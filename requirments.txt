@@ -1,0 +1,7 @@
+Django
+django-rest-framework
+m3u8
+filesplit
+channels
+httpx
+requests
