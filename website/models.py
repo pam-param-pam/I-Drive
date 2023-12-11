@@ -11,12 +11,12 @@ class Folder(models.Model):
 
 
 class File(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, editable=False)
     name = models.CharField(max_length=255)
     extension = models.CharField(max_length=10)
     streamable = models.BooleanField(default=False)
     size = models.BigIntegerField()
-    key = models.CharField(max_length=32)
+    key = models.BinaryField(max_length=32, null=True)
     #owner = models.ForeignKey(User, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(default=timezone.now)
     m3u8_message_id = models.URLField()
