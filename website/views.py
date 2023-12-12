@@ -23,7 +23,6 @@ from website.utilities.split import Split
 MAX_MB = 1
 
 
-# TODO handle discord rate limiting
 @csrf_exempt
 def upload_file(request):
     # request.upload_handlers.insert(0, ProgressBarUploadHandler(request))
