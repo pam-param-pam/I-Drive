@@ -5,3 +5,5 @@ filesplit
 channels
 httpx
 requests
+celery
+djoser
