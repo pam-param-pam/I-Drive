@@ -26,7 +26,6 @@ STATICFILES_DIRS = [
 INSTALLED_APPS = [
     'django.contrib.admin',
     'website',
-    'oauth2_provider',
     'channels',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,6 +46,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'website.middleware.RequestIdMiddleware',
+
 ]
 
 ROOT_URLCONF = 'website.urls'

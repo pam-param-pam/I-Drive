@@ -40,7 +40,6 @@ class Discord:
         response = self.client.post(url, headers=self.headers, files=files, timeout=None)
         return response
 
-    @retry()
     def get_file_url(self, message_id) -> str:
         return self.get_message(message_id).json()["attachments"][0]["url"]
 

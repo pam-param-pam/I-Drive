@@ -16,7 +16,8 @@ class File(models.Model):
     extension = models.CharField(max_length=10)
     streamable = models.BooleanField(default=False)
     size = models.BigIntegerField()
-    key = models.BinaryField(max_length=32, null=True)
+    key = models.BinaryField(null=True)
+
     #owner = models.ForeignKey(User, on_delete=models.CASCADE)
     uploaded_at = models.DateTimeField(default=timezone.now)
     m3u8_message_id = models.URLField()

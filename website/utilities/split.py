@@ -225,6 +225,7 @@ class Split:
             else:
                 raise ValueError('Unsupported split type provided.')
         finally:
+
             writer.close()
         splitsize = os.path.getsize(splitfile)
         if manifest:
