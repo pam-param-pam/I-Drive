@@ -1,16 +1,14 @@
 import os
 import subprocess
 import uuid
-from base64 import urlsafe_b64encode, urlsafe_b64decode
 from pathlib import Path
 from wsgiref.util import FileWrapper
 
 import m3u8
 import requests
 from cryptography.fernet import Fernet
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
-from django.utils.encoding import smart_str
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from website.decorators import cleanup
@@ -20,7 +18,9 @@ from website.utilities.Discord import discord
 from website.utilities.merge import Merge
 from website.utilities.split import Split
 
-MAX_MB = 1
+MAX_MB = 25
+MAX_STREAM_MB = 20
+
 
 # TODO make real size and encrypted size
 @csrf_exempt
@@ -30,7 +30,7 @@ def upload_file(request):
 
 
 def upload_files_from_folder(path, file_obj):
-    for filename in os.listdir(path):
+    for filename in sorted(os.listdir(path)):
         file_path = os.path.join(path, filename)
         if os.path.isfile(file_path):
             extension = Path(file_path).suffix
@@ -64,10 +64,14 @@ def upload_files_from_folder(path, file_obj):
                     )
                     fragment_obj.save()
 
+            os.remove(file_path)
+
 
 def calculate_time(file_size_bytes, bitrate_bps):
     time_seconds = (file_size_bytes * 8) / bitrate_bps
     return time_seconds
+
+
 
 
 def create_temp_request_dir(request_id):
@@ -115,7 +119,7 @@ def handle_uploaded_file(request):
                 check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
             #  don't ask me why we multiply it by 900 bytes and not 1024, it just works(mostly)
-            calculated_time = calculate_time(MAX_MB * 900 * 900, int(result.stdout.strip()))
+            calculated_time = calculate_time(MAX_STREAM_MB * 900 * 900, int(result.stdout.strip()))
 
             ffmpeg_command = [
                 'ffmpeg',
@@ -126,7 +130,7 @@ def handle_uploaded_file(request):
                 '-hls_time', f'{calculated_time}',
                 '-hls_list_size', '0',
                 '-f', 'hls',
-                '-hls_base_url', f'https://pamparampam.dev/stream/{file_obj.id}/',
+                '-hls_base_url', f'UwU :3',  # TODO change it back later'
                 # '-hls_flags', 'temp_file',  # Use temp_file option
                 '-hls_segment_filename', f"{file_dir}/%d.ts",
                 f'{os.path.join(file_dir, "manifest.m3u8")}'
@@ -140,10 +144,12 @@ def handle_uploaded_file(request):
                 file_obj.key = key
 
             os.remove(key_file_path)  # removing file key to not send it to Discord accidentally...
+            os.remove(file_path)  # removing original file, as we have it split already
+
             file_obj.streamable = True
             file_obj.save()
         except subprocess.CalledProcessError:
-            # TODO inform user that an error occured
+            # TODO inform user that an error occurred
             split_required = True
 
     if split_required or extension != ".mp4":
@@ -151,28 +157,44 @@ def handle_uploaded_file(request):
         file_obj.key = key
 
         file_obj.save()
-        print(file_obj.key)
-        with open(file_path, 'rb+') as file:
-            original = file.read()
-            fernet = Fernet(file_obj.key)
-            encrypted = fernet.encrypt(original)
-            file.seek(0) #  vevy important
-            file.write(encrypted)
 
-        split = Split(file_path, file_dir)
+        out_file_path = os.path.join(file_dir, str(file_obj.id) + file_obj.extension)
+
+        with open(file_path, "rb") as fin, open(out_file_path, "wb") as fout:
+            while True:
+                block = fin.read(524288)
+                if not block:
+                    break
+                f = Fernet(key)
+                output = f.encrypt(block)
+                fout.write(output)
+
+        os.remove(file_path)
+        split = Split(out_file_path, file_dir)
         split.manfilename = "0"
         split.bysize(MAX_MB * 1024 * 1023)
 
-    os.remove(file_path)  # removing original file, as we have it split already
+        os.remove(out_file_path)
+
     upload_files_from_folder(file_dir, file_obj)
 
 
-def merge_callback(filename, size, key):
-    with open(filename, 'rb+') as file:
-        fernet = Fernet(key)
-        content = fernet.decrypt(file.read())
-        file.seek(0) #  vevy important
-        file.write(content)
+def merge_callback(path, size, key):
+
+    directory, filename = os.path.split(path)
+    # Construct the output filename with "decrypted" added
+    temp_file_path = os.path.join(directory, f"temp_{filename}")
+    os.rename(path, temp_file_path)
+    with open(temp_file_path, "rb") as fin, open(path, "wb") as fout:
+        while True:
+            block = fin.read(699148)
+            if not block:
+                break
+            f = Fernet(key)
+            output = f.decrypt(block)
+
+            fout.write(output)
+    os.remove(temp_file_path)
     print("merge finished")
 
 
@@ -187,13 +209,11 @@ def process_download(request_id, file_obj):
 
     if fragments:
 
-
         for fragment in fragments:
             url = discord.get_file_url(fragment.message_id)
             response = requests.get(url)
 
             with open(os.path.join(file_dir, str(fragment.sequence)), 'wb') as file:
-
                 file.write(response.content)
 
         download_file_path = os.path.join("temp", "downloads",
@@ -219,11 +239,15 @@ def download(request, file_id):
     file_path = os.path.join("temp", "downloads",
                              str(file_obj.id), file_obj.name)  # temp/downloads/file_id/name.extension
     if os.path.isfile(file_path):
-
-        wrapper = FileWrapper(open(file_path, "rb"))
-        response = HttpResponse(wrapper, content_type='application/force-download')
+        chunk_size = 8192
+        response = StreamingHttpResponse(
+            FileWrapper(
+                open(file_path, "rb"),
+                chunk_size,
+            ),
+            content_type='application/force-download',
+        )
         response['Content-Disposition'] = f'attachment; filename={file_obj.name}'
-
         response['Content-Length'] = os.path.getsize(file_path)
         return response
 
@@ -259,7 +283,7 @@ def proccess_streamkey(request_id, file_obj):
     with open(key_file_path, 'wb+') as file:
         file.write(file_obj.key)
         # Move the file cursor to the beginning before reading
-        file.seek(0) #  vevy important
+        file.seek(0)  # vevy important
         file_content = file.read()
 
     response = HttpResponse(file_content, content_type='application/octet-stream')
@@ -297,8 +321,11 @@ def process_m3u8(request_id, file_obj):
 
     playlist = m3u8.load(m3u8_file_path)
     new_key = m3u8.Key(method="AES-128", base_uri=f"https://pamparampam.dev/stream/{file_obj.id}/key",
+                       # TODO change it back later
                        uri=f"https://pamparampam.dev/stream/{file_obj.id}/key")
-
+    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/stream/{file_obj.id}/key",
+                       # TODO change it back later
+                       uri=f"http://127.0.0.1:8000/stream/{file_obj.id}/key")
     fragments = Fragment.objects.filter(file_id=file_obj).order_by('sequence')
     for fragment, segment in zip(fragments, playlist.segments.by_key(playlist.keys[-1])):
         url = discord.get_file_url(fragment.message_id)
