@@ -51,7 +51,7 @@ class Discord:
         return response
 
     @retry()
-    def remove_message(self, message_id) -> httpx.Response:
+    def delete_file(self, message_id) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.delete(url, headers=self.headers)
         return response

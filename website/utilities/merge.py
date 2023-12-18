@@ -10,6 +10,8 @@ from typing import Callable, Optional
 import logging
 import time
 
+from cryptography.fernet import Fernet
+
 from .common import constant, error
 
 log = logging.getLogger(__name__)
@@ -120,7 +122,7 @@ class Merge:
         Returns:
             str: Output file path
         """
-        filepath = os.path.join(self.outputdir, self.outputfilename)
+        filepath = os.path.join(self.inputdir, self.outputfilename)
         return filepath
 
     def _endprocess(self):
@@ -161,20 +163,29 @@ class Merge:
                             next(splitreader)
                         for line in splitreader:
                             writer.write(line)
+                    if cleanup and not self.terminate:
+                        os.remove(splitfile)
                     if header:
                         skipheader = True
+
         if cleanup and not self.terminate:
-            with open(manfile, mode='r', encoding='utf8', newline='') as reader:
-                csvreader = csv.DictReader(reader)
-                for line in csvreader:
-                    splitfilename = line['filename']
-                    splitfile = os.path.join(self.inputdir, splitfilename)
-                    if os.path.exists(splitfile):
-                        os.remove(splitfile)
-            if os.path.exists(manfile):
-                os.remove(manfile)
+            if os.path.exists(splitfile):
+                os.remove(splitfile)
+        decrypted_filename = os.path.join(self.outputdir, self.outputfilename)
+        with open(outputfile, "rb") as fin, open(decrypted_filename, "wb") as fout:
+            while True:
+                block = fin.read(699148)
+                if not block:
+                    break
+                f = Fernet(key)
+                output = f.decrypt(block)
+
+                fout.write(output)
+        if cleanup and not self.terminate:
+            os.remove(outputfile)
+
         if callback:
-            callback(outputfile, os.path.getsize(outputfile), key)
+            callback(decrypted_filename, os.path.getsize(decrypted_filename), key)
         self._endprocess()
 
 

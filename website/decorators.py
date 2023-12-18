@@ -14,7 +14,7 @@ def cleanup(view_func):
             print(traceback.format_exc())
             return HttpResponse(status=500)
         finally:
-            shutil.rmtree(os.path.join("temp", request.request_id), ignore_errors=True)
+            #shutil.rmtree(os.path.join("temp", request.request_id), ignore_errors=True)
             pass
     return _wrapped_view
 

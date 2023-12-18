@@ -1,9 +1,11 @@
 Django
 django-rest-framework
 m3u8
-filesplit
-channels
+channels["daphne"]
 httpx
 requests
 celery
 djoser
+Redis
+channels-redis
+eventlet
