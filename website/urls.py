@@ -1,13 +1,17 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include
+from django.contrib import admin
+from django.template.defaulttags import url
+from django.urls import path, include, re_path
 
 from website import views
 
 
 
 urlpatterns = [
+        path('auth/', include('djoser.urls.authtoken')),
         path("", views.index, name="index"),
+        path('admin', admin.site.urls),
         path("upload", views.upload_file, name="upload"),
         path("download/<file_id>", views.download, name="download"),
         path("stream/<file_id>/key", views.streamkey, name="stream key"),

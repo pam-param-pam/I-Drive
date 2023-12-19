@@ -26,7 +26,9 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'website',
     'daphne',
-
+    'djoser',
+    'rest_framework',
+    'rest_framework.authtoken',
     'channels',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -34,6 +36,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+
+DJOSER = {
+    "LOGIN_FIELD": "username",
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -128,7 +134,11 @@ CHANNEL_LAYERS = {
     },
 }
 
-
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    )
+}
 # Celery settings
 CELERY_BROKER_URL = "redis://localhost:6379"
 CELERY_RESULT_BACKEND = "redis://localhost:6379"

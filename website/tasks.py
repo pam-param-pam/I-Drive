@@ -147,12 +147,12 @@ def process_download(request_id, file_id):
         shutil.rmtree(request_dir)
 
 @app.task
-def handle_uploaded_file(request_id, file_id, request_dir, file_dir, file_name, file_size):
+def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_name, file_size):
     try:
         send_message(f"Processing file...")
 
         split_required = False
-
+        user = 1
         extension = Path(file_name).suffix
         file_obj = File(
             extension=extension,
@@ -160,6 +160,7 @@ def handle_uploaded_file(request_id, file_id, request_dir, file_dir, file_name, 
             id=file_id,
             streamable=False,
             size=file_size,
+            owner_id=user,
             # parent_id="root",
         )
 

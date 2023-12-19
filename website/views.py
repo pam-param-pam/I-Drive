@@ -7,6 +7,9 @@ import requests
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import permission_classes, api_view
+from rest_framework.permissions import IsAuthenticated
 
 from website.Handlers import ProgressBarUploadHandler
 from website.decorators import view_cleanup
@@ -26,9 +29,11 @@ def upload_file(request):
     # request.upload_handlers.insert(0, ProgressBarUploadHandler(request)) #TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
     return _upload_file(request)
 
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def index(request):
-    return HttpResponse("hello")
+
+    return HttpResponse(f"hello {request.user}")
 
 
 def delete_file(request, file_id):
@@ -79,7 +84,7 @@ def _upload_file(request):
             with open(os.path.join(file_dir, file.name), "wb+") as destination:
                 for chunk in file.chunks():
                     destination.write(chunk)
-            handle_uploaded_file.delay(request.request_id, file_id, request_dir, file_dir, file.name, file.size)
+            handle_uploaded_file.delay(request.user.id, request.request_id, file_id, request_dir, file_dir, file.name, file.size)
 
     else:
         form = UploadFileForm()
