@@ -5,7 +5,7 @@ def calculate_time(file_size_bytes, bitrate_bps):
     time_seconds = (file_size_bytes * 8) / bitrate_bps
     return time_seconds
 
-def get_percentage(current, all):
+def get_percentage(current, all) -> int:
     if all == 0:
         return 0  # To avoid division by zero error
     percentage = round((current / all) * 100)

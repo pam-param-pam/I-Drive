@@ -7,8 +7,6 @@ from website import views
 
 
 urlpatterns = [
-        path("test", views.test, name="test"),
-
         path("", views.index, name="index"),
         path("upload", views.upload_file, name="upload"),
         path("download/<file_id>", views.download, name="download"),

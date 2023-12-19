@@ -1,6 +1,8 @@
 import os
+import shutil
 import subprocess
 import time
+import traceback
 from pathlib import Path
 
 import requests
@@ -19,41 +21,45 @@ from website.utilities.split import Split
 logger = get_task_logger(__name__)
 
 MAX_MB = 25
-MAX_STREAM_MB = 20
+MAX_STREAM_MB = 24
 
 
-@app.task
-def delete_files(file_id):
-    file_obj = File.objects.get(id=file_id)
-
+def send_message(message):
     channel_layer = get_channel_layer()
 
     async_to_sync(channel_layer.group_send)(
         'test',
         {
             'type': 'chat_message',
-            'message': "Deleting files"
+            # 'user_id': user_id,
+            'message': message
         }
     )
+
+
+@app.task
+def delete_files(file_id):
+    file_obj = File.objects.get(id=file_id)
+
+    send_message("Deleting files...")
+
     fragments = Fragment.objects.filter(file=file_obj)
     if fragments:
         for i, fragment in enumerate(fragments, start=1):
+            discord.remove_message(fragment.message_id)
+            send_message(f"Deleting... {get_percentage(i, len(fragments))}%")
 
-            discord.delete_file(fragment.message_id)
-            async_to_sync(channel_layer.group_send)(
-                'test',
-                {
-                    'type': 'chat_message',
-                    'message': f"Deleting... {get_percentage(i, len(fragments))}%"
-                }
-            )
             fragment.delete()
 
     file_obj.delete()
+    send_message(f"Deleted!")
 
 
 def upload_files_from_folder(path, file_obj):
-    for filename in sorted(os.listdir(path)):
+    send_message(f"Uploading file...")
+    file_count = len(os.listdir(path))
+    for i, filename in enumerate(sorted(os.listdir(path)), start=1):
+
         file_path = os.path.join(path, filename)
         if os.path.isfile(file_path):
             extension = Path(file_path).suffix
@@ -88,177 +94,154 @@ def upload_files_from_folder(path, file_obj):
                     fragment_obj.save()
 
             os.remove(file_path)
+            send_message(f"Uploading file...{get_percentage(i, file_count)}%")
 
 
 def merge_callback(path, size, key):
-    channel_layer = get_channel_layer()
+    send_message(f"File is ready to download!")
 
-    async_to_sync(channel_layer.group_send)(
-        'test',
-        {
-            'type': 'chat_message',
-            'message': f"File is ready to download!"
-
-        }
-    )
     print("merge finished")
 
 
 @app.task
-def sec3(reply_channel):
-    logger.info('WOOOOO')
-
-    # time sleep represent some long running process
-    time.sleep(3)
-
-    channel_layer = get_channel_layer()
-
-    async_to_sync(channel_layer.group_send)(
-        'test',
-        {
-            'type': 'chat_message',
-            'message': "Hello, World!"
-        }
-    )
-    return "kurwa mac"
-
-
-@app.task
 def process_download(request_id, file_id):
-    file_obj = File.objects.get(id=file_id)
-
-    fragments = Fragment.objects.filter(file=file_obj)
     request_dir = create_temp_request_dir(request_id)
-    file_dir = create_temp_file_dir(request_dir, file_obj.id)
+    try:
+        file_obj = File.objects.get(id=file_id)
 
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        'test',
-        {
-            'type': 'chat_message',
-            'message': "Processing download..."
-        }
-    )
-    if fragments:
+        fragments = Fragment.objects.filter(file=file_obj)
+        file_dir = create_temp_file_dir(request_dir, file_obj.id)
 
-        for i, fragment in enumerate(fragments, start=1):
-            url = discord.get_file_url(fragment.message_id)
-            response = requests.get(url)
-
-            with open(os.path.join(file_dir, str(fragment.sequence)), 'wb') as file:
-                file.write(response.content)
-            async_to_sync(channel_layer.group_send)(
-                'test',
-                {
-                    'type': 'chat_message',
-                    'message': f"Downloading {get_percentage(i, len(fragments))}%"
-
-                }
-            )
+        send_message("Processing download...")
         download_file_path = os.path.join("temp", "downloads",
                                           str(file_obj.id))  # temp/downloads/file_id/name.extension
+        file_path = os.path.join(download_file_path, file_obj.name)
 
-        if not os.path.exists(download_file_path):
-            os.makedirs(download_file_path)
-        async_to_sync(channel_layer.group_send)(
-            'test',
-            {
-                'type': 'chat_message',
-                'message': f"Merging download"
+        if os.path.isfile(file_path):  # we need to check if a process before us didn't already do a job for us :3
+            send_message(f"File is ready to download!")
+            return
 
-            }
-        )
-        merge = Merge(file_dir, download_file_path, file_obj.name)
-        merge.manfilename = "0"  # handle manifest UwU
-        merge.merge(cleanup=True, key=file_obj.key, callback=merge_callback)
+        if fragments:
 
+            for i, fragment in enumerate(fragments, start=1):
+                url = discord.get_file_url(fragment.message_id)
+                response = requests.get(url)
+
+                with open(os.path.join(file_dir, str(fragment.sequence)), 'wb') as file:
+                    file.write(response.content)
+                send_message(f"Downloading {get_percentage(i, len(fragments))}%")
+
+
+            if not os.path.exists(download_file_path):
+                os.makedirs(download_file_path)
+
+            send_message(f"Merging download")
+
+            merge = Merge(file_dir, download_file_path, file_obj.name)
+            merge.manfilename = "0"  # handle manifest UwU
+            merge.merge(cleanup=True, key=file_obj.key, callback=merge_callback)
+
+    except Exception:
+        traceback.print_exc()
+    finally:
+        shutil.rmtree(request_dir)
 
 @app.task
 def handle_uploaded_file(request_id, file_id, request_dir, file_dir, file_name, file_size):
-    split_required = False
+    try:
+        send_message(f"Processing file...")
 
-    extension = Path(file_name).suffix
-    file_obj = File(
-        extension=extension,
-        name=file_name,
-        id=file_id,
-        streamable=False,
-        size=file_size,
-        # parent_id="root",
-    )
+        split_required = False
 
-    file_obj.save()
-    file_path = os.path.join(file_dir, file_name)
+        extension = Path(file_name).suffix
+        file_obj = File(
+            extension=extension,
+            name=file_name,
+            id=file_id,
+            streamable=False,
+            size=file_size,
+            # parent_id="root",
+        )
 
-    if extension == ".mp4":
-        try:
+        file_obj.save()
+        file_path = os.path.join(file_dir, file_name)
 
-            result = subprocess.run(
-                f"ffprobe -v quiet -select_streams v:0 -show_entries stream=bit_rate -of default=noprint_wrappers=1:nokey=1 {file_path}",
-                check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if extension == ".mp4":
+            try:
 
-            #  don't ask me why we multiply it by 900 bytes and not 1024, it just works(mostly)
-            calculated_time = calculate_time(MAX_STREAM_MB * 900 * 900, int(result.stdout.strip()))
+                result = subprocess.run(
+                    f"ffprobe -v quiet -select_streams v:0 -show_entries stream=bit_rate -of default=noprint_wrappers=1:nokey=1 {file_path}",
+                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
-            ffmpeg_command = [
-                'ffmpeg',
-                '-i', file_path,
-                '-c', 'copy',
-                '-start_number', '0',
-                '-hls_enc', '1',
-                '-hls_time', f'{calculated_time}',
-                '-hls_list_size', '0',
-                '-f', 'hls',
-                '-hls_base_url', f'UwU :3',  # TODO change it back later'
-                # '-hls_flags', 'temp_file',  # Use temp_file option
-                '-hls_segment_filename', f"{file_dir}/%d.ts",
-                f'{os.path.join(file_dir, "manifest.m3u8")}'
-            ]
+                #  don't ask me why we multiply it by 900 bytes and not 1024, it just works(mostly)
+                calculated_time = calculate_time(MAX_STREAM_MB * 900 * 900, int(result.stdout.strip()))
 
-            subprocess.run(ffmpeg_command, check=True)
-            key_file_path = os.path.join(file_dir, "manifest.m3u8.key")
+                ffmpeg_command = [
+                    'ffmpeg',
+                    '-i', file_path,
+                    '-c', 'copy',
+                    '-start_number', '0',
+                    '-hls_enc', '1',
+                    '-hls_time', f'{calculated_time}',
+                    '-hls_list_size', '0',
+                    '-f', 'hls',
+                    '-hls_base_url', f'UwU :3',  # TODO change it back later'
+                    # '-hls_flags', 'temp_file',  # Use temp_file option
+                    '-hls_segment_filename', f"{file_dir}/%d.ts",
+                    f'{os.path.join(file_dir, "manifest.m3u8")}'
+                ]
 
-            with open(key_file_path, 'rb') as file:
-                key = file.read()
-                file_obj.key = key
+                subprocess.run(ffmpeg_command, check=True)
+                key_file_path = os.path.join(file_dir, "manifest.m3u8.key")
 
-            os.remove(key_file_path)  # removing file key to not send it to Discord accidentally...
-            os.remove(file_path)  # removing original file, as we have it split already
+                with open(key_file_path, 'rb') as file:
+                    key = file.read()
+                    file_obj.key = key
 
-            file_obj.streamable = True
+                os.remove(key_file_path)  # removing file key to not send it to Discord accidentally...
+                os.remove(file_path)  # removing original file, as we have it split already
+
+                file_obj.streamable = True
+                file_obj.save()
+            except subprocess.CalledProcessError:
+                # TODO inform user that an error occurred
+                split_required = True
+
+        if split_required or extension != ".mp4":
+            key = Fernet.generate_key()
+            file_obj.key = key
+
             file_obj.save()
-        except subprocess.CalledProcessError:
-            # TODO inform user that an error occurred
-            split_required = True
 
-    if split_required or extension != ".mp4":
-        key = Fernet.generate_key()
-        file_obj.key = key
+            out_file_path = os.path.join(file_dir, str(file_obj.id) + file_obj.extension)
 
-        file_obj.save()
+            with open(file_path, "rb") as fin, open(out_file_path, "wb") as fout:
+                while True:
+                    block = fin.read(524288)
+                    if not block:
+                        break
+                    f = Fernet(key)
+                    output = f.encrypt(block)
+                    fout.write(output)
 
-        out_file_path = os.path.join(file_dir, str(file_obj.id) + file_obj.extension)
+            os.remove(file_path)  # removing unencrypted file
 
-        with open(file_path, "rb") as fin, open(out_file_path, "wb") as fout:
-            while True:
-                block = fin.read(524288)
-                if not block:
-                    break
-                f = Fernet(key)
-                output = f.encrypt(block)
-                fout.write(output)
+            encrypted_size = os.path.getsize(out_file_path)
 
-        os.remove(file_path)  # removing unencrypted file
+            file_obj.encrypted_size = encrypted_size
+            file_obj.save()
 
-        encrypted_size = os.path.getsize(out_file_path)
+            split = Split(out_file_path, file_dir)
+            split.manfilename = "0"
+            split.bysize(MAX_MB * 1024 * 1023)
 
-        file_obj.encrypted_size = encrypted_size
-        file_obj.save()
+            os.remove(out_file_path)  # removing encrypted file as it's already split, and not needed
 
-        split = Split(out_file_path, file_dir)
-        split.manfilename = "0"
-        split.bysize(MAX_MB * 1024 * 1023)
+        upload_files_from_folder(file_dir, file_obj)
+        send_message(f"File uploaded!")
 
-        os.remove(out_file_path)  # removing encrypted file as it's already split, and not needed
+    except Exception:
+        traceback.print_exc()
 
-    upload_files_from_folder(file_dir, file_obj)
+    finally:
+        shutil.rmtree(request_dir)

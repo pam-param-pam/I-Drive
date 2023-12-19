@@ -1,37 +1,29 @@
 import os
-import subprocess
 import uuid
-from pathlib import Path
 from wsgiref.util import FileWrapper
-from django.core import serializers
 
 import m3u8
 import requests
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
-from cryptography.fernet import Fernet
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
-from website.decorators import cleanup
+from website.Handlers import ProgressBarUploadHandler
+from website.decorators import view_cleanup
 from website.forms import UploadFileForm
 from website.models import File, Fragment
+from website.tasks import process_download, handle_uploaded_file, delete_files
 from website.utilities.Discord import discord
-from website.utilities.merge import Merge
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir
-from website.utilities.split import Split
-
-from website.tasks import sec3, process_download, handle_uploaded_file, delete_files
 
 MAX_MB = 25
-MAX_STREAM_MB = 20
+MAX_STREAM_MB = 23
 
 
 # TODO make real size and encrypted size
 @csrf_exempt
 def upload_file(request):
-    # request.upload_handlers.insert(0, ProgressBarUploadHandler(request))
+    # request.upload_handlers.insert(0, ProgressBarUploadHandler(request)) #TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
     return _upload_file(request)
 
 
@@ -40,14 +32,11 @@ def index(request):
 
 
 def delete_file(request, file_id):
-
     if not File.objects.filter(id=file_id).exists():
         return HttpResponse(f"doesn't exist", status=404)
 
     delete_files.delay(file_id)
-
     return HttpResponse("file deleted")
-
 
 
 def download(request, file_id):
@@ -77,16 +66,7 @@ def download(request, file_id):
     return HttpResponse("file is being processed for the download")
 
 
-def test(request):
-    print(11111)
-    sec3.delay("specific.2e803649d76e4b04b3df37b3172002b8!7ba462c2037b4042b7cb20e15e52e2d4")
-    print(222222)
-
-    return HttpResponse(f"this was a test", status=200)
-
-
 @csrf_protect
-
 def _upload_file(request):
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
@@ -99,7 +79,6 @@ def _upload_file(request):
             with open(os.path.join(file_dir, file.name), "wb+") as destination:
                 for chunk in file.chunks():
                     destination.write(chunk)
-
             handle_uploaded_file.delay(request.request_id, file_id, request_dir, file_dir, file.name, file.size)
 
     else:
@@ -107,7 +86,7 @@ def _upload_file(request):
     return render(request, "upload.html", {"form": form})
 
 
-
+@view_cleanup
 def streamkey(request, file_id):
     try:
         file_obj = File.objects.get(id=file_id)
@@ -169,7 +148,11 @@ def process_m3u8(request_id, file_obj):
     return file_content
 
 
+def test(request):
+    pass
 
+
+@view_cleanup
 def get_m3u8(request, file_id):
     try:
         file_obj = File.objects.get(id=file_id)
