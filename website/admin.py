@@ -4,12 +4,15 @@ from .models import Fragment, Folder, File
 
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
-    pass
+    readonly_fields = ('id',)
+
 
 @admin.register(Folder)
 class FolderAdmin(admin.ModelAdmin):
-    pass
+    readonly_fields = ('id',)
+
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    pass
+    readonly_fields = ('id',)
+

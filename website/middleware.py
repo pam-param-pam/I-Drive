@@ -24,8 +24,10 @@ class TokenAuthMiddleware(BaseMiddleware):
 
     async def __call__(self, scope, receive, send):
         try:
-            token_key = dict(scope['headers'])[b'sec-websocket-protocol'].decode('utf-8')
-        except ValueError:
+            #token_key = dict(scope['headers'])[b'sec-websocket-protocol'].decode('utf-8') #TODO
+            token_key = dict(scope['headers'])[b'authorization'].decode('utf-8')
+
+        except (ValueError, KeyError):
             token_key = None
         scope['user'] = AnonymousUser() if token_key is None else await get_user(token_key)
         return await super().__call__(scope, receive, send)

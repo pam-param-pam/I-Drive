@@ -1,7 +1,6 @@
 import os
 import shutil
 import subprocess
-import time
 import traceback
 from pathlib import Path
 
@@ -24,39 +23,46 @@ MAX_MB = 25
 MAX_STREAM_MB = 24
 
 
-def send_message(message):
+def send_message(message, user_id, request_id):
     channel_layer = get_channel_layer()
 
     async_to_sync(channel_layer.group_send)(
         'test',
         {
             'type': 'chat_message',
-            # 'user_id': user_id,
-            'message': message
+            'user_id': user_id,
+            'message': message,
+            'request_id': request_id
         }
     )
 
 
 @app.task
-def delete_files(file_id):
-    file_obj = File.objects.get(id=file_id)
+def delete_files(user, request_id, file_id):
+    user = user  # TODO
+    user = 1
+    try:
+        file_obj = File.objects.get(id=file_id)
 
-    send_message("Deleting files...")
+        send_message("Deleting files...", user, request_id)
 
-    fragments = Fragment.objects.filter(file=file_obj)
-    if fragments:
-        for i, fragment in enumerate(fragments, start=1):
-            discord.remove_message(fragment.message_id)
-            send_message(f"Deleting... {get_percentage(i, len(fragments))}%")
+        fragments = Fragment.objects.filter(file=file_obj)
+        if fragments:
+            for i, fragment in enumerate(fragments, start=1):
+                discord.remove_message(fragment.message_id)
+                send_message(f"Deleting... {get_percentage(i, len(fragments))}%", user, request_id)
 
-            fragment.delete()
+                fragment.delete()
 
-    file_obj.delete()
-    send_message(f"Deleted!")
+        file_obj.delete()
+        send_message(f"Deleted!", user, request_id)
+    except Exception:
+        traceback.print_exc()
 
 
-def upload_files_from_folder(path, file_obj):
-    send_message(f"Uploading file...")
+def upload_files_from_folder(user, request_id, path, file_obj):
+
+    send_message(f"Uploading file...", user, request_id)
     file_count = len(os.listdir(path))
     for i, filename in enumerate(sorted(os.listdir(path)), start=1):
 
@@ -94,17 +100,19 @@ def upload_files_from_folder(path, file_obj):
                     fragment_obj.save()
 
             os.remove(file_path)
-            send_message(f"Uploading file...{get_percentage(i, file_count)}%")
+            send_message(f"Uploading file...{get_percentage(i, file_count)}%", user, request_id)
 
 
-def merge_callback(path, size, key):
-    send_message(f"File is ready to download!")
+def merge_callback(path, size, key, user, request_id):
+    send_message(f"File is ready to download!", user, request_id)
 
     print("merge finished")
 
 
 @app.task
-def process_download(request_id, file_id):
+def process_download(user, request_id, file_id):
+    user = user  # TODO
+    user = 1
     request_dir = create_temp_request_dir(request_id)
     try:
         file_obj = File.objects.get(id=file_id)
@@ -112,13 +120,13 @@ def process_download(request_id, file_id):
         fragments = Fragment.objects.filter(file=file_obj)
         file_dir = create_temp_file_dir(request_dir, file_obj.id)
 
-        send_message("Processing download...")
+        send_message("Processing download...", user, request_id)
         download_file_path = os.path.join("temp", "downloads",
                                           str(file_obj.id))  # temp/downloads/file_id/name.extension
         file_path = os.path.join(download_file_path, file_obj.name)
 
         if os.path.isfile(file_path):  # we need to check if a process before us didn't already do a job for us :3
-            send_message(f"File is ready to download!")
+            send_message(f"File is ready to download!", user, request_id)
             return
 
         if fragments:
@@ -129,17 +137,16 @@ def process_download(request_id, file_id):
 
                 with open(os.path.join(file_dir, str(fragment.sequence)), 'wb') as file:
                     file.write(response.content)
-                send_message(f"Downloading {get_percentage(i, len(fragments))}%")
-
+                send_message(f"Downloading {get_percentage(i, len(fragments))}%", user, request_id)
 
             if not os.path.exists(download_file_path):
                 os.makedirs(download_file_path)
 
-            send_message(f"Merging download")
+            send_message(f"Merging download", user, request_id)
 
             merge = Merge(file_dir, download_file_path, file_obj.name)
             merge.manfilename = "0"  # handle manifest UwU
-            merge.merge(cleanup=True, key=file_obj.key, callback=merge_callback)
+            merge.merge(cleanup=True, key=file_obj.key, user=user, request_id=request_id, callback=merge_callback)
 
     except Exception:
         traceback.print_exc()
@@ -147,13 +154,16 @@ def process_download(request_id, file_id):
         shutil.rmtree(request_dir)
 
 @app.task
-def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_name, file_size):
+def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_name, file_size, folder_id):
     try:
-        send_message(f"Processing file...")
+        user = user  # TODO
+        user = 1
+        send_message(f"Processing file...", user, request_id)
 
         split_required = False
-        user = 1
+
         extension = Path(file_name).suffix
+
         file_obj = File(
             extension=extension,
             name=file_name,
@@ -161,7 +171,7 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
             streamable=False,
             size=file_size,
             owner_id=user,
-            # parent_id="root",
+            parent_id=folder_id,
         )
 
         file_obj.save()
@@ -205,7 +215,7 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
                 file_obj.streamable = True
                 file_obj.save()
             except subprocess.CalledProcessError:
-                # TODO inform user that an error occurred
+                send_message(f"Error occurred, can't make it streamable :(", user, request_id)
                 split_required = True
 
         if split_required or extension != ".mp4":
@@ -238,8 +248,8 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
 
             os.remove(out_file_path)  # removing encrypted file as it's already split, and not needed
 
-        upload_files_from_folder(file_dir, file_obj)
-        send_message(f"File uploaded!")
+        upload_files_from_folder(user, request_id, file_dir, file_obj)
+        send_message(f"File uploaded!", user, request_id)
 
     except Exception:
         traceback.print_exc()

@@ -132,7 +132,7 @@ class Merge:
         runtime = int((endtime - self._starttime)/60)
         log.info(f'Process completed in {runtime} min(s)')
 
-    def merge(self, key, cleanup: bool = False, callback: Optional[Callable] = None) -> None:
+    def merge(self, key, user, request_id, cleanup: bool = False, callback: Optional[Callable] = None) -> None:
         """Merges the split files back into one single file
 
         Args:
@@ -185,7 +185,7 @@ class Merge:
             os.remove(outputfile)
 
         if callback:
-            callback(decrypted_filename, os.path.getsize(decrypted_filename), key)
+            callback(decrypted_filename, os.path.getsize(decrypted_filename), user, request_id)
         self._endprocess()
 
 
