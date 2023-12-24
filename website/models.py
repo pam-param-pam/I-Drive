@@ -27,6 +27,8 @@ class Folder(models.Model):
                     self.name = "_root"
 
         super(Folder, self).save(*args, **kwargs)
+
+
 class File(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, null=False, blank=False)
     name = models.CharField(max_length=255, null=False, blank=False)
@@ -36,9 +38,9 @@ class File(models.Model):
     key = models.BinaryField()
     encrypted_size = models.BigIntegerField()
     uploaded_at = models.DateTimeField(default=timezone.now)
-    m3u8_message_id = models.URLField(null=True)
+    m3u8_message_id = models.URLField(null=True, blank=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE)
-
+    ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     maintainer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
                                    related_name='file_maintainer_user')
@@ -61,5 +63,4 @@ class Fragment(models.Model):
     message_id = models.CharField(max_length=255)
 
     def __str__(self):
-        return self.sequence
-
+        return str(self.sequence)

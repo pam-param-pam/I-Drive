@@ -6,6 +6,8 @@ from django.urls import path, include
 from website import views
 
 urlpatterns = [
+                  path("test", views.test, name="download"),
+
                   path('auth/', include('djoser.urls.authtoken')),
                   path("", views.index, name="index"),
                   path('admin', admin.site.urls),

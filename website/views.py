@@ -14,7 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from website.decorators import view_cleanup
 from website.forms import UploadFileForm
 from website.models import File, Fragment, Folder
-from website.tasks import process_download, handle_uploaded_file, delete_files
+from website.tasks import process_download, handle_uploaded_file, delete_files, test_task
 from website.utilities.Discord import discord
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir
 
@@ -24,6 +24,7 @@ MAX_STREAM_MB = 23
 
 # TODO user_id to user lol
 
+# TODO fix maintainer, viewer id being null
 # TODO make real size and encrypted size
 @csrf_exempt
 def upload_file(request):
@@ -37,16 +38,19 @@ def index(request):
     return HttpResponse(f"hello {request.user}")
 
 
-
-
-
 def download(request, file_id):
     try:
         file_obj = File.objects.get(id=file_id)
-    except File.DoesNotExist:
+    except (File.DoesNotExist, ValidationError):
+
         return HttpResponse(f"doesn't exist", status=404)
+
+    # owner, maintainer or viewer perms needed
     if request.user.id not in (
-            file_obj.owner.id, file_obj.maintainer.id, file_obj.viewer.id):  # owner, maintainer or viewer perms needed
+            file_obj.owner.id,
+            getattr(file_obj.maintainer, 'id', None),
+            getattr(file_obj.viewer, 'id', None)
+    ):
         return HttpResponse(f"unauthorized", status=403)
 
     if file_obj.streamable:
@@ -85,9 +89,10 @@ def _upload_file(request):
             request_dir = create_temp_request_dir(request.request_id)  # creating /temp/<int>/
             file_id = uuid.uuid4()
             file_dir = create_temp_file_dir(request_dir, file_id)  # creating /temp/<int>/file_id/
-            with open(os.path.join(file_dir, file.name), "wb+") as destination:
+            with open(os.path.join(file_dir, file.name), "wb+") as destination:  # saving in /temp/<int>/file_id/filename
                 for chunk in file.chunks():
                     destination.write(chunk)
+
             handle_uploaded_file.delay(request.user.id, request.request_id, file_id, request_dir, file_dir, file.name,
                                        file.size, folder_id)
 
@@ -102,10 +107,16 @@ def _upload_file(request):
 def streamkey(request, file_id):
     try:
         file_obj = File.objects.get(id=file_id)
-    except File.DoesNotExist:
+    except (File.DoesNotExist, ValidationError):
+
         return HttpResponse(f"doesn't exist", status=404)
+
+    # owner, maintainer or viewer perms needed
     if request.user.id not in (
-            file_obj.owner.id, file_obj.maintainer.id, file_obj.viewer.id):  # owner, maintainer or viewer perms needed
+            file_obj.owner.id,
+            getattr(file_obj.maintainer, 'id', None),
+            getattr(file_obj.viewer, 'id', None)
+    ):
         return HttpResponse(f"unauthorized", status=403)
     if not file_obj.streamable:
         return HttpResponse(f"This file is not streamable!", status=404)
@@ -163,17 +174,23 @@ def process_m3u8(request_id, file_obj):
 
 
 def test(request):
-    pass
+    test_task.delay()
+    return HttpResponse(f"yupi", status=200)
 
 
 @view_cleanup
 def get_m3u8(request, file_id):
     try:
         file_obj = File.objects.get(id=file_id)
-    except File.DoesNotExist:
+    except (File.DoesNotExist, ValidationError):
         return HttpResponse(f"doesn't exist", status=404)
+
+    # owner, maintainer or viewer perms needed
     if request.user.id not in (
-            file_obj.owner.id, file_obj.maintainer.id, file_obj.viewer.id):  # owner, maintainer or viewer perms needed
+            file_obj.owner.id,
+            getattr(file_obj.maintainer, 'id', None),
+            getattr(file_obj.viewer, 'id', None)
+    ):
         return HttpResponse(f"unauthorized", status=403)
     if not file_obj.streamable:
         return HttpResponse(f"This file is not streamable!", status=404)
@@ -279,7 +296,8 @@ def movefile(request):
 def delete_file(request, file_id):
     try:
         file_obj = File.objects.get(id=file_id)
-    except File.DoesNotExist:
+    except (File.DoesNotExist, ValidationError):
+
         return HttpResponse(f"doesn't exist", status=404)
 
     if file_obj.owner.id != request.user.id:  # owner perms needed

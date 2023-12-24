@@ -1,14 +1,19 @@
 import os
+import random
 import shutil
 import subprocess
+import time
 import traceback
+import uuid
+from functools import partial
 from pathlib import Path
 
 import requests
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
 from cryptography.fernet import Fernet
+from django.db import transaction
 
 from website.celery import app
 from website.models import File, Fragment
@@ -16,25 +21,28 @@ from website.utilities.Discord import discord
 from website.utilities.merge import Merge
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, calculate_time, get_percentage
 from website.utilities.split import Split
+from threading import Lock
 
 logger = get_task_logger(__name__)
 
 MAX_MB = 25
 MAX_STREAM_MB = 24
 
+lock = Lock()
 
 def send_message(message, user_id, request_id):
-    channel_layer = get_channel_layer()
+    with lock:
+        channel_layer = get_channel_layer()
 
-    async_to_sync(channel_layer.group_send)(
-        'test',
-        {
-            'type': 'chat_message',
-            'user_id': user_id,
-            'message': message,
-            'request_id': request_id
-        }
-    )
+        async_to_sync(channel_layer.group_send)(
+            'test',
+            {
+                'type': 'chat_message',
+                'user_id': user_id,
+                'message': message,
+                'request_id': request_id
+            }
+        )
 
 
 @app.task
@@ -43,16 +51,19 @@ def delete_files(user, request_id, file_id):
     user = 1
     try:
         file_obj = File.objects.get(id=file_id)
-
         send_message("Deleting files...", user, request_id)
 
         fragments = Fragment.objects.filter(file=file_obj)
         if fragments:
+            file_obj.ready = False
             for i, fragment in enumerate(fragments, start=1):
                 discord.remove_message(fragment.message_id)
                 send_message(f"Deleting... {get_percentage(i, len(fragments))}%", user, request_id)
 
                 fragment.delete()
+
+        if file_obj.m3u8_message_id:  # remove m3u8 manifest file
+            discord.remove_message(file_obj.m3u8_message_id)
 
         file_obj.delete()
         send_message(f"Deleted!", user, request_id)
@@ -61,7 +72,6 @@ def delete_files(user, request_id, file_id):
 
 
 def upload_files_from_folder(user, request_id, path, file_obj):
-
     send_message(f"Uploading file...", user, request_id)
     file_count = len(os.listdir(path))
     for i, filename in enumerate(sorted(os.listdir(path)), start=1):
@@ -177,6 +187,11 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
         file_obj.save()
         file_path = os.path.join(file_dir, file_name)
 
+        # ffmpeg doesn't like spaces in file names :(
+        new_file_path = file_path.replace(" ", "")
+        os.rename(file_path, new_file_path)
+        file_path = new_file_path
+
         if extension == ".mp4":
             try:
 
@@ -215,6 +230,7 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
                 file_obj.streamable = True
                 file_obj.save()
             except subprocess.CalledProcessError:
+                print(traceback.print_exc())
                 send_message(f"Error occurred, can't make it streamable :(", user, request_id)
                 split_required = True
 
@@ -224,7 +240,7 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
 
             file_obj.save()
 
-            out_file_path = os.path.join(file_dir, str(file_obj.id) + file_obj.extension)
+            out_file_path = os.path.join(file_dir, str(file_id) + extension)
 
             with open(file_path, "rb") as fin, open(out_file_path, "wb") as fout:
                 while True:
@@ -247,8 +263,9 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
             split.bysize(MAX_MB * 1024 * 1023)
 
             os.remove(out_file_path)  # removing encrypted file as it's already split, and not needed
-
-        upload_files_from_folder(user, request_id, file_dir, file_obj)
+        transaction.on_commit(partial(upload_files_from_folder, user=user, request_id=request_id, path=file_dir, file_obj=file_obj))
+        file_obj.ready = True
+        file_obj.save()
         send_message(f"File uploaded!", user, request_id)
 
     except Exception:
@@ -256,3 +273,34 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
 
     finally:
         shutil.rmtree(request_dir)
+
+@app.task
+def test_task():
+    file_obj = File.objects.get(id="5d47d2a6-e68d-4d00-b238-e16dc23185ec")
+    time.sleep(5)
+    file_obj.name = str(random.randint(10, 1000))
+    time.sleep(1)
+
+    file_obj.save()
+    file_obj = File.objects.get(id="d90502dd-d56e-42d8-8de0-c2b8cb92a271")
+    time.sleep(1)
+
+    file_obj.name = str(random.randint(10, 1000))
+    file_obj.save()
+    file_id = uuid.uuid4()
+    time.sleep(1)
+
+    file_obj = File(
+        extension="test",
+        name="lol",
+        streamable=False,
+        size=1000,
+        id=file_id,
+        owner_id=1,
+        parent_id="459d3567-b667-40bc-a27d-38eb0b173c06",
+    )
+    time.sleep(1)
+
+    file_obj.save()
+
+    time.sleep(1)

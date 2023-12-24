@@ -9,3 +9,4 @@ djoser
 Redis
 channels-redis
 eventlet
+gevent

@@ -39,6 +39,7 @@ class Discord:
         return self.bot_tokens[self.current_token_index]
 
     def switch_token(self):
+        print("switching tokens!")
         self.current_token_index = (self.current_token_index + 1) % len(self.bot_tokens)
         self.headers = {'Authorization': f'Bot {self.current_token}'}
 
@@ -71,8 +72,6 @@ class Discord:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.delete(url, headers=self.headers)
         return response
-
-
 
 
 discord = Discord()

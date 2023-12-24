@@ -11,7 +11,7 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-o5m-fk59yjgizf7k6d9mk#*23&_gcc^1nptept@qykzch7zho-'
-
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it work? Well until it breaks something, YES IT DOES!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
