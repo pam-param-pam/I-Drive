@@ -185,7 +185,7 @@ class Merge:
             os.remove(outputfile)
 
         if callback:
-            callback(decrypted_filename, os.path.getsize(decrypted_filename), user, request_id)
+            callback(decrypted_filename, key, os.path.getsize(decrypted_filename), user, request_id)
         self._endprocess()
 
 

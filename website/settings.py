@@ -15,7 +15,8 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it wor
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS=['*']
+
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
@@ -26,6 +27,7 @@ STATICFILES_DIRS = [
 INSTALLED_APPS = [
     'django.contrib.admin',
     'website',
+    'corsheaders',
     'daphne',
     'djoser',
     'rest_framework',
@@ -43,6 +45,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -52,6 +55,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.middleware.RequestIdMiddleware',
 
+]
+CORS_ALLOW_HEADERS = "*"
+
+CORS_ALLOWED_ORIGINS = [
+        'http://127.0.0.1:8080',
+        'http://192.168.1.14:8080',
+        'http://localhost:8080',
+]
+CSRF_TRUSTED_ORIGINS = [
+        'http://127.0.0.1:8080',
+        'http://localhost:8080',
 ]
 
 ROOT_URLCONF = 'website.urls'
@@ -138,7 +152,11 @@ CHANNEL_LAYERS = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-    )
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+            'anon': '30/min',
+            'user': '60/min'
+        }
 }
 # Celery settings
 CELERY_BROKER_URL = "redis://localhost:6379"

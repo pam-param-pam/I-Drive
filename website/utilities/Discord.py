@@ -5,13 +5,15 @@ import httpx
 def retry(func):
     def decorator(*args, **kwargs):
         response = func(*args, **kwargs)
-        if response.status_code == 429:
+        if response.status_code == 429:  # with 4 tokens this almost never happens so no need for fancy rate limit calculations to avoid 429
             retry_after = response.json()["retry_after"]
-            time.sleep(retry_after)
-
-            # Retry with the new token
+            time.sleep(1)
             args[0].switch_token()
+
             return decorator(*args, **kwargs)
+
+        if response.headers["x-ratelimit-remaining"] == "0":
+            args[0].switch_token()
 
         return response
 
@@ -26,7 +28,9 @@ class Discord:
         self.client = httpx.Client(timeout=10.0)
         self.bot_tokens = ["ODk0NTc4MDM5NzI2NDQwNTUy.GAqXhm.8M61gjcKM5d6krNf6oWBOt1ZSVmpO5PwPoGVa4",
                            "MTE4NjczNTE5NTg3ODA2ODI4Ng.GeXLwx.KbonHuxNcUfnl0U-rqix7t9CzUoa4MLZgvbX3E",
-                           "MTE4Njc0ODE4ODA1NzY4MjA2MA.GEMHFW.eg9hT5IJKzSMpJ0nbFv4D_MqLCw72qlFR9VTTU"]
+                           "MTE4Njc0ODE4ODA1NzY4MjA2MA.GEMHFW.eg9hT5IJKzSMpJ0nbFv4D_MqLCw72qlFR9VTTU",
+                           "MTE4ODk1MTQyODYxNDU4NjQ4OA.G4CVRG.dMvoxd0Z7nQF5reiLIoFQNkstfalQmcTaGcXOY"
+                           ]
 
         self.BASE_URL = 'https://discord.com/api/v10'
         self.channel_id = '870781149583130644'
@@ -58,13 +62,14 @@ class Discord:
         return response
 
     def get_file_url(self, message_id) -> str:
-        return self.get_message(message_id).json()["attachments"][0]["url"]
+        url = self.get_message(message_id).json()["attachments"][0]["url"]
+        print(url)
+        return url
 
     @retry
     def get_message(self, message_id) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.get(url, headers=self.headers)
-
         return response
 
     @retry

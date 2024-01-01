@@ -16,7 +16,7 @@ from cryptography.fernet import Fernet
 from django.db import transaction
 
 from website.celery import app
-from website.models import File, Fragment
+from website.models import File, Fragment, Folder
 from website.utilities.Discord import discord
 from website.utilities.merge import Merge
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, calculate_time, get_percentage
@@ -46,16 +46,18 @@ def send_message(message, user_id, request_id):
 
 
 @app.task
-def delete_files(user, request_id, file_id):
+def delete_file_task(user, request_id, file_id):
     user = user  # TODO
     user = 1
     try:
         file_obj = File.objects.get(id=file_id)
-        send_message("Deleting files...", user, request_id)
+
+        send_message("Deleting file...", user, request_id)
 
         fragments = Fragment.objects.filter(file=file_obj)
         if fragments:
             file_obj.ready = False
+            file_obj.save()
             for i, fragment in enumerate(fragments, start=1):
                 discord.remove_message(fragment.message_id)
                 send_message(f"Deleting... {get_percentage(i, len(fragments))}%", user, request_id)
@@ -70,6 +72,26 @@ def delete_files(user, request_id, file_id):
     except Exception:
         traceback.print_exc()
 
+@app.task
+def delete_folder_task(user, request_id, folder_id):
+    user = user  # TODO
+    user = 1
+    try:
+        folder_obj = Folder.objects.get(id=folder_id)
+        send_message("Deleting folder...", user, request_id)
+
+        files = File.objects.filter(parent=folder_obj)
+        if files:
+            folder_obj.ready = False
+            for i, file in enumerate(files, start=1):
+                delete_file_task(user, request_id, file.id)
+                send_message(f"Deleting... {get_percentage(i, len(files))}%", user, request_id)
+
+        folder_obj.delete()
+        send_message(f"Deleted!", user, request_id)
+    except Exception:
+        traceback.print_exc()
+
 
 def upload_files_from_folder(user, request_id, path, file_obj):
     send_message(f"Uploading file...", user, request_id)
@@ -79,7 +101,7 @@ def upload_files_from_folder(user, request_id, path, file_obj):
         file_path = os.path.join(path, filename)
         if os.path.isfile(file_path):
             extension = Path(file_path).suffix
-
+            size = os.path.getsize(file_path)
             with open(file_path, 'rb') as file:
 
                 name = Path(file_path).stem
@@ -93,18 +115,12 @@ def upload_files_from_folder(user, request_id, path, file_obj):
                 if extension == ".m3u8":
                     file_obj.m3u8_message_id = message_id
                     file_obj.save()
-                elif extension == ".ts":
-                    fragment_obj = Fragment(
-                        sequence=name,
-                        file=file_obj,
-                        message_id=message_id,
-                    )
-                    fragment_obj.save()
 
                 else:
                     fragment_obj = Fragment(
                         sequence=name,
                         file=file_obj,
+                        size=size,
                         message_id=message_id,
                     )
                     fragment_obj.save()

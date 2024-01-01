@@ -12,22 +12,25 @@ urlpatterns = [
                   path("", views.index, name="index"),
                   path('admin', admin.site.urls),
                   path("upload", views.upload_file, name="upload"),
-                  path("download/<file_id>", views.download, name="download"),
-                  path("stream/<file_id>/key", views.streamkey, name="stream key"),
+                  path("download/<file>", views.download, name="download"),
+                  path("stream/<file_id>/key", views.stream_key, name="stream key"),
                   path("stream/<file_id>", views.get_m3u8, name="get m3u8 playlist"),
 
-                  path("folder/<folder_id>", views.test, name="get files and folders from a folder id"),
+                  path("search/<query>", views.search, name="get m3u8 playlist"),
+
+                  path("folder/<folder_id>", views.get_folder, name="get files and folders from a folder id"),
+                  path("getfolders", views.get_folders, name="get files and folders from a folder id"),
 
                   path("createfolder", views.create_folder, name="create folder"),
 
                   path("movefolder", views.movefolder, name="move folder"),
                   path("movefile", views.movefile, name="move file"),
 
-                  path("deletefile/<file_id>", views.delete_file, name="delete file"),
-                  path("deletefolder/<folder_id>", views.test, name="delete folder"),
+                  path("deletefile", views.delete_file, name="delete file"),
+                  path("deletefolder", views.delete_folder, name="delete folder"),
 
-                  path("changefilename/<file_id>", views.test, name="change file name"),
-                  path("changefoldername/<folder_id>", views.test, name="change folder name"),
+                  path("changefilename", views.change_file_name, name="change file name"),
+                  path("changefoldername", views.change_folder_name, name="change folder name"),
 
                   # this will create a temporary share url to a file accessible to everyone
                   path("share/<file_id>", views.test, name="share file"),

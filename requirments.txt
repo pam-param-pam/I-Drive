@@ -10,3 +10,4 @@ Redis
 channels-redis
 eventlet
 gevent
+django-cors-headers
