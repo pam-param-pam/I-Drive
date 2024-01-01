@@ -19,7 +19,7 @@ urlpatterns = [
                   path("search/<query>", views.search, name="get m3u8 playlist"),
 
                   path("folder/<folder_id>", views.get_folder, name="get files and folders from a folder id"),
-                  path("getfolders", views.get_folders, name="get files and folders from a folder id"),
+                  path("getfolders", views.get_folder_tree, name="get files and folders from a folder id"),
 
                   path("createfolder", views.create_folder, name="create folder"),
 

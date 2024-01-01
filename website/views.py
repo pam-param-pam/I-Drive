@@ -19,10 +19,12 @@ from website.forms import UploadFileForm
 from website.models import File, Fragment, Folder
 from website.tasks import process_download, handle_uploaded_file, delete_file_task, test_task, delete_folder_task
 from website.utilities.Discord import discord
-from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_folder_tree
+from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_folder_tree, \
+    build_folder_content, create_files_dict
 
 MAX_MB = 25
 MAX_STREAM_MB = 23
+
 
 # TODO return only if ready=true
 # TODO user_id to user lol
@@ -346,6 +348,7 @@ def delete_folder(request):
     except KeyError:
         return HttpResponse(f"bad request", status=404)
 
+
 @api_view(['POST'])  # this should be a post or delete imo
 # @permission_classes([IsAuthenticated])
 def change_file_name(request):
@@ -393,15 +396,15 @@ def change_folder_name(request):
         return HttpResponse(f"bad request", status=404)
 
 
-def get_folders(request):
+def get_folder_tree(request):
     user = request.user
 
     user.id = 1  # todo
     try:
 
-        user_folders = Folder.objects.filter(owner_id=user.id) # todo
+        user_folders = Folder.objects.filter(owner_id=user.id)  # todo
         folder_structure = build_folder_tree(user_folders)
-        return JsonResponse(folder_structure[0], safe=False)
+        return JsonResponse(folder_structure[0])
 
     except (Folder.DoesNotExist, ValidationError):
         return HttpResponse(f"doesn't exist", status=404)
@@ -420,26 +423,25 @@ def get_folder(request, folder_id):
         folder_obj = Folder.objects.get(id=folder_id)
         if folder_obj.owner.id != request.user.id:  # todo fix perms
             return HttpResponse(f"unauthorized", status=403)
-        json_string = create_folder_dict(folder_obj)
+        folder_content = build_folder_content(folder_obj)
 
-        return JsonResponse(json_string)
+        return JsonResponse(folder_content)
 
     except (Folder.DoesNotExist, ValidationError):
         return HttpResponse(f"doesn't exist", status=404)
     except KeyError:
         return HttpResponse(f"bad request", status=404)
 
+
 def search(request, query):
     user = request.user
 
     user.id = 1  # todo
     try:
-        files = File.objects.filter()
-        filtered_files = File.objects.filter(Q(name__icontains=query) | Q(parent__name__icontains=query), owner_id=user.id) # todo fix id
-
-        print(filtered_files)
-
-        return HttpResponse(filtered_files, status=200)
+        filtered_files = File.objects.filter(Q(name__icontains=query) | Q(parent__name__icontains=query),
+                                             owner_id=user.id)  # todo fix id
+        files = create_files_dict(filtered_files)
+        return JsonResponse(files, safe=False)
 
     except (Folder.DoesNotExist, ValidationError):
         return HttpResponse(f"doesn't exist", status=404)

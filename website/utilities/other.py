@@ -39,18 +39,8 @@ class UUIDEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def create_folder_dict(folder_obj):
-    file_children = File.objects.filter(parent=folder_obj)
-    folder_children = Folder.objects.filter(parent=folder_obj)
-    file_dicts = create_file_dict(file_children)
-    folder_dicts = create_fragmented_folder_dict(folder_children)
-    json_string = {"folder": True, "name": folder_obj.name, "id": folder_obj.id,
-                   "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
-                   "viewers": [], "children": file_dicts + folder_dicts}
-    return json_string
 
-
-def create_file_dict(file_list):
+def create_files_dict(file_list):
     file_dict_list = []
 
     for file_obj in file_list:
@@ -58,6 +48,7 @@ def create_file_dict(file_list):
             'folder': False,
             'id': str(file_obj.id),
             'name': file_obj.name,
+            'parent_id': file_obj.parent_id,
             'extension': file_obj.extension,
             'streamable': file_obj.streamable,
             'size': file_obj.size,
@@ -74,25 +65,50 @@ def create_file_dict(file_list):
     return file_dict_list
 
 
-def create_fragmented_folder_dict(folder_list):
-    folder_dict_list = []
-    for folder_obj in folder_list:
-        folder_dict = {
-            'folder': True,
-            'id': str(folder_obj.id),
-            'name': folder_obj.name,
-            'parent_id': folder_obj.parent_id
+def build_folder_tree(folder_objs, parent_folder=None):
+    folder_tree = []
 
+    # Get all folders with the specified parent folder
+    child_folders = folder_objs.filter(parent=parent_folder)
+
+    for folder in child_folders:
+
+        folder_data = {
+            'id': str(folder.id),
+            'name': folder.name,
+            'owner': {"name": folder.owner.username, "id": folder.owner.id},
+            'parent_id': folder.parent_id,
+            'children': build_folder_tree(folder_objs, folder),
         }
 
-        folders = Folder.objects.filter(parent_id=folder_obj.id)
-        files = File.objects.filter(parent=folder_obj.id)
+        folder_tree.append(folder_data)
 
-        if not files and not folders:
-            folder_dict['empty'] = True
-        else:
-            folder_dict['empty'] = False
+    return folder_tree
 
-        folder_dict_list.append(folder_dict)
-    print(folder_dict_list)
-    return folder_dict_list
+
+def create_fragmented_folder_dict(folder_children):
+    folder_list = []
+    for folder in folder_children:
+        folder_data = {
+            'id': str(folder.id),
+            'name': folder.name,
+            'owner': {"name": folder.owner.username, "id": folder.owner.id},
+            'parent_id': folder.parent_id,
+            'folder': True,
+        }
+        folder_list.append(folder_data)
+    return folder_list
+
+
+def build_folder_content(folder_obj):
+    file_children = File.objects.filter(parent=folder_obj)
+    folder_children = Folder.objects.filter(parent=folder_obj)
+
+    file_dicts = create_files_dict(file_children)
+    folder_dicts = create_fragmented_folder_dict(folder_children)
+
+    json_string = {"folder": True, "name": folder_obj.name, "id": folder_obj.id,
+                   "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
+                   "viewers": [], "children": file_dicts + folder_dicts}
+    return json_string
+
