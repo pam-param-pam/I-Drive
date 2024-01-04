@@ -14,6 +14,7 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
+from website.Handlers import ProgressBarUploadHandler
 from website.decorators import view_cleanup
 from website.forms import UploadFileForm
 from website.models import File, Fragment, Folder
@@ -33,7 +34,7 @@ MAX_STREAM_MB = 23
 @api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
 # @permission_classes([IsAuthenticated])
 def upload_file(request):
-    # request.upload_handlers.insert(0, ProgressBarUploadHandler(request)) #TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
+    request.upload_handlers.insert(0, ProgressBarUploadHandler(request)) #TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
     return _upload_file(request)
 
 

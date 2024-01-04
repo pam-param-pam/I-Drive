@@ -10,6 +10,7 @@ class Folder(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, null=False)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     maintainer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
@@ -51,7 +52,7 @@ class File(models.Model):
     size = models.BigIntegerField()
     key = models.BinaryField()
     encrypted_size = models.BigIntegerField()
-    uploaded_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now)
     m3u8_message_id = models.URLField(null=True, blank=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE)
     ready = models.BooleanField(default=False)

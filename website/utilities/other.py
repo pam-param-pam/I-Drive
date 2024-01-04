@@ -39,7 +39,6 @@ class UUIDEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-
 def create_files_dict(file_list):
     file_dict_list = []
 
@@ -53,7 +52,7 @@ def create_files_dict(file_list):
             'streamable': file_obj.streamable,
             'size': file_obj.size,
             'encrypted_size': file_obj.encrypted_size,
-            'uploaded_at': file_obj.uploaded_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
+            'created_at': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
             'ready': file_obj.ready,
             'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
             "maintainers": [],
@@ -72,12 +71,12 @@ def build_folder_tree(folder_objs, parent_folder=None):
     child_folders = folder_objs.filter(parent=parent_folder)
 
     for folder in child_folders:
-
         folder_data = {
             'id': str(folder.id),
             'name': folder.name,
             'owner': {"name": folder.owner.username, "id": folder.owner.id},
             'parent_id': folder.parent_id,
+            'created_at': folder.created_at.strftime('%Y-%m-%d %H:%M'),
             'children': build_folder_tree(folder_objs, folder),
         }
 
@@ -92,6 +91,7 @@ def create_fragmented_folder_dict(folder_children):
         folder_data = {
             'id': str(folder.id),
             'name': folder.name,
+            'created_at': folder.created_at.strftime('%Y-%m-%d %H:%M'),
             'owner': {"name": folder.owner.username, "id": folder.owner.id},
             'parent_id': folder.parent_id,
             'folder': True,
@@ -101,14 +101,13 @@ def create_fragmented_folder_dict(folder_children):
 
 
 def build_folder_content(folder_obj):
-    file_children = File.objects.filter(parent=folder_obj)
+    file_children = File.objects.filter(parent=folder_obj, ready=True)
     folder_children = Folder.objects.filter(parent=folder_obj)
 
     file_dicts = create_files_dict(file_children)
     folder_dicts = create_fragmented_folder_dict(folder_children)
 
-    json_string = {"folder": True, "name": folder_obj.name, "id": folder_obj.id,
+    json_string = {"folder": True, "name": folder_obj.name, "id": folder_obj.id, 'created_at': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
                    "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
                    "viewers": [], "children": file_dicts + folder_dicts}
     return json_string
-

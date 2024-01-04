@@ -32,10 +32,10 @@ class FolderAdmin(admin.ModelAdmin):
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'm3u8_message_id', 'key', 'streamable', 'ready', "uploaded_at", "size", "encrypted_size")
+    readonly_fields = ('id', 'm3u8_message_id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size")
     actions = ['delete_model']
-    ordering = ["uploaded_at"]
-    list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "uploaded_at"]
+    ordering = ["created_at"]
+    list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at"]
     """
     def has_delete_permission(self, request, obj=None):
         # Disable default delete so it's not shown
