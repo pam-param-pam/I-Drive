@@ -1,6 +1,8 @@
+import json
 import os
 import time
 import uuid
+from json import JSONDecodeError
 from wsgiref.util import FileWrapper
 
 import m3u8
@@ -21,7 +23,7 @@ from website.models import File, Fragment, Folder
 from website.tasks import process_download, handle_uploaded_file, delete_file_task, test_task, delete_folder_task
 from website.utilities.Discord import discord
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_folder_tree, \
-    build_folder_content, create_files_dict
+    build_folder_content, create_files_dict, build_response
 
 MAX_MB = 25
 MAX_STREAM_MB = 23
@@ -34,7 +36,8 @@ MAX_STREAM_MB = 23
 @api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
 # @permission_classes([IsAuthenticated])
 def upload_file(request):
-    request.upload_handlers.insert(0, ProgressBarUploadHandler(request)) #TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
+    #request.upload_handlers.insert(0, ProgressBarUploadHandler(
+    #    request))  # TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
     return _upload_file(request)
 
 
@@ -84,7 +87,7 @@ def download(request, file):
         return response
 
     process_download.delay(request.user.id, request.request_id, file_obj.id)
-    return HttpResponse("file is being processed for the download")
+    return JsonResponse(build_response(request.request_id, "file is being download..."))
 
 
 @csrf_protect
@@ -109,7 +112,7 @@ def _upload_file(request):
             handle_uploaded_file.delay(request.user.id, request.request_id, file_id, request_dir, file_dir, file.name,
                                        file.size, folder_id)
 
-            return HttpResponse(f"{request.request_id}", status=200)
+            return JsonResponse(build_response(request.request_id, "file is being uploaded..."), status=200)
 
     else:
         form = UploadFileForm()
@@ -226,9 +229,9 @@ def get_m3u8(request, file_id):
 # @permission_classes([IsAuthenticated])
 def create_folder(request):
     try:
-        name = request.POST['name']
+        name = request.data['name']
 
-        parent = Folder.objects.get(id=request.POST['parent_id'])
+        parent = Folder.objects.get(id=request.data['parent_id'])
 
         user = request.user
 
@@ -253,9 +256,9 @@ def create_folder(request):
 def movefolder(request):
     try:
 
-        folder = Folder.objects.get(id=request.POST['folder_id'])  # folder to be moved
+        folder = Folder.objects.get(id=request.data['folder_id'])  # folder to be moved
 
-        parent = Folder.objects.get(id=request.POST['parent_id'])  # destination folder
+        parent = Folder.objects.get(id=request.data['parent_id'])  # destination folder
 
         user = request.user
 
@@ -284,9 +287,9 @@ def movefolder(request):
 def movefile(request):
     try:
 
-        file = Folder.objects.get(id=request.POST['file_id'])  # file to be moved
+        file = Folder.objects.get(id=request.data['file_id'])  # file to be moved
 
-        parent = Folder.objects.get(id=request.POST['parent_id'])  # destination folder
+        parent = Folder.objects.get(id=request.data['parent_id'])  # destination folder
 
         user = request.user
 
@@ -312,87 +315,66 @@ def movefile(request):
 
 @api_view(['POST'])  # this should be a post or delete imo
 # @permission_classes([IsAuthenticated])
-def delete_file(request):
-    try:
-        file_obj = File.objects.get(id=request.POST['file_id'])  # file to be moved
-        user = request.user
+def delete(request):
 
+
+    try:
+        user = request.user
         user.id = 1  # todo
-        if file_obj.owner.id != user.id:  # owner perms needed
+        obj_id = request.data['id']
+
+        try:
+            obj = Folder.objects.get(id=obj_id)
+        except Folder.DoesNotExist:
+            try:
+                obj = File.objects.get(id=obj_id)
+            except File.DoesNotExist:
+                return HttpResponse(f"doesn't exist", status=404)
+
+        if obj.owner.id != user.id:  # owner perms needed
             return HttpResponse(f"unauthorized", status=403)
 
-        delete_file_task.delay(user.id, request.request_id, file_obj.id)
-        return HttpResponse("file deleted")
+        if isinstance(obj, File):
+            delete_file_task.delay(user.id, request.request_id, obj.id)
+            return JsonResponse(build_response(request.request_id, "file is being deleted..."))
+        elif isinstance(obj, Folder):
+            delete_folder_task.delay(user.id, request.request_id, obj.id)
+            return JsonResponse(build_response(request.request_id, "folder is being deleted..."))
 
-    except (File.DoesNotExist, ValidationError):
-        return HttpResponse(f"doesn't exist", status=404)
-
-
-@api_view(['POST'])  # this should be a post or delete imo
-# @permission_classes([IsAuthenticated])
-def delete_folder(request):
-    try:
-
-        folder_obj = Folder.objects.get(id=request.POST['folder_id'])  # file to be moved
-
-        user = request.user
-
-        user.id = 1  # todo
-
-        if folder_obj.owner.id != request.user.id:  # owner perms needed
-            return HttpResponse(f"unauthorized", status=403)
-
-        delete_folder_task.delay(request.user.id, request.request_id, folder_obj.id)
-        return HttpResponse("folder deleted")
-    except (Folder.DoesNotExist, ValidationError):
+    except ValidationError:
         return HttpResponse(f"doesn't exist", status=404)
     except KeyError:
-        return HttpResponse(f"bad request", status=404)
+        return HttpResponse(f"bad request", status=400)
 
 
 @api_view(['POST'])  # this should be a post or delete imo
 # @permission_classes([IsAuthenticated])
-def change_file_name(request):
+def rename(request):
     try:
-        user = request.user
 
+        user = request.user
         user.id = 1  # todo
 
-        file_obj = File.objects.get(id=request.POST['file_id'])  # file to be moved
-        new_name = request.POST['new_name']
-        if file_obj.owner.id != request.user.id:  # todo fix perms
+        obj_id = request.data['id']
+        new_name = request.data['new_name']
+
+        try:
+            obj = Folder.objects.get(id=obj_id)
+        except Folder.DoesNotExist:
+            try:
+                obj = File.objects.get(id=obj_id)
+            except File.DoesNotExist:
+                return HttpResponse(f"doesn't exist", status=404)
+
+        if obj.owner.id != request.user.id:  # todo fix perms
             return HttpResponse(f"unauthorized", status=403)
 
-        file_obj.name = new_name
-        file_obj.save()
+        obj.name = new_name
+        obj.save()
+
         return HttpResponse(f"Changed name to {new_name}", status=200)
-
-    except (Folder.DoesNotExist, ValidationError):
-        return HttpResponse(f"doesn't exist", status=404)
-    except KeyError:
-        return HttpResponse(f"bad request", status=404)
-
-
-@api_view(['POST'])  # this should be a post or delete imo
-# @permission_classes([IsAuthenticated])
-def change_folder_name(request):
-    try:
-        user = request.user
-
-        user.id = 1  # todo
-
-        folder_obj = Folder.objects.get(id=request.POST['folder_id'])  # file to be moved
-        new_name = request.POST['new_name']
-
-        if folder_obj.owner.id != request.user.id:  # todo fix perms
-            return HttpResponse(f"unauthorized", status=403)
-
-        folder_obj.name = new_name
-        folder_obj.save()
-        return HttpResponse(f"Changed name to {new_name}", status=200)
-
-    except (Folder.DoesNotExist, ValidationError):
-        return HttpResponse(f"doesn't exist", status=404)
+    except ValidationError:
+        return HttpResponse(f"bad request", status=400)
     except KeyError:
         return HttpResponse(f"bad request", status=404)
 

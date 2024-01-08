@@ -111,3 +111,7 @@ def build_folder_content(folder_obj):
                    "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
                    "viewers": [], "children": file_dicts + folder_dicts}
     return json_string
+
+def build_response(task_id, message):
+
+    return {"task_id": task_id, "message": message}

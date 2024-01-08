@@ -26,11 +26,9 @@ urlpatterns = [
                   path("movefolder", views.movefolder, name="move folder"),
                   path("movefile", views.movefile, name="move file"),
 
-                  path("deletefile", views.delete_file, name="delete file"),
-                  path("deletefolder", views.delete_folder, name="delete folder"),
+                  path("delete", views.delete, name="delete file"),
 
-                  path("changefilename", views.change_file_name, name="change file name"),
-                  path("changefoldername", views.change_folder_name, name="change folder name"),
+                  path("rename", views.rename, name="rename file/folder"),
 
                   # this will create a temporary share url to a file accessible to everyone
                   path("share/<file_id>", views.test, name="share file"),
