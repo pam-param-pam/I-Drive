@@ -30,7 +30,10 @@ import Preview from "@/views/files/Preview.vue";
 import Listing from "@/views/files/Listing.vue";
 
 function clean(path) {
-  return path.endsWith("/") ? path.slice(0, -1) : path;
+    console.log("from clean   1 ")
+    return false
+    return path.endsWith("/") ? path.slice(0, -1) : path;
+
 }
 
 export default {
@@ -52,11 +55,11 @@ export default {
   computed: {
     ...mapState(["req", "reload", "loading"]),
     currentView() {
-      if (this.req.type == undefined) {
+      if (this.req.type === undefined) {
         return null;
       }
-
-      if (this.req.isDir) {
+      console.log("req.is dir" + JSON.stringify(this.req))
+      if (! this.req.isDir) {
         return "listing";
       } else if (
         this.req.type === "text" ||
@@ -105,17 +108,22 @@ export default {
       this.error = null;
 
       let url = this.$route.path;
-      if (url === "") url = "/";
+      if (url === "") url = "";
       if (url[0] !== "/") url = "/" + url;
-
+      console.log("url" + url)
       try {
         const res = await api.fetch(url);
+          console.log("from file fetch data -1 ")
 
         if (clean(res.path) !== clean(`/${this.$route.params.pathMatch}`)) {
-          return;
-        }
+            console.log("from file fetch data 0 ")
 
-        this.$store.commit("updateRequest", res);
+            return;
+        }
+          console.log("from file fetch data 1")
+
+
+          this.$store.commit("updateRequest", res);
         document.title = `${res.name} - ${document.title}`;
       } catch (e) {
         this.error = e;

@@ -4,26 +4,33 @@ import store from "@/store";
 import { upload as postTus, useTus } from "./tus";
 
 export async function fetch(url) {
+  console.log("from fetch")
   url = removePrefix(url);
 
-  const res = await fetchURL(`/api/resources${url}`, {});
+  const res = await fetchURL(`/api/getroot`, {});
+  console.log("from fetch after fetchURl")
 
   let data = await res.json();
+  console.log("data" + data)
   data.url = `/files${url}`;
 
   if (data.isDir) {
     if (!data.url.endsWith("/")) data.url += "/";
     data.items = data.items.map((item, index) => {
+      console.log("from fetch map 1")
+
       item.index = index;
       item.url = `${data.url}${encodeURIComponent(item.name)}`;
 
       if (item.isDir) {
         item.url += "/";
       }
+      console.log("from fetch map 2")
 
       return item;
     });
   }
+  console.log("from fetch before return")
 
   return data;
 }
@@ -196,7 +203,7 @@ export function getSubtitlesURL(file) {
 export async function usage(url) {
   url = removePrefix(url);
 
-  const res = await fetchURL(`/api/usage${url}`, {});
+  const res = await fetchURL(`/api/usage`, {});
 
   return await res.json();
 }

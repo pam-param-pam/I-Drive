@@ -117,7 +117,7 @@ export default {
         await auth.login(this.username, this.password, captcha);
         this.$router.push({ path: redirect });
       } catch (e) {
-        if (e.message == 409) {
+        if (e.message === 409) {
           this.error = this.$t("login.usernameTaken");
         } else {
           this.error = this.$t("login.wrongCredentials");

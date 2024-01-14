@@ -15,7 +15,7 @@
   >
     <div>
       <img
-        v-if="readOnly == undefined && type === 'image' && isThumbsEnabled"
+        v-if="readOnly === undefined && type === 'image' && isThumbsEnabled"
         v-lazy="thumbnailUrl"
       />
       <i v-else class="material-icons"></i>
@@ -64,13 +64,13 @@ export default {
     ...mapState(["user", "selected", "req", "jwt"]),
     ...mapGetters(["selectedCount"]),
     singleClick() {
-      return this.readOnly == undefined && this.user.singleClick;
+      return this.readOnly === undefined && this.user.singleClick;
     },
     isSelected() {
       return this.selected.indexOf(this.index) !== -1;
     },
     isDraggable() {
-      return this.readOnly == undefined && this.user.perm.rename;
+      return this.readOnly === undefined && this.user.perm.rename;
     },
     canDrop() {
       if (!this.isDir || this.readOnly !== undefined) return false;
@@ -98,10 +98,10 @@ export default {
   methods: {
     ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
     humanSize: function () {
-      return this.type == "invalid_link" ? "invalid link" : filesize(this.size);
+      return this.type === "invalid_link" ? "invalid link" : filesize(this.size);
     },
     humanTime: function () {
-      if (this.readOnly == undefined && this.user.dateFormat) {
+      if (this.readOnly === undefined && this.user.dateFormat) {
         return moment(this.modified).format("L LT");
       }
       return moment(this.modified).fromNow();
@@ -176,8 +176,8 @@ export default {
         this.$store.commit("showHover", {
           prompt: "replace-rename",
           confirm: (event, option) => {
-            overwrite = option == "overwrite";
-            rename = option == "rename";
+            overwrite = option === "overwrite";
+            rename = option === "rename";
 
             event.preventDefault();
             this.$store.commit("closeHovers");
@@ -224,7 +224,7 @@ export default {
         }
 
         for (; fi <= la; fi++) {
-          if (this.$store.state.selected.indexOf(fi) == -1) {
+          if (this.$store.state.selected.indexOf(fi) === -1) {
             this.addSelected(fi);
           }
         }

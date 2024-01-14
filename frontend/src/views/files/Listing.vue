@@ -448,7 +448,7 @@ export default {
 
       // Del!
       if (event.keyCode === 46) {
-        if (!this.user.perm.delete || this.selectedCount == 0) return;
+        if (!this.user.perm.delete || this.selectedCount === 0) return;
 
         // Show delete prompt.
         this.$store.commit("showHover", "delete");
@@ -518,7 +518,7 @@ export default {
         });
       }
 
-      if (items.length == 0) {
+      if (items.length === 0) {
         return;
       }
 
@@ -568,7 +568,7 @@ export default {
         };
       }
 
-      if (this.$store.state.clipboard.path == this.$route.path) {
+      if (this.$store.state.clipboard.path === this.$route.path) {
         action(false, true);
 
         return;
@@ -583,8 +583,8 @@ export default {
         this.$store.commit("showHover", {
           prompt: "replace-rename",
           confirm: (event, option) => {
-            overwrite = option == "overwrite";
-            rename = option == "rename";
+            overwrite = option === "overwrite";
+            rename = option === "rename";
 
             event.preventDefault();
             this.$store.commit("closeHovers");

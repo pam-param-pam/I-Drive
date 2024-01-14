@@ -6,7 +6,7 @@ function loading(button) {
     return;
   }
 
-  if (el.innerHTML == "autorenew" || el.innerHTML == "done") {
+  if (el.innerHTML === "autorenew" || el.innerHTML === "done") {
     return;
   }
 

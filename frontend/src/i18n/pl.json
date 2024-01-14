@@ -42,7 +42,9 @@
   "errors": {
     "forbidden": "Nie posiadasz uprawnień potrzebnych, by uzyskać do tego dostęp.",
     "internal": "Pojawił się poważny problem.",
-    "notFound": "Ten adres nie jest poprawny."
+    "notFound": "Ten adres nie jest poprawny.",
+    "connection": "Serwer nie odpowiada."
+
   },
   "files": {
     "body": "Body",

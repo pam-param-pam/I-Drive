@@ -24,15 +24,11 @@ export async function fetchURL(url, opts, auth = true) {
     throw error;
   }
 
-  if (auth && res.headers.get("X-Renew-Token") === "true") {
-    await renew(store.state.jwt);
-  }
-
   if (res.status < 200 || res.status > 299) {
     const error = new Error(await res.text());
     error.status = res.status;
 
-    if (auth && res.status == 401) {
+    if (auth && res.status === 401) {
       logout();
     }
 

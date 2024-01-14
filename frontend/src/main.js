@@ -18,25 +18,12 @@ async function start() {
     if (loginPage) {
       await validateLogin();
     } else {
-      await login("", "", "");
+      await login("", "",);
     }
   } catch (e) {
     console.log(e);
   }
 
-  if (recaptcha) {
-    await new Promise((resolve) => {
-      const check = () => {
-        if (typeof window.grecaptcha === "undefined") {
-          setTimeout(check, 100);
-        } else {
-          resolve();
-        }
-      };
-
-      check();
-    });
-  }
 
   new Vue({
     el: "#app",

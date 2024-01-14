@@ -44,7 +44,7 @@ const mutations = {
       state.user = null;
       return;
     }
-
+    console.log(state.user)
     let locale = value.locale;
 
     if (locale === "") {
