@@ -1,9 +1,8 @@
 from django.contrib import admin
 from django.template.defaultfilters import filesizeformat
 
-from .models import Fragment, Folder, File
+from .models import Fragment, Folder, File, UserSettings, UserPerms
 from website.tasks import delete_file_task
-
 
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
@@ -56,3 +55,7 @@ class FileAdmin(admin.ModelAdmin):
 
     readable_size.short_description = 'SIZE'
     readable_encrypted_size.short_description = 'ENCRYPTED SIZE'
+
+
+admin.site.register(UserSettings)
+admin.site.register(UserPerms)

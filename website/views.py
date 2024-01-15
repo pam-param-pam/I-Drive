@@ -19,11 +19,11 @@ from rest_framework.throttling import UserRateThrottle
 from website.Handlers import ProgressBarUploadHandler
 from website.decorators import view_cleanup
 from website.forms import UploadFileForm
-from website.models import File, Fragment, Folder
+from website.models import File, Fragment, Folder, UserPerms, UserSettings
 from website.tasks import process_download, handle_uploaded_file, delete_file_task, test_task, delete_folder_task
 from website.utilities.Discord import discord
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_folder_tree, \
-    build_folder_content, create_files_dict, build_response
+    build_folder_content, create_files_dict, build_response, get_folder_path
 
 MAX_MB = 25
 MAX_STREAM_MB = 23
@@ -36,8 +36,9 @@ MAX_STREAM_MB = 23
 @api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
 # @permission_classes([IsAuthenticated])
 def upload_file(request):
-    #request.upload_handlers.insert(0, ProgressBarUploadHandler(
+    # request.upload_handlers.insert(0, ProgressBarUploadHandler(
     #    request))  # TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
+
     return _upload_file(request)
 
 
@@ -123,6 +124,10 @@ def _upload_file(request):
 # @permission_classes([IsAuthenticated])
 @view_cleanup
 def stream_key(request, file_id):
+    print(file_id)
+
+    file_id = file_id.replace(".key", "")
+    print(file_id)
     try:
         file_obj = File.objects.get(id=file_id)
     except (File.DoesNotExist, ValidationError):
@@ -171,12 +176,12 @@ def process_m3u8(request_id, file_obj):
                 file.write(chunk)
 
     playlist = m3u8.load(m3u8_file_path)
-    new_key = m3u8.Key(method="AES-128", base_uri=f"https://pamparampam.dev/stream/{file_obj.id}/key",
+    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/stream_key/{file_obj.id}.key",
                        # TODO change it back later
-                       uri=f"https://pamparampam.dev/stream/{file_obj.id}/key")
-    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/stream/{file_obj.id}/key",
+                       uri=f"https://pamparampam.dev/stream_key/{file_obj.id}.key")
+    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/stream_key/{file_obj.id}.key",
                        # TODO change it back later
-                       uri=f"http://127.0.0.1:8000/stream/{file_obj.id}/key")
+                       uri=f"http://127.0.0.1:8000/stream_key/{file_obj.id}.key")
     fragments = Fragment.objects.filter(file_id=file_obj).order_by('sequence')
     for fragment, segment in zip(fragments, playlist.segments.by_key(playlist.keys[-1])):
         url = discord.get_file_url(fragment.message_id)
@@ -201,6 +206,10 @@ def test(request):
 # @permission_classes([IsAuthenticated])
 @view_cleanup
 def get_m3u8(request, file_id):
+    print(file_id)
+
+    file_id = file_id.replace(".m3u8", "")
+    print(file_id)
     try:
         file_obj = File.objects.get(id=file_id)
     except (File.DoesNotExist, ValidationError):
@@ -316,8 +325,6 @@ def movefile(request):
 @api_view(['POST'])  # this should be a post or delete imo
 # @permission_classes([IsAuthenticated])
 def delete(request):
-
-
     try:
         user = request.user
         user.id = 1  # todo
@@ -379,6 +386,8 @@ def rename(request):
         return HttpResponse(f"bad request", status=404)
 
 
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
 def get_folder_tree(request):
     user = request.user
 
@@ -397,6 +406,8 @@ def get_folder_tree(request):
         return HttpResponse(f"bad request", status=404)
 
 
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
 def get_folder(request, folder_id):
     user = request.user
 
@@ -416,6 +427,8 @@ def get_folder(request, folder_id):
         return HttpResponse(f"bad request", status=404)
 
 
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
 def search(request, query):
     user = request.user
 
@@ -430,3 +443,107 @@ def search(request, query):
         return HttpResponse(f"doesn't exist", status=404)
     except KeyError:
         return HttpResponse(f"bad request", status=404)
+
+
+
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def usage(request):
+    user = request.user
+
+    user.id = 1  # todo
+    try:
+        used_size = 0
+        used_encrypted_size = 0
+        files = File.objects.filter(owner_id=user.id)
+        for file in files:
+            used_encrypted_size += file.encrypted_size
+            used_size += file.size
+        return JsonResponse({"total": used_encrypted_size, "used": used_size}, status=200)
+
+    except (Folder.DoesNotExist, ValidationError):
+        return HttpResponse(f"doesn't exist", status=404)
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_root(request):
+    user = request.user
+
+    user.id = 1  # todo
+    try:
+        folder_obj = Folder.objects.get(parent=None, owner_id=user.id)
+        folder_content = build_folder_content(folder_obj)
+
+        return JsonResponse(folder_content, safe=False)
+    except (Folder.DoesNotExist, ValidationError):
+        return HttpResponse(f"doesn't exist", status=404)
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_breadcrumbs(request, folder_id):
+    try:
+        user = request.user  # todo
+        user.id = 1
+
+        user_folders = Folder.objects.filter(owner_id=user.id)  # todo
+        folder_structure = build_folder_tree(user_folders)
+        folder_path = get_folder_path(folder_id, folder_structure[0])
+
+        return JsonResponse(folder_path, safe=False)
+    except KeyError:
+        return HttpResponse(f"bad request", status=400)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def users_me(request):
+    user = request.user
+    user.id = 1  # todo
+    perms = UserPerms.objects.get(user_id=user.id)
+    settings = UserSettings.objects.get(user_id=user.id)
+
+    response = {"id": user.id, "name": user.username,
+                "perm": {"admin": perms.admin, "execute": perms.execute, "create": perms.create, "rename": perms.rename,
+                         "modify": perms.modify, "delete": perms.delete, "share": perms.share,
+                         "download": perms.download},
+                "locale": settings.locale, "hideDotFiles": settings.hide_dotfiles,
+                "dateFormat": settings.date_format, "singleClick": settings.single_click,
+                "viewMode": settings.view_mode, "sorting_by": settings.sorting_by}
+
+    return JsonResponse(response, safe=False, status=200)
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+def update_settings(request):
+
+    user = request.user
+    user.id = 1  # todo
+
+    locale = request.data.get('locale')
+    hideDotFiles = request.data.get('hideDotFiles')
+    singleClick = request.data.get('singleClick')
+    dateFormat = request.data.get('dateFormat')
+    viewMode = request.data.get('viewMode')
+    sorting_by = request.data.get('sorting_by')
+
+    settings = UserSettings.objects.get(user_id=user.id)
+
+    if locale in ["pl", "en"]:
+        settings.locale = locale
+    if isinstance(dateFormat, bool):
+        settings.dateFormat = dateFormat
+    if isinstance(hideDotFiles, bool):
+        settings.hideDotFiles = hideDotFiles
+    if isinstance(singleClick, bool):
+        settings.singleClick = singleClick
+    if viewMode in ["list", "gallery", "mosaic gallery"]:
+        settings.viewMode = viewMode
+    if sorting_by in ["name", "size", "mosaic gallery"]:
+        settings.viewMode = viewMode
+
+    return HttpResponse(status=200)
+
+
+

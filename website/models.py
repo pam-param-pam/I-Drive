@@ -3,6 +3,7 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 from django.utils import timezone
 
 
@@ -69,6 +70,47 @@ class File(models.Model):
         if self.encrypted_size is None:
             self.encrypted_size = self.size
         super(File, self).save(*args, **kwargs)
+
+
+class UserSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    sorting_by = models.TextField(max_length=50, null=False, default="name")
+    locale = models.TextField(max_length=50, null=False, default="en")
+    view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
+    date_format = models.BooleanField(default=False)
+    hide_dotfiles = models.BooleanField(default=False)
+    single_click = models.BooleanField(default=False)
+
+
+    def __str__(self):
+        return self.user.username + "'s settings"
+
+    def create_user_profile(sender, instance, created, **kwargs):
+        if created:
+            profile, created = UserSettings.objects.get_or_create(user=instance)
+
+
+class UserPerms(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    admin = models.BooleanField(default=False)
+    execute = models.BooleanField(default=True)
+    create = models.BooleanField(default=True)
+    modify = models.BooleanField(default=True)
+    rename = models.BooleanField(default=True)
+    delete = models.BooleanField(default=True)
+    share = models.BooleanField(default=True)
+    download = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.user.username + "'s perms"
+
+    def create_user_perms(sender, instance, created, **kwargs):
+        if created:
+            profile, created = UserPerms.objects.get_or_create(user=instance)
+
+
+post_save.connect(UserPerms.create_user_perms, sender=User)
 
 
 class Fragment(models.Model):

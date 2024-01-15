@@ -44,7 +44,7 @@ def create_files_dict(file_list):
 
     for file_obj in file_list:
         file_dict = {
-            'folder': False,
+            'isDir': False,
             'id': str(file_obj.id),
             'name': file_obj.name,
             'parent_id': file_obj.parent_id,
@@ -94,7 +94,7 @@ def create_fragmented_folder_dict(folder_children):
             'created_at': folder.created_at.strftime('%Y-%m-%d %H:%M'),
             'owner': {"name": folder.owner.username, "id": folder.owner.id},
             'parent_id': folder.parent_id,
-            'folder': True,
+            'isDir': True,
         }
         folder_list.append(folder_data)
     return folder_list
@@ -107,7 +107,10 @@ def build_folder_content(folder_obj):
     file_dicts = create_files_dict(file_children)
     folder_dicts = create_fragmented_folder_dict(folder_children)
 
-    json_string = {"folder": True, "name": folder_obj.name, "id": folder_obj.id, 'created_at': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
+    json_string = {"sorting": {
+                "by": "name",
+                "asc": False
+            }, "isDir": True, "name": folder_obj.name, "id": folder_obj.id, 'created_at': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
                    "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
                    "viewers": [], "children": file_dicts + folder_dicts}
     return json_string
@@ -115,3 +118,20 @@ def build_folder_content(folder_obj):
 def build_response(task_id, message):
 
     return {"task_id": task_id, "message": message}
+def get_folder_path(folder_id, folder_structure, path=None):
+    if path is None:
+        path = []
+
+    for folder in folder_structure['children']:
+        if folder['id'] == folder_id:
+            # Found the folder, add it to the path
+            path.append(folder)
+            return path
+        elif folder['children']:
+            # Recursively search in children
+            result = get_folder_path(folder_id, folder, path + [folder])
+            if result:
+                return result
+
+    # Folder ID not found in the current folder structure
+    raise KeyError

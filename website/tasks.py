@@ -69,7 +69,9 @@ def delete_file_task(user, request_id, file_id):
 
         file_obj.delete()
         send_message(f"Deleted!", user, True, request_id)
-    except Exception:
+    except Exception as e:
+        send_message(str(e), False, user, request_id)
+
         traceback.print_exc()
 
 @app.task
@@ -89,12 +91,16 @@ def delete_folder_task(user, request_id, folder_id):
 
         folder_obj.delete()
         send_message(f"Deleted!", user, True, request_id)
-    except Exception:
+    except Exception as e:
+        send_message(str(e), False, user, request_id)
+
         traceback.print_exc()
 
 
 def upload_files_from_folder(user, request_id, path, file_obj):
+
     send_message(f"Uploading file...", False, user, request_id)
+
     file_count = len(os.listdir(path))
     for i, filename in enumerate(sorted(os.listdir(path)), start=1):
 
@@ -174,7 +180,9 @@ def process_download(user, request_id, file_id):
             merge.manfilename = "0"  # handle manifest UwU
             merge.merge(cleanup=True, key=file_obj.key, user=user, request_id=request_id, callback=merge_callback)
 
-    except Exception:
+    except Exception as e:
+        send_message(str(e), False, user, request_id)
+
         traceback.print_exc()
     finally:
         shutil.rmtree(request_dir)
@@ -284,7 +292,9 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
         file_obj.save()
         send_message(f"File uploaded!", True, user, request_id)
 
-    except Exception:
+    except Exception as e:
+        send_message(str(e), False, user, request_id)
+
         traceback.print_exc()
 
     finally:
