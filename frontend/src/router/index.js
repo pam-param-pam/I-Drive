@@ -65,6 +65,7 @@ const router = new Router({
             requiresAuth: true,
           },
         },
+
         {
           path: "/settings",
           name: "Settings",

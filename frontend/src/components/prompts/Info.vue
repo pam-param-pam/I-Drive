@@ -24,7 +24,7 @@
       </div>
 
       <p v-if="selected.length < 2" :title="modTime">
-        <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime }}
+        <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime }}
       </p>
 
       <template v-if="dir && selected.length === 0">

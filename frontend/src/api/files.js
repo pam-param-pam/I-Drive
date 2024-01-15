@@ -3,15 +3,26 @@ import { baseURL } from "@/utils/constants";
 import store from "@/store";
 import { upload as postTus, useTus } from "./tus";
 
+export function getImage(file) {
+  return undefined;
+}
+
+
 export async function fetch(url) {
   console.log("from fetch")
-  url = removePrefix(url);
+  if (url === "/files/") {
+    url = "/api/getroot"
+  }
+  else {
+    url = "/api" + url.replace("/files", "")
 
-  const res = await fetchURL(`/api/getroot`, {});
+  }
+  const res = await fetchURL(url, {});
   console.log("from fetch after fetchURl")
 
   let data = await res.json();
   console.log("data" + data)
+  /*
   data.url = `/files${url}`;
 
   if (data.isDir) {
@@ -30,6 +41,8 @@ export async function fetch(url) {
       return item;
     });
   }
+
+   */
   console.log("from fetch before return")
 
   return data;
@@ -200,10 +213,17 @@ export function getSubtitlesURL(file) {
   return subtitles;
 }
 
-export async function usage(url) {
-  url = removePrefix(url);
+export async function usage() {
 
   const res = await fetchURL(`/api/usage`, {});
+
+  return await res.json();
+}
+export async function breadcrumbs(folder_id) {
+  if (folder_id === "/files/") {
+      return []
+  }
+  const res = await fetchURL(`/api/breadcrumbs/${folder_id}`, {});
 
   return await res.json();
 }

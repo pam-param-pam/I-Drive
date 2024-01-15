@@ -5,7 +5,7 @@ export async function getAll() {
 }
 
 export async function get(id) {
-  return fetchJSON(`/api/users/${id}`, {});
+  return fetchJSON(`/api/users/me`, {});
 }
 
 export async function create(user) {

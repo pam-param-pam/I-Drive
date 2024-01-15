@@ -14,22 +14,22 @@
     :aria-selected="isSelected"
   >
     <div>
-      <img
-        v-if="readOnly === undefined && type === 'image' && isThumbsEnabled"
-        v-lazy="thumbnailUrl"
-      />
-      <i v-else class="material-icons"></i>
+
+      <i class="material-icons"></i>
     </div>
 
     <div>
       <p class="name">{{ name }}</p>
 
-      <p v-if="isDir" class="size" data-order="-1">&mdash;</p>
-      <p v-else class="size" :data-order="humanSize()">{{ humanSize() }}</p>
 
-      <p class="modified">
-        <time :datetime="modified">{{ humanTime() }}</time>
+      <p v-if="isDir" class="size" data-order="-1">&mdash;</p>
+      <p v-else class="size" :data-order="size">{{ humanSize() }}</p>
+
+
+      <p class="created">
+      <time :datetime="created">{{ humanTime() }}</time>
       </p>
+
     </div>
   </div>
 </template>
@@ -43,6 +43,7 @@ import { files as api } from "@/api";
 import * as upload from "@/utils/upload";
 
 export default {
+
   name: "item",
   data: function () {
     return {
@@ -51,20 +52,40 @@ export default {
   },
   props: [
     "name",
+    "id",
+    "extension",
+    "streamable",
+    "ready",
+    "owner",
+    "encrypted_size",
+    "parent_id",
     "isDir",
-    "url",
-    "type",
     "size",
-    "modified",
     "index",
     "readOnly",
-    "path",
+    "created",
   ],
   computed: {
-    ...mapState(["user", "selected", "req", "jwt"]),
+    ...mapState(["user", "selected", "req"]),
     ...mapGetters(["selectedCount"]),
     singleClick() {
       return this.readOnly === undefined && this.user.singleClick;
+    },
+    type() {
+        if (this.extension === ".mp4") {
+            return "video";
+        }
+        if (this.extension === ".mp3") {
+            return "song";
+        }
+        if (this.extension === ".txt") {
+            return "text";
+        }
+        if (this.extension === ".jpg" || this.extension === ".png") {
+            return "image";
+        }
+
+        return "unknown";
     },
     isSelected() {
       return this.selected.indexOf(this.index) !== -1;
@@ -83,28 +104,21 @@ export default {
 
       return true;
     },
-    thumbnailUrl() {
-      const file = {
-        path: this.path,
-        modified: this.modified,
-      };
 
-      return api.getPreviewURL(file, "thumb");
-    },
-    isThumbsEnabled() {
-      return enableThumbs;
-    },
   },
   methods: {
     ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
     humanSize: function () {
       return this.type === "invalid_link" ? "invalid link" : filesize(this.size);
     },
+    humanEncyptedSize: function () {
+        return this.type === "invalid_link" ? "invalid link" : filesize(this.encrypted_size);
+    },
     humanTime: function () {
       if (this.readOnly === undefined && this.user.dateFormat) {
-        return moment(this.modified).format("L LT");
+        return moment(this.created).format("L LT");
       }
-      return moment(this.modified).fromNow();
+      return moment(this.created).fromNow();
     },
     dragStart: function () {
       if (this.selectedCount === 0) {
@@ -242,7 +256,12 @@ export default {
       this.addSelected(this.index);
     },
     open: function () {
-      this.$router.push({ path: this.url });
+      if (this.isDir)  {
+          this.$router.push({ path: `/folder/${this.id}` });
+      }
+      else {
+          this.$router.push({ path: `/preview/${this.id}` });
+      }
     },
   },
 };

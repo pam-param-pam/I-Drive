@@ -82,9 +82,7 @@
 
     <div
       class="credits"
-      v-if="
-        $router.currentRoute.path.includes('/files/') && !disableUsedPercentage
-      "
+
       style="width: 90%; margin: 2em 2.5em 3em 2.5em"
     >
       <progress-bar :val="usage.usedPercentage" size="small"></progress-bar>
@@ -99,10 +97,9 @@
           v-else
           rel="noopener noreferrer"
           target="_blank"
-          href="https://github.com/filebrowser/filebrowser"
-          >File Browser</a
+          href="https://github.com/pam-param-pam/Disney-Plus-api-wrapper"
+          >File Browser {{ version }}</a
         >
-        <span> {{ version }}</span>
       </span>
       <span>
         <a @click="help">{{ $t("sidebar.help") }}</a>
@@ -146,15 +143,13 @@ export default {
   asyncComputed: {
     usage: {
       async get() {
-        let path = this.$route.path.endsWith("/")
-          ? this.$route.path
-          : this.$route.path + "/";
+
         let usageStats = { used: 0, total: 0, usedPercentage: 0 };
         if (this.disableUsedPercentage) {
           return usageStats;
         }
         try {
-          let usage = await api.usage(path);
+          let usage = await api.usage();
           usageStats = {
             used: prettyBytes(usage.used, { binary: true }),
             total: prettyBytes(usage.total, { binary: true }),
@@ -167,7 +162,7 @@ export default {
       },
       default: { used: "0 B", total: "0 B", usedPercentage: 0 },
       shouldUpdate() {
-        return this.$router.currentRoute.path.includes("/files/");
+        return this.$router.currentRoute.path.includes("/files/") || this.$router.currentRoute.path.includes("/settings/");
       },
     },
   },

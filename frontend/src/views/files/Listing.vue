@@ -126,7 +126,7 @@
       </h2>
     </div>
     <template v-else>
-      <div v-if="req.numDirs + req.numFiles == 0">
+      <div v-if="dirsSize + filesSize === 0">
         <h2 class="message">
           <i class="material-icons">sentiment_dissatisfied</i>
           <span>{{ $t("files.lonely") }}</span>
@@ -182,54 +182,62 @@
                 <span>{{ $t("files.size") }}</span>
                 <i class="material-icons">{{ sizeIcon }}</i>
               </p>
+
               <p
-                :class="{ active: modifiedSorted }"
-                class="modified"
+                :class="{ active: createdSorted }"
+                class="created"
                 role="button"
                 tabindex="0"
-                @click="sort('modified')"
-                :title="$t('files.sortByLastModified')"
-                :aria-label="$t('files.sortByLastModified')"
+                @click="sort('created')"
+                :title="$t('files.sortByCreated')"
+                :aria-label="$t('files.sortByCreated')"
               >
-                <span>{{ $t("files.lastModified") }}</span>
-                <i class="material-icons">{{ modifiedIcon }}</i>
+                <span>{{ $t("files.created") }}</span>
+                <i class="material-icons">{{ createdIcon }}</i>
               </p>
             </div>
           </div>
         </div>
 
-        <h2 v-if="req.numDirs > 0">{{ $t("files.folders") }}</h2>
-        <div v-if="req.numDirs > 0">
+        <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
+        <div v-if="dirsSize > 0">
           <item
-            v-for="item in dirs"
-            :key="base64(item.name)"
-            v-bind:index="item.index"
-            v-bind:name="item.name"
-            v-bind:isDir="item.isDir"
-            v-bind:url="item.url"
-            v-bind:modified="item.modified"
-            v-bind:type="item.type"
-            v-bind:size="item.size"
-            v-bind:path="item.path"
+          v-for="(item, index) in dirs" :key="item.id"
+          :id="item.id"
+          :name="item.name"
+          :isDir="item.isDir"
+          :created="item.created_at"
+          :size="item.size"
+          :extension="item.extension"
+          :streamable="item.streamable"
+          :ready="item.ready"
+          :owner="item.owner"
+          :encrypted_size="item.encrypted_size"
+          :parent_id="item.parent_id"
+          :index="index"
           >
           </item>
         </div>
 
-        <h2 v-if="req.numFiles > 0">{{ $t("files.files") }}</h2>
-        <div v-if="req.numFiles > 0">
+        <h2 v-if="filesSize > 0">{{ $t("files.files") }}</h2>
+        <div v-if="filesSize > 0">
+
           <item
-            v-for="item in files"
-            :key="base64(item.name)"
-            v-bind:index="item.index"
-            v-bind:name="item.name"
-            v-bind:isDir="item.isDir"
-            v-bind:url="item.url"
-            v-bind:modified="item.modified"
-            v-bind:type="item.type"
-            v-bind:size="item.size"
-            v-bind:path="item.path"
-          >
-          </item>
+            v-for="(item, index) in files" :key="item.id"
+            :name="item.name"
+            :id="item.id"
+            :isDir="item.isDir"
+            :created="item.created_at"
+            :size="item.size"
+            :extension="item.extension"
+            :streamable="item.streamable"
+            :ready="item.ready"
+            :owner="item.owner"
+            :encrypted_size="item.encrypted_size"
+            :parent_id="item.parent_id"
+            :index="dirsSize + index"
+          ></item>
+
         </div>
 
         <input
@@ -306,8 +314,8 @@ export default {
     sizeSorted() {
       return this.req.sorting.by === "size";
     },
-    modifiedSorted() {
-      return this.req.sorting.by === "modified";
+    createdSorted() {
+      return this.req.sorting.by === "created";
     },
     ascOrdered() {
       return this.req.sorting.asc;
@@ -316,25 +324,37 @@ export default {
       const dirs = [];
       const files = [];
 
-      this.req.items.forEach((item) => {
+      this.req.children.forEach((item) => {
         if (item.isDir) {
           dirs.push(item);
         } else {
           files.push(item);
+
         }
       });
+      console.log("dirs: " + dirs)
+      console.log("files: " + JSON.stringify(files))
 
       return { dirs, files };
+    },
+    filesSize() {
+        return this.items.files.length
+    },
+    dirsSize() {
+        return this.items.dirs.length
     },
     dirs() {
       return this.items.dirs.slice(0, this.showLimit);
     },
     files() {
+      return this.items.files
+        /*
       let showLimit = this.showLimit - this.items.dirs.length;
 
       if (showLimit < 0) showLimit = 0;
-
       return this.items.files.slice(0, showLimit);
+
+         */
     },
     nameIcon() {
       if (this.nameSorted && !this.ascOrdered) {
@@ -350,8 +370,8 @@ export default {
 
       return "arrow_upward";
     },
-    modifiedIcon() {
-      if (this.modifiedSorted && this.ascOrdered) {
+    createdIcon() {
+      if (this.createdSorted && this.ascOrdered) {
         return "arrow_downward";
       }
 
@@ -609,7 +629,7 @@ export default {
       items.style.width = `calc(${100 / columns}% - 1em)`;
     },
     scrollEvent: throttle(function () {
-      const totalItems = this.req.numDirs + this.req.numFiles;
+      const totalItems = this.filesSize + this.dirsSize;
 
       // All items are displayed
       if (this.showLimit >= totalItems) return;
@@ -643,7 +663,7 @@ export default {
     dragLeave() {
       this.dragCounter--;
 
-      if (this.dragCounter == 0) {
+      if (this.dragCounter === 0) {
         this.resetOpacity();
       }
     },
@@ -764,8 +784,8 @@ export default {
         if (this.sizeIcon === "arrow_upward") {
           asc = true;
         }
-      } else if (by === "modified") {
-        if (this.modifiedIcon === "arrow_upward") {
+      } else if (by === "created") {
+        if (this.createdIcon === "arrow_upward") {
           asc = true;
         }
       }
@@ -835,7 +855,6 @@ export default {
       };
 
       const data = {
-        id: this.user.id,
         viewMode: modes[this.user.viewMode] || "list",
       };
 
@@ -861,14 +880,14 @@ export default {
       // Listing element is not displayed
       if (this.$refs.listing == null) return;
 
-      let itemQuantity = this.req.numDirs + this.req.numFiles;
+      let itemQuantity = 11; //todo
       if (itemQuantity > this.showLimit) itemQuantity = this.showLimit;
 
       // How much every listing item affects the window height
       this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity;
     },
     fillWindow(fit = false) {
-      const totalItems = this.req.numDirs + this.req.numFiles;
+      const totalItems = 11; //todo
 
       // More items are displayed than the total
       if (this.showLimit >= totalItems && !fit) return;

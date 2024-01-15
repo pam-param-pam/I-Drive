@@ -9,58 +9,52 @@
       <i class="material-icons">home</i>
     </component>
 
-    <span v-for="(link, index) in items" :key="index">
+    <span v-for="(folder, index) in path" :key="index">
       <span class="chevron"
         ><i class="material-icons">keyboard_arrow_right</i></span
       >
-      <component :is="element" :to="link.url">{{ link.name }}</component>
+      <component :is="element" :to="folder.id">{{ folder.name }}</component>
     </span>
   </div>
 </template>
 
 <script>
+import {files as api} from "@/api/index.js";
+import prettyBytes from "pretty-bytes";
+
 export default {
   name: "breadcrumbs",
   props: ["base", "noLink"],
-  computed: {
-    items() {
-      const relativePath = this.$route.path.replace(this.base, "");
-      let parts = relativePath.split("/");
-
-      if (parts[0] === "") {
-        parts.shift();
-      }
-
-      if (parts[parts.length - 1] === "") {
-        parts.pop();
-      }
-
-      let breadcrumbs = [];
-
-      for (let i = 0; i < parts.length; i++) {
-        if (i === 0) {
-          breadcrumbs.push({
-            name: decodeURIComponent(parts[i]),
-            url: this.base + "/" + parts[i] + "/",
-          });
-        } else {
-          breadcrumbs.push({
-            name: decodeURIComponent(parts[i]),
-            url: breadcrumbs[i - 1].url + parts[i] + "/",
-          });
+    data() {
+        return {
+            path: []
         }
-      }
-
-      if (breadcrumbs.length > 3) {
-        while (breadcrumbs.length !== 4) {
-          breadcrumbs.shift();
-        }
-
-        breadcrumbs[0].name = "...";
-      }
-
-      return breadcrumbs;
     },
+  watch: {
+    $route: "fetchPath",
+    reload: function (value) {
+      if (value === true) {
+        this.fetchPath();
+      }
+    },
+  },
+  methods: {
+    async fetchPath() {
+      let path = [];
+
+      let folder_id = this.$router.currentRoute.path.replace("/files/folder/", "")
+      try {
+          path = await api.breadcrumbs(folder_id);
+
+      } catch (error) {
+          this.$showError(error);
+      }
+      this.path = path
+    },
+  },
+  computed: {
+
+
     element() {
       if (this.noLink !== undefined) {
         return "span";

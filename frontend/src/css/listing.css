@@ -47,7 +47,7 @@ body.rtl #listing {
 }
 
 #listing .item .size,
-#listing .item .modified {
+#listing .item .created {
   font-size: 0.9em;
 }
 
@@ -133,10 +133,10 @@ body.rtl #listing {
 }
 
 #listing.mosaic.gallery .item i {
-    width: 100%;
-    margin-right: 0;
-    font-size: 8em;
-    text-align: center;
+  width: 100%;
+  margin-right: 0;
+  font-size: 8em;
+  text-align: center;
 }
 
 #listing.mosaic.gallery .item img {
@@ -145,7 +145,7 @@ body.rtl #listing {
 }
 
 #listing.gallery .size,
-#listing.gallery .modified {
+#listing.gallery .created {
   display: none;
 }
 

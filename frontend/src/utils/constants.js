@@ -3,6 +3,8 @@ const disableExternal = window.FileBrowser.DisableExternal;
 const disableUsedPercentage = window.FileBrowser.DisableUsedPercentage;
 //const baseURL = window.FileBrowser.BaseURL;
 const baseURL = "http://127.0.0.1:8000"
+//const baseURL = "https://demo.filebrowser.org"
+
 const staticURL = window.FileBrowser.StaticURL;
 const recaptcha = window.FileBrowser.ReCaptcha;
 const recaptchaKey = window.FileBrowser.ReCaptchaKey;
