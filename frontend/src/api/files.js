@@ -9,7 +9,6 @@ export function getImage(file) {
 
 
 export async function fetch(url) {
-  console.log("from fetch")
   if (url === "/files/") {
     url = "/api/getroot"
   }
@@ -18,17 +17,14 @@ export async function fetch(url) {
 
   }
   const res = await fetchURL(url, {});
-  console.log("from fetch after fetchURl")
 
   let data = await res.json();
-  console.log("data" + data)
   /*
   data.url = `/files${url}`;
 
   if (data.isDir) {
     if (!data.url.endsWith("/")) data.url += "/";
     data.items = data.items.map((item, index) => {
-      console.log("from fetch map 1")
 
       item.index = index;
       item.url = `${data.url}${encodeURIComponent(item.name)}`;
@@ -36,14 +32,12 @@ export async function fetch(url) {
       if (item.isDir) {
         item.url += "/";
       }
-      console.log("from fetch map 2")
 
       return item;
     });
   }
 
    */
-  console.log("from fetch before return")
 
   return data;
 }

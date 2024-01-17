@@ -13,30 +13,9 @@ export default {
   data() {
     let dataObj = {
       locales: {
-        he: "he",
-        hu: "hu",
-        ar: "ar",
-        de: "de",
-        el: "el",
         en: "en",
-        es: "es",
-        fr: "fr",
-        is: "is",
-        it: "it",
-        ja: "ja",
-        ko: "ko",
-        "nl-be": "nlBE",
         pl: "pl",
-        "pt-br": "ptBR",
-        pt: "pt",
-        ro: "ro",
-        ru: "ru",
-        sk: "sk",
-        "sv-se": "svSE",
-        tr: "tr",
-        ua: "ua",
-        "zh-cn": "zhCN",
-        "zh-tw": "zhTW",
+
       },
     };
 

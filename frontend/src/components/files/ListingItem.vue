@@ -66,10 +66,27 @@ export default {
     "created",
   ],
   computed: {
-    ...mapState(["user", "selected", "req"]),
+    ...mapState(["user", "perms", "selected", "items"]),
     ...mapGetters(["selectedCount"]),
     singleClick() {
       return this.readOnly === undefined && this.user.singleClick;
+    },
+    item() {
+       return {
+           index: this.index,
+           name: this.name,
+           id: this.id,
+           extension: this.extension,
+           streamable:this.streamable,
+           ready: this.ready,
+           owner: this.owner,
+           encrypted_size: this.encrypted_size,
+           parent_id: this.parent_id,
+           isDir: this.isDir,
+           size: this.size,
+           readOnly: this.readOnly,
+           created: this.created,
+       }
     },
     type() {
         if (this.extension === ".mp4") {
@@ -88,16 +105,18 @@ export default {
         return "unknown";
     },
     isSelected() {
-      return this.selected.indexOf(this.index) !== -1;
+
+      return this.selected.indexOf(this.item) !== -1;
     },
     isDraggable() {
-      return this.readOnly === undefined && this.user.perm.rename;
+      return this.readOnly === undefined && this.perms.rename;
     },
     canDrop() {
       if (!this.isDir || this.readOnly !== undefined) return false;
 
+
       for (let i of this.selected) {
-        if (this.req.items[i].url === this.url) {
+        if (this.items[i] === this.item) {
           return false;
         }
       }
@@ -111,9 +130,6 @@ export default {
     humanSize: function () {
       return this.type === "invalid_link" ? "invalid link" : filesize(this.size);
     },
-    humanEncyptedSize: function () {
-        return this.type === "invalid_link" ? "invalid link" : filesize(this.encrypted_size);
-    },
     humanTime: function () {
       if (this.readOnly === undefined && this.user.dateFormat) {
         return moment(this.created).format("L LT");
@@ -122,13 +138,13 @@ export default {
     },
     dragStart: function () {
       if (this.selectedCount === 0) {
-        this.addSelected(this.index);
+        this.addSelected(this.item);
         return;
       }
 
       if (!this.isSelected) {
         this.resetSelected();
-        this.addSelected(this.index);
+        this.addSelected(this.item);
       }
     },
     dragOver: function (event) {
@@ -146,6 +162,7 @@ export default {
       el.style.opacity = 1;
     },
     drop: async function (event) {
+        //nie kumam co tu sie dzieje LOL
       if (!this.canDrop) return;
       event.preventDefault();
 
@@ -161,11 +178,15 @@ export default {
       let items = [];
 
       for (let i of this.selected) {
+          //xdddddddddddd
+          /*
         items.push({
           from: this.req.items[i].url,
           to: this.url + encodeURIComponent(this.req.items[i].name),
           name: this.req.items[i].name,
         });
+
+           */
       }
 
       // Get url from ListingItem instance
@@ -213,15 +234,15 @@ export default {
 
       setTimeout(() => {
         this.touches = 0;
-      }, 300);
+      }, 250);
 
       this.touches++;
       if (this.touches > 1) {
         this.open();
       }
 
-      if (this.$store.state.selected.indexOf(this.index) !== -1) {
-        this.removeSelected(this.index);
+      if (this.$store.state.selected.indexOf(this.item) !== -1) {
+        this.removeSelected(this.item);
         return;
       }
 
@@ -229,18 +250,21 @@ export default {
         let fi = 0;
         let la = 0;
 
-        if (this.index > this.selected[0]) {
-          fi = this.selected[0] + 1;
+        if (this.index > this.selected[0].index) {
+          fi = this.selected[0].index + 1;
           la = this.index;
         } else {
           fi = this.index;
-          la = this.selected[0] - 1;
+          la = this.selected[0].index - 1;
         }
 
+
         for (; fi <= la; fi++) {
-          if (this.$store.state.selected.indexOf(fi) === -1) {
-            this.addSelected(fi);
-          }
+            this.$store.state.items.forEach(item => {
+                // Perform actions on each item in the array
+                // Add your logic here
+                if (item.index === fi) this.addSelected(item)
+            });
         }
 
         return;
@@ -253,11 +277,13 @@ export default {
         !this.$store.state.multiple
       )
         this.resetSelected();
-      this.addSelected(this.index);
+      this.addSelected(this.item);
     },
     open: function () {
       if (this.isDir)  {
           this.$router.push({ path: `/folder/${this.id}` });
+          this.$store.commit("setCurrentFolder", this.item);
+
       }
       else {
           this.$router.push({ path: `/preview/${this.id}` });

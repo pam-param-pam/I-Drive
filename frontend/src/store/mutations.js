@@ -44,21 +44,16 @@ const mutations = {
       state.user = null;
       return;
     }
-    console.log(state.user)
-    let locale = value.locale;
 
-    if (locale === "") {
-      locale = i18n.detectLocale();
-    }
-
-    moment.locale(locale);
-    i18n.default.locale = locale;
     state.user = value;
   },
-  setJWT: (state, value) => (state.jwt = value),
-  multiple: (state, value) => (state.multiple = value),
-  addSelected: (state, value) => state.selected.push(value),
+  addSelected: (state, value) => {
+    if (typeof value !== "object") return;
+
+    state.selected.push(value)
+  },
   removeSelected: (state, value) => {
+
     let i = state.selected.indexOf(value);
     if (i === -1) return;
     state.selected.splice(i, 1);
@@ -78,7 +73,8 @@ const mutations = {
       state.user[field] = value[field];
     }
   },
-  updateRequest: (state, value) => {
+  updateItems: (state, value) => {
+    //todo co jezeli w items juz nie ma czegos co jest w selected? trzeba usunac
     const selectedItems = state.selected.map((i) => state.req.items[i]);
     state.oldReq = state.req;
     state.req = value;
@@ -88,6 +84,9 @@ const mutations = {
     state.selected = state.req.items
       .filter((item) => selectedItems.some((rItem) => rItem.url === item.url))
       .map((item) => item.index);
+  },
+  setItems: (state, value) => {
+    state.items = value
   },
   updateClipboard: (state, value) => {
     state.clipboard.key = value.key;
@@ -112,6 +111,35 @@ const mutations = {
     state.upload.id = 0;
     state.upload.speedMbyte = 0;
     state.upload.eta = 0;
+  },
+  setCurrentFolder(state, value) {
+    console.log("settings current folder")
+    state.currentFolder = value;
+
+  },
+  setPerms(state, value) {
+    state.perms = value;
+
+  },
+  setSettings(state, value) {
+    let locale = value.locale;
+
+    if (locale === "") {
+      locale = i18n.detectLocale();
+    }
+
+    moment.locale(locale);
+    i18n.default.locale = locale;
+    state.settings = value;
+
+  },
+  updateSettings: (state, value) => {
+    if (typeof value !== "object") return;
+
+    for (let field in value) {
+      state.settings[field] = value[field];
+
+    }
   },
 };
 

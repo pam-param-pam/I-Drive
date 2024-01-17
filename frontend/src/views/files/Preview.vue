@@ -177,7 +177,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["req", "user", "oldReq", "jwt", "loading"]),
+    ...mapState(["req", "user", "oldReq", "loading"]),
     ...mapGetters(["currentPrompt"]),
     hasPrevious() {
       return this.previousLink !== "";
@@ -342,7 +342,7 @@ export default {
       }, 1500);
     }, 500),
     close() {
-      this.$store.commit("updateRequest", {});
+      this.$store.commit("updateItems", {});
 
       let uri = url.removeLastDir(this.$route.path) + "/";
       this.$router.push({ path: uri });

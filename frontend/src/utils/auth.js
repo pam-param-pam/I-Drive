@@ -17,11 +17,14 @@ export async function getUser(token) {
 
       });
 
-      const body = await res.text();
+      const body = await res.json();
 
       if (res.status === 200) {
-        store.commit("setUser", JSON.parse(body));
-        console.log(store.state.user.perm)
+        store.commit("setUser", body.user);
+        store.commit("setSettings", body.settings);
+        store.commit("setPerms", body.perms);
+
+
       } else {
         throw new Error(body);
       }
@@ -81,8 +84,6 @@ export async function signup(username, password) {
 export function logout() {
   document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/";
 
-  store.commit("setJWT", "");
   store.commit("setUser", null);
-  localStorage.setItem("jwt", null);
   router.push({ path: "/login" });
 }

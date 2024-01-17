@@ -76,10 +76,12 @@ import { mapState, mapMutations } from "vuex";
 import { users as api } from "@/api";
 import Languages from "@/components/settings/Languages.vue";
 import i18n, { rtlLanguages } from "@/i18n";
+import Themes from "@/components/settings/Themes.vue";
 
 export default {
   name: "settings",
   components: {
+      Themes,
     Languages,
   },
   data: function () {

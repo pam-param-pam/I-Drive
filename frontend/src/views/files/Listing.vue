@@ -73,11 +73,7 @@
           @action="upload"
         />
         <action icon="info" :label="$t('buttons.info')" show="info" />
-        <action
-          icon="check_circle"
-          :label="$t('buttons.selectMultiple')"
-          @action="toggleMultipleSelection"
-        />
+
       </template>
     </header-bar>
 
@@ -151,7 +147,7 @@
         v-else
         id="listing"
         ref="listing"
-        :class="user.viewMode + ' file-icons'"
+        :class="settings.viewMode + ' file-icons'"
       >
         <div>
           <div class="item header">
@@ -208,11 +204,7 @@
           :isDir="item.isDir"
           :created="item.created_at"
           :size="item.size"
-          :extension="item.extension"
-          :streamable="item.streamable"
-          :ready="item.ready"
           :owner="item.owner"
-          :encrypted_size="item.encrypted_size"
           :parent_id="item.parent_id"
           :index="index"
           >
@@ -256,19 +248,6 @@
           multiple
         />
 
-        <div :class="{ active: $store.state.multiple }" id="multiple-selection">
-          <p>{{ $t("files.multipleSelectionEnabled") }}</p>
-          <div
-            @click="$store.commit('multiple', false)"
-            tabindex="0"
-            role="button"
-            :title="$t('files.clear')"
-            :aria-label="$t('files.clear')"
-            class="action"
-          >
-            <i class="material-icons">clear</i>
-          </div>
-        </div>
       </div>
     </template>
   </div>
@@ -306,55 +285,46 @@ export default {
     };
   },
   computed: {
-    ...mapState(["req", "selected", "user", "multiple", "selected", "loading"]),
+    ...mapState(["items", "selected", "settings", "perms", "user", "selected", "loading"]),
     ...mapGetters(["selectedCount", "currentPrompt"]),
     nameSorted() {
-      return this.req.sorting.by === "name";
+      return this.settings.sorting_by === "name";
     },
     sizeSorted() {
-      return this.req.sorting.by === "size";
+      return this.settings.sorting_by === "size";
     },
     createdSorted() {
-      return this.req.sorting.by === "created";
+      return this.settings.sorting_by === "created";
     },
     ascOrdered() {
-      return this.req.sorting.asc;
+      return this.settings.sort_by_asc;
     },
-    items() {
-      const dirs = [];
-      const files = [];
 
-      this.req.children.forEach((item) => {
-        if (item.isDir) {
-          dirs.push(item);
-        } else {
-          files.push(item);
-
-        }
-      });
-      console.log("dirs: " + dirs)
-      console.log("files: " + JSON.stringify(files))
-
-      return { dirs, files };
-    },
     filesSize() {
-        return this.items.files.length
+        return this.files.length
     },
     dirsSize() {
-        return this.items.dirs.length
+        return this.dirs.length
     },
     dirs() {
-      return this.items.dirs.slice(0, this.showLimit);
+        const items = [];
+
+        this.items.forEach((item) => {
+            if (item.isDir) {
+                items.push(item);
+            }
+        });
+        return items
     },
     files() {
-      return this.items.files
-        /*
-      let showLimit = this.showLimit - this.items.dirs.length;
+        const items = [];
 
-      if (showLimit < 0) showLimit = 0;
-      return this.items.files.slice(0, showLimit);
-
-         */
+        this.items.forEach((item) => {
+            if (!item.isDir) {
+                items.push(item);
+            }
+        });
+        return items
     },
     nameIcon() {
       if (this.nameSorted && !this.ascOrdered) {
@@ -383,18 +353,18 @@ export default {
         mosaic: "grid_view",
         "mosaic gallery": "view_list",
       };
-      return icons[this.user.viewMode];
+      return icons[this.settings.viewMode];
     },
     headerButtons() {
       return {
-        upload: this.user.perm.create,
-        download: this.user.perm.download,
-        shell: this.user.perm.execute && enableExec,
-        delete: this.selectedCount > 0 && this.user.perm.delete,
-        rename: this.selectedCount === 1 && this.user.perm.rename,
-        share: this.selectedCount === 1 && this.user.perm.share,
-        move: this.selectedCount > 0 && this.user.perm.rename,
-        copy: this.selectedCount > 0 && this.user.perm.create,
+        upload: this.perms.create,
+        download: this.perms.download,
+        shell: this.perms.execute && enableExec,
+        delete: this.selectedCount > 0 && this.perms.delete,
+        rename: this.selectedCount === 1 && this.perms.rename,
+        share: this.selectedCount === 1 && this.perms.share,
+        move: this.selectedCount > 0 && this.perms.rename,
+        copy: this.selectedCount > 0 && this.perms.create,
       };
     },
     isMobile() {
@@ -402,7 +372,7 @@ export default {
     },
   },
   watch: {
-    req: function () {
+    items: function () {
       // Reset the show value
       this.showLimit = 50;
 
@@ -431,7 +401,7 @@ export default {
     window.addEventListener("scroll", this.scrollEvent);
     window.addEventListener("resize", this.windowsResize);
 
-    if (!this.user.perm.create) return;
+    if (!this.perms.create) return;
     document.addEventListener("dragover", this.preventDefault);
     document.addEventListener("dragenter", this.dragEnter);
     document.addEventListener("dragleave", this.dragLeave);
@@ -443,7 +413,7 @@ export default {
     window.removeEventListener("scroll", this.scrollEvent);
     window.removeEventListener("resize", this.windowsResize);
 
-    if (this.user && !this.user.perm.create) return;
+    if (this.user && !this.perms.create) return;
     document.removeEventListener("dragover", this.preventDefault);
     document.removeEventListener("dragenter", this.dragEnter);
     document.removeEventListener("dragleave", this.dragLeave);
@@ -451,9 +421,7 @@ export default {
   },
   methods: {
     ...mapMutations(["updateUser", "addSelected"]),
-    base64: function (name) {
-      return window.btoa(unescape(encodeURIComponent(name)));
-    },
+
     keyEvent(event) {
       // No prompts are shown
       if (this.currentPrompt !== null) {
@@ -468,7 +436,7 @@ export default {
 
       // Del!
       if (event.keyCode === 46) {
-        if (!this.user.perm.delete || this.selectedCount === 0) return;
+        if (!this.perms.delete || this.selectedCount === 0) return;
 
         // Show delete prompt.
         this.$store.commit("showHover", "delete");
@@ -476,7 +444,7 @@ export default {
 
       // F2!
       if (event.keyCode === 113) {
-        if (!this.user.perm.rename || this.selectedCount !== 1) return;
+        if (!this.perms.rename || this.selectedCount !== 1) return;
 
         // Show rename prompt.
         this.$store.commit("showHover", "rename");
@@ -503,12 +471,12 @@ export default {
           break;
         case "a":
           event.preventDefault();
-          for (let file of this.items.files) {
+          for (let file of this.files) {
             if (this.$store.state.selected.indexOf(file.index) === -1) {
               this.addSelected(file.index);
             }
           }
-          for (let dir of this.items.dirs) {
+          for (let dir of this.dirs) {
             if (this.$store.state.selected.indexOf(dir.index) === -1) {
               this.addSelected(dir.index);
             }
@@ -533,6 +501,7 @@ export default {
 
       for (let i of this.selected) {
         items.push({
+            //todo
           from: this.req.items[i].url,
           name: this.req.items[i].name,
         });
@@ -594,7 +563,7 @@ export default {
         return;
       }
 
-      let conflict = upload.checkConflict(items, this.req.items);
+      let conflict = upload.checkConflict(items, this.items);
 
       let overwrite = false;
       let rename = false;
@@ -684,7 +653,7 @@ export default {
       }
 
       let files = await upload.scanFiles(dt);
-      let items = this.req.items;
+      let items = this.items;
       let path = this.$route.path.endsWith("/")
         ? this.$route.path
         : this.$route.path + "/";
@@ -744,7 +713,7 @@ export default {
       let path = this.$route.path.endsWith("/")
         ? this.$route.path
         : this.$route.path + "/";
-      let conflict = upload.checkConflict(files, this.req.items);
+      let conflict = upload.checkConflict(files, this.items);
 
       if (conflict) {
         this.$store.commit("showHover", {
@@ -803,10 +772,7 @@ export default {
     openSearch() {
       this.$store.commit("showHover", "search");
     },
-    toggleMultipleSelection() {
-      this.$store.commit("multiple", !this.multiple);
-      this.$store.commit("closeHovers");
-    },
+
     windowsResize: throttle(function () {
       this.colunmsResize();
       this.width = window.innerWidth;
@@ -855,13 +821,12 @@ export default {
       };
 
       const data = {
-        viewMode: modes[this.user.viewMode] || "list",
+        viewMode: modes[this.settings.viewMode] || "list",
       };
-
-      users.update(data, ["viewMode"]).catch(this.$showError);
+      //todo update settings on server
 
       // Await ensures correct value for setItemWeight()
-      await this.$store.commit("updateUser", data);
+      await this.$store.commit("updateSettings", data);
 
       this.setItemWeight();
       this.fillWindow();

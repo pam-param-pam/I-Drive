@@ -147,22 +147,7 @@
               </div>
             </div>
 
-            <div
-              :class="{ active: $store.state.multiple }"
-              id="multiple-selection"
-            >
-              <p>{{ $t("files.multipleSelectionEnabled") }}</p>
-              <div
-                @click="$store.commit('multiple', false)"
-                tabindex="0"
-                role="button"
-                :title="$t('files.clear')"
-                :aria-label="$t('files.clear')"
-                class="action"
-              >
-                <i class="material-icons">clear</i>
-              </div>
-            </div>
+
           </div>
         </div>
         <div
@@ -266,7 +251,7 @@ export default {
     },
   },
   methods: {
-    ...mapMutations(["resetSelected", "updateRequest", "setLoading"]),
+    ...mapMutations(["resetSelected", "updateItems", "setLoading"]),
     base64: function (name) {
       return window.btoa(unescape(encodeURIComponent(name)));
     },
@@ -274,7 +259,6 @@ export default {
       // Reset view information.
       this.$store.commit("setReload", false);
       this.$store.commit("resetSelected");
-      this.$store.commit("multiple", false);
       this.$store.commit("closeHovers");
 
       // Set loading to true and reset the error.
@@ -313,9 +297,7 @@ export default {
         }
       }
     },
-    toggleMultipleSelection() {
-      this.$store.commit("multiple", !this.multiple);
-    },
+
     isSingleFile: function () {
       return (
         this.selectedCount === 1 && !this.req.items[this.selected[0]].isDir

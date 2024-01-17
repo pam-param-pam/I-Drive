@@ -21,7 +21,6 @@ async function start() {
       await login("", "",);
     }
   } catch (e) {
-    console.log(e);
   }
 
 

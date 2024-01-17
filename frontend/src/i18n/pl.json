@@ -81,29 +81,9 @@
     "help": "Pomoc"
   },
   "languages": {
-    "he": "עברית",
-    "hu": "Magyar",
-    "ar": "العربية",
-    "de": "Deutsch",
     "en": "English",
-    "es": "Español",
-    "fr": "Français",
-    "is": "Íslenska",
-    "it": "Italiano",
-    "ja": "日本語",
-    "ko": "한국어",
-    "nlBE": "Nederlands (België)",
-    "pl": "Polski",
-    "pt": "Português",
-    "ptBR": "Português (Brasil)",
-    "ro": "Română",
-    "ru": "Русский",
-    "sk": "Slovenčina",
-    "svSE": "Svenska (Sverige)",
-    "tr" : "Türkçe",
-    "ua": "Українська",
-    "zhCN": "中文 (简体)",
-    "zhTW": "中文 (繁體)"
+    "pl": "Polski"
+
   },
   "login": {
     "createAnAccount": "Utwórz konto",
@@ -224,9 +204,9 @@
     "shareManagement": "Zarządzanie udostępnianiem",
     "singleClick": "Pojedyncze kliknięcie",
     "themes": {
-      "dark": "ciemny",
-      "light": "jasny",
-      "title": "Motywy"
+      "dark": "Ciemny",
+      "light": "Jasny",
+      "title": "Motyw"
     },
     "user": "Użytkownik",
     "userCommands": "Polecenia",

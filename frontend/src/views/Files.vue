@@ -1,6 +1,6 @@
 <template>
   <div>
-    <header-bar v-if="error || req.type == null" showMenu showLogo />
+    <header-bar v-if="error" showMenu showLogo />
 
     <breadcrumbs base="/files" />
 
@@ -29,13 +29,6 @@ import Errors from "@/views/Errors.vue";
 import Preview from "@/views/files/Preview.vue";
 import Listing from "@/views/files/Listing.vue";
 
-function clean(path) {
-    console.log("from clean   1 ")
-    return false
-    return path.endsWith("/") ? path.slice(0, -1) : path;
-
-}
-
 export default {
   name: "files",
   components: {
@@ -53,7 +46,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["req", "reload", "loading"]),
+    ...mapState(["reload", "loading"]),
     currentView() {
       if (this.$router.currentRoute.path.includes("preview")) {
         return "preview";
@@ -85,10 +78,9 @@ export default {
     window.removeEventListener("keydown", this.keyEvent);
   },
   destroyed() {
-    if (this.$store.state.showShell) {
-      this.$store.commit("toggleShell");
-    }
-    this.$store.commit("updateRequest", {});
+    this.$store.commit("setItems", {});
+    this.$store.commit("setCurrentFolder", {});
+
   },
   methods: {
     ...mapMutations(["setLoading"]),
@@ -96,7 +88,6 @@ export default {
       // Reset view information.
       this.$store.commit("setReload", false);
       this.$store.commit("resetSelected");
-      this.$store.commit("multiple", false);
       this.$store.commit("closeHovers");
 
       // Set loading to true and reset the error.
@@ -105,39 +96,26 @@ export default {
 
       let url = this.$route.path;
 
-      console.log("url" + url)
       try {
         const res = await api.fetch(url);
-        console.log("from file fetch data -1 ")
-        /*
-        if (clean(res.path) !== clean(`/${this.$route.params.pathMatch}`)) {
-            console.log("from file fetch data 0 ")
 
-            return;
-        }
-
-       */
-        console.log("from file fetch data 1")
-
-
-        this.$store.commit("updateRequest", res);
-        console.log("from file fetch data 2")
+        this.$store.commit("setItems", res.children);
+        this.$store.commit("setCurrentFolder", res);
 
         document.title = `${res.name} - ${document.title}`;
       } catch (e) {
         this.error = e;
       } finally {
         this.setLoading(false);
-          console.log("from file fetch data 3")
 
       }
     },
     keyEvent(event) {
-      // F1!
-      if (event.keyCode === 112) {
-        event.preventDefault();
-        this.$store.commit("showHover", "help");
-      }
+        // H!
+        if (event.keyCode === 72) {
+            event.preventDefault();
+            this.$store.commit("showHover", "help");
+        }
     },
   },
 };

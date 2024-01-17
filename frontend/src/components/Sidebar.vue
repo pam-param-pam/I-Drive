@@ -11,7 +11,7 @@
         <span>{{ $t("sidebar.myFiles") }}</span>
       </button>
 
-      <div v-if="user.perm.create">
+      <div v-if="perms.create">
         <button
           @click="$store.commit('showHover', 'newDir')"
           class="action"
@@ -129,7 +129,7 @@ export default {
     ProgressBar,
   },
   computed: {
-    ...mapState(["user"]),
+    ...mapState(["user", "perms"]),
     ...mapGetters(["isLogged", "currentPrompt"]),
     active() {
       return this.currentPrompt?.prompt === "sidebar";

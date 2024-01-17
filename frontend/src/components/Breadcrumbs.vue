@@ -1,68 +1,75 @@
 <template>
-  <div class="breadcrumbs">
-    <component
-      :is="element"
-      :to="base || ''"
-      :aria-label="$t('files.home')"
-      :title="$t('files.home')"
-    >
-      <i class="material-icons">home</i>
-    </component>
-
-    <span v-for="(folder, index) in path" :key="index">
-      <span class="chevron"
-        ><i class="material-icons">keyboard_arrow_right</i></span
-      >
-      <component :is="element" :to="folder.id">{{ folder.name }}</component>
+    <div class="breadcrumbs">
+        <component
+                :is="element"
+                :to="base || ''"
+                :aria-label="$t('files.home')"
+                :title="$t('files.home')"
+        >
+            <i class="material-icons">home</i>
+        </component>
+        <span v-for="(folder, index) in path" :key="folder.id">
+          <span class="chevron"
+          ><i class="material-icons">keyboard_arrow_right</i></span
+          >
+        <component :is="element" :to="folder.id">{{ folder.name }}</component>
     </span>
-  </div>
+
+    </div>
 </template>
 
 <script>
 import {files as api} from "@/api/index.js";
-import prettyBytes from "pretty-bytes";
+import {mapState} from "vuex";
 
 export default {
-  name: "breadcrumbs",
-  props: ["base", "noLink"],
-    data() {
-        return {
-            path: []
-        }
+    name: "breadcrumbs",
+    props: ["base", "noLink"],
+
+    computed: {
+        ...mapState(["currentFolder", "reload"]),
+        element() {
+            if (this.noLink !== undefined) {
+                return "span";
+            }
+
+            return "router-link";
+        },
     },
-  watch: {
-    $route: "fetchPath",
-    reload: function (value) {
-      if (value === true) {
-        this.fetchPath();
-      }
+
+    asyncComputed: {
+        path: {
+            async get() {
+
+                console.log("fetchPath!!!")
+                let path = [];
+
+
+                try {
+                    let folder_id = ""
+                    if (!this.currentFolder) {
+                        folder_id= "/files/"
+                    }
+                    else {
+                        folder_id = this.currentFolder.id
+
+                    }
+
+                    path = await api.breadcrumbs(folder_id);
+                    console.log("path" + JSON.stringify(path))
+                } catch (error) {
+                    this.$showError(error);
+                }
+                return path
+            },
+            default: [],
+
+        },
     },
-  },
-  methods: {
-    async fetchPath() {
-      let path = [];
-
-      let folder_id = this.$router.currentRoute.path.replace("/files/folder/", "")
-      try {
-          path = await api.breadcrumbs(folder_id);
-
-      } catch (error) {
-          this.$showError(error);
-      }
-      this.path = path
-    },
-  },
-  computed: {
 
 
-    element() {
-      if (this.noLink !== undefined) {
-        return "span";
-      }
 
-      return "router-link";
-    },
-  },
+
 };
 </script>
 

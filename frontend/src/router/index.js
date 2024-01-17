@@ -4,10 +4,7 @@ import Login from "@/views/Login.vue";
 import Layout from "@/views/Layout.vue";
 import Files from "@/views/Files.vue";
 import Share from "@/views/Share.vue";
-import Users from "@/views/settings/Users.vue";
-import User from "@/views/settings/User.vue";
 import Settings from "@/views/Settings.vue";
-import GlobalSettings from "@/views/settings/Global.vue";
 import ProfileSettings from "@/views/settings/Profile.vue";
 import Shares from "@/views/settings/Shares.vue";
 import Errors from "@/views/Errors.vue";
@@ -87,30 +84,7 @@ const router = new Router({
               name: "Shares",
               component: Shares,
             },
-            {
-              path: "/settings/global",
-              name: "GlobalSettings",
-              component: GlobalSettings,
-              meta: {
-                requiresAdmin: true,
-              },
-            },
-            {
-              path: "/settings/users",
-              name: "Users",
-              component: Users,
-              meta: {
-                requiresAdmin: true,
-              },
-            },
-            {
-              path: "/settings/users/*",
-              name: "User",
-              component: User,
-              meta: {
-                requiresAdmin: true,
-              },
-            },
+
           ],
         },
         {
@@ -156,8 +130,7 @@ const router = new Router({
 });
 
 router.beforeEach((to, from, next) => {
-  const title = i18n.t(titles[to.name]);
-  document.title = title + " - " + name;
+  document.title = name;
 
   /*** RTL related settings per route ****/
   const rtlSet = document.querySelector("body").classList.contains("rtl");

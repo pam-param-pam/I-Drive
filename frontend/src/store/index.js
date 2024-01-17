@@ -8,18 +8,18 @@ Vue.use(Vuex);
 
 const state = {
   user: null,
-  req: {},
-  oldReq: {},
   clipboard: {
     key: "",
     items: [],
   },
-  jwt: "",
+  items: null,
+  perms: null,
+  settings: null,
+  currentFolder: null,
   progress: 0,
   loading: false,
   reload: false,
   selected: [],
-  multiple: false,
   prompts: [],
   showShell: false,
 };

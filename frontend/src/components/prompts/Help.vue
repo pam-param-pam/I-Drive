@@ -6,7 +6,7 @@
 
     <div class="card-content">
       <ul>
-        <li><strong>F1</strong> - {{ $t("help.f1") }}</li>
+        <li><strong>H</strong> - {{ $t("help.f1") }}</li>
         <li><strong>F2</strong> - {{ $t("help.f2") }}</li>
         <li><strong>DEL</strong> - {{ $t("help.del") }}</li>
         <li><strong>ESC</strong> - {{ $t("help.esc") }}</li>

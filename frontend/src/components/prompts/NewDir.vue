@@ -85,7 +85,7 @@ export default {
           this.$router.push({ path: uri });
         } else if (!this.base) {
           const res = await api.fetch(url.removeLastDir(uri) + "/");
-          this.$store.commit("updateRequest", res);
+          this.$store.commit("updateItems", res);
         }
       } catch (e) {
         this.$showError(e);

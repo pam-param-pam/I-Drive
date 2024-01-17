@@ -81,7 +81,7 @@ export default {
   methods: {
     ...mapMutations(["toggleShell"]),
     checkTheme() {
-      if (theme == "dark") {
+      if (theme === "dark") {
         return "rgba(255, 255, 255, 0.4)";
       }
       return "rgba(127, 127, 127, 0.4)";
