@@ -107,17 +107,17 @@ def build_folder_content(folder_obj):
     file_dicts = create_files_dict(file_children)
     folder_dicts = create_fragmented_folder_dict(folder_children)
 
-    json_string = {"sorting": {
-                "by": "name",
-                "asc": False
-            }, "isDir": True, "name": folder_obj.name, "id": folder_obj.id, 'created_at': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
+    json_string = {"isDir": True, "name": folder_obj.name, "id": folder_obj.id,
+                   'created_at': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
                    "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
                    "viewers": [], "children": file_dicts + folder_dicts}
     return json_string
 
-def build_response(task_id, message):
 
+def build_response(task_id, message):
     return {"task_id": task_id, "message": message}
+
+
 def get_folder_path(folder_id, folder_structure, path=None):
     if path is None:
         path = []
@@ -134,4 +134,4 @@ def get_folder_path(folder_id, folder_structure, path=None):
                 return result
 
     # Folder ID not found in the current folder structure
-    raise KeyError
+    return []

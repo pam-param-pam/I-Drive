@@ -75,12 +75,12 @@ class File(models.Model):
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     sorting_by = models.TextField(max_length=50, null=False, default="name")
+    sort_by_asc = models.BooleanField(default=False)
     locale = models.TextField(max_length=50, null=False, default="en")
     view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
     date_format = models.BooleanField(default=False)
     hide_dotfiles = models.BooleanField(default=False)
     single_click = models.BooleanField(default=False)
-
 
     def __str__(self):
         return self.user.username + "'s settings"

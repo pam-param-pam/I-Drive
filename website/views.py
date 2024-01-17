@@ -124,10 +124,7 @@ def _upload_file(request):
 # @permission_classes([IsAuthenticated])
 @view_cleanup
 def stream_key(request, file_id):
-    print(file_id)
-
     file_id = file_id.replace(".key", "")
-    print(file_id)
     try:
         file_obj = File.objects.get(id=file_id)
     except (File.DoesNotExist, ValidationError):
@@ -176,12 +173,12 @@ def process_m3u8(request_id, file_obj):
                 file.write(chunk)
 
     playlist = m3u8.load(m3u8_file_path)
-    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/stream_key/{file_obj.id}.key",
+    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/api/stream_key/{file_obj.id}.key",
                        # TODO change it back later
-                       uri=f"https://pamparampam.dev/stream_key/{file_obj.id}.key")
-    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/stream_key/{file_obj.id}.key",
+                       uri=f"https://pamparampam.dev/api/stream_key/{file_obj.id}.key")
+    new_key = m3u8.Key(method="AES-128", base_uri=f"http://127.0.0.1:8000/api/stream_key/{file_obj.id}.key",
                        # TODO change it back later
-                       uri=f"http://127.0.0.1:8000/stream_key/{file_obj.id}.key")
+                       uri=f"http://127.0.0.1:8000/api/stream_key/{file_obj.id}.key")
     fragments = Fragment.objects.filter(file_id=file_obj).order_by('sequence')
     for fragment, segment in zip(fragments, playlist.segments.by_key(playlist.keys[-1])):
         url = discord.get_file_url(fragment.message_id)
@@ -206,10 +203,7 @@ def test(request):
 # @permission_classes([IsAuthenticated])
 @view_cleanup
 def get_m3u8(request, file_id):
-    print(file_id)
-
     file_id = file_id.replace(".m3u8", "")
-    print(file_id)
     try:
         file_obj = File.objects.get(id=file_id)
     except (File.DoesNotExist, ValidationError):
@@ -445,9 +439,6 @@ def search(request, query):
         return HttpResponse(f"bad request", status=404)
 
 
-
-
-
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 def usage(request):
@@ -485,7 +476,7 @@ def get_root(request):
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 def get_breadcrumbs(request, folder_id):
-    try:
+
         user = request.user  # todo
         user.id = 1
 
@@ -494,8 +485,8 @@ def get_breadcrumbs(request, folder_id):
         folder_path = get_folder_path(folder_id, folder_structure[0])
 
         return JsonResponse(folder_path, safe=False)
-    except KeyError:
-        return HttpResponse(f"bad request", status=400)
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -505,19 +496,21 @@ def users_me(request):
     perms = UserPerms.objects.get(user_id=user.id)
     settings = UserSettings.objects.get(user_id=user.id)
 
-    response = {"id": user.id, "name": user.username,
-                "perm": {"admin": perms.admin, "execute": perms.execute, "create": perms.create, "rename": perms.rename,
+    response = {"user": {"id": user.id, "name": user.username},
+                "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create, "rename": perms.rename,
                          "modify": perms.modify, "delete": perms.delete, "share": perms.share,
                          "download": perms.download},
-                "locale": settings.locale, "hideDotFiles": settings.hide_dotfiles,
-                "dateFormat": settings.date_format, "singleClick": settings.single_click,
-                "viewMode": settings.view_mode, "sorting_by": settings.sorting_by}
+                "settings": {"locale": settings.locale, "hideDotFiles": settings.hide_dotfiles,
+                             "dateFormat": settings.date_format, "singleClick": settings.single_click,
+                             "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
+                             "sortByAsc": settings.sort_by_asc}}
 
     return JsonResponse(response, safe=False, status=200)
+
+
 @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 def update_settings(request):
-
     user = request.user
     user.id = 1  # todo
 
@@ -527,6 +520,7 @@ def update_settings(request):
     dateFormat = request.data.get('dateFormat')
     viewMode = request.data.get('viewMode')
     sorting_by = request.data.get('sorting_by')
+    sort_by_asc = request.data.get('sort_by_asc')
 
     settings = UserSettings.objects.get(user_id=user.id)
 
@@ -542,8 +536,7 @@ def update_settings(request):
         settings.viewMode = viewMode
     if sorting_by in ["name", "size", "mosaic gallery"]:
         settings.viewMode = viewMode
+    if isinstance(sort_by_asc, bool):
+        settings.sort_by_asc = sort_by_asc
 
     return HttpResponse(status=200)
-
-
-
