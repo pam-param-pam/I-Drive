@@ -41,9 +41,7 @@ export default {
         path: {
             async get() {
 
-                console.log("fetchPath!!!")
                 let path = [];
-
 
                 try {
                     let folder_id = ""
@@ -52,11 +50,8 @@ export default {
                     }
                     else {
                         folder_id = this.currentFolder.id
-
                     }
-
                     path = await api.breadcrumbs(folder_id);
-                    console.log("path" + JSON.stringify(path))
                 } catch (error) {
                     this.$showError(error);
                 }

@@ -8,6 +8,7 @@ export function parseToken(body) {
 
 }
 export async function getUser(token) {
+      if (!token) return
       const res = await fetch(`${baseURL}/auth/users/me`, {
         method: "GET",
         headers: {
@@ -23,6 +24,8 @@ export async function getUser(token) {
         store.commit("setUser", body.user);
         store.commit("setSettings", body.settings);
         store.commit("setPerms", body.perms);
+        store.commit("setToken", token);
+
 
 
       } else {
@@ -54,7 +57,7 @@ export async function login(username, password, recaptcha) {
     const token = JSON.parse(body).auth_token;
 
     localStorage.setItem("token", token);
-    store.commit("token", token);
+    store.commit("setToken", token);
     await getUser(token)
   } else {
     throw new Error(body);
@@ -85,5 +88,8 @@ export function logout() {
   document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/";
 
   store.commit("setUser", null);
+  store.commit("setToken", null);
+  localStorage.removeItem("token");
+
   router.push({ path: "/login" });
 }

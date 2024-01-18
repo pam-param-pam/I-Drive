@@ -37,7 +37,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import {mapGetters, mapState} from "vuex";
 import { files as api } from "@/api";
 import url from "@/utils/url";
 
@@ -59,39 +59,16 @@ export default {
     };
   },
   computed: {
-    ...mapGetters(["isFiles", "isListing"]),
+    ...mapState(["currentFolder"]),
   },
   methods: {
     submit: async function (event) {
       event.preventDefault();
-      if (this.new === "") return;
 
-      // Build the path of the new directory.
-      let uri;
+      console.log(this.name)
+        this.$store.commit("setReload", true);
 
-      if (this.base) uri = this.base;
-      else if (this.isFiles) uri = this.$route.path + "/";
-      else uri = "/";
-
-      if (!this.isListing) {
-        uri = url.removeLastDir(uri) + "/";
-      }
-
-      uri += encodeURIComponent(this.name) + "/";
-      uri = uri.replace("//", "/");
-      try {
-        await api.post(uri);
-        if (this.redirect) {
-          this.$router.push({ path: uri });
-        } else if (!this.base) {
-          const res = await api.fetch(url.removeLastDir(uri) + "/");
-          this.$store.commit("updateItems", res);
-        }
-      } catch (e) {
-        this.$showError(e);
-      }
-
-      this.$store.commit("closeHovers");
+        this.$store.commit("closeHovers");
     },
   },
 };

@@ -45,7 +45,6 @@
         </button>
 
         <button
-          v-if="canLogout"
           @click="logout"
           class="action"
           id="logout"
@@ -138,7 +137,6 @@ export default {
     version: () => version,
     disableExternal: () => disableExternal,
     disableUsedPercentage: () => disableUsedPercentage,
-    canLogout: () => !noAuth && loginPage,
   },
   asyncComputed: {
     usage: {

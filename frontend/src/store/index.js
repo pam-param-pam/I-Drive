@@ -17,6 +17,7 @@ const state = {
   settings: null,
   currentFolder: null,
   progress: 0,
+  token: "",
   loading: false,
   reload: false,
   selected: [],

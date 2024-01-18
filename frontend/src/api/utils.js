@@ -12,7 +12,7 @@ export async function fetchURL(url, opts, auth = true) {
   try {
     res = await fetch(`${baseURL}${url}`, {
       headers: {
-        "X-Auth": store.state.jwt,
+        "Authorization": `Token ${store.state.token}`,
         ...headers,
       },
       ...rest,

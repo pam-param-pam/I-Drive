@@ -2,23 +2,7 @@
   <div class="dashboard">
     <header-bar showMenu showLogo />
 
-    <div id="nav">
-      <div class="wrapper">
-        <ul>
-          <router-link to="/settings/profile"
-            ><li :class="{ active: $route.path === '/settings/profile' }">
-              {{ $t("settings.profileSettings") }}
-            </li></router-link
-          >
-          <router-link to="/settings/shares" v-if="user.perm.share"
-            ><li :class="{ active: $route.path === '/settings/shares' }">
-              {{ $t("settings.shareManagement") }}
-            </li></router-link
-          >
 
-        </ul>
-      </div>
-    </div>
 
     <div v-if="loading">
       <h2 class="message delayed">
@@ -30,8 +14,9 @@
         <span>{{ $t("files.loading") }}</span>
       </h2>
     </div>
-
-    <router-view></router-view>
+    <div v-else>
+        <router-view></router-view>
+    </div>
   </div>
 </template>
 
@@ -46,7 +31,7 @@ export default {
     HeaderBar,
   },
   computed: {
-    ...mapState(["user", "loading"]),
+    ...mapState(["user", "loading", "perms"]),
   },
 };
 </script>

@@ -39,6 +39,9 @@ const mutations = {
   setReload: (state, value) => {
     state.reload = value;
   },
+  setToken: (state, value) => {
+    state.token = value;
+  },
   setUser: (state, value) => {
     if (value === null) {
       state.user = null;
@@ -113,7 +116,6 @@ const mutations = {
     state.upload.eta = 0;
   },
   setCurrentFolder(state, value) {
-    console.log("settings current folder")
     state.currentFolder = value;
 
   },

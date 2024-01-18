@@ -8,9 +8,9 @@
     @dragover="dragOver"
     @drop="drop"
     @click="itemClick"
-    :data-dir="isDir"
+    :data-dir="item.isDir"
     :data-type="type"
-    :aria-label="name"
+    :aria-label="item.name"
     :aria-selected="isSelected"
   >
     <div>
@@ -19,15 +19,15 @@
     </div>
 
     <div>
-      <p class="name">{{ name }}</p>
+      <p class="name">{{ item.name }}</p>
 
 
-      <p v-if="isDir" class="size" data-order="-1">&mdash;</p>
-      <p v-else class="size" :data-order="size">{{ humanSize() }}</p>
+      <p v-if="item.isDir" class="size" data-order="-1">&mdash;</p>
+      <p v-else class="size" :data-order="item.size">{{ humanSize() }}</p>
 
 
       <p class="created">
-      <time :datetime="created">{{ humanTime() }}</time>
+      <time :datetime="item.created">{{ humanTime() }}</time>
       </p>
 
     </div>
@@ -51,19 +51,9 @@ export default {
     };
   },
   props: [
-    "name",
-    "id",
-    "extension",
-    "streamable",
-    "ready",
-    "owner",
-    "encrypted_size",
-    "parent_id",
-    "isDir",
-    "size",
-    "index",
+
     "readOnly",
-    "created",
+    "item",
   ],
   computed: {
     ...mapState(["user", "perms", "selected", "items"]),
@@ -71,34 +61,19 @@ export default {
     singleClick() {
       return this.readOnly === undefined && this.user.singleClick;
     },
-    item() {
-       return {
-           index: this.index,
-           name: this.name,
-           id: this.id,
-           extension: this.extension,
-           streamable:this.streamable,
-           ready: this.ready,
-           owner: this.owner,
-           encrypted_size: this.encrypted_size,
-           parent_id: this.parent_id,
-           isDir: this.isDir,
-           size: this.size,
-           readOnly: this.readOnly,
-           created: this.created,
-       }
-    },
+
     type() {
-        if (this.extension === ".mp4") {
+        if (this.item.isDir) return "folder"
+        if (this.item.extension === ".mp4") {
             return "video";
         }
-        if (this.extension === ".mp3") {
+        if (this.item.extension === ".mp3") {
             return "song";
         }
-        if (this.extension === ".txt") {
+        if (this.item.extension === ".txt") {
             return "text";
         }
-        if (this.extension === ".jpg" || this.extension === ".png") {
+        if (this.item.extension === ".jpg" || this.item.extension === ".png") {
             return "image";
         }
 
@@ -128,13 +103,13 @@ export default {
   methods: {
     ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
     humanSize: function () {
-      return this.type === "invalid_link" ? "invalid link" : filesize(this.size);
+      return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size);
     },
     humanTime: function () {
-      if (this.readOnly === undefined && this.user.dateFormat) {
-        return moment(this.created).format("L LT");
+      if (this.item.readOnly === undefined && this.user.dateFormat) {
+        return moment(this.item.created).format("L LT");
       }
-      return moment(this.created).fromNow();
+      return moment(this.item.created).fromNow();
     },
     dragStart: function () {
       if (this.selectedCount === 0) {
@@ -148,7 +123,9 @@ export default {
       }
     },
     dragOver: function (event) {
-      if (!this.canDrop) return;
+        //nie kumam co tu sie dzieje LOL
+
+        if (!this.canDrop) return;
 
       event.preventDefault();
       let el = event.target;
@@ -250,11 +227,11 @@ export default {
         let fi = 0;
         let la = 0;
 
-        if (this.index > this.selected[0].index) {
+        if (this.item.index > this.selected[0].index) {
           fi = this.selected[0].index + 1;
-          la = this.index;
+          la = this.item.index;
         } else {
-          fi = this.index;
+          fi = this.item.index;
           la = this.selected[0].index - 1;
         }
 
@@ -280,13 +257,12 @@ export default {
       this.addSelected(this.item);
     },
     open: function () {
-      if (this.isDir)  {
-          this.$router.push({ path: `/folder/${this.id}` });
-          this.$store.commit("setCurrentFolder", this.item);
+      if (this.item.isDir)  {
+          this.$router.push({ path: `/folder/${this.item.id}` });
 
       }
       else {
-          this.$router.push({ path: `/preview/${this.id}` });
+          this.$router.push({ path: `/preview/${this.item.id}` });
       }
     },
   },

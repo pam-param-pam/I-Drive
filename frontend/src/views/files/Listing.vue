@@ -198,15 +198,8 @@
         <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
         <div v-if="dirsSize > 0">
           <item
-          v-for="(item, index) in dirs" :key="item.id"
-          :id="item.id"
-          :name="item.name"
-          :isDir="item.isDir"
-          :created="item.created_at"
-          :size="item.size"
-          :owner="item.owner"
-          :parent_id="item.parent_id"
-          :index="index"
+          v-for="item in dirs" :key="item.id"
+          :item="item"
           >
           </item>
         </div>
@@ -215,19 +208,8 @@
         <div v-if="filesSize > 0">
 
           <item
-            v-for="(item, index) in files" :key="item.id"
-            :name="item.name"
-            :id="item.id"
-            :isDir="item.isDir"
-            :created="item.created_at"
-            :size="item.size"
-            :extension="item.extension"
-            :streamable="item.streamable"
-            :ready="item.ready"
-            :owner="item.owner"
-            :encrypted_size="item.encrypted_size"
-            :parent_id="item.parent_id"
-            :index="dirsSize + index"
+            v-for="item in files" :key="item.id"
+            :item="item"
           ></item>
 
         </div>
@@ -288,16 +270,17 @@ export default {
     ...mapState(["items", "selected", "settings", "perms", "user", "selected", "loading"]),
     ...mapGetters(["selectedCount", "currentPrompt"]),
     nameSorted() {
-      return this.settings.sorting_by === "name";
+        console.log(this.settings)
+      return this.settings.sortingBy === "name";
     },
     sizeSorted() {
-      return this.settings.sorting_by === "size";
+      return this.settings.sortingBy === "size";
     },
     createdSorted() {
-      return this.settings.sorting_by === "created";
+      return this.settings.sortingBy === "created";
     },
     ascOrdered() {
-      return this.settings.sort_by_asc;
+      return this.settings.sortByAsc;
     },
 
     filesSize() {

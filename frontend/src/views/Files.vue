@@ -66,6 +66,7 @@ export default {
   watch: {
     $route: "fetchData",
     reload: function (value) {
+        console.log("reload changed")
       if (value === true) {
         this.fetchData();
       }
@@ -79,7 +80,7 @@ export default {
   },
   destroyed() {
     this.$store.commit("setItems", {});
-    this.$store.commit("setCurrentFolder", {});
+    //this.$store.commit("setCurrentFolder", {});
 
   },
   methods: {

@@ -1,21 +1,58 @@
 <template>
   <div class="card floating">
-    <div class="card-title">
-      <h2>{{ $t("prompts.fileInfo") }}</h2>
-    </div>
+      <div class="card-title">
+          <h2 >{{ $t("prompts.itemInfo") }}</h2>
+      </div>
 
     <div class="card-content">
       <p v-if="selected.length > 1">
-        {{ $t("prompts.filesSelected", { count: selected.length }) }}
+        {{ $t("prompts.itemsSelected", { count: selected.length }) }}
       </p>
 
-      <p class="break-word" v-if="selected.length < 2">
-        <strong>{{ $t("prompts.displayName") }}</strong> {{ name }}
+      <p class="break-word" v-if="name">
+        <strong>{{ $t("prompts.displayName") }}:</strong> {{ name }}
       </p>
 
-      <p v-if="!dir || selected.length > 1">
-        <strong>{{ $t("prompts.size") }}:</strong>
-        <span id="content_length"></span> {{ humanSize }}
+      <p class="break-word" v-if="id">
+          <strong>{{ $t("prompts.identifier") }}:</strong> {{ id }}
+      </p>
+
+      <p v-if="extension">
+          <strong>{{ $t("prompts.extension") }}:</strong> {{ extension }}
+      </p>
+
+
+      <p v-if="size">
+          <strong>{{ $t("prompts.size") }}: </strong>
+          <code>
+              <a @click="changeView($event, 'size')">{{ humanSize(size) }}</a>
+          </code>
+
+      </p>
+
+      <p v-if="encryptedSize">
+          <strong>{{ $t("prompts.encryptedSize") }}: </strong>
+          <code>
+              <a @click="changeView($event, 'encryptedSize')">{{ humanSize(encryptedSize) }}</a>
+          </code>
+
+      </p>
+
+
+      <p v-if="streamable">
+          <strong>{{ $t("prompts.streamable") }}:</strong>
+          <span v-if="streamable" class="checkmark-true"></span> <!-- Green checkmark emoji -->
+          <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
+      </p>
+
+      <p v-if="ready">
+        <strong>{{ $t("prompts.ready") }}:</strong>
+        <span v-if="ready" class="checkmark-true"></span> <!-- Green checkmark emoji -->
+        <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
+      </p>
+
+      <p v-if="owner">
+          <strong>{{ $t("prompts.owner") }}:</strong> {{ owner }}
       </p>
 
       <div v-if="resolution">
@@ -23,51 +60,16 @@
         {{ resolution.width }} x {{ resolution.height }}
       </div>
 
-      <p v-if="selected.length < 2" :title="modTime">
+      <p v-if="created">
         <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime }}
       </p>
 
-      <template v-if="dir && selected.length === 0">
+      <template v-if="folderItemsCount">
         <p>
-          <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ req.numFiles }}
+          <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ folderItemsCount.numFiles }}
         </p>
         <p>
-          <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ req.numDirs }}
-        </p>
-      </template>
-
-      <template v-if="!dir">
-        <p>
-          <strong>MD5: </strong
-          ><code
-            ><a @click="checksum($event, 'md5')">{{
-              $t("prompts.show")
-            }}</a></code
-          >
-        </p>
-        <p>
-          <strong>SHA1: </strong
-          ><code
-            ><a @click="checksum($event, 'sha1')">{{
-              $t("prompts.show")
-            }}</a></code
-          >
-        </p>
-        <p>
-          <strong>SHA256: </strong
-          ><code
-            ><a @click="checksum($event, 'sha256')">{{
-              $t("prompts.show")
-            }}</a></code
-          >
-        </p>
-        <p>
-          <strong>SHA512: </strong
-          ><code
-            ><a @click="checksum($event, 'sha512')">{{
-              $t("prompts.show")
-            }}</a></code
-          >
+          <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ folderItemsCount.numFolders }}
         </p>
       </template>
     </div>
@@ -95,77 +97,214 @@ import { files as api } from "@/api";
 export default {
   name: "info",
   computed: {
-    ...mapState(["req", "selected"]),
+    ...mapState(["selected","currentFolder"]),
     ...mapGetters(["selectedCount", "isListing"]),
-    humanSize: function () {
-      if (this.selectedCount === 0 || !this.isListing) {
-        return filesize(this.req.size);
-      }
-
-      let sum = 0;
-
-      for (let selected of this.selected) {
-        sum += this.req.items[selected].size;
-      }
-
-      return filesize(sum);
-    },
-    humanTime: function () {
+    size() {
       if (this.selectedCount === 0) {
-        return moment(this.req.modified).fromNow();
+          //return this.currentFolder.size
+          return null
+          //todo
+      }
+      if (this.selectedCount >= 1) {
+          let sum = 0
+          for (let selected of this.selected) {
+          if (!selected.isDir) sum += selected.size;
+        }
+        return sum
+      }
+      return null
+    },
+    encryptedSize() {
+      if (this.selectedCount === 0) {
+          //return this.currentFolder.size
+          return 0
+          //todo
       }
 
-      return moment(this.req.items[this.selected[0]].modified).fromNow();
+      if (this.selectedCount >= 1) {
+          let sum = 0
+          for (let selected of this.selected) {
+              if (!selected.isDir) sum += selected.encrypted_size;
+          }
+          return sum
+      }
+      return null
     },
-    modTime: function () {
-      return new Date(Date.parse(this.req.modified)).toLocaleString();
+    name() {
+      if (this.selectedCount === 0) {
+          return this.currentFolder.name
+
+      }
+      else if (this.selectedCount === 1) {
+          return this.selected[0].name
+      }
+      return null
     },
-    name: function () {
-      return this.selectedCount === 0
-        ? this.req.name
-        : this.req.items[this.selected[0]].name;
+    resolution() {
+        return null
     },
-    dir: function () {
-      return (
-        this.selectedCount > 1 ||
-        (this.selectedCount === 0
-          ? this.req.isDir
-          : this.req.items[this.selected[0]].isDir)
-      );
+    created() {
+      if (this.selectedCount === 0) {
+          return this.currentFolder.created
+
+      }
+      else if (this.selectedCount === 1) {
+          return this.selected[0].created
+      }
+      return null
+
     },
-    resolution: function() {
+    id() {
+      if (this.selectedCount === 0) {
+          return this.currentFolder.id
+
+      }
+      else if (this.selectedCount === 1) {
+          return this.selected[0].id
+      }
+      return null
+    },
+    ready() {
+      if (this.selectedCount === 0) {
+          return null
+
+      }
+      else if (this.selectedCount === 1) {
+          return this.selected[0].ready
+      }
+      return null
+
+    },
+    streamable() {
       if (this.selectedCount === 1) {
-        const selectedItem = this.req.items[this.selected[0]];
-        if (selectedItem && selectedItem.type === 'image') {
-          return selectedItem.resolution;
+        if (this.selected[0].extension === ".mp4") {
+          return this.selected[0].streamable
         }
       }
-      else if (this.req && this.req.type === 'image') {
-        return this.req.resolution;
-      }
-      return null;
+      return null
+
     },
+    extension() {
+      if (this.selectedCount === 0) {
+          return null
+
+      }
+      else if (this.selectedCount === 1) {
+          let extension = this.selected[0].extension
+          if (extension) return extension.replace(".", "")
+
+      }
+      return null
+
+    },
+    owner() {
+      if (this.selectedCount === 0) {
+          return this.currentFolder.owner.name
+
+      }
+      else if (this.selectedCount === 1) {
+          return this.selected[0].owner.name
+      }
+      return null
+    },
+
+    folderItemsCount() {
+        let folder
+        if (this.selectedCount === 0 && this.currentFolder) {
+            folder = this.currentFolder
+        } else if (this.selectedCount === 1) {
+            if (this.selected[0].isDir) {
+                folder = this.selected[0]
+            }
+        }
+        if (folder) {
+          let numFolders = folder.numFolders
+          let numFiles  = folder.numFiles
+          return {numFolders, numFiles};
+
+        }
+
+    },
+/*
+    folderItems() {
+        let folder
+        if (this.selectedCount === 0) {
+          folder = this.currentFolder
+        }
+        else if (this.selectedCount === 1) {
+          if (this.selected[0].isDir) {
+              folder = this.selected[0]
+          }
+        if (folder)  {
+          const folders = [];
+          const files = [];
+
+            folder.children.forEach(element => {
+              if (element.isDir) {
+                  folders.push(element);
+              } else {
+                  files.push(element);
+              }
+          });
+
+          return {folders, files};
+          }
+        }
+        return null
+        }
+       */
+
+
+    humanTime: function () {
+      return moment(this.created).fromNow();
+
+    },
+    modTime: function () {
+      return new Date(this.created).toLocaleString();
+    },
+
+
+
   },
   methods: {
-    checksum: async function (event, algo) {
-      event.preventDefault();
+    humanSize(size) {
+        return filesize(size);
+    },
+    changeView: async function (event, type) {
+        if (event.target.innerHTML.toString().includes("bytes")) {
+            if (type === "size") {
+                event.target.innerHTML = this.humanSize(this.size)
+            }
+            else if (type === "encryptedSize"){
+                event.target.innerHTML = this.humanSize(this.encryptedSize)
+            }
+        }
+        else {
+            if (type === "size") {
+                event.target.innerHTML = this.size + " bytes";
+            }
+            else if (type === "encryptedSize"){
+                event.target.innerHTML = this.encryptedSize + " bytes";
+            }
 
-      let link;
+        }
 
-      if (this.selectedCount) {
-        link = this.req.items[this.selected[0]].url;
-      } else {
-        link = this.$route.path;
-      }
-
-      try {
-        const hash = await api.checksum(link, algo);
-        // eslint-disable-next-line
-        event.target.innerHTML = hash;
-      } catch (e) {
-        this.$showError(e);
-      }
     },
   },
 };
 </script>
+<style lang="css" scoped>
+.checkmark-true:after {
+    content: "\002705";
+ color: #2ecc71;
+
+ margin-left: 5px; /* Adjust the margin value based on your preference */
+    /* Add other styles for the green checkmark icon if needed */
+}
+
+.checkmark-false {
+    content: "\00274C";
+    margin-left: 5px; /* Adjust the margin value based on your preference */
+    /* Add other styles for the red cross icon if needed */
+}
+</style>
