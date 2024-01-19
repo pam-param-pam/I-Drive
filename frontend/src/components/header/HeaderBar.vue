@@ -1,8 +1,7 @@
 <template>
   <header>
-    <img v-if="showLogo !== undefined" :src="logoURL" />
+    <img :src="logoURL"  alt="Logo"/>
     <action
-      v-if="showMenu !== undefined"
       class="menu-button"
       icon="menu"
       :label="$t('buttons.toggleSidebar')"

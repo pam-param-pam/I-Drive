@@ -1,6 +1,6 @@
 import * as files from "./files";
 import * as share from "./share";
-import * as users from "./users";
+import * as users from "./user.js";
 import * as settings from "./settings";
 import * as pub from "./pub";
 import search from "./search";

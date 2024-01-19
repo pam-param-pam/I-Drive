@@ -2,7 +2,6 @@ import Vue from "vue";
 import Noty from "noty";
 import VueLazyload from "vue-lazyload";
 import i18n from "@/i18n";
-import { disableExternal } from "@/utils/constants";
 import AsyncComputed from "vue-async-computed";
 
 Vue.use(VueLazyload);
@@ -25,6 +24,7 @@ Vue.prototype.$showSuccess = (message) => {
   new Noty(
     Object.assign({}, notyDefault, {
       text: message,
+      timeout: 2000,
       type: "success",
     })
   ).show();
@@ -37,7 +37,7 @@ Vue.prototype.$showError = (error, displayReport = true) => {
     }),
   ];
 
-  if (!disableExternal && displayReport) {
+  if (displayReport) {
     btns.unshift(
       Noty.button(i18n.t("buttons.reportIssue"), "", function () {
         window.open(

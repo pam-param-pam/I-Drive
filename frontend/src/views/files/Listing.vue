@@ -1,6 +1,6 @@
 <template>
   <div>
-    <header-bar showMenu showLogo>
+    <header-bar showMenu="false" showLogo="false">
       <search />
       <title />
       <action
@@ -248,6 +248,7 @@ import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
+import {updateSettings} from "@/api/user.js";
 
 export default {
   name: "listing",
@@ -403,6 +404,7 @@ export default {
     document.removeEventListener("drop", this.drop);
   },
   methods: {
+    ...mapState(["currentFolder"]),
     ...mapMutations(["updateUser", "addSelected"]),
 
     keyEvent(event) {
@@ -650,7 +652,7 @@ export default {
         path = el.__vue__.url;
 
         try {
-          items = (await api.fetch(path)).items;
+          items = (await api.getItems(path)).items;
         } catch (error) {
           this.$showError(error);
         }
@@ -806,6 +808,13 @@ export default {
       const data = {
         viewMode: modes[this.settings.viewMode] || "list",
       };
+      try {
+        const body = await updateSettings(data)
+
+      }
+      catch (error) {
+        this.$showError(error)
+      }
       //todo update settings on server
 
       // Await ensures correct value for setItemWeight()
@@ -828,14 +837,14 @@ export default {
       // Listing element is not displayed
       if (this.$refs.listing == null) return;
 
-      let itemQuantity = 11; //todo
+      let itemQuantity = this.currentFolder.numFiles + this.currentFolder.numFolders;
       if (itemQuantity > this.showLimit) itemQuantity = this.showLimit;
 
       // How much every listing item affects the window height
       this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity;
     },
     fillWindow(fit = false) {
-      const totalItems = 11; //todo
+      const totalItems = this.currentFolder.numFiles + this.currentFolder.numFolders;
 
       // More items are displayed than the total
       if (this.showLimit >= totalItems && !fit) return;

@@ -37,9 +37,9 @@
 </template>
 
 <script>
-import {mapGetters, mapState} from "vuex";
-import { files as api } from "@/api";
-import url from "@/utils/url";
+import {mapState} from "vuex";
+
+import {create} from "@/api/folder.js";
 
 export default {
   name: "new-dir",
@@ -64,11 +64,17 @@ export default {
   methods: {
     submit: async function (event) {
       event.preventDefault();
+      try {
+        await create({"parent_id": this.currentFolder.id, "name": this.name})
+        this.$showSuccess("woo");
 
-      console.log(this.name)
-        this.$store.commit("setReload", true);
+      }
+      catch (error) {
+        this.$showError(error);
+      }
+      this.$store.commit("setReload", true);
 
-        this.$store.commit("closeHovers");
+      this.$store.commit("closeHovers");
     },
   },
 };

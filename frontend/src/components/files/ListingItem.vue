@@ -14,7 +14,6 @@
     :aria-selected="isSelected"
   >
     <div>
-
       <i class="material-icons"></i>
     </div>
 
@@ -77,7 +76,7 @@ export default {
             return "image";
         }
 
-        return "unknown";
+        return "text";
     },
     isSelected() {
 
@@ -101,17 +100,19 @@ export default {
 
   },
   methods: {
-    ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
+    ...mapState(["settings"]),
+    ...mapMutations(["addSelected",  "removeSelected", "resetSelected"]),
     humanSize: function () {
       return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size);
     },
     humanTime: function () {
-      if (this.item.readOnly === undefined && this.user.dateFormat) {
+      if (this.settings.dateFormat) {
         return moment(this.item.created).format("L LT");
       }
       return moment(this.item.created).fromNow();
     },
     dragStart: function () {
+      console.log("drag start")
       if (this.selectedCount === 0) {
         this.addSelected(this.item);
         return;
@@ -168,7 +169,7 @@ export default {
 
       // Get url from ListingItem instance
       let path = el.__vue__.url;
-      let baseItems = (await api.fetch(path)).items;
+      let baseItems = (await api.getItems(path)).items;
 
       let action = (overwrite, rename) => {
         api
@@ -211,7 +212,7 @@ export default {
 
       setTimeout(() => {
         this.touches = 0;
-      }, 250);
+      }, 200);
 
       this.touches++;
       if (this.touches > 1) {

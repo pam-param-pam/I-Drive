@@ -90,7 +90,7 @@ export default {
       // content.
       let uri = event.currentTarget.dataset.url;
 
-      files.fetch(uri).then(this.fillOptions).catch(this.$showError);
+      files.getItems(uri).then(this.fillOptions).catch(this.$showError);
     },
     touchstart(event) {
       let url = event.currentTarget.dataset.url;

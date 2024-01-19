@@ -107,7 +107,7 @@ export default {
         return;
       }
 
-      let dstItems = (await api.fetch(this.dest)).items;
+      let dstItems = (await api.getItems(this.dest)).items;
       let conflict = upload.checkConflict(items, dstItems);
 
       let overwrite = false;

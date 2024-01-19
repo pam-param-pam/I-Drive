@@ -278,7 +278,7 @@ export default {
       if (!this.listing) {
         try {
           const path = url.removeLastDir(this.$route.path);
-          const res = await api.fetch(path);
+          const res = await api.getItems(path);
           this.listing = res.items;
         } catch (e) {
           this.$showError(e);

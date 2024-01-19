@@ -6,7 +6,7 @@
 
     <div class="card-content">
       <p>
-        {{ $t("prompts.renameMessage") }} <code>{{ oldName() }}</code
+        {{ $t("prompts.renameMessage") }} <code>{{ oldName }}</code
         >:
       </p>
       <input
@@ -42,58 +42,38 @@
 
 <script>
 import { mapState, mapGetters } from "vuex";
-import url from "@/utils/url";
-import { files as api } from "@/api";
+import {rename} from "@/api/item.js";
 
 export default {
   name: "rename",
   data: function () {
     return {
       name: "",
+      oldName: "",
     };
   },
-  created() {
-    this.name = this.oldName();
-  },
+
   computed: {
-    ...mapState(["req", "selected", "selectedCount"]),
-    ...mapGetters(["isListing"]),
+    ...mapState(["selected"]),
+    ...mapGetters(["isListing", "selectedCount"]),
+
+  },
+  created() {
+    this.name = this.selected[0].name
+    this.oldName = this.name
   },
   methods: {
     cancel: function () {
       this.$store.commit("closeHovers");
     },
-    oldName: function () {
-      if (!this.isListing) {
-        return this.req.name;
-      }
 
-      if (this.selectedCount === 0 || this.selectedCount > 1) {
-        // This shouldn't happen.
-        return;
-      }
-
-      return this.req.items[this.selected[0]].name;
-    },
     submit: async function () {
-      let oldLink = "";
-      let newLink = "";
 
-      if (!this.isListing) {
-        oldLink = this.req.url;
-      } else {
-        oldLink = this.req.items[this.selected[0]].url;
-      }
-
-      newLink =
-        url.removeLastDir(oldLink) + "/" + encodeURIComponent(this.name);
 
       try {
-        await api.move([{ from: oldLink, to: newLink }]);
-        if (!this.isListing) {
-          this.$router.push({ path: newLink });
-          return;
-        }
+        await rename({"id": this.selected[0].id, "new_name": this.name});
+        this.$showSuccess("renamed " + this.oldName + " to " + this.name);
+
 
         this.$store.commit("setReload", true);
       } catch (e) {

@@ -1,69 +1,65 @@
 <template>
-    <div class="breadcrumbs">
-        <component
-                :is="element"
-                :to="base || ''"
-                :aria-label="$t('files.home')"
-                :title="$t('files.home')"
-        >
-            <i class="material-icons">home</i>
-        </component>
-        <span v-for="(folder, index) in path" :key="folder.id">
+  <div class="breadcrumbs">
+    <component
+      :is="element"
+      :to="base || ''"
+      :aria-label="$t('files.home')"
+      :title="$t('files.home')"
+    >
+      <i class="material-icons">home</i>
+    </component>
+    <span v-for="folder in path" :key="folder.id">
           <span class="chevron"
           ><i class="material-icons">keyboard_arrow_right</i></span
           >
         <component :is="element" :to="folder.id">{{ folder.name }}</component>
+
     </span>
 
-    </div>
+  </div>
 </template>
 
 <script>
 import {files as api} from "@/api/index.js";
 import {mapState} from "vuex";
+import {breadcrumbs} from "@/api/folder.js";
 
 export default {
-    name: "breadcrumbs",
-    props: ["base", "noLink"],
+  name: "breadcrumbs",
+  props: ["base", "noLink"],
 
-    computed: {
-        ...mapState(["currentFolder", "reload"]),
-        element() {
-            if (this.noLink !== undefined) {
-                return "span";
-            }
+  computed: {
+    ...mapState(["currentFolder", "reload"]),
+    element() {
+      if (this.noLink !== undefined) {
+        return "span";
+      }
 
-            return "router-link";
-        },
+      return "router-link";
+
     },
+  },
 
-    asyncComputed: {
-        path: {
-            async get() {
+  asyncComputed: {
+    path: {
+      async get() {
+        let path = [];
 
-                let path = [];
+        if (this.currentFolder) {
+          try {
+            path = await breadcrumbs(this.currentFolder.id);
+          }
+          catch (error) {
+            this.$showError(error);
+          }
+        }
 
-                try {
-                    let folder_id = ""
-                    if (!this.currentFolder) {
-                        folder_id= "/files/"
-                    }
-                    else {
-                        folder_id = this.currentFolder.id
-                    }
-                    path = await api.breadcrumbs(folder_id);
-                } catch (error) {
-                    this.$showError(error);
-                }
-                return path
-            },
-            default: [],
+        return path
+      },
+      default: [],
 
-        },
     },
-
-
-
+  },
 
 };
 </script>

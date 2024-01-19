@@ -1,46 +1,22 @@
 import store from "@/store";
 import router from "@/router";
-import { Base64 } from "js-base64";
-import { baseURL } from "@/utils/constants";
-
-export function parseToken(body) {
-
-
-}
-export async function getUser(token) {
-      if (!token) return
-      const res = await fetch(`${baseURL}/auth/users/me`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Token ${token}`
-        },
-
-      });
-
-      const body = await res.json();
-
-      if (res.status === 200) {
-        store.commit("setUser", body.user);
-        store.commit("setSettings", body.settings);
-        store.commit("setPerms", body.perms);
-        store.commit("setToken", token);
+import {baseURL} from "@/utils/constants";
+import {getUser} from "@/api/user.js";
 
 
 
-      } else {
-        throw new Error(body);
-      }
-
-}
 export async function validateLogin() {
   const token = localStorage.getItem("token");
 
-  await getUser(token)
+  const body = await getUser(token)
+  store.commit("setUser", body.user);
+  store.commit("setSettings", body.settings);
+  store.commit("setPerms", body.perms);
+  store.commit("setToken", token);
 }
 
 export async function login(username, password, recaptcha) {
-  const data = { username, password };
+  const data = {username, password};
 
   const res = await fetch(`${baseURL}/auth/token/login`, {
     method: "POST",
@@ -64,12 +40,9 @@ export async function login(username, password, recaptcha) {
   }
 }
 
-export async function renew(jwt) {
-
-}
 
 export async function signup(username, password) {
-  const data = { username, password };
+  const data = {username, password};
 
   const res = await fetch(`${baseURL}/api/signup`, {
     method: "POST",
@@ -85,11 +58,11 @@ export async function signup(username, password) {
 }
 
 export function logout() {
-  document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/";
 
   store.commit("setUser", null);
+  store.commit("setSettings", null);
   store.commit("setToken", null);
   localStorage.removeItem("token");
 
-  router.push({ path: "/login" });
+  router.push({path: "/login"});
 }

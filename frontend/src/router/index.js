@@ -130,7 +130,6 @@ const router = new Router({
 });
 
 router.beforeEach((to, from, next) => {
-  document.title = name;
 
   /*** RTL related settings per route ****/
   const rtlSet = document.querySelector("body").classList.contains("rtl");

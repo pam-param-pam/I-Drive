@@ -91,9 +91,7 @@
 
     <p class="credits">
       <span>
-        <span v-if="disableExternal">File Browser</span>
         <a
-          v-else
           rel="noopener noreferrer"
           target="_blank"
           href="https://github.com/pam-param-pam/Disney-Plus-api-wrapper"
@@ -110,14 +108,7 @@
 <script>
 import { mapState, mapGetters } from "vuex";
 import * as auth from "@/utils/auth";
-import {
-  version,
-  signup,
-  disableExternal,
-  disableUsedPercentage,
-  noAuth,
-  loginPage,
-} from "@/utils/constants";
+import { version, signup } from "@/utils/constants";
 import { files as api } from "@/api";
 import ProgressBar from "vue-simple-progress";
 import prettyBytes from "pretty-bytes";
@@ -135,17 +126,13 @@ export default {
     },
     signup: () => signup,
     version: () => version,
-    disableExternal: () => disableExternal,
-    disableUsedPercentage: () => disableUsedPercentage,
   },
   asyncComputed: {
     usage: {
       async get() {
 
         let usageStats = { used: 0, total: 0, usedPercentage: 0 };
-        if (this.disableUsedPercentage) {
-          return usageStats;
-        }
+
         try {
           let usage = await api.usage();
           usageStats = {

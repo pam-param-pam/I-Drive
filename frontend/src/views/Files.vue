@@ -1,10 +1,10 @@
 <template>
   <div>
-    <header-bar v-if="error" showMenu showLogo />
+    <header-bar v-if="error" showMenu showLogo/>
 
-    <breadcrumbs base="/files" />
+    <breadcrumbs base="/files"/>
 
-    <errors v-if="error" :errorCode="error.status" />
+    <errors v-if="error" :errorCode="error.status"/>
     <component v-else-if="currentView" :is="currentView"></component>
     <div v-else>
       <h2 class="message delayed">
@@ -20,14 +20,14 @@
 </template>
 
 <script>
-import { files as api } from "@/api";
-import { mapState, mapMutations } from "vuex";
+import {mapState, mapMutations} from "vuex";
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import Errors from "@/views/Errors.vue";
 import Preview from "@/views/files/Preview.vue";
 import Listing from "@/views/files/Listing.vue";
+import {getItems} from "@/api/folder.js";
 
 export default {
   name: "files",
@@ -51,8 +51,7 @@ export default {
       if (this.$router.currentRoute.path.includes("preview")) {
         return "preview";
 
-      }
-      else if (this.$router.currentRoute.path.includes("editor")) {
+      } else if (this.$router.currentRoute.path.includes("editor")) {
         return "editor";
 
       }
@@ -66,7 +65,7 @@ export default {
   watch: {
     $route: "fetchData",
     reload: function (value) {
-        console.log("reload changed")
+      console.log("reload changed")
       if (value === true) {
         this.fetchData();
       }
@@ -79,8 +78,8 @@ export default {
     window.removeEventListener("keydown", this.keyEvent);
   },
   destroyed() {
-    this.$store.commit("setItems", {});
-    //this.$store.commit("setCurrentFolder", {});
+    this.$store.commit("setItems", null);
+    this.$store.commit("setCurrentFolder", null);
 
   },
   methods: {
@@ -98,12 +97,12 @@ export default {
       let url = this.$route.path;
 
       try {
-        const res = await api.fetch(url);
+        const res = await getItems(url);
 
         this.$store.commit("setItems", res.children);
         this.$store.commit("setCurrentFolder", res);
 
-        document.title = `${res.name} - ${document.title}`;
+        document.title = `${res.name} - File Browser`;
       } catch (e) {
         this.error = e;
       } finally {
@@ -112,11 +111,11 @@ export default {
       }
     },
     keyEvent(event) {
-        // H!
-        if (event.keyCode === 72) {
-            event.preventDefault();
-            this.$store.commit("showHover", "help");
-        }
+      // H!
+      if (event.keyCode === 72) {
+        event.preventDefault();
+        this.$store.commit("showHover", "help");
+      }
     },
   },
 };

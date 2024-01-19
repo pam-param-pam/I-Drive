@@ -1,5 +1,5 @@
 <template>
-  <div id="login" :class="{ recaptcha: recaptcha }">
+  <div id="login" >
     <form @submit="submit">
       <img :src="logoURL" alt="File Browser" />
       <h1>{{ name }}</h1>
@@ -27,7 +27,6 @@
         :placeholder="$t('login.passwordConfirm')"
       />
 
-      <div v-if="recaptcha" id="recaptcha"></div>
       <input
         class="button button--block"
         type="submit"
@@ -48,8 +47,6 @@ import * as auth from "@/utils/auth";
 import {
   name,
   logoURL,
-  recaptcha,
-  recaptchaKey,
   signup,
 } from "@/utils/constants";
 
@@ -66,19 +63,10 @@ export default {
       error: "",
       username: "",
       password: "",
-      recaptcha: recaptcha,
       passwordConfirm: "",
     };
   },
-  mounted() {
-    if (!recaptcha) return;
 
-    window.grecaptcha.ready(function () {
-      window.grecaptcha.render("recaptcha", {
-        sitekey: recaptchaKey,
-      });
-    });
-  },
   methods: {
     toggleMode() {
       this.createMode = !this.createMode;
@@ -90,16 +78,6 @@ export default {
       let redirect = this.$route.query.redirect;
       if (redirect === "" || redirect === undefined || redirect === null) {
         redirect = "/files/";
-      }
-
-      let captcha = "";
-      if (recaptcha) {
-        captcha = window.grecaptcha.getResponse();
-
-        if (captcha === "") {
-          this.error = this.$t("login.wrongCredentials");
-          return;
-        }
       }
 
       if (this.createMode) {
@@ -114,8 +92,8 @@ export default {
           await auth.signup(this.username, this.password);
         }
 
-        await auth.login(this.username, this.password, captcha);
-        this.$router.push({ path: redirect });
+        await auth.login(this.username, this.password);
+        await this.$router.push({path: redirect});
       } catch (e) {
         if (e.message === 409) {
           this.error = this.$t("login.usernameTaken");

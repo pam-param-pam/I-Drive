@@ -1,11 +1,11 @@
 <template>
   <div class="card floating">
     <div class="card-content">
-      <p v-if="!this.isListing || selectedCount === 1">
+      <p v-if="selectedCount === 1">
         {{ $t("prompts.deleteMessageSingle") }}
       </p>
-      <p v-else>
-        {{ $t("prompts.deleteMessageMultiple", { count: selectedCount }) }}
+      <p v-else-if="selectedCount > 1">
+        {{ $t("prompts.deleteMessageMultiple", {count: selectedCount}) }}
       </p>
     </div>
     <div class="card-action">
@@ -30,49 +30,31 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapState } from "vuex";
-import { files as api } from "@/api";
-import buttons from "@/utils/buttons";
+import {mapGetters, mapMutations, mapState} from "vuex";
+import {remove} from "@/api/item.js";
 
 export default {
   name: "delete",
   computed: {
-    ...mapGetters(["isListing", "selectedCount", "currentPrompt"]),
-    ...mapState(["req", "selected"]),
+    ...mapGetters(["selectedCount", "currentPrompt"]),
+    ...mapState(["selected"]),
   },
   methods: {
     ...mapMutations(["closeHovers"]),
     submit: async function () {
-      buttons.loading("delete");
 
       try {
-        if (!this.isListing) {
-          await api.remove(this.$route.path);
-          buttons.success("delete");
+        let ids = this.selected.map(item => item.id);
 
-          this.currentPrompt?.confirm();
-          this.closeHovers();
-          return;
-        }
+        await remove({"ids": ids});
 
         this.closeHovers();
-
-        if (this.selectedCount === 0) {
-          return;
-        }
-
-        let promises = [];
-        for (let index of this.selected) {
-          promises.push(api.remove(this.req.items[index].url));
-        }
-
-        await Promise.all(promises);
-        buttons.success("delete");
         this.$store.commit("setReload", true);
-      } catch (e) {
-        buttons.done("delete");
+
+
+      }
+      catch (e) {
         this.$showError(e);
-        if (this.isListing) this.$store.commit("setReload", true);
       }
     },
   },

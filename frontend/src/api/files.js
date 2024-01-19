@@ -1,4 +1,4 @@
-import { createURL, fetchURL, removePrefix } from "./utils";
+import {createURL, fetchJSON, fetchURL, removePrefix} from "./utils";
 import { baseURL } from "@/utils/constants";
 import store from "@/store";
 import { upload as postTus, useTus } from "./tus";
@@ -8,39 +8,7 @@ export function getImage(file) {
 }
 
 
-export async function fetch(url) {
-  if (url === "/files/") {
-    url = "/api/getroot"
-  }
-  else {
-    url = "/api" + url.replace("/files", "")
 
-  }
-  const res = await fetchURL(url, {});
-
-  let data = await res.json();
-  /*
-  data.url = `/files${url}`;
-
-  if (data.isDir) {
-    if (!data.url.endsWith("/")) data.url += "/";
-    data.items = data.items.map((item, index) => {
-
-      item.index = index;
-      item.url = `${data.url}${encodeURIComponent(item.name)}`;
-
-      if (item.isDir) {
-        item.url += "/";
-      }
-
-      return item;
-    });
-  }
-
-   */
-
-  return data;
-}
 
 async function resourceAction(url, method, content) {
   url = removePrefix(url);
@@ -56,9 +24,6 @@ async function resourceAction(url, method, content) {
   return res;
 }
 
-export async function remove(url) {
-  return resourceAction(url, "DELETE");
-}
 
 export async function put(url, content = "") {
   return resourceAction(url, "PUT", content);
@@ -210,14 +175,6 @@ export function getSubtitlesURL(file) {
 export async function usage() {
 
   const res = await fetchURL(`/api/usage`, {});
-
-  return await res.json();
-}
-export async function breadcrumbs(folder_id) {
-  if (folder_id === "/files/") {
-      return []
-  }
-  const res = await fetchURL(`/api/breadcrumbs/${folder_id}`, {});
 
   return await res.json();
 }

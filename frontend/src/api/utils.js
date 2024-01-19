@@ -1,5 +1,4 @@
 import store from "@/store";
-import { renew, logout } from "@/utils/auth";
 import { baseURL } from "@/utils/constants";
 import { encodePath } from "@/utils/url";
 
@@ -9,6 +8,7 @@ export async function fetchURL(url, opts, auth = true) {
 
   let { headers, ...rest } = opts;
   let res;
+  console.log(rest)
   try {
     res = await fetch(`${baseURL}${url}`, {
       headers: {
@@ -17,8 +17,9 @@ export async function fetchURL(url, opts, auth = true) {
       },
       ...rest,
     });
-  } catch {
-    const error = new Error("000 No connection");
+  } catch (e){
+    console.log(e)
+    const error = new Error(e);
     error.status = 0;
 
     throw error;

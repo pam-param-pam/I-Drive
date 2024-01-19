@@ -27,12 +27,6 @@ const mutations = {
       props: value?.props,
     });
   },
-  showError: (state) => {
-    state.prompts.push("error");
-  },
-  showSuccess: (state) => {
-    state.prompts.push("success");
-  },
   setLoading: (state, value) => {
     state.loading = value;
   },
@@ -116,6 +110,7 @@ const mutations = {
     state.upload.eta = 0;
   },
   setCurrentFolder(state, value) {
+    console.log("setting current folder to" + JSON.stringify(value))
     state.currentFolder = value;
 
   },

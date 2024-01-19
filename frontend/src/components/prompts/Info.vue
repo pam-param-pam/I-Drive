@@ -97,8 +97,8 @@ import { files as api } from "@/api";
 export default {
   name: "info",
   computed: {
-    ...mapState(["selected","currentFolder"]),
-    ...mapGetters(["selectedCount", "isListing"]),
+    ...mapState(["selected","settings", "currentFolder"]),
+    ...mapGetters(["selectedCount"]),
     size() {
       if (this.selectedCount === 0) {
           //return this.currentFolder.size
@@ -256,12 +256,14 @@ export default {
 
 
     humanTime: function () {
+      if (this.settings.dateFormat) {
+        return new Date(this.created).toLocaleString();
+
+      }
       return moment(this.created).fromNow();
 
     },
-    modTime: function () {
-      return new Date(this.created).toLocaleString();
-    },
+
 
 
 
