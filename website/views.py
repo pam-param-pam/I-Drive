@@ -1,8 +1,6 @@
-import json
 import os
 import time
 import uuid
-from json import JSONDecodeError
 from wsgiref.util import FileWrapper
 
 import m3u8
@@ -16,17 +14,17 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.Handlers import ProgressBarUploadHandler
 from website.decorators import view_cleanup
 from website.forms import UploadFileForm
 from website.models import File, Fragment, Folder, UserPerms, UserSettings
-from website.tasks import process_download, handle_uploaded_file, delete_file_task, test_task, delete_folder_task
+from website.tasks import process_download, handle_uploaded_file, delete_file_task, delete_folder_task
 from website.utilities.Discord import discord
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_folder_tree, \
     build_folder_content, create_files_dict, build_response, get_folder_path
 
 MAX_MB = 25
 MAX_STREAM_MB = 23
+DELAY_TIME = 0
 
 
 # TODO return only if ready=true
@@ -36,6 +34,8 @@ MAX_STREAM_MB = 23
 @api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
 # @permission_classes([IsAuthenticated])
 def upload_file(request):
+    time.sleep(DELAY_TIME)
+
     # request.upload_handlers.insert(0, ProgressBarUploadHandler(
     #    request))  # TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
 
@@ -46,12 +46,16 @@ def upload_file(request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
 def index(request):
+    time.sleep(DELAY_TIME)
+
     return HttpResponse(f"hello {request.user}")
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def download(request, file):
+    time.sleep(DELAY_TIME)
+
     try:
         file_obj = File.objects.get(id=file)
     except (File.DoesNotExist, ValidationError):
@@ -59,10 +63,10 @@ def download(request, file):
         return HttpResponse(f"doesn't exist", status=404)
 
     # owner, maintainer or viewer perms needed
-    if request.user.id not in (
-            file_obj.owner.id,
-            getattr(file_obj.maintainer, 'id', None),
-            getattr(file_obj.viewer, 'id', None)
+    if request.user not in (
+            file_obj.owner,
+            file_obj.maintainer,
+            file_obj.viewer
     ):
         return HttpResponse(f"unauthorized", status=403)
 
@@ -124,6 +128,8 @@ def _upload_file(request):
 # @permission_classes([IsAuthenticated])
 @view_cleanup
 def stream_key(request, file_id):
+    time.sleep(DELAY_TIME)
+
     file_id = file_id.replace(".key", "")
     try:
         file_obj = File.objects.get(id=file_id)
@@ -133,10 +139,10 @@ def stream_key(request, file_id):
     if not file_obj.ready:
         return HttpResponse(f"This file is not uploaded yet", status=404)
     # owner, maintainer or viewer perms needed
-    if request.user.id not in (
-            file_obj.owner.id,
-            getattr(file_obj.maintainer, 'id', None),
-            getattr(file_obj.viewer, 'id', None)
+    if request.user not in (
+            file_obj.owner,
+            file_obj.maintainer,
+            file_obj.viewer
     ):
         return HttpResponse(f"unauthorized", status=403)
     if not file_obj.streamable:
@@ -195,7 +201,6 @@ def process_m3u8(request_id, file_obj):
 
 
 def test(request):
-    test_task.delay()
     return HttpResponse(f"yupi", status=200)
 
 
@@ -203,6 +208,8 @@ def test(request):
 # @permission_classes([IsAuthenticated])
 @view_cleanup
 def get_m3u8(request, file_id):
+    time.sleep(DELAY_TIME)
+
     file_id = file_id.replace(".m3u8", "")
     try:
         file_obj = File.objects.get(id=file_id)
@@ -229,20 +236,19 @@ def get_m3u8(request, file_id):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def create_folder(request):
+    time.sleep(DELAY_TIME)
+
     try:
         name = request.data['name']
 
         parent = Folder.objects.get(id=request.data['parent_id'])
 
-        user = request.user
-
-        user = 1  # todo
         folder_obj = Folder(
             name=name,
             parent=parent,
-            owner_id=user,
+            owner=request.user,
         )
         folder_obj.save()
         return HttpResponse(f"folder created {request.request_id} id={folder_obj.id}", status=200)
@@ -252,95 +258,72 @@ def create_folder(request):
 
     except KeyError:
         return HttpResponse(f"bad request", status=404)
-
-
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-def movefolder(request):
+@permission_classes([IsAuthenticated])
+def move(request):
+    time.sleep(DELAY_TIME)
+
     try:
-
-        folder = Folder.objects.get(id=request.data['folder_id'])  # folder to be moved
-
-        parent = Folder.objects.get(id=request.data['parent_id'])  # destination folder
+        obj_id = request.data['id']
+        parent_id = request.data['parent_id']
 
         user = request.user
 
-        user = 1  # todo
-        if parent == folder.parent or parent == folder:
-            return HttpResponse(f"bad request: folders are the same", status=404)
+        obj = Folder.objects.get(id=obj_id)
 
-        if folder.owner_id != user or (folder.maintainer_id and folder.maintainer_id != user) or \
-                parent.owner_id != user or (parent.maintainer_id and parent.maintainer_id != user):
-            return HttpResponse("unauthorized", status=403)
+        parent = Folder.objects.get(id=parent_id)
 
-        folder.parent = parent
+        if parent == obj.parent or parent == obj:
+            return HttpResponse(f"Bad request: folders are the same", status=400)
 
-        folder.save()
-        return HttpResponse(f"folder moved {request.request_id} to={parent.name}", status=200)
+        if obj.owner != user or (obj.maintainer and obj.maintainer != user) or \
+                parent.owner != user or (parent.maintainer and parent.maintainer != user):
+            return HttpResponse("Unauthorized", status=403)
 
-    except (ValidationError, Folder.DoesNotExist):
-        return HttpResponse(f"bad request: folder id or parent id are not correct", status=404)
+        obj.parent = parent
+        obj.save()
+        item_type = "File" if isinstance(obj, File) else "Folder"
 
-    except KeyError:
-        return HttpResponse(f"bad request", status=404)
-
-
-@api_view(['POST'])  # not tested lul
-# @permission_classes([IsAuthenticated])
-def movefile(request):
-    try:
-
-        file = Folder.objects.get(id=request.data['file_id'])  # file to be moved
-
-        parent = Folder.objects.get(id=request.data['parent_id'])  # destination folder
-
-        user = request.user
-
-        user = 1  # todo
-        if parent == file.parent:  # if old folder and new folder are the same, throw error
-            return HttpResponse(f"bad request: folders are the same", status=404)
-
-        if file.owner_id != user or (file.maintainer_id and file.maintainer_id != user) or \
-                parent.owner_id != user or (parent.maintainer_id and parent.maintainer_id != user):
-            return HttpResponse("unauthorized", status=403)
-
-        file.parent = parent
-
-        file.save()
-        return HttpResponse(f"file moved {request.request_id} to={parent.name}", status=200)
+        return HttpResponse(f"{item_type} moved {request.request_id} to {parent.name}", status=200)
 
     except (ValidationError, Folder.DoesNotExist):
-        return HttpResponse(f"bad request: file id or parent id are not correct", status=404)
+        return HttpResponse("Bad request: item id or parent id are not correct", status=404)
 
     except KeyError:
-        return HttpResponse(f"bad request", status=404)
+        return HttpResponse("Bad request: Missing required parameters", status=400)
 
 
 @api_view(['POST'])  # this should be a post or delete imo
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def delete(request):
+    time.sleep(DELAY_TIME)
+
     try:
         user = request.user
-        user.id = 1  # todo
-        obj_id = request.data['id']
+        items = []
+        ids = request.data['ids']
+        if not isinstance(ids, list):
+            return HttpResponse("Bad request: 'ids' should be a list", status=400)
+        for item_id in ids:
 
-        try:
-            obj = Folder.objects.get(id=obj_id)
-        except Folder.DoesNotExist:
             try:
-                obj = File.objects.get(id=obj_id)
-            except File.DoesNotExist:
-                return HttpResponse(f"doesn't exist", status=404)
+                item = Folder.objects.get(id=item_id)
+            except Folder.DoesNotExist:
+                try:
+                    item = File.objects.get(id=item_id)
+                except File.DoesNotExist:
+                    return HttpResponse(f"doesn't exist", status=404)
 
-        if obj.owner.id != user.id:  # owner perms needed
-            return HttpResponse(f"unauthorized", status=403)
+            if item.owner != user:  # owner perms needed
+                return HttpResponse(f"unauthorized", status=403)
 
-        if isinstance(obj, File):
-            delete_file_task.delay(user.id, request.request_id, obj.id)
-            return JsonResponse(build_response(request.request_id, "file is being deleted..."))
-        elif isinstance(obj, Folder):
-            delete_folder_task.delay(user.id, request.request_id, obj.id)
-            return JsonResponse(build_response(request.request_id, "folder is being deleted..."))
+            items.append(item)
+        for item in items:
+            if isinstance(item, File):
+                delete_file_task.delay(user.id, request.request_id, item.id)
+            elif isinstance(item, Folder):
+                delete_folder_task.delay(user.id, request.request_id, item.id)
+        return JsonResponse(build_response(request.request_id, "folder is being deleted..."))
 
     except ValidationError:
         return HttpResponse(f"doesn't exist", status=404)
@@ -349,13 +332,11 @@ def delete(request):
 
 
 @api_view(['POST'])  # this should be a post or delete imo
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def rename(request):
+    time.sleep(DELAY_TIME)
+
     try:
-
-        user = request.user
-        user.id = 1  # todo
-
         obj_id = request.data['id']
         new_name = request.data['new_name']
 
@@ -367,7 +348,7 @@ def rename(request):
             except File.DoesNotExist:
                 return HttpResponse(f"doesn't exist", status=404)
 
-        if obj.owner.id != request.user.id:  # todo fix perms
+        if obj.owner != request.user:  # todo fix perms
             return HttpResponse(f"unauthorized", status=403)
 
         obj.name = new_name
@@ -381,14 +362,13 @@ def rename(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def get_folder_tree(request):
-    user = request.user
+    time.sleep(DELAY_TIME)
 
-    user.id = 1  # todo
     try:
 
-        user_folders = Folder.objects.filter(owner_id=user.id)  # todo
+        user_folders = Folder.objects.filter(owner=request.user)  # todo
         folder_structure = build_folder_tree(user_folders)
         return JsonResponse(folder_structure[0])
 
@@ -401,15 +381,14 @@ def get_folder_tree(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def get_folder(request, folder_id):
-    user = request.user
+    time.sleep(DELAY_TIME)
 
-    user.id = 1  # todo
     try:
 
         folder_obj = Folder.objects.get(id=folder_id)
-        if folder_obj.owner.id != request.user.id:  # todo fix perms
+        if folder_obj.owner != request.user:  # todo fix perms
             return HttpResponse(f"unauthorized", status=403)
         folder_content = build_folder_content(folder_obj)
 
@@ -422,14 +401,13 @@ def get_folder(request, folder_id):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def search(request, query):
-    user = request.user
+    time.sleep(DELAY_TIME)
 
-    user.id = 1  # todo
     try:
         filtered_files = File.objects.filter(Q(name__icontains=query) | Q(parent__name__icontains=query),
-                                             owner_id=user.id)  # todo fix id
+                                             owner=request.user)  # todo fix id
         files = create_files_dict(filtered_files)
         return JsonResponse(files, safe=False)
 
@@ -440,15 +418,14 @@ def search(request, query):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def usage(request):
-    user = request.user
+    time.sleep(DELAY_TIME)
 
-    user.id = 1  # todo
     try:
         used_size = 0
         used_encrypted_size = 0
-        files = File.objects.filter(owner_id=user.id)
+        files = File.objects.filter(owner=request.user)
         for file in files:
             used_encrypted_size += file.encrypted_size
             used_size += file.size
@@ -459,13 +436,12 @@ def usage(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def get_root(request):
-    user = request.user
+    time.sleep(DELAY_TIME)
 
-    user.id = 1  # todo
     try:
-        folder_obj = Folder.objects.get(parent=None, owner_id=user.id)
+        folder_obj = Folder.objects.get(parent=None, owner=request.user)
         folder_content = build_folder_content(folder_obj)
 
         return JsonResponse(folder_content, safe=False)
@@ -474,32 +450,36 @@ def get_root(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def get_breadcrumbs(request, folder_id):
+    time.sleep(DELAY_TIME)
+    try:
 
-        user = request.user  # todo
-        user.id = 1
+        Folder.objects.get(id=folder_id)  # check is the supplied folder_id is current else it throws error so 404
 
-        user_folders = Folder.objects.filter(owner_id=user.id)  # todo
+        user_folders = Folder.objects.filter(owner=request.user)
         folder_structure = build_folder_tree(user_folders)
         folder_path = get_folder_path(folder_id, folder_structure[0])
 
         return JsonResponse(folder_path, safe=False)
-
+    except (Folder.DoesNotExist, ValidationError):
+        return HttpResponse(f"doesn't exist", status=404)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def users_me(request):
+    time.sleep(DELAY_TIME)
+
     user = request.user
-    user.id = 1  # todo
-    perms = UserPerms.objects.get(user_id=user.id)
-    settings = UserSettings.objects.get(user_id=user.id)
+    perms = UserPerms.objects.get(user=user)
+    settings = UserSettings.objects.get(user=user)
 
     response = {"user": {"id": user.id, "name": user.username},
-                "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create, "rename": perms.rename,
-                         "modify": perms.modify, "delete": perms.delete, "share": perms.share,
-                         "download": perms.download},
+                "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
+                          "rename": perms.rename,
+                          "modify": perms.modify, "delete": perms.delete, "share": perms.share,
+                          "download": perms.download},
                 "settings": {"locale": settings.locale, "hideDotFiles": settings.hide_dotfiles,
                              "dateFormat": settings.date_format, "singleClick": settings.single_click,
                              "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
@@ -509,11 +489,8 @@ def users_me(request):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 def update_settings(request):
-    user = request.user
-    user.id = 1  # todo
-
     locale = request.data.get('locale')
     hideDotFiles = request.data.get('hideDotFiles')
     singleClick = request.data.get('singleClick')
@@ -522,21 +499,20 @@ def update_settings(request):
     sorting_by = request.data.get('sorting_by')
     sort_by_asc = request.data.get('sort_by_asc')
 
-    settings = UserSettings.objects.get(user_id=user.id)
-
+    settings = UserSettings.objects.get(user=request.user)
     if locale in ["pl", "en"]:
         settings.locale = locale
     if isinstance(dateFormat, bool):
-        settings.dateFormat = dateFormat
+        settings.date_format = dateFormat
     if isinstance(hideDotFiles, bool):
-        settings.hideDotFiles = hideDotFiles
+        settings.hide_dotfiles = hideDotFiles
     if isinstance(singleClick, bool):
-        settings.singleClick = singleClick
-    if viewMode in ["list", "gallery", "mosaic gallery"]:
-        settings.viewMode = viewMode
+        settings.single_click = singleClick
+    if viewMode in ["list", "mosaic", "mosaic gallery"]:
+        settings.view_mode = viewMode
     if sorting_by in ["name", "size", "mosaic gallery"]:
-        settings.viewMode = viewMode
+        settings.sorting_by = sorting_by
     if isinstance(sort_by_asc, bool):
         settings.sort_by_asc = sort_by_asc
-
+    settings.save()
     return HttpResponse(status=200)

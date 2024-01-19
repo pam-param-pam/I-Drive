@@ -25,15 +25,14 @@ urlpatterns = [
                   path("api/getroot", views.get_root, name="get root's content"),
                   path("api/breadcrumbs/<folder_id>", views.get_breadcrumbs, name="get root's real content"),
 
-                  path("api/settings", views.update_settings, name="update settings"),
+                  path("api/updatesettings", views.update_settings, name="update settings"),
 
                   path("api/createfolder", views.create_folder, name="create folder"),
 
-                  path("api/movefolder", views.movefolder, name="move folder"),
-                  path("api/movefile", views.movefile, name="move file"),
+                  path("api/move", views.move, name="move file/folder"),
 
-                  path("api/delete", views.delete, name="delete file"),
-                  path("api/usage", views.usage, name="rename file/folder"),
+                  path("api/delete", views.delete, name="delete file/folder"),
+                  path("api/usage", views.usage, name="get total size of all files"),
 
                   path("api/rename", views.rename, name="rename file/folder"),
 

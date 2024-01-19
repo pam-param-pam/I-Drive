@@ -52,7 +52,7 @@ def create_files_dict(file_list):
             'streamable': file_obj.streamable,
             'size': file_obj.size,
             'encrypted_size': file_obj.encrypted_size,
-            'created_at': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
+            'created': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
             'ready': file_obj.ready,
             'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
             "maintainers": [],
@@ -76,8 +76,10 @@ def build_folder_tree(folder_objs, parent_folder=None):
             'name': folder.name,
             'owner': {"name": folder.owner.username, "id": folder.owner.id},
             'parent_id': folder.parent_id,
-            'created_at': folder.created_at.strftime('%Y-%m-%d %H:%M'),
+            'created': folder.created_at.strftime('%Y-%m-%d %H:%M'),
             'children': build_folder_tree(folder_objs, folder),
+            "numFiles": 21,
+            "numFolders": 37,
         }
 
         folder_tree.append(folder_data)
@@ -91,9 +93,11 @@ def create_fragmented_folder_dict(folder_children):
         folder_data = {
             'id': str(folder.id),
             'name': folder.name,
-            'created_at': folder.created_at.strftime('%Y-%m-%d %H:%M'),
+            'created': folder.created_at.strftime('%Y-%m-%d %H:%M'),
             'owner': {"name": folder.owner.username, "id": folder.owner.id},
             'parent_id': folder.parent_id,
+            #"numFiles": 21,
+            #"numFolders": 37,
             'isDir': True,
         }
         folder_list.append(folder_data)
@@ -107,8 +111,8 @@ def build_folder_content(folder_obj):
     file_dicts = create_files_dict(file_children)
     folder_dicts = create_fragmented_folder_dict(folder_children)
 
-    json_string = {"isDir": True, "name": folder_obj.name, "id": folder_obj.id,
-                   'created_at': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
+    json_string = {"isDir": True, "name": folder_obj.name, "id": folder_obj.id, "numFiles": len(file_children), "numFolders": len(folder_children),
+                   'created': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
                    "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
                    "viewers": [], "children": file_dicts + folder_dicts}
     return json_string

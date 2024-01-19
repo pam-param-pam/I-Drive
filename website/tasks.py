@@ -1,15 +1,13 @@
 import os
-import random
 import shutil
 import subprocess
-import time
 import traceback
-import uuid
 from functools import partial
 from pathlib import Path
 
 import requests
 from asgiref.sync import async_to_sync
+from celery import shared_task
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
 from cryptography.fernet import Fernet
@@ -21,7 +19,6 @@ from website.utilities.Discord import discord
 from website.utilities.merge import Merge
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, calculate_time, get_percentage
 from website.utilities.split import Split
-from threading import Lock
 
 logger = get_task_logger(__name__)
 
@@ -29,10 +26,18 @@ MAX_MB = 25
 MAX_STREAM_MB = 24
 
 
-def send_message(message, finished, user_id, request_id):
-
+# thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
+@shared_task(bind=True, name='queue_ws_event', ignore_result=True, queue='wsQ')
+def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this self arg is needed - no, don't ask me why
     channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
+    if group:
+        async_to_sync(channel_layer.group_send)(ws_channel, ws_event)
+    else:
+        async_to_sync(channel_layer.send)(ws_channel, ws_event)
+
+
+def send_message(message, finished, user_id, request_id):
+    queue_ws_event.delay(
         'test',
         {
             'type': 'chat_message',
@@ -44,11 +49,9 @@ def send_message(message, finished, user_id, request_id):
     )
 
 
-
 @app.task
 def delete_file_task(user, request_id, file_id):
-    user = user  # TODO
-    user = 1
+
     try:
         file_obj = File.objects.get(id=file_id)
 
@@ -74,10 +77,9 @@ def delete_file_task(user, request_id, file_id):
 
         traceback.print_exc()
 
+
 @app.task
 def delete_folder_task(user, request_id, folder_id):
-    user = user  # TODO
-    user = 1
     try:
         folder_obj = Folder.objects.get(id=folder_id)
         send_message("Deleting folder...", False, user, request_id)
@@ -98,7 +100,6 @@ def delete_folder_task(user, request_id, folder_id):
 
 
 def upload_files_from_folder(user, request_id, path, file_obj):
-
     send_message(f"Uploading file...", False, user, request_id)
 
     file_count = len(os.listdir(path))
@@ -143,8 +144,7 @@ def merge_callback(path, size, key, user, request_id):
 
 @app.task
 def process_download(user, request_id, file_id):
-    user = user  # TODO
-    user = 1
+
     request_dir = create_temp_request_dir(request_id)
     try:
         file_obj = File.objects.get(id=file_id)
@@ -187,11 +187,11 @@ def process_download(user, request_id, file_id):
     finally:
         shutil.rmtree(request_dir)
 
+
 @app.task
 def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_name, file_size, folder_id):
     try:
-        user = user  # TODO
-        user = 1
+        user = 1 #todo
         send_message(f"Processing file...", False, user, request_id)
 
         split_required = False
@@ -287,7 +287,8 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
             split.bysize(MAX_MB * 1024 * 1023)
 
             os.remove(out_file_path)  # removing encrypted file as it's already split, and not needed
-        transaction.on_commit(partial(upload_files_from_folder, user=user, request_id=request_id, path=file_dir, file_obj=file_obj))
+        transaction.on_commit(
+            partial(upload_files_from_folder, user=user, request_id=request_id, path=file_dir, file_obj=file_obj))
         file_obj.ready = True
         file_obj.save()
         send_message(f"File uploaded!", True, user, request_id)
@@ -300,33 +301,3 @@ def handle_uploaded_file(user, request_id, file_id, request_dir, file_dir, file_
     finally:
         shutil.rmtree(request_dir)
 
-@app.task
-def test_task():
-    file_obj = File.objects.get(id="5d47d2a6-e68d-4d00-b238-e16dc23185ec")
-    time.sleep(5)
-    file_obj.name = str(random.randint(10, 1000))
-    time.sleep(1)
-
-    file_obj.save()
-    file_obj = File.objects.get(id="d90502dd-d56e-42d8-8de0-c2b8cb92a271")
-    time.sleep(1)
-
-    file_obj.name = str(random.randint(10, 1000))
-    file_obj.save()
-    file_id = uuid.uuid4()
-    time.sleep(1)
-
-    file_obj = File(
-        extension="test",
-        name="lol",
-        streamable=False,
-        size=1000,
-        id=file_id,
-        owner_id=1,
-        parent_id="459d3567-b667-40bc-a27d-38eb0b173c06",
-    )
-    time.sleep(1)
-
-    file_obj.save()
-
-    time.sleep(1)
