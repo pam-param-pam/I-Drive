@@ -13,7 +13,7 @@
       class="card-action"
       style="display: flex; align-items: center; justify-content: space-between;"
     >
-      <template v-if="user.perm.create">
+      <template v-if="perms.create">
         <button
           class="button button--flat"
           @click="$refs.fileList.createDir()"
@@ -63,58 +63,11 @@ export default {
       dest: null,
     };
   },
-  computed: mapState(["req", "selected", "user"]),
+  computed: mapState(["settings", "perms", "selected", "user"]),
   methods: {
     move: async function (event) {
-      event.preventDefault();
-      let items = [];
 
-      for (let item of this.selected) {
-        items.push({
-          from: this.req.items[item].url,
-          to: this.dest + encodeURIComponent(this.req.items[item].name),
-          name: this.req.items[item].name,
-        });
-      }
 
-      let action = async (overwrite, rename) => {
-        buttons.loading("move");
-
-        await api
-          .move(items, overwrite, rename)
-          .then(() => {
-            buttons.success("move");
-            this.$router.push({ path: this.dest });
-          })
-          .catch((e) => {
-            buttons.done("move");
-            this.$showError(e);
-          });
-      };
-
-      let dstItems = (await api.getItems(this.dest)).items;
-      let conflict = upload.checkConflict(items, dstItems);
-
-      let overwrite = false;
-      let rename = false;
-
-      if (conflict) {
-        this.$store.commit("showHover", {
-          prompt: "replace-rename",
-          confirm: (event, option) => {
-            overwrite = option == "overwrite";
-            rename = option == "rename";
-
-            event.preventDefault();
-            this.$store.commit("closeHovers");
-            action(overwrite, rename);
-          },
-        });
-
-        return;
-      }
-
-      action(overwrite, rename);
     },
   },
 };

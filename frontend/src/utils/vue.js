@@ -1,11 +1,25 @@
 import Vue from "vue";
 import Noty from "noty";
 import VueLazyload from "vue-lazyload";
-import i18n from "@/i18n";
 import AsyncComputed from "vue-async-computed";
+import Toast from "vue-toastification";
+import "vue-toastification/dist/index.css";
+import VueNativeSock from 'vue-native-websocket'
+import { baseWS } from "@/utils/constants";
 
 Vue.use(VueLazyload);
 Vue.use(AsyncComputed);
+const token = localStorage.getItem("token");
+
+Vue.use(VueNativeSock, 'ws://localhost:8000/user', {reconnectionDelay: 5000, reconnection: true, protocol: token})
+
+const options = {
+  transition: "Vue-Toastification__bounce",
+  maxToasts: 20,
+  newestOnTop: true
+};
+
+Vue.use(Toast, options);
 
 Vue.config.productionTip = true;
 
@@ -16,47 +30,14 @@ const notyDefault = {
   progressBar: true,
 };
 
-Vue.prototype.$noty = (opts) => {
-  new Noty(Object.assign({}, notyDefault, opts)).show();
-};
-
-Vue.prototype.$showSuccess = (message) => {
-  new Noty(
-    Object.assign({}, notyDefault, {
-      text: message,
-      timeout: 2000,
-      type: "success",
-    })
-  ).show();
-};
 
 Vue.prototype.$showError = (error, displayReport = true) => {
-  let btns = [
-    Noty.button(i18n.t("buttons.close"), "", function () {
-      n.close();
-    }),
-  ];
+  this.$toast.error(error || error.message, {
+    timeout: 2000,
+    position: "bottom-right",
 
-  if (displayReport) {
-    btns.unshift(
-      Noty.button(i18n.t("buttons.reportIssue"), "", function () {
-        window.open(
-          "https://github.com/filebrowser/filebrowser/issues/new/choose"
-        );
-      })
-    );
-  }
+  });
 
-  let n = new Noty(
-    Object.assign({}, notyDefault, {
-      text: error.message || error,
-      type: "error",
-      timeout: null,
-      buttons: btns,
-    })
-  );
-
-  n.show();
 };
 
 Vue.directive("focus", {
@@ -64,5 +45,10 @@ Vue.directive("focus", {
     el.focus();
   },
 });
+
+
+
+
+
 
 export default Vue;

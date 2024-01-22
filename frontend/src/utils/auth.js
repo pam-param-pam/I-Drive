@@ -5,7 +5,7 @@ import {getUser} from "@/api/user.js";
 
 
 
-export async function validateLogin() {
+export async function validateLogin() { //this isn't really validate login - more like finish login xD
   const token = localStorage.getItem("token");
 
   const body = await getUser(token)
@@ -33,8 +33,7 @@ export async function login(username, password, recaptcha) {
     const token = JSON.parse(body).auth_token;
 
     localStorage.setItem("token", token);
-    store.commit("setToken", token);
-    await getUser(token)
+    await validateLogin()
   } else {
     throw new Error(body);
   }

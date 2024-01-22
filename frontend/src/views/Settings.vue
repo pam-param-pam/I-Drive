@@ -33,5 +33,9 @@ export default {
   computed: {
     ...mapState(["user", "loading", "perms"]),
   },
+  mounted() {
+    document.title = "Settings - File Browser";
+
+  },
 };
 </script>

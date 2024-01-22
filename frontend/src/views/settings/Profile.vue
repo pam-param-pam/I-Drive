@@ -9,11 +9,7 @@
         <div class="card-content">
           <p>
             <input type="checkbox" v-model="hideDotfiles" />
-            {{ $t("settings.hideDotfiles") }}
-          </p>
-          <p>
-            <input type="checkbox" v-model="singleClick" />
-            {{ $t("settings.singleClick") }}
+            {{ $t("settings.hideHiddenFolders") }}
           </p>
           <p>
             <input type="checkbox" v-model="dateFormat" />
@@ -77,6 +73,7 @@ import { users as api } from "@/api";
 import Languages from "@/components/settings/Languages.vue";
 import i18n, { rtlLanguages } from "@/i18n";
 import Themes from "@/components/settings/Themes.vue";
+import {updateSettings} from "@/api/user.js";
 
 export default {
   name: "settings",
@@ -95,7 +92,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(["user"]),
+    ...mapState(["user", "settings"]),
     passwordClass() {
       const baseClass = "input input--block";
 
@@ -112,10 +109,9 @@ export default {
   },
   created() {
     this.setLoading(false);
-    this.locale = this.user.locale;
-    this.hideDotfiles = this.user.hideDotfiles;
-    this.singleClick = this.user.singleClick;
-    this.dateFormat = this.user.dateFormat;
+    this.locale = this.settings.locale;
+    this.hideHiddenFolders = this.settings.hideHiddenFolders;
+    this.dateFormat = this.settings.dateFormat;
   },
   methods: {
     ...mapMutations(["updateUser", "setLoading"]),
@@ -140,22 +136,17 @@ export default {
 
       try {
         const data = {
-          id: this.user.id,
           locale: this.locale,
-          hideDotfiles: this.hideDotfiles,
-          singleClick: this.singleClick,
+          hideHiddenFolders: this.hideHiddenFolders,
           dateFormat: this.dateFormat,
         };
         const shouldReload =
           rtlLanguages.includes(data.locale) !==
           rtlLanguages.includes(i18n.locale);
-        await api.update(data, [
-          "locale",
-          "hideDotfiles",
-          "singleClick",
-          "dateFormat",
-        ]);
-        this.updateUser(data);
+        await updateSettings(data)
+        this.$store.commit("updateSettings", data)
+
+
         if (shouldReload) {
           location.reload();
         }

@@ -2,16 +2,16 @@
   <div>
     <ul class="file-list">
       <li
+        v-for="item in dirs"
         @click="itemClick"
         @touchstart="touchstart"
         @dblclick="next"
         role="button"
         tabindex="0"
         :aria-label="item.name"
-        :aria-selected="selected == item.url"
-        :key="item.name"
-        v-for="item in items"
-        :data-url="item.url"
+        :aria-selected="selected === item"
+        :key="item.id"
+        :data-item="JSON.stringify(item)"
       >
         {{ item.name }}
       </li>
@@ -26,14 +26,12 @@
 
 <script>
 import { mapState } from "vuex";
-import url from "@/utils/url";
-import { files } from "@/api";
+import {getItems} from "@/api/folder.js";
 
 export default {
   name: "file-list",
   data: function () {
     return {
-      items: [],
       touches: {
         id: "",
         count: 0,
@@ -43,54 +41,42 @@ export default {
     };
   },
   computed: {
-    ...mapState(["req", "user"]),
+
+    ...mapState(["items", "currentFolder", "user"]),
     nav() {
       return decodeURIComponent(this.current);
     },
+    dirs() {
+      return this.fillOptions()
+    }
   },
   mounted() {
-    this.fillOptions(this.req);
+    this.fillOptions();
   },
   methods: {
-    fillOptions(req) {
+
+    fillOptions() {
       // Sets the current path and resets
       // the current items.
-      this.current = req.url;
-      this.items = [];
+      const dirs = this.items.filter(item => item.isDir);
 
-      this.$emit("update:selected", this.current);
+      this.$emit("update:selected", dirs);
+      return dirs
 
-      // If the path isn't the root path,
-      // show a button to navigate to the previous
-      // directory.
-      if (req.url !== "/files/") {
-        this.items.push({
-          name: "..",
-          url: url.removeLastDir(req.url) + "/",
-        });
-      }
-
-      // If this folder is empty, finish here.
-      if (req.items === null) return;
-
-      // Otherwise we add every directory to the
-      // move options.
-      for (let item of req.items) {
-        if (!item.isDir) continue;
-
-        this.items.push({
-          name: item.name,
-          url: item.url,
-        });
-      }
     },
     next: function (event) {
       // Retrieves the URL of the directory the user
       // just clicked in and fill the options with its
       // content.
-      let uri = event.currentTarget.dataset.url;
+      let current = event.currentTarget.dataset.item;
+      current = JSON.parse(current)
 
-      files.getItems(uri).then(this.fillOptions).catch(this.$showError);
+      let res = getItems("/files/folder/" + current.id).then(this.fillOptions).catch(this.$showError);
+      const dirs = res.children.filter(item => item.isDir);
+
+      this.$emit("update:selected", dirs);
+      return dirs
+
     },
     touchstart(event) {
       let url = event.currentTarget.dataset.url;
@@ -123,14 +109,14 @@ export default {
     },
     select: function (event) {
       // If the element is already selected, unselect it.
-      if (this.selected === event.currentTarget.dataset.url) {
+      if (this.selected === event.currentTarget.dataset.item) {
         this.selected = null;
         this.$emit("update:selected", this.current);
         return;
       }
 
       // Otherwise select the element.
-      this.selected = event.currentTarget.dataset.url;
+      this.selected = event.currentTarget.dataset.item;
       this.$emit("update:selected", this.selected);
     },
     createDir: async function () {

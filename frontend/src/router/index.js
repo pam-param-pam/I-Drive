@@ -9,25 +9,12 @@ import ProfileSettings from "@/views/settings/Profile.vue";
 import Shares from "@/views/settings/Shares.vue";
 import Errors from "@/views/Errors.vue";
 import store from "@/store";
+import Player from "@/views/files/player.vue";
 import { baseURL, name } from "@/utils/constants";
 import i18n, { rtlLanguages } from "@/i18n";
 
 Vue.use(Router);
 
-const titles = {
-  Login: "sidebar.login",
-  Share: "buttons.share",
-  Files: "files.files",
-  Settings: "sidebar.settings",
-  ProfileSettings: "settings.profileSettings",
-  Shares: "settings.shareManagement",
-  GlobalSettings: "settings.globalSettings",
-  Users: "settings.users",
-  User: "settings.user",
-  Forbidden: "errors.forbidden",
-  NotFound: "errors.notFound",
-  InternalServerError: "errors.internal",
-};
 
 const router = new Router({
   base: import.meta.env.PROD ? baseURL : "",
@@ -58,6 +45,14 @@ const router = new Router({
           path: "/files/*",
           name: "Files",
           component: Files,
+          meta: {
+            requiresAuth: true,
+          },
+        },
+        {
+          path: "/player",
+          name: "player",
+          component: Player,
           meta: {
             requiresAuth: true,
           },
@@ -120,6 +115,7 @@ const router = new Router({
             path: "/files/",
           },
         },
+
         {
           path: "/*",
           redirect: (to) => `/files${to.path}`,
@@ -131,7 +127,9 @@ const router = new Router({
 
 router.beforeEach((to, from, next) => {
 
+
   /*** RTL related settings per route ****/
+
   const rtlSet = document.querySelector("body").classList.contains("rtl");
   const shouldSetRtl = rtlLanguages.includes(i18n.locale);
   switch (true) {
@@ -154,7 +152,7 @@ router.beforeEach((to, from, next) => {
     }
 
     if (to.matched.some((record) => record.meta.requiresAdmin)) {
-      if (!store.state.user.perm.admin) {
+      if (!store.state.perms.admin) {
         next({ path: "/403" });
         return;
       }

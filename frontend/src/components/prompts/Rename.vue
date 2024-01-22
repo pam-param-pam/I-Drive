@@ -18,7 +18,7 @@
       />
     </div>
 
-    <div class="card-action">
+    <div class="card-action" >
       <button
         class="button button--flat button--grey"
         @click="$store.commit('closeHovers')"
@@ -28,6 +28,7 @@
         {{ $t("buttons.cancel") }}
       </button>
       <button
+
         @click="submit"
         class="button button--flat"
         type="submit"
@@ -43,6 +44,7 @@
 <script>
 import { mapState, mapGetters } from "vuex";
 import {rename} from "@/api/item.js";
+import buttons from "@/utils/buttons.js";
 
 export default {
   name: "rename",
@@ -71,16 +73,21 @@ export default {
 
 
       try {
+        buttons.loading("rename-submit");
         await rename({"id": this.selected[0].id, "new_name": this.name});
-        this.$showSuccess("renamed " + this.oldName + " to " + this.name);
+        this.$toast.success(`${this.oldName} renamed to ${this.name}!`, {
+          timeout: 3000,
+          position: "bottom-right",
+        });
 
-
-        this.$store.commit("setReload", true);
       } catch (e) {
-        this.$showError(e);
-      }
 
-      this.$store.commit("closeHovers");
+      }
+      finally {
+        this.$store.commit("setReload", true);
+        this.$store.commit("closeHovers");
+
+      }
     },
   },
 };

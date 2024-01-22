@@ -1,5 +1,7 @@
 import * as i18n from "@/i18n";
 import moment from "moment";
+import vue from "@/utils/vue.js";
+import store from "@/store/index.js";
 
 const mutations = {
   closeHovers: (state) => {
@@ -46,16 +48,25 @@ const mutations = {
   },
   addSelected: (state, value) => {
     if (typeof value !== "object") return;
-
+    console.log("selected is: " + JSON.stringify(state.selected))
+    console.log("adding to selected " + JSON.stringify(value))
     state.selected.push(value)
+    console.log("selected is: " + JSON.stringify(state.selected))
+    console.log("selected length is: " + state.selected.length)
+    console.log("selected count is: " + store.getters.selectedCount)
+
   },
   removeSelected: (state, value) => {
+    console.log("removing from selected " + JSON.stringify(value))
 
-    let i = state.selected.indexOf(value);
-    if (i === -1) return;
-    state.selected.splice(i, 1);
+    state.selected = state.selected.filter(item => item.id !== value.id);
+    console.log("removed from selected " + JSON.stringify(state.selected))
+
+
+
   },
   resetSelected: (state) => {
+    console.log("reseting selected")
     state.selected = [];
   },
   updateUser: (state, value) => {
@@ -110,7 +121,6 @@ const mutations = {
     state.upload.eta = 0;
   },
   setCurrentFolder(state, value) {
-    console.log("setting current folder to" + JSON.stringify(value))
     state.currentFolder = value;
 
   },
@@ -119,7 +129,8 @@ const mutations = {
 
   },
   setSettings(state, value) {
-    let locale = value.locale;
+    console.log("seting settings: " + value)
+    let locale = value?.locale;
 
     if (locale === "") {
       locale = i18n.detectLocale();

@@ -40,6 +40,7 @@
 import {mapState} from "vuex";
 
 import {create} from "@/api/folder.js";
+import vue from "@/utils/vue.js";
 
 export default {
   name: "new-dir",
@@ -64,17 +65,25 @@ export default {
   methods: {
     submit: async function (event) {
       event.preventDefault();
-      try {
-        await create({"parent_id": this.currentFolder.id, "name": this.name})
-        this.$showSuccess("woo");
+
+      if (this.name.length > 0) {
+        try {
+          await create({"parent_id": this.currentFolder.id, "name": this.name})
+          this.$toast.success(`${this.name} created!`, {
+            timeout: 3000,
+            position: "bottom-right",
+          });
+        } catch (error) {
+          // nothing has to be done
+        }
+        finally {
+          this.$store.commit("setReload", true);
+          this.$store.commit("closeHovers");
+
+        }
 
       }
-      catch (error) {
-        this.$showError(error);
-      }
-      this.$store.commit("setReload", true);
 
-      this.$store.commit("closeHovers");
     },
   },
 };

@@ -61,36 +61,15 @@ export default {
   created() {
     window.addEventListener("keydown", (event) => {
       if (this.currentPrompt == null) return;
-
-      let prompt = this.$refs.currentComponent;
-
       // Esc!
       if (event.keyCode === 27) {
         event.stopImmediatePropagation();
         this.$store.commit("closeHovers");
       }
 
-      // Enter
-      if (event.keyCode == 13) {
-        switch (this.currentPrompt.prompt) {
-          case "delete":
-            prompt.submit();
-            break;
-          case "copy":
-            prompt.copy(event);
-            break;
-          case "move":
-            prompt.move(event);
-            break;
-          case "replace":
-            prompt.showConfirm(event);
-            break;
-        }
-      }
     });
   },
   computed: {
-    ...mapState(["plugins"]),
     ...mapGetters(["currentPrompt", "currentPromptName"]),
     showOverlay: function () {
       return (

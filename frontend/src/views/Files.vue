@@ -65,7 +65,6 @@ export default {
   watch: {
     $route: "fetchData",
     reload: function (value) {
-      console.log("reload changed")
       if (value === true) {
         this.fetchData();
       }
@@ -95,8 +94,9 @@ export default {
       this.error = null;
 
       let url = this.$route.path;
-
       try {
+        this.$store.commit("setReload", false);
+
         const res = await getItems(url);
 
         this.$store.commit("setItems", res.children);

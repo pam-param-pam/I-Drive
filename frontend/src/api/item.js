@@ -1,7 +1,7 @@
-import {fetchURL} from "@/api/utils.js";
+import {fetchJSON, fetchURL} from "@/api/utils.js";
 
 export async function remove(data) {
-    const res = await fetchURL(`/api/delete`, {
+    const res = await fetchJSON(`/api/delete`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -9,6 +9,7 @@ export async function remove(data) {
 
         body: JSON.stringify(data)
     });
+    return res
 
 }
 export async function rename(data) {
@@ -20,5 +21,7 @@ export async function rename(data) {
 
         body: JSON.stringify(data)
     });
+    return res
+
 
 }

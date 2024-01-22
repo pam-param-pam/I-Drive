@@ -25,6 +25,7 @@
       >
         {{ $t("buttons.delete") }}
       </button>
+
     </div>
   </div>
 </template>
@@ -37,24 +38,82 @@ export default {
   name: "delete",
   computed: {
     ...mapGetters(["selectedCount", "currentPrompt"]),
-    ...mapState(["selected"]),
+    ...mapState(["selected", "items"]),
   },
+  beforeCreate() {
+    console.log("Before Create");
+  },
+  created() {
+    console.log("Created");
+  },
+  beforeMount() {
+    console.log("Before Mount");
+  },
+  mounted() {
+    console.log("Mounted");
+  },
+  beforeUpdate() {
+    console.log("Before Update");
+  },
+  updated() {
+    console.log("Updated");
+  },
+  beforeDestroy() {
+    console.log("Before Destroy");
+  },
+  destroyed() {
+    console.log("Destroyed");
+  },
+
+
+
+
   methods: {
-    ...mapMutations(["closeHovers"]),
+    ...mapMutations(["closeHovers", "resetSelected"]),
     submit: async function () {
-
+      console.log("SUMBIT CALLED WITH" + JSON.stringify(this.selected))
       try {
+
         let ids = this.selected.map(item => item.id);
+        let updatedItem = this.items.filter(item => !ids.includes(item.id));
+        this.$store.commit("setItems", updatedItem);
 
-        await remove({"ids": ids});
+        console.log("seleted are: " + ids)
 
-        this.closeHovers();
-        this.$store.commit("setReload", true);
+        console.log("seleted ids are: " + JSON.stringify(this.selected))
+        this.$store.commit("resetSelected", {});
 
 
+        if (ids.length > 0) {
+          let res = await remove({"ids": ids});
+          console.log("res: " + JSON.stringify(res))
+          let message = `Deleting ${ids.length} items...`
+
+
+          console.log("showing toast")
+
+          let id = this.$toast.info(message, {
+            id: res.task_id,
+            timeout: 0,
+            draggable: false,
+            closeOnClick: false,
+            position: "bottom-right",
+          });
+          console.log("showing toast1")
+
+          console.log("toast's id is: " + id)
+        }
+
+
+      } catch (e) {
+        console.log(e)
+        //nothing has to be done
       }
-      catch (e) {
-        this.$showError(e);
+      finally {
+        this.closeHovers()
+        //this.$store.commit("setReload", true);
+
+
       }
     },
   },

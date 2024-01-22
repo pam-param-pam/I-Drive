@@ -45,6 +45,7 @@
             :label="$t('buttons.delete')"
             show="delete"
           />
+
         </template>
 
         <action
@@ -73,6 +74,7 @@
           @action="upload"
         />
         <action icon="info" :label="$t('buttons.info')" show="info" />
+
 
       </template>
     </header-bar>
@@ -271,7 +273,6 @@ export default {
     ...mapState(["items", "selected", "settings", "perms", "user", "selected", "loading"]),
     ...mapGetters(["selectedCount", "currentPrompt"]),
     nameSorted() {
-        console.log(this.settings)
       return this.settings.sortingBy === "name";
     },
     sizeSorted() {
@@ -809,7 +810,7 @@ export default {
         viewMode: modes[this.settings.viewMode] || "list",
       };
       try {
-        const body = await updateSettings(data)
+        await updateSettings(data)
 
       }
       catch (error) {

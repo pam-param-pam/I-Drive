@@ -8,6 +8,7 @@ import Vue from "@/utils/vue";
 import {loginPage } from "@/utils/constants";
 import { login, validateLogin } from "@/utils/auth";
 import App from "@/App.vue";
+import vue from "@/utils/vue.js";
 
 cssVars();
 
@@ -36,6 +37,32 @@ async function start() {
     i18n,
     template: "<App/>",
     components: { App },
+    mounted() {
+      this.$options.sockets.onmessage = (data) => this.onMessage(data)
+
+
+    },
+    methods: {
+      onMessage(message) {
+        let jsonObject = JSON.parse(message.data);
+        let timeout = 0
+        let type = "info"
+        //console.log(jsonObject.task_id)
+        if (jsonObject.finished) {
+          timeout = 3000
+
+          type = "success"
+        }
+        vue.$toast.update(jsonObject.task_id, {
+
+          content: jsonObject.message,
+          options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
+
+        });
+        //console.log(jsonObject.message)
+
+      },
+    },
   });
 }
 
