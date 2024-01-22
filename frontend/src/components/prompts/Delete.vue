@@ -40,30 +40,25 @@ export default {
     ...mapGetters(["selectedCount", "currentPrompt"]),
     ...mapState(["selected", "items"]),
   },
-  beforeCreate() {
-    console.log("Before Create");
-  },
   created() {
-    console.log("Created");
+    // Save the event listener function to a property
+    this.keyEvent = (event) => { // fucking spent 3 hours debuging this fucking piece of code fuck you java script, retarded language istg
+      // Enter
+      if (event.keyCode === 13) {
+        console.log("calling submit from event listener");
+        this.submit();
+      }
+    };
+
+    // Add the event listener using the saved function
+    window.addEventListener("keydown", this.keyEvent);
   },
-  beforeMount() {
-    console.log("Before Mount");
-  },
-  mounted() {
-    console.log("Mounted");
-  },
-  beforeUpdate() {
-    console.log("Before Update");
-  },
-  updated() {
-    console.log("Updated");
-  },
+
   beforeDestroy() {
-    console.log("Before Destroy");
+    // Remove the event listener using the saved function
+    window.removeEventListener("keydown", this.keyEvent);
   },
-  destroyed() {
-    console.log("Destroyed");
-  },
+
 
 
 
@@ -84,7 +79,7 @@ export default {
         this.$store.commit("resetSelected", {});
 
 
-        if (ids.length > 0) {
+
           let res = await remove({"ids": ids});
           console.log("res: " + JSON.stringify(res))
           let message = `Deleting ${ids.length} items...`
@@ -102,7 +97,7 @@ export default {
           console.log("showing toast1")
 
           console.log("toast's id is: " + id)
-        }
+
 
 
       } catch (e) {
