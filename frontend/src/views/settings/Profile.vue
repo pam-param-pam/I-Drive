@@ -8,8 +8,12 @@
 
         <div class="card-content">
           <p>
-            <input type="checkbox" v-model="hideDotfiles" />
+            <input type="checkbox" v-model="hideHiddenFolders" />
             {{ $t("settings.hideHiddenFolders") }}
+          </p>
+          <p>
+            <input type="checkbox" v-model="subfoldersInShares" />
+            {{ $t("settings.subfoldersInShares") }}
           </p>
           <p>
             <input type="checkbox" v-model="dateFormat" />
@@ -85,8 +89,8 @@ export default {
     return {
       password: "",
       passwordConf: "",
-      hideDotfiles: false,
-      singleClick: false,
+      hideHiddenFolders: false,
+      subfoldersInShares: false,
       dateFormat: false,
       locale: "",
     };
@@ -137,6 +141,7 @@ export default {
       try {
         const data = {
           locale: this.locale,
+          subfoldersInShares: this.subfoldersInShares,
           hideHiddenFolders: this.hideHiddenFolders,
           dateFormat: this.dateFormat,
         };
@@ -150,7 +155,7 @@ export default {
         if (shouldReload) {
           location.reload();
         }
-        this.$showSuccess(this.$t("settings.settingsUpdated"));
+        this.$toast.success(this.$t("settings.settingsUpdated"))
       } catch (e) {
         this.$showError(e);
       }

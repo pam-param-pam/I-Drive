@@ -84,31 +84,35 @@ export default {
   methods: {
     ...mapMutations(["setLoading"]),
     async fetchData() {
-      // Reset view information.
-      this.$store.commit("setReload", false);
-      this.$store.commit("resetSelected");
-      this.$store.commit("closeHovers");
-
-      // Set loading to true and reset the error.
-      this.setLoading(true);
-      this.error = null;
-
       let url = this.$route.path;
-      try {
+      if (url.includes("/files/")) {
+        // Reset view information.
         this.$store.commit("setReload", false);
+        this.$store.commit("resetSelected");
+        this.$store.commit("closeHovers");
 
-        const res = await getItems(url);
+        // Set loading to true and reset the error.
+        this.setLoading(true);
+        this.error = null;
 
-        this.$store.commit("setItems", res.children);
-        this.$store.commit("setCurrentFolder", res);
+        try {
+          this.$store.commit("setReload", false);
 
-        document.title = `${res.name} - File Browser`;
-      } catch (e) {
-        this.error = e;
-      } finally {
-        this.setLoading(false);
+          const res = await getItems(url);
 
+          this.$store.commit("setItems", res.children);
+          this.$store.commit("setCurrentFolder", res);
+
+          document.title = `${res.name} - File Browser`;
+        } catch (e) {
+          console.log(e)
+          this.error = e;
+        } finally {
+          this.setLoading(false);
+
+        }
       }
+
     },
     keyEvent(event) {
       // H!

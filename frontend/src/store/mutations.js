@@ -96,6 +96,16 @@ const mutations = {
   setItems: (state, value) => {
     state.items = value
   },
+  renameItem(state, { id, newName }) {
+    // Find the index of the item with the given ID
+    const index = state.items.findIndex(item => item.id === id);
+
+    // Update the name of the item in the state
+    if (index !== -1) {
+      // Assuming your items have a 'name' property
+      state.items[index].name = newName;
+    }
+  },
   updateClipboard: (state, value) => {
     state.clipboard.key = value.key;
     state.clipboard.items = value.items;
@@ -126,6 +136,14 @@ const mutations = {
   },
   setPerms(state, value) {
     state.perms = value;
+
+  },
+  setSortingBy(state, value) {
+    state.settings.sortingBy = value;
+
+  },
+  setSortByAsc(state, value) {
+    state.settings.sortByAsc = value;
 
   },
   setSettings(state, value) {

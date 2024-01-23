@@ -39,6 +39,7 @@ export default {
   props: ["errorCode", "showHeader"],
   computed: {
     info() {
+      console.log(this.errorCode)
       return errors[this.errorCode] ? errors[this.errorCode] : errors[500];
     },
   },

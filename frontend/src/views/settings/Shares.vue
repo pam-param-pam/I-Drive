@@ -81,6 +81,7 @@ export default {
     };
   },
   async created() {
+    /*
     this.setLoading(true);
 
     try {
@@ -100,6 +101,8 @@ export default {
     } finally {
       this.setLoading(false);
     }
+    
+     */
   },
   mounted() {
     this.clip = new Clipboard(".copy-clipboard");

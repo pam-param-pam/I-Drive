@@ -71,10 +71,9 @@ export default {
           await create({"parent_id": this.currentFolder.id, "name": this.name})
           this.$toast.success(`${this.name} created!`, {
             timeout: 3000,
-            position: "bottom-right",
           });
         } catch (error) {
-          // nothing has to be done
+          console.log(error)
         }
         finally {
           this.$store.commit("setReload", true);

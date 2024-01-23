@@ -292,25 +292,18 @@ export default {
         return this.dirs.length
     },
     dirs() {
-        const items = [];
+      const items = this.items.filter(item => item.isDir);
 
-        this.items.forEach((item) => {
-            if (item.isDir) {
-                items.push(item);
-            }
-        });
-        return items
+      return this.sortItems(items);
     },
+
     files() {
-        const items = [];
+      const items = this.items.filter(item => !item.isDir);
 
-        this.items.forEach((item) => {
-            if (!item.isDir) {
-                items.push(item);
-            }
-        });
-        return items
+      return this.sortItems(items);
     },
+
+
     nameIcon() {
       if (this.nameSorted && !this.ascOrdered) {
         return "arrow_upward";
@@ -407,7 +400,27 @@ export default {
   methods: {
     ...mapState(["currentFolder"]),
     ...mapMutations(["updateUser", "addSelected"]),
+    sortItems(items) {
+      const sortingKey = this.settings.sortingBy;
+      const isAscending = this.settings.sortByAsc;
 
+      return items.sort((a, b) => {
+        let aValue = a[sortingKey];
+        let bValue = b[sortingKey];
+
+        // Adjust the values based on the sorting key (e.g., 'created' may be a Date object)
+        // You may need to customize this part based on the actual structure of your items.
+
+
+
+        // Compare values based on sorting order
+        if (isAscending) {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+          return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
+        }
+      });
+    },
     keyEvent(event) {
       // No prompts are shown
       if (this.currentPrompt !== null) {
@@ -746,14 +759,16 @@ export default {
       }
 
       try {
-        await users.update({ id: this.user.id, sorting: { by, asc } }, [
-          "sorting",
-        ]);
+        await updateSettings({"sortingBy": by, "sortByAsc": asc})
+
       } catch (e) {
+        console.log(e)
         this.$showError(e);
       }
 
-      this.$store.commit("setReload", true);
+      this.$store.commit("setSortingBy", by);
+      this.$store.commit("setSortByAsc", asc);
+
     },
     openSearch() {
       this.$store.commit("showHover", "search");
@@ -814,7 +829,8 @@ export default {
 
       }
       catch (error) {
-        this.$showError(error)
+        console.log(error)
+        //this.$showError(error)
       }
       //todo update settings on server
 

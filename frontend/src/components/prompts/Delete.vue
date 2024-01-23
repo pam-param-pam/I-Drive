@@ -61,50 +61,32 @@ export default {
 
 
 
-
-
   methods: {
     ...mapMutations(["closeHovers", "resetSelected"]),
     submit: async function () {
-      console.log("SUMBIT CALLED WITH" + JSON.stringify(this.selected))
       try {
-
         let ids = this.selected.map(item => item.id);
+
+        let res = await remove({"ids": ids});
+
         let updatedItem = this.items.filter(item => !ids.includes(item.id));
+
         this.$store.commit("setItems", updatedItem);
 
-        console.log("seleted are: " + ids)
+        let message = `Deleting ${ids.length} items...`
+        this.$toast.info(message, {
+          id: res.task_id,
+          timeout: 0,
+          draggable: false,
+          closeOnClick: false,
+        });
 
-        console.log("seleted ids are: " + JSON.stringify(this.selected))
-        this.$store.commit("resetSelected", {});
-
-
-
-          let res = await remove({"ids": ids});
-          console.log("res: " + JSON.stringify(res))
-          let message = `Deleting ${ids.length} items...`
-
-
-          console.log("showing toast")
-
-          let id = this.$toast.info(message, {
-            id: res.task_id,
-            timeout: 0,
-            draggable: false,
-            closeOnClick: false,
-            position: "bottom-right",
-          });
-          console.log("showing toast1")
-
-          console.log("toast's id is: " + id)
-
-
-
-      } catch (e) {
-        console.log(e)
+      } catch (error) {
+        console.log(error)
         //nothing has to be done
       }
       finally {
+        this.resetSelected()
         this.closeHovers()
         //this.$store.commit("setReload", true);
 

@@ -30,12 +30,14 @@ export async function fetchURL(url, opts, auth = true) {
   }
 
   if (res.status < 200 || res.status > 299) {
+    let res_text = await res.text()
 
+    const error = new Error(res_text);
+    error.status = res.status;
     if (auth && res.status === 401) {
       logout();
     }
     let message = "Unexpected report this"
-    let  res_text = await res.text()
     if (res_text.length < 150) {
       message = res_text
     }
@@ -45,7 +47,7 @@ export async function fetchURL(url, opts, auth = true) {
       position: "bottom-right",
     });
 
-    throw new Error();
+    throw error
   }
   return res;
 }
@@ -53,11 +55,8 @@ export async function fetchURL(url, opts, auth = true) {
 export async function fetchJSON(url, opts) {
   const res = await fetchURL(url, opts);
 
-  if (res.status === 200) {
-    return res.json();
-  } else {
-    throw new Error(res.status);
-  }
+  return res.json();
+
 }
 
 export function removePrefix(url) {

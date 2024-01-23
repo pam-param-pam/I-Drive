@@ -18,7 +18,7 @@ export default {
       }
     })
 
-    let stream = `https://corsproxy.io/?` + encodeURIComponent(baseURL +  '/api/stream/514fd2a9-3f22-4fc0-b36e-e854b8d82a9d.m3u8');
+    let stream = baseURL +  '/api/stream/caa8cddb-e44b-4e5d-8a95-2b58a8524d08'
     let video = this.$refs["video"];
     hls.loadSource(stream);
     hls.attachMedia(video);

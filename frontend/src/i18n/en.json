@@ -195,6 +195,7 @@
     "globalRules": "This is a global set of allow and disallow rules. They apply to every user. You can define specific rules on each user's settings to override these ones.",
     "globalSettings": "Global Settings",
     "hideHiddenFolders": "Hide hidden folders",
+    "subfoldersInShares": "Allow access to subfolders of shared folders",
     "insertPath": "Insert the path",
     "insertRegex": "Insert regex expression",
     "instanceName": "Instance name",
