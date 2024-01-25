@@ -22,7 +22,7 @@ const state = {
   reload: false,
   selected: [],
   prompts: [],
-  toastIds: [],
+  error: null,
   showShell: false,
 };
 

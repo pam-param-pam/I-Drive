@@ -68,10 +68,12 @@ export default {
 
       if (this.name.length > 0) {
         try {
-          await create({"parent_id": this.currentFolder.id, "name": this.name})
+          let res = await create({"parent_id": this.currentFolder.id, "name": this.name})
           this.$toast.success(`${this.name} created!`, {
             timeout: 3000,
           });
+          this.$store.commit("updateItems", res);
+
         } catch (error) {
           console.log(error)
         }

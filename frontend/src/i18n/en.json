@@ -52,6 +52,7 @@
     "forbidden": "You don't have permissions to access this.",
     "internal": "Something really went wrong.",
     "notFound": "This location can't be reached.",
+    "rateLimit": "Please slow down",
     "connection": "The server can't be reached."
   },
   "files": {

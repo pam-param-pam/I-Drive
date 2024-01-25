@@ -21,6 +21,10 @@ const errors = {
     icon: "error",
     message: "errors.forbidden",
   },
+  429: {
+    icon: "block",
+    message: "errors.rateLimit",
+  },
   404: {
     icon: "gps_off",
     message: "errors.notFound",

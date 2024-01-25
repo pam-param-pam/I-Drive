@@ -6,7 +6,7 @@
     <sidebar></sidebar>
     <main>
       <router-view></router-view>
-        <!--<shell v-if="isExecEnabled && isLogged && user.perm.execute" />-->
+      <shell v-if="true"></shell>
       </main>
       <prompts></prompts>
       <upload-files></upload-files>
@@ -31,7 +31,7 @@
     },
     computed: {
       ...mapGetters(["isLogged", "progress", "currentPrompt"]),
-      ...mapState(["user"]),
+      ...mapState(["user", "perms"]),
       isExecEnabled: () => enableExec,
     },
     watch: {

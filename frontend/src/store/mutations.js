@@ -48,17 +48,13 @@ const mutations = {
   },
   addSelected: (state, value) => {
     if (typeof value !== "object") return;
-    console.log("selected is: " + JSON.stringify(state.selected))
     console.log("adding to selected " + JSON.stringify(value))
     state.selected.push(value)
-    console.log("selected is: " + JSON.stringify(state.selected))
-    console.log("selected length is: " + state.selected.length)
     console.log("selected count is: " + store.getters.selectedCount)
 
   },
   removeSelected: (state, value) => {
     console.log("removing from selected " + JSON.stringify(value))
-
     state.selected = state.selected.filter(item => item.id !== value.id);
     console.log("removed from selected " + JSON.stringify(state.selected))
 
@@ -82,18 +78,11 @@ const mutations = {
     }
   },
   updateItems: (state, value) => {
-    //todo co jezeli w items juz nie ma czegos co jest w selected? trzeba usunac
-    const selectedItems = state.selected.map((i) => state.req.items[i]);
-    state.oldReq = state.req;
-    state.req = value;
-    state.selected = [];
+    state.items.push(value)
 
-    if (!state.req?.items) return;
-    state.selected = state.req.items
-      .filter((item) => selectedItems.some((rItem) => rItem.url === item.url))
-      .map((item) => item.index);
   },
   setItems: (state, value) => {
+    console.log("setting items")
     state.items = value
   },
   renameItem(state, { id, newName }) {
@@ -166,7 +155,19 @@ const mutations = {
       state.settings[field] = value[field];
 
     }
+
+    let locale = value?.locale;
+    if (locale) {
+
+      moment.locale(locale);
+      i18n.default.locale = locale;
+
+    }
+
   },
+  setError(state, value) {
+    state.error = value
+  }
 };
 
 export default mutations;

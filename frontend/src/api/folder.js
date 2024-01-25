@@ -9,16 +9,9 @@ export async function breadcrumbs(folder_id) {
 
     return await res.json();
 }
-export async function getItems(url) {
-    if (url === "/files/") {
-        url = "/api/getroot"
-    }
-    else {
-        url = "/api" + url.replace("/files", "")
+export async function getItems(folder_id) {
 
-    }
-
-    return await fetchJSON(url, {});
+    return await fetchJSON("/api/folder/" + folder_id, {});
 }
 
 export async function create(data) {
@@ -30,6 +23,7 @@ export async function create(data) {
 
         body: JSON.stringify(data)
     });
+    return await res.json()
 
 }
 

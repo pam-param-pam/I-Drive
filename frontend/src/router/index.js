@@ -12,6 +12,8 @@ import store from "@/store";
 import Player from "@/views/files/player.vue";
 import { baseURL, name } from "@/utils/constants";
 import i18n, { rtlLanguages } from "@/i18n";
+import Listing from "@/views/files/Listing.vue";
+import Preview from "@/views/files/Preview.vue";
 
 Vue.use(Router);
 
@@ -42,22 +44,37 @@ const router = new Router({
           component: Share,
         },
         {
-          path: "/files/*",
+          path: "/files",
           name: "Files",
           component: Files,
           meta: {
             requiresAuth: true,
           },
+          children: [
+            {
+              path: "/folder/:folderId",
+              name: "Listing",
+              component: Listing,
+
+            },
+            {
+              path: "/preview/:folderId",
+              name: "Preview",
+              component: Preview,
+
+            },
+
+          ],
         },
+
         {
-          path: "/player",
-          name: "player",
+          path: "/player/*",
+          name: "Player",
           component: Player,
           meta: {
             requiresAuth: true,
           },
         },
-
         {
           path: "/settings",
           name: "Settings",
@@ -110,15 +127,8 @@ const router = new Router({
           },
         },
         {
-          path: "/files",
-          redirect: {
-            path: "/files/",
-          },
-        },
-
-        {
           path: "/*",
-          redirect: (to) => `/files${to.path}`,
+          redirect: (to) => `/files`,
         },
       ],
     },

@@ -30,7 +30,7 @@ export default defineConfig(({ command }) => {
       plugins,
       resolve,
       server: {
-        proxy: {
+        proxy: { //todo o cu tu biega lol
           "/api/command": {
             target: "ws://127.0.0.1:8080",
             ws: true,

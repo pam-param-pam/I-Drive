@@ -9,7 +9,7 @@
       <title>{{ name }}</title>
       <action
         :disabled="loading"
-        v-if="isResizeEnabled && req.type === 'image'"
+        v-if="isResizeEnabled && item.extension === '.jpg'"
         :icon="fullSize ? 'photo_size_select_large' : 'hd'"
         @action="toggleSize"
       />
@@ -17,14 +17,14 @@
       <template #actions>
         <action
           :disabled="loading"
-          v-if="user.perm.rename"
+          v-if="perms.rename"
           icon="mode_edit"
           :label="$t('buttons.rename')"
           show="rename"
         />
         <action
           :disabled="loading"
-          v-if="user.perm.delete"
+          v-if="perms.delete"
           icon="delete"
           :label="$t('buttons.delete')"
           @action="deleteFile"
@@ -32,7 +32,7 @@
         />
         <action
           :disabled="loading"
-          v-if="user.perm.download"
+          v-if="perms.download"
           icon="file_download"
           :label="$t('buttons.download')"
           @action="download"
@@ -55,9 +55,9 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="req.type == 'image'" :src="raw"></ExtendedImage>
+        <ExtendedImage v-if="this.item.extension === '.jpg'" :src="raw"></ExtendedImage>
         <audio
-          v-else-if="req.type == 'audio'"
+          v-else-if="item.extension === '.mp3'"
           ref="player"
           :src="raw"
           controls
@@ -65,31 +65,19 @@
           @play="autoPlay = true"
         ></audio>
         <video
-          v-else-if="req.type == 'video'"
-          ref="player"
-          :src="raw"
+          v-else-if="item.extension === '.mp4'"
+          ref="video"
           controls
           :autoplay="autoPlay"
           @play="autoPlay = true"
         >
-          <track
-            kind="captions"
-            v-for="(sub, index) in subtitles"
-            :key="index"
-            :src="sub"
-            :label="'Subtitle ' + index"
-            :default="index === 0"
-          />
-          Sorry, your browser doesn't support embedded videos, but don't worry,
-          you can <a :href="downloadUrl">download it</a>
-          and watch it with your favorite video player!
         </video>
         <object
-          v-else-if="req.extension.toLowerCase() == '.pdf'"
+          v-else-if="item.extension === '.pdf'"
           class="pdf"
           :data="raw"
         ></object>
-        <div v-else-if="req.type == 'blob'" class="info">
+        <div v-else class="info">
           <div class="title">
             <i class="material-icons">feedback</i>
             {{ $t("files.noPreview") }}
@@ -145,12 +133,14 @@
 <script>
 import { mapGetters, mapState } from "vuex";
 import { files as api } from "@/api";
-import { resizePreview } from "@/utils/constants";
-import url from "@/utils/url";
+import {baseURL, resizePreview} from "@/utils/constants";
+import Hls from 'hls.js';
 import throttle from "lodash.throttle";
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
 import ExtendedImage from "@/components/files/ExtendedImage.vue";
+import store from "@/store/index.js";
+import {getFile} from "@/api/files.js";
 
 const mediaTypes = ["image", "video", "audio", "blob"];
 
@@ -169,6 +159,7 @@ export default {
       name: "",
       fullSize: false,
       showNav: true,
+      file: null,
       navTimeout: null,
       hoverNav: false,
       autoPlay: false,
@@ -177,23 +168,28 @@ export default {
     };
   },
   computed: {
-    ...mapState(["req", "user", "oldReq", "loading"]),
+    ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
     ...mapGetters(["currentPrompt"]),
     hasPrevious() {
       return this.previousLink !== "";
     },
+
     hasNext() {
       return this.nextLink !== "";
     },
     downloadUrl() {
+      return ""
       return api.getDownloadURL(this.req);
     },
     raw() {
+      /*
       if (this.req.type === "image" && !this.fullSize) {
         return api.getPreviewURL(this.req, "big");
       }
 
       return api.getDownloadURL(this.req, true);
+
+       */
     },
     showMore() {
       return this.currentPrompt?.prompt === "more";
@@ -201,12 +197,7 @@ export default {
     isResizeEnabled() {
       return resizePreview;
     },
-    subtitles() {
-      if (this.req.subtitles) {
-        return api.getSubtitlesURL(this.req);
-      }
-      return [];
-    },
+
   },
   watch: {
     $route: function () {
@@ -214,15 +205,63 @@ export default {
       this.toggleNavigation();
     },
   },
+  created() {
+    this.fetchData()
+  },
   async mounted() {
+
+
+    let hls = new Hls({
+
+      xhrSetup: xhr => {
+        xhr.setRequestHeader('Authorization', `Token ${store.state.token}`)
+        xhr.setRequestHeader('Origin', `https://discord.com/`)
+        xhr.setRequestHeader('Referer', `https://discord.com/`)
+
+      }
+    })
+
+    let stream = baseURL +  `/api/stream/${item_id}`
+    let video = this.$refs["video"];
+    hls.loadSource(stream);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+      video.play();
+    });
+
+
     window.addEventListener("keydown", this.key);
-    this.listing = this.oldReq.items;
+    this.listing = this.items;
     this.updatePreview();
   },
   beforeDestroy() {
     window.removeEventListener("keydown", this.key);
   },
   methods: {
+    fetchData() {
+      let fileId = this.$route.params.fileId;
+
+      this.setLoading(true);
+
+      try {
+
+        if (this.items) {
+          console.log(JSON.stringify(this.items))
+        }
+        else {
+          console.log(JSON.stringify(this.items))
+        }
+
+
+
+      } catch (e) {
+        console.log(e)
+        this.error = e;
+      } finally {
+        this.setLoading(false);
+
+      }
+    },
     deleteFile() {
       this.$store.commit("showHover", {
         prompt: "delete",
@@ -264,6 +303,7 @@ export default {
       }
     },
     async updatePreview() {
+      /*
       if (
         this.$refs.player &&
         this.$refs.player.paused &&
@@ -310,6 +350,8 @@ export default {
 
         return;
       }
+
+       */
     },
     prefetchUrl(item) {
       if (item.type !== "image") {
@@ -343,8 +385,8 @@ export default {
     }, 500),
     close() {
       this.$store.commit("updateItems", {});
+      let uri = `/files/folder/${this.currentFolder.id}`
 
-      let uri = url.removeLastDir(this.$route.path) + "/";
       this.$router.push({ path: uri });
     },
     download() {

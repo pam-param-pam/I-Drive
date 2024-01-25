@@ -109,9 +109,9 @@
 import { mapState, mapGetters } from "vuex";
 import * as auth from "@/utils/auth";
 import { version, signup } from "@/utils/constants";
-import { files as api } from "@/api";
 import ProgressBar from "vue-simple-progress";
 import prettyBytes from "pretty-bytes";
+import {getUsage} from "@/api/user.js";
 
 export default {
   name: "sidebar",
@@ -134,21 +134,19 @@ export default {
         let usageStats = { used: 0, total: 0, usedPercentage: 0 };
 
         try {
-          let usage = await api.usage();
+          let usage = await getUsage();
           usageStats = {
             used: prettyBytes(usage.used, { binary: true }),
             total: prettyBytes(usage.total, { binary: true }),
             usedPercentage: Math.round((usage.used / usage.total) * 100),
           };
         } catch (error) {
-          this.$showError(error);
+          console.log(error)
         }
         return usageStats;
       },
       default: { used: "0 B", total: "0 B", usedPercentage: 0 },
-      shouldUpdate() {
-        return this.$router.currentRoute.path.includes("/files/") || this.$router.currentRoute.path.includes("/settings/");
-      },
+        
     },
   },
   methods: {

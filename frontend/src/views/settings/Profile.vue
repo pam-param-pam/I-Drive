@@ -145,19 +145,15 @@ export default {
           hideHiddenFolders: this.hideHiddenFolders,
           dateFormat: this.dateFormat,
         };
-        const shouldReload =
-          rtlLanguages.includes(data.locale) !==
-          rtlLanguages.includes(i18n.locale);
+
         await updateSettings(data)
         this.$store.commit("updateSettings", data)
 
 
-        if (shouldReload) {
-          location.reload();
-        }
         this.$toast.success(this.$t("settings.settingsUpdated"))
       } catch (e) {
-        this.$showError(e);
+        console.log(e)
+        this.$toast.error("error occured");
       }
     },
   },

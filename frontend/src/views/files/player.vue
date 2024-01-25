@@ -9,6 +9,10 @@ import {baseURL} from "@/utils/constants.js";
 
 export default {
   mounted() {
+    let url = this.$route.path;
+
+    let item_id = url.replace("/files/player/", "")
+
     let hls = new Hls({
       xhrSetup: xhr => {
         xhr.setRequestHeader('Authorization', `Token ${store.state.token}`)
@@ -18,9 +22,9 @@ export default {
       }
     })
 
-    let stream = baseURL +  '/api/stream/caa8cddb-e44b-4e5d-8a95-2b58a8524d08'
+    let stream = baseURL +  `/api/stream/${item_id}`
     let video = this.$refs["video"];
-    hls.loadSource(stream);
+    hls.loadSource("http://127.0.0.1:8000/api/teststream");
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED, function () {
       video.play();

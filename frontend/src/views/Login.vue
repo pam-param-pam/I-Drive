@@ -49,10 +49,12 @@ import {
   logoURL,
   signup,
 } from "@/utils/constants";
+import {mapState} from "vuex";
 
 export default {
   name: "login",
   computed: {
+    ...mapState(["user"]),
     signup: () => signup,
     name: () => name,
     logoURL: () => logoURL,
@@ -76,9 +78,7 @@ export default {
       event.stopPropagation();
 
       let redirect = this.$route.query.redirect;
-      if (redirect === "" || redirect === undefined || redirect === null) {
-        redirect = "/files/";
-      }
+
 
       if (this.createMode) {
         if (this.password !== this.passwordConfirm) {
@@ -93,6 +93,9 @@ export default {
         }
 
         await auth.login(this.username, this.password);
+        if (redirect === "" || redirect === undefined || redirect === null) {
+          redirect = `/folder/${this.user.root}`;
+        }
         await this.$router.push({path: redirect});
 
       } catch (e) {

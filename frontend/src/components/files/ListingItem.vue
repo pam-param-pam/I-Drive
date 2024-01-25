@@ -27,7 +27,7 @@
 
 
       <p class="created">
-      <time :datetime="item.created">{{ humanTime() }}</time>
+        <time :datetime="item.created">{{ humanTime() }}</time>
       </p>
 
     </div>
@@ -35,10 +35,10 @@
 </template>
 
 <script>
-import { mapMutations, mapGetters, mapState } from "vuex";
-import { filesize } from "@/utils";
+import {mapMutations, mapGetters, mapState} from "vuex";
+import {filesize} from "@/utils";
 import moment from "moment";
-import { files as api } from "@/api";
+import {files as api} from "@/api";
 import * as upload from "@/utils/upload";
 
 export default {
@@ -61,21 +61,21 @@ export default {
     },
 
     type() {
-        if (this.item.isDir) return "folder"
-        if (this.item.extension === ".mp4") {
-            return "video";
-        }
-        if (this.item.extension === ".mp3") {
-            return "song";
-        }
-        if (this.item.extension === ".txt") {
-            return "text";
-        }
-        if (this.item.extension === ".jpg" || this.item.extension === ".png") {
-            return "image";
-        }
-
+      if (this.item.isDir) return "folder"
+      if (this.item.extension === ".mp4") {
+        return "video";
+      }
+      if (this.item.extension === ".mp3") {
+        return "song";
+      }
+      if (this.item.extension === ".txt") {
         return "text";
+      }
+      if (this.item.extension === ".jpg" || this.item.extension === ".png") {
+        return "image";
+      }
+
+      return "text";
     },
     isSelected() {
 
@@ -99,7 +99,7 @@ export default {
 
   },
   methods: {
-    ...mapMutations(["addSelected",  "removeSelected", "resetSelected"]),
+    ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
 
     humanSize: function () {
       return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size);
@@ -213,7 +213,6 @@ export default {
     },
 
 
-
     click: function (event) {
 
       if (this.$store.state.selected.includes(this.item)) {
@@ -225,12 +224,15 @@ export default {
       this.addSelected(this.item);
     },
     open: function () {
-      if (this.item.isDir)  {
-          this.$router.push({ path: `/folder/${this.item.id}` });
+      if (this.item.isDir) {
+        this.$router.push({path: `/folder/${this.item.id}`});
 
-      }
-      else {
-          this.$router.push({ path: `/preview/${this.item.id}` });
+      } else {
+
+
+        this.$router.push({path: `/preview/${this.item.id}`});
+
+
       }
     },
   },

@@ -23,3 +23,9 @@ export async function updateSettings(data) {
   });
 
 }
+export async function getUsage() {
+
+  const res = await fetchURL(`/api/usage`, {});
+
+  return await res.json();
+}

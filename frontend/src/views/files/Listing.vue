@@ -125,7 +125,7 @@
     </div>
     <template v-else>
       <div v-if="dirsSize + filesSize === 0">
-        <h2 class="message">
+        <h2 v-if="error == null" class="message">
           <i class="material-icons">sentiment_dissatisfied</i>
           <span>{{ $t("files.lonely") }}</span>
         </h2>
@@ -251,6 +251,7 @@ import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
 import {updateSettings} from "@/api/user.js";
+import {getItems} from "@/api/folder.js";
 
 export default {
   name: "listing",
@@ -267,10 +268,12 @@ export default {
       dragCounter: 0,
       width: window.innerWidth,
       itemWeight: 0,
+
     };
   },
   computed: {
-    ...mapState(["items", "selected", "settings", "perms", "user", "selected", "loading"]),
+
+    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder"]),
     ...mapGetters(["selectedCount", "currentPrompt"]),
     nameSorted() {
       return this.settings.sortingBy === "name";
@@ -278,31 +281,40 @@ export default {
     sizeSorted() {
       return this.settings.sortingBy === "size";
     },
+    dirs() {
+      const items = [];
+      if (this.items != null) {
+        this.items.forEach((item) => {
+          if (item.isDir) {
+            items.push(item);
+          }
+        });
+      }
+      return this.sortItems(items);
+    },
+    files() {
+      const items = [];
+
+      if (this.items != null) {
+        this.items.forEach((item) => {
+          if (!item.isDir) {
+            items.push(item);
+          }
+        });
+      }
+      return this.sortItems(items);    },
+    dirsSize() {
+      return this.dirs.length
+    },
+    filesSize() {
+      return this.files.length
+    },
     createdSorted() {
       return this.settings.sortingBy === "created";
     },
     ascOrdered() {
       return this.settings.sortByAsc;
     },
-
-    filesSize() {
-        return this.files.length
-    },
-    dirsSize() {
-        return this.dirs.length
-    },
-    dirs() {
-      const items = this.items.filter(item => item.isDir);
-
-      return this.sortItems(items);
-    },
-
-    files() {
-      const items = this.items.filter(item => !item.isDir);
-
-      return this.sortItems(items);
-    },
-
 
     nameIcon() {
       if (this.nameSorted && !this.ascOrdered) {
@@ -350,23 +362,31 @@ export default {
     },
   },
   watch: {
+    $route: "fetchFolder",
+    reload: function (value) {
+      console.log("reload changed")
+      if (value === true) {
+        this.fetchFolder();
+      }
+    },
     items: function () {
-      // Reset the show value
-      this.showLimit = 50;
-
       // Ensures that the listing is displayed
       Vue.nextTick(() => {
         // How much every listing item affects the window height
         this.setItemWeight();
-
         // Fill and fit the window with listing items
         this.fillWindow(true);
       });
-    },
+    }
   },
+  created() {
+    this.fetchFolder()
+
+  },
+
   mounted: function () {
     // Check the columns size for the first time.
-    this.colunmsResize();
+    this.columnsResize();
 
     // How much every listing item affects the window height
     this.setItemWeight();
@@ -398,8 +418,39 @@ export default {
     document.removeEventListener("drop", this.drop);
   },
   methods: {
-    ...mapState(["currentFolder"]),
-    ...mapMutations(["updateUser", "addSelected"]),
+
+    ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
+
+    async fetchFolder() {
+      console.log("loading1: " + this.loading)
+      this.setError(null)
+
+      this.setLoading(true);
+      console.log("loading2: " + this.loading)
+
+      let folderId = this.$route.params.folderId;
+
+      try {
+
+        const res = await getItems(folderId);
+
+        this.$store.commit("setItems", res.children);
+        this.$store.commit("setCurrentFolder", res);
+
+
+        document.title = `${res.name} - File Browser`;
+
+      } catch (e) {
+        console.log(e)
+        this.setError(e);
+      } finally {
+        console.log("loading3: " + this.loading)
+        this.setLoading(false);
+        console.log("loading4: " + this.loading)
+
+      }
+    },
+
     sortItems(items) {
       const sortingKey = this.settings.sortingBy;
       const isAscending = this.settings.sortByAsc;
@@ -407,11 +458,6 @@ export default {
       return items.sort((a, b) => {
         let aValue = a[sortingKey];
         let bValue = b[sortingKey];
-
-        // Adjust the values based on the sorting key (e.g., 'created' may be a Date object)
-        // You may need to customize this part based on the actual structure of your items.
-
-
 
         // Compare values based on sorting order
         if (isAscending) {
@@ -441,6 +487,12 @@ export default {
         this.$store.commit("showHover", "delete");
       }
 
+      // i!
+      if (event.keyCode === 73) {
+        // Show delete prompt.
+        this.$store.commit("showHover", "info");
+      }
+
       // F2!
       if (event.keyCode === 113) {
         if (!this.perms.rename || this.selectedCount !== 1) return;
@@ -450,142 +502,38 @@ export default {
       }
 
       // Ctrl is pressed
-      if (!event.ctrlKey && !event.metaKey) {
-        return;
-      }
+      if (event.ctrlKey  || event.metaKey) {
+        let key = String.fromCharCode(event.which).toLowerCase();
 
-      let key = String.fromCharCode(event.which).toLowerCase();
-
-      switch (key) {
-        case "f":
-          event.preventDefault();
-          this.$store.commit("showHover", "search");
-          break;
-        case "c":
-        case "x":
-          this.copyCut(event, key);
-          break;
-        case "v":
-          this.paste(event);
-          break;
-        case "a":
-          event.preventDefault();
-          for (let file of this.files) {
-            if (this.$store.state.selected.indexOf(file.index) === -1) {
-              this.addSelected(file.index);
-            }
-          }
-          for (let dir of this.dirs) {
-            if (this.$store.state.selected.indexOf(dir.index) === -1) {
-              this.addSelected(dir.index);
-            }
-          }
-          break;
-        case "s":
-          event.preventDefault();
-          document.getElementById("download-button").click();
-          break;
-      }
-    },
-    preventDefault(event) {
-      // Wrapper around prevent default.
-      event.preventDefault();
-    },
-    copyCut(event, key) {
-      if (event.target.tagName.toLowerCase() === "input") {
-        return;
-      }
-
-      let items = [];
-
-      for (let i of this.selected) {
-        items.push({
-            //todo
-          from: this.req.items[i].url,
-          name: this.req.items[i].name,
-        });
-      }
-
-      if (items.length === 0) {
-        return;
-      }
-
-      this.$store.commit("updateClipboard", {
-        key: key,
-        items: items,
-        path: this.$route.path,
-      });
-    },
-    paste(event) {
-      if (event.target.tagName.toLowerCase() === "input") {
-        return;
-      }
-
-      let items = [];
-
-      for (let item of this.$store.state.clipboard.items) {
-        const from = item.from.endsWith("/")
-          ? item.from.slice(0, -1)
-          : item.from;
-        const to = this.$route.path + encodeURIComponent(item.name);
-        items.push({ from, to, name: item.name });
-      }
-
-      if (items.length === 0) {
-        return;
-      }
-
-      let action = (overwrite, rename) => {
-        api
-          .copy(items, overwrite, rename)
-          .then(() => {
-            this.$store.commit("setReload", true);
-          })
-          .catch(this.$showError);
-      };
-
-      if (this.$store.state.clipboard.key === "x") {
-        action = (overwrite, rename) => {
-          api
-            .move(items, overwrite, rename)
-            .then(() => {
-              this.$store.commit("resetClipboard");
-              this.$store.commit("setReload", true);
-            })
-            .catch(this.$showError);
-        };
-      }
-
-      if (this.$store.state.clipboard.path === this.$route.path) {
-        action(false, true);
-
-        return;
-      }
-
-      let conflict = upload.checkConflict(items, this.items);
-
-      let overwrite = false;
-      let rename = false;
-
-      if (conflict) {
-        this.$store.commit("showHover", {
-          prompt: "replace-rename",
-          confirm: (event, option) => {
-            overwrite = option === "overwrite";
-            rename = option === "rename";
-
+        switch (key) {
+          case "f":
             event.preventDefault();
-            this.$store.commit("closeHovers");
-            action(overwrite, rename);
-          },
-        });
-
-        return;
+            this.$store.commit("showHover", "search");
+            break;
+          case "a":
+            event.preventDefault();
+            for (let file of this.files) {
+              if (this.$store.state.selected.indexOf(file.index) === -1) {
+                this.addSelected(file.index);
+              }
+            }
+            for (let dir of this.dirs) {
+              if (this.$store.state.selected.indexOf(dir.index) === -1) {
+                this.addSelected(dir.index);
+              }
+            }
+            break;
+          case "s":
+            event.preventDefault();
+            document.getElementById("download-button").click();
+            break;
+        }
       }
 
-      action(overwrite, rename);
     },
-    colunmsResize() {
+
+
+    columnsResize() {
       // Update the columns size based on the window width.
       let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
       if (!items) return;
@@ -757,17 +705,19 @@ export default {
           asc = true;
         }
       }
-
       try {
         await updateSettings({"sortingBy": by, "sortByAsc": asc})
 
       } catch (e) {
         console.log(e)
-        this.$showError(e);
+        this.$toast.error(e)
       }
 
       this.$store.commit("setSortingBy", by);
       this.$store.commit("setSortByAsc", asc);
+      let items = this.sortItems(this.items)
+      this.$store.commit("setItems", items);
+
 
     },
     openSearch() {
@@ -775,7 +725,7 @@ export default {
     },
 
     windowsResize: throttle(function () {
-      this.colunmsResize();
+      this.columnsResize();
       this.width = window.innerWidth;
 
       // Listing element is not displayed
@@ -824,21 +774,22 @@ export default {
       const data = {
         viewMode: modes[this.settings.viewMode] || "list",
       };
-      try {
-        await updateSettings(data)
-
-      }
-      catch (error) {
-        console.log(error)
-        //this.$showError(error)
-      }
-      //todo update settings on server
 
       // Await ensures correct value for setItemWeight()
       await this.$store.commit("updateSettings", data);
 
+
       this.setItemWeight();
       this.fillWindow();
+
+      try {
+        await updateSettings(data)
+      }
+      catch (error) {
+        console.log(error)
+      }
+
+
     },
     upload: function () {
       if (
@@ -851,17 +802,20 @@ export default {
       }
     },
     setItemWeight() {
-      // Listing element is not displayed
-      if (this.$refs.listing == null) return;
 
-      let itemQuantity = this.currentFolder.numFiles + this.currentFolder.numFolders;
+      if (this.$refs.listing == null || this.currentFolder == null) return;
+
+
+      let itemQuantity = this.filesSize + this.dirsSize;
       if (itemQuantity > this.showLimit) itemQuantity = this.showLimit;
 
       // How much every listing item affects the window height
       this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity;
     },
     fillWindow(fit = false) {
-      const totalItems = this.currentFolder.numFiles + this.currentFolder.numFolders;
+      if (this.currentFolder == null) return;
+
+      const totalItems = this.filesSize + this.dirsSize;
 
       // More items are displayed than the total
       if (this.showLimit >= totalItems && !fit) return;

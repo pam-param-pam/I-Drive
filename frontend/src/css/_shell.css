@@ -3,8 +3,8 @@
   bottom: 0;
   left: 0;
   max-height: calc(100% - 4em);
-  background: white;
-  color: #212121;
+  background: rgb(40, 40, 40);
+  color: #4AF626;
   z-index: 9997;
   width: 100%;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
@@ -74,7 +74,7 @@ body.rtl .shell-content {
 }
 
 .shell__prompt i {
-  color: var(--blue);
+  color: #4AF626;
 }
 
 .shell__text {

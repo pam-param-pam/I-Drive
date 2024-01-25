@@ -53,13 +53,16 @@ async function start() {
 
           type = "success"
         }
+        if (jsonObject.error) {
+          timeout = 0
+          type = "error"
+        }
         vue.$toast.update(jsonObject.task_id, {
 
           content: jsonObject.message,
           options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
 
         });
-        //console.log(jsonObject.message)
 
       },
     },
