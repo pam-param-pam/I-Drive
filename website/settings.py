@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
@@ -11,12 +10,12 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-o5m-fk59yjgizf7k6d9mk#*23&_gcc^1nptept@qykzch7zho-'
-os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it work? Well until it breaks something, YES IT DOES!
+os.environ[
+    "DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it work? Well until it breaks something, YES IT DOES!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS=['*']
-
+ALLOWED_HOSTS = ['*']
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
@@ -59,17 +58,17 @@ MIDDLEWARE = [
 CORS_ALLOW_HEADERS = "*"
 
 CORS_ALLOWED_ORIGINS = [
-        'http://127.0.0.1:8080',
-        'http://127.0.0.1:5173',
-        'http://localhost:8080',
-        'http://localhost:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
+    'http://localhost:8080',
+    'http://localhost:5173',
 
 ]
 CSRF_TRUSTED_ORIGINS = [
-        'http://127.0.0.1:8080',
-        'http://127.0.0.1:5173',
-        'http://localhost:8080',
-        'http://localhost:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
+    'http://localhost:8080',
+    'http://localhost:5173',
 ]
 
 ROOT_URLCONF = 'website.urls'
@@ -90,7 +89,12 @@ TEMPLATES = [
         },
     },
 ]
-
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379",
+    }
+}
 WSGI_APPLICATION = 'website.wsgi.application'
 
 ASGI_APPLICATION = 'website.asgi.application'
@@ -150,7 +154,6 @@ CHANNEL_LAYERS = {
         "CONFIG": {
             "hosts": [("127.0.0.1", 6379)],  # set redis address
 
-
         },
     },
 }
@@ -160,9 +163,9 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_THROTTLE_RATES': {
-            'anon': '30/min',
-            'user': '60/min'
-        }
+        'anon': '10/min',
+        'user': '60/min'
+    }
 }
 # Celery settings
 CELERY_BROKER_URL = "redis://localhost:6379"

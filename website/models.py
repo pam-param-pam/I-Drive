@@ -1,23 +1,24 @@
+import secrets
 import uuid
 
+import shortuuid
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.utils import timezone
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from shortuuidfield import ShortUUIDField
 
 
 class Folder(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = ShortUUIDField(primary_key=True, editable=False)
     name = models.CharField(max_length=255, null=False)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    maintainer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
-                                   related_name='folder_maintainer_user')
-
-    viewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='folder_viewer_user')
 
     def __str__(self):
         return self.name
@@ -26,8 +27,15 @@ class Folder(models.Model):
         if self.parent == self:
             raise ValidationError("A folder cannot be its own parent.")
 
+    def create_user_root(sender, instance, created, **kwargs):
+        if created:
+            folder, created = Folder.objects.get_or_create(owner=instance, name="root")
+
     def save(self, *args, **kwargs):
         folders = Folder.objects.filter(owner=self.owner.id)
+        max_name_length = 50  # Set your arbitrary maximum length here
+        if len(self.name) > max_name_length:
+            raise ValidationError(f"Name length exceeds the maximum allowed length of {max_name_length} characters.")
 
         if self.name == "root":
             if self.parent:
@@ -46,7 +54,7 @@ class Folder(models.Model):
 
 
 class File(models.Model):
-    id = models.UUIDField(primary_key=True, editable=False, null=False, blank=False)
+    id = ShortUUIDField(primary_key=True, editable=False, null=False, blank=False)
     name = models.CharField(max_length=255, null=False, blank=False)
     extension = models.CharField(max_length=10, null=False, blank=False)
     streamable = models.BooleanField(default=False)
@@ -59,14 +67,14 @@ class File(models.Model):
     ready = models.BooleanField(default=False)
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    maintainer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True,
-                                   related_name='file_maintainer_user')
-    viewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='file_viewer_user')
 
     def __str__(self):
         return self.name
 
     def save(self, *args, **kwargs):
+        max_name_length = 50  # Set your arbitrary maximum length here
+        if len(self.name) > max_name_length:
+            raise ValidationError(f"Name length exceeds the maximum allowed length of {max_name_length} characters.")
         if self.encrypted_size is None:
             self.encrypted_size = self.size
         super(File, self).save(*args, **kwargs)
@@ -79,15 +87,15 @@ class UserSettings(models.Model):
     locale = models.TextField(max_length=50, null=False, default="en")
     view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
     date_format = models.BooleanField(default=False)
-    hide_dotfiles = models.BooleanField(default=False)
-    single_click = models.BooleanField(default=False)
+    hide_hidden_folders = models.BooleanField(default=False)
+    subfolders_in_shares = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username + "'s settings"
 
-    def create_user_profile(sender, instance, created, **kwargs):
+    def create_user_settings(sender, instance, created, **kwargs):
         if created:
-            profile, created = UserSettings.objects.get_or_create(user=instance)
+            settings, created = UserSettings.objects.get_or_create(user=instance)
 
 
 class UserPerms(models.Model):
@@ -111,15 +119,44 @@ class UserPerms(models.Model):
 
 
 post_save.connect(UserPerms.create_user_perms, sender=User)
+post_save.connect(UserSettings.create_user_settings, sender=User)
+post_save.connect(Folder.create_user_root, sender=User)
 
 
 class Fragment(models.Model):
     sequence = models.SmallIntegerField()
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = ShortUUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
     size = models.BigIntegerField()
+    encrypted_size = models.BigIntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return str(self.sequence)
+
+
+class ShareableLink(models.Model):
+    token = models.CharField(max_length=255, unique=True)
+    expiration_time = models.DateTimeField()
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    password = models.TextField(max_length=100, null=True, blank=True)
+
+    # GenericForeignKey to point to either Folder or File
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={'model__in': ('folder', 'file')}
+    )
+    object_id = models.UUIDField()
+
+    resource = GenericForeignKey('content_type', 'object_id')
+
+    def save(self, *args, **kwargs):
+        if self.token is None or self.token == '':
+            self.token = secrets.token_urlsafe(32)
+        super(ShareableLink, self).save(*args, **kwargs)
+
+    def is_expired(self):
+        return timezone.now() >= self.expiration_time

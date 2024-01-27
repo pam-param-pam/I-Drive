@@ -10,6 +10,7 @@ urlpatterns = [
 
                   path('auth/', include('djoser.urls.authtoken')),
                   path('auth/users/me', views.users_me, name="get current user"),
+                  path('api/fragments/<file_id>', views.get_fragment_urls, name="check token"),
 
                   path("", views.index, name="index"),
                   path('admin', admin.site.urls),
@@ -17,10 +18,17 @@ urlpatterns = [
                   path("api/download/<file>", views.download, name="download"),
                   path("api/stream_key/<file_id>", views.stream_key, name="stream key"),
                   path("api/stream/<file_id>", views.get_m3u8, name="get m3u8 playlist"),
+                  path("api/shares", views.get_shares, name="get user's shares"),
+                  path("api/createshare", views.create_share, name="create share"),
+                  path("api/share/<token>", views.view_share, name="get share"),
 
-                  path("api/search/<query>", views.search, name="get m3u8 playlist"),
+                  # path("api/search/<query>", views.search, name="get m3u8 playlist"),
+                  #path("api/stream/fragment/<fragment_id>", views.stream_fragment,
+                   #    name="get files and folders from a folder id"),
 
                   path("api/folder/<folder_id>", views.get_folder, name="get files and folders from a folder id"),
+                  path("api/file/<file_id>", views.get_file, name="get file by file id"),
+
                   path("api/getfolders", views.get_folder_tree, name="get files and folders from a folder id"),
                   path("api/getroot", views.get_root, name="get root's content"),
                   path("api/breadcrumbs/<folder_id>", views.get_breadcrumbs, name="get root's real content"),
@@ -32,7 +40,7 @@ urlpatterns = [
                   path("api/move", views.move, name="move file/folder"),
 
                   path("api/delete", views.delete, name="delete file/folder"),
-                  path("api/usage", views.usage, name="get total size of all files"),
+                  path("api/usage", views.get_usage, name="get total size of all files"),
 
                   path("api/rename", views.rename, name="rename file/folder"),
 

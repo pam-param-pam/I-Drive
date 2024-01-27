@@ -11,3 +11,4 @@ channels-redis
 eventlet
 gevent
 django-cors-headers
+django-shortuuidfield

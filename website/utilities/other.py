@@ -39,29 +39,47 @@ class UUIDEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def create_files_dict(file_list):
-    file_dict_list = []
+def create_file_dict(file_obj):
+    file_dict = {
+        'isDir': False,
+        'id': str(file_obj.id),
+        'name': file_obj.name,
+        'url': f"http://127.0.0.1:9000/stream/{file_obj.id}",
+        'parent_id': file_obj.parent_id,
+        'extension': file_obj.extension,
+        'streamable': file_obj.streamable,
+        'size': file_obj.size,
+        'encrypted_size': file_obj.encrypted_size,
+        'created': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
+        'ready': file_obj.ready,
+        'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
+        "maintainers": [],
+        "viewers": []
+    }
+    return file_dict
 
-    for file_obj in file_list:
-        file_dict = {
-            'isDir': False,
-            'id': str(file_obj.id),
-            'name': file_obj.name,
-            'parent_id': file_obj.parent_id,
-            'extension': file_obj.extension,
-            'streamable': file_obj.streamable,
-            'size': file_obj.size,
-            'encrypted_size': file_obj.encrypted_size,
-            'created': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
-            'ready': file_obj.ready,
-            'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
-            "maintainers": [],
-            "viewers": [],
-        }
 
-        file_dict_list.append(file_dict)
+def create_folder_dict(folder_obj):
+    file_children = File.objects.filter(parent=folder_obj, ready=True)
+    folder_children = Folder.objects.filter(parent=folder_obj)
 
-    return file_dict_list
+    folder_dict = {
+        'id': str(folder_obj.id),
+        'name': folder_obj.name,
+        "numFiles": len(file_children),
+        "numFolders": len(folder_children),
+        'created': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
+        'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
+        'parent_id': folder_obj.parent_id,
+        'isDir': True,
+    }
+    return folder_dict
+
+
+def create_share_dict(share):
+    item = {"expiration_time": share.expiration_time, "isDir": True if share.content_type == 4 else False,
+            "token": share.token, "id": share.object_id}
+    return item
 
 
 def build_folder_tree(folder_objs, parent_folder=None):
@@ -71,51 +89,49 @@ def build_folder_tree(folder_objs, parent_folder=None):
     child_folders = folder_objs.filter(parent=parent_folder)
 
     for folder in child_folders:
-        folder_data = {
-            'id': str(folder.id),
-            'name': folder.name,
-            'owner': {"name": folder.owner.username, "id": folder.owner.id},
-            'parent_id': folder.parent_id,
-            'created': folder.created_at.strftime('%Y-%m-%d %H:%M'),
-            'children': build_folder_tree(folder_objs, folder),
-            "numFiles": 21,
-            "numFolders": 37,
-        }
+        folder_dict = create_folder_dict(folder)
+        folder_dict["children"] = build_folder_tree(folder_objs, folder)
 
-        folder_tree.append(folder_data)
+        folder_tree.append(folder_dict)
 
     return folder_tree
 
 
-def create_fragmented_folder_dict(folder_children):
-    folder_list = []
-    for folder in folder_children:
-        folder_data = {
-            'id': str(folder.id),
-            'name': folder.name,
-            'created': folder.created_at.strftime('%Y-%m-%d %H:%M'),
-            'owner': {"name": folder.owner.username, "id": folder.owner.id},
-            'parent_id': folder.parent_id,
-            #"numFiles": 21,
-            #"numFolders": 37,
-            'isDir': True,
-        }
-        folder_list.append(folder_data)
-    return folder_list
+def get_shared_folder(folder_obj, includeSubfolders):
+    def recursive_build(folder):
+        file_children = File.objects.filter(parent=folder, ready=True)
+        folder_children = Folder.objects.filter(parent=folder)
 
+        file_dicts = [create_file_dict(file) for file in file_children]
 
+        folder_dicts = []
+        if includeSubfolders:
+            folder_dicts = [recursive_build(subfolder) for subfolder in folder_children]
+
+        folder_dict = create_folder_dict(folder)
+        folder_dict["children"] = file_dicts + folder_dicts
+
+        return folder_dict
+
+    return recursive_build(folder_obj)
 def build_folder_content(folder_obj):
     file_children = File.objects.filter(parent=folder_obj, ready=True)
     folder_children = Folder.objects.filter(parent=folder_obj)
 
-    file_dicts = create_files_dict(file_children)
-    folder_dicts = create_fragmented_folder_dict(folder_children)
+    file_dicts = []
+    for file in file_children:
+        file_dict = create_file_dict(file)
+        file_dicts.append(file_dict)
 
-    json_string = {"isDir": True, "name": folder_obj.name, "id": folder_obj.id, "numFiles": len(file_children), "numFolders": len(folder_children),
-                   'created': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
-                   "owner": {"name": folder_obj.owner.username, "id": folder_obj.owner.id}, "maintainers": [],
-                   "viewers": [], "children": file_dicts + folder_dicts}
-    return json_string
+    folder_dicts = []
+    for folder in folder_children:
+        folder_dict = create_folder_dict(folder)
+        folder_dicts.append(folder_dict)
+
+    folder_dict = create_folder_dict(folder_obj)
+    folder_dict["children"] = file_dicts + folder_dicts
+
+    return folder_dict
 
 
 def build_response(task_id, message):

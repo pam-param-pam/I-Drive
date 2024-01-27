@@ -1,5 +1,25 @@
+import json
 import time
+from json import JSONDecodeError
+
 import httpx
+
+
+class DiscordError(Exception):
+    def __init__(self, message="Unexpected Discord Error.", status=0):
+        self.status = status
+        try:
+            json_message = json.loads(message)
+
+            self.message = json_message.get("message")
+        except (JSONDecodeError, KeyError):
+            print(message)
+            self.message = "Unknown"
+
+        super().__init__(self.message)
+
+    def __str__(self):
+        return f'Discord error-> {self.status}: {self.message}'
 
 
 def retry(func):
@@ -7,7 +27,7 @@ def retry(func):
         response = func(*args, **kwargs)
         if response.status_code == 429:  # with 4 tokens this almost never happens so no need for fancy rate limit calculations to avoid 429
             retry_after = response.json()["retry_after"]
-            time.sleep(1)
+            print("hit 429!!!!!!!!!!!!!!!")
             args[0].switch_token()
 
             return decorator(*args, **kwargs)
@@ -29,7 +49,9 @@ class Discord:
         self.bot_tokens = ["ODk0NTc4MDM5NzI2NDQwNTUy.GAqXhm.8M61gjcKM5d6krNf6oWBOt1ZSVmpO5PwPoGVa4",
                            "MTE4NjczNTE5NTg3ODA2ODI4Ng.GeXLwx.KbonHuxNcUfnl0U-rqix7t9CzUoa4MLZgvbX3E",
                            "MTE4Njc0ODE4ODA1NzY4MjA2MA.GEMHFW.eg9hT5IJKzSMpJ0nbFv4D_MqLCw72qlFR9VTTU",
-                           "MTE4ODk1MTQyODYxNDU4NjQ4OA.G4CVRG.dMvoxd0Z7nQF5reiLIoFQNkstfalQmcTaGcXOY"
+                           "MTE4ODk1MTQyODYxNDU4NjQ4OA.G4CVRG.dMvoxd0Z7nQF5reiLIoFQNkstfalQmcTaGcXOY",
+                           "MTIwMDExODYzNTkyMjk4OTE2Nw.GUkoOq.n6e-5qYwwiRacyKqZIsNClM5gD8G0x7e23rtxM",
+                           "MTIwMDExODkyMTQ0MTg0NTI5MA.Gq4BiA.7ChveurWbuTHPBqYpFOch-P6BvPfAX5A9yVRsI",
                            ]
 
         self.BASE_URL = 'https://discord.com/api/v10'
@@ -53,30 +75,37 @@ class Discord:
         payload = {'content': message}  # Construct the payload according to Discord API requirements
 
         response = self.client.post(url, headers=self.headers, json=payload)
-        return response
-
+        if response.is_success or response.status_code == 429:
+            return response
+        raise DiscordError(response.text, response.status_code)
     @retry
     def send_file(self, files) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
         response = self.client.post(url, headers=self.headers, files=files, timeout=None)
-        return response
+        if response.is_success or response.status_code == 429:
+            return response
+        raise DiscordError(response.text, response.status_code)
 
     def get_file_url(self, message_id) -> str:
-        url = self.get_message(message_id).json()["attachments"][0]["url"]
-        print(url)
+
+        message = self.get_message(message_id).json()
+        url = message["attachments"][0]["url"]
         return url
 
     @retry
     def get_message(self, message_id) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.get(url, headers=self.headers)
-        return response
-
+        if response.is_success or response.status_code == 429:
+            return response
+        raise DiscordError(response.text, response.status_code)
     @retry
     def remove_message(self, message_id) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.delete(url, headers=self.headers)
-        return response
+        if response.is_success or response.status_code == 429:
+            return response
+        raise DiscordError(response.text, response.status_code)
 
 
 discord = Discord()
