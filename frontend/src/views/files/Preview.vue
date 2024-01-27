@@ -5,15 +5,8 @@
     @touchstart="toggleNavigation"
   >
     <header-bar>
-      <action icon="close" :label="$t('buttons.close')" @action="close()" />
-      <title>{{ name }}</title>
-      <action
-        :disabled="loading"
-        v-if="isResizeEnabled && item.extension === '.jpg'"
-        :icon="fullSize ? 'photo_size_select_large' : 'hd'"
-        @action="toggleSize"
-      />
-
+      <action icon="close" :label="$t('buttons.close')" @action="close()"/>
+      <title v-if="file">{{ file.name }}</title>
       <template #actions>
         <action
           :disabled="loading"
@@ -55,27 +48,28 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="this.item.extension === '.jpg'" :src="raw"></ExtendedImage>
+        <ExtendedImage v-if="this.file.extension === '.jpg'" :src="file.url"></ExtendedImage>
         <audio
-          v-else-if="item.extension === '.mp3'"
+          v-else-if="file.extension === '.mp3'"
           ref="player"
-          :src="raw"
+          :src="file.url"
           controls
           :autoplay="autoPlay"
           @play="autoPlay = true"
         ></audio>
         <video
-          v-else-if="item.extension === '.mp4'"
+          v-else-if="file.extension === '.mp4'"
           ref="video"
           controls
+          :src="file.url"
           :autoplay="autoPlay"
           @play="autoPlay = true"
         >
         </video>
         <object
-          v-else-if="item.extension === '.pdf'"
+          v-else-if="file.extension === '.pdf'"
           class="pdf"
-          :data="raw"
+          :data="file.url"
         ></object>
         <div v-else class="info">
           <div class="title">
@@ -83,7 +77,7 @@
             {{ $t("files.noPreview") }}
           </div>
           <div>
-            <a target="_blank" :href="downloadUrl" class="button button--flat">
+            <a target="_blank" :href="file.url" class="button button--flat" download>
               <div>
                 <i class="material-icons">file_download</i
                 >{{ $t("buttons.download") }}
@@ -91,9 +85,9 @@
             </a>
             <a
               target="_blank"
-              :href="raw"
+              :href="file.url"
               class="button button--flat"
-              v-if="!req.isDir"
+              v-if="!file.isDir"
             >
               <div>
                 <i class="material-icons">open_in_new</i
@@ -125,24 +119,18 @@
     >
       <i class="material-icons">chevron_right</i>
     </button>
-    <link rel="prefetch" :href="previousRaw" />
-    <link rel="prefetch" :href="nextRaw" />
   </div>
 </template>
 
 <script>
-import { mapGetters, mapState } from "vuex";
-import { files as api } from "@/api";
-import {baseURL, resizePreview} from "@/utils/constants";
-import Hls from 'hls.js';
+import {mapGetters, mapMutations, mapState} from "vuex";
 import throttle from "lodash.throttle";
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
 import ExtendedImage from "@/components/files/ExtendedImage.vue";
-import store from "@/store/index.js";
 import {getFile} from "@/api/files.js";
-
-const mediaTypes = ["image", "video", "audio", "blob"];
+import {getItems} from "@/api/folder.js";
+import {sortItems} from "@/api/utils.js";
 
 export default {
   name: "preview",
@@ -153,55 +141,49 @@ export default {
   },
   data: function () {
     return {
-      previousLink: "",
-      nextLink: "",
-      listing: null,
-      name: "",
       fullSize: false,
       showNav: true,
       file: null,
       navTimeout: null,
       hoverNav: false,
-      autoPlay: false,
-      previousRaw: "",
-      nextRaw: "",
+      autoPlay: true,
     };
   },
   computed: {
     ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
     ...mapGetters(["currentPrompt"]),
-    hasPrevious() {
-      return this.previousLink !== "";
+    currentIndex() {
+      if (this.files && this.file) {
+        return this.files.findIndex(item => item.id === this.file.id);
+      }
     },
+    files() {
+      const items = [];
 
-    hasNext() {
-      return this.nextLink !== "";
-    },
-    downloadUrl() {
-      return ""
-      return api.getDownloadURL(this.req);
-    },
-    raw() {
-      /*
-      if (this.req.type === "image" && !this.fullSize) {
-        return api.getPreviewURL(this.req, "big");
+      if (this.items != null) {
+        this.items.forEach((item) => {
+          if (!item.isDir) {
+            items.push(item);
+          }
+        });
       }
 
-      return api.getDownloadURL(this.req, true);
+      return sortItems(items)
+    },
+    hasNext() {
+      return this.currentIndex < this.files.length - 1 // list starts at 0 lul
 
-       */
     },
-    showMore() {
-      return this.currentPrompt?.prompt === "more";
-    },
-    isResizeEnabled() {
-      return resizePreview;
+    hasPrevious() {
+
+
+      return this.files.length > 1 && this.currentIndex > 0
     },
 
   },
   watch: {
     $route: function () {
-      this.updatePreview();
+      this.fetchData();
       this.toggleNavigation();
     },
   },
@@ -210,49 +192,31 @@ export default {
   },
   async mounted() {
 
-
-    let hls = new Hls({
-
-      xhrSetup: xhr => {
-        xhr.setRequestHeader('Authorization', `Token ${store.state.token}`)
-        xhr.setRequestHeader('Origin', `https://discord.com/`)
-        xhr.setRequestHeader('Referer', `https://discord.com/`)
-
-      }
-    })
-
-    let stream = baseURL +  `/api/stream/${item_id}`
-    let video = this.$refs["video"];
-    hls.loadSource(stream);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, function () {
-      video.play();
-    });
-
-
     window.addEventListener("keydown", this.key);
-    this.listing = this.items;
-    this.updatePreview();
+
   },
   beforeDestroy() {
     window.removeEventListener("keydown", this.key);
   },
   methods: {
-    fetchData() {
+    ...mapMutations(["setLoading"]),
+
+    async fetchData() {
+
       let fileId = this.$route.params.fileId;
 
       this.setLoading(true);
 
       try {
+        this.file = await getFile(fileId)
+        if (!this.currentFolder) {
+          const res = await getItems(this.file.parent_id);
 
-        if (this.items) {
-          console.log(JSON.stringify(this.items))
+          this.$store.commit("setItems", res.children);
+          this.$store.commit("setCurrentFolder", res);
+
         }
-        else {
-          console.log(JSON.stringify(this.items))
-        }
-
-
+        this.$store.commit("addSelected", this.file);
 
       } catch (e) {
         console.log(e)
@@ -263,113 +227,45 @@ export default {
       }
     },
     deleteFile() {
-      this.$store.commit("showHover", {
-        prompt: "delete",
-        confirm: () => {
-          this.listing = this.listing.filter((item) => item.name !== this.name);
+      this.$store.commit("showHover", "delete");
 
-          if (this.hasNext) {
-            this.next();
-          } else if (!this.hasPrevious && !this.hasNext) {
-            this.close();
-          } else {
-            this.prev();
-          }
-        },
-      });
     },
     prev() {
       this.hoverNav = false;
-      this.$router.replace({ path: this.previousLink });
+      if (this.hasPrevious) {
+        let previousFile = this.files[this.currentIndex - 1];
+        this.$router.replace({path: previousFile.id});
+      }
+
     },
     next() {
       this.hoverNav = false;
-      this.$router.replace({ path: this.nextLink });
+      if (this.hasNext) {
+        let nextFile = this.files[this.currentIndex + 1];
+        this.$router.replace({path: nextFile.id});
+      }
     },
     key(event) {
+
       if (this.currentPrompt !== null) {
         return;
       }
 
       if (event.which === 13 || event.which === 39) {
         // right arrow
-        if (this.hasNext) this.next();
+        this.next();
       } else if (event.which === 37) {
         // left arrow
-        if (this.hasPrevious) this.prev();
+        this.prev();
       } else if (event.which === 27) {
         // esc
         this.close();
       }
     },
-    async updatePreview() {
-      /*
-      if (
-        this.$refs.player &&
-        this.$refs.player.paused &&
-        !this.$refs.player.ended
-      ) {
-        this.autoPlay = false;
-      }
 
-      let dirs = this.$route.fullPath.split("/");
-      this.name = decodeURIComponent(dirs[dirs.length - 1]);
 
-      if (!this.listing) {
-        try {
-          const path = url.removeLastDir(this.$route.path);
-          const res = await api.getItems(path);
-          this.listing = res.items;
-        } catch (e) {
-          this.$showError(e);
-        }
-      }
-
-      this.previousLink = "";
-      this.nextLink = "";
-
-      for (let i = 0; i < this.listing.length; i++) {
-        if (this.listing[i].name !== this.name) {
-          continue;
-        }
-
-        for (let j = i - 1; j >= 0; j--) {
-          if (mediaTypes.includes(this.listing[j].type)) {
-            this.previousLink = this.listing[j].url;
-            this.previousRaw = this.prefetchUrl(this.listing[j]);
-            break;
-          }
-        }
-        for (let j = i + 1; j < this.listing.length; j++) {
-          if (mediaTypes.includes(this.listing[j].type)) {
-            this.nextLink = this.listing[j].url;
-            this.nextRaw = this.prefetchUrl(this.listing[j]);
-            break;
-          }
-        }
-
-        return;
-      }
-
-       */
-    },
-    prefetchUrl(item) {
-      if (item.type !== "image") {
-        return "";
-      }
-
-      return this.fullSize
-        ? api.getDownloadURL(item, true)
-        : api.getPreviewURL(item, "big");
-    },
-    openMore() {
-      this.$store.commit("showHover", "more");
-    },
     resetPrompts() {
-      this.$store.commit("closeHovers");
-    },
-    toggleSize() {
-      this.fullSize = !this.fullSize;
+      this.$store.commit("closeHover");
     },
     toggleNavigation: throttle(function () {
       this.showNav = true;
@@ -379,18 +275,18 @@ export default {
       }
 
       this.navTimeout = setTimeout(() => {
-        this.showNav = false || this.hoverNav;
+        this.showNav = this.hoverNav;
         this.navTimeout = null;
       }, 1500);
     }, 500),
     close() {
       this.$store.commit("updateItems", {});
-      let uri = `/files/folder/${this.currentFolder.id}`
+      let uri = `/folder/${this.file.parent_id}`
 
-      this.$router.push({ path: uri });
+      this.$router.push({path: uri});
     },
     download() {
-      window.open(this.downloadUrl);
+      window.open(this.file.url, '_blank');
     },
   },
 };

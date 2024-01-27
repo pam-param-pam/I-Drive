@@ -1,16 +1,13 @@
-import { removePrefix } from "./utils";
-import { baseURL } from "@/utils/constants";
-import store from "@/store";
 
-const ssl = window.location.protocol === "https:";
-const protocol = ssl ? "wss:" : "ws:";
+
+const ssl = window.location.protocol === "https:"
 
 export default function command(url, command, onmessage, onclose) {
-  url = removePrefix(url);
-  url = `${protocol}//${window.location.host}${baseURL}/api/command${url}?auth=${store.state.jwt}`;
+  url = `ws://127.0.0.1:8000/command`
+  const token = localStorage.getItem("token");
 
-  let conn = new window.WebSocket(url);
-  conn.onopen = () => conn.send(command);
-  conn.onmessage = onmessage;
-  conn.onclose = onclose;
+  let conn = new window.WebSocket(url, token)
+  conn.onopen = () => conn.send(command)
+  conn.onmessage = onmessage
+  conn.onclose = onclose
 }

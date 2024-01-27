@@ -199,7 +199,7 @@ export default {
                   rename = option === "rename";
 
                   event.preventDefault();
-                  this.$store.commit("closeHovers");
+                  this.$store.commit("closeHover");
                   action(overwrite, rename);
                 },
               });

@@ -259,7 +259,7 @@ export default {
       // Reset view information.
       this.$store.commit("setReload", false);
       this.$store.commit("resetSelected");
-      this.$store.commit("closeHovers");
+      this.$store.commit("closeHover");
 
       // Set loading to true and reset the error.
       this.setLoading(true);
@@ -317,7 +317,7 @@ export default {
       this.$store.commit("showHover", {
         prompt: "download",
         confirm: (format) => {
-          this.$store.commit("closeHovers");
+          this.$store.commit("closeHover");
 
           let files = [];
 

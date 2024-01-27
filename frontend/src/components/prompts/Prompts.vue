@@ -64,7 +64,7 @@ export default {
       // Esc!
       if (event.keyCode === 27) {
         event.stopImmediatePropagation();
-        this.$store.commit("closeHovers");
+        this.$store.commit("closeHover");
       }
 
     });
@@ -81,7 +81,7 @@ export default {
   },
   methods: {
     resetPrompts() {
-      this.$store.commit("closeHovers");
+      this.$store.commit("closeHover");
     },
   },
 };

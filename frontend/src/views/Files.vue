@@ -43,12 +43,6 @@ export default {
   watch: {
     $route: "redirect",
   },
-  mounted() {
-    window.addEventListener("keydown", this.keyEvent);
-  },
-  beforeDestroy() {
-    window.removeEventListener("keydown", this.keyEvent);
-  },
   destroyed() {
     this.$store.commit("setItems", null);
     this.$store.commit("setCurrentFolder", null);
@@ -63,20 +57,6 @@ export default {
         await this.$router.push({path: `/folder/${this.user.root}`});
       }
 
-    },
-    keyEvent(event) {
-      // H!
-      if (event.keyCode === 72) {
-        if (this.currentPrompt !== null) {
-          return;
-        }
-        event.preventDefault();
-
-        if (this.prompts.length === 0) {
-          this.$store.commit("showHover", "help");
-
-        }
-      }
     },
   },
 };

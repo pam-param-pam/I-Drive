@@ -58,7 +58,7 @@ const router = new Router({
 
             },
             {
-              path: "/preview/:folderId",
+              path: "/preview/:fileId",
               name: "Preview",
               component: Preview,
 

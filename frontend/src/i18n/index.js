@@ -1,24 +1,24 @@
-import Vue from "vue";
-import VueI18n from "vue-i18n";
+import Vue from "vue"
+import VueI18n from "vue-i18n"
 
 
-import en from "./en.json";
-import pl from "./pl.json";
+import en from "./en.json"
+import pl from "./pl.json"
 
 
-Vue.use(VueI18n);
+Vue.use(VueI18n)
 
 export function detectLocale() {
   let locale = (navigator.language || navigator.browserLangugae).toLowerCase();
   switch (true) {
     case /^en.*/i.test(locale):
-      locale = "en";
-      break;
+      locale = "en"
+      break
     case /^pl.*/i.test(locale):
-      locale = "pl";
-      break;
+      locale = "pl"
+      break
     default:
-      locale = "en";
+      locale = "en"
   }
 
   return locale;

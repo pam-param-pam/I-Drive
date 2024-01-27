@@ -21,7 +21,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHovers')"
+        @click="$store.commit('closeHover')"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -80,7 +80,7 @@ export default {
         console.log(error)
 
       } finally {
-        this.$store.commit("closeHovers");
+        this.$store.commit("closeHover");
         this.$store.commit("resetSelected");
 
       }

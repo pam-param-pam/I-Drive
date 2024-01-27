@@ -10,7 +10,7 @@
     </div>
     <div class="card-action">
       <button
-        @click="$store.commit('closeHovers')"
+        @click="$store.commit('closeHover')"
         class="button button--flat button--grey"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
@@ -62,7 +62,7 @@ export default {
 
 
   methods: {
-    ...mapMutations(["closeHovers", "resetSelected"]),
+    ...mapMutations(["closeHover", "resetSelected"]),
     submit: async function () {
       try {
         let ids = this.selected.map(item => item.id);
@@ -87,7 +87,7 @@ export default {
       }
       finally {
         this.resetSelected()
-        this.closeHovers()
+        this.closeHover()
         //this.$store.commit("setReload", true);
 
 

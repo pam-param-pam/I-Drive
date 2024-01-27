@@ -1,14 +1,13 @@
-import * as i18n from "@/i18n";
-import moment from "moment";
-import vue from "@/utils/vue.js";
-import store from "@/store/index.js";
+import * as i18n from "@/i18n"
+import moment from "moment"
+import store from "@/store/index.js"
 
 const mutations = {
-  closeHovers: (state) => {
-    state.prompts.pop();
+  closeHover: (state) => {
+    state.prompts.pop()
   },
   toggleShell: (state) => {
-    state.show = null;
+    state.show = null
     state.showShell = !state.showShell;
   },
   showHover: (state, value) => {
@@ -30,17 +29,17 @@ const mutations = {
     });
   },
   setLoading: (state, value) => {
-    state.loading = value;
+    state.loading = value
   },
   setReload: (state, value) => {
-    state.reload = value;
+    state.reload = value
   },
   setToken: (state, value) => {
-    state.token = value;
+    state.token = value
   },
   setUser: (state, value) => {
     if (value === null) {
-      state.user = null;
+      state.user = null
       return;
     }
 

@@ -28,7 +28,7 @@
       <div>
         <button
           class="button button--flat button--grey"
-          @click="$store.commit('closeHovers')"
+          @click="$store.commit('closeHover')"
           :aria-label="$t('buttons.cancel')"
           :title="$t('buttons.cancel')"
         >
@@ -101,7 +101,7 @@ export default {
       };
 
       if (this.$route.path === this.dest) {
-        this.$store.commit("closeHovers");
+        this.$store.commit("closeHover");
         action(false, true);
 
         return;
@@ -121,7 +121,7 @@ export default {
             rename = option == "rename";
 
             event.preventDefault();
-            this.$store.commit("closeHovers");
+            this.$store.commit("closeHover");
             action(overwrite, rename);
           },
         });

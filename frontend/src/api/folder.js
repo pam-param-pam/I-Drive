@@ -1,17 +1,17 @@
-import {fetchJSON, fetchURL, removePrefix} from "./utils";
+import {fetchJSON, fetchURL, removePrefix} from "./utils"
 
 
 export async function breadcrumbs(folder_id) {
     if (folder_id === "/files/") {
         return []
     }
-    const res = await fetchURL(`/api/breadcrumbs/${folder_id}`, {});
+    const res = await fetchURL(`/api/breadcrumbs/${folder_id}`, {})
 
-    return await res.json();
+    return await res.json()
 }
 export async function getItems(folder_id) {
 
-    return await fetchJSON("/api/folder/" + folder_id, {});
+    return await fetchJSON("/api/folder/" + folder_id, {})
 }
 
 export async function create(data) {
@@ -22,7 +22,7 @@ export async function create(data) {
         },
 
         body: JSON.stringify(data)
-    });
+    })
     return await res.json()
 
 }

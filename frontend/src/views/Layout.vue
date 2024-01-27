@@ -38,7 +38,7 @@
       $route: function () {
         this.$store.commit("resetSelected");
         if (this.currentPrompt?.prompt !== "success")
-          this.$store.commit("closeHovers");
+          this.$store.commit("closeHover");
       },
     },
   };

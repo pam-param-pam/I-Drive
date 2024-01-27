@@ -121,7 +121,7 @@ export default {
       this.$store.commit("showHover", {
         prompt: "share-delete",
         confirm: () => {
-          this.$store.commit("closeHovers");
+          this.$store.commit("closeHover");
 
           try {
             api.remove(link.hash);

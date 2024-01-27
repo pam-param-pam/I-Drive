@@ -148,14 +148,14 @@ export default {
     });
   },
   methods: {
-    ...mapMutations(["showHover", "closeHovers", "setReload"]),
+    ...mapMutations(["showHover", "closeHover", "setReload"]),
     open() {
       this.showHover("search");
     },
     close(event) {
       event.stopPropagation();
       event.preventDefault();
-      this.closeHovers();
+      this.closeHover();
     },
     keyup(event) {
       if (event.keyCode === 27) {

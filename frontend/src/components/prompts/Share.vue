@@ -59,7 +59,7 @@
       <div class="card-action">
         <button
           class="button button--flat button--grey"
-          @click="$store.commit('closeHovers')"
+          @click="$store.commit('closeHover')"
           :aria-label="$t('buttons.close')"
           :title="$t('buttons.close')"
         >
@@ -242,7 +242,7 @@ export default {
     },
     switchListing() {
       if (this.links.length == 0 && !this.listing) {
-        this.$store.commit("closeHovers");
+        this.$store.commit("closeHover");
       }
 
       this.listing = !this.listing;

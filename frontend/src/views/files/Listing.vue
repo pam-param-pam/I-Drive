@@ -123,9 +123,10 @@
         <span>{{ $t("files.loading") }}</span>
       </h2>
     </div>
-    <template v-else>
+    <template v-else-if="error == null">
+      
       <div v-if="dirsSize + filesSize === 0">
-        <h2 v-if="error == null" class="message">
+        <h2  class="message">
           <i class="material-icons">sentiment_dissatisfied</i>
           <span>{{ $t("files.lonely") }}</span>
         </h2>
@@ -252,6 +253,7 @@ import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
 import {updateSettings} from "@/api/user.js";
 import {getItems} from "@/api/folder.js";
+import {sortItems} from "@/api/utils.js";
 
 export default {
   name: "listing",
@@ -274,7 +276,7 @@ export default {
   computed: {
 
     ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder"]),
-    ...mapGetters(["selectedCount", "currentPrompt"]),
+    ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
     nameSorted() {
       return this.settings.sortingBy === "name";
     },
@@ -290,7 +292,7 @@ export default {
           }
         });
       }
-      return this.sortItems(items);
+      return sortItems(items);
     },
     files() {
       const items = [];
@@ -302,7 +304,8 @@ export default {
           }
         });
       }
-      return this.sortItems(items);    },
+      return sortItems(items);
+    },
     dirsSize() {
       return this.dirs.length
     },
@@ -451,25 +454,17 @@ export default {
       }
     },
 
-    sortItems(items) {
-      const sortingKey = this.settings.sortingBy;
-      const isAscending = this.settings.sortByAsc;
 
-      return items.sort((a, b) => {
-        let aValue = a[sortingKey];
-        let bValue = b[sortingKey];
 
-        // Compare values based on sorting order
-        if (isAscending) {
-          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-        } else {
-          return bValue < aValue ? -1 : bValue > aValue ? 1 : 0;
-        }
-      });
-    },
     keyEvent(event) {
       // No prompts are shown
       if (this.currentPrompt !== null) {
+
+        if (this.currentPromptName === "info") {
+          event.preventDefault()
+
+          this.$store.commit("closeHover");
+        }
         return;
       }
 
@@ -487,8 +482,9 @@ export default {
         this.$store.commit("showHover", "delete");
       }
 
-      // i!
-      if (event.keyCode === 73) {
+      // F1!
+      if (event.keyCode === 112) {
+        event.preventDefault()
         // Show delete prompt.
         this.$store.commit("showHover", "info");
       }
@@ -523,10 +519,7 @@ export default {
               }
             }
             break;
-          case "s":
-            event.preventDefault();
-            document.getElementById("download-button").click();
-            break;
+
         }
       }
 
@@ -627,12 +620,12 @@ export default {
           prompt: "replace",
           action: (event) => {
             event.preventDefault();
-            this.$store.commit("closeHovers");
+            this.$store.commit("closeHover");
             upload.handleFiles(files, path, false);
           },
           confirm: (event) => {
             event.preventDefault();
-            this.$store.commit("closeHovers");
+            this.$store.commit("closeHover");
             upload.handleFiles(files, path, true);
           },
         });
@@ -643,7 +636,7 @@ export default {
       upload.handleFiles(files, path);
     },
     uploadInput(event) {
-      this.$store.commit("closeHovers");
+      this.$store.commit("closeHover");
 
       let files = event.currentTarget.files;
       let folder_upload =
@@ -667,12 +660,12 @@ export default {
           prompt: "replace",
           action: (event) => {
             event.preventDefault();
-            this.$store.commit("closeHovers");
+            this.$store.commit("closeHover");
             upload.handleFiles(files, path, false);
           },
           confirm: (event) => {
             event.preventDefault();
-            this.$store.commit("closeHovers");
+            this.$store.commit("closeHover");
             upload.handleFiles(files, path, true);
           },
         });
@@ -715,7 +708,7 @@ export default {
 
       this.$store.commit("setSortingBy", by);
       this.$store.commit("setSortByAsc", asc);
-      let items = this.sortItems(this.items)
+      let items = sortItems(this.items)
       this.$store.commit("setItems", items);
 
 
@@ -738,32 +731,32 @@ export default {
       this.fillWindow();
     }, 100),
     download() {
-      if (this.selectedCount === 1 && !this.req.items[this.selected[0]].isDir) {
-        api.download(null, this.req.items[this.selected[0]].url);
-        return;
+      if (this.selectedCount === 0) {
+        this.$toast.info("Select a file to download first!")
       }
 
-      this.$store.commit("showHover", {
-        prompt: "download",
-        confirm: (format) => {
-          this.$store.commit("closeHovers");
-
-          let files = [];
-
-          if (this.selectedCount > 0) {
-            for (let i of this.selected) {
-              files.push(this.req.items[i].url);
-            }
-          } else {
-            files.push(this.$route.path);
+      else {
+        let filesNum = 0
+        this.selected.forEach( item => {
+          if (!item.isDir) {
+            window.open(item.url, '_blank');
+            filesNum ++
           }
+        })
+        if (filesNum > 0) {
+          this.$toast.success(`Downloading ${filesNum} files`)
+          this.$store.commit("resetSelected");
+        }
+        else {
+          this.$toast.info(`You can't download a folder >-<`)
 
-          api.download(format, ...files);
-        },
-      });
+        }
+
+
+      }
     },
     switchView: async function () {
-      this.$store.commit("closeHovers");
+      this.$store.commit("closeHover");
 
       const modes = {
         list: "mosaic",

@@ -25,7 +25,7 @@
     <div
       class="overlay"
       v-show="this.currentPromptName == 'more'"
-      @click="$store.commit('closeHovers')"
+      @click="$store.commit('closeHover')"
     />
   </header>
 </template>
