@@ -1,12 +1,11 @@
 import { fetchURL, fetchJSON, removePrefix, createURL } from "./utils"
 
-export async function list() {
+export async function getAll() {
   return fetchJSON("/api/shares")
 }
 
-export async function get(url) {
-  url = removePrefix(url)
-  return fetchJSON(`/api/share${url}`)
+export async function get(file_id) {
+  return fetchJSON(`/api/shares/${file_id}`)
 }
 
 export async function remove(hash) {

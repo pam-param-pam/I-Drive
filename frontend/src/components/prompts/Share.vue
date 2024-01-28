@@ -130,6 +130,7 @@ import { mapState, mapGetters } from "vuex";
 import { share as api, pub as pub_api } from "@/api";
 import moment from "moment";
 import Clipboard from "clipboard";
+import {baseURL} from "@/utils/constants.js";
 
 export default {
   name: "share",
@@ -144,8 +145,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(["req", "selected", "selectedCount"]),
-    ...mapGetters(["isListing"]),
+    ...mapState(["selected", "selected"]),
+    ...mapGetters(["isListing", "selectedCount"]),
     url() {
       if (!this.isListing) {
         return this.$route.path;
@@ -156,26 +157,30 @@ export default {
         return;
       }
 
-      return this.req.items[this.selected[0]].url;
+      return this.selected[0].url;
     },
   },
   async beforeMount() {
     try {
-      const links = await api.get(this.url);
+      let links = await api.getAll();
+      console.log(links)
+      links.filter(item => item.resource_id === this.selected[0].id)
+      console.log(links)
+
       this.links = links;
       this.sort();
 
-      if (this.links.length == 0) {
+      if (this.links.length === 0) {
         this.listing = false;
       }
     } catch (e) {
-      this.$showError(e);
+      console.log(e)
     }
   },
   mounted() {
     this.clip = new Clipboard(".copy-clipboard");
     this.clip.on("success", () => {
-      this.$showSuccess(this.$t("success.linkCopied"));
+      this.$toast.success(this.$t("success.linkCopied"));
     });
   },
   beforeDestroy() {
@@ -220,18 +225,16 @@ export default {
       }
     },
     humanTime(time) {
-      return moment(time * 1000).fromNow();
+      return moment(time).fromNow();
     },
     buildLink(share) {
-      return api.getShareURL(share);
+      return " to do lol"
     },
     hasDownloadLink() {
-      return (
-        this.selected.length === 1 && !this.req.items[this.selected[0]].isDir
-      );
+      return true;
     },
     buildDownloadLink(share) {
-      return pub_api.getDownloadURL(share);
+      return " also to do lol"
     },
     sort() {
       this.links = this.links.sort((a, b) => {

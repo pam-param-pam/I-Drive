@@ -460,11 +460,6 @@ export default {
       // No prompts are shown
       if (this.currentPrompt !== null) {
 
-        if (this.currentPromptName === "info") {
-          event.preventDefault()
-
-          this.$store.commit("closeHover");
-        }
         return;
       }
 
@@ -499,6 +494,7 @@ export default {
 
       // Ctrl is pressed
       if (event.ctrlKey  || event.metaKey) {
+
         let key = String.fromCharCode(event.which).toLowerCase();
 
         switch (key) {

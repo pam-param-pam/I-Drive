@@ -37,7 +37,7 @@ export default {
         count: 0,
       },
       selected: null,
-      current: window.location.pathname,
+
     };
   },
   computed: {
@@ -58,10 +58,13 @@ export default {
     fillOptions() {
       // Sets the current path and resets
       // the current items.
-      const dirs = this.items.filter(item => item.isDir);
 
-      this.$emit("update:selected", dirs);
-      return dirs
+        const dirs = this.items.filter(item => item.isDir);
+
+        this.$emit("update:selected", dirs);
+        return dirs
+
+
 
     },
     next: function (event) {
