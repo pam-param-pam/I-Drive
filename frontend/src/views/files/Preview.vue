@@ -48,7 +48,7 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="this.file.extension === '.jpg'" :src="file.url"></ExtendedImage>
+        <ExtendedImage v-if="['.jpg', '.png', '.webp'].includes(file.extension)" :src="file.url"></ExtendedImage>
         <audio
           v-else-if="file.extension === '.mp3'"
           ref="player"
@@ -58,7 +58,7 @@
           @play="autoPlay = true"
         ></audio>
         <video
-          v-else-if="file.extension === '.mp4'"
+          v-else-if="['.mp4', '.mov'].includes(file.extension)"
           ref="video"
           controls
           :src="file.url"
@@ -227,7 +227,19 @@ export default {
       }
     },
     deleteFile() {
-      this.$store.commit("showHover", "delete");
+      this.$store.commit("showHover", {
+        prompt: "delete",
+        confirm: () => {
+          console.log("confirm lol")
+          if (this.hasNext) {
+            this.next();
+          } else if (!this.hasPrevious && !this.hasNext) {
+            this.close();
+          } else {
+            this.prev();
+          }
+        },
+      });
 
     },
     prev() {

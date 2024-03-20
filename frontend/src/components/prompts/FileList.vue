@@ -3,10 +3,7 @@
     <ul class="file-list">
       <li
         v-for="item in dirs"
-        @click="itemClick"
-        @touchstart="touchstart"
-        @dblclick="next"
-        role="button"
+        @click="next"
         tabindex="0"
         :aria-label="item.name"
         :aria-selected="selected === item"
@@ -18,7 +15,7 @@
     </ul>
 
     <p>
-      {{ $t("prompts.currentlyNavigating") }} <code>{{ nav }}</code
+      {{ $t("prompts.currentlyNavigating") }} <code>{{ nav.name }}</code
       >.
     </p>
   </div>
@@ -32,84 +29,51 @@ export default {
   name: "file-list",
   data: function () {
     return {
-      touches: {
-        id: "",
-        count: 0,
-      },
       selected: null,
+      dirs : [],
+      nav: null
 
     };
   },
   computed: {
 
     ...mapState(["items", "currentFolder", "user"]),
-    nav() {
-      return decodeURIComponent(this.current);
-    },
-    dirs() {
-      return this.fillOptions()
-    }
+
+
   },
+
   mounted() {
-    this.fillOptions();
+    this.fetchData(this.currentFolder)
+    this.nav = this.currentFolder
   },
   methods: {
-
-    fillOptions() {
-      // Sets the current path and resets
-      // the current items.
-
-        const dirs = this.items.filter(item => item.isDir);
-
-        this.$emit("update:selected", dirs);
-        return dirs
+    async fetchData(folder) {
+      const res = await getItems(folder.id);
+      const dirs = res.children.filter(item => item.isDir);
+      const folderCopy = {...folder};
 
 
-
+      folderCopy.name = "..."
+      dirs.unshift(folderCopy);
+      console.log(dirs)
+      this.dirs = dirs
+      this.$emit("update:selected", dirs);
+      return dirs
     },
-    next: function (event) {
+
+    async next(event) {
       // Retrieves the URL of the directory the user
       // just clicked in and fill the options with its
       // content.
       let current = event.currentTarget.dataset.item;
       current = JSON.parse(current)
+      let dirs = await this.fetchData(current)
 
-      let res = getItems("/files/folder/" + current.id).then(this.fillOptions).catch(this.$showError);
-      const dirs = res.children.filter(item => item.isDir);
-
-      this.$emit("update:selected", dirs);
-      return dirs
+      console.log(dirs)
+      this.nav = current
 
     },
-    touchstart(event) {
-      let url = event.currentTarget.dataset.url;
 
-      // In 300 milliseconds, we shall reset the count.
-      setTimeout(() => {
-        this.touches.count = 0;
-      }, 300);
-
-      // If the element the user is touching
-      // is different from the last one he touched,
-      // reset the count.
-      if (this.touches.id !== url) {
-        this.touches.id = url;
-        this.touches.count = 1;
-        return;
-      }
-
-      this.touches.count++;
-
-      // If there is more than one touch already,
-      // open the next screen.
-      if (this.touches.count > 1) {
-        this.next(event);
-      }
-    },
-    itemClick: function (event) {
-      if (this.user.singleClick) this.next(event);
-      else this.select(event);
-    },
     select: function (event) {
       // If the element is already selected, unselect it.
       if (this.selected === event.currentTarget.dataset.item) {

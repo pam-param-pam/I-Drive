@@ -68,7 +68,7 @@ const router = new Router({
         },
 
         {
-          path: "/player/*",
+          path: "/player/:fileId",
           name: "Player",
           component: Player,
           meta: {

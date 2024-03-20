@@ -80,7 +80,7 @@ export default {
           draggable: false,
           closeOnClick: false,
         });
-
+        //this.currentPrompt?.confirm();
       } catch (error) {
         console.log(error)
         //nothing has to be done

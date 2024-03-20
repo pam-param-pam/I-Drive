@@ -14,6 +14,7 @@ export async function fetchURL(url, opts, auth = true) {
     res = await fetch(`${baseURL}${url}`, {
       headers: {
         "Authorization": `Token ${store.state.token}`,
+        "Content-Type": "application/json",
         ...headers,
       },
       ...rest,

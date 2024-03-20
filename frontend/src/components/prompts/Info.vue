@@ -17,10 +17,13 @@
           <strong>{{ $t("prompts.identifier") }}:</strong> {{ id }}
       </p>
 
+      <p v-if="type">
+        <strong>{{ $t("prompts.type") }}:</strong> {{ type }}
+      </p>
+
       <p v-if="extension">
           <strong>{{ $t("prompts.extension") }}:</strong> {{ extension }}
       </p>
-
 
       <p v-if="size">
           <strong>{{ $t("prompts.size") }}: </strong>
@@ -61,7 +64,10 @@
       </div>
 
       <p v-if="created">
-        <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime }}
+        <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime(created) }}
+      </p>
+      <p v-if="last_modified">
+        <strong>{{ $t("prompts.last_modified") }}:</strong> {{ humanTime(last_modified) }}
       </p>
 
       <template v-if="folderItemsCount">
@@ -140,6 +146,7 @@ export default {
       }
       return null
     },
+
     resolution() {
         return null
     },
@@ -150,6 +157,17 @@ export default {
       }
       else if (this.selectedCount === 1) {
           return this.selected[0].created
+      }
+      return null
+
+    },
+    last_modified() {
+      if (this.selectedCount === 0) {
+        return this.currentFolder.last_modified
+
+      }
+      else if (this.selectedCount === 1) {
+        return this.selected[0].last_modified
       }
       return null
 
@@ -177,19 +195,22 @@ export default {
     },
     streamable() {
       if (this.selectedCount === 1) {
-        if (this.selected[0].extension === ".mp4") {
-          return this.selected[0].streamable
-        }
+        return this.selected[0].streamable
+      }
+      return null
+
+    },
+    type() {
+      if (this.selectedCount === 1) {
+
+        return this.selected[0].type
+
       }
       return null
 
     },
     extension() {
-      if (this.selectedCount === 0) {
-          return null
-
-      }
-      else if (this.selectedCount === 1) {
+      if (this.selectedCount === 1) {
           let extension = this.selected[0].extension
           if (extension) return extension.replace(".", "")
 
@@ -255,22 +276,18 @@ export default {
        */
 
 
-    humanTime: function () {
-      if (this.settings.dateFormat) {
-        return new Date(this.created).toLocaleString();
-
-      }
-      return moment(this.created).fromNow();
-
-    },
-
-
-
-
   },
   methods: {
     humanSize(size) {
         return filesize(size);
+    },
+    humanTime: function (date) {
+      if (this.settings.dateFormat) {
+        return new Date(date).toLocaleString();
+
+      }
+      return moment(this.date).fromNow();
+
     },
     changeView: async function (event, type) {
         if (event.target.innerHTML.toString().includes("bytes")) {

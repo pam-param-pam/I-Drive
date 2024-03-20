@@ -7,31 +7,30 @@
           <h2>{{ $t("settings.shareManagement") }}</h2>
         </div>
 
-        <div class="card-content full" v-if="links.length > 0">
+        <div class="card-content full" v-if="shares.length > 0">
           <table>
             <tr>
-              <th>{{ $t("settings.path") }}</th>
+              <th>{{ $t("settings.ShareName") }}</th>
               <th>{{ $t("settings.shareDuration") }}</th>
-              <th v-if="user.perm.admin">{{ $t("settings.username") }}</th>
+              <th v-if="perms.admin">{{ $t("settings.username") }}</th>
               <th></th>
               <th></th>
             </tr>
 
-            <tr v-for="link in links" :key="link.hash">
+            <tr v-for="share in shares" :key="share.token">
               <td>
-                <a :href="buildLink(link)" target="_blank">{{ link.path }}</a>
+                <a :href="buildLink(share)" target="_blank">{{ share.name }}</a>
               </td>
               <td>
-                <template v-if="link.expire !== 0">{{
-                  humanTime(link.expire)
+                <template v-if="share.expire !== 0">{{
+                  humanTime(share.expire)
                 }}</template>
                 <template v-else>{{ $t("permanent") }}</template>
               </td>
-              <td v-if="user.perm.admin">{{ link.username }}</td>
               <td class="small">
                 <button
                   class="action"
-                  @click="deleteLink($event, link)"
+                  @click="deleteLink($event, share)"
                   :aria-label="$t('buttons.delete')"
                   :title="$t('buttons.delete')"
                 >
@@ -41,7 +40,7 @@
               <td class="small">
                 <button
                   class="action copy-clipboard"
-                  :data-clipboard-text="buildLink(link)"
+                  :data-clipboard-text="buildLink(share)"
                   :aria-label="$t('buttons.copyToClipboard')"
                   :title="$t('buttons.copyToClipboard')"
                 >
@@ -66,48 +65,52 @@ import { mapState, mapMutations } from "vuex";
 import moment from "moment";
 import Clipboard from "clipboard";
 import Errors from "@/views/Errors.vue";
+import {baseURL, staticURL} from "@/utils/constants.js";
 
 export default {
   name: "shares",
   components: {
     Errors,
   },
-  computed: mapState(["user", "loading"]),
+  computed: mapState(["user", "perms", "loading"]),
   data: function () {
     return {
       error: null,
-      links: [],
+      shares: [],
       clip: null,
     };
   },
   async created() {
-    /*
+
     this.setLoading(true);
 
     try {
-      let links = await api.list();
-      if (this.user.perm.admin) {
+      let links = await api.getAll();
+      /*
+      if (this.perms.admin) {
         let userMap = new Map();
         for (let user of await users.getAll())
           userMap.set(user.id, user.username);
-        for (let link of links)
+        for (let link of shares)
           link.username = userMap.has(link.userID)
             ? userMap.get(link.userID)
             : "";
       }
-      this.links = links;
+
+       */
+      this.shares = links;
     } catch (e) {
       this.error = e;
     } finally {
       this.setLoading(false);
     }
     
-     */
+
   },
   mounted() {
     this.clip = new Clipboard(".copy-clipboard");
     this.clip.on("success", () => {
-      this.$showSuccess(this.$t("success.linkCopied"));
+      this.$toast.success(this.$t("success.linkCopied"));
     });
   },
   beforeDestroy() {
@@ -115,7 +118,7 @@ export default {
   },
   methods: {
     ...mapMutations(["setLoading"]),
-    deleteLink: async function (event, link) {
+    deleteLink: async function (event, share) {
       event.preventDefault();
 
       this.$store.commit("showHover", {
@@ -124,21 +127,26 @@ export default {
           this.$store.commit("closeHover");
 
           try {
-            api.remove(link.hash);
-            this.links = this.links.filter((item) => item.hash !== link.hash);
-            this.$showSuccess(this.$t("settings.shareDeleted"));
+            api.remove({"token": share.token});
+            this.shares = this.shares.filter((item) => item.token !== share.token);
+            this.$toast.success(this.$t("settings.shareDeleted"));
           } catch (e) {
-            this.$showError(e);
+            console.log(e)
+            this.$toast.error(e);
           }
         },
       });
     },
     humanTime(time) {
-      return moment(time * 1000).fromNow();
+      return moment(time).fromNow();
     },
     buildLink(share) {
-      return api.getShareURL(share);
+      if (share.isDir) {
+        return staticURL + "/folder/" + share.resource_id
+      }
+      return staticURL + "/preview/" + share.resource_id
     },
+
   },
 };
 </script>

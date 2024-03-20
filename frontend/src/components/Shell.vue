@@ -10,7 +10,7 @@
       class="shell__divider"
       :style="this.shellDrag ? { background: `${checkTheme()}` } : ''"
     ></div>
-    <div @click="focus" class="shell__content" ref="scrollable">
+    <div class="shell__content" ref="scrollable">
       <div v-for="(c, index) in content" :key="index" class="shell__result">
         <div class="shell__prompt">
           <i class="material-icons">chevron_right</i>
@@ -120,19 +120,30 @@ export default {
     scroll: function () {
       this.$refs.scrollable.scrollTop = this.$refs.scrollable.scrollHeight;
     },
-    focus: function () {
-      this.$refs.input.focus();
+
+
+
+    focusToEnd() {
+      this.$nextTick(() => {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNodeContents(this.$refs.input);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
     },
     historyUp() {
       if (this.historyPos > 0) {
         this.$refs.input.innerText = this.history[--this.historyPos];
-        this.focus();
+        this.focusToEnd();
+
       }
     },
     historyDown() {
       if (this.historyPos >= 0 && this.historyPos < this.history.length - 1) {
         this.$refs.input.innerText = this.history[++this.historyPos];
-        this.focus();
+        this.focusToEnd();
       } else {
         this.historyPos = this.history.length;
         this.$refs.input.innerText = "";

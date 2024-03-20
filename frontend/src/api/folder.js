@@ -17,10 +17,6 @@ export async function getItems(folder_id) {
 export async function create(data) {
     const res = await fetchURL(`/api/createfolder`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-
         body: JSON.stringify(data)
     })
     return await res.json()

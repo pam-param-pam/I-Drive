@@ -126,9 +126,10 @@
     <template v-else-if="error == null">
       
       <div v-if="dirsSize + filesSize === 0">
-        <h2  class="message">
-          <i class="material-icons">sentiment_dissatisfied</i>
-          <span>{{ $t("files.lonely") }}</span>
+        <h2 class="message">
+          <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
+            <img src="https://steamuserimages-a.akamaihd.net/ugc/2153341894595795931/DCCF2A0051A51653A133FB1A8123EA4D3696AB6C/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true" alt="Image Description">
+          </a>
         </h2>
         <input
           style="display: none"
@@ -242,22 +243,24 @@
 import Vue from "vue";
 import { mapState, mapGetters, mapMutations } from "vuex";
 import { users, files as api } from "@/api";
-import { enableExec } from "@/utils/constants";
+import {enableExec, name} from "@/utils/constants";
 import * as upload from "@/utils/upload";
 import css from "@/utils/css";
 import throttle from "lodash.throttle";
+import Dropdown from "@/components/Dropdown.vue";
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
 import {updateSettings} from "@/api/user.js";
-import {getItems} from "@/api/folder.js";
+import {create, getItems} from "@/api/folder.js";
 import {sortItems} from "@/api/utils.js";
 
 export default {
   name: "listing",
   components: {
+    Dropdown,
     HeaderBar,
     Action,
     Search,
@@ -441,7 +444,7 @@ export default {
         this.$store.commit("setCurrentFolder", res);
 
 
-        document.title = `${res.name} - File Browser`;
+        document.title = `${res.name} - ` + name;
 
       } catch (e) {
         console.log(e)
@@ -573,12 +576,17 @@ export default {
       }
     },
     drop: async function (event) {
+      console.log("DROOOOOOOOP")
+
       event.preventDefault();
       this.dragCounter = 0;
       this.resetOpacity();
 
       let dt = event.dataTransfer;
       let el = event.target;
+      console.log(JSON.stringify(dt))
+
+      console.log(JSON.stringify(el))
 
       if (dt.files.length <= 0) return;
 
@@ -631,45 +639,52 @@ export default {
 
       upload.handleFiles(files, path);
     },
-    uploadInput(event) {
+    async uploadInput(event) {
       this.$store.commit("closeHover");
 
       let files = event.currentTarget.files;
+      let folder = this.currentFolder
+
+
+      console.log(files)
       let folder_upload =
         files[0].webkitRelativePath !== undefined &&
         files[0].webkitRelativePath !== "";
 
+
       if (folder_upload) {
+        let folder_name
         for (let i = 0; i < files.length; i++) {
           let file = files[i];
           files[i].fullPath = file.webkitRelativePath;
+
+          // get folder name
+          if (!folder_name) {
+            let arry = file.fullPath.split("/")
+            folder_name = arry[arry.length - 2]
+
+            // try creating new folder
+            try {
+              let res = await create({"parent_id": this.currentFolder.id, "name": folder_name})
+              this.$toast.success(`${folder_name} created!`, {
+                timeout: 3000,
+              });
+              this.$store.commit("updateItems", res);
+              folder = res
+
+            } catch (error) {
+              console.log(error)
+            }
+            finally {
+              this.$store.commit("closeHover");
+
+            }
+          }
         }
       }
 
-      let path = this.$route.path.endsWith("/")
-        ? this.$route.path
-        : this.$route.path + "/";
-      let conflict = upload.checkConflict(files, this.items);
 
-      if (conflict) {
-        this.$store.commit("showHover", {
-          prompt: "replace",
-          action: (event) => {
-            event.preventDefault();
-            this.$store.commit("closeHover");
-            upload.handleFiles(files, path, false);
-          },
-          confirm: (event) => {
-            event.preventDefault();
-            this.$store.commit("closeHover");
-            upload.handleFiles(files, path, true);
-          },
-        });
-
-        return;
-      }
-
-      upload.handleFiles(files, path);
+      upload.handleFiles(files, folder);
     },
     resetOpacity() {
       let items = document.getElementsByClassName("item");

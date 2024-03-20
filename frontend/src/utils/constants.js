@@ -6,7 +6,7 @@ const baseURL = "http://127.0.0.1:8000"
 const staticURL = window.FileBrowser.StaticURL;
 const signup = window.FileBrowser.Signup;
 const version = window.FileBrowser.Version;
-const logoURL = `${staticURL}/img/logo.svg`;
+const logoURL = `https://i.redd.it/i5s5x4bzffdb1.jpg`;
 const loginPage = window.FileBrowser.LoginPage;
 const theme = window.FileBrowser.Theme;
 const enableThumbs = window.FileBrowser.EnableThumbs;
@@ -19,6 +19,7 @@ const tusEndpoint = `/api/tus`;
 export {
   name,
   baseURL,
+  staticURL,
   logoURL,
   signup,
   version,

@@ -113,7 +113,7 @@ export default {
     },
 
     dragStart: function () {
-      /*
+/*
       if (this.selectedCount === 0) {
         this.addSelected(this.item);
         return;
@@ -124,9 +124,11 @@ export default {
         this.addSelected(this.item);
       }
       */
+
     },
 
     dragOver: function (event) {
+      console.log("1111")
       /*
         //nie kumam co tu sie dzieje LOL
 
@@ -145,80 +147,96 @@ export default {
       */
     },
     drop: async function (event) {
+
+            //nie kumam co tu sie dzieje LOL
+          if (!this.canDrop) return;
+          event.preventDefault();
+
+          if (this.selectedCount === 0) return;
+
+          let el = event.target;
+          console.log(JSON.stringify(el))
       /*
-              //nie kumam co tu sie dzieje LOL
-            if (!this.canDrop) return;
-            event.preventDefault();
-
-            if (this.selectedCount === 0) return;
-
-            let el = event.target;
-            for (let i = 0; i < 5; i++) {
-              if (el !== null && !el.classList.contains("item")) {
-                el = el.parentElement;
-              }
+          for (let i = 0; i < 5; i++) {
+            if (el !== null && !el.classList.contains("item")) {
+              el = el.parentElement;
             }
+          }
 
-            let items = [];
+          let items = [];
 
-            for (let i of this.selected) {
-                //xdddddddddddd
+          for (let i of this.selected) {
+              //xdddddddddddd
 
-              items.push({
-                from: this.req.items[i].url,
-                to: this.url + encodeURIComponent(this.req.items[i].name),
-                name: this.req.items[i].name,
-              });
+            items.push({
+              from: this.req.items[i].url,
+              to: this.url + encodeURIComponent(this.req.items[i].name),
+              name: this.req.items[i].name,
+            });
 
 
-            }
+          }
 
-            // Get url from ListingItem instance
-            let path = el.__vue__.url;
-            let baseItems = (await api.getItems(path)).items;
+          // Get url from ListingItem instance
+          let path = el.__vue__.url;
+          let baseItems = (await api.getItems(path)).items;
 
-            let action = (overwrite, rename) => {
-              api
-                .move(items, overwrite, rename)
-                .then(() => {
-                  this.$store.commit("setReload", true);
-                })
-                .catch(this.$showError);
-            };
+          let action = (overwrite, rename) => {
+            api
+              .move(items, overwrite, rename)
+              .then(() => {
+                this.$store.commit("setReload", true);
+              })
+              .catch(this.$showError);
+          };
 
-            let conflict = upload.checkConflict(items, baseItems);
+          let conflict = upload.checkConflict(items, baseItems);
 
-            let overwrite = false;
-            let rename = false;
+          let overwrite = false;
+          let rename = false;
 
-            if (conflict) {
-              this.$store.commit("showHover", {
-                prompt: "replace-rename",
-                confirm: (event, option) => {
-                  overwrite = option === "overwrite";
-                  rename = option === "rename";
+          if (conflict) {
+            this.$store.commit("showHover", {
+              prompt: "replace-rename",
+              confirm: (event, option) => {
+                overwrite = option === "overwrite";
+                rename = option === "rename";
 
-                  event.preventDefault();
-                  this.$store.commit("closeHover");
-                  action(overwrite, rename);
-                },
-              });
+                event.preventDefault();
+                this.$store.commit("closeHover");
+                action(overwrite, rename);
+              },
+            });
 
-              return;
-            }
+            return;
+          }
 
-            action(overwrite, rename);
-          */
+          action(overwrite, rename);
 
+*/
     },
 
 
     click: function (event) {
 
-      if (this.$store.state.selected.includes(this.item)) {
+      if (this.selected.includes(this.item)) {
         this.removeSelected(this.item);
         return;
       }
+      let lastIndex = -1;
+      let currentIndex = -1
+      for (let i = 0; i < this.items.length; i++) {
+        if (this.items[i].id === this.selected[this.selected.length - 1]?.id) {
+          lastIndex = i;
+        }
+        if (this.items[i].id === this.item.id) {
+          currentIndex = i
+        }
+      }
+      console.log("lastIndex: " + lastIndex)
+      console.log("currentIndex: " + currentIndex)
+
+
 
 
       this.addSelected(this.item);

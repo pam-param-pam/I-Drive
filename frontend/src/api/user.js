@@ -15,9 +15,6 @@ export async function getUser(token) {
 export async function updateSettings(data) {
   const res = await fetchURL(`/api/updatesettings`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
 
     body: JSON.stringify(data)
   });
@@ -25,7 +22,7 @@ export async function updateSettings(data) {
 }
 export async function getUsage() {
 
-  const res = await fetchURL(`/api/usage`, {});
+  const res = await fetchJSON(`/api/usage`, {});
 
-  return await res.json();
+  return await res
 }

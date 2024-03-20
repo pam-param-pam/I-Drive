@@ -98,7 +98,6 @@
         <p>{{ $t("prompts.optionalPassword") }}</p>
         <input
           class="input input--block"
-          type="password"
           v-model.trim="password"
         />
       </div>
@@ -136,7 +135,7 @@ export default {
   name: "share",
   data: function () {
     return {
-      time: "",
+      time: 24,
       unit: "hours",
       links: [],
       clip: null,
@@ -163,9 +162,9 @@ export default {
   async beforeMount() {
     try {
       let links = await api.getAll();
-      console.log(links)
-      links.filter(item => item.resource_id === this.selected[0].id)
-      console.log(links)
+
+
+      links = links.filter(item => item.resource_id === this.selected[0].id)
 
       this.links = links;
       this.sort();
@@ -188,40 +187,35 @@ export default {
   },
   methods: {
     submit: async function () {
-      let isPermanent = !this.time || this.time == 0;
 
       try {
-        let res = null;
 
-        if (isPermanent) {
-          res = await api.create(this.url, this.password);
-        } else {
-          res = await api.create(this.url, this.password, this.time, this.unit);
-        }
+
+        let res = await api.create({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit});
 
         this.links.push(res);
         this.sort();
 
-        this.time = "";
+        this.time = 24;
         this.unit = "hours";
         this.password = "";
 
         this.listing = true;
+        this.$toast.success(this.$t("settings.shareCreated"));
+
       } catch (e) {
-        this.$showError(e);
+        this.$toast.error(e);
       }
     },
-    deleteLink: async function (event, link) {
+    deleteLink: async function (event, share) {
       event.preventDefault();
+      console.log(JSON.stringify(share))
       try {
-        await api.remove(link.hash);
-        this.links = this.links.filter((item) => item.hash !== link.hash);
-
-        if (this.links.length == 0) {
-          this.listing = false;
-        }
+        await api.remove({"token": share.token});
+        this.links = this.links.filter((item) => item.hash !== share.hash);
+        this.$toast.success(this.$t("settings.shareDeleted"));
       } catch (e) {
-        this.$showError(e);
+        console.log(e)
       }
     },
     humanTime(time) {
@@ -234,7 +228,7 @@ export default {
       return true;
     },
     buildDownloadLink(share) {
-      return " also to do lol"
+      return "http://127.0.0.1:9000/stream/" + share.resource_id
     },
     sort() {
       this.links = this.links.sort((a, b) => {
@@ -244,7 +238,7 @@ export default {
       });
     },
     switchListing() {
-      if (this.links.length == 0 && !this.listing) {
+      if (this.links.length === 0 && !this.listing) {
         this.$store.commit("closeHover");
       }
 

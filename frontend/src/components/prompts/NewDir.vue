@@ -78,7 +78,6 @@ export default {
           console.log(error)
         }
         finally {
-          this.$store.commit("setReload", true);
           this.$store.commit("closeHover");
 
         }

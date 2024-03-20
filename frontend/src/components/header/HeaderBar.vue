@@ -1,7 +1,8 @@
 <template>
   <header>
-    <img :src="logoURL"  alt="Logo"/>
+    <img v-if="showLogo !== undefined" :src="logoURL" />
     <action
+      v-if="showMenu !== undefined"
       class="menu-button"
       icon="menu"
       :label="$t('buttons.toggleSidebar')"
@@ -24,7 +25,7 @@
 
     <div
       class="overlay"
-      v-show="this.currentPromptName == 'more'"
+      v-show="this.currentPromptName === 'more'"
       @click="$store.commit('closeHover')"
     />
   </header>
