@@ -1,22 +1,22 @@
 import secrets
-import uuid
 
 import shortuuid
-from django.core.exceptions import ValidationError
-from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
-from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.db.models.signals import post_save
+from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
 
 class Folder(models.Model):
-    id = ShortUUIDField(primary_key=True, editable=False)
+    id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.CharField(max_length=255, null=False)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
+    last_modified_at = models.DateTimeField(default=timezone.now)
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
 
@@ -50,18 +50,22 @@ class Folder(models.Model):
             if matching_folder:
                 self.parent = matching_folder
 
+        self.last_modified_at = timezone.now()
         super(Folder, self).save(*args, **kwargs)
 
 
 class File(models.Model):
-    id = ShortUUIDField(primary_key=True, editable=False, null=False, blank=False)
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)
     name = models.CharField(max_length=255, null=False, blank=False)
     extension = models.CharField(max_length=10, null=False, blank=False)
     streamable = models.BooleanField(default=False)
     size = models.BigIntegerField()
+    type = models.CharField(max_length=15, null=False, blank=False, default="blob")
     key = models.BinaryField()
+    deleted = models.BooleanField(default=False)
     encrypted_size = models.BigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
+    last_modified_at = models.DateTimeField(default=timezone.now)
     m3u8_message_id = models.URLField(null=True, blank=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE)
     ready = models.BooleanField(default=False)
@@ -72,11 +76,12 @@ class File(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        max_name_length = 50  # Set your arbitrary maximum length here
+        max_name_length = 30  # Set your arbitrary maximum length here
         if len(self.name) > max_name_length:
             raise ValidationError(f"Name length exceeds the maximum allowed length of {max_name_length} characters.")
         if self.encrypted_size is None:
             self.encrypted_size = self.size
+        self.last_modified_at = timezone.now()
         super(File, self).save(*args, **kwargs)
 
 
@@ -89,7 +94,7 @@ class UserSettings(models.Model):
     date_format = models.BooleanField(default=False)
     hide_hidden_folders = models.BooleanField(default=False)
     subfolders_in_shares = models.BooleanField(default=False)
-
+    discord_webhook = models.TextField(null=True)
     def __str__(self):
         return self.user.username + "'s settings"
 
@@ -125,7 +130,7 @@ post_save.connect(Folder.create_user_root, sender=User)
 
 class Fragment(models.Model):
     sequence = models.SmallIntegerField()
-    id = ShortUUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
 
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
@@ -149,7 +154,7 @@ class ShareableLink(models.Model):
         on_delete=models.CASCADE,
         limit_choices_to={'model__in': ('folder', 'file')}
     )
-    object_id = models.UUIDField()
+    object_id = models.CharField(max_length=22)
 
     resource = GenericForeignKey('content_type', 'object_id')
 

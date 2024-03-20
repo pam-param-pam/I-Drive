@@ -39,7 +39,7 @@ def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this se
 
 def send_message(message, finished, user_id, request_id, isError=False):
     queue_ws_event.delay(
-        'test',
+        'user',
         {
             'type': 'chat_message',
             'user_id': user_id,

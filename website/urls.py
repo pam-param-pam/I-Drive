@@ -3,54 +3,53 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
-from website import views
+from website.views.dataViews import users_me, get_shares, delete_share, create_share, view_share, get_folder, get_file, \
+    get_folder_tree, get_root, get_breadcrumbs, get_usage, update_settings
+from website.views.fileManagmentViews import rename, delete, move, create_folder
+from website.views.otherViews import test, index
+from website.views.streamViews import get_fragment_urls, download, stream_key, get_m3u8, stream_fragment
+from website.views.uploadViews import upload_file, create_file
 
 urlpatterns = [
-                  path("test", views.test, name="download"),
+                  path("test", test, name="download"),
+                  path("api/createfile", create_file, name="create file"),
 
                   path('auth/', include('djoser.urls.authtoken')),
-                  path('auth/users/me', views.users_me, name="get current user"),
-                  path('api/fragments/<file_id>', views.get_fragment_urls, name="check token"),
+                  path('auth/users/me', users_me, name="get current user"),
+                  path('api/fragments/<file_id>', get_fragment_urls, name="check token"),
+                  path("api/stream/fragment/<fragment_id>", stream_fragment, name="stream fragment"),
 
-                  path("", views.index, name="index"),
+                  path("", index, name="index"),
                   path('admin', admin.site.urls),
-                  path("api/upload", views.upload_file, name="upload"),
-                  path("api/download/<file>", views.download, name="download"),
-                  path("api/stream_key/<file_id>", views.stream_key, name="stream key"),
-                  path("api/stream/<file_id>", views.get_m3u8, name="get m3u8 playlist"),
-                  path("api/shares", views.get_shares, name="get user's shares"),
-                  path("api/createshare", views.create_share, name="create share"),
-                  path("api/share/<token>", views.view_share, name="get share"),
+                  path("api/upload", upload_file, name="upload"),
+                  path("api/download/<file>", download, name="download"),
+                  path("api/stream_key/<file_id>", stream_key, name="stream key"),
+                  path("api/stream/<file_id>", get_m3u8, name="get m3u8 playlist"),
+
+                  path("api/shares", get_shares, name="get user's shares"),
+
+                  path("api/deleteshare", delete_share, name="create share"),
+                  path("api/createshare", create_share, name="delete share"),
+                  path("api/share/<token>", view_share, name="get share"),
 
                   # path("api/search/<query>", views.search, name="get m3u8 playlist"),
-                  #path("api/stream/fragment/<fragment_id>", views.stream_fragment,
-                   #    name="get files and folders from a folder id"),
 
-                  path("api/folder/<folder_id>", views.get_folder, name="get files and folders from a folder id"),
-                  path("api/file/<file_id>", views.get_file, name="get file by file id"),
+                  path("api/folder/<folder_id>", get_folder, name="get files and folders from a folder id"),
+                  path("api/file/<file_id>", get_file, name="get file by file id"),
 
-                  path("api/getfolders", views.get_folder_tree, name="get files and folders from a folder id"),
-                  path("api/getroot", views.get_root, name="get root's content"),
-                  path("api/breadcrumbs/<folder_id>", views.get_breadcrumbs, name="get root's real content"),
+                  path("api/getfolders", get_folder_tree, name="get files and folders from a folder id"),
+                  path("api/getroot", get_root, name="get root's content"),
+                  path("api/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
 
-                  path("api/updatesettings", views.update_settings, name="update settings"),
+                  path("api/updatesettings", update_settings, name="update settings"),
 
-                  path("api/createfolder", views.create_folder, name="create folder"),
+                  path("api/createfolder", create_folder, name="create folder"),
 
-                  path("api/move", views.move, name="move file/folder"),
+                  path("api/move", move, name="move file/folder"),
 
-                  path("api/delete", views.delete, name="delete file/folder"),
-                  path("api/usage", views.get_usage, name="get total size of all files"),
+                  path("api/delete", delete, name="delete file/folder"),
+                  path("api/usage", get_usage, name="get total size of all files"),
 
-                  path("api/rename", views.rename, name="rename file/folder"),
-
-                  # this will create a temporary share url to a file accessible to everyone
-                  path("api/share/<file_id>", views.test, name="share file"),
-
-                  # this will create a 1 time only link, that will make the first logged-in user be able to access this file/folder(see, download)
-                  path("api/addviewer/<id>", views.test, name="add viewer"),
-
-                  # this will create a 1 time only link, that will make the first logged-in user be able to maintain this file/folder(see, download, edit name, move, share)
-                  path("api/addmaintainer/<id>", views.test, name="add maintainer"),
+                  path("api/rename", rename, name="rename file/folder"),
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

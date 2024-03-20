@@ -1,10 +1,23 @@
-import os
 import json
+import os
 from uuid import UUID
 
-from website.models import File, Folder
+from website.models import File, Folder, UserSettings
 
+message_codes = {
+    1: {"pl": "Błędne zapytanie", "en": "Bad Request"},
+    2: {"pl": "Wewnętrzny błąd serwera", "en": "Internal Server Error"},
+    3: {"pl": "Błąd bazy danych", "en": "Database Error"},
+    4: {"pl": "Nieuwierzytelniony", "en": "Unauthenticated"},
+    5: {"pl": "Niedozwolony dostęp do zasobu", "en": "Access to resource forbidden"},
+    6: {"pl": "Zasób już nie dostępny", "en": "Resource expired"},
+    7: {"pl": "Zasób jeszcze nie gotowy", "en": "Resource is not ready yet"},
+    8: {"pl": "Zasób nie istnieje", "en": "Resource doesn't exist"},
+    9: {"pl": "Zasobu nie da sie pobrać", "en": "Resource is not downloadable"},
+    10: {"pl": "Zasobu nie da sie strumieniować", "en": "Resource is not streamable"},
+    11: {"pl": "Zasobu nie da sie podejrzeć", "en": "Resource is not previewable"},
 
+}
 def calculate_time(file_size_bytes, bitrate_bps):
     time_seconds = (file_size_bytes * 8) / bitrate_bps
     return time_seconds
@@ -31,31 +44,26 @@ def create_temp_file_dir(upload_folder, file_id):
     return out_folder_path
 
 
-class UUIDEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, UUID):
-            # if the obj is uuid, we simply return the value of uuid
-            return obj.hex
-        return json.JSONEncoder.default(self, obj)
-
 
 def create_file_dict(file_obj):
     file_dict = {
         'isDir': False,
         'id': str(file_obj.id),
         'name': file_obj.name,
-        'url': f"http://127.0.0.1:9000/stream/{file_obj.id}",
         'parent_id': file_obj.parent_id,
         'extension': file_obj.extension,
         'streamable': file_obj.streamable,
         'size': file_obj.size,
+        'type': file_obj.type,
         'encrypted_size': file_obj.encrypted_size,
         'created': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
         'ready': file_obj.ready,
         'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
         "maintainers": [],
-        "viewers": []
+        "last_modified": file_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
     }
+    if file_obj.size < 25 * 1024 * 1024:  # max preview size
+        file_dict['preview_url'] = f"http://127.0.0.1:8000/preview/{file_obj.id}"
     return file_dict
 
 
@@ -69,6 +77,7 @@ def create_folder_dict(folder_obj):
         "numFiles": len(file_children),
         "numFolders": len(folder_children),
         'created': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
+        'last_modified': folder_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
         'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
         'parent_id': folder_obj.parent_id,
         'isDir': True,
@@ -77,8 +86,25 @@ def create_folder_dict(folder_obj):
 
 
 def create_share_dict(share):
-    item = {"expiration_time": share.expiration_time, "isDir": True if share.content_type == 4 else False,
-            "token": share.token, "id": share.object_id}
+    isDir = False
+    try:
+        obj = File.objects.get(id=share.object_id)
+    except File.DoesNotExist:
+        try:
+            obj = Folder.objects.get(id=share.object_id)
+            isDir = True
+        except Folder.DoesNotExist:
+            # looks like folder/file no longer exist, deleting time!
+            share.delete()
+            return
+    item = {
+        "expire": share.expiration_time.strftime('%Y-%m-%d %H:%M'),
+        "name": obj.name,
+        "isDir": isDir,
+        "token": share.token,
+        "resource_id": share.object_id,
+        "id": share.pk
+    }
     return item
 
 
@@ -114,6 +140,8 @@ def get_shared_folder(folder_obj, includeSubfolders):
         return folder_dict
 
     return recursive_build(folder_obj)
+
+
 def build_folder_content(folder_obj):
     file_children = File.objects.filter(parent=folder_obj, ready=True)
     folder_children = Folder.objects.filter(parent=folder_obj)
@@ -136,6 +164,11 @@ def build_folder_content(folder_obj):
 
 def build_response(task_id, message):
     return {"task_id": task_id, "message": message}
+
+def error_res(user, code, error_code, details):  # build_http_error_response
+    settings = UserSettings.objects.get(user=user)
+
+    return {"code": code, "error": message_codes[error_code][settings.locale], "details": details}
 
 
 def get_folder_path(folder_id, folder_structure, path=None):

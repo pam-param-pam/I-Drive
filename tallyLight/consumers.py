@@ -5,16 +5,16 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
 
-class UserConsumer(WebsocketConsumer):
+class TallyConsumer(WebsocketConsumer):
 
     def connect(self):
         user = self.scope['user']
-        if not user.is_anonymous:
-            async_to_sync(self.channel_layer.group_add)("user", self.channel_name)
+        if user.superuser:
+            async_to_sync(self.channel_layer.group_add)("tally", self.channel_name)
             self.accept(self.scope['token'])
 
     def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)("user", self.channel_name)
+        async_to_sync(self.channel_layer.group_discard)("tally", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
         pass
@@ -24,16 +24,16 @@ class UserConsumer(WebsocketConsumer):
                               "task_id": event["request_id"]}))
 
 
-class CommandConsumer(WebsocketConsumer):
+class AtemConsumer(WebsocketConsumer):
 
     def connect(self):
         user = self.scope['user']
-        if not user.is_anonymous:
-            async_to_sync(self.channel_layer.group_add)("command", self.channel_name)
+        if user.superuser:
+            async_to_sync(self.channel_layer.group_add)("test", self.channel_name)
             self.accept(self.scope['token'])
 
     def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)("command", self.channel_name)
+        async_to_sync(self.channel_layer.group_discard)("test", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
         print(text_data)
