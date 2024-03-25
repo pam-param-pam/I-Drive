@@ -7,36 +7,29 @@ import m3u8
 import requests
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, StreamingHttpResponse, JsonResponse
+from django.views.decorators.cache import cache_page
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.decorators import view_cleanup
+from website.decorators import view_cleanup, check_file_and_permissions
 from website.models import File, Fragment
 from website.tasks import process_download
 from website.utilities.Discord import discord
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_response, error_res
 
 DELAY_TIME = 0
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def download(request, file_id):
+@check_file_and_permissions
+def download(request, file_obj):
     time.sleep(DELAY_TIME)
 
-    try:
-        file_obj = File.objects.get(id=file_id)
-    except (File.DoesNotExist, ValidationError):
-
-        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                      details="File with id of 'file_id' doesn't exist."), status=400)
-    if request.user != file_obj.owner:
-        return JsonResponse(
-            error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-            status=403)
     if file_obj.streamable:
         return HttpResponse(f"This file is not downloadable on this endpoint, use m3u8 file", status=404)
-    if not file_obj.ready:
-        return HttpResponse(f"This file is not uploaded yet", status=404)
 
     # checking if the file is already downloaded
     file_path = os.path.join("temp", "downloads",
@@ -56,7 +49,6 @@ def download(request, file_id):
 
     process_download.delay(request.user.id, request.request_id, file_obj.id)
     return JsonResponse(build_response(request.request_id, "file is being download..."))
-
 
 
 @api_view(['GET'])
@@ -130,7 +122,6 @@ def process_m3u8(request_id, file_obj):
     return file_content
 
 
-
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 @view_cleanup
@@ -156,8 +147,6 @@ def get_m3u8(request, file_id):
     response['Content-Disposition'] = f'attachment; filename="manifest.m3u8"'
 
     return response
-
-
 
 
 @api_view(['GET'])
@@ -190,6 +179,46 @@ def stream_fragment(request, fragment_id):
     except Fragment.DoesNotExist:
         return JsonResponse(error_res(user=request.user, code=400, error_code=8,
                                       details="Fragment with id of 'fragment_id' doesn't exist."), status=400)
+
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+#@permission_classes([IsAuthenticated])
+@check_file_and_permissions
+@cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
+@xframe_options_sameorigin
+def get_file_preview(request, file_obj):
+    if file_obj.size > 25 * 1023 * 1024:
+        return JsonResponse(error_res(user=request.user, code=400, error_code=11,
+                                      details=f"File size={file_obj.size} is too big, max allowed >25mb."),
+                            status=400)
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+    if len(fragments) != 1:
+        return JsonResponse(error_res(user=request.user, code=400, error_code=11,
+                                      details=f"Unexpected, report this. File with size <25 has more than 1 fragment."),
+                            status=400)
+
+    url = discord.get_file_url(fragments[0].message_id, fragments[0].attachment_id)
+
+    response = requests.get(url, stream=True)
+
+    # Ensure the request was successful
+    if response.status_code == 200:
+
+        def file_iterator():
+            for chunk in response.iter_content(chunk_size=8192):
+                yield chunk
+
+        streaming_response = StreamingHttpResponse(file_iterator(), content_type=file_obj.mimetype)
+        streaming_response['Content-Disposition'] = 'inline'
+
+        return streaming_response
+    else:
+        # Handle the case where the file couldn't be fetched
+        return HttpResponse("Failed to fetch file from URL", status=response.status_code)
+
+
+
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])

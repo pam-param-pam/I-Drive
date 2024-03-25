@@ -8,74 +8,39 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.throttling import UserRateThrottle
 
+from website.decorators import check_file_and_permissions, check_folder_and_permissions
 from website.models import File, Folder, UserPerms, UserSettings, ShareableLink
-from website.utilities.other import build_folder_tree, \
-    build_folder_content, create_file_dict, get_folder_path, create_share_dict, get_shared_folder, error_res
+from website.utilities.other import build_folder_content, create_file_dict, create_share_dict, get_shared_folder, \
+    error_res, \
+    create_folder_dict
 
 DELAY_TIME = 0
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@throttle_classes([UserRateThrottle])
-def get_folder_tree(request):
-    time.sleep(DELAY_TIME)
 
-    try:
-
-        user_folders = Folder.objects.filter(owner=request.user)  # todo
-        folder_structure = build_folder_tree(user_folders)
-        return JsonResponse(folder_structure[0])
-
-    except Folder.MultipleObjectsReturned:
-        return JsonResponse(error_res(user=request.user, code=500, error_code=3, details="Database is malformed WHOOPS"), status=500)
-
-    except KeyError:
-        return JsonResponse(error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"), status=404)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
-def get_folder(request, folder_id):
+@permission_classes([IsAuthenticated])
+@check_folder_and_permissions
+def get_folder(request, folder_obj):
     time.sleep(DELAY_TIME)
 
-    try:
+    includeTrash = request.GET.get('includeTrash', False)
+    folder_content = build_folder_content(folder_obj, includeTrash)
 
-        folder_obj = Folder.objects.get(id=folder_id)
-        if folder_obj.owner != request.user:  # todo fix perms
-            return JsonResponse(
-                error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                status=403)
-        folder_content = build_folder_content(folder_obj)
-
-        return JsonResponse(folder_content)
-
-    except (Folder.DoesNotExist, ValidationError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder with id of 'folder_id' doesn't exist."), status=404)
+    return JsonResponse(folder_content)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
-def get_file(request, file_id):
+@permission_classes([IsAuthenticated])
+@check_file_and_permissions
+def get_file(request, file_obj):
     time.sleep(DELAY_TIME)
-    try:
-        file_obj = File.objects.get(id=file_id)
-        if not file_obj.ready:
-            return HttpResponse(f"file is not ready yet", status=404)
-        if file_obj.owner != request.user:
-            return JsonResponse(
-                error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                status=403)
 
-        file_content = create_file_dict(file_obj)
+    file_content = create_file_dict(file_obj)
 
-        return JsonResponse(file_content)
-
-    except (File.DoesNotExist, ValidationError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="File with id of 'file_id' doesn't exist."), status=404)
-
-
-
+    return JsonResponse(file_content)
 
 
 @api_view(['GET'])
@@ -91,47 +56,26 @@ def get_usage(request):
         for file in files:
             used_encrypted_size += file.encrypted_size
             used_size += file.size
-        return JsonResponse({"total": used_encrypted_size, "used": used_size}, status=200)
+        return JsonResponse({"total": used_size * 2, "used": used_size}, status=200)
 
     except ValidationError:
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8, details=f"Error happened when querying for all files of a user?"), status=404)
-
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@throttle_classes([UserRateThrottle])
-def get_root(request):
-    time.sleep(DELAY_TIME)
-
-    try:
-        folder_obj = Folder.objects.get(parent=None, owner=request.user)
-        folder_content = build_folder_content(folder_obj)
-
-        return JsonResponse(folder_content, safe=False)
-    except (Folder.DoesNotExist, ValidationError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder with id of 'folder_id' doesn't exist."), status=404)
+        return JsonResponse(error_res(user=request.user, code=404, error_code=8,
+                                      details=f"Error happened when querying for all files of a user?"), status=404)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
-def get_breadcrumbs(request, folder_id):
-    time.sleep(DELAY_TIME)
-    try:
+@permission_classes([IsAuthenticated])
+@check_folder_and_permissions
+def get_breadcrumbs(request, folder_obj):
+    folder_path = []
 
-        Folder.objects.get(id=folder_id)  # check if folder exists
+    while folder_obj.parent:
+        folder_path.append(create_folder_dict(folder_obj))
+        folder_obj = Folder.objects.get(id=folder_obj.parent.id)
 
-        user_folders = Folder.objects.filter(owner=request.user)
-        folder_structure = build_folder_tree(user_folders)
-
-        folder_path = get_folder_path(folder_id, folder_structure[0])
-        for folder in folder_path:
-            folder.pop("children")  # Remove the "children" key as it's not needed
-        return JsonResponse(folder_path, safe=False)
-    except (Folder.DoesNotExist, ValidationError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder with id of 'folder_id' doesn't exist."), status=404)
-
+    folder_path.reverse()
+    return JsonResponse(folder_path, safe=False)
 
 
 @api_view(['GET'])
@@ -152,7 +96,8 @@ def users_me(request):
                 "settings": {"locale": settings.locale, "hideHiddenFolders": settings.hide_hidden_folders,
                              "dateFormat": settings.date_format,
                              "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
-                             "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares}}
+                             "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
+                             "webhook": settings.discord_webhook}}
 
     return JsonResponse(response, safe=False, status=200)
 
@@ -228,7 +173,9 @@ def delete_share(request):
         return HttpResponse(f"Share deleted!", status=204)
 
     except (ValueError, KeyError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"), status=404)
+        return JsonResponse(
+            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
+            status=404)
 
 
 @api_view(['POST'])
@@ -267,7 +214,8 @@ def create_share(request):
             expiration_time = current_time + timedelta(days=value)
         else:
             return JsonResponse(
-                error_res(user=request.user, code=404, error_code=1, details="Invalid unit. Supported units are 'minutes', 'hours', and 'days'."),
+                error_res(user=request.user, code=404, error_code=1,
+                          details="Invalid unit. Supported units are 'minutes', 'hours', and 'days'."),
                 status=404)
 
         share = ShareableLink.objects.create(
@@ -288,7 +236,9 @@ def create_share(request):
         return JsonResponse(error_res(user=request.user, code=404, error_code=8,
                                       details="Resource with id of 'resource_id' doesn't exist."), status=404)
     except (ValueError, KeyError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"), status=404)
+        return JsonResponse(
+            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
+            status=404)
 
 
 @api_view(['GET'])
@@ -315,3 +265,43 @@ def view_share(request, token):
         return JsonResponse(error_res(user=request.user, code=404, error_code=8,
                                       details="Resource with token of 'token' doesn't exist."), status=404)
 
+
+"""
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def get_root(request):
+    time.sleep(DELAY_TIME)
+    return HttpResponse(500)
+
+    try:
+        folder_obj = Folder.objects.get(parent=None, owner=request.user)
+        folder_content = build_folder_content(folder_obj)
+
+        return JsonResponse(folder_content, safe=False)
+    except (Folder.DoesNotExist, ValidationError):
+        return JsonResponse(error_res(user=request.user, code=404, error_code=8,
+                                      details="Folder with id of 'folder_id' doesn't exist."), status=404)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def get_folder_tree(request):
+    time.sleep(DELAY_TIME)
+    return HttpResponse(500)
+    try:
+
+        user_folders = Folder.objects.filter(owner=request.user)  # todo
+        folder_structure = build_folder_tree(user_folders)
+        return JsonResponse(folder_structure[0])
+
+    except Folder.MultipleObjectsReturned:
+        return JsonResponse(
+            error_res(user=request.user, code=500, error_code=3, details="Database is malformed WHOOPS"), status=500)
+
+    except KeyError:
+        return JsonResponse(
+            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
+            status=404)
+"""

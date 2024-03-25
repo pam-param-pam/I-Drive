@@ -9,7 +9,7 @@ from website.tasks import delete_file_task, delete_folder_task
 
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'size')
+    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
     """
@@ -38,47 +38,58 @@ class FragmentAdmin(admin.ModelAdmin):
 @admin.register(Folder)
 class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
-
-    actions = ['delete_model']
+    list_display = ["name", "owner", "created_at", "inTrash"]
+    actions = ['move_to_trash', 'restore_from_trash']
 
     def delete_queryset(self, request, queryset):
-        if isinstance(queryset, File):
-            delete_folder_task.delay(request.user.id, request.request_id, queryset.id)
-        else:
-            for real_obj in queryset:
-                delete_folder_task.delay(request.user.id, request.request_id, real_obj.id)
+        for folder in queryset:
+            folder.delete_forever(request)
 
+    # override of default django method(in obj page)
     def delete_model(self, request, obj):
-        if isinstance(obj, File):
-            delete_file_task.delay(request.user.id, request.request_id, obj.id)
+        if isinstance(obj, Folder):
+            obj.delete_forever(request)
         else:
             for real_obj in obj:
-                delete_file_task.delay(request.user.id, request.request_id, real_obj.id)
+                real_obj.delete_forever(request)
+
+    def move_to_trash(self, request, queryset):
+        for folder in queryset:
+            folder.moveToTrash()
+
+    def restore_from_trash(self, request, queryset):
+        for folder in queryset:
+            folder.restoreFromTrash()
+
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'm3u8_message_id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size")
+    readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size")
     ordering = ["created_at"]
-    list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at"]
-    """
-    def has_delete_permission(self, request, obj=None):
-        # Disable default delete so it's not shown
-        return False
-    """
+    list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
+                    "inTrash"]
+    actions = ['move_to_trash', 'restore_from_trash']
+
+
 
     def delete_queryset(self, request, queryset):
-        if isinstance(queryset, File):
-            delete_file_task.delay(request.user.id, request.request_id, queryset.id)
-        else:
-            for real_obj in queryset:
-                delete_file_task.delay(request.user.id, request.request_id, real_obj.id)
+        for real_obj in queryset:
+            real_obj.delete_forever(request)
 
     def delete_model(self, request, obj):
         if isinstance(obj, File):
-            delete_file_task.delay(request.user.id, request.request_id, obj.id)
+            obj.delete_forever(request)
         else:
             for real_obj in obj:
-                delete_file_task.delay(request.user.id, request.request_id, real_obj.id)
+                real_obj.delete_forever(request)
+
+    def move_to_trash(self, request, queryset):
+        for file in queryset:
+            file.moveToTrash()
+
+    def restore_from_trash(self, request, queryset):
+        for file in queryset:
+            file.restoreFromTrash()
 
     def readable_size(self, obj):
         return filesizeformat(obj.size)

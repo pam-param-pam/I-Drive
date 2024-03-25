@@ -39,77 +39,86 @@ def upload_file(request):
 def create_file(request):
     user = request.user
     user.id = 1
-    if request.method == "POST":
-        file_name = request.data['name']
-        parent_id = request.data['parent_id']
-        extension = request.data['extension']
-        file_type = request.data['type']
+    try:
+        if request.method == "POST":
+            files = request.data['files']
+            if not isinstance(files, list):
+                return JsonResponse(error_res(user=request.user, code=404, error_code=8,
+                                              details="'ids' must be a list."), status=404)
+            if len(files) > 100:
+                return JsonResponse(error_res(user=request.user, code=400, error_code=8,
+                                              details="'ids' cannot be larger than 100"), status=400)
+            response_json = []
 
-        file_size = request.data['size']
+            for file in files:
+                file_name = file['name']
+                parent_id = file['parent_id']
+                extension = file['extension']
+                mimetype = file['mimetype']
+                file_size = file['size']
+                file_index = file['index']
 
-        try:
-            folder_obj = Folder.objects.get(id=parent_id)
-            if folder_obj.owner.id != request.user.id:  # todo fix perms
-                return JsonResponse(
-                    error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                    status=403)
-            private_key = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=2048,
-                backend=default_backend()
-            )
-            public_key = private_key.public_key()
-            private_key_pem = private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
+                folder_obj = Folder.objects.get(id=parent_id)
+                if folder_obj.owner.id != request.user.id:  # todo fix perms
+                    return JsonResponse(
+                        error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
+                        status=403)
+                private_key = rsa.generate_private_key(
+                    public_exponent=65537,
+                    key_size=2048,
+                    backend=default_backend()
+                )
+                public_key = private_key.public_key()
+                private_key_pem = private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                )
 
-            public_key_pem = public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
+                public_key_pem = public_key.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                )
 
-            file_obj = File(
-                extension=extension,
-                name=file_name,
-                size=file_size,
-                type=file_type,
-                owner_id=user.id,
-                key=private_key_pem,
-                parent_id=parent_id,
-            )
-            file_obj.save()
-            settings = UserSettings.objects.get(user=request.user)
+                file_obj = File(
+                    extension=extension,
+                    name=file_name,
+                    size=file_size,
+                    mimetype=mimetype,
+                    type=mimetype.split("/")[0],
+                    owner_id=user.id,
+                    key=private_key_pem,
+                    parent_id=parent_id,
+                )
+                if file_size == 0:
+                    file_obj.ready = True
+                file_obj.save()
+                settings = UserSettings.objects.get(user=request.user)
 
-            return JsonResponse(
-                {"key": public_key_pem.decode(), "file_id": file_obj.id, "webhook_url": settings.discord_webhook})
+                response_json.append({"index": file_index, "file_id": file_obj.id})
 
-        except (Folder.DoesNotExist, ValidationError):
-            return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                          details="Folder with id of 'parent_id' doesn't exist."), status=400)
-        except KeyError:
-            return JsonResponse(
-                error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-                status=404)
+            return JsonResponse(response_json, safe=False)
 
-    if request.method == "PATCH":
-        file_id = request.data['file_id']
-        fragment_sequence = request.data['fragment_sequence']
-        total_fragments = request.data['total_fragments']
-        message_id = request.data['message_id']
-        fragment_size = request.data['fragment_size']
-        # return fragment ID
-        try:
+        if request.method == "PATCH":
+            file_id = request.data['file_id']
+            fragment_sequence = request.data['fragment_sequence']
+            total_fragments = request.data['total_fragments']
+            message_id = request.data['message_id']
+            attachment_id = request.data['attachment_id']
+            fragment_size = request.data['fragment_size']
+            # return fragment ID
+
             file_obj = File.objects.get(id=file_id)
             if file_obj.owner.id != request.user.id:  # todo fix perms
                 return JsonResponse(
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
                     status=403)
+
             fragment_obj = Fragment(
                 sequence=fragment_sequence,
                 file=file_obj,
                 size=fragment_size,
+                attachment_id=attachment_id,
                 encrypted_size=fragment_size,
                 message_id=message_id,
             )
@@ -121,13 +130,19 @@ def create_file(request):
 
             return JsonResponse({"woo": "fragment saved"}, status=200)
 
-        except (File.DoesNotExist, ValidationError):
-            return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                          details="File with id of 'file_id' doesn't exist."), status=400)
-        except KeyError:
-            return JsonResponse(
-                error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-                status=404)
+    except (File.DoesNotExist, ValidationError):
+        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
+                                      details="File with id of 'file_id' doesn't exist."), status=400)
+    except Folder.DoesNotExist:
+        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
+                                      details="Folder with id of 'parent_id' doesn't exist."), status=400)
+    except ValidationError:
+        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
+                                      details="Validation error for Folder"), status=400)
+    except KeyError:
+        return JsonResponse(
+            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
+            status=404)
 
 
 @csrf_protect

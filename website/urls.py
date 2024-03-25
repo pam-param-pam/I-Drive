@@ -1,30 +1,33 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 
 from website.views.dataViews import users_me, get_shares, delete_share, create_share, view_share, get_folder, get_file, \
     get_folder_tree, get_root, get_breadcrumbs, get_usage, update_settings
-from website.views.fileManagmentViews import rename, delete, move, create_folder
+from website.views.fileManagmentViews import rename, move_to_trash, move, create_folder
 from website.views.otherViews import test, index
-from website.views.streamViews import get_fragment_urls, download, stream_key, get_m3u8, stream_fragment
+from website.views.streamViews import get_fragment_urls, download, stream_key, get_m3u8, stream_fragment, \
+    get_file_preview
 from website.views.uploadViews import upload_file, create_file
 
 urlpatterns = [
-                  path("test", test, name="download"),
+                  path("test/<file_id>", test, name="download"),
                   path("api/createfile", create_file, name="create file"),
+
+                  path("api/file/preview/<file_id>", get_file_preview, name="get file preview by file id"),
 
                   path('auth/', include('djoser.urls.authtoken')),
                   path('auth/users/me', users_me, name="get current user"),
                   path('api/fragments/<file_id>', get_fragment_urls, name="check token"),
-                  path("api/stream/fragment/<fragment_id>", stream_fragment, name="stream fragment"),
+                  #path("api/stream/fragment/<fragment_id>", stream_fragment, name="stream fragment"),
 
                   path("", index, name="index"),
                   path('admin', admin.site.urls),
-                  path("api/upload", upload_file, name="upload"),
-                  path("api/download/<file>", download, name="download"),
-                  path("api/stream_key/<file_id>", stream_key, name="stream key"),
-                  path("api/stream/<file_id>", get_m3u8, name="get m3u8 playlist"),
+                  #path("api/upload", upload_file, name="upload"),
+                  path("api/download/<file_id>", download, name="download"),
+                  #path("api/stream_key/<file_id>", stream_key, name="stream key"),
+                  #path("api/stream/<file_id>", get_m3u8, name="get m3u8 playlist"),
 
                   path("api/shares", get_shares, name="get user's shares"),
 
@@ -34,7 +37,7 @@ urlpatterns = [
 
                   # path("api/search/<query>", views.search, name="get m3u8 playlist"),
 
-                  path("api/folder/<folder_id>", get_folder, name="get files and folders from a folder id"),
+                  re_path(r'^api/folder/(?P<folder_id>\w+)/$', get_folder, name="get files and folders from a folder id"),
                   path("api/file/<file_id>", get_file, name="get file by file id"),
 
                   path("api/getfolders", get_folder_tree, name="get files and folders from a folder id"),
@@ -47,7 +50,7 @@ urlpatterns = [
 
                   path("api/move", move, name="move file/folder"),
 
-                  path("api/delete", delete, name="delete file/folder"),
+                  path("api/moveToTrash", move_to_trash, name="delete file/folder"),
                   path("api/usage", get_usage, name="get total size of all files"),
 
                   path("api/rename", rename, name="rename file/folder"),

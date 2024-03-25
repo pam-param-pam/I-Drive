@@ -71,12 +71,13 @@ def delete_file_task(user, request_id, file_id):
                 send_message(f"Deleting... {get_percentage(i, len(fragments))}%", False, user, request_id)
 
                 fragment.delete()
-
+        """
         if file_obj.m3u8_message_id:  # remove m3u8 manifest file
             try:
                 discord.remove_message(file_obj.m3u8_message_id)
             except DiscordError:
                 send_message(str(DiscordError), False, user, request_id, True)
+        """
         file_obj.delete()
         send_message(f"Deleted!", user, True, request_id)
     except Exception as e:
