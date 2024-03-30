@@ -48,20 +48,20 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="['.jpg', '.png', '.webp'].includes(file.extension)" :src="file.url"></ExtendedImage>
+        <ExtendedImage v-if="file.type === 'image'" :src="file.preview_url"></ExtendedImage>
         <audio
-          v-else-if="file.extension === '.mp3'"
+          v-else-if="file.type === 'audio'"
           ref="player"
-          :src="file.url"
+          :src="file.preview_url"
           controls
           :autoplay="autoPlay"
           @play="autoPlay = true"
         ></audio>
         <video
-          v-else-if="['.mp4', '.mov'].includes(file.extension)"
+          v-else-if="file.type === 'video'"
           ref="video"
           controls
-          :src="file.url"
+          :src="file.preview_url"
           :autoplay="autoPlay"
           @play="autoPlay = true"
         >
@@ -69,7 +69,7 @@
         <object
           v-else-if="file.extension === '.pdf'"
           class="pdf"
-          :data="file.url"
+          :data="file.preview_url"
         ></object>
         <div v-else class="info">
           <div class="title">
@@ -77,7 +77,7 @@
             {{ $t("files.noPreview") }}
           </div>
           <div>
-            <a target="_blank" :href="file.url" class="button button--flat" download>
+            <a target="_blank" :href="file.preview_url" class="button button--flat" download>
               <div>
                 <i class="material-icons">file_download</i
                 >{{ $t("buttons.download") }}
@@ -85,7 +85,7 @@
             </a>
             <a
               target="_blank"
-              :href="file.url"
+              :href="file.preview_url"
               class="button button--flat"
               v-if="!file.isDir"
             >
@@ -230,7 +230,6 @@ export default {
       this.$store.commit("showHover", {
         prompt: "delete",
         confirm: () => {
-          console.log("confirm lol")
           if (this.hasNext) {
             this.next();
           } else if (!this.hasPrevious && !this.hasNext) {
@@ -298,7 +297,7 @@ export default {
       this.$router.push({path: uri});
     },
     download() {
-      window.open(this.file.url, '_blank');
+      //window.open(this.file.preview_url, '_blank');
     },
   },
 };

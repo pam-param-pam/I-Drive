@@ -1,4 +1,3 @@
-import { fetchURL, removePrefix, createURL } from "./utils"
 import { baseURL } from "@/utils/constants"
 
 export async function fetch(url, password = "") {

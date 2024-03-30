@@ -12,12 +12,16 @@
     :data-dir="item.isDir"
     :data-type="type"
     :aria-label="item.name"
+
     :aria-selected="isSelected"
   >
     <div>
-      <i class="material-icons"></i>
+      <img
+        v-if="item.preview_url && type === 'image'"
+        v-lazy="item.preview_url"
+      />
+      <i v-else class="material-icons"></i>
     </div>
-
     <div>
       <p class="name">{{ item.name }}</p>
 
@@ -38,8 +42,8 @@
 import {mapMutations, mapGetters, mapState} from "vuex";
 import {filesize} from "@/utils";
 import moment from "moment";
-import {files as api} from "@/api";
-import * as upload from "@/utils/upload";
+import {move} from "@/api/item.js";
+
 
 export default {
 
@@ -56,44 +60,26 @@ export default {
   computed: {
     ...mapState(["user", "perms", "selected", "settings", "items"]),
     ...mapGetters(["selectedCount"]),
-    singleClick() {
-      return this.readOnly === undefined && this.user.singleClick;
-    },
-
     type() {
       if (this.item.isDir) return "folder"
-      if (this.item.extension === ".mp4") {
-        return "video";
-      }
-      if (this.item.extension === ".mp3") {
-        return "song";
-      }
-      if (this.item.extension === ".txt") {
-        return "text";
-      }
-      if (this.item.extension === ".jpg" || this.item.extension === ".png") {
-        return "image";
-      }
-
-      return "text";
+      if (this.item.type === "application") return "pdf"
+      return this.item.type
     },
     isSelected() {
 
-      return this.selected.indexOf(this.item) !== -1;
+      return this.selected.includes(this.item)
     },
     isDraggable() {
       return this.readOnly === undefined && this.perms.rename;
     },
     canDrop() {
-      if (!this.isDir || this.readOnly !== undefined) return false;
+      if (!this.item.isDir || this.readOnly !== undefined) return false;
 
-
-      for (let i of this.selected) {
-        if (this.items[i] === this.item) {
+      for (let item of this.selected) {
+        if (item === this.item) {
           return false;
         }
       }
-
       return true;
     },
 
@@ -113,7 +99,7 @@ export default {
     },
 
     dragStart: function () {
-/*
+
       if (this.selectedCount === 0) {
         this.addSelected(this.item);
         return;
@@ -123,16 +109,12 @@ export default {
         this.resetSelected();
         this.addSelected(this.item);
       }
-      */
+
 
     },
 
     dragOver: function (event) {
-      console.log("1111")
-      /*
-        //nie kumam co tu sie dzieje LOL
-
-        if (!this.canDrop) return;
+      if (!this.canDrop) return;
 
       event.preventDefault();
       let el = event.target;
@@ -144,85 +126,50 @@ export default {
       }
 
       el.style.opacity = 1;
-      */
+
     },
     drop: async function (event) {
 
-            //nie kumam co tu sie dzieje LOL
-          if (!this.canDrop) return;
-          event.preventDefault();
+      if (!this.canDrop) return;
+      event.preventDefault();
 
-          if (this.selectedCount === 0) return;
+      if (this.selectedCount === 0) return;
 
-          let el = event.target;
-          console.log(JSON.stringify(el))
-      /*
-          for (let i = 0; i < 5; i++) {
-            if (el !== null && !el.classList.contains("item")) {
-              el = el.parentElement;
-            }
-          }
+      let listOfIds = this.selected.map(obj => obj.id);
+      try {
+        await move({ids: listOfIds, "new_parent_id": this.item.id})
 
-          let items = [];
+        let updatedItem = this.items.filter(item => !listOfIds.includes(item.id));
+        this.$store.commit("setItems", updatedItem);
 
-          for (let i of this.selected) {
-              //xdddddddddddd
+        let message = `Moved to ${this.item.name}!`
+        this.$toast.info(message);
 
-            items.push({
-              from: this.req.items[i].url,
-              to: this.url + encodeURIComponent(this.req.items[i].name),
-              name: this.req.items[i].name,
-            });
+      } catch (error) {
+        console.log(error)
+        //nothing has to be done
+      }
 
-
-          }
-
-          // Get url from ListingItem instance
-          let path = el.__vue__.url;
-          let baseItems = (await api.getItems(path)).items;
-
-          let action = (overwrite, rename) => {
-            api
-              .move(items, overwrite, rename)
-              .then(() => {
-                this.$store.commit("setReload", true);
-              })
-              .catch(this.$showError);
-          };
-
-          let conflict = upload.checkConflict(items, baseItems);
-
-          let overwrite = false;
-          let rename = false;
-
-          if (conflict) {
-            this.$store.commit("showHover", {
-              prompt: "replace-rename",
-              confirm: (event, option) => {
-                overwrite = option === "overwrite";
-                rename = option === "rename";
-
-                event.preventDefault();
-                this.$store.commit("closeHover");
-                action(overwrite, rename);
-              },
-            });
-
-            return;
-          }
-
-          action(overwrite, rename);
-
-*/
     },
 
 
     click: function (event) {
 
-      if (this.selected.includes(this.item)) {
-        this.removeSelected(this.item);
-        return;
+      if (!event.shiftKey && this.selected.length > 0) {
+        if (! this.isSelected) {
+          this.resetSelected()
+        }
       }
+
+      if (this.isSelected && this.selected.length > 0)  {
+        this.removeSelected(this.item)
+        return
+      }
+
+      this.addSelected(this.item);
+
+
+      /*
       let lastIndex = -1;
       let currentIndex = -1
       for (let i = 0; i < this.items.length; i++) {
@@ -235,20 +182,22 @@ export default {
       }
       console.log("lastIndex: " + lastIndex)
       console.log("currentIndex: " + currentIndex)
+       */
 
-
-
-
-      this.addSelected(this.item);
     },
     open: function () {
       if (this.item.isDir) {
         this.$router.push({path: `/folder/${this.item.id}`});
 
       } else {
+        if (this.item.type === "text") {
+          this.$router.push({path: `/editor/${this.item.id}`});
 
+        }
+        else {
+          this.$router.push({path: `/preview/${this.item.id}`});
 
-        this.$router.push({path: `/preview/${this.item.id}`});
+        }
 
 
       }

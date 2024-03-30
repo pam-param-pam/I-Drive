@@ -40,10 +40,10 @@ export async function fetchURL(url, opts, auth = true) {
     }
     let message = "Unexpected report this"
     if (res_text.length < 150) {
-      message = res_text
+      message = JSON.parse(res_text)
     }
 
-    vue.$toast.error(`${(res.status)}: ${message}`, {
+    vue.$toast.error(`${message.error}`, {
       timeout: 5000,
       position: "bottom-right",
     });
@@ -60,32 +60,6 @@ export async function fetchJSON(url, opts) {
 
 }
 
-export function removePrefix(url) {
-  url = url.split("/").splice(2).join("/");
-
-  if (url === "") url = "/";
-  if (url[0] !== "/") url = "/" + url;
-  return url;
-}
-
-export function createURL(endpoint, params = {}, auth = true) {
-  let prefix = baseURL;
-  if (!prefix.endsWith("/")) {
-    prefix = prefix + "/";
-  }
-  const url = new URL(prefix + encodePath(endpoint), origin);
-
-  const searchParams = {
-    ...(auth && { auth: store.state.jwt }),
-    ...params,
-  };
-
-  for (const key in searchParams) {
-    url.searchParams.set(key, searchParams[key]);
-  }
-
-  return url.toString();
-}
 export function sortItems(items) {
   // Create a shallow copy of the items array
   const itemsCopy = items.slice();

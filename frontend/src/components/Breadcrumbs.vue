@@ -5,6 +5,7 @@
       :to="base || ''"
       :aria-label="$t('files.home')"
       :title="$t('files.home')"
+      draggable="false"
     >
       <i class="material-icons">home</i>
     </component>
@@ -12,7 +13,7 @@
           <span class="chevron"
           ><i class="material-icons">keyboard_arrow_right</i></span
           >
-        <component :is="element" :to="folder.id">{{ folder.name }}</component>
+        <component draggable="false" :is="element" :to="folder.id">{{ folder.name }} </component>
 
     </span>
 
@@ -20,7 +21,6 @@
 </template>
 
 <script>
-import {files as api} from "@/api/index.js";
 import {mapState} from "vuex";
 import {breadcrumbs} from "@/api/folder.js";
 
@@ -50,7 +50,7 @@ export default {
             path = await breadcrumbs(this.currentFolder.id);
           }
           catch (error) {
-            this.$showError(error);
+            console.log(error)
           }
         }
 

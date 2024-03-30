@@ -1,4 +1,4 @@
-import { fetchURL, fetchJSON, removePrefix, createURL } from "./utils"
+import { fetchURL, fetchJSON} from "./utils"
 import {baseURL} from "@/utils/constants.js";
 
 export async function getAll() {
@@ -18,10 +18,6 @@ export async function remove(data) {
 }
 
 export async function create(data) {
-
-
-
-
   return fetchJSON("/api/createshare", {
     method: "POST",
     body: JSON.stringify(data)

@@ -32,7 +32,7 @@
 
 <script>
 import {mapGetters, mapMutations, mapState} from "vuex";
-import {remove} from "@/api/item.js";
+import {moveToTrash, remove} from "@/api/item.js";
 
 export default {
   name: "delete",
@@ -72,15 +72,11 @@ export default {
         let updatedItem = this.items.filter(item => !ids.includes(item.id));
 
         this.$store.commit("setItems", updatedItem);
+        let message = this.$t('toasts.itemMoved', { amount: ids.length})
 
-        let message = `Deleting ${ids.length} items...`
         this.$toast.info(message, {
           id: res.task_id,
-          timeout: 0,
-          draggable: false,
-          closeOnClick: false,
         });
-        //this.currentPrompt?.confirm();
       } catch (error) {
         console.log(error)
         //nothing has to be done

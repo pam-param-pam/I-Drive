@@ -20,9 +20,9 @@ export async function updateSettings(data) {
   });
 
 }
-export async function getUsage() {
+export async function getUsage(folderId) {
 
-  const res = await fetchJSON(`/api/usage`, {});
+  const res = await fetchJSON(`/api/usage/${folderId}`, {});
 
   return await res
 }

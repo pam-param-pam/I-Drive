@@ -74,7 +74,8 @@ export default {
 
         this.$store.commit("renameItem", {id: this.selected[0].id, newName: this.name});
 
-        this.$toast.success(`Renamed!`)
+        let message = this.$t('toasts.itemRenamed')
+        this.$toast.success(message)
 
       } catch (error) {
         console.log(error)

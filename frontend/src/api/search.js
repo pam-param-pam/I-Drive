@@ -1,4 +1,4 @@
-import { fetchURL, removePrefix } from "./utils";
+import { fetchURL } from "./utils";
 import url from "../utils/url";
 
 export default async function search(base, query) {

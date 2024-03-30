@@ -15,7 +15,7 @@ export async function validateLogin() { //this isn't really validate login - mor
   store.commit("setToken", token);
 }
 
-export async function login(username, password, recaptcha) {
+export async function login(username, password) {
   const data = {username, password};
 
   const res = await fetch(`${baseURL}/auth/token/login`, {

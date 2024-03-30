@@ -1,7 +1,6 @@
 import * as tus from "tus-js-client";
 import { baseURL, tusEndpoint, tusSettings } from "@/utils/constants";
 import store from "@/store";
-import { removePrefix } from "@/api/utils";
 import { fetchURL } from "./utils";
 
 const RETRY_BASE_DELAY = 1000;

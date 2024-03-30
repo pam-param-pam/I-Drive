@@ -14,6 +14,8 @@ import { baseURL, name } from "@/utils/constants";
 import i18n, { rtlLanguages } from "@/i18n";
 import Listing from "@/views/files/Listing.vue";
 import Preview from "@/views/files/Preview.vue";
+import Editor from "@/views/files/Editor.vue";
+import Trash from "@/views/Trash.vue";
 
 Vue.use(Router);
 
@@ -44,6 +46,11 @@ const router = new Router({
           component: Share,
         },
         {
+          path: "/trash",
+          name: "Trash",
+          component: Trash,
+        },
+        {
           path: "/files",
           name: "Files",
           component: Files,
@@ -61,6 +68,12 @@ const router = new Router({
               path: "/preview/:fileId",
               name: "Preview",
               component: Preview,
+
+            },
+            {
+              path: "/editor/:fileId",
+              name: "Editor",
+              component: Editor,
 
             },
 

@@ -1,8 +1,8 @@
 <template>
   <div>
     <header-bar showMenu="false" showLogo="false">
-      <search />
-      <title />
+      <search/>
+      <title/>
       <action
         class="search-button"
         icon="search"
@@ -73,7 +73,7 @@
           :label="$t('buttons.upload')"
           @action="upload"
         />
-        <action icon="info" :label="$t('buttons.info')" show="info" />
+        <action icon="info" :label="$t('buttons.info')" show="info"/>
 
 
       </template>
@@ -124,11 +124,13 @@
       </h2>
     </div>
     <template v-else-if="error == null">
-      
+
       <div v-if="dirsSize + filesSize === 0">
         <h2 class="message">
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
-            <img src="https://steamuserimages-a.akamaihd.net/ugc/2153341894595795931/DCCF2A0051A51653A133FB1A8123EA4D3696AB6C/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true" alt="Image Description">
+            <img
+              src="https://steamuserimages-a.akamaihd.net/ugc/2153341894595795931/DCCF2A0051A51653A133FB1A8123EA4D3696AB6C/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true"
+              alt="Image Description">
           </a>
         </h2>
         <input
@@ -152,6 +154,7 @@
         id="listing"
         ref="listing"
         :class="settings.viewMode + ' file-icons'"
+        @dragenter.prevent @dragover.prevent
       >
         <div>
           <div class="item header">
@@ -202,8 +205,8 @@
         <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
         <div v-if="dirsSize > 0">
           <item
-          v-for="item in dirs" :key="item.id"
-          :item="item"
+            v-for="item in dirs" :key="item.id"
+            :item="item"
           >
           </item>
         </div>
@@ -241,13 +244,11 @@
 
 <script>
 import Vue from "vue";
-import { mapState, mapGetters, mapMutations } from "vuex";
-import { users, files as api } from "@/api";
+import {mapGetters, mapMutations, mapState} from "vuex";
 import {enableExec, name} from "@/utils/constants";
 import * as upload from "@/utils/upload";
 import css from "@/utils/css";
 import throttle from "lodash.throttle";
-import Dropdown from "@/components/Dropdown.vue";
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
@@ -260,7 +261,6 @@ import {sortItems} from "@/api/utils.js";
 export default {
   name: "listing",
   components: {
-    Dropdown,
     HeaderBar,
     Action,
     Search,
@@ -438,13 +438,17 @@ export default {
 
       try {
 
-        const res = await getItems(folderId);
+        const res = await getItems(folderId, false);
 
         this.$store.commit("setItems", res.children);
         this.$store.commit("setCurrentFolder", res);
 
-
-        document.title = `${res.name} - ` + name;
+        if (res.parent_id) { //only set title if its not root folder
+          document.title = `${res.name} - ` + name;
+        }
+        else {
+          document.title = name;
+        }
 
       } catch (e) {
         console.log(e)
@@ -456,7 +460,6 @@ export default {
 
       }
     },
-
 
 
     keyEvent(event) {
@@ -496,7 +499,7 @@ export default {
       }
 
       // Ctrl is pressed
-      if (event.ctrlKey  || event.metaKey) {
+      if (event.ctrlKey || event.metaKey) {
 
         let key = String.fromCharCode(event.which).toLowerCase();
 
@@ -575,18 +578,18 @@ export default {
         this.resetOpacity();
       }
     },
-    drop: async function (event) {
-      console.log("DROOOOOOOOP")
+    preventDefault(event) {
+      // Wrapper around prevent default.
+      event.preventDefault();
+    },
 
+    drop: async function (event) {
       event.preventDefault();
       this.dragCounter = 0;
       this.resetOpacity();
-
       let dt = event.dataTransfer;
+      console.log(dt.files)
       let el = event.target;
-      console.log(JSON.stringify(dt))
-
-      console.log(JSON.stringify(el))
 
       if (dt.files.length <= 0) return;
 
@@ -595,96 +598,33 @@ export default {
           el = el.parentElement;
         }
       }
-
+      console.log(el)
+      this.dropHandler(event)
+      console.log(dt)
       let files = await upload.scanFiles(dt);
-      let items = this.items;
-      let path = this.$route.path.endsWith("/")
-        ? this.$route.path
-        : this.$route.path + "/";
+      console.log(files)
+      let parent_id = this.currentFolder.id
+      if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
+        parent_id = el.__vue__.item.id;
 
-      if (
-        el !== null &&
-        el.classList.contains("item") &&
-        el.dataset.dir === "true"
-      ) {
-        // Get url from ListingItem instance
-        path = el.__vue__.url;
-
-        try {
-          items = (await api.getItems(path)).items;
-        } catch (error) {
-          this.$showError(error);
-        }
       }
+      console.log(parent_id)
 
-      let conflict = upload.checkConflict(files, items);
-
-      if (conflict) {
-        this.$store.commit("showHover", {
-          prompt: "replace",
-          action: (event) => {
-            event.preventDefault();
-            this.$store.commit("closeHover");
-            upload.handleFiles(files, path, false);
-          },
-          confirm: (event) => {
-            event.preventDefault();
-            this.$store.commit("closeHover");
-            upload.handleFiles(files, path, true);
-          },
-        });
-
-        return;
-      }
-
-      upload.handleFiles(files, path);
+      //upload.handleFiles(files, path);
     },
+
     async uploadInput(event) {
       this.$store.commit("closeHover");
 
       let files = event.currentTarget.files;
       let folder = this.currentFolder
 
-
-      console.log(files)
-      let folder_upload =
-        files[0].webkitRelativePath !== undefined &&
-        files[0].webkitRelativePath !== "";
+      await upload.prepareForUpload(files, folder)
 
 
-      if (folder_upload) {
-        let folder_name
-        for (let i = 0; i < files.length; i++) {
-          let file = files[i];
-          files[i].fullPath = file.webkitRelativePath;
-
-          // get folder name
-          if (!folder_name) {
-            let arry = file.fullPath.split("/")
-            folder_name = arry[arry.length - 2]
-
-            // try creating new folder
-            try {
-              let res = await create({"parent_id": this.currentFolder.id, "name": folder_name})
-              this.$toast.success(`${folder_name} created!`, {
-                timeout: 3000,
-              });
-              this.$store.commit("updateItems", res);
-              folder = res
-
-            } catch (error) {
-              console.log(error)
-            }
-            finally {
-              this.$store.commit("closeHover");
-
-            }
-          }
-        }
-      }
+      this.$store.commit("setReload", true);
 
 
-      upload.handleFiles(files, folder);
     },
     resetOpacity() {
       let items = document.getElementsByClassName("item");
@@ -744,21 +684,18 @@ export default {
     download() {
       if (this.selectedCount === 0) {
         this.$toast.info("Select a file to download first!")
-      }
-
-      else {
+      } else {
         let filesNum = 0
-        this.selected.forEach( item => {
+        this.selected.forEach(item => {
           if (!item.isDir) {
             window.open(item.url, '_blank');
-            filesNum ++
+            filesNum++
           }
         })
         if (filesNum > 0) {
           this.$toast.success(`Downloading ${filesNum} files`)
           this.$store.commit("resetSelected");
-        }
-        else {
+        } else {
           this.$toast.info(`You can't download a folder >-<`)
 
         }
@@ -788,8 +725,7 @@ export default {
 
       try {
         await updateSettings(data)
-      }
-      catch (error) {
+      } catch (error) {
         console.log(error)
       }
 

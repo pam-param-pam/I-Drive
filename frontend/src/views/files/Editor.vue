@@ -2,10 +2,10 @@
     <div id="editor-container">
         <header-bar>
             <action icon="close" :label="$t('buttons.close')" @action="close()" />
-            <title>{{ req.name }}</title>
+            <title>{{ file.name }}</title>
 
             <action
-                v-if="user.perm.modify"
+                v-if="perms.modify"
                 id="save-button"
                 icon="save"
                 :label="$t('buttons.save')"
@@ -13,7 +13,7 @@
             />
         </header-bar>
 
-        <breadcrumbs base="/files" noLink />
+        <breadcrumbs base="/files/"/>
 
         <form id="editor"></form>
     </div>
@@ -27,12 +27,14 @@ import buttons from "@/utils/buttons";
 import url from "@/utils/url";
 
 import {version as ace_version} from "ace-builds";
-import ace from "ace-builds/src-min-noconflict/ace.js";
-import modelist from "ace-builds/src-min-noconflict/ext-modelist.js";
+import ace from "ace-builds/src-min/ace.js"
+import modelist from "ace-builds/src-min-noconflict/ext-modelist.js"
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
+import {getFile} from "@/api/files.js";
+import {getItems} from "@/api/folder.js";
 
 export default {
     name: "editor",
@@ -41,42 +43,21 @@ export default {
         Action,
         Breadcrumbs,
     },
-    data: function () {
-        return {};
-    },
     computed: {
-        ...mapState(["req", "user"]),
-        breadcrumbs() {
-            let parts = this.$route.path.split("/");
+        ...mapState(["perms", "currentFolder"]),
 
-            if (parts[0] === "") {
-                parts.shift();
-            }
-
-            if (parts[parts.length - 1] === "") {
-                parts.pop();
-            }
-
-            let breadcrumbs = [];
-
-            for (let i = 0; i < parts.length; i++) {
-                breadcrumbs.push({name: decodeURIComponent(parts[i])});
-            }
-
-            breadcrumbs.shift();
-
-            if (breadcrumbs.length > 3) {
-                while (breadcrumbs.length !== 4) {
-                    breadcrumbs.shift();
-                }
-
-                breadcrumbs[0].name = "...";
-            }
-
-            return breadcrumbs;
-        },
     },
+    data: function () {
+        return {
+            file: null,
+
+        };
+    },
+
     created() {
+        console.log("aaaaaaaaaa")
+        this.fetchData()
+
         window.addEventListener("keydown", this.keyEvent);
     },
     beforeDestroy() {
@@ -84,7 +65,8 @@ export default {
         this.editor.destroy();
     },
     mounted: function () {
-        const fileContent = this.req.content || "";
+        /*
+        const fileContent = this.file.content || "aaaaaaaaaaa";
 
         ace.config.set(
             "basePath",
@@ -94,17 +76,44 @@ export default {
         this.editor = ace.edit("editor", {
             value: fileContent,
             showPrintMargin: false,
-            readOnly: this.req.type === "textImmutable",
+            readOnly: false,
             theme: "ace/theme/chrome",
             mode: modelist.getModeForPath(this.req.name).mode,
             wrap: true,
         });
 
-        if (theme == "dark") {
+        if (theme === "dark") {
             this.editor.setTheme("ace/theme/twilight");
         }
+
+         */
     },
     methods: {
+        async fetchData() {
+
+            let fileId = this.$route.params.fileId;
+
+            this.setLoading(true);
+
+            try {
+                this.file = await getFile(fileId)
+                if (!this.currentFolder) {
+                    const res = await getItems(this.file.parent_id);
+
+                    this.$store.commit("setItems", res.children);
+                    this.$store.commit("setCurrentFolder", res);
+
+                }
+                this.$store.commit("addSelected", this.file);
+
+            } catch (e) {
+                console.log(e)
+                this.error = e;
+            } finally {
+                this.setLoading(false);
+
+            }
+        },
         back() {
             let uri = url.removeLastDir(this.$route.path) + "/";
             this.$router.push({path: uri});
@@ -122,6 +131,7 @@ export default {
             this.save();
         },
         async save() {
+            /*
             const button = "save";
             buttons.loading("save");
 
@@ -132,11 +142,13 @@ export default {
                 buttons.done(button);
                 this.$showError(e);
             }
+
+             */
         },
         close() {
             this.$store.commit("updateItems", {});
+            let uri = `/folder/${this.file.parent_id}`
 
-            let uri = url.removeLastDir(this.$route.path) + "/";
             this.$router.push({path: uri});
         },
     },

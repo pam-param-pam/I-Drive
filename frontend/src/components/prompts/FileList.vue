@@ -50,11 +50,12 @@ export default {
     async fetchData(folder) {
       const res = await getItems(folder.id);
       const dirs = res.children.filter(item => item.isDir);
-      const folderCopy = {...folder};
+
+      let folderBack = {name: "...", id: folder.parent_id}
 
 
-      folderCopy.name = "..."
-      dirs.unshift(folderCopy);
+
+      dirs.unshift(folderBack);
       console.log(dirs)
       this.dirs = dirs
       this.$emit("update:selected", dirs);

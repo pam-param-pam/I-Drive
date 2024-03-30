@@ -2,7 +2,7 @@
   <div>
     <header-bar v-if="error" showMenu showLogo/>
 
-    <breadcrumbs base="/files/"/>
+    <breadcrumbs base="/files"/>
     <errors v-if="error" :errorCode="error.status"/>
 
     <router-view></router-view>
@@ -11,7 +11,7 @@
 </template>
 
 <script>
-import {mapState, mapGetters} from "vuex";
+import {mapState} from "vuex";
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
@@ -29,12 +29,10 @@ export default {
   },
   data: function () {
     return {
-      width: window.innerWidth,
     };
   },
   computed: {
-    ...mapState(["user", "error"]),
-    ...mapGetters(["currentPrompt"]),
+    ...mapState(["error", "user"]),
 
   },
   created() {

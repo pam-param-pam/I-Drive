@@ -32,6 +32,15 @@
           <span>{{ $t("sidebar.newFile") }}</span>
         </button>
       </div>
+      <button
+        @click="toTrash"
+        class="action"
+        :aria-label="$t('sidebar.trash')"
+        :title="$t('sidebar.trash')"
+      >
+        <i class="material-icons">delete</i>
+        <span>{{ $t("sidebar.trash") }}</span>
+      </button>
 
       <div>
         <button
@@ -119,7 +128,7 @@ export default {
     ProgressBar,
   },
   computed: {
-    ...mapState(["user", "perms"]),
+    ...mapState(["user", "perms", "currentFolder"]),
     ...mapGetters(["isLogged", "currentPrompt"]),
     active() {
       return this.currentPrompt?.prompt === "sidebar";
@@ -130,20 +139,23 @@ export default {
   asyncComputed: {
     usage: {
       async get() {
+        if (this.currentFolder) {
+          let usageStats = { used: 0, total: 0, usedPercentage: 0 };
 
-        let usageStats = { used: 0, total: 0, usedPercentage: 0 };
-
-        try {
-          let usage = await getUsage();
-          usageStats = {
-            used: prettyBytes(usage.used, { binary: true }),
-            total: prettyBytes(usage.total, { binary: true }),
-            usedPercentage: Math.round((usage.used / usage.total) * 100),
-          };
-        } catch (error) {
-          console.log(error)
+          try {
+            let usage = await getUsage(this.currentFolder?.id);
+            usageStats = {
+              used: prettyBytes(usage.used, { binary: true }),
+              total: prettyBytes(usage.total, { binary: true }),
+              usedPercentage: Math.round((usage.used / usage.total) * 100),
+            };
+          } catch (error) {
+            console.log(error)
+          }
+          return usageStats;
         }
-        return usageStats;
+        return this.usage
+
       },
       default: { used: "0 B", total: "0 B", usedPercentage: 0 },
         
@@ -152,6 +164,10 @@ export default {
   methods: {
     toRoot() {
       this.$router.push({ path: "/files/" }, () => {});
+      this.$store.commit("closeHover");
+    },
+    toTrash() {
+      this.$router.push({ path: "/trash/" }, () => {});
       this.$store.commit("closeHover");
     },
     toSettings() {

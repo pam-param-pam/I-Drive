@@ -1,4 +1,5 @@
 function loading(button) {
+  /*
   let el = document.querySelector(`#${button}-button > i`);
 
   if (el === undefined || el === null) {
@@ -18,9 +19,12 @@ function loading(button) {
     el.innerHTML = "autorenew";
     el.style.opacity = 1;
   }, 100);
+
+   */
 }
 
 function done(button) {
+  /*
   let el = document.querySelector(`#${button}-button > i`);
 
   if (el === undefined || el === null) {
@@ -35,9 +39,12 @@ function done(button) {
     el.innerHTML = el.dataset.icon;
     el.style.opacity = 1;
   }, 100);
+
+   */
 }
 
 function success(button) {
+  /*
   let el = document.querySelector(`#${button}-button > i`);
 
   if (el === undefined || el === null) {
@@ -61,6 +68,8 @@ function success(button) {
       }, 100);
     }, 500);
   }, 100);
+
+   */
 }
 
 export default {
