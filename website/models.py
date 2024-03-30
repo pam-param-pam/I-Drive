@@ -34,8 +34,7 @@ class Folder(models.Model):
 
     def save(self, *args, **kwargs):
         max_name_length = 20  # Set your arbitrary maximum length here
-        if len(self.name) > max_name_length:
-            raise ValidationError(f"Name length exceeds the maximum allowed length of {max_name_length} characters.")
+        self.name = self.name[:max_name_length]
 
         self.last_modified_at = timezone.now()
         super(Folder, self).save(*args, **kwargs)
@@ -64,17 +63,20 @@ class Folder(models.Model):
         self.inTrash = False
         self.save()
 
-    def get_all_files(self):
+    def get_all_files(self, ignoreTrash=False):
         children = []
-
-        folders = Folder.objects.filter(parent_id=self.id)
-        files = File.objects.filter(parent_id=self.id)
+        if ignoreTrash:
+            folders = Folder.objects.filter(parent_id=self.id, inTrash=False)
+            files = File.objects.filter(parent_id=self.id, inTrash=False)
+        else:
+            folders = Folder.objects.filter(parent_id=self.id)
+            files = File.objects.filter(parent_id=self.id)
 
         for file in files:
             children.append(file)
 
         for folder in folders:
-            children += folder.get_all_files()
+            children += folder.get_all_files(ignoreTrash=ignoreTrash)
 
         return children
 

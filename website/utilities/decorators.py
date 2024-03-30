@@ -3,6 +3,7 @@ import shutil
 import traceback
 from functools import wraps
 
+from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 
@@ -44,6 +45,7 @@ def check_file_and_permissions(view_func):
 
             return JsonResponse(error_res(user=request.user, code=400, error_code=8,
                                           details=f"File with id of '{file_id}' doesn't exist."), status=400)
+
         return view_func(request, file_obj, *args, **kwargs)
 
     return wrapper
@@ -64,6 +66,7 @@ def check_folder_and_permissions(view_func):
         except (File.DoesNotExist, ValidationError):
             return JsonResponse(error_res(user=request.user, code=400, error_code=8,
                                           details=f"Folder with id of '{folder_id}' doesn't exist."), status=400)
+
         return view_func(request, folder_obj, *args, **kwargs)
 
     return wrapper
@@ -75,9 +78,11 @@ def handle_common_errors(view_func):
         try:
             return view_func(request, *args, **kwargs)
         except Folder.DoesNotExist:
-            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder not found."), status=404)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder not found."),
+                                status=404)
         except File.DoesNotExist:
-            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="File not found."), status=404)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="File not found."),
+                                status=404)
         except ValidationError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
         except ResourceNotFound as e:
@@ -92,5 +97,5 @@ def handle_common_errors(view_func):
             return JsonResponse(
                 error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
                 status=404)
-    return wrapper
 
+    return wrapper

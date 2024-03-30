@@ -1,5 +1,4 @@
 from django.http import JsonResponse
-from django.http import JsonResponse
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
@@ -35,6 +34,8 @@ def create_file(request):
             mimetype = file['mimetype']
             file_size = file['size']
             file_index = file['index']
+            if mimetype == "":
+                mimetype = "text/plain"
 
             folder_obj = Folder.objects.get(id=parent_id)
             if folder_obj.owner.id != request.user.id:  # todo fix perms
@@ -47,7 +48,7 @@ def create_file(request):
                 mimetype=mimetype,
                 type=mimetype.split("/")[0],
                 owner_id=user.id,
-                key="no key",
+                key=b"no key",
                 parent_id=parent_id,
             )
             if file_size == 0:

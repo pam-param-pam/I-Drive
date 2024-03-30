@@ -62,8 +62,9 @@ def create_file_dict(file_obj):
         "maintainers": [],
         "last_modified": file_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
     }
-    if file_obj.size < 25 * 1024 * 1024:  # max preview size
-        file_dict['preview_url'] = f"http://127.0.0.1:8000/api/file/preview/{file_obj.id}"
+    #if file_obj.size < 25 * 1024 * 1024:  # max preview size
+    #    file_dict['preview_url'] = f"http://127.0.0.1:8000/api/file/preview/{file_obj.id}"
+    file_dict['preview_url'] = f"http://127.0.0.1:8000/api/file/preview/{file_obj.id}"
     return file_dict
 
 

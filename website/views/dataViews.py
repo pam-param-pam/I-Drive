@@ -41,16 +41,23 @@ def get_file(request, file_obj):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
-def get_usage(request):
+@check_folder_and_permissions
+def get_usage(request, folder_obj):
     time.sleep(DELAY_TIME)
 
-    used_size = 0
-    used_encrypted_size = 0
-    files = File.objects.filter(owner=request.user)
-    for file in files:
-        used_encrypted_size += file.encrypted_size
-        used_size += file.size
-    return JsonResponse({"total": used_size * 2, "used": used_size}, status=200)
+    total_used_size = 0
+    folder_used_size = 0
+    includeTrash = request.GET.get('includeTrash', False)
+
+    all_files = File.objects.filter(owner=request.user, inTrash=includeTrash)
+    for file in all_files:
+        total_used_size += file.size
+
+    folder_files = folder_obj.get_all_files(ignoreTrash=not includeTrash)
+    for file in folder_files:
+        folder_used_size += file.size
+
+    return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
 
 @api_view(['GET'])
@@ -143,9 +150,6 @@ def get_shares(request):
             items.append(item)
 
     return JsonResponse(items, status=200, safe=False)
-
-
-
 
 
 @api_view(['GET'])

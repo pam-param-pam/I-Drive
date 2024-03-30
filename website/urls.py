@@ -51,7 +51,7 @@ urlpatterns = [
                   path("api/delete", delete, name="delete file/folder"),
 
                   path("api/moveToTrash", move_to_trash, name="move file/folder to trash"),
-                  path("api/usage", get_usage, name="get total size of all files"),
+                  path("api/usage/<folder_id>", get_usage, name="get total size of all files"),
 
                   path("api/rename", rename, name="rename file/folder"),
 

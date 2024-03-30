@@ -1,12 +1,13 @@
 import base64
 import os
+import re
 import time
 from wsgiref.util import FileWrapper
 
 import m3u8
 import requests
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, StreamingHttpResponse, JsonResponse
+from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, HttpResponseBadRequest
 from django.views.decorators.cache import cache_page
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
@@ -18,6 +19,7 @@ from website.tasks import process_download
 from website.utilities.Discord import discord
 from website.utilities.decorators import check_file_and_permissions, view_cleanup
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_response, error_res
+from website.views.otherViews import range_re, RangeFileWrapper
 
 DELAY_TIME = 0
 
@@ -183,41 +185,65 @@ def stream_fragment(request, fragment_id):
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-#@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 @check_file_and_permissions
 @cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
 @xframe_options_sameorigin
 def get_file_preview(request, file_obj):
-    if file_obj.size > 25 * 1023 * 1024:
-        return JsonResponse(error_res(user=request.user, code=400, error_code=11,
-                                      details=f"File size={file_obj.size} is too big, max allowed >25mb."),
-                            status=400)
+
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-    if len(fragments) != 1:
-        return JsonResponse(error_res(user=request.user, code=500, error_code=11,
-                                      details=f"Unexpected, report this. File with size <25 has more than 1 fragment."),
-                            status=400)
 
-    url = discord.get_file_url(fragments[0].message_id, fragments[0].attachment_id)
-
-    response = requests.get(url, stream=True)
-
-    # Ensure the request was successful
-    if response.status_code == 200:
-
-        def file_iterator():
-            for chunk in response.iter_content(chunk_size=8192):
+    def file_iterator(url, start_byte, end_byte, chunk_size=8192):
+        #headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
+        #headers=headers,
+        response = requests.get(url,stream=True)
+        if response.ok:  # Partial content
+            for chunk in response.iter_content(chunk_size):
                 yield chunk
+        else:
+            raise Exception("Failed to fetch partial content. Status code: {}".format(response.status_code))
 
-        streaming_response = StreamingHttpResponse(file_iterator(), content_type=file_obj.mimetype)
-        streaming_response['Content-Disposition'] = 'inline'
-
-        return streaming_response
+    range_header = request.headers.get('Range')
+    if range_header:
+        range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
+        if range_match:
+            start_byte = int(range_match.group(1))
+            end_byte = int(range_match.group(2)) if range_match.group(2) else None
+        else:
+            return HttpResponseBadRequest("Invalid byte range request")
     else:
-        # Handle the case where the file couldn't be fetched
-        return HttpResponse("Failed to fetch file from URL", status=response.status_code)
+        start_byte = 0
+        end_byte = None
 
+    # Find the appropriate file fragment based on byte range request
+    print("UwU")
+    print(f"start_byte= {start_byte}")
+    for fragment in fragments:
+        print("another fragment")
+        if start_byte < fragment.size:
+            selected_fragment = fragment
+            break
+        else:
+            start_byte -= fragment.size
 
+    url = discord.get_file_url(selected_fragment.message_id, selected_fragment.attachment_id)
+    print(url)
+    print(start_byte)
+    print(end_byte)
+    response = StreamingHttpResponse(
+        (chunk for chunk in file_iterator(url, 0, 0)),
+        content_type='application/octet-stream',
+        status=206 if range_header else 200,
+    )
+
+    file_size = file_obj.size
+    if end_byte is None:
+        end_byte = file_size - 1
+
+    response['Content-Length'] = str(end_byte - start_byte + 1)
+    response['Content-Range'] = 'bytes %s-%s/%s' % (start_byte, end_byte, file_size)
+    response['Accept-Ranges'] = 'bytes'
+    return response
 
 
 @api_view(['GET'])
