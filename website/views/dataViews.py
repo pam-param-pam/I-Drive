@@ -1,21 +1,16 @@
 import time
-from datetime import datetime, timedelta
 
-from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.throttling import UserRateThrottle
 
-from website.decorators import check_file_and_permissions, check_folder_and_permissions
 from website.models import File, Folder, UserPerms, UserSettings, ShareableLink
+from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions
 from website.utilities.other import build_folder_content, create_file_dict, create_share_dict, get_shared_folder, \
-    error_res, \
     create_folder_dict
 
 DELAY_TIME = 0
-
 
 
 @api_view(['GET'])
@@ -49,18 +44,13 @@ def get_file(request, file_obj):
 def get_usage(request):
     time.sleep(DELAY_TIME)
 
-    try:
-        used_size = 0
-        used_encrypted_size = 0
-        files = File.objects.filter(owner=request.user)
-        for file in files:
-            used_encrypted_size += file.encrypted_size
-            used_size += file.size
-        return JsonResponse({"total": used_size * 2, "used": used_size}, status=200)
-
-    except ValidationError:
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8,
-                                      details=f"Error happened when querying for all files of a user?"), status=404)
+    used_size = 0
+    used_encrypted_size = 0
+    files = File.objects.filter(owner=request.user)
+    for file in files:
+        used_encrypted_size += file.encrypted_size
+        used_size += file.size
+    return JsonResponse({"total": used_size * 2, "used": used_size}, status=200)
 
 
 @api_view(['GET'])
@@ -155,90 +145,7 @@ def get_shares(request):
     return JsonResponse(items, status=200, safe=False)
 
 
-@api_view(['POST'])
-@throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated])
-def delete_share(request):
-    time.sleep(DELAY_TIME)
-    try:
-        token = request.data['token']
 
-        share = ShareableLink.objects.get(token=token)
-
-        if share.owner != request.user:
-            return JsonResponse(
-                error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                status=403)
-        share.delete()
-        return HttpResponse(f"Share deleted!", status=204)
-
-    except (ValueError, KeyError):
-        return JsonResponse(
-            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-            status=404)
-
-
-@api_view(['POST'])
-# @permission_classes([IsAuthenticated])
-@throttle_classes([UserRateThrottle])
-def create_share(request):
-    time.sleep(DELAY_TIME)
-
-    try:
-        print(request.data)
-        item_id = request.data['resource_id']
-        value = abs(int(request.data['value']))
-
-        unit = request.data['unit']
-        password = request.data.get('password')
-
-        current_time = datetime.now()
-        try:
-            obj = Folder.objects.get(id=item_id)
-        except Folder.DoesNotExist:
-            try:
-                obj = File.objects.get(id=item_id)
-            except File.DoesNotExist:
-                return JsonResponse(error_res(user=request.user, code=404, error_code=8,
-                                              details="Resource with id of 'resource_id' doesn't exist."), status=404)
-
-        if obj.owner != request.user:
-            return JsonResponse(
-                error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                status=403)
-        if unit == 'minutes':
-            expiration_time = current_time + timedelta(minutes=value)
-        elif unit == 'hours':
-            expiration_time = current_time + timedelta(hours=value)
-        elif unit == 'days':
-            expiration_time = current_time + timedelta(days=value)
-        else:
-            return JsonResponse(
-                error_res(user=request.user, code=404, error_code=1,
-                          details="Invalid unit. Supported units are 'minutes', 'hours', and 'days'."),
-                status=404)
-
-        share = ShareableLink.objects.create(
-            expiration_time=expiration_time,
-            owner_id=1,
-            content_type=ContentType.objects.get_for_model(obj),
-            object_id=obj.id
-        )
-        if password:
-            share.password = password
-
-        share.save()
-        item = create_share_dict(share)
-
-        return JsonResponse(item, status=200, safe=False)
-
-    except ValidationError:
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8,
-                                      details="Resource with id of 'resource_id' doesn't exist."), status=404)
-    except (ValueError, KeyError):
-        return JsonResponse(
-            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-            status=404)
 
 
 @api_view(['GET'])
@@ -247,23 +154,18 @@ def create_share(request):
 def view_share(request, token):
     time.sleep(DELAY_TIME)
 
+    share = ShareableLink.objects.get(token=token)
+    if share.is_expired():
+        return HttpResponse(f"Share is expired :(", status=404)
+
     try:
-        share = ShareableLink.objects.get(token=token)
-        if share.is_expired():
-            return HttpResponse(f"Share is expired :(", status=404)
+        obj = Folder.objects.get(id=share.object_id)
+        settings = UserSettings.objects.get(user=obj.owner)
 
-        try:
-            obj = Folder.objects.get(id=share.object_id)
-            settings = UserSettings.objects.get(user=obj.owner)
-
-            return JsonResponse(get_shared_folder(obj, settings.subfolders_in_shares), status=200)
-        except Folder.DoesNotExist:
-            obj = File.objects.get(id=share.object_id)
-            return JsonResponse(create_file_dict(obj), status=200)
-
-    except ShareableLink.DoesNotExist:
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8,
-                                      details="Resource with token of 'token' doesn't exist."), status=404)
+        return JsonResponse(get_shared_folder(obj, settings.subfolders_in_shares), status=200)
+    except Folder.DoesNotExist:
+        file_ob = File.objects.get(id=share.object_id)
+        return JsonResponse(create_file_dict(file_ob), status=200)
 
 
 """

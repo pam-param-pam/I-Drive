@@ -1,150 +1,94 @@
-import os
-import time
-
-import shortuuid
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.permissions import IsAuthenticated
+from django.http import JsonResponse
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
-from website.forms import UploadFileForm
-from website.models import Folder, File, UserSettings, Fragment
-from website.tasks import handle_uploaded_file
-from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_response, error_res
+from website.models import Folder, File, Fragment
+from website.utilities.common.error import BadRequestError, ResourcePermissionError
+from website.utilities.decorators import handle_common_errors
 
 DELAY_TIME = 0
-
-
-@csrf_exempt
-@api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
-# @permission_classes([IsAuthenticated])
-def upload_file(request):
-    time.sleep(DELAY_TIME)
-
-    # request.upload_handlers.insert(0, ProgressBarUploadHandler(
-    #    request))  # TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
-
-    return _upload_file(request)
 
 
 @api_view(['POST', 'PATCH'])
 # @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
+@handle_common_errors
 def create_file(request):
     user = request.user
     user.id = 1
-    try:
-        if request.method == "POST":
-            files = request.data['files']
-            if not isinstance(files, list):
-                return JsonResponse(error_res(user=request.user, code=404, error_code=8,
-                                              details="'ids' must be a list."), status=404)
-            if len(files) > 100:
-                return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                              details="'ids' cannot be larger than 100"), status=400)
-            response_json = []
 
-            for file in files:
-                file_name = file['name']
-                parent_id = file['parent_id']
-                extension = file['extension']
-                mimetype = file['mimetype']
-                file_size = file['size']
-                file_index = file['index']
+    if request.method == "POST":
+        files = request.data['files']
+        if not isinstance(files, list):
+            raise BadRequestError("'ids' must be a list.")
 
-                folder_obj = Folder.objects.get(id=parent_id)
-                if folder_obj.owner.id != request.user.id:  # todo fix perms
-                    return JsonResponse(
-                        error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                        status=403)
-                private_key = rsa.generate_private_key(
-                    public_exponent=65537,
-                    key_size=2048,
-                    backend=default_backend()
-                )
-                public_key = private_key.public_key()
-                private_key_pem = private_key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption()
-                )
+        if len(files) > 100:
+            raise BadRequestError("'ids' cannot be larger than 100")
 
-                public_key_pem = public_key.public_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo
-                )
+        response_json = []
 
-                file_obj = File(
-                    extension=extension,
-                    name=file_name,
-                    size=file_size,
-                    mimetype=mimetype,
-                    type=mimetype.split("/")[0],
-                    owner_id=user.id,
-                    key=private_key_pem,
-                    parent_id=parent_id,
-                )
-                if file_size == 0:
-                    file_obj.ready = True
-                file_obj.save()
-                settings = UserSettings.objects.get(user=request.user)
+        for file in files:
+            file_name = file['name']
+            parent_id = file['parent_id']
+            extension = file['extension']
+            mimetype = file['mimetype']
+            file_size = file['size']
+            file_index = file['index']
 
-                response_json.append({"index": file_index, "file_id": file_obj.id})
+            folder_obj = Folder.objects.get(id=parent_id)
+            if folder_obj.owner.id != request.user.id:  # todo fix perms
+                raise ResourcePermissionError(f"You do not own this resource!")
 
-            return JsonResponse(response_json, safe=False)
-
-        if request.method == "PATCH":
-            file_id = request.data['file_id']
-            fragment_sequence = request.data['fragment_sequence']
-            total_fragments = request.data['total_fragments']
-            message_id = request.data['message_id']
-            attachment_id = request.data['attachment_id']
-            fragment_size = request.data['fragment_size']
-            # return fragment ID
-
-            file_obj = File.objects.get(id=file_id)
-            if file_obj.owner.id != request.user.id:  # todo fix perms
-                return JsonResponse(
-                    error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
-                    status=403)
-
-            fragment_obj = Fragment(
-                sequence=fragment_sequence,
-                file=file_obj,
-                size=fragment_size,
-                attachment_id=attachment_id,
-                encrypted_size=fragment_size,
-                message_id=message_id,
+            file_obj = File(
+                extension=extension,
+                name=file_name,
+                size=file_size,
+                mimetype=mimetype,
+                type=mimetype.split("/")[0],
+                owner_id=user.id,
+                key="no key",
+                parent_id=parent_id,
             )
-            fragment_obj.save()
-            if fragment_sequence == total_fragments:
+            if file_size == 0:
                 file_obj.ready = True
-                file_obj.save()
-                return JsonResponse({"woo": "file fully saved"}, status=200)
+            file_obj.save()
 
-            return JsonResponse({"woo": "fragment saved"}, status=200)
+            response_json.append({"index": file_index, "file_id": file_obj.id})
 
-    except (File.DoesNotExist, ValidationError):
-        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                      details="File with id of 'file_id' doesn't exist."), status=400)
-    except Folder.DoesNotExist:
-        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                      details="Folder with id of 'parent_id' doesn't exist."), status=400)
-    except ValidationError:
-        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                      details="Validation error for Folder"), status=400)
-    except KeyError:
-        return JsonResponse(
-            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-            status=404)
+        return JsonResponse(response_json, safe=False)
+
+    if request.method == "PATCH":
+        file_id = request.data['file_id']
+        fragment_sequence = request.data['fragment_sequence']
+        total_fragments = request.data['total_fragments']
+        message_id = request.data['message_id']
+        attachment_id = request.data['attachment_id']
+        fragment_size = request.data['fragment_size']
+        # return fragment ID
+
+        file_obj = File.objects.get(id=file_id)
+        if file_obj.owner.id != request.user.id:  # todo fix perms
+            raise ResourcePermissionError(f"You do not own this resource!")
+
+        fragment_obj = Fragment(
+            sequence=fragment_sequence,
+            file=file_obj,
+            size=fragment_size,
+            attachment_id=attachment_id,
+            encrypted_size=fragment_size,
+            message_id=message_id,
+        )
+        fragment_obj.save()
+        if fragment_sequence == total_fragments:
+            file_obj.ready = True
+            file_obj.save()
+            return JsonResponse({"woo": "file fully saved"}, status=200)
+
+        return JsonResponse({"woo": "fragment saved"}, status=200)
 
 
+"""
 @csrf_protect
 def _upload_file(request):
     if request.method == "POST":
@@ -172,3 +116,16 @@ def _upload_file(request):
     else:
         form = UploadFileForm()
     return render(request, "upload.html", {"form": form})
+    
+
+@csrf_exempt
+@api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
+# @permission_classes([IsAuthenticated])
+def upload_file(request):
+    time.sleep(DELAY_TIME)
+
+    # request.upload_handlers.insert(0, ProgressBarUploadHandler(
+    #    request))  # TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
+
+    return _upload_file(request)
+"""

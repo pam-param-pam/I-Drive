@@ -58,7 +58,7 @@ class Discord:
         self.channel_id = '870781149583130644'
         self.current_token_index = 0
 
-        self.headers = {'Authorization': f'Bot {self.current_token}'}
+        self.headers = {'Authorization': f'Bot {self.current_token}', "Content-Type": 'application/json'}
 
     @property
     def current_token(self):
@@ -101,10 +101,20 @@ class Discord:
         if response.is_success or response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)
+
     @retry
     def remove_message(self, message_id) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.delete(url, headers=self.headers)
+        if response.is_success or response.status_code == 429:
+            return response
+        raise DiscordError(response.text, response.status_code)
+
+    @retry
+    def edit_attachments(self, webhook, message_id, attachments_to_keep) -> httpx.Response:
+        url = f"{webhook}/messages/{message_id}"
+        response = self.client.patch(url, json={"attachments": [{"id": attachments_to_keep}]}, headers=self.headers)
+        print(response.text)
         if response.is_success or response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)

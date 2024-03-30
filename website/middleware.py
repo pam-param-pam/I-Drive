@@ -34,7 +34,7 @@ class TokenAuthMiddleware(BaseMiddleware):
         return await super().__call__(scope, receive, send)
 
 
-class RequestIdMiddleware(object):
+class RequestIdMiddleware(object): #todo base class is object??
     def __init__(self, get_response=None):
         self.get_response = get_response
 

@@ -13,10 +13,10 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.decorators import view_cleanup, check_file_and_permissions
 from website.models import File, Fragment
 from website.tasks import process_download
 from website.utilities.Discord import discord
+from website.utilities.decorators import check_file_and_permissions, view_cleanup
 from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_response, error_res
 
 DELAY_TIME = 0
@@ -194,7 +194,7 @@ def get_file_preview(request, file_obj):
                             status=400)
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     if len(fragments) != 1:
-        return JsonResponse(error_res(user=request.user, code=400, error_code=11,
+        return JsonResponse(error_res(user=request.user, code=500, error_code=11,
                                       details=f"Unexpected, report this. File with size <25 has more than 1 fragment."),
                             status=400)
 

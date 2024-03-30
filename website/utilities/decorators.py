@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 
 from website.models import File, Folder
+from website.utilities.common.error import ResourceNotFound, ResourcePermissionError, BadRequestError, \
+    RootPermissionError
 from website.utilities.other import error_res
 
 
@@ -73,13 +75,22 @@ def handle_common_errors(view_func):
         try:
             return view_func(request, *args, **kwargs)
         except Folder.DoesNotExist:
-            return JsonResponse(error_res(user=request.user, code=400, error_code=8), status=400)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder not found."), status=404)
         except File.DoesNotExist:
-            return JsonResponse(error_res(user=request.user, code=400, error_code=8), status=400)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="File not found."), status=404)
         except ValidationError as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
+        except ResourceNotFound as e:
             return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
+        except ResourcePermissionError as e:
+            return JsonResponse(error_res(user=request.user, code=403, error_code=1, details=str(e)), status=403)
+        except BadRequestError as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
+        except RootPermissionError as e:
+            return JsonResponse(error_res(user=request.user, code=403, error_code=12, details=str(e)), status=403)
         except KeyError:
             return JsonResponse(
                 error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
                 status=404)
     return wrapper
+

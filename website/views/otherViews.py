@@ -5,6 +5,8 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
+from website.utilities.decorators import check_folder_and_permissions
+
 DELAY_TIME = 0
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -21,6 +23,8 @@ def index(request):
 
 
 # Example usage in a view
-def test(request, file_obj):
+@check_folder_and_permissions
+def test(request, folder_obj):
     # Your delete file logic here using file_obj
-    return HttpResponse(file_obj.name)
+    print(folder_obj.get_all_children())
+    return HttpResponse()

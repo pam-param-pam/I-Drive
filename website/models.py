@@ -64,6 +64,20 @@ class Folder(models.Model):
         self.inTrash = False
         self.save()
 
+    def get_all_files(self):
+        children = []
+
+        folders = Folder.objects.filter(parent_id=self.id)
+        files = File.objects.filter(parent_id=self.id)
+
+        for file in files:
+            children.append(file)
+
+        for folder in folders:
+            children += folder.get_all_files()
+
+        return children
+
     def delete_forever(self, request):
         folders = Folder.objects.filter(parent_id=self.id)
         files = File.objects.filter(parent_id=self.id)
