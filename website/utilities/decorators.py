@@ -43,8 +43,8 @@ def check_file_and_permissions(view_func):
 
         except (File.DoesNotExist, ValidationError):
 
-            return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                          details=f"File with id of '{file_id}' doesn't exist."), status=400)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8,
+                                          details=f"File with id of '{file_id}' doesn't exist."), status=404)
 
         return view_func(request, file_obj, *args, **kwargs)
 
@@ -64,8 +64,8 @@ def check_folder_and_permissions(view_func):
                     status=403)
 
         except (File.DoesNotExist, ValidationError):
-            return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                          details=f"Folder with id of '{folder_id}' doesn't exist."), status=400)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8,
+                                          details=f"Folder with id of '{folder_id}' doesn't exist."), status=404)
 
         return view_func(request, folder_obj, *args, **kwargs)
 

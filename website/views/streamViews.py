@@ -1,28 +1,200 @@
-import base64
-import os
 import re
-import time
-from wsgiref.util import FileWrapper
+from urllib.parse import quote
 
-import m3u8
 import requests
-from django.core.exceptions import ValidationError
 from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, HttpResponseBadRequest
 from django.views.decorators.cache import cache_page
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from rest_framework.decorators import permission_classes, api_view, throttle_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
-from website.models import File, Fragment
-from website.tasks import process_download
+from website.models import Fragment
 from website.utilities.Discord import discord
-from website.utilities.decorators import check_file_and_permissions, view_cleanup
-from website.utilities.other import create_temp_request_dir, create_temp_file_dir, build_response, error_res
-from website.views.otherViews import range_re, RangeFileWrapper
+from website.utilities.decorators import check_file_and_permissions
+from website.utilities.other import error_res
 
 DELAY_TIME = 0
 
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+# @permission_classes([IsAuthenticated])
+@check_file_and_permissions
+@xframe_options_sameorigin
+@cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
+def get_file_preview(request, file_obj):
+    if file_obj.size > 25 * 1023 * 1024:
+        return JsonResponse(error_res(user=request.user, code=400, error_code=11,
+                                      details=f"File size={file_obj.size} is too big, max allowed >25mb."),
+                            status=400)
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+    if len(fragments) != 1:
+        return JsonResponse(error_res(user=request.user, code=500, error_code=11,
+                                      details=f"Unexpected, report this. File with size <25 has more than 1 fragment."),
+                            status=400)
+
+    url = discord.get_file_url(fragments[0].message_id, fragments[0].attachment_id)
+
+    response = requests.get(url, stream=True)
+
+    # Ensure the request was successful
+    if response.status_code == 200:
+
+        def file_iterator():
+            for chunk in response.iter_content(chunk_size=8192):
+                yield chunk
+
+        streaming_response = StreamingHttpResponse(file_iterator(), content_type=file_obj.mimetype)
+        encoded_filename = quote(file_obj.name)
+
+        streaming_response['Content-Disposition'] = f'attachment; filename={encoded_filename}'
+        streaming_response['Accept-Ranges'] = 'bytes'
+        streaming_response['Content-Length'] = fragments[0].size
+
+        return streaming_response
+    else:
+        # Handle the case where the file couldn't be fetched
+        return HttpResponse("Failed to fetch file from URL", status=response.status_code)
+
+
+@api_view(['GET'])
+@xframe_options_sameorigin
+@throttle_classes([UserRateThrottle])
+# @permission_classes([IsAuthenticated])
+@check_file_and_permissions
+def stream_file(request, file_obj):
+    print(file_obj.name)
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+
+    def file_iterator(index, start_byte, end_byte, chunk_size=8192):
+
+        headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
+        # headers = {}
+        print(f"fragments lenght: {len(fragments)}")
+
+        url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
+        print(url)
+        response = requests.get(url, headers=headers, stream=True)
+        if response.ok:  # Partial content
+            for chunk in response.iter_content(chunk_size):
+                yield chunk
+        else:
+            raise Exception("Failed to fetch partial content. Status code: {}".format(response.status_code))
+
+    range_header = request.headers.get('Range')
+    print(f"range_header: {range_header}")
+    if range_header:
+        range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
+        if range_match:
+            start_byte = int(range_match.group(1))
+            end_byte = int(range_match.group(2)) if range_match.group(2) else None
+        else:
+            return HttpResponseBadRequest("Invalid byte range request")
+    else:
+        start_byte = 0
+        end_byte = None
+
+    # Find the appropriate file fragment based on byte range request
+    print(f"start_byte= {start_byte}")
+    real_start_byte = start_byte
+    print(f"real_start_byte= {start_byte}")
+    selected_fragment_index = 0
+    for index, fragment in enumerate(fragments):
+        print("another fragment")
+        if start_byte < fragment.size:
+            selected_fragment_index = index
+            break
+        else:
+            start_byte -= fragment.size
+    print(f"selected_fragment_index = {selected_fragment_index}")
+
+    print(f"start_byte after= {start_byte}")
+    print(f"end_byte after= {end_byte}")
+    print(f"real_start_byte after= {real_start_byte}")
+    #        content_type='application/octet-stream',
+
+    if len(fragments) == 1 and start_byte == 0:
+        status = 200
+    else:
+        status = 206
+
+    response = StreamingHttpResponse(
+        (chunk for chunk in file_iterator(selected_fragment_index, start_byte, end_byte)),
+        content_type=file_obj.mimetype,
+        status=status,
+    )
+
+    file_size = file_obj.size
+
+    # response['Content-Length'] = str(end_byte - start_byte + 1)
+    # response['Content-Length'] = str(26188800)
+    i = 0
+    real_end_byte = 0
+    while i <= selected_fragment_index:
+        real_end_byte += fragments[i].size
+        i += 1
+    real_end_byte -= 1
+    # TODO calculate real fragments size here for real_end_byte
+
+    response['Content-Length'] = file_obj.size
+    if range_header:
+        response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte, file_size)
+        response['Accept-Ranges'] = 'bytes'
+        response['Content-Length'] = real_end_byte - real_start_byte
+
+    # response['Content-Disposition'] = f'attachment; filename={file_obj.name}'
+
+    # response['Content-Disposition'] = 'inline'
+
+    return response
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+@check_file_and_permissions
+def download_file(request, file_obj):
+    pass
+
+
+"""
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+# @permission_classes([IsAuthenticated])
+# @cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
+# @cache_page(60 * 60 * 60 * 60)  # Cache for a long time lol
+def get_fragment_urls(request, file_id):
+    try:
+
+        # if file.owner != request.user:
+        #    return HttpResponse(f"unauthorized", status=403)
+        fileObj = File.objects.get(id=file_id)
+        if not fileObj.ready:
+            return HttpResponse(f"file not ready", status=404)
+
+        serialized_key = base64.urlsafe_b64encode(fileObj.key).decode()
+
+        fragments = Fragment.objects.filter(file=fileObj).order_by('sequence')
+        fragments_list = []
+
+        for fragment in fragments:
+            fragments_list.append({
+                "sequence": fragment.sequence,
+                "url": f"http://127.0.0.1:8000/api/stream/fragment/{fragment.id}",
+                "length": 30,
+                "size": fragment.size,
+                "encrypted_size": fragment.encrypted_size}
+            )
+        json_string = {"name": fileObj.name,
+                       "id": fileObj.id,
+                       "key": serialized_key,
+                       "total_size": fileObj.size,
+                       "fragments": fragments_list}
+
+        return JsonResponse(json_string, safe=False, status=200)
+
+    except File.DoesNotExist:
+        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
+                                      details="File with id of 'file_id' doesn't exist."), status=400)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -181,106 +353,4 @@ def stream_fragment(request, fragment_id):
     except Fragment.DoesNotExist:
         return JsonResponse(error_res(user=request.user, code=400, error_code=8,
                                       details="Fragment with id of 'fragment_id' doesn't exist."), status=400)
-
-
-@api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated])
-@check_file_and_permissions
-@cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
-@xframe_options_sameorigin
-def get_file_preview(request, file_obj):
-
-    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-
-    def file_iterator(url, start_byte, end_byte, chunk_size=8192):
-        #headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
-        #headers=headers,
-        response = requests.get(url,stream=True)
-        if response.ok:  # Partial content
-            for chunk in response.iter_content(chunk_size):
-                yield chunk
-        else:
-            raise Exception("Failed to fetch partial content. Status code: {}".format(response.status_code))
-
-    range_header = request.headers.get('Range')
-    if range_header:
-        range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
-        if range_match:
-            start_byte = int(range_match.group(1))
-            end_byte = int(range_match.group(2)) if range_match.group(2) else None
-        else:
-            return HttpResponseBadRequest("Invalid byte range request")
-    else:
-        start_byte = 0
-        end_byte = None
-
-    # Find the appropriate file fragment based on byte range request
-    print("UwU")
-    print(f"start_byte= {start_byte}")
-    for fragment in fragments:
-        print("another fragment")
-        if start_byte < fragment.size:
-            selected_fragment = fragment
-            break
-        else:
-            start_byte -= fragment.size
-
-    url = discord.get_file_url(selected_fragment.message_id, selected_fragment.attachment_id)
-    print(url)
-    print(start_byte)
-    print(end_byte)
-    response = StreamingHttpResponse(
-        (chunk for chunk in file_iterator(url, 0, 0)),
-        content_type='application/octet-stream',
-        status=206 if range_header else 200,
-    )
-
-    file_size = file_obj.size
-    if end_byte is None:
-        end_byte = file_size - 1
-
-    response['Content-Length'] = str(end_byte - start_byte + 1)
-    response['Content-Range'] = 'bytes %s-%s/%s' % (start_byte, end_byte, file_size)
-    response['Accept-Ranges'] = 'bytes'
-    return response
-
-
-@api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated])
-# @cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
-# @cache_page(60 * 60 * 60 * 60)  # Cache for a long time lol
-def get_fragment_urls(request, file_id):
-    try:
-
-        # if file.owner != request.user:
-        #    return HttpResponse(f"unauthorized", status=403)
-        fileObj = File.objects.get(id=file_id)
-        if not fileObj.ready:
-            return HttpResponse(f"file not ready", status=404)
-
-        serialized_key = base64.urlsafe_b64encode(fileObj.key).decode()
-
-        fragments = Fragment.objects.filter(file=fileObj).order_by('sequence')
-        fragments_list = []
-
-        for fragment in fragments:
-            fragments_list.append({
-                "sequence": fragment.sequence,
-                "url": f"http://127.0.0.1:8000/api/stream/fragment/{fragment.id}",
-                "length": 30,
-                "size": fragment.size,
-                "encrypted_size": fragment.encrypted_size}
-            )
-        json_string = {"name": fileObj.name,
-                       "id": fileObj.id,
-                       "key": serialized_key,
-                       "total_size": fileObj.size,
-                       "fragments": fragments_list}
-
-        return JsonResponse(json_string, safe=False, status=200)
-
-    except File.DoesNotExist:
-        return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                      details="File with id of 'file_id' doesn't exist."), status=400)
+"""

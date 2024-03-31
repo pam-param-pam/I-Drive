@@ -115,7 +115,25 @@ class File(models.Model):
 
     def save(self, *args, **kwargs):
         max_name_length = 30  # Set your arbitrary maximum length here
-        self.name = self.name[:max_name_length]
+        if len(self.name) > max_name_length:
+            # Find the last occurrence of '.' to handle possibility of no extension
+            last_dot_index = self.name.rfind('.')
+
+            # Extracting the extension if it exists
+            if last_dot_index != -1:
+                file_extension = self.name[last_dot_index + 1:]
+                file_name_without_extension = self.name[:last_dot_index]
+            else:
+                file_extension = ""
+                file_name_without_extension = self.name
+
+            # Keeping only the first 'max_name_length' characters
+            shortened_file_name = file_name_without_extension[:max_name_length]
+
+            # Adding the extension back if it exists
+            if file_extension:
+                shortened_file_name += "." + file_extension
+            self.name = shortened_file_name
 
         if self.encrypted_size is None:
             self.encrypted_size = self.size
