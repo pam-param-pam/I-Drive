@@ -15,7 +15,6 @@ from website.utilities.other import error_res
 
 DELAY_TIME = 0
 
-
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 # @permission_classes([IsAuthenticated])
