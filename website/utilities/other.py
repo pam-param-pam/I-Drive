@@ -1,6 +1,7 @@
 import os
 
-from website.models import File, Folder, UserSettings
+from website.models import File, Folder, UserSettings, Fragment
+from website.utilities.Discord import discord
 
 message_codes = {
     1: {"pl": "Niepoprawne zapytanie", "en": "Bad Request"},
@@ -15,6 +16,9 @@ message_codes = {
     10: {"pl": "Zasobu nie da sie strumieniować", "en": "Resource is not streamable"},
     11: {"pl": "Nie da sie wygenerować podglądu zasobu", "en": "Resource is not previewable"},
     12: {"pl": "Brak uprawnień do 'root' foldera", "en": "Access denied to 'root' folder"},
+    13: {"pl": "Discord wysłał błędną odpowiedż", "en": "Unexpected discord response"},
+    14: {"pl": "Discord jest chwilowo zablokowany ", "en": "Discord is temporarily blocked"},
+    15: {"pl": "Funkcja jeszcze nie dostępna", "en": "Not yet implemented"},
 
 }
 
@@ -62,13 +66,23 @@ def create_file_dict(file_obj):
         "maintainers": [],
         "last_modified": file_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
     }
+    base_url = "http://127.0.0.1:8000"
+    base_url = "https://api.pamparampam.dev"
     if file_obj.size < 25 * 1024 * 1024:  # max preview size
-        file_dict['preview_url'] = f"http://127.0.0.1:8000/api/file/preview/{file_obj.id}"
-        file_dict['download_url'] = f"http://127.0.0.1:8000/api/file/preview/{file_obj.id}"
+        if file_obj.id == "h4JEztnaEaQu8WHfX4eB9i":
+            fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+
+            url = discord.get_file_url(fragments[0].message_id, fragments[0].attachment_id)
+            file_dict['preview_url'] = url
+        else:
+            #file_dict['preview_url'] = f"{base_url}/api/file/preview/{file_obj.id}"
+            file_dict['preview_url'] = f"{base_url}/api/file/stream/{file_obj.id}"
+
+        file_dict['download_url'] = f"{base_url}/api/file/preview/{file_obj.id}"
 
     else:
-        file_dict['preview_url'] = f"http://127.0.0.1:8000/api/file/stream/{file_obj.id}"
-        file_dict['download_url'] = f"http://127.0.0.1:8000/api/file/download/{file_obj.id}"
+        file_dict['preview_url'] = f"{base_url}/api/file/stream/{file_obj.id}"
+        file_dict['download_url'] = f"{base_url}/api/file/download/{file_obj.id}"
 
     return file_dict
 

@@ -3,30 +3,13 @@ import shutil
 import traceback
 from functools import wraps
 
-from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 
 from website.models import File, Folder
 from website.utilities.common.error import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError
+    RootPermissionError, DiscordError, DiscordBlockError
 from website.utilities.other import error_res
-
-
-def view_cleanup(view_func):
-    def _wrapped_view(request, *args, **kwargs):
-        try:
-            return view_func(request, *args, **kwargs)
-        except Exception as e:
-            print(traceback.format_exc())
-            return JsonResponse(
-                error_res(user=request.user, code=404, error_code=2, details="view cleanup error"),
-                status=500)
-        finally:
-            shutil.rmtree(os.path.join("temp", request.request_id), ignore_errors=True)
-            pass
-
-    return _wrapped_view
 
 
 def check_file_and_permissions(view_func):
@@ -93,6 +76,12 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
         except RootPermissionError as e:
             return JsonResponse(error_res(user=request.user, code=403, error_code=12, details=str(e)), status=403)
+        except DiscordError as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=13, details=str(e)), status=400)
+        except DiscordBlockError as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=14, details=str(e)), status=400)
+        except NotImplementedError as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=15, details=str(e)), status=400)
         except KeyError:
             return JsonResponse(
                 error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),

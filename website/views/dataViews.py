@@ -1,14 +1,14 @@
 import time
 
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.cache import cache_page
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.models import File, Folder, UserPerms, UserSettings, ShareableLink
+from website.models import File, Folder, UserPerms, UserSettings
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions
-from website.utilities.other import build_folder_content, create_file_dict, create_share_dict, get_shared_folder, \
-    create_folder_dict
+from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict
 
 DELAY_TIME = 0
 
@@ -37,7 +37,7 @@ def get_file(request, file_obj):
 
     return JsonResponse(file_content)
 
-
+@cache_page(60 * 1)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
@@ -51,11 +51,13 @@ def get_usage(request, folder_obj):
 
     all_files = File.objects.filter(owner=request.user, inTrash=includeTrash)
     for file in all_files:
-        total_used_size += file.size
+        if not file.inTrash and file.ready:
+            total_used_size += file.size
 
-    folder_files = folder_obj.get_all_files(ignoreTrash=not includeTrash)
+    folder_files = folder_obj.get_all_files()
     for file in folder_files:
-        folder_used_size += file.size
+        if not file.inTrash and file.ready:
+            folder_used_size += file.size
 
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
@@ -130,46 +132,6 @@ def update_settings(request):
         settings.subfolders_in_shares = subfoldersInShares
     settings.save()
     return HttpResponse(status=200)
-
-
-@api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-@throttle_classes([UserRateThrottle])
-def get_shares(request):
-    time.sleep(DELAY_TIME)
-
-    user = request.user
-    user.id = 1
-    shares = ShareableLink.objects.filter(owner_id=1)
-    items = []
-
-    for share in shares:
-        if not share.is_expired():
-            item = create_share_dict(share)
-
-            items.append(item)
-
-    return JsonResponse(items, status=200, safe=False)
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-@throttle_classes([UserRateThrottle])
-def view_share(request, token):
-    time.sleep(DELAY_TIME)
-
-    share = ShareableLink.objects.get(token=token)
-    if share.is_expired():
-        return HttpResponse(f"Share is expired :(", status=404)
-
-    try:
-        obj = Folder.objects.get(id=share.object_id)
-        settings = UserSettings.objects.get(user=obj.owner)
-
-        return JsonResponse(get_shared_folder(obj, settings.subfolders_in_shares), status=200)
-    except Folder.DoesNotExist:
-        file_ob = File.objects.get(id=share.object_id)
-        return JsonResponse(create_file_dict(file_ob), status=200)
 
 
 """

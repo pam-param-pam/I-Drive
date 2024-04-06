@@ -63,32 +63,21 @@ class Folder(models.Model):
         self.inTrash = False
         self.save()
 
-    def get_all_files(self, ignoreTrash=False):
+    def get_all_files(self):
         children = []
-        if ignoreTrash:
-            folders = Folder.objects.filter(parent_id=self.id, inTrash=False)
-            files = File.objects.filter(parent_id=self.id, inTrash=False)
-        else:
-            folders = Folder.objects.filter(parent_id=self.id)
-            files = File.objects.filter(parent_id=self.id)
+
+        folders = Folder.objects.filter(parent_id=self.id)
+        files = File.objects.filter(parent_id=self.id)
 
         for file in files:
             children.append(file)
 
         for folder in folders:
-            children += folder.get_all_files(ignoreTrash=ignoreTrash)
+            children += folder.get_all_files()
 
         return children
 
-    def delete_forever(self, request):
-        folders = Folder.objects.filter(parent_id=self.id)
-        files = File.objects.filter(parent_id=self.id)
-        for file in files:
-            file.delete_forever(request)
-
-        for folder in folders:
-            folder.delete_forever(request)
-
+    def force_delete(self):
         self.delete()
 
 
@@ -107,7 +96,6 @@ class File(models.Model):
     last_modified_at = models.DateTimeField(default=timezone.now)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE)
     ready = models.BooleanField(default=False)
-
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -148,10 +136,8 @@ class File(models.Model):
         self.inTrash = False
         self.save()
 
-    def delete_forever(self, request):
-        # goofy ah circular import
-        from website.tasks import delete_file_task
-        delete_file_task.delay(request.user.id, request.request_id, self.id)
+    def force_delete(self):
+        self.delete()
 
 
 class UserSettings(models.Model):
@@ -240,3 +226,9 @@ class ShareableLink(models.Model):
 # class Trash(models.Model):
 #    folder_id = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True)
 #    old_parent_id = models.ForeignKey(Folder, on_delete=models.SET(get_users_root()))
+
+class Thumbnail(models.Model):
+    size = models.PositiveBigIntegerField()
+    attachment_id = models.CharField(max_length=255, null=True)
+    file = models.ForeignKey(File, on_delete=models.CASCADE)
+    message_id = models.CharField(max_length=255)

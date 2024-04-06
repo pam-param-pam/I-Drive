@@ -3,15 +3,18 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 
-from website.views.dataViews import users_me, get_shares, view_share, get_folder, get_file, get_breadcrumbs, get_usage, update_settings
-from website.views.fileManagmentViews import rename, move_to_trash, move, create_folder, delete_share, create_share, \
+from website.views.dataViews import users_me, get_folder, get_file, get_breadcrumbs, get_usage, update_settings
+from website.views.fileManagmentViews import rename, move_to_trash, move, create_folder, \
     delete
-from website.views.otherViews import test, index
+from website.views.otherViews import test, index, help1
+from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import get_file_preview, stream_file, download_file
 from website.views.uploadViews import create_file
 
 urlpatterns = [
-                  path("test/<folder_id>", test, name="download"),
+                  path("test/<file_id>", test, name="test"),
+                  path("help", help1, name="help"),
+
                   path("", index, name="index"),
 
 

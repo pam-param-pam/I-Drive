@@ -25,6 +25,9 @@ def create_file(request):
         if len(files) > 100:
             raise BadRequestError("'ids' cannot be larger than 100")
 
+        if len(files) == 0:
+            raise BadRequestError("'ids' length cannot be 0.")
+
         response_json = []
 
         for file in files:
@@ -41,12 +44,13 @@ def create_file(request):
             if folder_obj.owner.id != request.user.id:  # todo fix perms
                 raise ResourcePermissionError(f"You do not own this resource!")
 
+            file_type = mimetype.split("/")[0]
             file_obj = File(
                 extension=extension,
                 name=file_name,
                 size=file_size,
                 mimetype=mimetype,
-                type=mimetype.split("/")[0],
+                type=file_type,
                 owner_id=user.id,
                 key=b"no key",
                 parent_id=parent_id,
@@ -55,7 +59,7 @@ def create_file(request):
                 file_obj.ready = True
             file_obj.save()
 
-            response_json.append({"index": file_index, "file_id": file_obj.id})
+            response_json.append({"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name, "type": file_type})
 
         return JsonResponse(response_json, safe=False)
 

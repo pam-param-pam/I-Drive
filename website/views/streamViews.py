@@ -10,8 +10,8 @@ from rest_framework.throttling import UserRateThrottle
 
 from website.models import Fragment
 from website.utilities.Discord import discord
-from website.utilities.decorators import check_file_and_permissions
-from website.utilities.other import error_res
+from website.utilities.common.error import BadRequestError
+from website.utilities.decorators import check_file_and_permissions, handle_common_errors
 
 DELAY_TIME = 0
 
@@ -21,16 +21,14 @@ DELAY_TIME = 0
 @check_file_and_permissions
 @xframe_options_sameorigin
 @cache_page(60 * 60 * 2)  # Cache for 2 hours (time in seconds)
+@handle_common_errors
 def get_file_preview(request, file_obj):
     if file_obj.size > 25 * 1023 * 1024:
-        return JsonResponse(error_res(user=request.user, code=400, error_code=11,
-                                      details=f"File size={file_obj.size} is too big, max allowed >25mb."),
-                            status=400)
+        raise BadRequestError(f"File size={file_obj.size} is too big, max allowed >25mb.")
+
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     if len(fragments) != 1:
-        return JsonResponse(error_res(user=request.user, code=500, error_code=11,
-                                      details=f"Unexpected, report this. File with size <25 has more than 1 fragment."),
-                            status=400)
+        raise BadRequestError(f"Unexpected, report this. File with size <25 has more than 1 fragment.")
 
     url = discord.get_file_url(fragments[0].message_id, fragments[0].attachment_id)
 
@@ -55,12 +53,12 @@ def get_file_preview(request, file_obj):
         # Handle the case where the file couldn't be fetched
         return HttpResponse("Failed to fetch file from URL", status=response.status_code)
 
-
+@cache_page(60 * 60 * 24)
 @api_view(['GET'])
-@xframe_options_sameorigin
 @throttle_classes([UserRateThrottle])
 # @permission_classes([IsAuthenticated])
 @check_file_and_permissions
+@handle_common_errors
 def stream_file(request, file_obj):
     print(file_obj.name)
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
@@ -110,7 +108,6 @@ def stream_file(request, file_obj):
     print(f"start_byte after= {start_byte}")
     print(f"end_byte after= {end_byte}")
     print(f"real_start_byte after= {real_start_byte}")
-    #        content_type='application/octet-stream',
 
     if len(fragments) == 1 and start_byte == 0:
         status = 200
@@ -124,35 +121,32 @@ def stream_file(request, file_obj):
     )
 
     file_size = file_obj.size
-
-    # response['Content-Length'] = str(end_byte - start_byte + 1)
-    # response['Content-Length'] = str(26188800)
     i = 0
     real_end_byte = 0
     while i <= selected_fragment_index:
         real_end_byte += fragments[i].size
         i += 1
-    real_end_byte -= 1
+    real_end_byte -= 1  # apparently this -1 is vevy important
     # TODO calculate real fragments size here for real_end_byte
 
-    response['Content-Length'] = file_obj.size
+    response['Content-Length'] = file_size
+    response['Cache-Control'] = "max-age=3600"
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte, file_size)
         response['Accept-Ranges'] = 'bytes'
-        response['Content-Length'] = real_end_byte - real_start_byte
-
-    # response['Content-Disposition'] = f'attachment; filename={file_obj.name}'
-
-    # response['Content-Disposition'] = 'inline'
-
+        #response['Content-Length'] = real_end_byte - real_start_byte
+        response['Content-Length'] = real_end_byte - real_start_byte + 1  # apparently this +1 is vevy important
     return response
 
 
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+
 @check_file_and_permissions
+@handle_common_errors
 def download_file(request, file_obj):
-    pass
+    raise NotImplementedError("Come back later :3")
 
 
 """

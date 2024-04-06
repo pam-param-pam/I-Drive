@@ -1,39 +1,43 @@
-import json
 import time
-from json import JSONDecodeError
 
 import httpx
+from django.core.cache import caches
 
-
-class DiscordError(Exception):
-    def __init__(self, message="Unexpected Discord Error.", status=0):
-        self.status = status
-        try:
-            json_message = json.loads(message)
-
-            self.message = json_message.get("message")
-        except (JSONDecodeError, KeyError):
-            print(message)
-            self.message = "Unknown"
-
-        super().__init__(self.message)
-
-    def __str__(self):
-        return f'Discord error-> {self.status}: {self.message}'
+from website.utilities.common.error import DiscordError, DiscordBlockError
 
 
 def retry(func):
     def decorator(*args, **kwargs):
         response = func(*args, **kwargs)
-        if response.status_code == 429:  # with 4 tokens this almost never happens so no need for fancy rate limit calculations to avoid 429
-            retry_after = response.json()["retry_after"]
-            print("hit 429!!!!!!!!!!!!!!!")
+        print(response.headers["X-ratelimit-remaining"])
+        if response.headers["X-ratelimit-remaining"] == "1":
+            if response.status_code == 429:
+                print("hit 429!!!!!!!!!!!!!!!")
+                try:
+                    retry_after = response.json()["retry_after"]
+                    time.sleep(retry_after)
+                except KeyError:
+                    raise DiscordBlockError("Discord is stupid :(")
             args[0].switch_token()
-
             return decorator(*args, **kwargs)
 
-        if response.headers["x-ratelimit-remaining"] == "0":
-            args[0].switch_token()
+        return response
+
+    return decorator
+
+
+def webhook_retry(func):
+    def decorator(*args, **kwargs):
+        response = func(*args, **kwargs)
+        if response.status_code == 429:
+            retry_after = response.json()["retry_after"]
+            time.sleep(retry_after)
+            return decorator(*args, **kwargs)
+
+        if response.headers["X-ratelimit-remaining"] == "0":
+            retry_after = response.json()["X-RateLimit-Reset"]
+            time.sleep(retry_after)
+            return decorator(*args, **kwargs)
 
         return response
 
@@ -57,6 +61,7 @@ class Discord:
         self.BASE_URL = 'https://discord.com/api/v10'
         self.channel_id = '870781149583130644'
         self.current_token_index = 0
+        self.cache = caches["default"]
 
         self.headers = {'Authorization': f'Bot {self.current_token}', "Content-Type": 'application/json'}
 
@@ -78,6 +83,7 @@ class Discord:
         if response.is_success or response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)
+
     @retry
     def send_file(self, files) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
@@ -93,17 +99,26 @@ class Discord:
                 return attachment["url"]
         raise KeyError(f"File with {attachment_id} not found")
 
-
     @retry
     def get_message(self, message_id) -> httpx.Response:
+        cached_message = self.cache.get(message_id)
+        if cached_message:
+            print("using cached message")
+            return cached_message
+        print("hit discord api")
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.get(url, headers=self.headers)
         if response.is_success or response.status_code == 429:
+            # expire is 6 days
+            self.cache.set(message_id, response, timeout=518400)
+
             return response
+
         raise DiscordError(response.text, response.status_code)
 
     @retry
     def remove_message(self, message_id) -> httpx.Response:
+
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.delete(url, headers=self.headers)
         if response.is_success or response.status_code == 429:
@@ -111,10 +126,12 @@ class Discord:
         raise DiscordError(response.text, response.status_code)
 
     @retry
-    def edit_attachments(self, webhook, message_id, attachments_to_keep) -> httpx.Response:
+    def edit_attachments(self, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
+        attachments_to_keep = []
+        for id in attachment_ids_to_keep:
+            attachments_to_keep.append({"id": id})
         url = f"{webhook}/messages/{message_id}"
-        response = self.client.patch(url, json={"attachments": [{"id": attachments_to_keep}]}, headers=self.headers)
-        print(response.text)
+        response = self.client.patch(url, json={"attachments": attachments_to_keep}, headers=self.headers)
         if response.is_success or response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)

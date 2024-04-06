@@ -53,26 +53,33 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.middleware.RequestIdMiddleware',
+    #"django.middleware.cache.UpdateCacheMiddleware",
+    #"django.middleware.common.CommonMiddleware",
+    #"django.middleware.cache.FetchFromCacheMiddleware",
 
 ]
 CORS_ALLOW_HEADERS = "*"
 
+CORS_ALLOW_PRIVATE_NETWORK = True
+
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://127.0.0.1:5173',
-    'http://127.0.0.1:9999',
-    'http://localhost:9999',
     'http://localhost:8080',
     'http://localhost:5173',
+    'https://pamparampam.dev',
+    'https://api.pamparampam.dev',
+    'https://idrive.pamparampam.dev',
 
 ]
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://127.0.0.1:5173',
-    'http://127.0.0.1:9999',
-    'http://localhost:9999',
     'http://localhost:8080',
     'http://localhost:5173',
+    'https://pamparampam.dev',
+    'https://api.pamparampam.dev',
+    'https://idrive.pamparampam.dev',
 ]
 
 ROOT_URLCONF = 'website.urls'
@@ -167,8 +174,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10/min',
-        'user': '6000/min'
+        'anon': '30/min',
+        'user': '1000/min'
     }
 }
 # Celery settings

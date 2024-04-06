@@ -1,10 +1,8 @@
-import secrets
 
 from django.contrib import admin
 from django.template.defaultfilters import filesizeformat
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink
-from website.tasks import delete_file_task, delete_folder_task
 
 
 @admin.register(Fragment)
@@ -43,15 +41,15 @@ class FolderAdmin(admin.ModelAdmin):
 
     def delete_queryset(self, request, queryset):
         for folder in queryset:
-            folder.delete_forever(request)
+            folder.force_delete()
 
     # override of default django method(in obj page)
     def delete_model(self, request, obj):
         if isinstance(obj, Folder):
-            obj.delete_forever(request)
+            obj.force_delete()
         else:
             for real_obj in obj:
-                real_obj.delete_forever(request)
+                real_obj.force_delete()
 
     def move_to_trash(self, request, queryset):
         for folder in queryset:
@@ -68,20 +66,25 @@ class FileAdmin(admin.ModelAdmin):
     ordering = ["created_at"]
     list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
                     "inTrash"]
-    actions = ['move_to_trash', 'restore_from_trash']
+    actions = ['move_to_trash', 'restore_from_trash', 'force_ready']
 
 
 
     def delete_queryset(self, request, queryset):
         for real_obj in queryset:
-            real_obj.delete_forever(request)
+            real_obj.force_delete()
+
+    def force_ready(self, request, queryset):
+        for real_obj in queryset:
+            real_obj.ready = True
+            real_obj.save()
 
     def delete_model(self, request, obj):
         if isinstance(obj, File):
-            obj.delete_forever(request)
+            obj.force_delete()
         else:
             for real_obj in obj:
-                real_obj.delete_forever(request)
+                real_obj.force_delete()
 
     def move_to_trash(self, request, queryset):
         for file in queryset:
