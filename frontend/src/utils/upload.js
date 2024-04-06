@@ -2,6 +2,8 @@ import {fetchJSON} from "@/api/utils.js";
 import CryptoJS from 'crypto-js';
 import store from "@/store";
 import {create} from "@/api/folder.js";
+import vue from "@/utils/vue.js";
+import i18n from '../i18n';
 
 
 export function scanFiles(dt) {
@@ -70,23 +72,58 @@ function detectExtension(filename) {
   return "." + arry[arry.length - 1]
 
 }
+async function createFiles(fileList, filesInRequest) {
+  let createdFiles = []
+
+  let file_res = await fetchJSON(`/api/file/create`, {
+    method: "POST",
+    body: JSON.stringify({"files": filesInRequest})
+  })
+
+  for (let created_file of file_res) {
+    let file = fileList[created_file.index].file
+
+    createdFiles.push({"file_id": created_file.file_id, "encryption_key": created_file.key, "file": file,
+      "parent_id": created_file.parent_id, "name": created_file.name, "type": created_file.type})
+  }
+  return createdFiles
+}
+
 export async function prepareForUpload(files, parent_folder) {
+  /**
+   * This function creates all folders needed for upload,
+   * and also creates a nice file structure with it's corresponding parent folder id
+   *
+   * {fileList} = {file: file, parent_id: parent_id}
+   *
+   * @param {event.currentTarget.files} files - The first number to be added.
+   * @param {string} parent_folder - The second number to be added.
+   */
+
+
+  // check if we are uploading a folder or just files
   let folder_upload =
     files[0].webkitRelativePath !== undefined &&
     files[0].webkitRelativePath !== "";
 
   let fileList = []
-
+  let folder = parent_folder
+  //if we are uploading a folder, we need to create folders that don't already exist
   if (folder_upload) {
     let folder_structure = {}
+
     for (let file of files) {
       console.log("====file====");
+      // file.webkitRelativePath np: "nowyFolder/kolejnyFolder/plik.ext"
       let folder_list = file.webkitRelativePath.split("/").slice(0, -1);  // Get list of folders by removing the file name
-      let folder_list_str = folder_list.join("/");
+      // folder_list np: ['nowyFolder', 'kolejnyFolder']
+      let folder_list_str = folder_list.join("/"); // convert that list to str "example:
+      // folder_list_str np: "nowyFolder/kolejnyFolder"
+
 
       console.log(`1:  ${folder_list}`);
       console.log(`2:  ${folder_list_str}`);
-      let folder
+
       for (let i = 1; i <= folder_list.length; i++) {
         // idziemy od tyłu po liscie czyli jesli lista to np [a1, b2, c3, d4, e5, f6]
         // to najpierw bedziemy mieli a1
@@ -95,6 +132,7 @@ export async function prepareForUpload(files, parent_folder) {
         console.log(`4:  ${folder_list.slice(0, i)}`);
         let folder_list_key = folder_list.slice(0, i).join("/");
         if (!(folder_list_key in folder_structure)) {
+
           // zapytanie API
           // stwórz folder o nazwie folder_list[0:i][-1] z parent_id = file_structure[folder_list[0:i-1]]
           let parent_list = folder_structure[folder_list.slice(0, i - 1).join("/")]
@@ -106,9 +144,8 @@ export async function prepareForUpload(files, parent_folder) {
           }
           else {
             parent_list_id = parent_folder.id
-            this.$toast.success(`${chatgpt_folder_name} created!`, {
-              timeout: 3000,
-            });
+            let message = i18n.t('toasts.folderCreated', {name: chatgpt_folder_name}).toString()
+            vue.$toast.success(message)
           }
 
           console.log("creating " + chatgpt_folder_name)
@@ -120,39 +157,19 @@ export async function prepareForUpload(files, parent_folder) {
       fileList.push({"parent_id": folder.id, "file": file})
 
     }
-
-    console.log(folder_structure);
-
   }
   else {
+    // jeżeli uploadujemy pliki a nie foldery to nie musimy sie bawić w to całe gówno jak na górze XD
     for (let file of files) {
       fileList.push({"parent_id": parent_folder.id, "file": file})
     }
 
-
   }
-  await handleFiles(fileList);
+  await handleCreatingFiles(fileList);
 
 }
-
-async function createFiles(fileList, filesInRequest) {
-  let createdFiles = []
-
-  let file_res = await fetchJSON(`/api/createfile`, {
-    method: "POST",
-    body: JSON.stringify({"files": filesInRequest})
-  })
-
-  for (let created_file of file_res) {
-    let file = fileList[created_file.index].file
-
-    createdFiles.push({"file_id": created_file.file_id, "key": created_file.key, "file": file})
-  }
-  return createdFiles
-}
-export async function handleFiles(fileList) {
-  console.log("HANDLE FILESSSS")
-
+export async function handleCreatingFiles(fileList) {
+  //sortujemy rozmiarami
   fileList.sort((a, b) => a.file.size - b.file.size);
   let createdFiles = []
   let filesInRequest = []
@@ -160,7 +177,14 @@ export async function handleFiles(fileList) {
   for (let i = 0; i < fileList.length; i++) {
     let fileObj = fileList[i]
     let file_obj =
-      {"name": fileObj.file.name, "parent_id": fileObj.parent_id, "mimetype": fileObj.file.type, "extension": detectExtension(fileObj.file.name), "size": fileObj.file.size, "index": i}
+      {
+        "name": fileObj.file.name,
+        "parent_id": fileObj.parent_id,
+        "mimetype": fileObj.file.type,
+        "extension": detectExtension(fileObj.file.name),
+        "size": fileObj.file.size,
+        "index": i
+      }
 
     filesInRequest.push(file_obj)
     if (filesInRequest.length >= 100) {
@@ -170,6 +194,15 @@ export async function handleFiles(fileList) {
   }
   createdFiles.push(...await createFiles(fileList, filesInRequest))
 
+  // createdFiles looks like this:
+  // "file_id": created_file.file_id, "encryption_key": created_file.key, "file": file, "parent_id": created_file.parent_id, "name": created_file.name}
+  await prepareUploadRequests(createdFiles)
+}
+
+export async function prepareUploadRequests(createdFiles) {
+
+  //for (let file of createdFiles) {
+  //await store.dispatch("upload/upload", createdFiles);
 
   const chunkSize = 25 * 1023 * 1024; // <25MB in bytes
   let totalSize = 0
@@ -198,25 +231,25 @@ export async function handleFiles(fileList) {
 
       // Upload each chunk
       for (let j = 0; j < chunks.length; j++) {
-        await this.uploadChunk(chunks[j], j + 1, chunks.length, fileObj.file_id);
+        await uploadChunk(chunks[j], j + 1, chunks.length, fileObj.file_id);
       }
     } else {
-        if (totalSize + size > chunkSize  || filesForRequest.length >= 10) {
-          await uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest)
-          filesForRequest = []
-          attachmentJson = []
-          fileFormList = new FormData();
-          totalSize = 0
-        }
-        filesForRequest.push(fileObj)
-        fileFormList.append(`File ${i + 1}`, fileObj.file, `files[${i}]`);
+      if (totalSize + size > chunkSize  || filesForRequest.length >= 10) {
+        await uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest)
+        filesForRequest = []
+        attachmentJson = []
+        fileFormList = new FormData();
+        totalSize = 0
+      }
+      filesForRequest.push(fileObj)
+      fileFormList.append(`File ${i + 1}`, fileObj.file, `files[${i}]`);
 
-        attachmentJson.push({
-          "id": i+1,
-          "description": `File ${i + 1}`,
-          "filename": `file${i + 1}`
-        })
-        totalSize = totalSize + size
+      attachmentJson.push({
+        "id": i+1,
+        "description": `File ${i + 1}`,
+        "filename": `file${i + 1}`
+      })
+      totalSize = totalSize + size
 
     }
 
@@ -230,10 +263,11 @@ export async function handleFiles(fileList) {
     file: "file",
     overwrite: true,
   };
-  await store.dispatch("upload/upload", item);
+  //await store.dispatch("upload/upload", item);
 
 
 }
+
 export async function uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest) {
   console.log("1: " + fileFormList)
   console.log("2: " + JSON.stringify(attachmentJson))
@@ -257,7 +291,7 @@ export async function uploadMultiAttachments(fileFormList, attachmentJson, files
     for (let i = 0; i < json.attachments.length; i++) {
       let attachment = json.attachments[i]
       console.log("aaaaaa: " + JSON.stringify(filesForRequest[i]))
-      let fragment_res = await fetchJSON(`/api/createfile`, {
+      let fragment_res = await fetchJSON(`/api/file/create`, {
         method: "PATCH",
         body: JSON.stringify(
           {
@@ -296,7 +330,7 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, file_id) {
 
     let json = await response.json();
 
-    let fragment_res = await fetchJSON(`/api/createfile`, {
+    let fragment_res = await fetchJSON(`/api/file/create`, {
       method: "PATCH",
       body: JSON.stringify(
         {

@@ -191,10 +191,12 @@
     "uploadMessage": "Proszę wybrać metodę przesyłania"
   },
   "toasts": {
-    "itemMoved": "Przenesiono {{amount}} itemy",
-    "itemMovedToTrash": "Przenesiono {{amount}} itemy do kosza",
-    "itemDeleted": "Usunięto {{amount}}",
-    "folderCreated": "Stworzono {{name}",
-    "itemRenamed": "Nazwa zmieniona"
+    "itemMoved": "Przenesiono {amount} itemy",
+    "itemMovedToTrash": "Przenesiono {amount} itemy do kosza",
+    "itemDeleted": "Usunięto {amount}",
+    "folderCreated": "Stworzono {name}",
+    "itemRenamed": "Nazwa zmieniona",
+    "selectFilesFirst": "Zaznacz plik(i) najpierw!",
+    "PreparingUpload": "Rozpoczęto proces przesyłania plików..."
   }
 }

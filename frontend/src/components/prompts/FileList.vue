@@ -90,8 +90,6 @@ export default {
     createDir: async function () {
       this.$store.commit("showHover", {
         prompt: "newDir",
-        action: null,
-        confirm: null,
         props: {
           redirect: false,
           base: this.current === this.$route.path ? null : this.current,

@@ -130,7 +130,7 @@
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
             <img
               src="https://steamuserimages-a.akamaihd.net/ugc/2153341894595795931/DCCF2A0051A51653A133FB1A8123EA4D3696AB6C/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true"
-              alt="Image Description">
+              alt="You look lonely, I can fix that~">
           </a>
         </h2>
         <input
@@ -619,8 +619,8 @@ export default {
       let files = event.currentTarget.files;
       let folder = this.currentFolder
 
+      this.$toast.info(this.$t("toasts.PreparingUpload"))
       await upload.prepareForUpload(files, folder)
-
 
       this.$store.commit("setReload", true);
 
@@ -683,12 +683,15 @@ export default {
     }, 100),
     download() {
       if (this.selectedCount === 0) {
-        this.$toast.info("Select a file to download first!")
+        let message = this.$t('toasts.selectFilesFirst')
+
+        this.$toast.info(message)
       } else {
         let filesNum = 0
         this.selected.forEach(item => {
+
           if (!item.isDir) {
-            window.open(item.url, '_blank');
+            window.open(item.download_url, '_blank');
             filesNum++
           }
         })

@@ -61,11 +61,13 @@ export default {
   created() {
     window.addEventListener("keydown", (event) => {
       if (this.currentPrompt == null) return;
-      // Esc!
-      if (event.keyCode === 27) {
+
+        // Esc!
+      if (event.code === "Escape") {
         event.stopImmediatePropagation();
         this.$store.commit("closeHover");
       }
+
 
     });
   },

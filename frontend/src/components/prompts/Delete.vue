@@ -72,11 +72,14 @@ export default {
         let updatedItem = this.items.filter(item => !ids.includes(item.id));
 
         this.$store.commit("setItems", updatedItem);
-        let message = this.$t('toasts.itemMoved', { amount: ids.length})
-
-        this.$toast.info(message, {
+        let message = this.$t('toasts.itemMovedToTrash', {amount: ids.length})
+        console.log(message)
+        this.$toast.success(message, {
           id: res.task_id,
+          timeout: null
         });
+        this.currentPrompt?.confirm();
+
       } catch (error) {
         console.log(error)
         //nothing has to be done

@@ -1,9 +1,8 @@
 import axios from 'axios';
-import store from "@/store/index.js";
 import {baseURL} from "@/utils/constants.js";
 // Function to calculate the delay using exponential backoff strategy
 
-const backend_instance = axios.create({
+export const backend_instance = axios.create({
   baseURL: baseURL,
   timeout: 1000,
   headers: {
@@ -12,7 +11,7 @@ const backend_instance = axios.create({
   },
 });
 
-const discord_instance = axios.create({
+export const discord_instance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },

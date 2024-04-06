@@ -17,6 +17,7 @@ const mutations = {
         confirm: null,
         action: null,
         props: null,
+        callback: null,
       });
       return;
     }
@@ -26,6 +27,8 @@ const mutations = {
       confirm: value?.confirm,
       action: value?.action,
       props: value?.props,
+      callback: value?.callback,
+
     });
   },
   setLoading: (state, value) => {
@@ -86,12 +89,16 @@ const mutations = {
   },
   renameItem(state, { id, newName }) {
     // Find the index of the item with the given ID
-    const index = state.items.findIndex(item => item.id === id);
+    const index1 = state.items.findIndex(item => item.id === id);
+    const index2 = state.selected.findIndex(item => item.id === id);
 
-    // Update the name of the item in the state
-    if (index !== -1) {
-      // Assuming your items have a 'name' property
-      state.items[index].name = newName;
+    // update item name in items
+    if (index1 !== -1) {
+      state.items[index1].name = newName;
+    }
+    // update item name in selected(important for preview)
+    if (index2 !== -1) {
+      state.selected[index2].name = newName;
     }
   },
   updateClipboard: (state, value) => {

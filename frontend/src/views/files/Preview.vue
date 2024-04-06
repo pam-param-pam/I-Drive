@@ -13,7 +13,7 @@
           v-if="perms.rename"
           icon="mode_edit"
           :label="$t('buttons.rename')"
-          show="rename"
+          @action="rename()"
         />
         <action
           :disabled="loading"
@@ -176,7 +176,6 @@ export default {
     },
     hasPrevious() {
 
-
       return this.files.length > 1 && this.currentIndex > 0
     },
 
@@ -230,13 +229,16 @@ export default {
       this.$store.commit("showHover", {
         prompt: "delete",
         confirm: () => {
-          if (this.hasNext) {
-            this.next();
-          } else if (!this.hasPrevious && !this.hasNext) {
-            this.close();
-          } else {
-            this.prev();
-          }
+          this.close()
+        },
+      });
+
+    },
+    rename() {
+      this.$store.commit("showHover", {
+        prompt: "rename",
+        confirm: (newName) => {
+          this.file.name = newName
         },
       });
 
@@ -291,10 +293,15 @@ export default {
       }, 1500);
     }, 500),
     close() {
-      this.$store.commit("updateItems", {});
-      let uri = `/folder/${this.file.parent_id}`
+      let parent_id = this.file?.parent_id
+      if (parent_id) {
+        this.$store.commit("updateItems", {});
+        this.$router.push({path: `/folder/${parent_id}`});
+      }
+      else {
+        this.$router.push("/files/");
 
-      this.$router.push({path: uri});
+      }
     },
     download() {
       //window.open(this.file.preview_url, '_blank');

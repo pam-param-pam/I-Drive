@@ -120,7 +120,7 @@ import * as auth from "@/utils/auth";
 import { version, signup } from "@/utils/constants";
 import ProgressBar from "vue-simple-progress";
 import prettyBytes from "pretty-bytes";
-import {getUsage} from "@/api/user.js";
+import {getUsage} from "@/api/folder.js";
 
 export default {
   name: "sidebar",

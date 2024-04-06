@@ -13,7 +13,8 @@
         class="input input--block"
         v-focus
         type="text"
-        @keyup.enter="submit"
+        @keyup.enter="submit()"
+
         v-model.trim="name"
       />
     </div>
@@ -28,8 +29,7 @@
         {{ $t("buttons.cancel") }}
       </button>
       <button
-
-        @click="submit"
+        @click="submit()"
         class="button button--flat"
         type="submit"
         :aria-label="$t('buttons.rename')"
@@ -44,7 +44,6 @@
 <script>
 import {mapState, mapGetters} from "vuex";
 import {rename} from "@/api/item.js";
-import buttons from "@/utils/buttons.js";
 
 export default {
   name: "rename",
@@ -57,7 +56,7 @@ export default {
 
   computed: {
     ...mapState(["selected", "items"]),
-    ...mapGetters(["isListing", "selectedCount"]),
+    ...mapGetters(["isListing", "selectedCount", "currentPrompt"]),
 
   },
   created() {
@@ -69,10 +68,11 @@ export default {
     submit: async function () {
 
       try {
+        let id = this.selected[0].id
+        let new_name = this.name
+        await rename({"id": id, "new_name": new_name});
 
-        await rename({"id": this.selected[0].id, "new_name": this.name});
-
-        this.$store.commit("renameItem", {id: this.selected[0].id, newName: this.name});
+        this.$store.commit("renameItem", {id: id, newName: new_name});
 
         let message = this.$t('toasts.itemRenamed')
         this.$toast.success(message)
@@ -82,7 +82,6 @@ export default {
 
       } finally {
         this.$store.commit("closeHover");
-        this.$store.commit("resetSelected");
 
       }
     },

@@ -20,28 +20,27 @@ const getters = {
   },
   filesInUpload: (state) => {
     let files = [];
+    for (let i = 0; i < state.upload.queue.length; i++) {
 
-    for (let index in state.upload.uploads) {
-      let upload = state.upload.uploads[index];
-      let id = upload.id;
-      let type = upload.type;
-      let name = upload.file.name;
-      let size = state.upload.sizes[id];
-      let isDir = upload.file.isDir;
-      let progress = isDir
-        ? 100
-        : Math.ceil((state.upload.progress[id] / size) * 100);
+      let file = state.upload.queue[i]
+      let id = file.file_id
+      let name = file.name
+      let parent_id = file.parent_id
+      let size = file.file.size
+      let progress = 0
+      let type = file.type
+
 
       files.push({
+        type,
+        size,
         id,
+        parent_id,
         name,
         progress,
-        type,
-        isDir,
       });
     }
-
-    return files.sort((a, b) => a.progress - b.progress);
+    return files.sort((a, b) => a.progress - b.progress).slice(0, 10);
   },
   currentPrompt: (state) => {
     return state.prompts.length > 0

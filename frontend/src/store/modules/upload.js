@@ -2,14 +2,17 @@ import Vue from "vue";
 import { files as api } from "@/api";
 import throttle from "lodash.throttle";
 import buttons from "@/utils/buttons";
+import {discord_instance} from "@/api/networker.js";
 
-const UPLOADS_LIMIT = 5;
+let MAX_CONCURRENT_REQUESTS = 4;
 
 const state = {
   id: 0,
   sizes: [],
   progress: [],
   queue: [],
+  requestsUploading: 0,
+  filesUploading: [],
   uploads: {},
   speedMbyte: 0,
   eta: 0,
@@ -26,8 +29,8 @@ const mutations = {
   },
   addJob: (state, item) => {
     state.queue.push(item);
-    state.sizes[state.id] = item.file.size;
-    state.id++;
+    //state.sizes[state.id] = item.file.size;
+    //state.id++;
   },
   moveJob(state) {
     const item = state.queue[0];
@@ -46,29 +49,30 @@ const beforeUnload = (event) => {
 };
 
 const actions = {
-  upload: (context, item) => {
-    let uploadsCount = Object.keys(context.state.uploads).length;
+  upload: (context, filesList) => {
 
     let isQueueEmpty = context.state.queue.length === 0;
-    let isUploadsEmpty = uploadsCount === 0;
+    let isUploadsEmpty = Object.keys(context.state.uploads).length === 0;
 
-    if (isQueueEmpty && isUploadsEmpty) {
-      window.addEventListener("beforeunload", beforeUnload);
-      buttons.loading("upload");
+    //if (isQueueEmpty && isUploadsEmpty) {
+    //  window.addEventListener("beforeunload", beforeUnload);
+    //}
+
+    for (let file of filesList) {
+      context.commit("addJob", file);
     }
-
-    context.commit("addJob", item);
-    context.dispatch("processUploads");
+    console.log(JSON.stringify(context.state.queue))
+    //context.dispatch("processUploads");
   },
   finishUpload: (context, item) => {
-    context.commit("setProgress", { id: item.id, loaded: item.file.size });
+    context.commit("setProgress", {id: item.id, loaded: item.file.size});
     context.commit("removeJob", item.id);
     context.dispatch("processUploads");
   },
   processUploads: async (context) => {
     let uploadsCount = Object.keys(context.state.uploads).length;
 
-    let isBellowLimit = uploadsCount < UPLOADS_LIMIT;
+    let isBellowLimit = context.state.requestsUploading < MAX_CONCURRENT_REQUESTS;
     let isQueueEmpty = context.state.queue.length === 0;
     let isUploadsEmpty = uploadsCount === 0;
 
@@ -79,33 +83,46 @@ const actions = {
       window.removeEventListener("beforeunload", beforeUnload);
       buttons.success("upload");
       context.commit("reset");
-      context.commit("setReload", true, { root: true });
+      context.commit("setReload", true, {root: true});
     }
 
     if (canProcess) {
       const item = context.state.queue[0];
       context.commit("moveJob");
 
-      if (item.file.isDir) {
-        await api.post(item.path).catch(Vue.prototype.$showError);
-      } else {
-        let onUpload = throttle(
-          (event) =>
-            context.commit("setProgress", {
-              id: item.id,
-              loaded: event.loaded,
-            }),
-          100,
-          { leading: true, trailing: false }
-        );
 
-        await api
-          .post(item.path, item.file, item.overwrite, onUpload)
-          .catch(Vue.prototype.$showError);
-      }
+      let url = context.rootState.settings.webhook
+      discord_instance.post(url, {
+        // Request data
+      }, {
+        onUploadProgress: function (progressEvent) {
+          // Handle upload progress
+          console.log(`Uploaded ${progressEvent.loaded} bytes out of ${progressEvent.total}`);
+        }
+      })
+        .then(response => {
+          // Handle response
+        })
+        .catch(error => {
+          // Handle error
+        });
+      let onUpload = throttle(
+        (event) =>
+          context.commit("setProgress", {
+            id: item.id,
+            loaded: event.loaded,
+          }),
+        100,
+        {leading: true, trailing: false}
+      );
 
-      context.dispatch("finishUpload", item);
+      await api
+        .post(item.path, item.file, item.overwrite, onUpload)
+        .catch(Vue.prototype.$showError);
     }
+
+    context.dispatch("finishUpload", item);
+
   },
 };
 

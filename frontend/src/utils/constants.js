@@ -1,7 +1,7 @@
 const name = window.FileBrowser.Name || "File Browser";
 //const baseURL = window.FileBrowser.BaseURL;
 const baseWS = "ws://127.0.0.1:8000"
-const baseURL = "http://127.0.0.1:8000"
+const baseURL = "https://api.pamparampam.dev"
 //const baseURL = "https://demo.filebrowser.org"
 const staticURL = window.FileBrowser.StaticURL;
 const signup = window.FileBrowser.Signup;

@@ -8,6 +8,8 @@
     @dragover="dragOver"
     @drop="drop"
     @dblclick="open"
+    v-touch:longtap="open"
+    v-touch:touchhold="click"
     @click="click"
     :data-dir="item.isDir"
     :data-type="type"
