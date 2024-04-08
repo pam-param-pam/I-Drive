@@ -48,7 +48,7 @@
           <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
       </p>
 
-      <p v-if="ready">
+      <p>
         <strong>{{ $t("prompts.ready") }}:</strong>
         <span v-if="ready" class="checkmark-true"></span> <!-- Green checkmark emoji -->
         <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
@@ -67,7 +67,7 @@
         <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime(created) }}
       </p>
       <p v-if="last_modified">
-        <strong>{{ $t("prompts.last_modified") }}:</strong> {{ humanTime(last_modified) }}
+        <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime(last_modified) }}
       </p>
 
       <template v-if="folderItemsCount">
@@ -321,9 +321,12 @@ export default {
     /* Add other styles for the green checkmark icon if needed */
 }
 
-.checkmark-false {
-    content: "\00274C";
-    margin-left: 5px; /* Adjust the margin value based on your preference */
-    /* Add other styles for the red cross icon if needed */
+
+.checkmark-false:after {
+ content: "\00274C";
+ color: #d31010;
+
+ margin-left: 5px; /* Adjust the margin value based on your preference */
+ /* Add other styles for the green checkmark icon if needed */
 }
 </style>

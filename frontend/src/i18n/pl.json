@@ -1,30 +1,23 @@
 {
   "sidebar": {
     "help": "Pomoc",
-    "hugoNew": "Hugo New",
     "login": "Login",
     "logout": "Wyloguj",
     "myFiles": "Moje pliki",
     "newFile": "Nowy plik",
     "trash": "Kosz",
     "newFolder": "Nowy folder",
-    "preview": "Podgląd",
     "settings": "Ustawienia",
-    "signup": "Rejestracja",
-    "siteSettings": "Ustawienia Strony"
+    "register": "Rejestracja"
   },
   "files": {
-    "body": "Body",
     "clear": "Wyczyść",
-    "closePreview": "Zamknij poprzednie",
     "files": "Pliki",
     "folders": "Foldery",
-    "home": "Folder domowy",
+    "home": "Główny folder",
     "created": "Utworzone",
     "loading": "Ładowanie...",
     "lonely": "Smutno gdy tak pusto...",
-    "metadata": "Metadane",
-    "multipleSelectionEnabled": "Zaznaczenie wielu włączone",
     "name": "Nazwa",
     "size": "Rozmiar",
     "sortByCreated": "Sortuj wg. daty stworzenia",
@@ -44,17 +37,15 @@
     "video": "Wideo"
   },
   "buttons": {
+    "copyFile": "todo",
+    "more": "todo",
     "cancel": "Anuluj",
     "close": "Zamknij",
-    "copy": "Kopiuj",
-    "copyFile": "Kopiuj",
-    "copyToClipboard": "kopiuj do schowka",
     "create": "Utwórz",
     "delete": "Usuń",
     "download": "Pobierz",
     "hideDotfiles": "",
     "info": "Szczegóły",
-    "more": "Więce",
     "move": "Przenieś",
     "moveFile": "Przenieś plik",
     "new": "Nowy",
@@ -121,10 +112,8 @@
     "unit": "Jednostka czasu"
   },
   "settings": {
-    "admin": "Admin",
     "ShareName": "Nazwa",
     "changePassword": "Zmień Hasło",
-    "globalSettings": "Ustawienia Globalne",
     "hideHiddenFolders": "Ukryj ukryte foldery",
     "subfoldersInShares": "Zezwól na dostep do podfolderów w udostępnionych folderach",
     "language": "Język",
@@ -133,16 +122,6 @@
     "password": "Hasło",
     "passwordUpdated": "Hasło zostało zapisane!",
     "path": "Ścieżka",
-    "perm": {
-      "create": "Tworzenie plików i folderów",
-      "delete": "Usuwanie plików i folderów",
-      "download": "Pobieranie",
-      "execute": "Wykonywanie poleceń",
-      "modify": "Edycja plików",
-      "rename": "Zmiana nazw lub przenoszenie plików i Folderów",
-      "share": "Udostępnianie plików"
-    },
-    "permissions": "Uprawnienia",
     "profileSettings": "Twój profil",
     "settingsUpdated": "Ustawienia zapisane!",
     "setDateFormat": "Dokładna data",
@@ -155,8 +134,6 @@
     }
   },
   "prompts": {
-    "copy": "Kopiuj",
-    "copyMessage": "Wybierz lokalizację do której mają być skopiowane wybrane pliki",
     "currentlyNavigating": "Obecnie przeglądasz:",
     "deleteMessageMultiple": "Czy jesteś pewien że chcesz usunąć {count} plik(ów)?",
     "deleteMessageSingle": "Czy jesteś pewien, że chcesz usunąć ten plik/folder?",

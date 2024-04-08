@@ -80,11 +80,11 @@
         v-if="signup"
         class="action"
         to="/login"
-        :aria-label="$t('sidebar.signup')"
-        :title="$t('sidebar.signup')"
+        :aria-label="$t('sidebar.register')"
+        :title="$t('sidebar.register')"
       >
         <i class="material-icons">person_add</i>
-        <span>{{ $t("sidebar.signup") }}</span>
+        <span>{{ $t("sidebar.register") }}</span>
       </router-link>
     </template>
 
