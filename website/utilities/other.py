@@ -1,7 +1,15 @@
 import os
+from datetime import timedelta, datetime
+
+from django.core.cache import caches
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 
 from website.models import File, Folder, UserSettings, Fragment
 from website.utilities.Discord import discord
+from website.utilities.common.error import ResourcePermissionError
+
+signer = TimestampSigner()
+cache = caches["default"]
 
 message_codes = {
     1: {"pl": "Niepoprawne zapytanie", "en": "Bad Request"},
@@ -21,6 +29,24 @@ message_codes = {
     15: {"pl": "Funkcja jeszcze nie dostępna", "en": "Not yet implemented"},
 
 }
+
+# Function to sign a URL with an expiration time
+def sign_file_id_with_expiry(file_id):
+    cached_signed_file_id = cache.get(file_id)
+    if cached_signed_file_id:
+        print("using cached signed file id")
+        return cached_signed_file_id
+    signed_file_id = signer.sign(file_id)
+    cache.set(file_id, signed_file_id, timeout=43200)
+    return signed_file_id
+
+# Function to verify and extract the URL and expiry time
+def verify_signed_file_id(signed_file_id, expiry_days=1):
+    try:
+        file_id = signer.unsign(signed_file_id, max_age=timedelta(days=expiry_days))
+        return file_id
+    except (BadSignature, SignatureExpired):
+        raise ResourcePermissionError("Url not valid or expired.")
 
 
 def calculate_time(file_size_bytes, bitrate_bps):
@@ -68,21 +94,13 @@ def create_file_dict(file_obj):
     }
     base_url = "http://127.0.0.1:8000"
     base_url = "https://api.pamparampam.dev"
-    if file_obj.size < 25 * 1024 * 1024:  # max preview size
-        if file_obj.id == "h4JEztnaEaQu8WHfX4eB9i":
-            fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
 
-            url = discord.get_file_url(fragments[0].message_id, fragments[0].attachment_id)
-            file_dict['preview_url'] = url
-        else:
-            #file_dict['preview_url'] = f"{base_url}/api/file/preview/{file_obj.id}"
-            file_dict['preview_url'] = f"{base_url}/api/file/stream/{file_obj.id}"
+    signed_file_id = sign_file_id_with_expiry(file_obj.id)
+    preview_url = f"{base_url}/api/file/stream/{signed_file_id}"
+    download_url = f"{base_url}/api/file/download/{signed_file_id}"
 
-        file_dict['download_url'] = f"{base_url}/api/file/preview/{file_obj.id}"
-
-    else:
-        file_dict['preview_url'] = f"{base_url}/api/file/stream/{file_obj.id}"
-        file_dict['download_url'] = f"{base_url}/api/file/download/{file_obj.id}"
+    file_dict['preview_url'] = preview_url
+    file_dict['download_url'] = download_url
 
     return file_dict
 
@@ -164,7 +182,7 @@ def get_shared_folder(folder_obj, includeSubfolders):
 
 def build_folder_content(folder_obj, includeTrash):
 
-    file_children = File.objects.filter(parent=folder_obj, ready=True, inTrash=includeTrash)
+    file_children = File.objects.filter(parent=folder_obj, inTrash=includeTrash)
     folder_children = Folder.objects.filter(parent=folder_obj, inTrash=includeTrash)
 
     file_dicts = []

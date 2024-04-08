@@ -18,8 +18,9 @@ def retry(func):
                     time.sleep(retry_after)
                 except KeyError:
                     raise DiscordBlockError("Discord is stupid :(")
+                return decorator(*args, **kwargs)
             args[0].switch_token()
-            return decorator(*args, **kwargs)
+
 
         return response
 

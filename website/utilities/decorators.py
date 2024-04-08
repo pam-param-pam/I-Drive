@@ -1,28 +1,61 @@
-import os
-import shutil
-import traceback
 from functools import wraps
 
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 
 from website.models import File, Folder
 from website.utilities.common.error import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError
-from website.utilities.other import error_res
+from website.utilities.other import error_res, verify_signed_file_id
 
 
+def check_signed_url(view_func):
+    @wraps(view_func)
+    def wrapper(request, file_id, *args, **kwargs):
+        try:
+            file_id = verify_signed_file_id(file_id)
+        except ResourcePermissionError as e:
+            return JsonResponse(
+                error_res(user=request.user, code=403, error_code=5, details=str(e)),
+                status=403)
+        return view_func(request, file_id, *args, **kwargs)
+
+    return wrapper
+
+# goofy ah code duplication
 def check_file_and_permissions(view_func):
     @wraps(view_func)
     def wrapper(request, file_id, *args, **kwargs):
         try:
             file_obj = File.objects.get(id=file_id)
-            if file_obj.owner != request.user and False:  # TODO :sob:
+            if file_obj.owner != request.user:
                 return JsonResponse(
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
                     status=403)
             if not file_obj.ready:
-                return HttpResponse(f"file not ready", status=404)
+                return JsonResponse(
+                    error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),
+                    status=404)
+
+        except (File.DoesNotExist, ValidationError):
+
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8,
+                                          details=f"File with id of '{file_id}' doesn't exist."), status=404)
+
+        return view_func(request, file_obj, *args, **kwargs)
+
+    return wrapper
+
+# goofy ah code duplication
+def check_file(view_func):
+    @wraps(view_func)
+    def wrapper(request, file_id, *args, **kwargs):
+        try:
+            file_obj = File.objects.get(id=file_id)
+            if not file_obj.ready:
+                return JsonResponse(
+                    error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),
+                    status=404)
 
         except (File.DoesNotExist, ValidationError):
 

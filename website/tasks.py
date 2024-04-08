@@ -80,8 +80,9 @@ def smart_delete(user_id, request_id, ids):
                     message_structure[key] = [value]
         settings = UserSettings.objects.get(user_id=user_id)
         webhook = settings.discord_webhook
-        print(len(message_structure))
-        for key in message_structure.keys():
+        length = len(message_structure)
+
+        for index, key in enumerate(message_structure.keys()):
 
             try:
                 fragments = Fragment.objects.filter(message_id=key)
@@ -103,7 +104,11 @@ def smart_delete(user_id, request_id, ids):
                         discord.remove_message(key)
             except DiscordError as e:
                 print(f"===========DISCORD ERROR===========\n{e}")
-            time.sleep(1)
+                send_message(str(e), False, user_id, request_id, True)
+            #time.sleep(0.1)
+            percentage = round((index + 1) / length * 100)
+            send_message(f"Deleting {percentage}%...", False, user_id, request_id)
+
             print("sleeping")
         for item in items:
             item.delete()
@@ -111,7 +116,7 @@ def smart_delete(user_id, request_id, ids):
         send_message(f"Items deleted!", True, user_id, request_id)
 
     except Exception as e:
-        send_message(str(e), False, user_id, request_id, True)
+        send_message(str(e), True, user_id, request_id, True)
 
         traceback.print_exc()
 

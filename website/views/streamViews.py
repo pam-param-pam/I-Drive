@@ -2,16 +2,16 @@ import re
 from urllib.parse import quote
 
 import requests
-from django.http import HttpResponse, StreamingHttpResponse, JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponse, StreamingHttpResponse, HttpResponseBadRequest
 from django.views.decorators.cache import cache_page
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.throttling import UserRateThrottle
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 from website.models import Fragment
 from website.utilities.Discord import discord
 from website.utilities.common.error import BadRequestError
-from website.utilities.decorators import check_file_and_permissions, handle_common_errors
+from website.utilities.decorators import check_file_and_permissions, handle_common_errors, check_signed_url, check_file
 
 DELAY_TIME = 0
 
@@ -55,16 +55,16 @@ def get_file_preview(request, file_obj):
 
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated])
-@check_file_and_permissions
+@throttle_classes([AnonRateThrottle])
+@check_signed_url
+@check_file
 @handle_common_errors
 def stream_file(request, file_obj):
     print(file_obj.name)
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
 
     def file_iterator(index, start_byte, end_byte, chunk_size=8192):
-
+        print(f"==file iterator==\nSTART_BYTE={start_byte}\nEND_BYTE={end_byte}")
         headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
         # headers = {}
         print(f"fragments lenght: {len(fragments)}")
@@ -76,7 +76,9 @@ def stream_file(request, file_obj):
             for chunk in response.iter_content(chunk_size):
                 yield chunk
         else:
-            raise Exception("Failed to fetch partial content. Status code: {}".format(response.status_code))
+            print("============DISCORD ERROR============")
+            print(response.status_code)
+            print(response.text)
 
     range_header = request.headers.get('Range')
     print(f"range_header: {range_header}")
