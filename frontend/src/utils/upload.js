@@ -149,6 +149,7 @@ export async function prepareForUpload(files, parent_folder) {
           }
 
           console.log("creating " + chatgpt_folder_name)
+          console.log(parent_list_id)
           folder = await create({"parent_id": parent_list_id, "name": chatgpt_folder_name})
           folder_structure[folder_list_key] = {"id": folder.id, "parent_id": parent_list_id};
 

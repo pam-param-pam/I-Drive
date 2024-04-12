@@ -48,7 +48,7 @@
           <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
       </p>
 
-      <p>
+      <p v-if="!isDir">
         <strong>{{ $t("prompts.ready") }}:</strong>
         <span v-if="ready" class="checkmark-true"></span> <!-- Green checkmark emoji -->
         <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
@@ -227,6 +227,14 @@ export default {
           return this.selected[0].owner.name
       }
       return null
+    },
+    isDir() {
+      if (this.selectedCount === 1) {
+
+        return this.selected[0].isDir
+      }
+      return true
+
     },
 
     folderItemsCount() {

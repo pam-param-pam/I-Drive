@@ -9,6 +9,7 @@ import {loginPage } from "@/utils/constants";
 import { login, validateLogin } from "@/utils/auth";
 import App from "@/App.vue";
 import vue from "@/utils/vue.js";
+import onEvent from "@/utils/WsEventhandler.js";
 
 cssVars();
 
@@ -38,34 +39,10 @@ async function start() {
     template: "<App/>",
     components: { App },
     mounted() {
-      this.$options.sockets.onmessage = (data) => this.onMessage(data)
+      this.$options.sockets.onmessage = (data) => onEvent(data)
 
 
-    },
-    methods: {
-      onMessage(message) {
-        let jsonObject = JSON.parse(message.data);
-        let timeout = 0
-        let type = "info"
-        //console.log(jsonObject.task_id)
-        if (jsonObject.finished) {
-          timeout = 3000
-
-          type = "success"
-        }
-        if (jsonObject.error) {
-          timeout = 0
-          type = "error"
-        }
-        vue.$toast.update(jsonObject.task_id, {
-
-          content: jsonObject.message,
-          options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
-
-        });
-
-      },
-    },
+    }
   });
 }
 

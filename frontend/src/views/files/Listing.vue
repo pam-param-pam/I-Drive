@@ -622,8 +622,6 @@ export default {
       this.$toast.info(this.$t("toasts.PreparingUpload"))
       await upload.prepareForUpload(files, folder)
 
-      this.$store.commit("setReload", true);
-
 
     },
     resetOpacity() {

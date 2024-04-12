@@ -69,12 +69,9 @@ export default {
 
         let res = await remove({"ids": ids});
 
-        let updatedItem = this.items.filter(item => !ids.includes(item.id));
-
-        this.$store.commit("setItems", updatedItem);
         let message = this.$t('toasts.itemMovedToTrash', {amount: ids.length})
         console.log(message)
-        this.$toast.success(message, {
+        this.$toast.info(message, {
           id: res.task_id,
           timeout: null
         });

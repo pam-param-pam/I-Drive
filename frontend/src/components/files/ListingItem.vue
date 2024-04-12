@@ -8,8 +8,6 @@
     @dragover="dragOver"
     @drop="drop"
     @dblclick="open"
-    v-touch:longtap="open"
-    v-touch:touchhold="click"
     @click="click"
     :data-dir="item.isDir"
     :data-type="type"
@@ -145,7 +143,7 @@ export default {
         this.$store.commit("setItems", updatedItem);
 
         let message = `Moved to ${this.item.name}!`
-        this.$toast.info(message);
+        this.$toast.success(message);
 
       } catch (error) {
         console.log(error)
