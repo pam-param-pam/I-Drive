@@ -9,7 +9,8 @@ from channels.layers import get_channel_layer
 from website.celery import app
 from website.models import File, Fragment, Folder, UserSettings
 from website.utilities.Discord import discord
-from website.utilities.common.error import DiscordError
+from website.utilities.OPCodes import EventCode
+from website.utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
 
@@ -31,7 +32,8 @@ def send_message(message, finished, user_id, request_id, isError=False):
     queue_ws_event.delay(
         'user',
         {
-            'type': 'chat_message',
+            'type': 'send_message',
+            'op_code': EventCode.MESSAGE_SENT.value,
             'user_id': user_id,
             'message': message,
             'finished': finished,
@@ -43,6 +45,7 @@ def send_message(message, finished, user_id, request_id, isError=False):
 
 @app.task
 def smart_delete(user_id, request_id, ids):
+    send_message(f"Deleting 0%...", False, user_id, request_id)
 
     try:
         items = []

@@ -1,16 +1,17 @@
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, throttle_classes
+from django.http import JsonResponse, HttpResponse
+from rest_framework.decorators import api_view, throttle_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import Folder, File, Fragment
-from website.utilities.common.error import BadRequestError, ResourcePermissionError
+from website.utilities.OPCodes import EventCode
+from website.utilities.errors import BadRequestError, ResourcePermissionError
 from website.utilities.decorators import handle_common_errors
-
-DELAY_TIME = 0
+from website.utilities.other import send_event, create_file_dict
 
 
 @api_view(['POST', 'PATCH'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def create_file(request):
@@ -41,7 +42,7 @@ def create_file(request):
                 mimetype = "text/plain"
 
             folder_obj = Folder.objects.get(id=parent_id)
-            if folder_obj.owner.id != request.user.id:  # todo fix perms
+            if folder_obj.owner != request.user:
                 raise ResourcePermissionError(f"You do not own this resource!")
 
             file_type = mimetype.split("/")[0]
@@ -73,8 +74,10 @@ def create_file(request):
         # return fragment ID
 
         file_obj = File.objects.get(id=file_id)
-        if file_obj.owner.id != request.user.id:  # todo fix perms
+        if file_obj.owner != request.user:
             raise ResourcePermissionError(f"You do not own this resource!")
+        if file_obj.ready:
+            raise BadRequestError(f"You cannot further modify a 'ready' file!")
 
         fragment_obj = Fragment(
             sequence=fragment_sequence,
@@ -88,49 +91,8 @@ def create_file(request):
         if fragment_sequence == total_fragments:
             file_obj.ready = True
             file_obj.save()
-            return JsonResponse({"woo": "file fully saved"}, status=200)
+            send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
+            return HttpResponse(status=200)
 
-        return JsonResponse({"woo": "fragment saved"}, status=200)
+        return HttpResponse(status=200)
 
-
-"""
-@csrf_protect
-def _upload_file(request):
-    if request.method == "POST":
-        form = UploadFileForm(request.POST, request.FILES)
-
-        if form.is_valid():
-            folder_id = form.data["folder_id"]
-            if not Folder.objects.filter(id=folder_id).exists():
-                return JsonResponse(error_res(user=request.user, code=400, error_code=8,
-                                              details="Folder with id of 'folder_id' doesn't exist."), status=400)
-            file = request.FILES["file"]
-            request_dir = create_temp_request_dir(request.request_id)  # creating /temp/<int>/
-            file_id = shortuuid.uuid()
-            file_dir = create_temp_file_dir(request_dir, file_id)  # creating /temp/<int>/file_id/
-            with open(os.path.join(file_dir, file.name),
-                      "wb+") as destination:  # saving in /temp/<int>/file_id/filename
-                for chunk in file.chunks():
-                    destination.write(chunk)
-
-            handle_uploaded_file.delay(request.user.id, request.request_id, file_id, request_dir, file_dir, file.name,
-                                       file.size, folder_id)
-
-            return JsonResponse(build_response(request.request_id, "file is being uploaded..."), status=200)
-
-    else:
-        form = UploadFileForm()
-    return render(request, "upload.html", {"form": form})
-    
-
-@csrf_exempt
-@api_view(['GET', 'POST'])  # TODO maybe change it later? when removing form idk
-# @permission_classes([IsAuthenticated])
-def upload_file(request):
-    time.sleep(DELAY_TIME)
-
-    # request.upload_handlers.insert(0, ProgressBarUploadHandler(
-    #    request))  # TODO tak z lekka nie działa ale moze to dlatego ze lokalna siec? nwm
-
-    return _upload_file(request)
-"""

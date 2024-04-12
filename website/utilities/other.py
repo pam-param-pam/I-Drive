@@ -1,34 +1,17 @@
 import os
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 from django.core.cache import caches
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 
-from website.models import File, Folder, UserSettings, Fragment
-from website.utilities.Discord import discord
-from website.utilities.common.error import ResourcePermissionError
+from website.models import File, Folder, UserSettings
+from website.tasks import queue_ws_event
+from website.utilities.OPCodes import message_codes
+from website.utilities.errors import ResourcePermissionError
 
 signer = TimestampSigner()
 cache = caches["default"]
 
-message_codes = {
-    1: {"pl": "Niepoprawne zapytanie", "en": "Bad Request"},
-    2: {"pl": "Nieznany błąd serwera", "en": "Internal Server Error"},
-    3: {"pl": "Błąd bazy danych", "en": "Database Error"},
-    4: {"pl": "Użytkownik nieuwierzytelniony", "en": "Unauthenticated"},
-    5: {"pl": "Brak uprawnień do zasobu", "en": "Access to resource forbidden"},
-    6: {"pl": "Zasób już nie istnieje", "en": "Resource expired"},
-    7: {"pl": "Zasób jeszcze nie gotowy", "en": "Resource is not ready yet"},
-    8: {"pl": "Zasób nie istnieje", "en": "Resource doesn't exist"},
-    9: {"pl": "Zasobu nie da sie pobrać", "en": "Resource is not downloadable"},
-    10: {"pl": "Zasobu nie da sie strumieniować", "en": "Resource is not streamable"},
-    11: {"pl": "Nie da sie wygenerować podglądu zasobu", "en": "Resource is not previewable"},
-    12: {"pl": "Brak uprawnień do 'root' foldera", "en": "Access denied to 'root' folder"},
-    13: {"pl": "Discord wysłał błędną odpowiedż", "en": "Unexpected discord response"},
-    14: {"pl": "Discord jest chwilowo zablokowany ", "en": "Discord is temporarily blocked"},
-    15: {"pl": "Funkcja jeszcze nie dostępna", "en": "Not yet implemented"},
-
-}
 
 # Function to sign a URL with an expiration time
 def sign_file_id_with_expiry(file_id):
@@ -40,7 +23,7 @@ def sign_file_id_with_expiry(file_id):
     cache.set(file_id, signed_file_id, timeout=43200)
     return signed_file_id
 
-# Function to verify and extract the URL and expiry time
+# Function to verify and extract the file id
 def verify_signed_file_id(signed_file_id, expiry_days=1):
     try:
         file_id = signer.unsign(signed_file_id, max_age=timedelta(days=expiry_days))
@@ -48,6 +31,17 @@ def verify_signed_file_id(signed_file_id, expiry_days=1):
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("Url not valid or expired.")
 
+def send_event(user_id, op_code, request_id, data):
+    queue_ws_event.delay(
+        'user',
+        {
+            'type': 'send_event',
+            'user_id': user_id,
+            'op_code': op_code.value,
+            'request_id': request_id,
+            'data': data,
+        }
+    )
 
 def calculate_time(file_size_bytes, bitrate_bps):
     time_seconds = (file_size_bytes * 8) / bitrate_bps

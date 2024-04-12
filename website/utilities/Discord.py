@@ -3,24 +3,26 @@ import time
 import httpx
 from django.core.cache import caches
 
-from website.utilities.common.error import DiscordError, DiscordBlockError
+from website.utilities.errors import DiscordError, DiscordBlockError
 
 
 def retry(func):
     def decorator(*args, **kwargs):
         response = func(*args, **kwargs)
         print(response.headers["X-ratelimit-remaining"])
-        if response.headers["X-ratelimit-remaining"] == "1":
-            if response.status_code == 429:
-                print("hit 429!!!!!!!!!!!!!!!")
-                try:
-                    retry_after = response.json()["retry_after"]
-                    time.sleep(retry_after)
-                except KeyError:
-                    raise DiscordBlockError("Discord is stupid :(")
-                return decorator(*args, **kwargs)
-            args[0].switch_token()
+        if response.status_code == 429:
+            print("hit 429!!!!!!!!!!!!!!!")
+            try:
+                retry_after = response.json()["retry_after"]
+                time.sleep(retry_after)
+            except KeyError:
+                raise DiscordBlockError("Discord is stupid :(")
+            return decorator(*args, **kwargs)
 
+        if response.headers["X-ratelimit-remaining"] == "1":
+            retry_after = float(response.headers["X-RateLimit-Reset-After"])
+            time.sleep(retry_after)
+            args[0].switch_token()
 
         return response
 

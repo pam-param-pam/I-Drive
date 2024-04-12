@@ -7,14 +7,13 @@ from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder
 from website.tasks import smart_delete
-from website.utilities.common.error import ResourceNotFound, ResourcePermissionError, BadRequestError, \
+from website.utilities.OPCodes import EventCode
+from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError
 from website.utilities.decorators import handle_common_errors
-from website.utilities.other import build_response, create_folder_dict
+from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict
 
 DELAY_TIME = 0
-
-
 
 
 @api_view(['POST'])
@@ -33,7 +32,9 @@ def create_folder(request):
         owner=request.user,
     )
     folder_obj.save()
-    return JsonResponse(create_folder_dict(folder_obj))
+    folder_dict = create_folder_dict(folder_obj)
+    send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [folder_dict])
+    return JsonResponse(folder_dict, status=200)
 
 
 @api_view(['POST'])
@@ -43,8 +44,6 @@ def create_folder(request):
 def move(request):
     time.sleep(DELAY_TIME)
 
-    print(request.data)
-
     ids = request.data['ids']
     items = []
     new_parent_id = request.data['new_parent_id']
@@ -53,13 +52,18 @@ def move(request):
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
 
+    ws_data = []
+
     for item_id in ids:
 
         try:
             item = Folder.objects.get(id=item_id)
+            item_dict = create_folder_dict(item)
         except Folder.DoesNotExist:
             try:
                 item = File.objects.get(id=item_id)
+                item_dict = create_file_dict(item)
+
             except File.DoesNotExist:
                 raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
 
@@ -82,13 +86,14 @@ def move(request):
 
         items.append(item)
 
+        ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
     new_parent = Folder.objects.get(id=new_parent_id)  # goofy ah redeclaration
 
     for item in items:
         item.parent = new_parent
         item.save()
-
-    return HttpResponse(f"Items moved", status=200)
+    send_event(request.user.id, EventCode.ITEM_MOVED, request.request_id, ws_data)
+    return HttpResponse(status=200)
 
 
 @api_view(['POST'])  # this should be a post or delete imo
@@ -127,7 +132,7 @@ def move_to_trash(request):
         elif isinstance(item, Folder):
             item.moveToTrash()
 
-    return HttpResponse(f"Items moved to trash", status=200)
+    return HttpResponse(status=200)
 
 
 @api_view(['POST'])  # this should be a post or delete imo
@@ -161,6 +166,9 @@ def delete(request):
 
         items.append(item)
     smart_delete.delay(request.user.id, request.request_id, ids)
+
+    send_event(request.user.id, EventCode.ITEM_DELETE, request.request_id, ids)
+
     return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
 
 
@@ -175,20 +183,21 @@ def rename(request):
     new_name = request.data['new_name']
 
     try:
-        obj = Folder.objects.get(id=obj_id)
+        item = Folder.objects.get(id=obj_id)
     except Folder.DoesNotExist:
         try:
-            obj = File.objects.get(id=obj_id)
+            item = File.objects.get(id=obj_id)
         except File.DoesNotExist:
             raise ResourceNotFound(f"Resource with id of '{obj_id}' doesn't exist.")
 
-    if obj.owner != request.user:  # todo fix perms
+    if item.owner != request.user:  # todo fix perms
         raise ResourcePermissionError(f"You do not own this resource!")
 
-    if isinstance(obj, Folder) and not obj.parent:
+    if isinstance(item, Folder) and not item.parent:
         raise RootPermissionError("Cannot rename 'root' folder!")
 
-    obj.name = new_name
-    obj.save()
-
-    return HttpResponse(f"Changed name to {new_name}", status=200)
+    item.name = new_name
+    item.save()
+    send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
+               [{'parent_id': item.parent.id, 'id': item.id, 'new_name': new_name}])
+    return HttpResponse(status=200)

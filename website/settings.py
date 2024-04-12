@@ -24,6 +24,7 @@ STATICFILES_DIRS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'silk',
     'django.contrib.admin',
     'website',
     'corsheaders',
@@ -52,7 +53,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'website.middleware.RequestIdMiddleware',
+    'website.utilities.middlewares.RequestIdMiddleware',
+    'silk.middleware.SilkyMiddleware',
+
     #"django.middleware.cache.UpdateCacheMiddleware",
     #"django.middleware.common.CommonMiddleware",
     #"django.middleware.cache.FetchFromCacheMiddleware",
@@ -65,6 +68,10 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://127.0.0.1:5173',
+    'http://172.24.240.1:5173',
+    'http://172.23.16.1:5173',
+    'http://192.168.56.1:5173',
+    'http://192.168.1.14:5173',
     'http://localhost:8080',
     'http://localhost:5173',
     'https://pamparampam.dev',

@@ -19,9 +19,16 @@ class UserConsumer(WebsocketConsumer):
     def receive(self, text_data=None, bytes_data=None):
         pass
 
-    def chat_message(self, event):
-        self.send(json.dumps({"message": event["message"], "error": event["error"], "finished": event["finished"],
-                              "task_id": event["request_id"]}))
+    def send_message(self, event):
+
+        if self.scope['user'].id == event['user_id']:
+            self.send(json.dumps({"op_code": event['op_code'], "message": event["message"], "error": event["error"], "finished": event["finished"],
+                                  "task_id": event["request_id"]}))
+
+    def send_event(self, event):
+
+        if self.scope['user'].id == event['user_id']:
+            self.send(json.dumps({"op_code": event['op_code'], "data": event['data']}))
 
 
 class CommandConsumer(WebsocketConsumer):

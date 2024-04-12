@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 
 from website.models import File, Folder
-from website.utilities.common.error import ResourceNotFound, ResourcePermissionError, BadRequestError, \
+from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError
 from website.utilities.other import error_res, verify_signed_file_id
 
@@ -117,7 +117,7 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=400, error_code=15, details=str(e)), status=400)
         except KeyError:
             return JsonResponse(
-                error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-                status=404)
+                error_res(user=request.user, code=400, error_code=1, details="Missing some required parameters"),
+                status=400)
 
     return wrapper

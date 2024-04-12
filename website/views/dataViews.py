@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserPerms, UserSettings
-from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions
+from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict
 
 DELAY_TIME = 0
@@ -16,6 +16,7 @@ DELAY_TIME = 0
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
+@handle_common_errors
 @check_folder_and_permissions
 def get_folder(request, folder_obj):
     time.sleep(DELAY_TIME)
@@ -29,6 +30,7 @@ def get_folder(request, folder_obj):
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
+@handle_common_errors
 @check_file_and_permissions
 def get_file(request, file_obj):
     time.sleep(DELAY_TIME)
@@ -39,8 +41,9 @@ def get_file(request, file_obj):
 
 @cache_page(60 * 1)
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
 @check_folder_and_permissions
 def get_usage(request, folder_obj):
     time.sleep(DELAY_TIME)
@@ -65,6 +68,7 @@ def get_usage(request, folder_obj):
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
+@handle_common_errors
 @check_folder_and_permissions
 def get_breadcrumbs(request, folder_obj):
     folder_path = []
@@ -78,8 +82,9 @@ def get_breadcrumbs(request, folder_obj):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
 def users_me(request):
     time.sleep(DELAY_TIME)
 
@@ -104,6 +109,7 @@ def users_me(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
+@handle_common_errors
 def update_settings(request):
     time.sleep(DELAY_TIME)
 
@@ -136,8 +142,9 @@ def update_settings(request):
 
 """
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
 def get_root(request):
     time.sleep(DELAY_TIME)
     return HttpResponse(500)
@@ -153,8 +160,9 @@ def get_root(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
 def get_folder_tree(request):
     time.sleep(DELAY_TIME)
     return HttpResponse(500)

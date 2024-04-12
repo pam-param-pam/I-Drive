@@ -8,7 +8,7 @@ from website.views.fileManagmentViews import rename, move_to_trash, move, create
     delete
 from website.views.otherViews import test, index, help1
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
-from website.views.streamViews import get_file_preview, stream_file, download_file
+from website.views.streamViews import stream_file, download_file
 from website.views.uploadViews import create_file
 
 urlpatterns = [
@@ -21,7 +21,7 @@ urlpatterns = [
                   path("api/file/create", create_file, name="create file"),
                   path("api/file/<file_id>", get_file, name="get file by file id"),
                   path("api/file/download/<file_id>", download_file, name="download"),
-                  path("api/file/preview/<file_id>", get_file_preview, name="get file preview by file id"),
+                  #path("api/file/preview/<file_id>", get_file_preview, name="get file preview by file id"),
                   path("api/file/stream/<file_id>", stream_file, name="stream larger files"),
 
 
@@ -30,7 +30,6 @@ urlpatterns = [
 
 
                   path("api/user/updatesettings", update_settings, name="update settings"),
-
 
                   path('admin', admin.site.urls),
 
@@ -63,3 +62,4 @@ urlpatterns = [
                   #path("api/getroot", get_root, name="get root's content"),
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

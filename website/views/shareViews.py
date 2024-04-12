@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserSettings, ShareableLink
-from website.utilities.common.error import ResourceNotFound, ResourcePermissionError, BadRequestError
+from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import create_file_dict, create_share_dict, get_shared_folder
 
