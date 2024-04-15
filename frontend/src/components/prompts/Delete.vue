@@ -73,7 +73,6 @@ export default {
         console.log(message)
         this.$toast.info(message, {
           id: res.task_id,
-          timeout: null
         });
         this.currentPrompt?.confirm();
 

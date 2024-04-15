@@ -162,7 +162,7 @@ export default {
 
       if (this.items != null) {
         this.items.forEach((item) => {
-          if (!item.isDir) {
+          if (!item.isDir && item.type !== "text" && item.type !== "application") {
             items.push(item);
           }
         });
@@ -201,29 +201,38 @@ export default {
     ...mapMutations(["setLoading"]),
 
     async fetchData() {
-
       let fileId = this.$route.params.fileId;
 
       this.setLoading(true);
 
-      try {
-        this.file = await getFile(fileId)
-        if (!this.currentFolder) {
-          const res = await getItems(this.file.parent_id);
+      if (this.items) {
+        for (let i = 0; i < this.items.length; i++) {
+          if (this.items[i].id === fileId) {
+            this.file = this.items[i];
+          }
+        }
+      }
+      if (!this.file) {
+        try {
+          this.file = await getFile(fileId)
+          if (!this.currentFolder) {
+            const res = await getItems(this.file.parent_id);
 
-          this.$store.commit("setItems", res.children);
-          this.$store.commit("setCurrentFolder", res);
+            this.$store.commit("setItems", res.children);
+            this.$store.commit("setCurrentFolder", res);
+
+          }
+
+        } catch (e) {
+          console.log(e)
+          this.error = e;
 
         }
-        this.$store.commit("addSelected", this.file);
-
-      } catch (e) {
-        console.log(e)
-        this.error = e;
-      } finally {
-        this.setLoading(false);
-
       }
+      this.$store.commit("addSelected", this.file);
+
+      this.setLoading(false);
+
     },
     deleteFile() {
       this.$store.commit("showHover", {
@@ -295,7 +304,7 @@ export default {
     close() {
       let parent_id = this.file?.parent_id
       if (parent_id) {
-        this.$store.commit("updateItems", {});
+        //this.$store.commit("updateItems", {});
         this.$router.push({path: `/folder/${parent_id}`});
       }
       else {

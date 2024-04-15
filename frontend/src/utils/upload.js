@@ -1,4 +1,4 @@
-import {fetchJSON} from "@/api/utils.js";
+import {fetchJSON, fetchURL} from "@/api/utils.js";
 import CryptoJS from 'crypto-js';
 import store from "@/store";
 import {create} from "@/api/folder.js";
@@ -194,16 +194,17 @@ export async function handleCreatingFiles(fileList) {
     }
   }
   createdFiles.push(...await createFiles(fileList, filesInRequest))
-
-  // createdFiles looks like this:
-  // "file_id": created_file.file_id, "encryption_key": created_file.key, "file": file, "parent_id": created_file.parent_id, "name": created_file.name}
+  /**
+  createdFiles looks like this:
+  "file_id": created_file.file_id, "encryption_key": created_file.key, "file": file, "parent_id": created_file.parent_id, "name": created_file.name}
+  */
   await prepareUploadRequests(createdFiles)
 }
 
 export async function prepareUploadRequests(createdFiles) {
 
   //for (let file of createdFiles) {
-  //await store.dispatch("upload/upload", createdFiles);
+  await store.dispatch("upload/upload", createdFiles);
 
   const chunkSize = 25 * 1023 * 1024; // <25MB in bytes
   let totalSize = 0
@@ -267,6 +268,7 @@ export async function prepareUploadRequests(createdFiles) {
   //await store.dispatch("upload/upload", item);
 
 
+
 }
 
 export async function uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest) {
@@ -292,7 +294,7 @@ export async function uploadMultiAttachments(fileFormList, attachmentJson, files
     for (let i = 0; i < json.attachments.length; i++) {
       let attachment = json.attachments[i]
       console.log("aaaaaa: " + JSON.stringify(filesForRequest[i]))
-      let fragment_res = await fetchJSON(`/api/file/create`, {
+      await fetchURL(`/api/file/create`, {
         method: "PATCH",
         body: JSON.stringify(
           {
@@ -331,7 +333,7 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, file_id) {
 
     let json = await response.json();
 
-    let fragment_res = await fetchJSON(`/api/file/create`, {
+    await fetchURL(`/api/file/create`, {
       method: "PATCH",
       body: JSON.stringify(
         {

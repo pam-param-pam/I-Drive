@@ -39,7 +39,12 @@ export default {
 
     },
   },
+  methods: {
+    isMobile() {
+      return window.innerWidth <= 736;
 
+    }
+  },
   asyncComputed: {
     path: {
       async get() {
@@ -53,8 +58,27 @@ export default {
             console.log(error)
           }
         }
+        const maxWidth = window.innerWidth; // Assuming window width as the maximum width in pixels
 
-        return path
+        let currentWidth = 0;
+        let trimmedPath = [];
+
+        for (let folder of path) {
+          const folderWidth = (folder.name.length + 3)* 16 ; // Assuming average character width of 8px and adding 3 for characters like space and '...'
+
+          if (currentWidth + folderWidth <= maxWidth) {
+            trimmedPath.push(folder);
+            currentWidth += folderWidth;
+          } else {
+            // If adding this folder exceeds the width, stop and add "..."
+            let changed_folder = folder
+            changed_folder.name = "..."
+            trimmedPath.push(changed_folder);
+            break;
+          }
+        }
+
+        return trimmedPath;
       },
       default: [],
 
@@ -64,4 +88,6 @@ export default {
 };
 </script>
 
-<style></style>
+<style>
+
+</style>

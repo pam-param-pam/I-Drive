@@ -32,21 +32,11 @@
       </div>
 
       <div class="card-content file-icons">
-        <div
-          class="file"
+        <UploadFile
           v-for="file in filesInUpload"
-          :key="file.id"
-          :aria-label="file.name"
-          :data-dir="false"
-          :data-type="file.type"
-        >
-          <div class="file-name">
-            <i class="material-icons"></i> {{ file.name }}
-          </div>
-          <div class="file-progress">
-            <div v-bind:style="{ width: file.progress + '%' }"></div>
-          </div>
-        </div>
+          :key="file.name"
+          :file="file"
+        />
       </div>
     </div>
   </div>
@@ -56,9 +46,11 @@
 import { mapGetters, mapMutations } from "vuex";
 import { abortAllUploads } from "@/api/tus";
 import buttons from "@/utils/buttons";
+import UploadFile from "@/components/UploadFile.vue";
 
 export default {
   name: "uploadFiles",
+  components: {UploadFile},
   data: function () {
     return {
       open: false,

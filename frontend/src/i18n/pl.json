@@ -63,7 +63,9 @@
     "update": "Aktualizuj",
     "upload": "Prześlij",
     "file": "Pliki",
-    "folder": "Foldery"
+    "folder": "Foldery",
+    "discardChanges": "Odrzuć"
+
   },
   "languages": {
     "en": "English",
@@ -165,7 +167,9 @@
     "show": "Pokaż",
     "size": "Rozmiar",
     "upload": "Prześlij",
-    "uploadMessage": "Proszę wybrać metodę przesyłania"
+    "uploadMessage": "Proszę wybrać metodę przesyłania",
+    "discardEditorChanges": "Czy napewno chcesz odrzucić zmiany?"
+
   },
   "toasts": {
     "itemMoved": "Przenesiono {amount} itemy",
@@ -174,6 +178,7 @@
     "folderCreated": "Stworzono {name}",
     "itemRenamed": "Nazwa zmieniona",
     "selectFilesFirst": "Zaznacz plik(i) najpierw!",
-    "PreparingUpload": "Rozpoczęto proces przesyłania plików..."
+    "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
+    "fileSaved": "Zapisano plik"
   }
 }

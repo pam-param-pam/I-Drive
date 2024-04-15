@@ -27,11 +27,13 @@ const getters = {
       let name = file.name
       let parent_id = file.parent_id
       let size = file.file.size
-      let progress = 0
+      let progress = 50
       let type = file.type
-
-
+      let status = "uploading"
+      let percentage = 50
       files.push({
+        status,
+        percentage,
         type,
         size,
         id,

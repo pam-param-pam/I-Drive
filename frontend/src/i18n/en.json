@@ -167,7 +167,8 @@
     "show": "Show",
     "size": "Size",
     "upload": "Upload",
-    "uploadFiles": "Uploading {files} files..."
+    "uploadFiles": "Uploading {files} files...",
+    "discardEditorChanges": "Are you sure you wish to discard the changes you've made?"
   },
   "toasts": {
     "itemMoved": "Przenesiono {amount} itemy",
@@ -176,7 +177,8 @@
     "folderCreated": "Stworzono {name}",
     "itemRenamed": "Nazwa zmieniona",
     "selectFilesFirst": "Zaznacz plik(i) najpierw!",
-    "PreparingUpload": "Rozpoczęto proces przesyłania plików..."
+    "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
+    "fileSaved": "File saved"
   }
 }
 

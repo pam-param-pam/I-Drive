@@ -27,6 +27,7 @@
       <button
         class="button button--flat"
         :aria-label="$t('buttons.create')"
+        id="create-button"
         :title="$t('buttons.create')"
         @click="submit"
       >
@@ -41,9 +42,12 @@ import {mapState} from "vuex";
 
 import {create} from "@/api/folder.js";
 import vue from "@/utils/vue.js";
+import Action from "@/components/header/Action.vue";
+import buttons from "@/utils/buttons.js";
 
 export default {
   name: "new-dir",
+  components: {Action},
   props: {
     redirect: {
       type: Boolean,
@@ -68,6 +72,7 @@ export default {
 
       if (this.name.length > 0) {
         try {
+
           await create({"parent_id": this.currentFolder?.id, "name": this.name})
           let message = this.$t('toasts.folderCreated', { name: this.name})
           this.$toast.success(message);
@@ -78,7 +83,9 @@ export default {
         finally {
           this.$store.commit("closeHover");
 
+
         }
+
 
       }
 

@@ -190,12 +190,14 @@ export default {
         this.$router.push({path: `/folder/${this.item.id}`});
 
       } else {
-        if (this.item.type === "text") {
-          this.$router.push({path: `/editor/${this.item.id}`});
+        if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" || this.item.size >= 25 * 1024 * 1024) {
+          this.$router.push({path: `/preview/${this.item.id}`});
 
         }
         else {
-          this.$router.push({path: `/preview/${this.item.id}`});
+          this.$router.push({path: `/editor/${this.item.id}`});
+
+
 
         }
 

@@ -55,8 +55,7 @@ export default {
   },
 
   computed: {
-    ...mapState(["selected", "items"]),
-    ...mapGetters(["isListing", "selectedCount", "currentPrompt"]),
+    ...mapState(["selected"]),
 
   },
   created() {

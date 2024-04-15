@@ -1,5 +1,5 @@
 function loading(button) {
-  /*
+
   let el = document.querySelector(`#${button}-button > i`);
 
   if (el === undefined || el === null) {
@@ -20,11 +20,11 @@ function loading(button) {
     el.style.opacity = 1;
   }, 100);
 
-   */
+
 }
 
 function done(button) {
-  /*
+
   let el = document.querySelector(`#${button}-button > i`);
 
   if (el === undefined || el === null) {
@@ -40,11 +40,11 @@ function done(button) {
     el.style.opacity = 1;
   }, 100);
 
-   */
+
 }
 
 function success(button) {
-  /*
+
   let el = document.querySelector(`#${button}-button > i`);
 
   if (el === undefined || el === null) {
@@ -66,10 +66,10 @@ function success(button) {
         el.innerHTML = el.dataset.icon;
         el.style.opacity = 1;
       }, 100);
-    }, 500);
+    }, 2000);
   }, 100);
 
-   */
+
 }
 
 export default {

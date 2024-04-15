@@ -42,8 +42,8 @@ export default {
     $route: "redirect",
   },
   destroyed() {
-    this.$store.commit("setItems", null);
-    this.$store.commit("setCurrentFolder", null);
+    //this.$store.commit("setItems", null);
+    //this.$store.commit("setCurrentFolder", null);
 
   },
   methods: {

@@ -23,11 +23,12 @@ import NewFile from "./NewFile.vue";
 import NewDir from "./NewDir.vue";
 import Replace from "./Replace.vue";
 import ReplaceRename from "./ReplaceRename.vue";
+import DiscardEditorChanges from "./DiscardEditorChanges.vue";
 import Share from "./Share.vue";
 import Upload from "./Upload.vue";
 import ShareDelete from "./ShareDelete.vue";
 import Sidebar from "../Sidebar.vue";
-import { mapGetters, mapState } from "vuex";
+import { mapGetters } from "vuex";
 import buttons from "@/utils/buttons";
 
 export default {
@@ -47,7 +48,8 @@ export default {
     ReplaceRename,
     Upload,
     ShareDelete,
-    Sidebar
+    Sidebar,
+    DiscardEditorChanges
   },
   data: function () {
     return {
