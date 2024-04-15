@@ -1,16 +1,18 @@
+from django.core.cache import caches
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.models import Folder, File, Fragment
+from website.models import Folder, File, Fragment, UserSettings
+from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.errors import BadRequestError, ResourcePermissionError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import send_event, create_file_dict
 
-
-@api_view(['POST', 'PATCH'])
+cache = caches["default"]
+@api_view(['POST', 'PATCH', 'PUT'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
@@ -60,7 +62,9 @@ def create_file(request):
                 file_obj.ready = True
             file_obj.save()
 
-            response_json.append({"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name, "type": file_type})
+            response_json.append(
+                {"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
+                 "type": file_type})
 
         return JsonResponse(response_json, safe=False)
 
@@ -96,3 +100,58 @@ def create_file(request):
 
         return HttpResponse(status=200)
 
+    if request.method == "PUT":
+        file_id = request.data['file_id']
+
+        file_obj = File.objects.get(id=file_id)
+        if file_obj.owner != request.user:
+            raise ResourcePermissionError(f"You do not own this resource!")
+        if not file_obj.ready:
+            raise BadRequestError(f"You cannot edit a 'not ready' file!")
+
+        fragments = Fragment.objects.filter(file=file_obj)
+
+        if file_obj.size > 25 * 1024 * 1023:
+            raise BadRequestError(f"You cannot edit a file larger than 25Mb!")
+        if len(fragments) > 1:
+            raise BadRequestError(f"Fragments > 1")
+
+        old_fragment = fragments[0]
+        message_id = request.data['message_id']
+        attachment_id = request.data['attachment_id']
+        fragment_size = request.data['fragment_size']
+
+        old_message_id = old_fragment.message_id
+        fragments = Fragment.objects.filter(message_id=old_message_id)
+        # multi file in 1 message
+        if len(fragments) > 1:
+            attachment_ids = []
+            for fragment in fragments:
+                if fragment != old_fragment:
+                    attachment_ids.append(fragment.attachment_id)
+
+            settings = UserSettings.objects.get(user_id=request.user)
+            webhook = settings.discord_webhook
+
+            discord.edit_attachments(webhook, old_message_id, attachment_ids)
+        else:
+            # single file in 1 message
+
+            discord.remove_message(old_message_id)
+        old_fragment.delete()
+
+        fragment_obj = Fragment(
+            sequence=1,
+            file=file_obj,
+            size=fragment_size,
+            attachment_id=attachment_id,
+            encrypted_size=fragment_size,
+            message_id=message_id,
+        )
+        fragment_obj.save()
+        file_obj.size = fragment_size
+        file_obj.save()
+        # important invalidate caches!
+        cache.delete(message_id)
+
+        return HttpResponse(200)

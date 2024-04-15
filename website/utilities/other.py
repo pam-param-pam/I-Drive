@@ -23,6 +23,7 @@ def sign_file_id_with_expiry(file_id):
     cache.set(file_id, signed_file_id, timeout=43200)
     return signed_file_id
 
+
 # Function to verify and extract the file id
 def verify_signed_file_id(signed_file_id, expiry_days=1):
     try:
@@ -30,6 +31,7 @@ def verify_signed_file_id(signed_file_id, expiry_days=1):
         return file_id
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("Url not valid or expired.")
+
 
 def send_event(user_id, op_code, request_id, data):
     queue_ws_event.delay(
@@ -42,6 +44,7 @@ def send_event(user_id, op_code, request_id, data):
             'data': data,
         }
     )
+
 
 def calculate_time(file_size_bytes, bitrate_bps):
     time_seconds = (file_size_bytes * 8) / bitrate_bps
@@ -100,6 +103,9 @@ def create_file_dict(file_obj):
 
 
 def create_folder_dict(folder_obj):
+    """
+    Crates partial folder dict, not containing children items
+    """
     file_children = File.objects.filter(parent=folder_obj, ready=True)
     folder_children = Folder.objects.filter(parent=folder_obj)
 
@@ -140,21 +146,6 @@ def create_share_dict(share):
     return item
 
 
-def build_folder_tree(folder_objs, parent_folder=None):
-    folder_tree = []
-
-    # Get all folders with the specified parent folder
-    child_folders = folder_objs.filter(parent=parent_folder)
-
-    for folder in child_folders:
-        folder_dict = create_folder_dict(folder)
-        folder_dict["children"] = build_folder_tree(folder_objs, folder)
-
-        folder_tree.append(folder_dict)
-
-    return folder_tree
-
-
 def get_shared_folder(folder_obj, includeSubfolders):
     def recursive_build(folder):
         file_children = File.objects.filter(parent=folder, ready=True)
@@ -175,8 +166,7 @@ def get_shared_folder(folder_obj, includeSubfolders):
 
 
 def build_folder_content(folder_obj, includeTrash):
-
-    file_children = File.objects.filter(parent=folder_obj, inTrash=includeTrash)
+    file_children = File.objects.filter(parent=folder_obj, inTrash=includeTrash, ready=True)
     folder_children = Folder.objects.filter(parent=folder_obj, inTrash=includeTrash)
 
     file_dicts = []
@@ -226,3 +216,20 @@ def get_folder_path(folder_id, folder_structure, path=None):
 
     # Folder ID not found in the current folder structure
     return []
+
+
+"""
+def build_folder_tree(folder_objs, parent_folder=None):
+    folder_tree = []
+
+    # Get all folders with the specified parent folder
+    child_folders = folder_objs.filter(parent=parent_folder)
+
+    for folder in child_folders:
+        folder_dict = create_folder_dict(folder)
+        folder_dict["children"] = build_folder_tree(folder_objs, folder)
+
+        folder_tree.append(folder_dict)
+
+    return folder_tree
+"""

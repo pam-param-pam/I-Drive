@@ -102,9 +102,16 @@ def stream_file(request, file_obj):
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
-@check_file_and_permissions
+@check_signed_url
+@check_file
 @handle_common_errors
-def download_file(request, file_obj):
-    raise NotImplementedError("Come back later :3")
+async def download_file(request, file_obj):
+
+    async def streaming_response():
+        # Do some work here
+        while True:
+            yield "hello"
+
+    return StreamingHttpResponse(streaming_response())
 
 
