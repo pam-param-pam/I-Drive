@@ -67,6 +67,7 @@ class Discord:
         self.cache = caches["default"]
 
         self.headers = {'Authorization': f'Bot {self.current_token}', "Content-Type": 'application/json'}
+        self.file_upload_headers = {'Authorization': f'Bot {self.current_token}'}
 
     @property
     def current_token(self):
@@ -80,7 +81,7 @@ class Discord:
     @retry
     def send_message(self, message) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
-        payload = {'content': message}  # Construct the payload according to Discord API requirements
+        payload = {'content': message}
 
         response = self.client.post(url, headers=self.headers, json=payload)
         if response.is_success or response.status_code == 429:
@@ -90,7 +91,7 @@ class Discord:
     @retry
     def send_file(self, files) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
-        response = self.client.post(url, headers=self.headers, files=files, timeout=None)
+        response = self.client.post(url, headers=self.file_upload_headers, files=files, timeout=None)
         if response.is_success or response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)

@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.template.defaultfilters import filesizeformat
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail
 
 
 @admin.register(Fragment)
@@ -106,6 +106,9 @@ class FileAdmin(admin.ModelAdmin):
 
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)
+
+admin.site.register(Preview)
+admin.site.register(Thumbnail)
 
 
 class ShareableLinkAdmin(admin.ModelAdmin):

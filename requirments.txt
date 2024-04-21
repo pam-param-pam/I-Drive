@@ -12,3 +12,6 @@ eventlet
 gevent
 django-cors-headers
 django-shortuuidfield
+gunicorn
+exifread
+rawpy

@@ -94,6 +94,13 @@ def create_file_dict(file_obj):
 
     signed_file_id = sign_file_id_with_expiry(file_obj.id)
     preview_url = f"{base_url}/api/file/stream/{signed_file_id}"
+
+    if file_obj.extension in ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
+        preview_url = f"{base_url}/api/file/preview/{signed_file_id}"
+
+    if file_obj.type == "image":
+        file_dict['thumbnail_url'] = f"{base_url}/api/file/thumbnail/{signed_file_id}"
+
     download_url = f"{base_url}/api/file/download/{signed_file_id}"
 
     file_dict['preview_url'] = preview_url

@@ -8,12 +8,18 @@ from website.views.fileManagmentViews import rename, move_to_trash, move, create
     delete
 from website.views.otherViews import test, index, help1
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
-from website.views.streamViews import stream_file, download_file
+from website.views.streamViews import stream_file, download_file, preview, thumbnail  # ,\
+    #stream_test, stream_file_test, stream_test
 from website.views.uploadViews import create_file
 
 urlpatterns = [
                   path("test/<file_id>", test, name="test"),
                   path("help", help1, name="help"),
+
+                  #path("stream", stream_test, name="stream"),
+                  #path("stream2", stream_test2, name="stream"),
+
+                  #path("stream_file", stream_file_test, name="stream"),
 
                   path("", index, name="index"),
 
@@ -23,7 +29,8 @@ urlpatterns = [
                   path("api/file/download/<file_id>", download_file, name="download"),
                   #path("api/file/preview/<file_id>", get_file_preview, name="get file preview by file id"),
                   path("api/file/stream/<file_id>", stream_file, name="stream larger files"),
-
+                  path("api/file/preview/<file_id>", preview, name="help"),
+                  path("api/file/thumbnail/<file_id>", thumbnail, name="help"),
 
                   path('auth/', include('djoser.urls.authtoken')),
                   path('auth/user/me', users_me, name="get current user"),

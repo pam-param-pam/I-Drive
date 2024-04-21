@@ -122,7 +122,7 @@ def update_settings(request):
     subfoldersInShares = request.data.get('subfoldersInShares')
 
     settings = UserSettings.objects.get(user=request.user)
-    if locale in ["pl", "en"]:
+    if locale in ["pl", "en", "uwu"]:
         settings.locale = locale
     if isinstance(dateFormat, bool):
         settings.date_format = dateFormat

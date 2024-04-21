@@ -5,7 +5,7 @@ from django.http import JsonResponse
 
 from website.models import File, Folder
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError
+    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable
 from website.utilities.other import error_res, verify_signed_file_id
 
 
@@ -113,6 +113,8 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=400, error_code=13, details=str(e)), status=400)
         except DiscordBlockError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=14, details=str(e)), status=400)
+        except ResourceNotPreviewable as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=11, details=str(e)), status=400)
         except NotImplementedError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=15, details=str(e)), status=400)
         except KeyError:

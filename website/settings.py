@@ -118,11 +118,12 @@ WSGI_APPLICATION = 'website.wsgi.application'
 ASGI_APPLICATION = 'website.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'CONN_MAX_AGE':  None
+
     }
 }
 
@@ -159,6 +160,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+#STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -185,8 +187,9 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '60/min',
-        'user': '1000/min'
+        'anon': '30/min',
+        'user': '100/min',
+        'media': '60/min'
     }
 }
 # Celery settings

@@ -229,6 +229,22 @@ class ShareableLink(models.Model):
 
 class Thumbnail(models.Model):
     size = models.PositiveBigIntegerField()
+    encrypted_size = models.PositiveBigIntegerField()
     attachment_id = models.CharField(max_length=255, null=True)
-    file = models.ForeignKey(File, on_delete=models.CASCADE)
+    file = models.OneToOneField(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
+    key = models.BinaryField()
+
+    def __str__(self):
+        return self.file.name
+
+class Preview(models.Model):
+    size = models.PositiveBigIntegerField()
+    encrypted_size = models.PositiveBigIntegerField()
+    attachment_id = models.CharField(max_length=255, null=True)
+    file = models.OneToOneField(File, on_delete=models.CASCADE)
+    message_id = models.CharField(max_length=255)
+    key = models.BinaryField()
+
+    def __str__(self):
+        return self.file.name
