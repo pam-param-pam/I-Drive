@@ -1,13 +1,17 @@
+import binascii
+import io
 import time
 import traceback
 
+import exifread
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
+from django.db.utils import IntegrityError
 
 from website.celery import app
-from website.models import File, Fragment, Folder, UserSettings
+from website.models import File, Fragment, Folder, UserSettings, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.errors import DiscordError
@@ -21,11 +25,14 @@ MAX_STREAM_MB = 24
 # thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
 @shared_task(bind=True, name='queue_ws_event', ignore_result=True, queue='wsQ')
 def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this self arg is needed - no, don't ask me why
+    print("33333")
+
     channel_layer = get_channel_layer()
     if group:
         async_to_sync(channel_layer.group_send)(ws_channel, ws_event)
     else:
         async_to_sync(channel_layer.send)(ws_channel, ws_event)
+    print("444444")
 
 
 def send_message(message, finished, user_id, request_id, isError=False):
@@ -42,6 +49,30 @@ def send_message(message, finished, user_id, request_id, isError=False):
         }
     )
 
+@app.task
+def save_preview(file_id, celery_file):
+    try:
+        file_data = binascii.a2b_base64(celery_file)
+        preview_file = io.BytesIO(file_data)
+        files = {'file': ('1', preview_file)}
+        #tags = exifread.process_file(file_like_object)
+        response = discord.send_file(files)
+        message = response.json()
+        file_size = preview_file.getbuffer().nbytes
+
+        file_obj = File.objects.get(id=file_id)
+
+        preview = Preview(
+            file=file_obj,
+            size=file_size,
+            attachment_id=message["attachments"][0]["id"],
+            encrypted_size=file_size,
+            message_id=message["id"],
+            key=b'#todo'
+        )
+        preview.save()
+    except IntegrityError:
+        print("IntegrityError aka I don't care")
 
 @app.task
 def smart_delete(user_id, request_id, ids):
@@ -81,6 +112,15 @@ def smart_delete(user_id, request_id, ids):
                 # If the key doesn't exist, create a new key with a list containing the value
                 else:
                     message_structure[key] = [value]
+
+            # deleting file preview if it exists
+            try:
+                preview = Preview.objects.get(file=file)
+                # no need to check if it exists cuz previews are always stored as separate messages
+                message_structure[preview.message_id] = [preview.attachment_id]
+            except Preview.DoesNotExist:
+                pass
+
         settings = UserSettings.objects.get(user_id=user_id)
         webhook = settings.discord_webhook
         length = len(message_structure)

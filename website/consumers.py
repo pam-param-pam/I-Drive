@@ -4,6 +4,10 @@ import time
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
+from website.models import Folder
+from website.utilities.OPCodes import EventCode
+from website.utilities.other import build_folder_content, send_event
+
 
 class UserConsumer(WebsocketConsumer):
 
@@ -26,8 +30,12 @@ class UserConsumer(WebsocketConsumer):
                                   "task_id": event["request_id"]}))
 
     def send_event(self, event):
+        print("send event1")
 
+        print(self.scope['user'].id)
+        print(event['user_id'])
         if self.scope['user'].id == event['user_id']:
+            print("send event")
             self.send(json.dumps({"op_code": event['op_code'], "data": event['data']}))
 
 
@@ -43,14 +51,22 @@ class CommandConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_discard)("command", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
-        print(text_data)
-        if "sudo" in text_data:
-            self.send("hecking white house...")
-            time.sleep(1)
-            self.send("Obama's last name is...")
-            time.sleep(3)
-            self.send("Connection terminated by Illuminati")
-        else:
-            self.send("Sending 100 nukes to your location.")
+        json_data = json.loads(text_data)
+        current_folder = json_data["current_folder_id"]
+        command = json_data["command"]
+        item_names = []
+        if command == "ls":
+            folder_obj = Folder.objects.get(id=current_folder)
+            folder_content = build_folder_content(folder_obj, False)
+            print(folder_content)
+            for item in folder_content["children"]:
+                item_names.append("> " + item["name"])
+
+        dir_content = '\n'.join(item_names)
+        self.send(dir_content)
+        if command == "cd":
+            print("cd1")
+            send_event(self.scope['user'].id, EventCode.FORCE_FOLDER_NAVIGATION, "0000", {"folder_id": "8x9XURqmWZYcCaExwk6vnB"})
+            print("cd2")
 
         self.close()

@@ -8,6 +8,7 @@ from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserPerms, UserSettings
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
+from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict
 
 DELAY_TIME = 0
@@ -22,9 +23,14 @@ def get_folder(request, folder_obj):
     time.sleep(DELAY_TIME)
 
     includeTrash = request.GET.get('includeTrash', False)
-    folder_content = build_folder_content(folder_obj, includeTrash)
+    password = request.headers.get("X-Folder-Password")
+    if password == folder_obj.password:
+        folder_content = build_folder_content(folder_obj, includeTrash)
+        return JsonResponse(folder_content)
 
-    return JsonResponse(folder_content)
+    if password:
+        raise IncorrectFolderPassword("Incorrect folder password")
+    raise MissingFolderPassword("Please enter folder password.")
 
 
 @api_view(['GET'])
@@ -97,7 +103,7 @@ def users_me(request):
                           "rename": perms.rename,
                           "modify": perms.modify, "delete": perms.delete, "share": perms.share,
                           "download": perms.download},
-                "settings": {"locale": settings.locale, "hideHiddenFolders": settings.hide_hidden_folders,
+                "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders,
                              "dateFormat": settings.date_format,
                              "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
                              "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
@@ -114,7 +120,7 @@ def update_settings(request):
     time.sleep(DELAY_TIME)
 
     locale = request.data.get('locale')
-    hideHiddenFolders = request.data.get('hideHiddenFolders')
+    hideLockedFolders = request.data.get('hideLockedFolders')
     dateFormat = request.data.get('dateFormat')
     viewMode = request.data.get('viewMode')
     sortingBy = request.data.get('sortingBy')
@@ -126,8 +132,8 @@ def update_settings(request):
         settings.locale = locale
     if isinstance(dateFormat, bool):
         settings.date_format = dateFormat
-    if isinstance(hideHiddenFolders, bool):
-        settings.hide_hidden_folders = hideHiddenFolders
+    if isinstance(hideLockedFolders, bool):
+        settings.hide_locked_folders = hideLockedFolders
     if viewMode in ["list", "mosaic", "mosaic gallery"]:
         settings.view_mode = viewMode
     if sortingBy in ["name", "size", "created"]:

@@ -5,7 +5,8 @@ from django.http import JsonResponse
 
 from website.models import File, Folder
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable
+    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, \
+    MissingFolderPassword
 from website.utilities.other import error_res, verify_signed_file_id
 
 
@@ -57,7 +58,7 @@ def check_file(view_func):
                     error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),
                     status=404)
 
-        except (File.DoesNotExist, ValidationError):
+        except (Folder.DoesNotExist, ValidationError):
 
             return JsonResponse(error_res(user=request.user, code=404, error_code=8,
                                           details=f"File with id of '{file_id}' doesn't exist."), status=404)
@@ -74,7 +75,7 @@ def check_folder_and_permissions(view_func):
             includeTrash = request.GET.get('includeTrash', False)
 
             folder_obj = Folder.objects.get(id=folder_id, inTrash=includeTrash)
-            if folder_obj.owner != request.user and False:  # TODO :sob:
+            if folder_obj.owner != request.user:
                 return JsonResponse(
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
                     status=403)
@@ -93,22 +94,22 @@ def handle_common_errors(view_func):
     def wrapper(request, *args, **kwargs):
         try:
             return view_func(request, *args, **kwargs)
+
+        # 404 NOT FOUND
         except Folder.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder not found."),
                                 status=404)
         except File.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="File not found."),
                                 status=404)
-        except ValidationError as e:
-            return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
         except ResourceNotFound as e:
             return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
-        except ResourcePermissionError as e:
-            return JsonResponse(error_res(user=request.user, code=403, error_code=1, details=str(e)), status=403)
+
+        # 400 BAD REQUEST
+        except ValidationError as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
         except BadRequestError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=1, details=str(e)), status=400)
-        except RootPermissionError as e:
-            return JsonResponse(error_res(user=request.user, code=403, error_code=12, details=str(e)), status=403)
         except DiscordError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=13, details=str(e)), status=400)
         except DiscordBlockError as e:
@@ -121,5 +122,17 @@ def handle_common_errors(view_func):
             return JsonResponse(
                 error_res(user=request.user, code=400, error_code=1, details="Missing some required parameters"),
                 status=400)
+
+        # 403 REQUEST FORBIDDEN
+        except ResourcePermissionError as e:
+            return JsonResponse(error_res(user=request.user, code=403, error_code=5, details=str(e)), status=403)
+        except RootPermissionError as e:
+            return JsonResponse(error_res(user=request.user, code=403, error_code=12, details=str(e)), status=403)
+
+        # 469 CUSTOM STATUS CODE - FOLDER PASSWORD MISSING OR INCORRECT
+        except IncorrectFolderPassword as e:
+            return JsonResponse(error_res(user=request.user, code=469, error_code=16, details=str(e)), status=469)
+        except MissingFolderPassword as e:
+            return JsonResponse(error_res(user=request.user, code=469, error_code=17, details=str(e)), status=469)
 
     return wrapper

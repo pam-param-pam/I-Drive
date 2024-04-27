@@ -18,7 +18,7 @@ class Folder(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
     inTrash = models.BooleanField(default=False)
-
+    password = models.CharField(max_length=255, null=True, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
 
     def __str__(self):
@@ -147,7 +147,7 @@ class UserSettings(models.Model):
     locale = models.TextField(max_length=50, null=False, default="en")
     view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
     date_format = models.BooleanField(default=False)
-    hide_hidden_folders = models.BooleanField(default=False)
+    hide_locked_folders = models.BooleanField(default=False)
     subfolders_in_shares = models.BooleanField(default=False)
     discord_webhook = models.TextField(null=True)
 
@@ -226,7 +226,7 @@ class ShareableLink(models.Model):
 # class Trash(models.Model):
 #    folder_id = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True)
 #    old_parent_id = models.ForeignKey(Folder, on_delete=models.SET(get_users_root()))
-
+"""
 class Thumbnail(models.Model):
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
@@ -237,14 +237,22 @@ class Thumbnail(models.Model):
 
     def __str__(self):
         return self.file.name
+"""
 
 class Preview(models.Model):
+    created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
     attachment_id = models.CharField(max_length=255, null=True)
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
     key = models.BinaryField()
+    iso = models.CharField(max_length=50, null=True)
+    aperture = models.CharField(max_length=50, null=True)
+    exposure_time = models.CharField(max_length=50, null=True)
+    model_name = models.CharField(max_length=50, null=True)
+    focal_length = models.CharField(max_length=50, null=True)
+
 
     def __str__(self):
         return self.file.name

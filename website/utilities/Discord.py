@@ -14,7 +14,7 @@ def retry(func):
             print("hit 429!!!!!!!!!!!!!!!")
             try:
                 retry_after = response.json()["retry_after"]
-                time.sleep(retry_after)
+                time.sleep(1.5)
             except KeyError:
                 raise DiscordBlockError("Discord is stupid :(")
             return decorator(*args, **kwargs)
@@ -92,7 +92,11 @@ class Discord:
     def send_file(self, files) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
         response = self.client.post(url, headers=self.file_upload_headers, files=files, timeout=None)
-        if response.is_success or response.status_code == 429:
+        if response.is_success:
+            # expire is 1 day
+            self.cache.set(response.json()["id"], response, timeout=86400)
+            return response
+        if response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)
 
@@ -112,10 +116,12 @@ class Discord:
         print("hit discord api")
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.get(url, headers=self.headers)
-        if response.is_success or response.status_code == 429:
-            # expire is 6 days
-            self.cache.set(message_id, response, timeout=518400)
+        if response.is_success:
+            # expire is 1 day
+            self.cache.set(message_id, response, timeout=86400)
+            return response
 
+        if response.status_code == 429:
             return response
 
         raise DiscordError(response.text, response.status_code)

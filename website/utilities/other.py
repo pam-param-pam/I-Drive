@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.core.cache import caches
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 
-from website.models import File, Folder, UserSettings
+from website.models import File, Folder, UserSettings, Preview
 from website.tasks import queue_ws_event
 from website.utilities.OPCodes import message_codes
 from website.utilities.errors import ResourcePermissionError
@@ -34,6 +34,7 @@ def verify_signed_file_id(signed_file_id, expiry_days=1):
 
 
 def send_event(user_id, op_code, request_id, data):
+
     queue_ws_event.delay(
         'user',
         {
@@ -84,24 +85,35 @@ def create_file_dict(file_obj):
         'type': file_obj.type,
         'encrypted_size': file_obj.encrypted_size,
         'created': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
-        'ready': file_obj.ready,
-        'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
-        "maintainers": [],
+        #'ready': file_obj.ready,
+        #'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
+        #"maintainers": [],
         "last_modified": file_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
     }
-    base_url = "http://127.0.0.1:8000"
-    base_url = "https://api.pamparampam.dev"
+    try:
+        preview = Preview.objects.get(file=file_obj)
+        file_dict["iso"] = preview.iso
+        file_dict["model_name"] = preview.model_name
+        file_dict["aperture"] = preview.aperture
+        file_dict["exposure_time"] = preview.exposure_time
+        file_dict["focal_length"] = preview.focal_length
 
+    except Preview.DoesNotExist:
+        pass
+    #base_url = "http://127.0.0.1:8000"
+
+    base_url = "https://api.pamparampam.dev"
     signed_file_id = sign_file_id_with_expiry(file_obj.id)
-    preview_url = f"{base_url}/api/file/stream/{signed_file_id}"
 
     if file_obj.extension in ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
         preview_url = f"{base_url}/api/file/preview/{signed_file_id}"
+    else:
+        preview_url = f"{base_url}/api/file/stream/{signed_file_id}"
 
-    if file_obj.type == "image":
-        file_dict['thumbnail_url'] = f"{base_url}/api/file/thumbnail/{signed_file_id}"
-
-    download_url = f"{base_url}/api/file/download/{signed_file_id}"
+    if file_obj.size < 25 * 1024 * 1024:
+        download_url = preview_url
+    else:
+        download_url = f"{base_url}/api/file/download/{signed_file_id}"
 
     file_dict['preview_url'] = preview_url
     file_dict['download_url'] = download_url
@@ -126,6 +138,7 @@ def create_folder_dict(folder_obj):
         'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
         'parent_id': folder_obj.parent_id,
         'isDir': True,
+        'locked': True if folder_obj.password else False
     }
     return folder_dict
 

@@ -5,10 +5,10 @@ from django.urls import path, include, re_path
 
 from website.views.dataViews import users_me, get_folder, get_file, get_breadcrumbs, get_usage, update_settings
 from website.views.fileManagmentViews import rename, move_to_trash, move, create_folder, \
-    delete
+    delete, folder_password
 from website.views.otherViews import test, index, help1
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
-from website.views.streamViews import stream_file, download_file, preview, thumbnail  # ,\
+from website.views.streamViews import stream_file, download_file, preview  # ,\
     #stream_test, stream_file_test, stream_test
 from website.views.uploadViews import create_file
 
@@ -30,7 +30,6 @@ urlpatterns = [
                   #path("api/file/preview/<file_id>", get_file_preview, name="get file preview by file id"),
                   path("api/file/stream/<file_id>", stream_file, name="stream larger files"),
                   path("api/file/preview/<file_id>", preview, name="help"),
-                  path("api/file/thumbnail/<file_id>", thumbnail, name="help"),
 
                   path('auth/', include('djoser.urls.authtoken')),
                   path('auth/user/me', users_me, name="get current user"),
@@ -51,7 +50,7 @@ urlpatterns = [
                   re_path(r'^api/folder/usage/(?P<folder_id>\w+)/$', get_usage, name="get size of all files in that folder to all user's files"),
                   path("api/folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
                   path("api/folder/create", create_folder, name="create folder"),
-
+                  path("api/folder/password/<folder_id>", folder_password, name="create folder"),
 
                   path("api/item/move", move, name="move file/folder"),
                   path("api/item/delete", delete, name="delete file/folder"),

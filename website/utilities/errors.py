@@ -18,6 +18,13 @@ class ResourcePermissionError(IDriveException):
     """Raised when user has not enough privilege to access a resource"""
     pass
 
+class IncorrectFolderPassword(IDriveException):
+    """Raised when folder password is incorrect"""
+    pass
+
+class MissingFolderPassword(IDriveException):
+    """Raised when folder password is missing"""
+    pass
 
 class BadRequestError(IDriveException):
     """Raised when user's request has some bad/missing data in it"""

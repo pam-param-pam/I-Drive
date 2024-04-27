@@ -9,9 +9,10 @@ from website.models import File, Folder
 from website.tasks import smart_delete
 from website.utilities.OPCodes import EventCode
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError
-from website.utilities.decorators import handle_common_errors
+    RootPermissionError, IncorrectFolderPassword
+from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict
+from website.utilities.throttle import FolderPasswordRateThrottle
 
 DELAY_TIME = 0
 
@@ -37,9 +38,9 @@ def create_folder(request):
     return JsonResponse(folder_dict, status=200)
 
 
-@api_view(['POST'])
+@api_view(['PATCH'])
 @throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 @handle_common_errors
 def move(request):
     time.sleep(DELAY_TIME)
@@ -96,7 +97,7 @@ def move(request):
     return HttpResponse(status=200)
 
 
-@api_view(['POST'])  # this should be a post or delete imo
+@api_view(['PATCH'])  # this should be a post or delete imo
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
@@ -135,7 +136,7 @@ def move_to_trash(request):
     return HttpResponse(status=200)
 
 
-@api_view(['POST'])  # this should be a post or delete imo
+@api_view(['DELETE'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
@@ -172,7 +173,7 @@ def delete(request):
     return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
 
 
-@api_view(['POST'])  # this should be a post or delete imo
+@api_view(['PATCH'])  # this should be a post or delete imo
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
@@ -201,3 +202,26 @@ def rename(request):
     send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
                [{'parent_id': item.parent.id, 'id': item.id, 'new_name': new_name}])
     return HttpResponse(status=200)
+
+
+@api_view(['POST', 'GET'])
+@throttle_classes([FolderPasswordRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
+@check_folder_and_permissions
+def folder_password(request, folder_obj):
+    if request.method == "GET":
+        password = request.headers.get("X-Folder-Password")
+        if folder_obj.password == password:
+            return HttpResponse(200)
+        raise IncorrectFolderPassword("Incorrect folder password")
+
+    if request.method == "POST":
+        newPassword = request.data['newPassword']
+        oldPassword = request.data['oldPassword']
+        if folder_obj.password == oldPassword:
+            folder_obj.password = newPassword
+            folder_obj.save()
+            return HttpResponse(status=200)
+        else:
+            raise IncorrectFolderPassword("Incorrect folder password")
