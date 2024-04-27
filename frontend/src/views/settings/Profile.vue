@@ -8,8 +8,8 @@
 
         <div class="card-content">
           <p>
-            <input type="checkbox" v-model="hideHiddenFolders" />
-            {{ $t("settings.hideHiddenFolders") }}
+            <input type="checkbox" v-model="hideLockedFolders" />
+            {{ $t("settings.hideLockedFolders") }}
           </p>
           <p>
             <input type="checkbox" v-model="subfoldersInShares" />
@@ -89,7 +89,7 @@ export default {
     return {
       password: "",
       passwordConf: "",
-      hideHiddenFolders: false,
+      hideLockedFolders: false,
       subfoldersInShares: false,
       dateFormat: false,
       locale: "",
@@ -114,7 +114,9 @@ export default {
   created() {
     this.setLoading(false);
     this.locale = this.settings.locale;
-    this.hideHiddenFolders = this.settings.hideHiddenFolders;
+    this.hideLockedFolders = this.settings.hideLockedFolders;
+    this.subfoldersInShares = this.settings.subfoldersInShares;
+
     this.dateFormat = this.settings.dateFormat;
   },
   methods: {
@@ -142,7 +144,7 @@ export default {
         const data = {
           locale: this.locale,
           subfoldersInShares: this.subfoldersInShares,
-          hideHiddenFolders: this.hideHiddenFolders,
+          hideLockedFolders: this.hideLockedFolders,
           dateFormat: this.dateFormat,
         };
 

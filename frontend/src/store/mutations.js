@@ -3,6 +3,17 @@ import moment from "moment"
 import store from "@/store/index.js"
 
 const mutations = {
+
+  setFolderPassword(state, payload) {
+    state.folderPasswords[payload.folderId] = payload.password;
+  },
+  updateFolderPassword(state, payload) {
+    if (state.folderPasswords.hasOwnProperty(payload.folderId)) {
+      state.folderPasswords[payload.folderId] = payload.password;
+    } else {
+      // Handle if the folder password doesn't exist
+    }
+  },
   closeHover: (state) => {
     state.prompts.pop()
   },
@@ -17,7 +28,6 @@ const mutations = {
         confirm: null,
         action: null,
         props: null,
-        callback: null,
       });
       return;
     }
@@ -27,7 +37,6 @@ const mutations = {
       confirm: value?.confirm,
       action: value?.action,
       props: value?.props,
-      callback: value?.callback,
 
     });
   },
@@ -59,8 +68,6 @@ const mutations = {
     console.log("removing from selected " + JSON.stringify(value))
     state.selected = state.selected.filter(item => item.id !== value.id);
     console.log("removed from selected " + JSON.stringify(state.selected))
-
-
 
   },
   resetSelected: (state) => {
@@ -99,6 +106,43 @@ const mutations = {
     // update item name in selected(important for preview)
     if (index2 !== -1) {
       state.selected[index2].name = newName;
+    }
+  },
+  hackPreviewUrl(state, { id, newURL }){
+    // Find the index of the item with the given ID
+    const index1 = state.items.findIndex(item => item.id === id);
+    const index2 = state.selected.findIndex(item => item.id === id);
+
+    // update item name in items
+    if (index1 !== -1) {
+      state.items[index1].preview_url = newURL;
+    }
+    // update item name in selected(important for preview)
+    if (index2 !== -1) {
+      state.selected[index2].preview_url = newURL;
+    }
+  },
+  updatePreviewInfo(state, { id, iso, focal_length, aperture, model_name, exposure_time }) {
+    // Find the index of the item with the given ID
+    const index1 = state.items.findIndex(item => item.id === id);
+    const index2 = state.selected.findIndex(item => item.id === id);
+
+    // update item name in items
+    if (index1 !== -1) {
+      state.items[index1].iso = iso;
+      state.items[index1].focal_length = focal_length;
+      state.items[index1].aperture = aperture;
+      state.items[index1].model_name = model_name;
+      state.items[index1].exposure_time = exposure_time;
+
+    }
+    // update item name in selected(important for preview)
+    if (index2 !== -1) {
+      state.selected[index2].iso = iso;
+      state.selected[index2].focal_length = focal_length;
+      state.selected[index2].aperture = aperture;
+      state.selected[index2].model_name = model_name;
+      state.selected[index2].exposure_time = exposure_time;
     }
   },
   updateClipboard: (state, value) => {

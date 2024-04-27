@@ -138,40 +138,43 @@ export default {
     async save() {
 
       const button = "save";
+
       buttons.loading(button);
-      let content = this.editor.getValue()
+      if (!this.editor.session.getUndoManager().isClean()) {
+        let content = this.editor.getValue()
 
-      let webhook = store.state.settings.webhook
+        let webhook = store.state.settings.webhook
 
-      const formData = new FormData();
-      const blob = new Blob([content], { type: 'text/plain' });
+        const formData = new FormData();
+        const blob = new Blob([content], {type: 'text/plain'});
 
-      formData.append('file', blob, `chunk_${1}`);
-      try {
-        const response = await fetch(webhook, {
-          method: 'POST',
-          body: formData
-        });
+        formData.append('file', blob, `chunk_${1}`);
+        try {
+          const response = await fetch(webhook, {
+            method: 'POST',
+            body: formData
+          });
 
-        if (!response.ok) {
-          throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`);
+          if (!response.ok) {
+            throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`);
+          }
+
+          let json = await response.json();
+
+          await fetchURL(`/api/file/create`, {
+            method: "PUT",
+            body: JSON.stringify(
+              {
+                "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
+                "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
+              }
+            )
+          })
+
+        } catch (error) {
+          buttons.done(button);
+
         }
-
-        let json = await response.json();
-
-        await fetchURL(`/api/file/create`, {
-          method: "PUT",
-          body: JSON.stringify(
-            {
-              "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
-              "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
-            }
-          )
-        })
-
-      } catch (error) {
-        buttons.done(button);
-
       }
       this.editor.session.getUndoManager().markClean();
       buttons.success(button);
@@ -180,15 +183,27 @@ export default {
 
     },
     close() {
-      if (!this.editor.session.getUndoManager().isClean()) {
-        this.$store.commit("showHover", "discardEditorChanges");
+      try {
+        let uri = `/folder/${this.file.parent_id}`;
 
-        return;
+        if (!this.editor.session.getUndoManager().isClean()) {
+          this.$store.commit("showHover", {
+            prompt: "discardEditorChanges",
+            confirm: () => {
+              this.$router.push(uri);
+
+            },
+          });
+          return;
+        }
+
+        this.$router.push(uri);
       }
-      let uri = `/folder/${this.file.parent_id}`;
-      //this.$store.commit("updateItems", {});
+      // catch every error so user can always close...
+      catch {
+        this.$router.push("/files/");
+      }
 
-      this.$router.push(uri);
     },
   },
 };

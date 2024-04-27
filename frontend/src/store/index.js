@@ -3,7 +3,6 @@ import Vuex from "vuex";
 import mutations from "./mutations";
 import getters from "./getters";
 import upload from "./modules/upload";
-import actions from "./actions";
 Vue.use(Vuex);
 
 const state = {
@@ -24,12 +23,13 @@ const state = {
   prompts: [],
   error: null,
   showShell: false,
+  folderPasswords: {}
+
 };
 
 export default new Vuex.Store({
   strict: true,
   state,
-  actions,
   getters,
   mutations,
   modules: { upload },

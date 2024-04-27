@@ -15,6 +15,7 @@ export default {
       locales: {
         en: "en",
         pl: "pl",
+        uwu: "uwu",
 
       },
     };

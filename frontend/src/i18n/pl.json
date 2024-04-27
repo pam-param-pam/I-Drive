@@ -64,12 +64,15 @@
     "upload": "Prześlij",
     "file": "Pliki",
     "folder": "Foldery",
-    "discardChanges": "Odrzuć"
+    "discardChanges": "Odrzuć",
+    "lockFolder": "Zablokuj folder"
+
 
   },
   "languages": {
     "en": "English",
-    "pl": "Polski"
+    "pl": "Polski",
+    "uwu": "UwU"
 
   },
   "errors": {
@@ -77,7 +80,9 @@
     "internal": "Pojawił się poważny problem.",
     "notFound": "Ten adres nie jest poprawny.",
     "badRequest": "Niepoprawne żądanie.",
-    "connection": "Serwer nie odpowiada."
+    "connection": "Serwer nie odpowiada.",
+    "folderPasswordRequired": "Hasło jest wymagane by odblokować folder."
+
 
   },
   "help": {
@@ -116,7 +121,7 @@
   "settings": {
     "ShareName": "Nazwa",
     "changePassword": "Zmień Hasło",
-    "hideHiddenFolders": "Ukryj ukryte foldery",
+    "hideLockedFolders": "Ukryj zablokowane foldery",
     "subfoldersInShares": "Zezwól na dostep do podfolderów w udostępnionych folderach",
     "language": "Język",
     "newPassword": "Twoje nowe hasło",
@@ -168,7 +173,17 @@
     "size": "Rozmiar",
     "upload": "Prześlij",
     "uploadMessage": "Proszę wybrać metodę przesyłania",
-    "discardEditorChanges": "Czy napewno chcesz odrzucić zmiany?"
+    "discardEditorChanges": "Czy napewno chcesz odrzucić zmiany?",
+    "modelName": "Nazwa modelu",
+    "iso": "ISO",
+    "exposureTime": "Czas naświetlania",
+    "aperture": "Przesłona",
+    "focalLength": "Ogniskowa",
+    "enterFolderPassword": "Wprowadź hasło by odblokować folder",
+    "unlockFolder": "Odblokuj Folder",
+    "enterOldFolderPassword": "Wprowadź nowe hasło",
+    "enterNewFolderPassword": "Wprowadż stare hasło",
+    "setFolderPassword": "Zablokuj Folder"
 
   },
   "toasts": {

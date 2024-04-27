@@ -30,6 +30,8 @@ import ShareDelete from "./ShareDelete.vue";
 import Sidebar from "../Sidebar.vue";
 import { mapGetters } from "vuex";
 import buttons from "@/utils/buttons";
+import FolderPassword from "@/components/prompts/FolderPassword.vue";
+import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue";
 
 export default {
   name: "prompts",
@@ -49,7 +51,9 @@ export default {
     Upload,
     ShareDelete,
     Sidebar,
-    DiscardEditorChanges
+    DiscardEditorChanges,
+    FolderPassword,
+    EditFolderPassword,
   },
   data: function () {
     return {

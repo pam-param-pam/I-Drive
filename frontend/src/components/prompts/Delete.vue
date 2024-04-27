@@ -32,7 +32,7 @@
 
 <script>
 import {mapGetters, mapMutations, mapState} from "vuex";
-import {moveToTrash, remove} from "@/api/item.js";
+import {remove} from "@/api/item.js";
 
 export default {
   name: "delete",
@@ -69,7 +69,7 @@ export default {
 
         let res = await remove({"ids": ids});
 
-        let message = this.$t('toasts.itemMovedToTrash', {amount: ids.length})
+        let message = this.$t('toasts.itemDeleted', {amount: ids.length})
         console.log(message)
         this.$toast.info(message, {
           id: res.task_id,

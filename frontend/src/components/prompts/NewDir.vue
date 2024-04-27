@@ -48,16 +48,6 @@ import buttons from "@/utils/buttons.js";
 export default {
   name: "new-dir",
   components: {Action},
-  props: {
-    redirect: {
-      type: Boolean,
-      default: true,
-    },
-    base: {
-      type: [String, null],
-      default: null,
-    },
-  },
   data: function () {
     return {
       name: "",

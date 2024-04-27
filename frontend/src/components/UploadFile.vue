@@ -13,7 +13,7 @@
     <!-- Lower -->
     <div v-if="file.percentage">
       <span v-if="file.status === 'failed'">
-        <b class="failed">Failed</b>
+        <b class="failed">Failed, retrying...</b>
       </span>
       <span v-if="file.status === 'success'">
         <b class="success">OK</b>

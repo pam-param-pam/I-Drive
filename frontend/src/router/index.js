@@ -62,7 +62,7 @@ const router = new Router({
               path: "/folder/:folderId",
               name: "Listing",
               component: Listing,
-
+              props: true
             },
             {
               path: "/preview/:fileId",

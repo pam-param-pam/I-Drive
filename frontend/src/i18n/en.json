@@ -38,6 +38,7 @@
   },
   "buttons": {
     "ok": "OK",
+    "submit": "Submit",
     "file": "File",
     "folder": "Folder",
     "cancel": "Cancel",
@@ -66,18 +67,21 @@
     "update": "Update",
     "upload": "Upload",
     "openFile": "Open file",
-    "discardChanges": "Discard"
+    "discardChanges": "Discard",
+    "lockFolder": "Lock folder"
   },
   "languages": {
     "en": "English",
-    "pl": "Polish"
+    "pl": "Polish",
+    "uwu": "UwU"
   },
   "errors": {
     "forbidden": "You do not have enough permissions to access this resource",
     "internal": "Internal server error",
     "notFound": "This location can't be reached.",
     "badRequest": "Bad request",
-    "connection": "The server can't be reached."
+    "connection": "The server can't be reached.",
+    "folderPasswordRequired": "Password is required for this folder."
   },
   "help": {
     "click": "select file or directory",
@@ -115,7 +119,7 @@
   "settings": {
     "ShareName": "Name",
     "changePassword": "Change password",
-    "hideHiddenFolders": "Hide hidden folders",
+    "hideLockedFolders": "Hide locked folders",
     "subfoldersInShares": "Include subfolders in shares",
     "language": "Language",
     "newPassword": "Your new password",
@@ -167,17 +171,30 @@
     "show": "Show",
     "size": "Size",
     "upload": "Upload",
+    "uploadMessage": "Please pick upload method",
     "uploadFiles": "Uploading {files} files...",
-    "discardEditorChanges": "Are you sure you wish to discard the changes you've made?"
+    "discardEditorChanges": "Are you sure you wish to discard the changes you've made?",
+    "modelName": "Model name",
+    "iso": "ISO",
+    "exposureTime": "Exposure time",
+    "aperture": "Aperture",
+    "focalLength": "Focal length",
+    "enterFolderPassword": "Enter password to unlock this folder.",
+    "unlockFolder": "Unlock Folder",
+    "enterOldFolderPassword": "Enter old password",
+    "enterNewFolderPassword": "Enter new password",
+    "setFolderPassword": "Lock Folder"
+
+
   },
   "toasts": {
-    "itemMoved": "Przenesiono {amount} itemy",
-    "itemMovedToTrash": "Przenesiono {amount} itemy do kosza",
-    "itemDeleted": "Usunięto {amount}",
-    "folderCreated": "Stworzono {name}",
-    "itemRenamed": "Nazwa zmieniona",
-    "selectFilesFirst": "Zaznacz plik(i) najpierw!",
-    "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
+    "itemMoved": "Moved {amount} items",
+    "itemMovedToTrash": "Moved {amount} items to trash",
+    "itemDeleted": "Deleted {amount}",
+    "folderCreated": "Created {name}",
+    "itemRenamed": "Name changed",
+    "selectFilesFirst": "Select file(s) first!",
+    "PreparingUpload": "Started proccesing files for upload...",
     "fileSaved": "File saved"
   }
 }

@@ -48,7 +48,8 @@
           <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
       </p>
 
-      <p v-if="!isDir">
+      <!--<p v-if="!isDir">-->
+      <p v-if="ready">
         <strong>{{ $t("prompts.ready") }}:</strong>
         <span v-if="ready" class="checkmark-true"></span> <!-- Green checkmark emoji -->
         <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
@@ -69,7 +70,21 @@
       <p v-if="last_modified">
         <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime(last_modified) }}
       </p>
-
+      <p v-if="iso">
+        <strong>{{ $t("prompts.iso") }}:</strong> {{ iso }}
+      </p>
+      <p v-if="aperture">
+        <strong>{{ $t("prompts.aperture") }}:</strong> f/{{ aperture }}
+      </p>
+      <p v-if="exposureTime">
+        <strong>{{ $t("prompts.exposureTime") }}:</strong> {{ exposureTime }} sec
+      </p>
+      <p v-if="focalLength">
+        <strong>{{ $t("prompts.focalLength") }}:</strong> {{ focalLength }}mm
+      </p>
+      <p v-if="modelName">
+        <strong>{{ $t("prompts.modelName") }}:</strong> {{ modelName }}
+      </p>
       <template v-if="folderItemsCount">
         <p>
           <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ folderItemsCount.numFiles }}
@@ -183,11 +198,7 @@ export default {
       return null
     },
     ready() {
-      if (this.selectedCount === 0) {
-          return null
-
-      }
-      else if (this.selectedCount === 1) {
+      if (this.selectedCount === 1) {
           return this.selected[0].ready
       }
       return null
@@ -202,12 +213,39 @@ export default {
     },
     type() {
       if (this.selectedCount === 1) {
-
         return this.selected[0].type
-
       }
       return null
-
+    },
+    iso() {
+      if (this.selectedCount === 1) {
+        return this.selected[0].iso
+      }
+      return null
+    },
+    exposureTime() {
+      if (this.selectedCount === 1) {
+        return this.selected[0].exposure_time
+      }
+      return null
+    },
+    aperture() {
+      if (this.selectedCount === 1) {
+        return this.selected[0].aperture
+      }
+      return null
+    },
+    focalLength() {
+      if (this.selectedCount === 1) {
+        return this.selected[0].focal_length
+      }
+      return null
+    },
+    modelName() {
+      if (this.selectedCount === 1) {
+        return this.selected[0].model_name
+      }
+      return null
     },
     extension() {
       if (this.selectedCount === 1) {
@@ -220,11 +258,11 @@ export default {
     },
     owner() {
       if (this.selectedCount === 0) {
-          return this.currentFolder.owner.name
+          return this.currentFolder.owner?.name
 
       }
       else if (this.selectedCount === 1) {
-          return this.selected[0].owner.name
+          return this.selected[0].owner?.name
       }
       return null
     },

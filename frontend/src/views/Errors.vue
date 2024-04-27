@@ -29,6 +29,10 @@ const errors = {
     icon: "gps_off",
     message: "errors.notFound",
   },
+  469: {
+    icon: "block",
+    message: "errors.folderPasswordRequired",
+  },
   500: {
     icon: "error_outline",
     message: "errors.internal",

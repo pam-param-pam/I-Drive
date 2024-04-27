@@ -13,7 +13,7 @@
           <span class="chevron"
           ><i class="material-icons">keyboard_arrow_right</i></span
           >
-        <component draggable="false" :is="element" :to="folder.id">{{ folder.name }} </component>
+        <component draggable="false" :is="element" :to="`/folder/` + folder.id">{{ folder.name }} </component>
 
     </span>
 

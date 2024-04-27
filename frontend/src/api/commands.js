@@ -1,3 +1,4 @@
+import store from "@/store/index.js";
 
 
 const ssl = window.location.protocol === "https:"
@@ -7,7 +8,8 @@ export default function command(url, command, onmessage, onclose) {
   const token = localStorage.getItem("token");
 
   let conn = new window.WebSocket(url, token)
-  conn.onopen = () => conn.send(command)
+  let current_folder = store.state.currentFolder
+  conn.onopen = () => conn.send(JSON.stringify({command: command, current_folder_id: current_folder.id}))
   conn.onmessage = onmessage
   conn.onclose = onclose
 }

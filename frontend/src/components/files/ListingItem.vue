@@ -58,8 +58,8 @@ export default {
     "item",
   ],
   computed: {
-    ...mapState(["user", "perms", "selected", "settings", "items"]),
-    ...mapGetters(["selectedCount"]),
+    ...mapState(["user", "perms", "selected", "settings", "items", "lastFolderPassword"]),
+    ...mapGetters(["selectedCount", "getFolderPassword"]),
     type() {
       if (this.item.isDir) return "folder"
       if (this.item.type === "application") return "pdf"
@@ -187,10 +187,33 @@ export default {
     },
     open: function () {
       if (this.item.isDir) {
-        this.$router.push({path: `/folder/${this.item.id}`});
+        if (this.item.locked === true) {
+          let password = this.getFolderPassword(this.item.id)
+          console.log(password)
+          if (!password) {
+            this.$store.commit("showHover", {
+              prompt: "FolderPassword",
+              props: {folder_id: this.item.id},
+              confirm: () => {
+                this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
+              },
+            });
+          }
+          else {
+            this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
+          }
+
+        }
+        else {
+          this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
+
+        }
+
+
 
       } else {
-        if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" || this.item.size >= 25 * 1024 * 1024) {
+        //this.item.size >= 25 * 1024 * 1024 ||
+        if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" ||  this.item.extension === ".pdf") {
           this.$router.push({path: `/preview/${this.item.id}`});
 
         }

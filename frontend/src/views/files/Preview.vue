@@ -7,6 +7,8 @@
     <header-bar>
       <action icon="close" :label="$t('buttons.close')" @action="close()"/>
       <title v-if="file">{{ file.name }}</title>
+      <title v-else> </title>
+
       <template #actions>
         <action
           :disabled="loading"
@@ -48,7 +50,7 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="file.type === 'image'" :src="file.preview_url"></ExtendedImage>
+        <ExtendedImage v-if="file.type === 'image' &&!loadingImage" :src="file.preview_url"></ExtendedImage>
         <audio
           v-else-if="file.type === 'audio'"
           ref="player"
@@ -147,6 +149,8 @@ export default {
       navTimeout: null,
       hoverNav: false,
       autoPlay: true,
+      loadingImage: false,
+
     };
   },
   computed: {
@@ -201,37 +205,47 @@ export default {
     ...mapMutations(["setLoading"]),
 
     async fetchData() {
-      let fileId = this.$route.params.fileId;
+      let fileId = this.$route.params.fileId
 
-      this.setLoading(true);
+      this.setLoading(true)
+      this.loadingImage = true
 
+      this.file = null
+      /*
       if (this.items) {
         for (let i = 0; i < this.items.length; i++) {
           if (this.items[i].id === fileId) {
-            this.file = this.items[i];
+            this.file = this.items[i]
+
           }
         }
       }
+
+       */
+
+
       if (!this.file) {
         try {
           this.file = await getFile(fileId)
           if (!this.currentFolder) {
-            const res = await getItems(this.file.parent_id);
+            const res = await getItems(this.file.parent_id)
 
-            this.$store.commit("setItems", res.children);
-            this.$store.commit("setCurrentFolder", res);
+            this.$store.commit("setItems", res.children)
+            this.$store.commit("setCurrentFolder", res)
 
           }
 
         } catch (e) {
           console.log(e)
-          this.error = e;
+          this.error = e
 
         }
       }
       this.$store.commit("addSelected", this.file);
 
       this.setLoading(false);
+      this.loadingImage = false;
+      console.log("loading false")
 
     },
     deleteFile() {
@@ -244,12 +258,7 @@ export default {
 
     },
     rename() {
-      this.$store.commit("showHover", {
-        prompt: "rename",
-        confirm: (newName) => {
-          this.file.name = newName
-        },
-      });
+      this.$store.commit("showHover", "rename");
 
     },
     prev() {

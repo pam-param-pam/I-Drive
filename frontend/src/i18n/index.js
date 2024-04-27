@@ -4,6 +4,7 @@ import VueI18n from "vue-i18n"
 
 import en from "./en.json"
 import pl from "./pl.json"
+import uwu from "./uwu.json"
 
 
 Vue.use(VueI18n)
@@ -16,6 +17,9 @@ export function detectLocale() {
       break
     case /^pl.*/i.test(locale):
       locale = "pl"
+      break
+    case /^uwu.*/i.test(locale):
+      locale = "uwu"
       break
     default:
       locale = "en"
@@ -44,6 +48,8 @@ const i18n = new VueI18n({
 
     en: en,
     pl: removeEmpty(pl),
+    uwu: removeEmpty(uwu),
+
 
   },
 });

@@ -30,12 +30,13 @@
 </template>
 
 <script>
-import {mapState} from "vuex";
+import {mapGetters, mapState} from "vuex";
 
 export default {
   name: "DiscardEditorChanges",
   computed: {
     ...mapState(["selected"]),
+    ...mapGetters(["currentPrompt"]),
 
     file() {
       return this.selected[0]
@@ -43,9 +44,11 @@ export default {
   },
   methods: {
     submit: async function () {
-      let uri = `/folder/${this.file.parent_id}`;
+      this.currentPrompt?.confirm();
 
-      this.$router.push(uri);
+      //let uri = `/folder/${this.file.parent_id}`;
+
+      //this.$router.push(uri);
     },
   },
 };

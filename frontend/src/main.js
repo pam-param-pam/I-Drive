@@ -8,7 +8,6 @@ import Vue from "@/utils/vue";
 import {loginPage } from "@/utils/constants";
 import { login, validateLogin } from "@/utils/auth";
 import App from "@/App.vue";
-import vue from "@/utils/vue.js";
 import onEvent from "@/utils/WsEventhandler.js";
 
 cssVars();

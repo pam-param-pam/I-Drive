@@ -25,11 +25,11 @@
             show="rename"
           />
           <action
-            v-if="headerButtons.copy"
-            id="copy-button"
-            icon="content_copy"
-            :label="$t('buttons.copyFile')"
-            show="copy"
+            v-if="headerButtons.lock"
+            id="lock-button"
+            icon="lock"
+            :label="$t('buttons.lockFolder')"
+            show="editFolderPassword"
           />
           <action
             v-if="headerButtons.move"
@@ -94,10 +94,10 @@
         show="rename"
       />
       <action
-        v-if="headerButtons.copy"
-        icon="content_copy"
-        :label="$t('buttons.copyFile')"
-        show="copy"
+        v-if="headerButtons.lock"
+        icon="lock"
+        :label="$t('buttons.lockFolder')"
+        show="editFolderPassword"
       />
       <action
         v-if="headerButtons.move"
@@ -255,11 +255,17 @@ import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
 import {updateSettings} from "@/api/user.js";
-import {create, getItems} from "@/api/folder.js";
+import {getItems} from "@/api/folder.js";
 import {sortItems} from "@/api/utils.js";
 
 export default {
   name: "listing",
+
+  props: {
+    password: String,
+    folderId: String,
+  },
+
   components: {
     HeaderBar,
     Action,
@@ -278,7 +284,7 @@ export default {
   },
   computed: {
 
-    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder"]),
+    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
     nameSorted() {
       return this.settings.sortingBy === "name";
@@ -290,9 +296,15 @@ export default {
       const items = [];
       if (this.items != null) {
         this.items.forEach((item) => {
-          if (item.isDir) {
+          console.log("name: " + item.name)
+
+          console.log("hideLockedFolders: " + this.settings.hideLockedFolders)
+          console.log("locked: " + item.locked)
+
+          if (item.isDir && (!item.locked || !this.settings.hideLockedFolders)) {
             items.push(item);
           }
+
         });
       }
       return sortItems(items);
@@ -361,6 +373,7 @@ export default {
         share: this.selectedCount === 1 && this.perms.share,
         move: this.selectedCount > 0 && this.perms.rename,
         copy: this.selectedCount > 0 && this.perms.create,
+        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.delete,
       };
     },
     isMobile() {
@@ -428,17 +441,15 @@ export default {
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
 
     async fetchFolder() {
+
       console.log("loading1: " + this.loading)
       this.setError(null)
 
       this.setLoading(true);
       console.log("loading2: " + this.loading)
 
-      let folderId = this.$route.params.folderId;
-
       try {
-
-        const res = await getItems(folderId, false);
+        const res = await getItems(this.folderId, false);
 
         this.$store.commit("setItems", res.children);
         this.$store.commit("setCurrentFolder", res);
@@ -450,9 +461,20 @@ export default {
           document.title = name;
         }
 
-      } catch (e) {
-        console.log(e)
-        this.setError(e);
+      } catch (error) {
+        this.setError(error);
+
+        if (error.status === 469) {
+          this.$store.commit("showHover", {
+            prompt: "FolderPassword",
+            props: {folder_id: this.folderId},
+            confirm: () => {
+              this.fetchFolder();
+
+            },
+          });
+        }
+        console.log(error)
       } finally {
         console.log("loading3: " + this.loading)
         this.setLoading(false);

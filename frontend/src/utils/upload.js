@@ -4,6 +4,7 @@ import store from "@/store";
 import {create} from "@/api/folder.js";
 import vue from "@/utils/vue.js";
 import i18n from '../i18n';
+import buttons from "@/utils/buttons.js";
 
 
 export function scanFiles(dt) {
@@ -100,6 +101,7 @@ export async function prepareForUpload(files, parent_folder) {
    * @param {string} parent_folder - The second number to be added.
    */
 
+  buttons.loading("upload");
 
   // check if we are uploading a folder or just files
   let folder_upload =

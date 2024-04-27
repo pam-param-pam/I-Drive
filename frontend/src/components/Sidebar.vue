@@ -32,17 +32,8 @@
           <span>{{ $t("sidebar.newFile") }}</span>
         </button>
       </div>
-      <button
-        @click="toTrash"
-        class="action"
-        :aria-label="$t('sidebar.trash')"
-        :title="$t('sidebar.trash')"
-      >
-        <i class="material-icons">delete</i>
-        <span>{{ $t("sidebar.trash") }}</span>
-      </button>
 
-      <div>
+      <div class="bottom-buttons">
         <button
           class="action"
           @click="toSettings"
@@ -181,3 +172,7 @@ export default {
   },
 };
 </script>
+<style>
+
+
+</style>
