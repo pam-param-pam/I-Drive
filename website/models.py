@@ -10,6 +10,8 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
+from website.utilities.constants import MAX_NAME_LENGTH
+
 
 class Folder(models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
@@ -26,15 +28,14 @@ class Folder(models.Model):
 
     def clean(self):
         if self.parent == self:
-            raise ValidationError("A folder cannot be its own parent.")
+            raise ValidationError("A folder cannot be it's own parent.")
 
     def _create_user_root(sender, instance, created, **kwargs):
         if created:
             folder, created = Folder.objects.get_or_create(owner=instance, name="root")
 
     def save(self, *args, **kwargs):
-        max_name_length = 20  # Set your arbitrary maximum length here
-        self.name = self.name[:max_name_length]
+        self.name = self.name[:MAX_NAME_LENGTH]
 
         self.last_modified_at = timezone.now()
         super(Folder, self).save(*args, **kwargs)
@@ -102,8 +103,7 @@ class File(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        max_name_length = 30  # Set your arbitrary maximum length here
-        if len(self.name) > max_name_length:
+        if len(self.name) > MAX_NAME_LENGTH:
             # Find the last occurrence of '.' to handle possibility of no extension
             last_dot_index = self.name.rfind('.')
 
@@ -116,7 +116,7 @@ class File(models.Model):
                 file_name_without_extension = self.name
 
             # Keeping only the first 'max_name_length' characters
-            shortened_file_name = file_name_without_extension[:max_name_length]
+            shortened_file_name = file_name_without_extension[:MAX_NAME_LENGTH]
 
             # Adding the extension back if it exists
             if file_extension:
@@ -252,7 +252,6 @@ class Preview(models.Model):
     exposure_time = models.CharField(max_length=50, null=True)
     model_name = models.CharField(max_length=50, null=True)
     focal_length = models.CharField(max_length=50, null=True)
-
 
     def __str__(self):
         return self.file.name

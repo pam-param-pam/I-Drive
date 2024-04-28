@@ -16,9 +16,10 @@ from rest_framework.decorators import api_view, throttle_classes
 from website.models import Fragment, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
+from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, MAX_MEDIA_CACHE_AGE
 from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
 from website.utilities.errors import ResourceNotPreviewable
-from website.utilities.other import send_event, create_file_dict
+from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
 
 cache = caches["default"]
@@ -28,7 +29,7 @@ cache = caches["default"]
 @throttle_classes([MediaRateThrottle])
 @check_signed_url
 @check_file
-#@handle_common_errors
+@handle_common_errors
 def preview(request, file_obj):
     print(file_obj.name)
     try:
@@ -62,8 +63,7 @@ def preview(request, file_obj):
         file_content += response.content
     file_like_object = io.BytesIO(file_content)
 
-    if file_obj.size > 100 * 1024 * 1024:  # 100 mb
-        print("file too big")
+    if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
         raise ResourceNotPreviewable("File too big: size > 100mb")
     try:
         with rawpy.imread(file_like_object) as raw:
@@ -216,7 +216,13 @@ def stream_file(request, file_obj):
         response['X-Frame-Options'] = 'DENY'
 
     response['Content-Length'] = file_size
-    response['Cache-Control'] = "max-age=3600"
+
+    if file_obj.type == "text":
+        response['Cache-Control'] = "no-cache"
+
+    else:
+        response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
+
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte, file_size)
         response['Accept-Ranges'] = 'bytes'

@@ -61,7 +61,7 @@ def delete_share(request):
     share = ShareableLink.objects.get(token=token)
 
     if share.owner != request.user:
-        raise ResourcePermissionError("You do not own this resource.")
+        raise ResourcePermissionError()
     share.delete()
     return HttpResponse(f"Share deleted!", status=204)
 
@@ -88,7 +88,7 @@ def create_share(request):
             raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
 
     if obj.owner != request.user:
-        raise ResourcePermissionError("You do not own this resource.")
+        raise ResourcePermissionError()
 
     if unit == 'minutes':
         expiration_time = current_time + timedelta(minutes=value)

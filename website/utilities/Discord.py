@@ -3,6 +3,7 @@ import time
 import httpx
 from django.core.cache import caches
 
+from website.utilities.constants import DISCORD_MESSAGE_EXPIRY
 from website.utilities.errors import DiscordError, DiscordBlockError
 
 
@@ -94,7 +95,7 @@ class Discord:
         response = self.client.post(url, headers=self.file_upload_headers, files=files, timeout=None)
         if response.is_success:
             # expire is 1 day
-            self.cache.set(response.json()["id"], response, timeout=86400)
+            self.cache.set(response.json()["id"], response, timeout=DISCORD_MESSAGE_EXPIRY)
             return response
         if response.status_code == 429:
             return response
@@ -118,7 +119,7 @@ class Discord:
         response = self.client.get(url, headers=self.headers)
         if response.is_success:
             # expire is 1 day
-            self.cache.set(message_id, response, timeout=86400)
+            self.cache.set(message_id, response, timeout=DISCORD_MESSAGE_EXPIRY)
             return response
 
         if response.status_code == 429:

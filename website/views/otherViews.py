@@ -5,15 +5,9 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-import requests
-from django.http import StreamingHttpResponse
-from wsgiref.util import FileWrapper
-import os
-import re
-
 from website.models import Fragment, File
 from website.utilities.Discord import discord
-from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
+from website.utilities.decorators import check_file_and_permissions, handle_common_errors
 
 DELAY_TIME = 0
 

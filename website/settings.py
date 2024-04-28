@@ -175,11 +175,13 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
     ],
+    'EXCEPTION_HANDLER': 'website.utilities.CustomExceptionHandler.custom_exception_handler',
+
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/min',
         'user': '100/min',
         'media': '1000/min',
-        'folder_password': '60/hour',
+        'folder_password': '15/min',
     }
 }
 

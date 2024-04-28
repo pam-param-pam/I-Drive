@@ -7,6 +7,7 @@ from rest_framework.throttling import UserRateThrottle
 from website.models import Folder, File, Fragment, UserSettings
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
+from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE
 from website.utilities.errors import BadRequestError, ResourcePermissionError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import send_event, create_file_dict
@@ -45,7 +46,7 @@ def create_file(request):
 
             folder_obj = Folder.objects.get(id=parent_id)
             if folder_obj.owner != request.user:
-                raise ResourcePermissionError(f"You do not own this resource!")
+                raise ResourcePermissionError()
 
             file_type = mimetype.split("/")[0]
             file_obj = File(
@@ -79,7 +80,7 @@ def create_file(request):
 
         file_obj = File.objects.get(id=file_id)
         if file_obj.owner != request.user:
-            raise ResourcePermissionError(f"You do not own this resource!")
+            raise ResourcePermissionError()
         if file_obj.ready:
             raise BadRequestError(f"You cannot further modify a 'ready' file!")
 
@@ -105,13 +106,13 @@ def create_file(request):
 
         file_obj = File.objects.get(id=file_id)
         if file_obj.owner != request.user:
-            raise ResourcePermissionError(f"You do not own this resource!")
+            raise ResourcePermissionError()
         if not file_obj.ready:
             raise BadRequestError(f"You cannot edit a 'not ready' file!")
 
         fragments = Fragment.objects.filter(file=file_obj)
 
-        if file_obj.size > 25 * 1024 * 1023:
+        if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
             raise BadRequestError(f"You cannot edit a file larger than 25Mb!")
         if len(fragments) > 1:
             raise BadRequestError(f"Fragments > 1")
@@ -138,6 +139,7 @@ def create_file(request):
             # single file in 1 message
 
             discord.remove_message(old_message_id)
+        old_message_id = old_fragment.message_id
         old_fragment.delete()
 
         fragment_obj = Fragment(
@@ -151,7 +153,8 @@ def create_file(request):
         fragment_obj.save()
         file_obj.size = fragment_size
         file_obj.save()
+
         # important invalidate caches!
-        cache.delete(message_id)
+        cache.delete(old_message_id)
 
         return HttpResponse(200)

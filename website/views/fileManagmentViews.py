@@ -8,6 +8,7 @@ from rest_framework.throttling import UserRateThrottle
 from website.models import File, Folder
 from website.tasks import smart_delete
 from website.utilities.OPCodes import EventCode
+from website.utilities.constants import MAX_NAME_LENGTH
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError, IncorrectFolderPassword
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
@@ -68,8 +69,8 @@ def move(request):
             except File.DoesNotExist:
                 raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
 
-        # if item.owner != user:  # owner perms needed
-        #    raise ResourcePermissionError(f"You do not own this resource!")
+        if item.owner != request.user:  # owner perms needed
+            raise ResourcePermissionError()
         if isinstance(item, Folder) and not item.parent:
             raise RootPermissionError("Cannot move 'root' folder!")
 
@@ -120,7 +121,7 @@ def move_to_trash(request):
                 raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
 
         if item.owner != user:  # owner perms needed
-            raise ResourcePermissionError(f"You do not own this resource!")
+            raise ResourcePermissionError()
 
         if isinstance(item, Folder) and not item.parent:
             raise RootPermissionError("Cannot move 'root' folder to trash!")
@@ -163,7 +164,7 @@ def delete(request):
             raise RootPermissionError("Cannot delete 'root' folder!")
 
         if item.owner != user:  # owner perms needed
-            raise ResourcePermissionError(f"You do not own this resource!")
+            raise ResourcePermissionError()
 
         items.append(item)
     smart_delete.delay(request.user.id, request.request_id, ids)
@@ -182,7 +183,8 @@ def rename(request):
 
     obj_id = request.data['id']
     new_name = request.data['new_name']
-
+    if len(new_name) > MAX_NAME_LENGTH:
+        raise BadRequestError("Name cannot be larger than '30'")
     try:
         item = Folder.objects.get(id=obj_id)
     except Folder.DoesNotExist:
@@ -191,8 +193,8 @@ def rename(request):
         except File.DoesNotExist:
             raise ResourceNotFound(f"Resource with id of '{obj_id}' doesn't exist.")
 
-    if item.owner != request.user:  # todo fix perms
-        raise ResourcePermissionError(f"You do not own this resource!")
+    if item.owner != request.user:
+        raise ResourcePermissionError()
 
     if isinstance(item, Folder) and not item.parent:
         raise RootPermissionError("Cannot rename 'root' folder!")
@@ -214,14 +216,20 @@ def folder_password(request, folder_obj):
         password = request.headers.get("X-Folder-Password")
         if folder_obj.password == password:
             return HttpResponse(200)
-        raise IncorrectFolderPassword("Incorrect folder password")
+        raise IncorrectFolderPassword()
 
     if request.method == "POST":
-        newPassword = request.data['newPassword']
-        oldPassword = request.data['oldPassword']
+        newPassword = request.data['new_password']
+        oldPassword = request.data['old_password']
         if folder_obj.password == oldPassword:
             folder_obj.password = newPassword
             folder_obj.save()
+
+            isLocked = True if folder_obj.password else False
+
+            send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
+                       [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked}])
             return HttpResponse(status=200)
+
         else:
-            raise IncorrectFolderPassword("Incorrect folder password")
+            raise IncorrectFolderPassword()

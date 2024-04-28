@@ -7,6 +7,7 @@ from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from website.models import File, Folder, UserSettings, Preview
 from website.tasks import queue_ws_event
 from website.utilities.OPCodes import message_codes
+from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE
 from website.utilities.errors import ResourcePermissionError
 
 signer = TimestampSigner()
@@ -30,7 +31,7 @@ def verify_signed_file_id(signed_file_id, expiry_days=1):
         file_id = signer.unsign(signed_file_id, max_age=timedelta(days=expiry_days))
         return file_id
     except (BadSignature, SignatureExpired):
-        raise ResourcePermissionError("Url not valid or expired.")
+        raise ResourcePermissionError("URL not valid or expired.")
 
 
 def send_event(user_id, op_code, request_id, data):
@@ -110,7 +111,7 @@ def create_file_dict(file_obj):
     else:
         preview_url = f"{base_url}/api/file/stream/{signed_file_id}"
 
-    if file_obj.size < 25 * 1024 * 1024:
+    if file_obj.size < MAX_DISCORD_MESSAGE_SIZE:
         download_url = preview_url
     else:
         download_url = f"{base_url}/api/file/download/{signed_file_id}"
@@ -138,7 +139,7 @@ def create_folder_dict(folder_obj):
         'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
         'parent_id': folder_obj.parent_id,
         'isDir': True,
-        'locked': True if folder_obj.password else False
+        'isLocked': True if folder_obj.password else False
     }
     return folder_dict
 

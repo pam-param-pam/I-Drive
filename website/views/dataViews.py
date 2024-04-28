@@ -29,7 +29,7 @@ def get_folder(request, folder_obj):
         return JsonResponse(folder_content)
 
     if password:
-        raise IncorrectFolderPassword("Incorrect folder password")
+        raise IncorrectFolderPassword()
     raise MissingFolderPassword("Please enter folder password.")
 
 

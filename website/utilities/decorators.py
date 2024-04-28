@@ -2,6 +2,7 @@ from functools import wraps
 
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
+from rest_framework.exceptions import Throttled
 
 from website.models import File, Folder
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
@@ -128,6 +129,10 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=403, error_code=5, details=str(e)), status=403)
         except RootPermissionError as e:
             return JsonResponse(error_res(user=request.user, code=403, error_code=12, details=str(e)), status=403)
+
+        # 429 RATE LIMIT
+        except Throttled as e:
+            return JsonResponse(error_res(user=request.user, code=403, error_code=5, details=str(e)), status=403)
 
         # 469 CUSTOM STATUS CODE - FOLDER PASSWORD MISSING OR INCORRECT
         except IncorrectFolderPassword as e:
