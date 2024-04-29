@@ -20,7 +20,6 @@ DELAY_TIME = 0
 @handle_common_errors
 @check_folder_and_permissions
 def get_folder(request, folder_obj):
-    time.sleep(DELAY_TIME)
 
     includeTrash = request.GET.get('includeTrash', False)
     password = request.headers.get("X-Folder-Password")
@@ -39,7 +38,6 @@ def get_folder(request, folder_obj):
 @handle_common_errors
 @check_file_and_permissions
 def get_file(request, file_obj):
-    time.sleep(DELAY_TIME)
 
     file_content = create_file_dict(file_obj)
 
@@ -52,8 +50,6 @@ def get_file(request, file_obj):
 @handle_common_errors
 @check_folder_and_permissions
 def get_usage(request, folder_obj):
-    time.sleep(DELAY_TIME)
-
     total_used_size = 0
     folder_used_size = 0
     includeTrash = request.GET.get('includeTrash', False)
@@ -92,15 +88,13 @@ def get_breadcrumbs(request, folder_obj):
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def users_me(request):
-    time.sleep(DELAY_TIME)
-
     user = request.user
     perms = UserPerms.objects.get(user=user)
     settings = UserSettings.objects.get(user=user)
     root = Folder.objects.get(owner=request.user, parent=None)
     response = {"user": {"id": user.id, "name": user.username, "root": root.id},
                 "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
-                          "rename": perms.rename,
+                          "lock": perms.lock,
                           "modify": perms.modify, "delete": perms.delete, "share": perms.share,
                           "download": perms.download},
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders,
@@ -117,7 +111,6 @@ def users_me(request):
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def update_settings(request):
-    time.sleep(DELAY_TIME)
 
     locale = request.data.get('locale')
     hideLockedFolders = request.data.get('hideLockedFolders')
@@ -152,7 +145,6 @@ def update_settings(request):
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def get_root(request):
-    time.sleep(DELAY_TIME)
     return HttpResponse(500)
 
     try:
@@ -170,7 +162,6 @@ def get_root(request):
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def get_folder_tree(request):
-    time.sleep(DELAY_TIME)
     return HttpResponse(500)
     try:
 

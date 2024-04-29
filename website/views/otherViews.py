@@ -16,7 +16,6 @@ DELAY_TIME = 0
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
 def index(request):
-    time.sleep(DELAY_TIME)
 
     return HttpResponse(f"hello {request.user}")
 

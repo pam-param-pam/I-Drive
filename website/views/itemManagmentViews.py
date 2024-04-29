@@ -8,6 +8,7 @@ from rest_framework.throttling import UserRateThrottle
 from website.models import File, Folder
 from website.tasks import smart_delete
 from website.utilities.OPCodes import EventCode
+from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
 from website.utilities.constants import MAX_NAME_LENGTH
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError, IncorrectFolderPassword
@@ -20,10 +21,9 @@ DELAY_TIME = 0
 
 @api_view(['POST'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_folder(request):
-    time.sleep(DELAY_TIME)
     name = request.data['name']
 
     parent = Folder.objects.get(id=request.data['parent_id'])
@@ -41,10 +41,9 @@ def create_folder(request):
 
 @api_view(['PATCH'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move(request):
-    time.sleep(DELAY_TIME)
 
     ids = request.data['ids']
     items = []
@@ -100,10 +99,9 @@ def move(request):
 
 @api_view(['PATCH'])  # this should be a post or delete imo
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move_to_trash(request):
-    time.sleep(DELAY_TIME)
     user = request.user
     items = []
     ids = request.data['ids']
@@ -139,10 +137,9 @@ def move_to_trash(request):
 
 @api_view(['DELETE'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & DeletePerms])
 @handle_common_errors
 def delete(request):
-    time.sleep(DELAY_TIME)
     user = request.user
     items = []
     ids = request.data['ids']
@@ -176,10 +173,9 @@ def delete(request):
 
 @api_view(['PATCH'])  # this should be a post or delete imo
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def rename(request):
-    time.sleep(DELAY_TIME)
 
     obj_id = request.data['id']
     new_name = request.data['new_name']
@@ -208,7 +204,7 @@ def rename(request):
 
 @api_view(['POST', 'GET'])
 @throttle_classes([FolderPasswordRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & LockPerms])
 @handle_common_errors
 @check_folder_and_permissions
 def folder_password(request, folder_obj):

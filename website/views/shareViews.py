@@ -3,20 +3,20 @@ from datetime import datetime, timedelta
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserSettings, ShareableLink
+from website.utilities.Permissions import SharePerms
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import create_file_dict, create_share_dict, get_shared_folder
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([UserRateThrottle])
 def get_shares(request):
-
     user = request.user
     user.id = 1
     shares = ShareableLink.objects.filter(owner_id=1)
@@ -35,7 +35,6 @@ def get_shares(request):
 @permission_classes([AllowAny])
 @throttle_classes([UserRateThrottle])
 def view_share(request, token):
-
     share = ShareableLink.objects.get(token=token)
     if share.is_expired():
         return HttpResponse(f"Share is expired :(", status=404)
@@ -50,10 +49,9 @@ def view_share(request, token):
         return JsonResponse(create_file_dict(file_ob), status=200)
 
 
-
 @api_view(['POST'])
 @throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors
 def delete_share(request):
     token = request.data['token']
@@ -67,11 +65,10 @@ def delete_share(request):
 
 
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def create_share(request):
-
     item_id = request.data['resource_id']
     value = abs(int(request.data['value']))
 

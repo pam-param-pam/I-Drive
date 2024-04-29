@@ -1,5 +1,6 @@
 import time
 
+import asyncio
 import httpx
 from django.core.cache import caches
 
@@ -9,13 +10,17 @@ from website.utilities.errors import DiscordError, DiscordBlockError
 
 def retry(func):
     def decorator(*args, **kwargs):
+        args[0].semaphore.acquire()
+
         response = func(*args, **kwargs)
         print(response.headers["X-ratelimit-remaining"])
         if response.status_code == 429:
             print("hit 429!!!!!!!!!!!!!!!")
             try:
                 retry_after = response.json()["retry_after"]
-                time.sleep(1.5)
+                time.sleep(retry_after)
+                args[0].switch_token()
+
             except KeyError:
                 raise DiscordBlockError("Discord is stupid :(")
             return decorator(*args, **kwargs)
@@ -24,6 +29,7 @@ def retry(func):
             retry_after = float(response.headers["X-RateLimit-Reset-After"])
             time.sleep(retry_after)
             args[0].switch_token()
+        args[0].semaphore.release()
 
         return response
 
@@ -61,6 +67,8 @@ class Discord:
                            "MTIwMDExODYzNTkyMjk4OTE2Nw.GUkoOq.n6e-5qYwwiRacyKqZIsNClM5gD8G0x7e23rtxM",
                            "MTIwMDExODkyMTQ0MTg0NTI5MA.Gq4BiA.7ChveurWbuTHPBqYpFOch-P6BvPfAX5A9yVRsI",
                            ]
+        #self.semaphore = asyncio.Semaphore(len(self.bot_tokens))
+        self.semaphore = asyncio.Semaphore(1)
 
         self.BASE_URL = 'https://discord.com/api/v10'
         self.channel_id = '870781149583130644'

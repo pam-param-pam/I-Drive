@@ -4,7 +4,7 @@ import time
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
-from website.models import Folder
+from website.models import Folder, UserPerms
 from website.utilities.OPCodes import EventCode
 from website.utilities.other import build_folder_content, send_event
 
@@ -44,6 +44,12 @@ class CommandConsumer(WebsocketConsumer):
     def connect(self):
         user = self.scope['user']
         if not user.is_anonymous:
+
+            perms = UserPerms.objects.get(user=user)
+            if not perms.execute:
+                self.close()
+                return
+
             async_to_sync(self.channel_layer.group_add)("command", self.channel_name)
             self.accept(self.scope['token'])
 

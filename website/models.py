@@ -166,7 +166,7 @@ class UserPerms(models.Model):
     execute = models.BooleanField(default=True)
     create = models.BooleanField(default=True)
     modify = models.BooleanField(default=True)
-    rename = models.BooleanField(default=True)
+    lock = models.BooleanField(default=True)
     delete = models.BooleanField(default=True)
     share = models.BooleanField(default=True)
     download = models.BooleanField(default=True)

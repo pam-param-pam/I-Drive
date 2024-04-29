@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 
 from website.views.dataViews import users_me, get_folder, get_file, get_breadcrumbs, get_usage, update_settings
-from website.views.fileManagmentViews import rename, move_to_trash, move, create_folder, \
+from website.views.itemManagmentViews import rename, move_to_trash, move, create_folder, \
     delete, folder_password
 from website.views.otherViews import test, index, help1
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
@@ -32,6 +32,8 @@ urlpatterns = [
                   path("api/file/preview/<file_id>", preview, name="help"),
 
                   path('auth/', include('djoser.urls.authtoken')),
+                  #path('auth/logout/', auth_views.LogoutView.as_view(), name='logout'),
+
                   path('auth/user/me', users_me, name="get current user"),
 
 

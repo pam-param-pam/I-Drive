@@ -7,6 +7,7 @@ from rest_framework.throttling import UserRateThrottle
 from website.models import Folder, File, Fragment, UserSettings
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
+from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE
 from website.utilities.errors import BadRequestError, ResourcePermissionError
 from website.utilities.decorators import handle_common_errors
@@ -14,7 +15,7 @@ from website.utilities.other import send_event, create_file_dict
 
 cache = caches["default"]
 @api_view(['POST', 'PATCH', 'PUT'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def create_file(request):
