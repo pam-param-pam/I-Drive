@@ -10,7 +10,7 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from website.utilities.constants import MAX_NAME_LENGTH
+from website.utilities.constants import MAX_NAME_LENGTH, cache
 
 
 class Folder(models.Model):
@@ -38,6 +38,11 @@ class Folder(models.Model):
         self.name = self.name[:MAX_NAME_LENGTH]
 
         self.last_modified_at = timezone.now()
+
+        # invalidate any cache
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
+
         super(Folder, self).save(*args, **kwargs)
 
     def moveToTrash(self):
@@ -79,6 +84,8 @@ class Folder(models.Model):
         return children
 
     def force_delete(self):
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
         self.delete()
 
 
@@ -103,6 +110,7 @@ class File(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        print("================SAVE MODEL================")
         if len(self.name) > MAX_NAME_LENGTH:
             # Find the last occurrence of '.' to handle possibility of no extension
             last_dot_index = self.name.rfind('.')
@@ -126,6 +134,11 @@ class File(models.Model):
         if self.encrypted_size is None:
             self.encrypted_size = self.size
         self.last_modified_at = timezone.now()
+
+        # invalidate any cache
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
+
         super(File, self).save(*args, **kwargs)
 
     def moveToTrash(self):
@@ -137,6 +150,8 @@ class File(models.Model):
         self.save()
 
     def force_delete(self):
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
         self.delete()
 
 
@@ -162,14 +177,18 @@ class UserSettings(models.Model):
 class UserPerms(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
+    globalLock = models.BooleanField(default=False)
+
     admin = models.BooleanField(default=False)
-    execute = models.BooleanField(default=True)
+    execute = models.BooleanField(default=False)
+
     create = models.BooleanField(default=True)
     modify = models.BooleanField(default=True)
     lock = models.BooleanField(default=True)
     delete = models.BooleanField(default=True)
     share = models.BooleanField(default=True)
     download = models.BooleanField(default=True)
+    read = models.BooleanField(default=True)
 
     def __str__(self):
         return self.user.username + "'s perms"
@@ -223,6 +242,7 @@ class ShareableLink(models.Model):
     def is_expired(self):
         return timezone.now() >= self.expiration_time
 
+
 # class Trash(models.Model):
 #    folder_id = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True)
 #    old_parent_id = models.ForeignKey(Folder, on_delete=models.SET(get_users_root()))
@@ -238,6 +258,7 @@ class Thumbnail(models.Model):
     def __str__(self):
         return self.file.name
 """
+
 
 class Preview(models.Model):
     created_at = models.DateTimeField(default=timezone.now)

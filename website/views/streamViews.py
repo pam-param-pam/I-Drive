@@ -6,7 +6,6 @@ import imageio
 import rawpy
 import requests
 from cryptography.fernet import Fernet
-from django.core.cache import caches
 from django.db.utils import IntegrityError
 from django.http import StreamingHttpResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.cache import cache_page
@@ -22,7 +21,6 @@ from website.utilities.errors import ResourceNotPreviewable
 from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
 
-cache = caches["default"]
 
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])

@@ -1,25 +1,23 @@
 import binascii
 import io
-import time
 import traceback
 
-import exifread
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
+from django.core.cache import caches
 from django.db.utils import IntegrityError
 
 from website.celery import app
 from website.models import File, Fragment, Folder, UserSettings, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
+from website.utilities.constants import cache
 from website.utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
 
-MAX_MB = 25  # todo
-MAX_STREAM_MB = 24
 
 
 # thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
@@ -154,6 +152,10 @@ def smart_delete(user_id, request_id, ids):
 
             print("sleeping")
         for item in items:
+            # TODO delete cache of item
+            # TODO delete cache of item.parent
+            cache.delete(item.id)
+            cache.delete(item.parent.id)
             item.delete()
 
         send_message(f"Items deleted!", True, user_id, request_id)

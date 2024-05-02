@@ -1,5 +1,6 @@
 from django.core.cache import caches
 from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
@@ -8,19 +9,17 @@ from website.models import Folder, File, Fragment, UserSettings
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms
-from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE
+from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
 from website.utilities.errors import BadRequestError, ResourcePermissionError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import send_event, create_file_dict
 
-cache = caches["default"]
+
 @api_view(['POST', 'PATCH', 'PUT'])
 @permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def create_file(request):
-    user = request.user
-    user.id = 1
 
     if request.method == "POST":
         files = request.data['files']
@@ -46,6 +45,7 @@ def create_file(request):
                 mimetype = "text/plain"
 
             folder_obj = Folder.objects.get(id=parent_id)
+
             if folder_obj.owner != request.user:
                 raise ResourcePermissionError()
 
@@ -56,7 +56,7 @@ def create_file(request):
                 size=file_size,
                 mimetype=mimetype,
                 type=file_type,
-                owner_id=user.id,
+                owner_id=request.user.id,
                 key=b"no key",
                 parent_id=parent_id,
             )
@@ -97,6 +97,10 @@ def create_file(request):
         if fragment_sequence == total_fragments:
             file_obj.ready = True
             file_obj.save()
+            # TODO delete cache of file_obj
+            # TODO delete cache of file_obj.parent
+            cache.delete(file_obj.id)
+            cache.delete(file_obj.parent.id)
             send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
             return HttpResponse(status=200)
 
@@ -153,9 +157,16 @@ def create_file(request):
         )
         fragment_obj.save()
         file_obj.size = fragment_size
+        file_obj.last_modified_at = timezone.now()
+
         file_obj.save()
 
         # important invalidate caches!
         cache.delete(old_message_id)
+
+        # TODO delete cache of file_obj
+        # TODO delete cache of file_obj.parent
+        cache.delete(file_obj.id)
+        cache.delete(file_obj.parent.id)
 
         return HttpResponse(200)

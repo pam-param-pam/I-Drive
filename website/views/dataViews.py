@@ -1,12 +1,16 @@
 import time
 
+from django.core.cache import caches
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.cache import cache_page
+from django.views.decorators.http import etag, last_modified
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserPerms, UserSettings
+from website.utilities.Permissions import ReadPerms, ModifyPerms
+from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict
@@ -16,7 +20,7 @@ DELAY_TIME = 0
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
 def get_folder(request, folder_obj):
@@ -24,19 +28,28 @@ def get_folder(request, folder_obj):
     includeTrash = request.GET.get('includeTrash', False)
     password = request.headers.get("X-Folder-Password")
     if password == folder_obj.password:
-        folder_content = build_folder_content(folder_obj, includeTrash)
+        folder_content = cache.get(folder_obj.id)
+        if not folder_content:
+            print("=======using uncached version=======")
+            folder_content = build_folder_content(folder_obj, includeTrash)
+            cache.set(folder_obj.id, folder_content)
+
         return JsonResponse(folder_content)
 
     if password:
         raise IncorrectFolderPassword()
     raise MissingFolderPassword("Please enter folder password.")
 
+def etag_func(request, file_obj):
+    last_modified_str = file_obj.last_modified_at #.strftime('%a, %d %b %Y %H:%M:%S GMT')
+    return last_modified_str
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
+@last_modified(etag_func)
 def get_file(request, file_obj):
 
     file_content = create_file_dict(file_obj)
@@ -46,30 +59,31 @@ def get_file(request, file_obj):
 @cache_page(60 * 1)
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
 def get_usage(request, folder_obj):
     total_used_size = 0
     folder_used_size = 0
     includeTrash = request.GET.get('includeTrash', False)
+    all_files = cache.get(f"ALL_FILES:{request.user}")
+    if not all_files:
+        all_files = File.objects.filter(owner=request.user, inTrash=includeTrash).select_related("parent")
+        cache.set(f"ALL_FILES:{request.user}", all_files, 60)
 
-    all_files = File.objects.filter(owner=request.user, inTrash=includeTrash)
     for file in all_files:
         if not file.inTrash and file.ready:
             total_used_size += file.size
 
-    folder_files = folder_obj.get_all_files()
-    for file in folder_files:
-        if not file.inTrash and file.ready:
-            folder_used_size += file.size
-
+        if file.parent.id == folder_obj.id:
+            if not file.inTrash and file.ready:
+                folder_used_size += file.size
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
 def get_breadcrumbs(request, folder_obj):
@@ -107,7 +121,7 @@ def users_me(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def update_settings(request):

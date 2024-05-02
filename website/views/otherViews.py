@@ -20,10 +20,11 @@ def index(request):
     return HttpResponse(f"hello {request.user}")
 
 
-# def test(request):
-#    return HttpResponse(f"yupi", status=200)
+def test(request):
+    time.sleep(1)
+    return HttpResponse(f"yupi", status=200)
 
-
+"""
 # Example usage in a view
 @check_file_and_permissions
 @handle_common_errors
@@ -36,7 +37,7 @@ def test(request, file_obj):
     url = discord.get_file_url(message_id, attachment_id)
     # Your delete file logic here using file_obj
     return HttpResponse(url)
-
+"""
 @handle_common_errors
 def help1(request):
     files = File.objects.filter(owner_id=1)

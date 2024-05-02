@@ -7,11 +7,10 @@ from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from website.models import File, Folder, UserSettings, Preview
 from website.tasks import queue_ws_event
 from website.utilities.OPCodes import message_codes
-from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE
+from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
 from website.utilities.errors import ResourcePermissionError
 
 signer = TimestampSigner()
-cache = caches["default"]
 
 
 # Function to sign a URL with an expiration time

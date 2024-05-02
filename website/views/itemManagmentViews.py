@@ -1,6 +1,8 @@
 import time
 
+from django.core.cache import caches
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
@@ -9,14 +11,13 @@ from website.models import File, Folder
 from website.tasks import smart_delete
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
-from website.utilities.constants import MAX_NAME_LENGTH
+from website.utilities.constants import MAX_NAME_LENGTH, cache
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError, IncorrectFolderPassword
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict
 from website.utilities.throttle import FolderPasswordRateThrottle
 
-DELAY_TIME = 0
 
 
 @api_view(['POST'])
@@ -25,7 +26,6 @@ DELAY_TIME = 0
 @handle_common_errors
 def create_folder(request):
     name = request.data['name']
-
     parent = Folder.objects.get(id=request.data['parent_id'])
 
     folder_obj = Folder(
@@ -34,6 +34,10 @@ def create_folder(request):
         owner=request.user,
     )
     folder_obj.save()
+
+    # TODO delete cache of parent
+    cache.delete(parent.id)
+
     folder_dict = create_folder_dict(folder_obj)
     send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [folder_dict])
     return JsonResponse(folder_dict, status=200)
@@ -44,7 +48,6 @@ def create_folder(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move(request):
-
     ids = request.data['ids']
     items = []
     new_parent_id = request.data['new_parent_id']
@@ -90,14 +93,24 @@ def move(request):
         ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
     new_parent = Folder.objects.get(id=new_parent_id)  # goofy ah redeclaration
 
+    # TODO delete cache of new_parent
+    cache.delete(new_parent.id)
+
     for item in items:
+        # TODO delete cache of item
+        # TODO delete cache of item.parent
+        cache.delete(item.id)
+        cache.delete(item.parent.id)
+        if isinstance(item, File):
+            item.last_modified_at = timezone.now()
         item.parent = new_parent
         item.save()
+
     send_event(request.user.id, EventCode.ITEM_MOVED, request.request_id, ws_data)
     return HttpResponse(status=200)
 
 
-@api_view(['PATCH'])  # this should be a post or delete imo
+@api_view(['PATCH'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
@@ -164,6 +177,7 @@ def delete(request):
             raise ResourcePermissionError()
 
         items.append(item)
+
     smart_delete.delay(request.user.id, request.request_id, ids)
 
     send_event(request.user.id, EventCode.ITEM_DELETE, request.request_id, ids)
@@ -176,7 +190,6 @@ def delete(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def rename(request):
-
     obj_id = request.data['id']
     new_name = request.data['new_name']
     if len(new_name) > MAX_NAME_LENGTH:
@@ -196,7 +209,14 @@ def rename(request):
         raise RootPermissionError("Cannot rename 'root' folder!")
 
     item.name = new_name
+    if isinstance(item, File):
+        item.last_modified_at = timezone.now()
     item.save()
+    # TODO delete cache of item
+    # TODO delete cache of item.parent
+    cache.delete(item.id)
+    cache.delete(item.parent.id)
+
     send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
                [{'parent_id': item.parent.id, 'id': item.id, 'new_name': new_name}])
     return HttpResponse(status=200)
@@ -221,6 +241,10 @@ def folder_password(request, folder_obj):
             folder_obj.password = newPassword
             folder_obj.save()
 
+            # TODO delete cache of item
+            # TODO delete cache of item.parent
+            cache.delete(folder_obj.id)
+            cache.delete(folder_obj.parent.id)
             isLocked = True if folder_obj.password else False
 
             send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,

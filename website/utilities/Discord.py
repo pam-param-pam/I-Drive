@@ -4,13 +4,13 @@ import asyncio
 import httpx
 from django.core.cache import caches
 
-from website.utilities.constants import DISCORD_MESSAGE_EXPIRY
+from website.utilities.constants import DISCORD_MESSAGE_EXPIRY, cache
 from website.utilities.errors import DiscordError, DiscordBlockError
 
 
 def retry(func):
     def decorator(*args, **kwargs):
-        args[0].semaphore.acquire()
+        #args[0].semaphore.acquire()
 
         response = func(*args, **kwargs)
         print(response.headers["X-ratelimit-remaining"])
@@ -29,7 +29,7 @@ def retry(func):
             retry_after = float(response.headers["X-RateLimit-Reset-After"])
             time.sleep(retry_after)
             args[0].switch_token()
-        args[0].semaphore.release()
+        #args[0].semaphore.release()
 
         return response
 
@@ -67,13 +67,12 @@ class Discord:
                            "MTIwMDExODYzNTkyMjk4OTE2Nw.GUkoOq.n6e-5qYwwiRacyKqZIsNClM5gD8G0x7e23rtxM",
                            "MTIwMDExODkyMTQ0MTg0NTI5MA.Gq4BiA.7ChveurWbuTHPBqYpFOch-P6BvPfAX5A9yVRsI",
                            ]
-        #self.semaphore = asyncio.Semaphore(len(self.bot_tokens))
+        # self.semaphore = asyncio.Semaphore(len(self.bot_tokens))
         self.semaphore = asyncio.Semaphore(1)
 
         self.BASE_URL = 'https://discord.com/api/v10'
         self.channel_id = '870781149583130644'
         self.current_token_index = 0
-        self.cache = caches["default"]
 
         self.headers = {'Authorization': f'Bot {self.current_token}', "Content-Type": 'application/json'}
         self.file_upload_headers = {'Authorization': f'Bot {self.current_token}'}
@@ -103,7 +102,7 @@ class Discord:
         response = self.client.post(url, headers=self.file_upload_headers, files=files, timeout=None)
         if response.is_success:
             # expire is 1 day
-            self.cache.set(response.json()["id"], response, timeout=DISCORD_MESSAGE_EXPIRY)
+            cache.set(response.json()["id"], response, timeout=DISCORD_MESSAGE_EXPIRY)
             return response
         if response.status_code == 429:
             return response
@@ -118,7 +117,7 @@ class Discord:
 
     @retry
     def get_message(self, message_id) -> httpx.Response:
-        cached_message = self.cache.get(message_id)
+        cached_message = cache.get(message_id)
         if cached_message:
             print("using cached message")
             return cached_message
@@ -127,7 +126,7 @@ class Discord:
         response = self.client.get(url, headers=self.headers)
         if response.is_success:
             # expire is 1 day
-            self.cache.set(message_id, response, timeout=DISCORD_MESSAGE_EXPIRY)
+            cache.set(message_id, response, timeout=DISCORD_MESSAGE_EXPIRY)
             return response
 
         if response.status_code == 429:

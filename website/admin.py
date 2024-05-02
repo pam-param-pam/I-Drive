@@ -1,8 +1,11 @@
 
 from django.contrib import admin
+from django.core.cache import caches
 from django.template.defaultfilters import filesizeformat
+from django.utils import timezone
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview
+from .utilities.constants import cache
 
 
 @admin.register(Fragment)
@@ -61,6 +64,10 @@ class FolderAdmin(admin.ModelAdmin):
         for folder in queryset:
             folder.restoreFromTrash()
 
+    def save_model(self, request, obj, form, change):
+        cache.delete(obj.id)
+        cache.delete(obj.parent.id)
+        super().save_model(request, obj, form, change)
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
@@ -79,13 +86,17 @@ class FileAdmin(admin.ModelAdmin):
     def force_ready(self, request, queryset):
         for real_obj in queryset:
             real_obj.ready = True
+            cache.delete(real_obj.id)
+            cache.delete(real_obj.parent.id)
             real_obj.save()
 
     def delete_model(self, request, obj):
         if isinstance(obj, File):
+
             obj.force_delete()
         else:
             for real_obj in obj:
+
                 real_obj.force_delete()
 
     def move_to_trash(self, request, queryset):
@@ -105,7 +116,11 @@ class FileAdmin(admin.ModelAdmin):
     readable_size.short_description = 'SIZE'
     readable_encrypted_size.short_description = 'ENCRYPTED SIZE'
 
-
+    def save_model(self, request, obj, form, change):
+        cache.delete(obj.id)
+        cache.delete(obj.parent.id)
+        obj.last_modified = timezone.now()
+        super().save_model(request, obj, form, change)
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)
 

@@ -9,8 +9,8 @@ def custom_exception_handler(exc, context):
     if isinstance(exc, Throttled):  # check that a Throttled exception is raised
         custom_response_data = {
             'error': 'Rate Limit Exceeded >:(',
-            'details': 'Enhance your calm, try again in %d seconds' % exc.wait,
-            'retry_after': '%d seconds' % exc.wait
+            'details': f'Enhance your calm, try again in {exc.wait} seconds',
+            'retry_after': f'{exc.wait} seconds'
         }
         response.data = custom_response_data
 

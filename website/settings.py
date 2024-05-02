@@ -24,7 +24,6 @@ STATICFILES_DIRS = [
 # Application definition
 
 INSTALLED_APPS = [
-    'silk',
     'django.contrib.admin',
     'website',
     'corsheaders',
@@ -52,9 +51,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    #'silk.middleware.SilkyMiddleware',
 
     #"django.middleware.cache.UpdateCacheMiddleware",
     #"django.middleware.common.CommonMiddleware",
@@ -118,6 +117,7 @@ WSGI_APPLICATION = 'website.wsgi.application'
 ASGI_APPLICATION = 'website.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -126,7 +126,23 @@ DATABASES = {
 
     }
 }
+"""
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
 
+        'USER': 'secret_user',
+        'NAME': "postgres",
+        'PASSWORD': 'secret_password',
+
+        'HOST': '127.0.0.1',
+
+        'PORT': '5432',
+        'CONN_MAX_AGE': None
+
+    }
+}
+"""
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -179,7 +195,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/min',
-        'user': '10000/min',
+        'user': '100/min',
         'media': '1000/min',
         'folder_password': '15/min',
     }

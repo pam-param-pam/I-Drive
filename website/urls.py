@@ -15,6 +15,7 @@ from website.views.uploadViews import create_file
 urlpatterns = [
                   path("test/<file_id>", test, name="test"),
                   path("help", help1, name="help"),
+                  path("test", test, name="help"),
 
                   #path("stream", stream_test, name="stream"),
                   #path("stream2", stream_test2, name="stream"),
@@ -70,4 +71,4 @@ urlpatterns = [
                   #path("api/getroot", get_root, name="get root's content"),
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
+#urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
