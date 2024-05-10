@@ -7,6 +7,9 @@ const mutations = {
   setFolderPassword(state, payload) {
     state.folderPasswords[payload.folderId] = payload.password;
   },
+  resetFolderPassword(state, payload) {
+    state.folderPasswords = {}
+  },
   updateFolderPassword(state, payload) {
     if (state.folderPasswords.hasOwnProperty(payload.folderId)) {
       state.folderPasswords[payload.folderId] = payload.password;
@@ -16,6 +19,9 @@ const mutations = {
   },
   closeHover: (state) => {
     state.prompts.pop()
+  },
+  changeOpenSearchState: (state, payload) => {
+    state.searchOpen = payload
   },
   toggleShell: (state) => {
     state.show = null
@@ -108,19 +114,21 @@ const mutations = {
       state.selected[index2].name = newName;
     }
   },
-  hackPreviewUrl(state, { id, newURL }){
+  changeLockStatusAndPasswordCache(state, { folderId, newLockStatus }){
     // Find the index of the item with the given ID
-    const index1 = state.items.findIndex(item => item.id === id);
-    const index2 = state.selected.findIndex(item => item.id === id);
+    const index1 = state.items.findIndex(item => item.id === folderId);
+    const index2 = state.selected.findIndex(item => item.id === folderId);
 
     // update item name in items
     if (index1 !== -1) {
-      state.items[index1].preview_url = newURL;
+      state.items[index1].isLocked = newLockStatus;
     }
     // update item name in selected(important for preview)
     if (index2 !== -1) {
-      state.selected[index2].preview_url = newURL;
+      state.selected[index2].isLocked = newLockStatus;
     }
+    this.commit('updateFolderPassword', {"folderId": folderId, "password": null});
+
   },
   updatePreviewInfo(state, { id, iso, focal_length, aperture, model_name, exposure_time }) {
     // Find the index of the item with the given ID

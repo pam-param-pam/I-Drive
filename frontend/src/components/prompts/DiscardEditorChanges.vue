@@ -46,9 +46,6 @@ export default {
     submit: async function () {
       this.currentPrompt?.confirm();
 
-      //let uri = `/folder/${this.file.parent_id}`;
-
-      //this.$router.push(uri);
     },
   },
 };

@@ -11,6 +11,10 @@
 
     <slot />
 
+    <button @click="toggleDark()">
+      <span class="ml-2">{{ isDark ? 'Dark' : 'Light' }}</span>
+    </button>
+
     <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
       <slot name="actions" />
     </div>
@@ -36,22 +40,29 @@ import { logoURL } from "@/utils/constants";
 
 import Action from "@/components/header/Action.vue";
 import { mapGetters } from "vuex";
+import {useDark, useToggle} from '@vueuse/core'
 
 export default {
   name: "header-bar",
   props: ["showLogo", "showMenu"],
   components: {
     Action,
+    useDark,
   },
   data: function () {
     return {
       logoURL,
+      isDark: true
     };
   },
   methods: {
     openSidebar() {
       this.$store.commit("showHover", "sidebar");
     },
+    toggleDark() {
+      useToggle(false)
+    },
+
   },
   computed: {
     ...mapGetters(["currentPromptName"]),

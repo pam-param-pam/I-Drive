@@ -99,11 +99,19 @@ export default {
         await this.$router.push({path: redirect});
 
       } catch (e) {
-        console.log(e)
-        if (e.message === 409) {
+        console.log()
+        if (e.status === 409) {
           this.error = this.$t("login.usernameTaken");
-        } else {
+        }
+        else if (e.status === 400) {
           this.error = this.$t("login.wrongCredentials");
+        }
+        else if (e.status === 500) {
+          this.error = this.$t("login.unexpectedError");
+        }
+        else {
+          this.error = this.$t("login.unknownError");
+          alert(e)
         }
       }
     },

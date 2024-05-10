@@ -23,6 +23,7 @@ const state = {
   prompts: [],
   error: null,
   showShell: false,
+  searchOpen: false,
   folderPasswords: {}
 
 };

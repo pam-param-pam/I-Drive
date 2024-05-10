@@ -39,7 +39,9 @@ export async function login(username, password) {
     localStorage.setItem("token", token);
     await validateLogin()
   } else {
-    throw new Error(body);
+    const error = new Error();
+    error.status = res.status;
+    throw error
   }
 }
 
@@ -60,11 +62,27 @@ export async function signup(username, password) {
   }
 }
 
-export function logout() {
+export async function logout() {
+  let token = store.state.token
+  if (token) {
+    const res = await fetch(`${baseURL}/auth/token/logout`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Token ${token}`,
+      },
+
+    });
+  }
+
 
   store.commit("setUser", null);
   store.commit("setSettings", null);
   store.commit("setToken", null);
+  store.commit("setCurrentFolder", null);
+  store.commit("setItems", null);
+  store.commit("setPerms", null);
+  store.commit("resetFolderPassword", null);
+
   localStorage.removeItem("token");
 
   router.push({path: "/login"});

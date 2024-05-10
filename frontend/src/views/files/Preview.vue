@@ -12,7 +12,7 @@
       <template #actions>
         <action
           :disabled="loading"
-          v-if="perms.rename"
+          v-if="perms.modify"
           icon="mode_edit"
           :label="$t('buttons.rename')"
           @action="rename()"

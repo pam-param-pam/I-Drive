@@ -1,27 +1,6 @@
-import { fetchURL } from "./utils";
-import url from "../utils/url";
+import {fetchJSON} from "./utils";
 
-export default async function search(base, query) {
-  base = removePrefix(base);
-  query = encodeURIComponent(query);
+export async function search(query) {
+  return await fetchJSON(`/api/search?query=${query}`)
 
-  if (!base.endsWith("/")) {
-    base += "/"
-  }
-
-  let res = await fetchURL(`/api/search${base}?query=${query}`, {});
-
-  let data = await res.json()
-
-  data = data.map((item) => {
-    item.url = `/files${base}` + url.encodePath(item.path)
-
-    if (item.dir) {
-      item.url += "/";
-    }
-
-    return item;
-  });
-
-  return data;
 }

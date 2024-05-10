@@ -10,6 +10,7 @@
           <p>
             <input type="checkbox" v-model="hideLockedFolders" />
             {{ $t("settings.hideLockedFolders") }}
+
           </p>
           <p>
             <input type="checkbox" v-model="subfoldersInShares" />
@@ -19,6 +20,16 @@
             <input type="checkbox" v-model="dateFormat" />
             {{ $t("settings.setDateFormat") }}
           </p>
+
+          <div>
+            <h3>{{ $t("settings.webhookURL") }}</h3>
+            <input
+              class="input input--block"
+              type="text"
+              v-model="webhook"
+            />
+          </div>
+
           <h3>{{ $t("settings.language") }}</h3>
           <languages
             class="input input--block"
@@ -93,6 +104,7 @@ export default {
       subfoldersInShares: false,
       dateFormat: false,
       locale: "",
+      webhook: "",
     };
   },
   computed: {
@@ -116,7 +128,7 @@ export default {
     this.locale = this.settings.locale;
     this.hideLockedFolders = this.settings.hideLockedFolders;
     this.subfoldersInShares = this.settings.subfoldersInShares;
-
+    this.webhook = this.settings.webhook
     this.dateFormat = this.settings.dateFormat;
   },
   methods: {
@@ -146,16 +158,15 @@ export default {
           subfoldersInShares: this.subfoldersInShares,
           hideLockedFolders: this.hideLockedFolders,
           dateFormat: this.dateFormat,
+          webhook: this.webhook
         };
 
         await updateSettings(data)
         this.$store.commit("updateSettings", data)
 
-
         this.$toast.success(this.$t("settings.settingsUpdated"))
       } catch (e) {
         console.log(e)
-        this.$toast.error("error occured");
       }
     },
   },

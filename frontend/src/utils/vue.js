@@ -6,6 +6,7 @@ import "vue-toastification/dist/index.css";
 import VueNativeSock from 'vue-native-websocket'
 import Vue2TouchEvents from 'vue2-touch-events'
 import {baseWS} from "@/utils/constants.js";
+import Dropdown from 'vue-simple-search-dropdown';
 
 Vue.use(Vue2TouchEvents)
 Vue.use(VueLazyload);
@@ -14,14 +15,32 @@ const token = localStorage.getItem("token");
 // todo do this after login cuz token is null
 // todo and so is the the websocket connection one the first login
 Vue.use(VueNativeSock, baseWS + "/user", {reconnectionDelay: 5000, reconnection: true, protocol: token})
+Vue.use(Dropdown);
 
 const options = {
   transition: "Vue-Toastification__bounce",
   maxToasts: 20,
   position: "bottom-right",
   timeout: 2500,
+  newestOnTop: true,
+  /*
+  filterToasts: toasts => {
+    // Keep track of existing types
+    const types = {};
+    const texts = {};
+    return toasts.reduce((aggToasts, toast) => {
+      // Check if type was not seen before
+      if (!types[toast.type] && !texts[toast.text]) {
+        aggToasts.push(toast);
+        texts[toast.text] = true;
+        types[toast.type] = true;
 
-  newestOnTop: true
+      }
+      return aggToasts;
+    }, []);
+  }
+  
+   */
 };
 
 Vue.use(Toast, options);

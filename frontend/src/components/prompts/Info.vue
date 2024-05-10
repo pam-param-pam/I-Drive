@@ -329,10 +329,9 @@ export default {
     },
     humanTime: function (date) {
       if (this.settings.dateFormat) {
-        return new Date(date).toLocaleString();
-
+        return moment(date).format("L LT");
       }
-      return moment(this.date).fromNow();
+      return moment(date).fromNow();
 
     },
     changeView: async function (event, type) {

@@ -23,6 +23,7 @@
     "size": "Size (ᗒᗨᗕ)",
     "sortByLastModified": "S-Sowt by wast m-m-modified",
     "sortByName": "Sowt by nyame",
+    "sortByCreated": "Sowt by cweated a-at",
     "sortBySize": "Sowt by size ( ´ ▽ ` ).｡ｏ♡",
     "noPreview": "Pweview is nyot avaiwabwe fow this fiwe."
   },
@@ -67,7 +68,8 @@
     "upload": "Upwoad",
     "openFile": "Open fiwe",
     "discardChanges": "Discawd *notices bulge*",
-    "lockFolder": "Lock folder"
+    "lockFolder": "Lock folder",
+    "moveFile": "Move file"
   },
   "languages": {
     "en": "Engwish",
@@ -80,6 +82,7 @@
     "notFound": "This wocation can't be weached ɾ⚈▿⚈ɹ",
     "badRequest": "Bad wequest murr~",
     "connection": "T-The sewvew can't be weached",
+    "rateLimit": "Enhance your calm, try again in a few seconds",
     "folderPasswordRequired": "Password is required for this folder."
 
   },
@@ -107,7 +110,9 @@
     "submit": "Login",
     "username": "Username",
     "usernameTaken": "Username already taken",
-    "wrongCredentials": "Wrong credentials"
+    "wrongCredentials": "Wrong credentials",
+    "unexpectedError": "Unexpected server error",
+    "unknownError": "Unknown error"
   },
   "time": {
     "days": "D-Days",
@@ -132,6 +137,8 @@
     "setDateFormat": "S-Set exact d-date fowmat",
     "shareDuration": "Shawe Duwation OwO",
     "shareManagement": "Shawe Manyagement",
+    "webhookURL": "Webhook URL",
+
     "themes": {
       "default": "System default",
       "dark": "Dark",
@@ -193,7 +200,9 @@
     "itemRenamed": "Nyame changed",
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
     "PreparingUpload": "Stawted pwoccesing f-fiwes f-f-fow upwoad...",
-    "fileSaved": "Fiwe saved"
+    "fileSaved": "Fiwe saved",
+    "passwordUpdated": "Password updated!"
+
   }
 }
 

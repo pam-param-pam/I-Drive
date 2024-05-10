@@ -10,7 +10,22 @@
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
   transition: .2s ease transform;
 }
+/* Customizing scrollbar */
+.shell__content::-webkit-scrollbar {
+  width: 10px; /* Width of the scrollbar */
+}
 
+.shell__content::-webkit-scrollbar-thumb {
+  background: #666; /* Color of the scrollbar thumb */
+}
+
+.shell__content::-webkit-scrollbar-thumb:hover {
+  background: #888; /* Color of the scrollbar thumb on hover */
+}
+
+.shell__content::-webkit-scrollbar-track {
+  background: #333; /* Color of the scrollbar track */
+}
 .shell__divider {
   position: relative;
   height: 8px;

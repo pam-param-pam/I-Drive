@@ -1,201 +1,215 @@
 <template>
-  <div id="search" @click="open" v-bind:class="{ active, ongoing }">
+  <div id="search" class="dropdown">
     <div id="input">
-      <button
-        v-if="active"
-        class="action"
-        @click="close"
-        :aria-label="$t('buttons.close')"
-        :title="$t('buttons.close')"
-      >
-        <i class="material-icons">arrow_back</i>
-      </button>
-      <i v-else class="material-icons">search</i>
       <input
+
         type="text"
-        @keyup.exact="keyup"
-        @keyup.enter="submit"
+        @focusout="exit()"
+        @focus="showOptions()"
+        v-model="searchFilter"
         ref="input"
-        :autofocus="active"
-        v-model.trim="value"
         :aria-label="$t('search.search')"
         :placeholder="$t('search.search')"
       />
+
     </div>
-
-    <div id="result" ref="result">
+    <div class="search-list dropdown-content"
+         v-show="optionsShown">
       <div>
-        <template v-if="isEmpty">
-          <p>{{ text }}</p>
-
-          <template v-if="value.length === 0">
-            <div class="boxes">
-              <h3>{{ $t("search.types") }}</h3>
-              <div>
-                <div
-                  tabindex="0"
-                  v-for="(v, k) in boxes"
-                  :key="k"
-                  role="button"
-                  @click="init('type:' + k)"
-                  :aria-label="$t('search.' + v.label)"
-                >
-                  <i class="material-icons">{{ v.icon }}</i>
-                  <p>{{ $t("search." + v.label) }}</p>
-                </div>
-              </div>
-            </div>
-          </template>
-        </template>
-        <ul v-show="results.length > 0">
-          <li v-for="(s, k) in filteredResults" :key="k">
-            <router-link @click.native="close" :to="s.url">
-              <i v-if="s.dir" class="material-icons">folder</i>
-              <i v-else class="material-icons">insert_drive_file</i>
-              <span>./{{ s.path }}</span>
-            </router-link>
+        <ul >
+          <li
+            v-for="item in searchItems"
+            @click="selectOption(item)"
+            tabindex="0"
+            :aria-label="item.name"
+            :key="item.id"
+            :class="{'folder': item.isDir === true, 'file': item.isDir !== true}"
+          >
+            {{ item.name }}
           </li>
         </ul>
       </div>
-      <p id="renew">
-        <i class="material-icons spin">autorenew</i>
-      </p>
     </div>
   </div>
 </template>
 
 <script>
-import { mapState, mapGetters, mapMutations } from "vuex";
-import url from "@/utils/url";
-import { search } from "@/api";
-
-var boxes = {
-  image: { label: "images", icon: "insert_photo" },
-  audio: { label: "music", icon: "volume_up" },
-  video: { label: "video", icon: "movie" },
-  pdf: { label: "pdf", icon: "picture_as_pdf" },
-};
+import FileList from "@/components/prompts/FileList.vue";
+import {search} from "@/api/search.js";
+import {mapGetters, mapMutations} from "vuex";
 
 export default {
   name: "search",
+  components: {FileList},
+
   data: function () {
     return {
-      value: "",
-      active: false,
-      ongoing: false,
-      results: [],
-      reload: false,
-      resultsCount: 50,
-      scrollable: null,
-    };
+      selected: {},
+      optionsShown: false,
+      searchFilter: '',
+      searchItems: []
+    }
   },
-  watch: {
-    currentPrompt(val, old) {
-      this.active = val?.prompt === "search";
-
-      if (old?.prompt === "search" && !this.active) {
-        if (this.reload) {
-          this.setReload(true);
-        }
-
-        document.body.style.overflow = "auto";
-        this.reset();
-        this.value = "";
-        this.active = false;
-        this.$refs.input.blur();
-      } else if (this.active) {
-        this.reload = false;
-        this.$refs.input.focus();
-        document.body.style.overflow = "hidden";
-      }
-    },
-    value() {
-      if (this.results.length) {
-        this.reset();
-      }
-    },
+  created() {
+    this.$emit('selected', this.selected);
   },
+
   computed: {
-    ...mapState(["user"]),
-    ...mapGetters(["isListing", "currentPrompt"]),
-    boxes() {
-      return boxes;
-    },
-    isEmpty() {
-      return this.results.length === 0;
-    },
-    text() {
-      if (this.ongoing) {
-        return "";
-      }
-
-      return this.value === ""
-        ? this.$t("search.typeToSearch")
-        : this.$t("search.pressToSearch");
-    },
-    filteredResults() {
-      return this.results.slice(0, this.resultsCount);
-    },
-  },
-  mounted() {
-    this.$refs.result.addEventListener("scroll", (event) => {
-      if (
-        event.target.offsetHeight + event.target.scrollTop >=
-        event.target.scrollHeight - 100
-      ) {
-        this.resultsCount += 50;
-      }
-    });
+    ...mapGetters(["getFolderPassword"])
   },
   methods: {
-    ...mapMutations(["showHover", "closeHover", "setReload"]),
-    open() {
-      this.showHover("search");
+
+    async search() {
+      if (this.searchFilter === '') return []
+      this.searchItems = await search(this.searchFilter)
+
     },
-    close(event) {
-      event.stopPropagation();
-      event.preventDefault();
-      this.closeHover();
-    },
-    keyup(event) {
-      if (event.keyCode === 27) {
-        this.close(event);
-        return;
+    selectOption(item) {
+
+      console.log(item)
+      if (item.isDir) {
+        if (item.isLocked === true) {
+          let password = this.getFolderPassword(item.id)
+          if (!password) {
+            this.$store.commit("showHover", {
+              prompt: "FolderPassword",
+              props: {folderId: item.id},
+              confirm: () => {
+                this.$router.push({name: `Listing`, params: {"folderId": item.id}});
+              },
+            });
+            return
+          }
+        }
+        this.$router.push({name: `Listing`, params: {"folderId": item.id}});
+
+      } else {
+        //
+        if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf") {
+          this.$router.push({path: `/preview/${item.id}`});
+
+        }
+        else {
+          this.$router.push({path: `/editor/${item.id}`});
+
+        }
+
       }
-
-      this.results.length = 0;
     },
-    init(string) {
-      this.value = `${string} `;
-      this.$refs.input.focus();
-    },
-    reset() {
-      this.ongoing = false;
-      this.resultsCount = 50;
-      this.results = [];
-    },
-    async submit(event) {
-      event.preventDefault();
-
-      if (this.value === "") {
-        return;
+    showOptions(){
+      if (!this.disabled) {
+        this.searchFilter = '';
+        this.optionsShown = true;
       }
-
-      let path = this.$route.path;
-      if (!this.isListing) {
-        path = url.removeLastDir(path) + "/";
-      }
-
-      this.ongoing = true;
-
-      try {
-        this.results = await search(path, this.value);
-      } catch (error) {
-        this.$showError(error);
-      }
-
-      this.ongoing = false;
     },
+    async exit() {
+
+      if (!this.selected.id) {
+
+        this.selected = {};
+        this.searchFilter = '';
+      } else {
+        this.searchFilter = this.selected.name;
+      }
+      this.$emit('selected', this.selected);
+      this.optionsShown = false;
+    },
+
+
   },
+  watch: {
+    searchFilter() {
+      if (this.searchFilter === '') {
+        this.$store.commit("changeOpenSearchState", false);
+
+      }
+      else {
+        this.$store.commit("changeOpenSearchState", true);
+
+      }
+      this.search()
+
+    }
+  }
 };
 </script>
+
+
+<style lang="scss" scoped>
+.dropdown {
+  position: relative;
+  display: block;
+  margin: auto;
+
+  .dropdown-content {
+    position: relative;
+    left: 60px;
+    top: 10px;
+    opacity: 1;
+    background-color: #ffffff; /* Change the background color */
+    max-width: 400px;
+    border: 1px solid #e7ecf5;
+    border-radius: 10px; /* Round the edges */
+    box-shadow: 0px 10px 40px 0 rgba(0,0,0,0.1), 0px 20px 50px -10px rgba(0,0,0,0.2); /* Adjust the box-shadow */
+    overflow: auto;
+    z-index: 1;
+
+    .dropdown-item {
+      color: black;
+      line-height: 3em;
+      padding: 8px;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+      &:hover {
+        background-color: #e7ecf5;
+      }
+    }
+  }
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+.search-list {
+  max-height: 50vh;
+  overflow: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+  .search-list li {
+    width: 100%;
+    user-select: none;
+    border-radius: .2em;
+    padding: .3em;
+  }
+
+  .search-list li[aria-selected=true] {
+    background: var(--blue) !important;
+    color: #fff !important;
+    transition: .1s ease all;
+  }
+
+  .search-list li:hover {
+    background-color: #e9eaeb;
+    cursor: pointer;
+  }
+
+  .search-list li:before {
+    color: #6f6f6f;
+    vertical-align: middle;
+    line-height: 1.4;
+    font-family: 'Material Icons';
+    font-size: 1.75em;
+    margin-right: .25em;
+  }
+
+  .search-list li.folder:before {
+    content: "folder";
+  }
+  .search-list li.file:before {
+    content: "description";
+  }
+}
+</style>

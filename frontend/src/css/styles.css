@@ -195,6 +195,10 @@ main .spinner .bounce2 {
   text-align: left;
   overflow: auto;
 }
+#previewer .preview audio{
+  height: 95%;
+  width: 95%;
+}
 
 #previewer .preview pre,
 #previewer .preview video,

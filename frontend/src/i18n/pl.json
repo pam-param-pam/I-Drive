@@ -37,8 +37,6 @@
     "video": "Wideo"
   },
   "buttons": {
-    "copyFile": "todo",
-    "more": "todo",
     "cancel": "Anuluj",
     "close": "Zamknij",
     "create": "Utwórz",
@@ -81,6 +79,7 @@
     "notFound": "Ten adres nie jest poprawny.",
     "badRequest": "Niepoprawne żądanie.",
     "connection": "Serwer nie odpowiada.",
+    "rateLimit": "Za szybko wysyłasz zapytania!",
     "folderPasswordRequired": "Hasło jest wymagane by odblokować folder."
 
 
@@ -109,7 +108,9 @@
     "submit": "Zaloguj się",
     "username": "Nazwa użytkownika",
     "usernameTaken": "Nazwa użytkownika już zajęta",
-    "wrongCredentials": "Błędne dane logowania"
+    "wrongCredentials": "Błędne dane logowania",
+    "unexpectedError": "Niespodziewany błąd serwera",
+    "unknownError": "Nieznany błąd"
   },
   "time": {
     "days": "Dni",
@@ -134,6 +135,7 @@
     "setDateFormat": "Dokładna data",
     "shareDuration": "Okres udostępniania",
     "shareManagement": "Zarządzanie udostępnianiem",
+    "webhookURL": "Webhook URL",
     "themes": {
       "dark": "Ciemny",
       "light": "Jasny",
@@ -185,6 +187,7 @@
     "enterNewFolderPassword": "Wprowadż stare hasło",
     "setFolderPassword": "Zablokuj Folder"
 
+
   },
   "toasts": {
     "itemMoved": "Przenesiono {amount} itemy",
@@ -194,6 +197,8 @@
     "itemRenamed": "Nazwa zmieniona",
     "selectFilesFirst": "Zaznacz plik(i) najpierw!",
     "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
-    "fileSaved": "Zapisano plik"
+    "fileSaved": "Zapisano plik",
+    "passwordUpdated": "Hasło zmienione"
+
   }
 }

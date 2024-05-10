@@ -35,15 +35,19 @@ export async function fetchURL(url, opts, auth = true) {
 
     const error = new Error(res_text);
     error.status = res.status;
-    if (auth && res.status === 401) {
-      logout();
-    }
-    let message = "Unexpected report this"
+    let message = {"error": "Unexpected Error", details: "report this"}
     if (res_text.length < 150) {
       message = JSON.parse(res_text)
     }
 
-    vue.$toast.error(`${message.error}`, {
+    if (auth && res.status === 401) {
+      await logout();
+      message.error = "Unauthorized"
+      message.details = "Session expired"
+    }
+
+
+    vue.$toast.error(`${message.error}\n${message.details}`, {
       timeout: 5000,
       position: "bottom-right",
     });

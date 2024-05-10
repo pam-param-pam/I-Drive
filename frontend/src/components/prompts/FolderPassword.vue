@@ -51,7 +51,7 @@ export default {
     };
   },
   props: {
-    folder_id: String
+    folderId: String
   },
   computed: {
     ...mapGetters(["currentPrompt", "getFolderPassword"]),
@@ -64,8 +64,8 @@ export default {
 
     submit: async function () {
 
-      if (await isPasswordCorrect(this.folder_id, this.password) === true) {
-        this.setFolderPassword({"folderId": this.folder_id, "password": this.password})
+      if (await isPasswordCorrect(this.folderId, this.password) === true) {
+        this.setFolderPassword({"folderId": this.folderId, "password": this.password})
         this.currentPrompt.confirm();
         this.closeHover()
       }
@@ -73,9 +73,6 @@ export default {
         let message = this.$t('toasts.folderPasswordIncorrect')
         this.$toast.info(message);
       }
-
-
-
 
     },
   },

@@ -23,6 +23,7 @@
     "size": "Size",
     "sortByLastModified": "Sort by last modified",
     "sortByName": "Sort by name",
+    "sortByCreated": "Sort by created at",
     "sortBySize": "Sort by size",
     "noPreview": "Preview is not available for this file."
   },
@@ -68,7 +69,10 @@
     "upload": "Upload",
     "openFile": "Open file",
     "discardChanges": "Discard",
-    "lockFolder": "Lock folder"
+    "lockFolder": "Lock folder",
+    "moveFile": "Move file"
+
+
   },
   "languages": {
     "en": "English",
@@ -81,6 +85,7 @@
     "notFound": "This location can't be reached.",
     "badRequest": "Bad request",
     "connection": "The server can't be reached.",
+    "rateLimit": "Enhance your calm, try again in a few seconds",
     "folderPasswordRequired": "Password is required for this folder."
   },
   "help": {
@@ -107,7 +112,9 @@
     "submit": "Login",
     "username": "Username",
     "usernameTaken": "Username already taken",
-    "wrongCredentials": "Wrong credentials"
+    "wrongCredentials": "Wrong credentials",
+    "unexpectedError": "Unexpected server error",
+    "unknownError": "Unknown error"
   },
   "time": {
     "days": "Days",
@@ -132,6 +139,7 @@
     "setDateFormat": "Set exact date format",
     "shareDuration": "Share Duration",
     "shareManagement": "Share Management",
+    "webhookURL": "Webhook URL",
     "themes": {
       "default": "System default",
       "dark": "Dark",
@@ -185,7 +193,6 @@
     "enterNewFolderPassword": "Enter new password",
     "setFolderPassword": "Lock Folder"
 
-
   },
   "toasts": {
     "itemMoved": "Moved {amount} items",
@@ -195,7 +202,9 @@
     "itemRenamed": "Name changed",
     "selectFilesFirst": "Select file(s) first!",
     "PreparingUpload": "Started proccesing files for upload...",
-    "fileSaved": "File saved"
+    "fileSaved": "File saved",
+    "passwordUpdated": "Password updated!"
+
   }
 }
 

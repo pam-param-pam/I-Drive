@@ -1,6 +1,7 @@
 <template>
   <div>
     <header-bar showMenu="false" showLogo="false">
+
       <search/>
       <title/>
       <action
@@ -19,7 +20,7 @@
             show="share"
           />
           <action
-            v-if="headerButtons.rename"
+            v-if="headerButtons.modify"
             icon="mode_edit"
             :label="$t('buttons.rename')"
             show="rename"
@@ -30,9 +31,10 @@
             icon="lock"
             :label="$t('buttons.lockFolder')"
             show="editFolderPassword"
+            props
           />
           <action
-            v-if="headerButtons.move"
+            v-if="headerButtons.modify"
             id="move-button"
             icon="forward"
             :label="$t('buttons.moveFile')"
@@ -60,7 +62,7 @@
           @action="switchView"
         />
         <action
-          v-if="headerButtons.download"
+          v-if="headerButtons.download && selectedCount > 0"
           icon="file_download"
           :label="$t('buttons.download')"
           @action="download"
@@ -88,7 +90,7 @@
         show="share"
       />
       <action
-        v-if="headerButtons.rename"
+        v-if="headerButtons.modify"
         icon="mode_edit"
         :label="$t('buttons.rename')"
         show="rename"
@@ -100,7 +102,7 @@
         show="editFolderPassword"
       />
       <action
-        v-if="headerButtons.move"
+        v-if="headerButtons.modify"
         icon="forward"
         :label="$t('buttons.moveFile')"
         show="move"
@@ -284,7 +286,7 @@ export default {
   },
   computed: {
 
-    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords"]),
+    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "searchOpen"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
     nameSorted() {
       return this.settings.sortingBy === "name";
@@ -296,12 +298,7 @@ export default {
       const items = [];
       if (this.items != null) {
         this.items.forEach((item) => {
-          console.log("name: " + item.name)
-
-          console.log("hideLockedFolders: " + this.settings.hideLockedFolders)
-          console.log("locked: " + item.locked)
-
-          if (item.isDir && (!item.locked || !this.settings.hideLockedFolders)) {
+          if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
             items.push(item);
           }
 
@@ -369,11 +366,9 @@ export default {
         download: this.perms.download,
         shell: this.perms.execute && enableExec,
         delete: this.selectedCount > 0 && this.perms.delete,
-        rename: this.selectedCount === 1 && this.perms.rename,
+        modify: this.selectedCount === 1 && this.perms.modify,
         share: this.selectedCount === 1 && this.perms.share,
-        move: this.selectedCount > 0 && this.perms.rename,
-        copy: this.selectedCount > 0 && this.perms.create,
-        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.delete,
+        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
       };
     },
     isMobile() {
@@ -449,7 +444,7 @@ export default {
       console.log("loading2: " + this.loading)
 
       try {
-        const res = await getItems(this.folderId, false);
+        let res = await getItems(this.folderId, false);
 
         this.$store.commit("setItems", res.children);
         this.$store.commit("setCurrentFolder", res);
@@ -467,7 +462,7 @@ export default {
         if (error.status === 469) {
           this.$store.commit("showHover", {
             prompt: "FolderPassword",
-            props: {folder_id: this.folderId},
+            props: {folderId: this.folderId},
             confirm: () => {
               this.fetchFolder();
 
@@ -514,14 +509,15 @@ export default {
 
       // F2!
       if (event.keyCode === 113) {
-        if (!this.perms.rename || this.selectedCount !== 1) return;
+        if (!this.perms.modify || this.selectedCount !== 1) return;
 
         // Show rename prompt.
         this.$store.commit("showHover", "rename");
       }
 
       // Ctrl is pressed
-      if (event.ctrlKey || event.metaKey) {
+      console.log("this.searchOpen"+this.searchOpen)
+      if ((event.ctrlKey || event.metaKey) && !this.searchOpen) {
 
         let key = String.fromCharCode(event.which).toLowerCase();
 
@@ -533,12 +529,12 @@ export default {
           case "a":
             event.preventDefault();
             for (let file of this.files) {
-              if (this.$store.state.selected.indexOf(file.index) === -1) {
+              if (this.selected.indexOf(file.index) === -1) {
                 this.addSelected(file.index);
               }
             }
             for (let dir of this.dirs) {
-              if (this.$store.state.selected.indexOf(dir.index) === -1) {
+              if (this.selected.indexOf(dir.index) === -1) {
                 this.addSelected(dir.index);
               }
             }

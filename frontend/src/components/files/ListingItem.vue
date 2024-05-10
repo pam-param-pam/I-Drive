@@ -58,7 +58,7 @@ export default {
     "item",
   ],
   computed: {
-    ...mapState(["user", "perms", "selected", "settings", "items", "lastFolderPassword"]),
+    ...mapState(["user", "perms", "selected", "settings", "items"]),
     ...mapGetters(["selectedCount", "getFolderPassword"]),
     type() {
       if (this.item.isDir) return "folder"
@@ -70,7 +70,7 @@ export default {
       return this.selected.includes(this.item)
     },
     isDraggable() {
-      return this.readOnly === undefined && this.perms.rename;
+      return this.readOnly === undefined && this.perms.modify;
     },
     canDrop() {
       if (!this.item.isDir || this.readOnly !== undefined) return false;
@@ -139,8 +139,8 @@ export default {
       try {
         await move({ids: listOfIds, "new_parent_id": this.item.id})
 
-        let updatedItem = this.items.filter(item => !listOfIds.includes(item.id));
-        this.$store.commit("setItems", updatedItem);
+        //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id));
+        //this.$store.commit("setItems", updatedItem);
 
         let message = `Moved to ${this.item.name}!`
         this.$toast.success(message);
@@ -187,43 +187,31 @@ export default {
     },
     open: function () {
       if (this.item.isDir) {
-        if (this.item.locked === true) {
+        if (this.item.isLocked === true) {
           let password = this.getFolderPassword(this.item.id)
-          console.log(password)
           if (!password) {
             this.$store.commit("showHover", {
               prompt: "FolderPassword",
-              props: {folder_id: this.item.id},
+              props: {folderId: this.item.id},
               confirm: () => {
                 this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
               },
             });
+            return
           }
-          else {
-            this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
-          }
-
         }
-        else {
-          this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
-
-        }
-
-
+        this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
 
       } else {
-        //this.item.size >= 25 * 1024 * 1024 ||
-        if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" ||  this.item.extension === ".pdf") {
+        //
+        if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" ||  this.item.size >= 25 * 1024 * 1024 || this.item.extension === ".pdf") {
           this.$router.push({path: `/preview/${this.item.id}`});
 
         }
         else {
           this.$router.push({path: `/editor/${this.item.id}`});
 
-
-
         }
-
 
       }
     },

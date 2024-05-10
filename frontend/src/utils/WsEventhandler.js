@@ -30,26 +30,7 @@ export default function onEvent(message) {
       console.log("renamed")
     }
   }
-  if (jsonObject.op_code === 4) { // message event, for example, when deleting items
-    let timeout = 0
-    let type = "info"
-    //console.log(jsonObject.task_id)
-    if (jsonObject.finished) {
-      timeout = 3000
 
-      type = "success"
-    }
-    if (jsonObject.error) {
-      timeout = 0
-      type = "error"
-    }
-    vue.$toast.update(jsonObject.task_id, {
-
-      content: jsonObject.message,
-      options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
-
-    });
-  }
   if (jsonObject.op_code === 5) { // items moved event
     for (let item of jsonObject.data) {
       if (item.old_parent_id === currentFolder.id) {
@@ -78,6 +59,37 @@ export default function onEvent(message) {
     router.push({path: `/folder/${id}`});
 
   }
+  if (jsonObject.op_code === 8) { // folder lock status change
+    for (let item of jsonObject.data) {
+      if (item.parent_id !== currentFolder.id) return
+      store.commit("changeLockStatusAndPasswordCache", {folderId: item.id, newLockStatus: item.isLocked});
+      console.log("renamed")
+    }
 
+
+  }
+
+
+
+  if (jsonObject.op_code === 4) { // message event, for example, when deleting items
+    let timeout = 0
+    let type = "info"
+    //console.log(jsonObject.task_id)
+    if (jsonObject.finished) {
+      timeout = 3000
+
+      type = "success"
+    }
+    if (jsonObject.error) {
+      timeout = 0
+      type = "error"
+    }
+    vue.$toast.update(jsonObject.task_id, {
+
+      content: jsonObject.message,
+      options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
+
+    });
+  }
 
 }

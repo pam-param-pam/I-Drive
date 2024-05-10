@@ -38,6 +38,14 @@ export default {
       return "router-link";
 
     },
+    maxBreadcrumbs() {
+      return 5
+      if (this.isMobile()) {
+        return 3
+      }
+      else return 5
+    },
+
   },
   methods: {
     isMobile() {
@@ -53,32 +61,26 @@ export default {
         if (this.currentFolder) {
           try {
             path = await breadcrumbs(this.currentFolder.id);
+
+            if (path.length >= this.maxBreadcrumbs) {
+              while (path.length !== this.maxBreadcrumbs) {
+                path.shift();
+              }
+
+              path[0].name = "...";
+            }
+
+
           }
           catch (error) {
             console.log(error)
           }
         }
-        const maxWidth = window.innerWidth; // Assuming window width as the maximum width in pixels
 
-        let currentWidth = 0;
-        let trimmedPath = [];
 
-        for (let folder of path) {
-          const folderWidth = (folder.name.length + 3)* 16 ; // Assuming average character width of 8px and adding 3 for characters like space and '...'
 
-          if (currentWidth + folderWidth <= maxWidth) {
-            trimmedPath.push(folder);
-            currentWidth += folderWidth;
-          } else {
-            // If adding this folder exceeds the width, stop and add "..."
-            let changed_folder = folder
-            changed_folder.name = "..."
-            trimmedPath.push(changed_folder);
-            break;
-          }
-        }
 
-        return trimmedPath;
+        return path;
       },
       default: [],
 
@@ -87,7 +89,3 @@ export default {
 
 };
 </script>
-
-<style>
-
-</style>

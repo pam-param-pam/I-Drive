@@ -71,7 +71,7 @@ export default {
         let new_name = this.name
         await rename({"id": id, "new_name": new_name});
 
-        this.$store.commit("renameItem", {id: id, newName: new_name});
+        //this.$store.commit("renameItem", {id: id, newName: new_name});
 
         let message = this.$t('toasts.itemRenamed')
         this.$toast.success(message)

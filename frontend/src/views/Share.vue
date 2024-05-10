@@ -19,11 +19,6 @@
       >
         <i class="material-icons">content_paste</i>
       </button>
-      <action
-        icon="check_circle"
-        :label="$t('buttons.selectMultiple')"
-        @action="toggleMultipleSelection"
-      />
     </header-bar>
 
     <breadcrumbs :base="'/share/' + hash" />
@@ -221,7 +216,7 @@ export default {
     this.clip.destroy();
   },
   computed: {
-    ...mapState(["req", "loading", "multiple", "selected"]),
+    ...mapState(["loading", "selected"]),
     ...mapGetters(["selectedCount"]),
     icon: function () {
       if (this.req.isDir) return "folder";

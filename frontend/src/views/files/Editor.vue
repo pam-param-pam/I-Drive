@@ -3,7 +3,13 @@
     <header-bar>
       <action icon="close" :label="$t('buttons.close')" @action="close()"/>
       <title>{{ file?.name }}</title>
-
+      <action
+        v-if="perms.delete"
+        id="delete-button"
+        icon="delete"
+        :label="$t('buttons.delete')"
+        show="delete"
+      />
       <action
         v-if="perms.modify"
         id="save-button"
@@ -11,6 +17,7 @@
         :label="$t('buttons.save')"
         @action="save()"
       />
+
     </header-bar>
 
     <breadcrumbs base="/files/"/>
@@ -50,7 +57,7 @@ export default {
     Breadcrumbs,
   },
   computed: {
-    ...mapState(["loading", "items", "perms", "currentFolder"]),
+    ...mapState(["loading", "items", "perms", "currentFolder", "settings"]),
   },
   data: function () {
     return {
@@ -104,7 +111,7 @@ export default {
       this.setLoading(false);
     },
     setupEditor() {
-      const fileContent = this.raw || "aaaaa"
+      const fileContent = this.raw || ""
       ace.config.set(
         "basePath",
         `https://cdn.jsdelivr.net/npm/ace-builds@${ace_version}/src-min-noconflict/`
@@ -143,7 +150,7 @@ export default {
       if (!this.editor.session.getUndoManager().isClean()) {
         let content = this.editor.getValue()
 
-        let webhook = store.state.settings.webhook
+        let webhook = this.settings.webhook
 
         const formData = new FormData();
         const blob = new Blob([content], {type: 'text/plain'});

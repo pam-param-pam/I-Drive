@@ -15,7 +15,7 @@
         @keyup.enter="submit()"
         v-model.trim="password"
       />
-      <div v-if="locked">
+      <div v-if="isLocked">
         <p>
           {{ $t("prompts.enterOldFolderPassword") }}
         </p>
@@ -24,7 +24,7 @@
           v-focus
           type="text"
           @keyup.enter="submit()"
-          v-model.trim="password"
+          v-model.trim="oldPassword"
         />
       </div>
 
@@ -54,23 +54,26 @@
 
 <script>
 import {mapGetters, mapMutations, mapState} from "vuex";
-import {isPasswordCorrect} from "@/api/folder.js";
+import {isPasswordCorrect, lockWithPassword} from "@/api/folder.js";
 
 export default {
   name: "folder-password",
   data: function () {
     return {
       password: "",
+      oldPassword: "",
     };
   },
-  props: {
-    folder_id: String
-  },
+
   computed: {
     ...mapGetters(["currentPrompt"]),
     ...mapState(["selected"]),
-    locked() {
-      return this.selected[0].locked
+    isLocked() {
+      return this.selected[0].isLocked
+    },
+    folder_id(){
+      return this.selected[0].id
+
     }
   },
 
@@ -78,23 +81,20 @@ export default {
     ...mapMutations(["closeHover", "setFolderPassword"]),
 
     submit: async function () {
-      //todo
-      /*
-      if (await isPasswordCorrect(this.folder_id, this.password) === true) {
-        this.setFolderPassword({"folderId": this.folder_id, "password": this.password})
-        this.currentPrompt.confirm();
-        this.closeHover()
+      if (!(this.password === "" && this.oldPassword === "")) {
+        try {
+          await lockWithPassword(this.folder_id, this.password, this.oldPassword)
+          let message = this.$t('toasts.passwordUpdated')
+          this.$toast.success(message);
+          this.$store.commit("closeHover");
+
+        }
+    catch
+      (error)
+      {
+        console.log(error)
       }
-      else {
-        let message = this.$t('toasts.folderPasswordIncorrect')
-        this.$toast.info(message);
-      }
-
-
-
-       */
-
-
+    }
     },
   },
 };

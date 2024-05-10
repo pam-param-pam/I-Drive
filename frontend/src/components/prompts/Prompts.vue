@@ -5,6 +5,7 @@
       :ref="currentPromptName"
       :is="currentPromptName"
       v-bind="currentPrompt.props"
+
     >
     </component>
     <div v-show="showOverlay" @click="resetPrompts" class="overlay"></div>
@@ -18,11 +19,8 @@ import Delete from "./Delete.vue";
 import Rename from "./Rename.vue";
 import Download from "./Download.vue";
 import Move from "./Move.vue";
-import Copy from "./Copy.vue";
 import NewFile from "./NewFile.vue";
 import NewDir from "./NewDir.vue";
-import Replace from "./Replace.vue";
-import ReplaceRename from "./ReplaceRename.vue";
 import DiscardEditorChanges from "./DiscardEditorChanges.vue";
 import Share from "./Share.vue";
 import Upload from "./Upload.vue";
@@ -41,13 +39,10 @@ export default {
     Rename,
     Download,
     Move,
-    Copy,
     Share,
     NewFile,
     NewDir,
     Help,
-    Replace,
-    ReplaceRename,
     Upload,
     ShareDelete,
     Sidebar,
@@ -65,6 +60,7 @@ export default {
     };
   },
   created() {
+
     window.addEventListener("keydown", (event) => {
       if (this.currentPrompt == null) return;
 
@@ -76,7 +72,9 @@ export default {
 
 
     });
+
   },
+
   computed: {
     ...mapGetters(["currentPrompt", "currentPromptName"]),
     showOverlay: function () {
