@@ -17,10 +17,13 @@ const mutations = {
       // Handle if the folder password doesn't exist
     }
   },
+  setIsTrash: (state, payload) => {
+    state.isTrash = payload
+  },
   closeHover: (state) => {
     state.prompts.pop()
   },
-  changeOpenSearchState: (state, payload) => {
+  setOpenSearchState: (state, payload) => {
     state.searchOpen = payload
   },
   toggleShell: (state) => {

@@ -11,9 +11,7 @@
 
     <slot />
 
-    <button @click="toggleDark()">
-      <span class="ml-2">{{ isDark ? 'Dark' : 'Light' }}</span>
-    </button>
+
 
     <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
       <slot name="actions" />

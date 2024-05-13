@@ -9,7 +9,7 @@
         <table>
           <tr>
             <th>#</th>
-            <th>{{ $t("settings.shareDuration") }}</th>
+            <th>{{ $t("settings.shareExpiry") }}</th>
             <th></th>
             <th></th>
           </tr>

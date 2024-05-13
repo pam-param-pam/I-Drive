@@ -10,6 +10,7 @@
     <div>
       {{ file.name }}
     </div>
+
     <!-- Lower -->
     <div v-if="file.percentage">
       <span v-if="file.status === 'failed'">

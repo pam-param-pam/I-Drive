@@ -45,11 +45,7 @@ const router = new Router({
           name: "Share",
           component: Share,
         },
-        {
-          path: "/trash",
-          name: "Trash",
-          component: Trash,
-        },
+
         {
           path: "/files",
           name: "Files",
@@ -65,28 +61,28 @@ const router = new Router({
               props: true
             },
             {
+              path: "/trash",
+              name: "Trash",
+              component: Listing,
+              props: { trash: true}
+
+            },
+            {
               path: "/preview/:fileId",
               name: "Preview",
               component: Preview,
+              props: true
 
             },
             {
               path: "/editor/:fileId",
               name: "Editor",
               component: Editor,
+              props: true
 
             },
 
           ],
-        },
-
-        {
-          path: "/player/:fileId",
-          name: "Player",
-          component: Player,
-          meta: {
-            requiresAuth: true,
-          },
         },
         {
           path: "/settings",

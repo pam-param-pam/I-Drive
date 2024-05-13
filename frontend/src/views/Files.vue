@@ -1,10 +1,6 @@
 <template>
   <div>
-    <header-bar v-if="error" showMenu showLogo/>
-
-    <breadcrumbs base="/files"/>
     <errors v-if="error" :errorCode="error.status"/>
-
     <router-view></router-view>
 
   </div>
@@ -16,7 +12,7 @@ import {mapState} from "vuex";
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import Errors from "@/views/Errors.vue";
-
+import Listing from "@/views/files/Listing.vue";
 
 export default {
   name: "files",
@@ -24,8 +20,7 @@ export default {
     HeaderBar,
     Breadcrumbs,
     Errors,
-
-    Editor: () => import("@/views/files/Editor.vue"),
+    Listing,
   },
   data: function () {
     return {

@@ -35,7 +35,7 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
+import {mapMutations, mapState} from "vuex";
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 
@@ -47,8 +47,18 @@ export default {
   computed: {
     ...mapState(["user", "loading", "perms"]),
   },
+  methods: {
+    ...mapMutations(["setIsTrash"])
+  },
   mounted() {
     document.title = "Settings - File Browser";
+
+  },
+  created() {
+    this.setIsTrash(true)
+  },
+  beforeDestroy() {
+    this.setIsTrash(false)
 
   },
 };

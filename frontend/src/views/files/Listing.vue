@@ -1,16 +1,17 @@
 <template>
+
   <div>
+    <div>
+      <breadcrumbs v-if="!searchItemsFound && !error" base="/files"/>
+      <h4 v-else-if="!error">{{$t('buttons.searchItemsFound', {amount: this.searchItemsFound})}}</h4>
+    </div>
+
     <header-bar showMenu="false" showLogo="false">
-
-      <search/>
-      <title/>
-      <action
-        class="search-button"
-        icon="search"
-        :label="$t('buttons.search')"
-        @action="openSearch()"
-      />
-
+    <Search
+      @search-items="searchItemsUpdate"
+      @exit="searchExit"
+    />
+    <title/>
       <template #actions>
         <template v-if="!isMobile">
           <action
@@ -70,12 +71,18 @@
         />
         <action
           v-if="headerButtons.upload"
+          :disabled="isTrash || searchOpen && !selectedCount > 0"
           icon="file_upload"
           id="upload-button"
           :label="$t('buttons.upload')"
           @action="upload"
         />
-        <action icon="info" :label="$t('buttons.info')" show="info"/>
+        <action
+          icon="info"
+          :disabled="isTrash || searchOpen && !selectedCount > 0"
+          :label="$t('buttons.info')"
+          show="info"
+        />
 
 
       </template>
@@ -125,6 +132,8 @@
         <span>{{ $t("files.loading") }}</span>
       </h2>
     </div>
+
+
     <template v-else-if="error == null">
 
       <div v-if="dirsSize + filesSize === 0">
@@ -151,6 +160,7 @@
           multiple
         />
       </div>
+
       <div
         v-else
         id="listing"
@@ -159,6 +169,7 @@
         @dragenter.prevent @dragover.prevent
       >
         <div>
+
           <div class="item header">
             <div></div>
             <div>
@@ -241,6 +252,7 @@
 
       </div>
     </template>
+
   </div>
 </template>
 
@@ -259,6 +271,8 @@ import Item from "@/components/files/ListingItem.vue";
 import {updateSettings} from "@/api/user.js";
 import {getItems} from "@/api/folder.js";
 import {sortItems} from "@/api/utils.js";
+import Breadcrumbs from "@/components/Breadcrumbs.vue";
+import buttons from "@/utils/buttons.js";
 
 export default {
   name: "listing",
@@ -266,9 +280,11 @@ export default {
   props: {
     password: String,
     folderId: String,
+    trash: Boolean,
   },
 
   components: {
+    Breadcrumbs,
     HeaderBar,
     Action,
     Search,
@@ -281,12 +297,13 @@ export default {
       dragCounter: 0,
       width: window.innerWidth,
       itemWeight: 0,
+      searchItemsFound: null
 
     };
   },
   computed: {
 
-    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "searchOpen"]),
+    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "searchOpen", "isTrash"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
     nameSorted() {
       return this.settings.sortingBy === "name";
@@ -383,6 +400,8 @@ export default {
         this.fetchFolder();
       }
     },
+    /*
+    //TODO is this code even needed?
     items: function () {
       // Ensures that the listing is displayed
       Vue.nextTick(() => {
@@ -392,6 +411,8 @@ export default {
         this.fillWindow(true);
       });
     }
+
+     */
   },
   created() {
     this.fetchFolder()
@@ -399,14 +420,15 @@ export default {
   },
 
   mounted: function () {
-    // Check the columns size for the first time.
-    this.columnsResize();
 
-    // How much every listing item affects the window height
-    this.setItemWeight();
-
-    // Fill and fit the window with listing items
-    this.fillWindow(true);
+    // // Check the columns size for the first time.
+    // this.columnsResize();
+    //
+    // // How much every listing item affects the window height
+    // this.setItemWeight();
+    //
+    // // Fill and fit the window with listing items
+    // this.fillWindow(true);
 
     // Add the needed event listeners to the window and document.
     window.addEventListener("keydown", this.keyEvent);
@@ -434,14 +456,19 @@ export default {
   methods: {
 
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
+    searchItemsUpdate(items) {
+      this.$store.commit("setItems", items);
+      this.searchItemsFound = items.length
 
+    },
+    searchExit() {
+      this.fetchFolder()
+    },
     async fetchFolder() {
-
-      console.log("loading1: " + this.loading)
-      this.setError(null)
+      this.searchItemsFound = null
 
       this.setLoading(true);
-      console.log("loading2: " + this.loading)
+      this.setError(null)
 
       try {
         let res = await getItems(this.folderId, false);
@@ -469,11 +496,8 @@ export default {
             },
           });
         }
-        console.log(error)
       } finally {
-        console.log("loading3: " + this.loading)
         this.setLoading(false);
-        console.log("loading4: " + this.loading)
 
       }
     },
@@ -516,7 +540,6 @@ export default {
       }
 
       // Ctrl is pressed
-      console.log("this.searchOpen"+this.searchOpen)
       if ((event.ctrlKey || event.metaKey) && !this.searchOpen) {
 
         let key = String.fromCharCode(event.which).toLowerCase();
@@ -545,39 +568,42 @@ export default {
 
     },
 
+    /*
+       columnsResize() {
+         // Update the columns size based on the window width.
+         let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
+         if (!items) return;
 
-    columnsResize() {
-      // Update the columns size based on the window width.
-      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
-      if (!items) return;
+         let columns = Math.floor(
+           document.querySelector("main").offsetWidth / this.columnWidth
+         );
+         if (columns === 0) columns = 1;
+         items.style.width = `calc(${100 / columns}% - 1em)`;
+       },
 
-      let columns = Math.floor(
-        document.querySelector("main").offsetWidth / this.columnWidth
-      );
-      if (columns === 0) columns = 1;
-      items.style.width = `calc(${100 / columns}% - 1em)`;
-    },
-    scrollEvent: throttle(function () {
-      const totalItems = this.filesSize + this.dirsSize;
+       scrollEvent: throttle(function () {
+         const totalItems = this.filesSize + this.dirsSize;
 
-      // All items are displayed
-      if (this.showLimit >= totalItems) return;
+         // All items are displayed
+         if (this.showLimit >= totalItems) return;
 
-      const currentPos = window.innerHeight + window.scrollY;
+         const currentPos = window.innerHeight + window.scrollY;
 
-      // Trigger at the 75% of the window height
-      const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
+         // Trigger at the 75% of the window height
+         const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
 
-      if (currentPos > triggerPos) {
-        // Quantity of items needed to fill 2x of the window height
-        const showQuantity = Math.ceil(
-          (window.innerHeight * 2) / this.itemWeight
-        );
+         if (currentPos > triggerPos) {
+           // Quantity of items needed to fill 2x of the window height
+           const showQuantity = Math.ceil(
+             (window.innerHeight * 2) / this.itemWeight
+           );
 
-        // Increase the number of displayed items
-        this.showLimit += showQuantity;
-      }
-    }, 100),
+           // Increase the number of displayed items
+           this.showLimit += showQuantity;
+         }
+       }, 100),
+
+        */
     dragEnter() {
       this.dragCounter++;
 
@@ -633,11 +659,13 @@ export default {
 
     async uploadInput(event) {
       this.$store.commit("closeHover");
+      buttons.loading("upload");
 
       let files = event.currentTarget.files;
       let folder = this.currentFolder
 
       this.$toast.info(this.$t("toasts.PreparingUpload"))
+
       await upload.prepareForUpload(files, folder)
 
 
@@ -683,7 +711,7 @@ export default {
     openSearch() {
       this.$store.commit("showHover", "search");
     },
-
+    /*
     windowsResize: throttle(function () {
       this.columnsResize();
       this.width = window.innerWidth;
@@ -697,6 +725,8 @@ export default {
       // Fill but not fit the window
       this.fillWindow();
     }, 100),
+
+     */
     download() {
       if (this.selectedCount === 0) {
         let message = this.$t('toasts.selectFilesFirst')
@@ -760,6 +790,7 @@ export default {
         document.getElementById("upload-input").click();
       }
     },
+    /*
     setItemWeight() {
 
       if (this.$refs.listing == null || this.currentFolder == null) return;
@@ -792,6 +823,8 @@ export default {
       // Set the number of displayed items
       this.showLimit = showQuantity > totalItems ? totalItems : showQuantity;
     },
+
+     */
   },
 };
 </script>

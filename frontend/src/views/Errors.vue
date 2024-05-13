@@ -11,6 +11,7 @@
 
 <script>
 import HeaderBar from "@/components/header/HeaderBar.vue";
+import {mapMutations} from "vuex";
 
 const errors = {
   0: {
@@ -45,9 +46,18 @@ export default {
     HeaderBar,
   },
   props: ["errorCode", "showHeader"],
+  methods: {
+    ...mapMutations(["setIsTrash"])
+  },
+  created() {
+    this.setIsTrash(true)
+  },
+  beforeDestroy() {
+    this.setIsTrash(false)
+
+  },
   computed: {
     info() {
-      console.log(this.errorCode)
       return errors[this.errorCode] ? errors[this.errorCode] : errors[500];
     },
   },

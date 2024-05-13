@@ -13,7 +13,6 @@ const state = {
   queue: [],
   requestsUploading: 0,
   filesUploading: [],
-  uploads: {},
   speedMbyte: 0,
   eta: 0,
 };
@@ -33,14 +32,9 @@ const mutations = {
     //state.id++;
   },
   moveJob(state) {
-    const item = state.queue[0];
     state.queue.shift();
-    Vue.set(state.uploads, item.id, item);
   },
-  removeJob(state, id) {
-    Vue.delete(state.uploads, id);
-    delete state.uploads[id];
-  },
+
 };
 
 const beforeUnload = (event) => {
@@ -61,12 +55,10 @@ const actions = {
     for (let file of filesList) {
       context.commit("addJob", file);
     }
-    console.log(JSON.stringify(context.state.queue))
-    //context.dispatch("processUploads");
+
   },
   finishUpload: (context, item) => {
     context.commit("setProgress", {id: item.id, loaded: item.file.size});
-    context.commit("removeJob", item.id);
     context.dispatch("processUploads");
   },
   processUploads: async (context) => {
@@ -82,14 +74,11 @@ const actions = {
     if (isFinished) {
       window.removeEventListener("beforeunload", beforeUnload);
       buttons.success("upload");
-      context.commit("reset");
-      context.commit("setReload", true, {root: true});
     }
 
     if (canProcess) {
       const item = context.state.queue[0];
       context.commit("moveJob");
-
 
       let url = context.rootState.settings.webhook
       discord_instance.post(url, {
@@ -106,19 +95,9 @@ const actions = {
         .catch(error => {
           // Handle error
         });
-      let onUpload = throttle(
-        (event) =>
-          context.commit("setProgress", {
-            id: item.id,
-            loaded: event.loaded,
-          }),
-        100,
-        {leading: true, trailing: false}
-      );
 
-      await api
-        .post(item.path, item.file, item.overwrite, onUpload)
-        .catch(Vue.prototype.$showError);
+
+
     }
 
     context.dispatch("finishUpload", item);

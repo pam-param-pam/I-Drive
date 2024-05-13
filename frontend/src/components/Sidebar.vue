@@ -13,6 +13,7 @@
 
       <div v-if="perms.create">
         <button
+          :disabled="isTrash || searchOpen"
           @click="$store.commit('showHover', 'newDir')"
           class="action"
           :aria-label="$t('sidebar.newFolder')"
@@ -23,6 +24,7 @@
         </button>
 
         <button
+          :disabled="isTrash || searchOpen"
           @click="$store.commit('showHover', 'newFile')"
           class="action"
           :aria-label="$t('sidebar.newFile')"
@@ -32,6 +34,16 @@
           <span>{{ $t("sidebar.newFile") }}</span>
         </button>
       </div>
+
+      <button
+        class="action"
+        @click="toTrash"
+        :aria-label="$t('sidebar.trash')"
+        :title="$t('sidebar.trash')"
+      >
+        <i class="material-icons">delete</i>
+        <span>{{ $t("sidebar.trash") }}</span>
+      </button>
 
       <div class="bottom-buttons">
         <button
@@ -119,7 +131,7 @@ export default {
     ProgressBar,
   },
   computed: {
-    ...mapState(["user", "perms", "currentFolder"]),
+    ...mapState(["user", "perms", "currentFolder", "isTrash", "searchOpen"]),
     ...mapGetters(["isLogged", "currentPrompt"]),
     active() {
       return this.currentPrompt?.prompt === "sidebar";
@@ -154,10 +166,14 @@ export default {
   },
   methods: {
     toRoot() {
+      //this.$store.commit("setOpenSearchState", false);
+      //this.$store.commit("setIsTrash", false);
+
       this.$router.push({ path: "/files/" }, () => {});
       this.$store.commit("closeHover");
     },
     toTrash() {
+      //this.$store.commit("setOpenSearchState", false);
       this.$router.push({ path: "/trash/" }, () => {});
       this.$store.commit("closeHover");
     },

@@ -133,7 +133,7 @@
     "profileSettings": "Twój profil",
     "settingsUpdated": "Ustawienia zapisane!",
     "setDateFormat": "Dokładna data",
-    "shareDuration": "Okres udostępniania",
+    "shareExpiry": "Kiedy wygasa?",
     "shareManagement": "Zarządzanie udostępnianiem",
     "webhookURL": "Webhook URL",
     "themes": {

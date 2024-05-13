@@ -82,8 +82,8 @@ main .spinner .bounce2 {
   position: relative;
 }
 
-.action.disabled {
-  opacity: 0.2;
+.action:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 

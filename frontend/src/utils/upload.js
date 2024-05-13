@@ -97,11 +97,10 @@ export async function prepareForUpload(files, parent_folder) {
    *
    * {fileList} = {file: file, parent_id: parent_id}
    *
-   * @param {event.currentTarget.files} files - The first number to be added.
-   * @param {string} parent_folder - The second number to be added.
+   * @param {event.currentTarget.files} files - list of file objects
+   * @param {string} parent_folder - folder object in which to upload to
    */
 
-  buttons.loading("upload");
 
   // check if we are uploading a folder or just files
   let folder_upload =
@@ -110,7 +109,7 @@ export async function prepareForUpload(files, parent_folder) {
 
   let fileList = []
   let folder = parent_folder
-  //if we are uploading a folder, we need to create folders that don't already exist
+  //if we are uploading a folder, we need to create all folders that don't already exist
   if (folder_upload) {
     let folder_structure = {}
 
@@ -223,7 +222,6 @@ export async function prepareUploadRequests(createdFiles) {
 
     let size = fileObj.file.size
     if (size === 0) continue
-
 
     if (size > chunkSize) {
       const chunks = [];

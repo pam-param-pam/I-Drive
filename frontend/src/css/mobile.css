@@ -156,15 +156,13 @@
     width: calc(100% - 2em);
   }
   #search {
-    display: none;
-  }
-  #search.active {
-    display: block;
+    max-width: 15em;
+
   }
 }
 
 @media (max-width: 450px) {
-  #listing.list .item .modified {
+  #listing.list .item .created {
     display: none;
   }
   #listing.list .item .name {

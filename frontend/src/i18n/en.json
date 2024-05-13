@@ -40,6 +40,7 @@
   "buttons": {
     "ok": "OK",
     "submit": "Submit",
+    "searchItemsFound": "Found {amount} items",
     "file": "File",
     "folder": "Folder",
     "cancel": "Cancel",
@@ -137,7 +138,7 @@
     "profileSettings": "Profile Settings",
     "settingsUpdated": "Settings updated!",
     "setDateFormat": "Set exact date format",
-    "shareDuration": "Share Duration",
+    "shareExpiry": "Share Expiry",
     "shareManagement": "Share Management",
     "webhookURL": "Webhook URL",
     "themes": {

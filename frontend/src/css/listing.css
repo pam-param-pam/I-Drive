@@ -133,13 +133,12 @@ body.rtl #listing {
   width: calc(100% - 1em);
   text-align: center;
 }
-/*
+
 #listing.mosaic.gallery .item[data-type=image] div:last-of-type {
   color: white;
   background: linear-gradient(#0000, #0009);
 }
 
- */
 #listing.mosaic.gallery .item i {
   width: 100%;
   margin-right: 0;
