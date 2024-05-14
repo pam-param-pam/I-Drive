@@ -43,7 +43,6 @@ class RequestIdMiddleware(object): #todo base class is object??
         request.request_id = request_id
 
         response = self.get_response(request)
-
         return response
 
 

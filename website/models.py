@@ -15,7 +15,7 @@ from website.utilities.constants import MAX_NAME_LENGTH, cache
 
 class Folder(models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
-    name = models.CharField(max_length=255, null=False)
+    name = models.TextField(max_length=255, null=False)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
@@ -42,8 +42,21 @@ class Folder(models.Model):
         # invalidate any cache
         cache.delete(self.id)
         cache.delete(self.parent.id)
-
+        # invalidate also cache of 'old' parent if the parent was changed
+        # we make a db lookup to get the old parent
+        # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
+        try:
+            old_object = Folder.objects.get(id=self.id)
+            cache.delete(old_object.parent.id)
+        except Folder.DoesNotExist:
+            pass
         super(Folder, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # invalidate any cache
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
+        super(Folder, self).delete()
 
     def moveToTrash(self):
         folders = Folder.objects.filter(parent_id=self.id)
@@ -91,7 +104,7 @@ class Folder(models.Model):
 
 class File(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)
-    name = models.CharField(max_length=255, null=False, blank=False)
+    name = models.TextField(max_length=255, null=False, blank=False)
     extension = models.CharField(max_length=10, null=False, blank=False)
     streamable = models.BooleanField(default=False)
     size = models.PositiveBigIntegerField()
@@ -138,8 +151,23 @@ class File(models.Model):
         # invalidate any cache
         cache.delete(self.id)
         cache.delete(self.parent.id)
+        # invalidate also cache of 'old' parent if the parent was changed
+        # we make a db lookup to get the old parent
+        # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
+        try:
+            old_object = File.objects.get(id=self.id)
+            cache.delete(old_object.parent.id)
+
+        except File.DoesNotExist:
+            pass
 
         super(File, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # invalidate any cache
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
+        super(File, self).delete()
 
     def moveToTrash(self):
         self.inTrash = True
@@ -189,6 +217,7 @@ class UserPerms(models.Model):
     share = models.BooleanField(default=True)
     download = models.BooleanField(default=True)
     read = models.BooleanField(default=True)
+    settings_modify = models.BooleanField(default=True)
 
     def __str__(self):
         return self.user.username + "'s perms"

@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet
 from django.db.utils import IntegrityError
 from django.http import StreamingHttpResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.cache import cache_page
+from django.views.decorators.http import last_modified
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
 
@@ -58,6 +59,8 @@ def preview(request, file_obj):
     for fragment in fragments:
         url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
         response = requests.get(url)
+        if not response.ok:
+            return HttpResponse(status=500, content=f"Unexpected response from discord:\n{response.text}, status_code={response.status_code}")
         file_content += response.content
     file_like_object = io.BytesIO(file_content)
 
@@ -128,6 +131,9 @@ def preview(request, file_obj):
         pass
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
+def last_modified_func(request, file_obj):
+    last_modified_str = file_obj.last_modified_at
+    return last_modified_str
 
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
@@ -135,10 +141,11 @@ def preview(request, file_obj):
 @check_signed_url
 @check_file
 @handle_common_errors
+@last_modified(last_modified_func)
 def stream_file(request, file_obj):
-    print(file_obj.name)
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-
+    if len(fragments) == 0:
+        return HttpResponse(status=204)
     def file_iterator(index, start_byte, end_byte, chunk_size=8192):
         #print(f"==file iterator==\nSTART_BYTE={start_byte}\nEND_BYTE={end_byte}")
         headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}

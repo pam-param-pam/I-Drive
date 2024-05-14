@@ -117,9 +117,8 @@ class FileAdmin(admin.ModelAdmin):
     readable_encrypted_size.short_description = 'ENCRYPTED SIZE'
 
     def save_model(self, request, obj, form, change):
-        cache.delete(obj.id)
-        cache.delete(obj.parent.id)
-        obj.last_modified = timezone.now()
+
+        print(change)
         super().save_model(request, obj, form, change)
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)

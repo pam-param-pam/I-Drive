@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'website',
     'corsheaders',
     'daphne',
+    'django_celery_beat',
     'djoser',
     'rest_framework',
     'rest_framework.authtoken',
@@ -155,7 +156,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Warsaw'
 
 USE_I18N = True
 
@@ -198,6 +199,7 @@ REST_FRAMEWORK = {
         'user': '100/min',
         'media': '1000/min',
         'folder_password': '15/min',
+        'search': '109000/s'
     }
 }
 

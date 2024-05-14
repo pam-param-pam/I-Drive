@@ -47,3 +47,8 @@ class ReadPerms(BasePermission):
     def has_permission(self, request, view):
         perms = UserPerms.objects.get(user=request.user)
         return (perms.read or perms.admin) and not perms.globalLock
+
+class SettingsModifyPerms(BasePermission):
+    def has_permission(self, request, view):
+        perms = UserPerms.objects.get(user=request.user)
+        return (perms.settings_modify or perms.admin) and not perms.globalLock

@@ -35,9 +35,6 @@ def create_folder(request):
     )
     folder_obj.save()
 
-    # TODO delete cache of parent
-    cache.delete(parent.id)
-
     folder_dict = create_folder_dict(folder_obj)
     send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [folder_dict])
     return JsonResponse(folder_dict, status=200)
@@ -93,14 +90,11 @@ def move(request):
         ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
     new_parent = Folder.objects.get(id=new_parent_id)  # goofy ah redeclaration
 
-    # TODO delete cache of new_parent
+    # invalidate any cache
     cache.delete(new_parent.id)
 
     for item in items:
-        # TODO delete cache of item
-        # TODO delete cache of item.parent
-        cache.delete(item.id)
-        cache.delete(item.parent.id)
+
         if isinstance(item, File):
             item.last_modified_at = timezone.now()
         item.parent = new_parent
@@ -209,13 +203,8 @@ def rename(request):
         raise RootPermissionError("Cannot rename 'root' folder!")
 
     item.name = new_name
-    if isinstance(item, File):
-        item.last_modified_at = timezone.now()
+
     item.save()
-    # TODO delete cache of item
-    # TODO delete cache of item.parent
-    cache.delete(item.id)
-    cache.delete(item.parent.id)
 
     send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
                [{'parent_id': item.parent.id, 'id': item.id, 'new_name': new_name}])
@@ -241,10 +230,6 @@ def folder_password(request, folder_obj):
             folder_obj.password = newPassword
             folder_obj.save()
 
-            # TODO delete cache of item
-            # TODO delete cache of item.parent
-            cache.delete(folder_obj.id)
-            cache.delete(folder_obj.parent.id)
             isLocked = True if folder_obj.password else False
 
             send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,

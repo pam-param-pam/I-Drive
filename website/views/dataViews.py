@@ -1,4 +1,5 @@
 import time
+from urllib.parse import urlparse
 
 from django.core.cache import caches
 from django.http import HttpResponse, JsonResponse
@@ -9,13 +10,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserPerms, UserSettings
-from website.utilities.Permissions import ReadPerms, ModifyPerms
+from website.utilities.Permissions import ReadPerms, ModifyPerms, SettingsModifyPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
-from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword
+from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword, BadRequestError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict
+from website.utilities.throttle import SearchRateThrottle
+from ipware import get_client_ip
 
-DELAY_TIME = 0
+
+def etag_func(request, folder_obj):
+    folder_content = cache.get(folder_obj.id)
+    if folder_content:
+        return str(hash(str(folder_content)))
 
 
 @api_view(['GET'])
@@ -23,38 +30,41 @@ DELAY_TIME = 0
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
+@etag(etag_func)
 def get_folder(request, folder_obj):
+    client_ip, is_routable = get_client_ip(request)
 
-    includeTrash = request.GET.get('includeTrash', False)
+    print(client_ip)
     password = request.headers.get("X-Folder-Password")
     if password == folder_obj.password:
         folder_content = cache.get(folder_obj.id)
         if not folder_content:
             print("=======using uncached version=======")
-            folder_content = build_folder_content(folder_obj, includeTrash)
+            folder_content = build_folder_content(folder_obj)
             cache.set(folder_obj.id, folder_content)
-
         return JsonResponse(folder_content)
 
     if password:
         raise IncorrectFolderPassword()
     raise MissingFolderPassword("Please enter folder password.")
 
-def etag_func(request, file_obj):
-    last_modified_str = file_obj.last_modified_at #.strftime('%a, %d %b %Y %H:%M:%S GMT')
+
+def last_modified_func(request, file_obj):
+    last_modified_str = file_obj.last_modified_at  # .strftime('%a, %d %b %Y %H:%M:%S GMT')
     return last_modified_str
+
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
-@last_modified(etag_func)
+@last_modified(last_modified_func)
 def get_file(request, file_obj):
-
     file_content = create_file_dict(file_obj)
 
     return JsonResponse(file_content)
+
 
 @cache_page(60 * 1)
 @api_view(['GET'])
@@ -65,10 +75,9 @@ def get_file(request, file_obj):
 def get_usage(request, folder_obj):
     total_used_size = 0
     folder_used_size = 0
-    includeTrash = request.GET.get('includeTrash', False)
     all_files = cache.get(f"ALL_FILES:{request.user}")
     if not all_files:
-        all_files = File.objects.filter(owner=request.user, inTrash=includeTrash).select_related("parent")
+        all_files = File.objects.filter(owner=request.user, inTrash=False).select_related("parent")
         cache.set(f"ALL_FILES:{request.user}", all_files, 60)
 
     for file in all_files:
@@ -121,11 +130,10 @@ def users_me(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms])
+@permission_classes([IsAuthenticated & SettingsModifyPerms])
 @throttle_classes([UserRateThrottle])
 @handle_common_errors
 def update_settings(request):
-
     locale = request.data.get('locale')
     hideLockedFolders = request.data.get('hideLockedFolders')
     dateFormat = request.data.get('dateFormat')
@@ -133,6 +141,7 @@ def update_settings(request):
     sortingBy = request.data.get('sortingBy')
     sortByAsc = request.data.get('sortByAsc')
     subfoldersInShares = request.data.get('subfoldersInShares')
+    webhookURL = request.data.get('webhook')
 
     settings = UserSettings.objects.get(user=request.user)
     if locale in ["pl", "en", "uwu"]:
@@ -149,8 +158,100 @@ def update_settings(request):
         settings.sort_by_asc = sortByAsc
     if isinstance(subfoldersInShares, bool):
         settings.subfolders_in_shares = subfoldersInShares
+    if isinstance(webhookURL, str):
+        obj = urlparse(webhookURL)
+        if obj.hostname != 'discord.com':
+            raise BadRequestError("Only webhook urls from 'discord.com' are allowed")
+        settings.discord_webhook = webhookURL
     settings.save()
     return HttpResponse(status=200)
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([SearchRateThrottle])
+@handle_common_errors
+def search(request):
+    # TODO
+    user = request.user
+    user.id = 1
+
+    query = request.GET.get('query', None)
+    file_type = request.GET.get('type', None)
+    extension = request.GET.get('extension', None)
+
+    # goofy ah
+    include_files = request.GET.get('files', 'True')
+    if include_files.lower() == "false":
+        include_files = False
+    else:
+        include_files = True
+
+    # goofy ah
+    include_folders = request.GET.get('folders', 'True')
+    if include_folders.lower() == "false":
+        include_folders = False
+    else:
+        include_folders = True
+
+    # Start with a base queryset
+    files = File.objects.filter(owner_id=user.id).order_by("-created_at")
+    folders = Folder.objects.filter(owner_id=user.id).order_by("-created_at")
+    if query is None and file_type is None and extension is None and not include_files and not include_folders:
+        raise BadRequestError(
+            "Please specify at least one: ['query', 'file_type', 'extension']")
+    if query:
+        if include_files:
+            
+            files = files.filter(name__icontains=query)
+        if include_folders:
+            folders = folders.filter(name__icontains=query)
+
+    if file_type:
+        if include_files:
+            files = files.filter(type=file_type)
+    if extension:
+        if include_files:
+            files = files.filter(extension="." + extension)
+
+    # Retrieve only the first 20 results
+    files = files[:20]
+    folders = folders[:5]
+    folders_list = []
+    files_list = []
+    if include_folders and query and not file_type and not extension:
+        for folder in folders:
+            folder_dict = create_folder_dict(folder)
+            folders_list.append(folder_dict)
+    if include_files:
+        for file in files:
+            file_dict = create_file_dict(file)
+            files_list.append(file_dict)
+    # return JsonResponse({"files": files_list, "folders": folders_list})
+    return JsonResponse(files_list + folders_list, safe=False)
+
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+# @permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+def get_trash(request):
+    # todo user perms
+    request.user.id = 1
+
+    files = File.objects.filter(inTrash=True, owner_id=request.user.id, parent__inTrash=False)
+    folders = Folder.objects.filter(inTrash=True, owner_id=request.user.id, parent__inTrash=False)
+
+    children = []
+    for file in files:
+        file_dict = create_file_dict(file)
+        children.append(file_dict)
+
+    for folder in folders:
+        folder_dict = create_folder_dict(folder)
+        children.append(folder_dict)
+
+    return JsonResponse({"trash": children})
 
 
 """

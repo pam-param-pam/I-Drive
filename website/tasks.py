@@ -1,13 +1,17 @@
 import binascii
 import io
+import random
 import traceback
+from datetime import timedelta
 
 from asgiref.sync import async_to_sync
-from celery import shared_task
+from celery import shared_task, Celery
+from celery.schedules import crontab
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
 from django.core.cache import caches
 from django.db.utils import IntegrityError
+from django.utils import timezone
 
 from website.celery import app
 from website.models import File, Fragment, Folder, UserSettings, Preview
@@ -17,7 +21,6 @@ from website.utilities.constants import cache
 from website.utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
-
 
 
 # thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
@@ -47,13 +50,14 @@ def send_message(message, finished, user_id, request_id, isError=False):
         }
     )
 
+
 @app.task
 def save_preview(file_id, celery_file):
     try:
         file_data = binascii.a2b_base64(celery_file)
         preview_file = io.BytesIO(file_data)
         files = {'file': ('1', preview_file)}
-        #tags = exifread.process_file(file_like_object)
+        # tags = exifread.process_file(file_like_object)
         response = discord.send_file(files)
         message = response.json()
         file_size = preview_file.getbuffer().nbytes
@@ -71,6 +75,7 @@ def save_preview(file_id, celery_file):
         preview.save()
     except IntegrityError:
         print("IntegrityError aka I don't care")
+
 
 @app.task
 def smart_delete(user_id, request_id, ids):
@@ -146,16 +151,12 @@ def smart_delete(user_id, request_id, ids):
             except DiscordError as e:
                 print(f"===========DISCORD ERROR===========\n{e}")
                 send_message(str(e), False, user_id, request_id, True)
-            #time.sleep(0.1)
+            # time.sleep(0.1)
             percentage = round((index + 1) / length * 100)
             send_message(f"Deleting {percentage}%...", False, user_id, request_id)
 
             print("sleeping")
         for item in items:
-            # TODO delete cache of item
-            # TODO delete cache of item.parent
-            cache.delete(item.id)
-            cache.delete(item.parent.id)
             item.delete()
 
         send_message(f"Items deleted!", True, user_id, request_id)
@@ -164,4 +165,24 @@ def smart_delete(user_id, request_id, ids):
         send_message(str(e), True, user_id, request_id, True)
 
         traceback.print_exc()
+
+
+@app.task
+def delete_unready_files():
+    print("deleting un ready files!")
+    files = File.objects.filter(ready=False)
+    current_datetime = timezone.now()
+    request_id = str(random.randint(0, 100000))
+    for file in files:
+        elapsed_time = current_datetime - file.created_at
+
+        # if at least one day has elapsed
+        # then remove the file, with every fragment
+        if elapsed_time >= timedelta(days=1):
+            print(f"found {file.name}!")
+
+            smart_delete.delay(file.owner.id, request_id, [file.id])
+
+
+
 

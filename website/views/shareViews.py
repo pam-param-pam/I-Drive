@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.throttling import UserRateThrottle
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 from website.models import File, Folder, UserSettings, ShareableLink
 from website.utilities.Permissions import SharePerms
@@ -17,9 +17,8 @@ from website.utilities.other import create_file_dict, create_share_dict, get_sha
 @permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([UserRateThrottle])
 def get_shares(request):
-    user = request.user
-    user.id = 1
-    shares = ShareableLink.objects.filter(owner_id=1)
+
+    shares = ShareableLink.objects.filter(owner=request.user)
     items = []
 
     for share in shares:
@@ -33,7 +32,7 @@ def get_shares(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([AnonRateThrottle])
 def view_share(request, token):
     share = ShareableLink.objects.get(token=token)
     if share.is_expired():
@@ -49,7 +48,7 @@ def view_share(request, token):
         return JsonResponse(create_file_dict(file_ob), status=200)
 
 
-@api_view(['POST'])
+@api_view(['DELETE'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors

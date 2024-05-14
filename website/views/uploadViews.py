@@ -44,6 +44,8 @@ def create_file(request):
             if mimetype == "":
                 mimetype = "text/plain"
 
+            if file_name == "" or not file_name:
+                raise BadRequestError("'name' cannot be empty")
             folder_obj = Folder.objects.get(id=parent_id)
 
             if folder_obj.owner != request.user:
@@ -97,10 +99,7 @@ def create_file(request):
         if fragment_sequence == total_fragments:
             file_obj.ready = True
             file_obj.save()
-            # TODO delete cache of file_obj
-            # TODO delete cache of file_obj.parent
-            cache.delete(file_obj.id)
-            cache.delete(file_obj.parent.id)
+
             send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
             return HttpResponse(status=200)
 
@@ -163,10 +162,4 @@ def create_file(request):
 
         # important invalidate caches!
         cache.delete(old_message_id)
-
-        # TODO delete cache of file_obj
-        # TODO delete cache of file_obj.parent
-        cache.delete(file_obj.id)
-        cache.delete(file_obj.parent.id)
-
         return HttpResponse(200)

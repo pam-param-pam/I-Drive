@@ -3,7 +3,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include, re_path
 
-from website.views.dataViews import users_me, get_folder, get_file, get_breadcrumbs, get_usage, update_settings
+from website.views.dataViews import users_me, get_folder, get_file, get_breadcrumbs, get_usage, update_settings, search, \
+    get_trash
 from website.views.itemManagmentViews import rename, move_to_trash, move, create_folder, \
     delete, folder_password
 from website.views.otherViews import test, index, help1
@@ -23,7 +24,9 @@ urlpatterns = [
                   #path("stream_file", stream_file_test, name="stream"),
 
                   path("", index, name="index"),
+                  path("api/trash", get_trash, name="help"),
 
+                  path("api/search", search, name="search"),
 
                   path("api/file/create", create_file, name="create file"),
                   path("api/file/<file_id>", get_file, name="get file by file id"),
@@ -62,7 +65,6 @@ urlpatterns = [
 
 
                   #path("api/upload", upload_file, name="upload"),
-                  #path("api/search/<query>", views.search, name="get m3u8 playlist"),
                   #path("api/stream_key/<file_id>", stream_key, name="stream key"),
                   #path("api/stream/<file_id>", get_m3u8, name="get m3u8 playlist"),
                   #path('api/fragments/<file_id>', get_fragment_urls, name="check token"),

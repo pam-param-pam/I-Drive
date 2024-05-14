@@ -73,9 +73,8 @@ def check_folder_and_permissions(view_func):
     @wraps(view_func)
     def wrapper(request, folder_id, *args, **kwargs):
         try:
-            includeTrash = request.GET.get('includeTrash', False)
 
-            folder_obj = Folder.objects.get(id=folder_id, inTrash=includeTrash)
+            folder_obj = Folder.objects.get(id=folder_id)
             if folder_obj.owner != request.user:
                 return JsonResponse(
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),

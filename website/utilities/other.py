@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.core.cache import caches
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from django.utils import timezone
 
 from website.models import File, Folder, UserSettings, Preview
 from website.tasks import queue_ws_event
@@ -17,7 +18,6 @@ signer = TimestampSigner()
 def sign_file_id_with_expiry(file_id):
     cached_signed_file_id = cache.get(file_id)
     if cached_signed_file_id:
-        print("using cached signed file id")
         return cached_signed_file_id
     signed_file_id = signer.sign(file_id)
     cache.set(file_id, signed_file_id, timeout=43200)
@@ -84,11 +84,11 @@ def create_file_dict(file_obj):
         'size': file_obj.size,
         'type': file_obj.type,
         'encrypted_size': file_obj.encrypted_size,
-        'created': file_obj.created_at.strftime('%Y-%m-%d %H:%M'),  # Format with date, hour, and minutes
+        'created': timezone.localtime(file_obj.created_at).strftime('%Y-%m-%d %H:%M'),
+        'last_modified': timezone.localtime(file_obj.last_modified_at).strftime('%Y-%m-%d %H:%M'),
         #'ready': file_obj.ready,
         #'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
         #"maintainers": [],
-        "last_modified": file_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
     }
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -133,8 +133,8 @@ def create_folder_dict(folder_obj):
         'name': folder_obj.name,
         "numFiles": len(file_children),
         "numFolders": len(folder_children),
-        'created': folder_obj.created_at.strftime('%Y-%m-%d %H:%M'),
-        'last_modified': folder_obj.last_modified_at.strftime('%Y-%m-%d %H:%M'),
+        'created': timezone.localtime(folder_obj.created_at).strftime('%Y-%m-%d %H:%M'),
+        'last_modified': timezone.localtime(folder_obj.last_modified_at).strftime('%Y-%m-%d %H:%M'),
         'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
         'parent_id': folder_obj.parent_id,
         'isDir': True,
@@ -185,9 +185,9 @@ def get_shared_folder(folder_obj, includeSubfolders):
     return recursive_build(folder_obj)
 
 
-def build_folder_content(folder_obj, includeTrash):
-    file_children = File.objects.filter(parent=folder_obj, inTrash=includeTrash, ready=True)
-    folder_children = Folder.objects.filter(parent=folder_obj, inTrash=includeTrash)
+def build_folder_content(folder_obj):
+    file_children = File.objects.filter(parent=folder_obj, inTrash=False, ready=True)
+    folder_children = Folder.objects.filter(parent=folder_obj, inTrash=False)
 
     file_dicts = []
     for file in file_children:

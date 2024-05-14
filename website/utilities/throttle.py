@@ -6,3 +6,6 @@ class MediaRateThrottle(UserRateThrottle):
 
 class FolderPasswordRateThrottle(UserRateThrottle):
     scope = 'folder_password'
+
+class SearchRateThrottle(UserRateThrottle):
+    scope = 'search'

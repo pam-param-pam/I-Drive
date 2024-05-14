@@ -67,7 +67,7 @@ class CommandConsumer(WebsocketConsumer):
             item_names = []
             if command == "ls":
                 folder_obj = Folder.objects.get(id=current_folder)
-                folder_content = build_folder_content(folder_obj, False)
+                folder_content = build_folder_content(folder_obj)
                 for item in folder_content["children"]:
                     item_names.append("> " + item["name"])
 
