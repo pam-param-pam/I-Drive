@@ -22,6 +22,7 @@ class Folder(models.Model):
     inTrash = models.BooleanField(default=False)
     password = models.CharField(max_length=255, null=True, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    inTrashSince = models.DateTimeField(null=True)
 
     def __str__(self):
         return self.name
@@ -118,6 +119,7 @@ class File(models.Model):
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE)
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    inTrashSince = models.DateTimeField(null=True)
 
     def __str__(self):
         return self.name

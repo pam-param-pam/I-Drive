@@ -6,7 +6,7 @@ from django.urls import path, include, re_path
 from website.views.dataViews import users_me, get_folder, get_file, get_breadcrumbs, get_usage, update_settings, search, \
     get_trash
 from website.views.itemManagmentViews import rename, move_to_trash, move, create_folder, \
-    delete, folder_password
+    delete, folder_password, restore_from_trash
 from website.views.otherViews import test, index, help1
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import stream_file, download_file, preview  # ,\
@@ -61,6 +61,8 @@ urlpatterns = [
                   path("api/item/move", move, name="move file/folder"),
                   path("api/item/delete", delete, name="delete file/folder"),
                   path("api/item/moveToTrash", move_to_trash, name="move file/folder to trash"),
+                  path("api/item/restore", restore_from_trash, name="move file/folder to trash"),
+
                   path("api/item/rename", rename, name="rename file/folder"),
 
 

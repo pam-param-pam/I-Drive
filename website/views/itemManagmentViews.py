@@ -128,16 +128,72 @@ def move_to_trash(request):
         if item.owner != user:  # owner perms needed
             raise ResourcePermissionError()
 
+        if item.inTrash:
+            raise BadRequestError(f"'Cannot move to Trash. At least one item is already in Trash.")
+
         if isinstance(item, Folder) and not item.parent:
             raise RootPermissionError("Cannot move 'root' folder to trash!")
 
         items.append(item)
 
     for item in items:
+        item.inTrash = True
+        item.inTrashSince = timezone.now()
+        item.save()
         if isinstance(item, File):
-            item.moveToTrash()
+            send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
+                       [create_file_dict(item)])
+
         elif isinstance(item, Folder):
-            item.moveToTrash()
+            send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
+                       [create_folder_dict(item)])
+
+    return HttpResponse(status=200)
+
+
+@api_view(['PATCH'])
+@throttle_classes([UserRateThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@handle_common_errors
+def restore_from_trash(request):
+    user = request.user
+    items = []
+    ids = request.data['ids']
+
+    if not isinstance(ids, list):
+        raise BadRequestError("'ids' must be a list.")
+
+    for item_id in ids:
+        try:
+            item = Folder.objects.get(id=item_id)
+        except Folder.DoesNotExist:
+            try:
+                item = File.objects.get(id=item_id)
+            except File.DoesNotExist:
+                raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
+
+        if item.owner != user:  # owner perms needed
+            raise ResourcePermissionError()
+
+        if not item.inTrash:
+            raise BadRequestError(f"'Cannot restore from Trash. At least one item is not in Trash.")
+
+        if isinstance(item, Folder) and not item.parent:
+            raise RootPermissionError("Cannot restore 'root' folder from trash!")
+
+        items.append(item)
+
+    for item in items:
+        item.inTrash = False
+        item.inTrashSince = None
+        item.save()
+        if isinstance(item, File):
+            send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
+                       [create_file_dict(item)])
+
+        elif isinstance(item, Folder):
+            send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
+                       [create_folder_dict(item)])
 
     return HttpResponse(status=200)
 

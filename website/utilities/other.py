@@ -1,7 +1,6 @@
 import os
 from datetime import timedelta
 
-from django.core.cache import caches
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
@@ -90,6 +89,9 @@ def create_file_dict(file_obj):
         #'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
         #"maintainers": [],
     }
+    if file_obj.inTrashSince:
+        file_dict["in_trash_since"] = file_obj.inTrashSince
+
     try:
         preview = Preview.objects.get(file=file_obj)
         file_dict["iso"] = preview.iso
@@ -100,9 +102,10 @@ def create_file_dict(file_obj):
 
     except Preview.DoesNotExist:
         pass
-    #base_url = "http://127.0.0.1:8000"
 
-    base_url = "https://api.pamparampam.dev"
+    base_url = "http://127.0.0.1:8000"
+
+    #base_url = "https://api.pamparampam.dev"
     signed_file_id = sign_file_id_with_expiry(file_obj.id)
 
     if file_obj.extension in ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
@@ -140,6 +143,8 @@ def create_folder_dict(folder_obj):
         'isDir': True,
         'isLocked': True if folder_obj.password else False
     }
+    if folder_obj.inTrashSince:
+        folder_dict["in_trash_since"] = folder_obj.inTrashSince
     return folder_dict
 
 

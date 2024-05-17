@@ -18,7 +18,7 @@ from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, MAX_MEDIA_CACHE_AGE
 from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
-from website.utilities.errors import ResourceNotPreviewable
+from website.utilities.errors import ResourceNotPreviewable, DiscordError
 from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
 
@@ -60,7 +60,8 @@ def preview(request, file_obj):
         url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
         response = requests.get(url)
         if not response.ok:
-            return HttpResponse(status=500, content=f"Unexpected response from discord:\n{response.text}, status_code={response.status_code}")
+            return HttpResponse(status=500,
+                                content=f"Unexpected response from discord:\n{response.text}, status_code={response.status_code}")
         file_content += response.content
     file_like_object = io.BytesIO(file_content)
 
@@ -87,7 +88,7 @@ def preview(request, file_obj):
         raise ResourceNotPreviewable("Raw file cannot be read properly to extract preview image.")
 
     tags = exifread.process_file(file_like_object)
-    #print(tags)
+    # print(tags)
     model_name = str(tags.get("Image Model"))
     focal_length = str(tags.get("EXIF FocalLength"))
     aperture = str(tags.get("EXIF ApertureValue"))
@@ -122,7 +123,8 @@ def preview(request, file_obj):
     )
     try:
         preview.save()
-        file_dict = {"parent_id": file_obj.parent.id, "id": file_obj.id, "iso": preview.iso, "model_name": preview.model_name,
+        file_dict = {"parent_id": file_obj.parent.id, "id": file_obj.id, "iso": preview.iso,
+                     "model_name": preview.model_name,
                      "aperture": preview.aperture, "exposure_time": preview.exposure_time,
                      "focal_length": preview.focal_length}
         send_event(file_obj.owner.id, EventCode.ITEM_PREVIEW_INFO_ADD, request.request_id, [file_dict])
@@ -131,11 +133,13 @@ def preview(request, file_obj):
         pass
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
+
 def last_modified_func(request, file_obj):
     last_modified_str = file_obj.last_modified_at
     return last_modified_str
 
-@cache_page(60 * 60 * 24)
+
+#@cache_page(60 * 60 * 24)
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
 @check_signed_url
@@ -146,14 +150,15 @@ def stream_file(request, file_obj):
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     if len(fragments) == 0:
         return HttpResponse(status=204)
+
     def file_iterator(index, start_byte, end_byte, chunk_size=8192):
-        #print(f"==file iterator==\nSTART_BYTE={start_byte}\nEND_BYTE={end_byte}")
+        # print(f"==file iterator==\nSTART_BYTE={start_byte}\nEND_BYTE={end_byte}")
         headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
         # headers = {}
-        #print(f"fragments lenght: {len(fragments)}")
+        # print(f"fragments lenght: {len(fragments)}")
 
         url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
-        #print(url)
+        # print(url)
         response = requests.get(url, headers=headers, stream=True)
         if response.ok:  # Partial content
             for chunk in response.iter_content(chunk_size):
@@ -162,9 +167,10 @@ def stream_file(request, file_obj):
             print("============DISCORD ERROR============")
             print(response.status_code)
             print(response.text)
+            return 
 
     range_header = request.headers.get('Range')
-    #print(f"range_header: {range_header}")
+    # print(f"range_header: {range_header}")
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
         if range_match:
@@ -177,9 +183,9 @@ def stream_file(request, file_obj):
         end_byte = None
 
     # Find the appropriate file fragment based on byte range request
-    #print(f"start_byte= {start_byte}")
+    # print(f"start_byte= {start_byte}")
     real_start_byte = start_byte
-    #print(f"real_start_byte= {start_byte}")
+    # print(f"real_start_byte= {start_byte}")
     selected_fragment_index = 0
     for index, fragment in enumerate(fragments):
         print("another fragment")
@@ -188,11 +194,11 @@ def stream_file(request, file_obj):
             break
         else:
             start_byte -= fragment.size
-    #print(f"selected_fragment_index = {selected_fragment_index}")
+    # print(f"selected_fragment_index = {selected_fragment_index}")
 
-    #print(f"start_byte after= {start_byte}")
-    #print(f"end_byte after= {end_byte}")
-    #print(f"real_start_byte after= {real_start_byte}")
+    # print(f"start_byte after= {start_byte}")
+    # print(f"end_byte after= {end_byte}")
+    # print(f"real_start_byte after= {real_start_byte}")
 
     if len(fragments) == 1 and start_byte == 0:  # and end_byte ==file_obj.size
         status = 200

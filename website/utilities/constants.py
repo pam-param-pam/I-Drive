@@ -13,7 +13,7 @@ MAX_SIZE_OF_PREVIEWABLE_FILE = 100 * 1024 * 1024
 MAX_MEDIA_CACHE_AGE = 2628000
 
 # Discord message cache expiry in seconds: 1 day
-DISCORD_MESSAGE_EXPIRY = 86400
+DISCORD_MESSAGE_EXPIRY = 79200
 
 cache = caches["default"]
 

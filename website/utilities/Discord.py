@@ -110,6 +110,7 @@ class Discord:
 
     def get_file_url(self, message_id, attachment_id) -> str:
         message = self.get_message(message_id).json()
+        print(message_id)
         for attachment in message["attachments"]:
             if attachment["id"] == attachment_id:
                 return attachment["url"]
