@@ -1,16 +1,12 @@
 <template>
   <div class="card floating">
-    <div class="card-title">
-      <h2>{{ $t("prompts.irreversibleAction") }}</h2>
-    </div>
     <div class="card-content">
       <p v-if="selectedCount === 1">
-        {{ $t("prompts.deleteMessageSingle") }}
+        {{ $t("prompts.moveToTrashMessageSingle") }}
       </p>
       <p v-else-if="selectedCount > 1">
-        {{ $t("prompts.deleteMessageMultiple", {count: selectedCount}) }}
+        {{ $t("prompts.moveToTrashMessageMultiple", {count: selectedCount}) }}
       </p>
-
     </div>
     <div class="card-action">
       <button
@@ -24,10 +20,10 @@
       <button
         @click="submit"
         class="button button--flat button--red"
-        :aria-label="$t('buttons.delete')"
-        :title="$t('buttons.delete')"
+        :aria-label="$t('buttons.moveToTrash')"
+        :title="$t('buttons.moveToTrash')"
       >
-        {{ $t("buttons.delete") }}
+        {{ $t("buttons.moveToTrash") }}
       </button>
 
     </div>
@@ -36,17 +32,17 @@
 
 <script>
 import {mapGetters, mapMutations, mapState} from "vuex";
-import {remove} from "@/api/item.js";
+import {moveToTrash} from "@/api/item.js";
 
 export default {
-  name: "delete",
+  name: "MoveToTrash",
   computed: {
     ...mapGetters(["selectedCount", "currentPrompt"]),
     ...mapState(["selected", "items"]),
   },
   created() {
     // Save the event listener function to a property
-    this.keyEvent = (event) => { // fucking spent 3 hours debuging this fucking piece of code fuck you java script, retarded language istg
+    this.keyEvent = (event) => {
       // Enter
       if (event.keyCode === 13) {
         console.log("calling submit from event listener");
@@ -54,15 +50,12 @@ export default {
       }
     };
 
-    // Add the event listener using the saved function
     window.addEventListener("keydown", this.keyEvent);
   },
 
   beforeDestroy() {
-    // Remove the event listener using the saved function
     window.removeEventListener("keydown", this.keyEvent);
   },
-
 
 
   methods: {
@@ -71,13 +64,9 @@ export default {
       try {
         let ids = this.selected.map(item => item.id);
 
-        let res = await remove({"ids": ids});
-
-        let message = this.$t('toasts.itemDeleted', {amount: ids.length})
-        console.log(message)
-        this.$toast.info(message, {
-          id: res.task_id,
-        });
+        await moveToTrash({"ids": ids});
+        let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
+        this.$toast.info(message);
         this.currentPrompt?.confirm();
 
       } catch (error) {
@@ -87,7 +76,6 @@ export default {
       finally {
         this.resetSelected()
         this.closeHover()
-        //this.$store.commit("setReload", true);
 
 
       }

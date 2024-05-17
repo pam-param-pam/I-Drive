@@ -10,7 +10,11 @@
     "settings": "Ustawienia",
     "register": "Rejestracja"
   },
+  "trash": {
+    "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!"
+  },
   "files": {
+    "searchItemsFound": "Znaleziono {amount} plików/folderów",
     "clear": "Wyczyść",
     "files": "Pliki",
     "folders": "Foldery",
@@ -37,6 +41,9 @@
     "video": "Wideo"
   },
   "buttons": {
+
+    "restoreFromTrash": "Przenieś z kosza",
+    "moveToTrash": "Przenieś do kosza",
     "cancel": "Anuluj",
     "close": "Zamknij",
     "create": "Utwórz",
@@ -143,6 +150,11 @@
     }
   },
   "prompts": {
+    "inTrashSince": "W koszu od",
+    "moveToTrashMessageMultiple":  "Czy jesteś pewien, że chcesz przeniesć do kosza {count} plik(ów)?",
+    "moveToTrashMessageSingle":  "Czy jesteś pewien, że chcesz przeniesć do kosza ten plik/folder?",
+    "restoreFromTrashMessageMultiple": "Czy jesteś pewien, że chcesz przywrócić z kosza {count} plik(ów)?",
+    "restoreFromTrashMessageSingle": "Czy jesteś pewien, że chcesz przywrócić z kosza ten plik/folder?",
     "currentlyNavigating": "Obecnie przeglądasz:",
     "deleteMessageMultiple": "Czy jesteś pewien że chcesz usunąć {count} plik(ów)?",
     "deleteMessageSingle": "Czy jesteś pewien, że chcesz usunąć ten plik/folder?",
@@ -198,7 +210,9 @@
     "selectFilesFirst": "Zaznacz plik(i) najpierw!",
     "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
     "fileSaved": "Zapisano plik",
-    "passwordUpdated": "Hasło zmienione"
+    "passwordUpdated": "Hasło zmienione",
+    "itemsRestoredFromTrash": "Przywrócono z kosza {amount} itemy",
+    "itemsMovedToTrash": "Przeniesiono do kosza {amount} itemy"
 
   }
 }

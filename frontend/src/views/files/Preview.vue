@@ -314,10 +314,12 @@ export default {
       let parent_id = this.file?.parent_id
       if (parent_id) {
         //this.$store.commit("updateItems", {});
-        this.$router.push({path: `/folder/${parent_id}`});
+        this.$router.push({name: `Files`, params: {"folderId": parent_id}});
+
       }
       else {
-        this.$router.push("/files/");
+        this.$router.push({name: `Files`});
+
 
       }
     },

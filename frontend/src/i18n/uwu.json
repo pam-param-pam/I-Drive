@@ -10,7 +10,11 @@
     "settings": "S-Swettings OwO",
     "register": "Wegistew"
   },
+  "trash": {
+    "info": "Items in trash will be deleted after 30 days!"
+  },
   "files": {
+    "searchItemsFound": "Fwouwnd {amount} itwems-s",
     "closePreview": "Cwose p-pweview",
     "files": "Fiwes",
     "created": "OwO Cweated at",
@@ -38,6 +42,8 @@
     "video": "Video (・ω・)"
   },
   "buttons": {
+    "restoreFromTrash": "Restore from Trash",
+    "moveToTrash": "Move to Trash",
     "ok": "OK (・ω・)",
     "file": "*giggles* Fiwe",
     "folder": "Fowdew OwO",
@@ -147,6 +153,10 @@
     }
   },
   "prompts": {
+    "moveToTrashMessageMultiple": "Are you sure you wish to move to trash {count} file(s)?",
+    "moveToTrashMessageSingle": "Are you sure you wish to move to trash this file/folder?",
+    "restoreFromTrashMessageMultiple": "Are you sure you wish to restore from trash {count} file(s)?",
+    "restoreFromTrashMessageSingle": "Are you sure you wish to restore from trash this file/folder?",
     "itemInfo": "Infowmation OwO",
     "currentlyNavigating": "Cuwwentwy Wuwwentwy nyavigating on:",
     "deleteMessageMultiple": "Awe you suwe you wish to dewete {count} fiwe(s)?",
@@ -201,7 +211,9 @@
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
     "PreparingUpload": "Stawted pwoccesing f-fiwes f-f-fow upwoad...",
     "fileSaved": "Fiwe saved",
-    "passwordUpdated": "Password updated!"
+    "passwordUpdated": "Password updated!",
+    "itemsRestoredFromTrash": "Restored {amount} items from Trash!",
+    "itemsMovedToTrash": "Moved {amount} items to Trash!"
 
   }
 }

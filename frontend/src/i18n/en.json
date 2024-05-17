@@ -11,6 +11,7 @@
     "register": "Register"
   },
   "files": {
+    "searchItemsFound": "Found {amount} items",
     "closePreview": "Close preview",
     "files": "Files",
     "created": "Created at",
@@ -27,6 +28,9 @@
     "sortBySize": "Sort by size",
     "noPreview": "Preview is not available for this file."
   },
+  "trash": {
+    "info": "Items in trash will be deleted after 30 days!"
+  },
   "search": {
     "images": "Images",
     "music": "Music",
@@ -38,9 +42,10 @@
     "video": "Video"
   },
   "buttons": {
+    "restoreFromTrash": "Restore from Trash",
+    "moveToTrash": "Move to Trash",
     "ok": "OK",
     "submit": "Submit",
-    "searchItemsFound": "Found {amount} items",
     "file": "File",
     "folder": "Folder",
     "cancel": "Cancel",
@@ -149,10 +154,16 @@
     }
   },
   "prompts": {
+    "inTrashSince": "In Trash since",
+    "moveToTrashMessageMultiple": "Are you sure you wish to move to trash {count} file(s)?",
+    "moveToTrashMessageSingle": "Are you sure you wish to move to trash this file/folder?",
+    "restoreFromTrashMessageMultiple": "Are you sure you wish to restore from trash {count} file(s)?",
+    "restoreFromTrashMessageSingle": "Are you sure you wish to restore from trash this file/folder?",
     "itemInfo": "Information",
     "currentlyNavigating": "Currently navigating on:",
-    "deleteMessageMultiple": "Are you sure you wish to delete {count} file(s)?",
+    "deleteMessageMultiple": "Are you sure you wish to delete {count} file(s)? This action is irreversible!",
     "deleteMessageSingle": "Are you sure you wish to delete this file/folder?",
+    "irreversibleAction": " This action is irreversible!",
     "deleteTitle": "Delete files",
     "displayName": "Display Name",
     "download": "Download files",
@@ -204,7 +215,9 @@
     "selectFilesFirst": "Select file(s) first!",
     "PreparingUpload": "Started proccesing files for upload...",
     "fileSaved": "File saved",
-    "passwordUpdated": "Password updated!"
+    "passwordUpdated": "Password updated!",
+    "itemsRestoredFromTrash": "Restored {amount} items from Trash!",
+    "itemsMovedToTrash": "Moved {amount} items to Trash!"
 
   }
 }

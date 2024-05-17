@@ -48,6 +48,7 @@ import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import {getFile} from "@/api/files.js";
 import store from "@/store/index.js";
 import {fetchURL} from "@/api/utils.js";
+import {theme} from "@/utils/constants.js";
 
 export default {
   name: "editor",
@@ -126,6 +127,9 @@ export default {
         wrap: true,
 
       });
+      if (theme === "dark") {
+        this.editor.setTheme("ace/theme/twilight");
+      }
       //this.editor.session.getUndoManager().markClean();
       console.log(this.editor.session)
 
@@ -208,7 +212,8 @@ export default {
       }
       // catch every error so user can always close...
       catch {
-        this.$router.push("/files/");
+        this.$router.push({name: `Files`});
+
       }
 
     },

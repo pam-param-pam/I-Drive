@@ -35,6 +35,16 @@
             class="input input--block"
             :locale.sync="locale"
           ></languages>
+
+          <p>
+            <label for="theme">{{ $t("settings.themes.title") }}</label>
+            <themes
+              class="input input--block"
+              :theme.sync="theme"
+              id="theme"
+            ></themes>
+          </p>
+
         </div>
 
         <div class="card-action">
@@ -86,14 +96,13 @@
 import { mapState, mapMutations } from "vuex";
 import { users as api } from "@/api";
 import Languages from "@/components/settings/Languages.vue";
-import i18n, { rtlLanguages } from "@/i18n";
 import Themes from "@/components/settings/Themes.vue";
 import {updateSettings} from "@/api/user.js";
 
 export default {
   name: "settings",
   components: {
-      Themes,
+    Themes,
     Languages,
   },
   data: function () {
@@ -105,6 +114,7 @@ export default {
       dateFormat: false,
       locale: "",
       webhook: "",
+      theme: "",
     };
   },
   computed: {
@@ -160,15 +170,39 @@ export default {
           dateFormat: this.dateFormat,
           webhook: this.webhook
         };
+        this.setTheme(this.theme)
 
         await updateSettings(data)
         this.$store.commit("updateSettings", data)
+
 
         this.$toast.success(this.$t("settings.settingsUpdated"))
       } catch (e) {
         console.log(e)
       }
     },
+    getMediaPreference() {
+      let hasDarkPreference = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      if (hasDarkPreference) {
+        return "dark";
+      } else {
+        return "light";
+      }
+    },
+    setTheme(theme) {
+      const html = document.documentElement;
+      if (!theme) {
+        theme = this.getMediaPreference();
+        console.log("theme2 set: " + theme)
+
+        html.className = theme
+      } else {
+        console.log("theme set: " + theme)
+        html.className = theme;
+      }
+    }
   },
 };
 </script>

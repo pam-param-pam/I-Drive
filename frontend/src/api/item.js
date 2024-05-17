@@ -1,7 +1,14 @@
 import {fetchJSON, fetchURL} from "@/api/utils.js"
 
 export async function moveToTrash(data) {
-    return await fetchJSON(`/api/item/moveToTrash`, {
+    return await fetchURL(`/api/item/moveToTrash`, {
+        method: "PATCH",
+        body: JSON.stringify(data)
+    })
+}
+
+export async function restoreFromTrash(data) {
+    return await fetchURL(`/api/item/restore`, {
         method: "PATCH",
         body: JSON.stringify(data)
     })

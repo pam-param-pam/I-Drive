@@ -16,7 +16,9 @@
       <p class="break-word" v-if="id">
           <strong>{{ $t("prompts.identifier") }}:</strong> {{ id }}
       </p>
-
+      <p v-if="inTrashSince">
+        <strong>{{ $t("prompts.inTrashSince") }}:</strong> {{ humanTime(inTrashSince) }}
+      </p>
       <p v-if="type">
         <strong>{{ $t("prompts.type") }}:</strong> {{ type }}
       </p>
@@ -113,7 +115,8 @@
 import { mapState, mapGetters } from "vuex";
 import { filesize } from "@/utils";
 import moment from "moment";
-import { files as api } from "@/api";
+import 'moment/locale/es'
+
 
 export default {
   name: "info",
@@ -256,6 +259,17 @@ export default {
       return null
 
     },
+    inTrashSince() {
+      if (this.selectedCount === 0) {
+        return this.currentFolder.in_trash_since
+
+      }
+      else if (this.selectedCount === 1) {
+        return this.selected[0].in_trash_since
+      }
+      return null
+
+    },
     owner() {
       if (this.selectedCount === 0) {
           return this.currentFolder.owner?.name
@@ -327,13 +341,16 @@ export default {
     humanSize(size) {
         return filesize(size);
     },
-    humanTime: function (date) {
+    humanTime(date) {
+      console.log(this.settings.locale)
+      moment.locale(this.settings.locale)
       if (this.settings.dateFormat) {
         return moment(date).format("L LT");
       }
       return moment(date).fromNow();
 
     },
+
     changeView: async function (event, type) {
         if (event.target.innerHTML.toString().includes("bytes")) {
             if (type === "size") {

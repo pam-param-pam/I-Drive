@@ -11,8 +11,6 @@
 
     <slot />
 
-
-
     <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
       <slot name="actions" />
     </div>
@@ -45,7 +43,6 @@ export default {
   props: ["showLogo", "showMenu"],
   components: {
     Action,
-    useDark,
   },
   data: function () {
     return {
@@ -56,9 +53,6 @@ export default {
   methods: {
     openSidebar() {
       this.$store.commit("showHover", "sidebar");
-    },
-    toggleDark() {
-      useToggle(false)
     },
 
   },

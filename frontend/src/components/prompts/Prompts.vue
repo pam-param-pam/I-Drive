@@ -30,12 +30,16 @@ import { mapGetters } from "vuex";
 import buttons from "@/utils/buttons";
 import FolderPassword from "@/components/prompts/FolderPassword.vue";
 import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue";
+import MoveToTrash from "@/components/prompts/MoveToTrash.vue";
+import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue";
 
 export default {
   name: "prompts",
   components: {
     Info,
     Delete,
+    MoveToTrash,
+    RestoreFromTrash,
     Rename,
     Download,
     Move,

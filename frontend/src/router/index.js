@@ -44,45 +44,42 @@ const router = new Router({
           path: "/share/*",
           name: "Share",
           component: Share,
-        },
-
-        {
-          path: "/files",
-          name: "Files",
-          component: Files,
           meta: {
             requiresAuth: true,
           },
-          children: [
-            {
-              path: "/folder/:folderId",
-              name: "Listing",
-              component: Listing,
-              props: true
-            },
-            {
-              path: "/trash",
-              name: "Trash",
-              component: Listing,
-              props: { trash: true}
+        },
+        {
+          path: "/trash",
+          name: "Trash",
+          component: Trash,
+          meta: {
+            requiresAuth: true,
+          },
 
-            },
-            {
-              path: "/preview/:fileId",
-              name: "Preview",
-              component: Preview,
-              props: true
+        },
+        {
+          path: "/files/:folderId",
+          name: "Files",
+          component: Files,
+          props: true,
+          meta: {
+            requiresAuth: true,
+          },
 
-            },
-            {
-              path: "/editor/:fileId",
-              name: "Editor",
-              component: Editor,
-              props: true
+        },
+        {
+          path: "/editor/:fileId",
+          name: "Editor",
+          component: Editor,
+          props: true
 
-            },
+        },
+        {
+          path: "/preview/:fileId",
+          name: "Preview",
+          component: Preview,
+          props: true
 
-          ],
         },
         {
           path: "/settings",
@@ -137,7 +134,15 @@ const router = new Router({
         },
         {
           path: "/*",
-          redirect: (to) => `/files`,
+
+          redirect: function(to) {
+            if (store.state.user?.root) {
+              return `/files/${store.state.user.root}`;
+            }
+            else {
+              return "/login"
+            }
+          }
         },
       ],
     },

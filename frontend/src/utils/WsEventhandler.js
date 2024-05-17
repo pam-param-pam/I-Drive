@@ -18,7 +18,7 @@ export default function onEvent(message) {
     store.commit("setItems", updatedItems);
     //if the deleted folder was the current folder, then let's redirect to root
     if (jsonObject.data.includes(currentFolder.id)) {
-      router.push({path: `/files/`});
+      this.$router.push({name: `Files`});
 
     }
 
@@ -56,20 +56,67 @@ export default function onEvent(message) {
   }
   if (jsonObject.op_code === 7) { // force folder navigation from server
     let id = jsonObject.data.folder_id
-    router.push({path: `/folder/${id}`});
+    this.$router.push({name: `Files`, params: {"folderId": id}});
 
   }
+
   if (jsonObject.op_code === 8) { // folder lock status change
     for (let item of jsonObject.data) {
       if (item.parent_id !== currentFolder.id) return
-      store.commit("changeLockStatusAndPasswordCache", {folderId: item.id, newLockStatus: item.isLocked});
+      store.commit("changeLockStatusAndPasswordCache", {folderId: item.id, newLockStatus: item.isLocked})
       console.log("renamed")
     }
 
+  }
+
+  if (jsonObject.op_code === 9) { // items move to trash event
+    // current view is 'Files'
+    if (currentFolder) {
+      console.log("OPCODE 9")
+      console.log(JSON.stringify(jsonObject.data))
+      for (let item of jsonObject.data) {
+
+        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.id);
+
+        store.commit("setItems", updatedItems);
+
+        //if the deleted folder was the current folder, then let's redirect to root
+        if (jsonObject.data.includes(currentFolder.id)) {
+          this.$router.push({name: `Files`})
+        }
+      }
+    }
+    //current view is 'Trash'
+    else {
+      for (let item of jsonObject.data) {
+        //add
+        store.commit("updateItems", item);
+      }
+    }
 
   }
 
+  if (jsonObject.op_code === 10) { // items restore from trash event
+    // current view is 'Files'
+    if (currentFolder) {
+      for (let item of jsonObject.data) {
+        if (item.parent_id === currentFolder.id) {
+          //add
+          store.commit("updateItems", item);
+        }
 
+      }
+    }
+    //current view is 'Trash'
+    else {
+      console.log("OPCODE 10")
+      for (let item of jsonObject.data) {
+        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.id);
+        store.commit("setItems", updatedItems);
+      }
+    }
+
+  }
 
   if (jsonObject.op_code === 4) { // message event, for example, when deleting items
     let timeout = 0

@@ -21,3 +21,10 @@ export async function updateSettings(data) {
 
 }
 
+export async function getTrash() {
+  return await fetchJSON(`/api/trash`);
+
+}
+
+
+

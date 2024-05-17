@@ -17,14 +17,11 @@ const mutations = {
       // Handle if the folder password doesn't exist
     }
   },
-  setIsTrash: (state, payload) => {
-    state.isTrash = payload
+  setDisableCreation: (state, payload) => {
+    state.disableCreation = payload
   },
   closeHover: (state) => {
     state.prompts.pop()
-  },
-  setOpenSearchState: (state, payload) => {
-    state.searchOpen = payload
   },
   toggleShell: (state) => {
     state.show = null
@@ -88,7 +85,7 @@ const mutations = {
 
     for (let field in value) {
       if (field === "locale") {
-        moment.locale(value[field]);
+        moment.locale("pl");
         i18n.default.locale = value[field];
       }
 

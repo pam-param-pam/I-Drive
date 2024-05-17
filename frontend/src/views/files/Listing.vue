@@ -1,33 +1,31 @@
 <template>
-
   <div>
-    <div>
-      <breadcrumbs v-if="!searchItemsFound && !error" base="/files"/>
-      <h4 v-else-if="!error">{{$t('buttons.searchItemsFound', {amount: this.searchItemsFound})}}</h4>
-    </div>
-
     <header-bar showMenu="false" showLogo="false">
+
     <Search
-      @search-items="searchItemsUpdate"
+      v-if="!isTrash"
+      @onSearchQuery="searchItemsUpdate"
       @exit="searchExit"
     />
+
+
     <title/>
       <template #actions>
         <template v-if="!isMobile">
           <action
-            v-if="headerButtons.share"
+            v-if="headerButtons.share && !isTrash"
             icon="share"
             :label="$t('buttons.share')"
             show="share"
           />
           <action
-            v-if="headerButtons.modify"
+            v-if="headerButtons.modify && !isTrash"
             icon="mode_edit"
             :label="$t('buttons.rename')"
             show="rename"
           />
           <action
-            v-if="headerButtons.lock"
+            v-if="headerButtons.lock && !isTrash"
             id="lock-button"
             icon="lock"
             :label="$t('buttons.lockFolder')"
@@ -35,20 +33,32 @@
             props
           />
           <action
-            v-if="headerButtons.modify"
+            v-if="headerButtons.modify && !isTrash"
             id="move-button"
             icon="forward"
             :label="$t('buttons.moveFile')"
             show="move"
           />
           <action
-            v-if="headerButtons.delete"
+            v-if="headerButtons.moveToTrash && !isTrash"
+            id="moveToTrash-button"
+            icon="delete"
+            :label="$t('buttons.moveToTrash')"
+            show="moveToTrash"
+          />
+          <action
+            v-if="headerButtons.moveToTrash && isTrash"
             id="delete-button"
             icon="delete"
             :label="$t('buttons.delete')"
             show="delete"
           />
-
+          <action
+            v-if="headerButtons.restore && isTrash"
+            icon="restore"
+            :label="$t('buttons.restore')"
+            show="restoreFromTrash"
+          />
         </template>
 
         <action
@@ -63,23 +73,24 @@
           @action="switchView"
         />
         <action
-          v-if="headerButtons.download && selectedCount > 0"
+          v-if="headerButtons.download && selectedCount > 0  && !isTrash"
           icon="file_download"
           :label="$t('buttons.download')"
           @action="download"
           :counter="selectedCount"
         />
         <action
-          v-if="headerButtons.upload"
-          :disabled="isTrash || searchOpen && !selectedCount > 0"
+          v-if="headerButtons.upload && !isTrash"
+          :disabled="isSearchActive && !selectedCount > 0 "
           icon="file_upload"
           id="upload-button"
           :label="$t('buttons.upload')"
           @action="upload"
         />
         <action
+          v-if="!isTrash || selectedCount > 0"
           icon="info"
-          :disabled="isTrash || searchOpen && !selectedCount > 0"
+          :disabled="isSearchActive && !selectedCount > 0"
           :label="$t('buttons.info')"
           show="info"
         />
@@ -91,31 +102,44 @@
     <div v-if="isMobile" id="file-selection">
       <span v-if="selectedCount > 0">{{ selectedCount }} selected</span>
       <action
-        v-if="headerButtons.share"
+        v-if="headerButtons.restore && isTrash"
+        icon="restore"
+        :label="$t('buttons.restore')"
+        show="restoreFromTrash"
+      />
+      <action
+        v-if="headerButtons.share && !isTrash"
         icon="share"
         :label="$t('buttons.share')"
         show="share"
       />
       <action
-        v-if="headerButtons.modify"
+        v-if="headerButtons.modify && !isTrash"
         icon="mode_edit"
         :label="$t('buttons.rename')"
         show="rename"
       />
       <action
-        v-if="headerButtons.lock"
+        v-if="headerButtons.lock && !isTrash"
         icon="lock"
         :label="$t('buttons.lockFolder')"
         show="editFolderPassword"
       />
       <action
-        v-if="headerButtons.modify"
+        v-if="headerButtons.modify && !isTrash"
         icon="forward"
         :label="$t('buttons.moveFile')"
         show="move"
       />
       <action
-        v-if="headerButtons.delete"
+        v-if="headerButtons.moveToTrash && !isTrash"
+        icon="delete"
+        :label="$t('buttons.moveToTrash')"
+        show="moveToTrash"
+      />
+      <action
+        v-if="headerButtons.moveToTrash && isTrash"
+        id="delete-button"
         icon="delete"
         :label="$t('buttons.delete')"
         show="delete"
@@ -278,10 +302,10 @@ export default {
   name: "listing",
 
   props: {
-    password: String,
-    folderId: String,
-    trash: Boolean,
+    isTrash: Boolean,
+    isSearchActive: Boolean,
   },
+  emits: ['onSearchClosed', 'onSearchQuery'],
 
   components: {
     Breadcrumbs,
@@ -301,9 +325,54 @@ export default {
 
     };
   },
-  computed: {
+  watch: {
+    items: function () {
+      // Ensures that the listing is displayed
+      Vue.nextTick(() => {
+        // How much every listing item affects the window height
+        this.setItemWeight();
+        // Fill and fit the window with listing items
+        this.fillWindow(true);
+      });
+    }
 
-    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "searchOpen", "isTrash"]),
+  },
+
+  mounted: function () {
+    // Check the columns size for the first time.
+    this.columnsResize();
+
+    // How much every listing item affects the window height
+    this.setItemWeight();
+
+    // Fill and fit the window with listing items
+    this.fillWindow(true);
+
+    // Add the needed event listeners to the window and document.
+    window.addEventListener("keydown", this.keyEvent);
+    window.addEventListener("scroll", this.scrollEvent);
+    window.addEventListener("resize", this.windowsResize);
+
+    if (!this.perms.create) return;
+    document.addEventListener("dragover", this.preventDefault);
+    document.addEventListener("dragenter", this.dragEnter);
+    document.addEventListener("dragleave", this.dragLeave);
+    document.addEventListener("drop", this.drop);
+  },
+  beforeDestroy() {
+    // Remove event listeners before destroying this page.
+    window.removeEventListener("keydown", this.keyEvent);
+    window.removeEventListener("scroll", this.scrollEvent);
+    window.removeEventListener("resize", this.windowsResize);
+
+    if (this.user && !this.perms.create) return;
+    document.removeEventListener("dragover", this.preventDefault);
+    document.removeEventListener("dragenter", this.dragEnter);
+    document.removeEventListener("dragleave", this.dragLeave);
+    document.removeEventListener("drop", this.drop);
+  },
+  computed: {
+    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "disableCreation"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
     nameSorted() {
       return this.settings.sortingBy === "name";
@@ -382,7 +451,8 @@ export default {
         upload: this.perms.create,
         download: this.perms.download,
         shell: this.perms.execute && enableExec,
-        delete: this.selectedCount > 0 && this.perms.delete,
+        moveToTrash: this.selectedCount > 0 && this.perms.delete,
+        restore: this.selectedCount > 0 && this.perms.modify,
         modify: this.selectedCount === 1 && this.perms.modify,
         share: this.selectedCount === 1 && this.perms.share,
         lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
@@ -392,116 +462,17 @@ export default {
       return this.width <= 736;
     },
   },
-  watch: {
-    $route: "fetchFolder",
-    reload: function (value) {
-      console.log("reload changed")
-      if (value === true) {
-        this.fetchFolder();
-      }
-    },
-    /*
-    //TODO is this code even needed?
-    items: function () {
-      // Ensures that the listing is displayed
-      Vue.nextTick(() => {
-        // How much every listing item affects the window height
-        this.setItemWeight();
-        // Fill and fit the window with listing items
-        this.fillWindow(true);
-      });
-    }
 
-     */
-  },
-  created() {
-    this.fetchFolder()
-
-  },
-
-  mounted: function () {
-
-    // // Check the columns size for the first time.
-    // this.columnsResize();
-    //
-    // // How much every listing item affects the window height
-    // this.setItemWeight();
-    //
-    // // Fill and fit the window with listing items
-    // this.fillWindow(true);
-
-    // Add the needed event listeners to the window and document.
-    window.addEventListener("keydown", this.keyEvent);
-    window.addEventListener("scroll", this.scrollEvent);
-    window.addEventListener("resize", this.windowsResize);
-
-    if (!this.perms.create) return;
-    document.addEventListener("dragover", this.preventDefault);
-    document.addEventListener("dragenter", this.dragEnter);
-    document.addEventListener("dragleave", this.dragLeave);
-    document.addEventListener("drop", this.drop);
-  },
-  beforeDestroy() {
-    // Remove event listeners before destroying this page.
-    window.removeEventListener("keydown", this.keyEvent);
-    window.removeEventListener("scroll", this.scrollEvent);
-    window.removeEventListener("resize", this.windowsResize);
-
-    if (this.user && !this.perms.create) return;
-    document.removeEventListener("dragover", this.preventDefault);
-    document.removeEventListener("dragenter", this.dragEnter);
-    document.removeEventListener("dragleave", this.dragLeave);
-    document.removeEventListener("drop", this.drop);
-  },
   methods: {
 
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
-    searchItemsUpdate(items) {
-      this.$store.commit("setItems", items);
-      this.searchItemsFound = items.length
+    searchItemsUpdate(query) {
+      this.$emit('onSearchQuery', query);
 
     },
     searchExit() {
-      this.fetchFolder()
+      this.$emit('onSearchClosed');
     },
-    async fetchFolder() {
-      this.searchItemsFound = null
-
-      this.setLoading(true);
-      this.setError(null)
-
-      try {
-        let res = await getItems(this.folderId, false);
-
-        this.$store.commit("setItems", res.children);
-        this.$store.commit("setCurrentFolder", res);
-
-        if (res.parent_id) { //only set title if its not root folder
-          document.title = `${res.name} - ` + name;
-        }
-        else {
-          document.title = name;
-        }
-
-      } catch (error) {
-        this.setError(error);
-
-        if (error.status === 469) {
-          this.$store.commit("showHover", {
-            prompt: "FolderPassword",
-            props: {folderId: this.folderId},
-            confirm: () => {
-              this.fetchFolder();
-
-            },
-          });
-        }
-      } finally {
-        this.setLoading(false);
-
-      }
-    },
-
 
     keyEvent(event) {
       // No prompts are shown
@@ -521,7 +492,7 @@ export default {
         if (!this.perms.delete || this.selectedCount === 0) return;
 
         // Show delete prompt.
-        this.$store.commit("showHover", "delete");
+        this.$store.commit("showHover", "moveToTrash");
       }
 
       // F1!
@@ -540,7 +511,7 @@ export default {
       }
 
       // Ctrl is pressed
-      if ((event.ctrlKey || event.metaKey) && !this.searchOpen) {
+      if ((event.ctrlKey || event.metaKey) && !this.isSearchActive) {
 
         let key = String.fromCharCode(event.which).toLowerCase();
 
@@ -565,45 +536,43 @@ export default {
 
         }
       }
-
     },
 
-    /*
-       columnsResize() {
-         // Update the columns size based on the window width.
-         let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
-         if (!items) return;
+     columnsResize() {
+       // Update the columns size based on the window width.
+       let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
+       if (!items) return;
 
-         let columns = Math.floor(
-           document.querySelector("main").offsetWidth / this.columnWidth
+       let columns = Math.floor(
+         document.querySelector("main").offsetWidth / this.columnWidth
+       );
+       if (columns === 0) columns = 1;
+       items.style.width = `calc(${100 / columns}% - 1em)`;
+     },
+
+     scrollEvent: throttle(function () {
+       const totalItems = this.filesSize + this.dirsSize;
+
+       // All items are displayed
+       if (this.showLimit >= totalItems) return;
+
+       const currentPos = window.innerHeight + window.scrollY;
+
+       // Trigger at the 75% of the window height
+       const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
+
+       if (currentPos > triggerPos) {
+         // Quantity of items needed to fill 2x of the window height
+         const showQuantity = Math.ceil(
+           (window.innerHeight * 2) / this.itemWeight
          );
-         if (columns === 0) columns = 1;
-         items.style.width = `calc(${100 / columns}% - 1em)`;
-       },
 
-       scrollEvent: throttle(function () {
-         const totalItems = this.filesSize + this.dirsSize;
+         // Increase the number of displayed items
+         this.showLimit += showQuantity;
+       }
+     }, 100),
 
-         // All items are displayed
-         if (this.showLimit >= totalItems) return;
 
-         const currentPos = window.innerHeight + window.scrollY;
-
-         // Trigger at the 75% of the window height
-         const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
-
-         if (currentPos > triggerPos) {
-           // Quantity of items needed to fill 2x of the window height
-           const showQuantity = Math.ceil(
-             (window.innerHeight * 2) / this.itemWeight
-           );
-
-           // Increase the number of displayed items
-           this.showLimit += showQuantity;
-         }
-       }, 100),
-
-        */
     dragEnter() {
       this.dragCounter++;
 
@@ -708,10 +677,7 @@ export default {
 
 
     },
-    openSearch() {
-      this.$store.commit("showHover", "search");
-    },
-    /*
+
     windowsResize: throttle(function () {
       this.columnsResize();
       this.width = window.innerWidth;
@@ -726,7 +692,7 @@ export default {
       this.fillWindow();
     }, 100),
 
-     */
+
     download() {
       if (this.selectedCount === 0) {
         let message = this.$t('toasts.selectFilesFirst')
@@ -790,7 +756,7 @@ export default {
         document.getElementById("upload-input").click();
       }
     },
-    /*
+
     setItemWeight() {
 
       if (this.$refs.listing == null || this.currentFolder == null) return;
@@ -824,7 +790,7 @@ export default {
       this.showLimit = showQuantity > totalItems ? totalItems : showQuantity;
     },
 
-     */
+
   },
 };
 </script>

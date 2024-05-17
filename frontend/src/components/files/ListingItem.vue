@@ -194,13 +194,13 @@ export default {
               prompt: "FolderPassword",
               props: {folderId: this.item.id},
               confirm: () => {
-                this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
+                this.$router.push({name: `Files`, params: {"folderId": this.item.id}});
               },
             });
             return
           }
         }
-        this.$router.push({name: `Listing`, params: {"folderId": this.item.id}});
+        this.$router.push({name: `Files`, params: {"folderId": this.item.id}});
 
       } else {
         //

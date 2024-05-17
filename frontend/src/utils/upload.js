@@ -205,7 +205,7 @@ export async function handleCreatingFiles(fileList) {
 export async function prepareUploadRequests(createdFiles) {
 
   //for (let file of createdFiles) {
-  await store.dispatch("upload/upload", createdFiles);
+  //await store.dispatch("upload/upload", createdFiles);
 
   const chunkSize = 25 * 1023 * 1024; // <25MB in bytes
   let totalSize = 0

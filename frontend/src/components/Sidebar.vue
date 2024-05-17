@@ -13,7 +13,7 @@
 
       <div v-if="perms.create">
         <button
-          :disabled="isTrash || searchOpen"
+          :disabled="disableCreation"
           @click="$store.commit('showHover', 'newDir')"
           class="action"
           :aria-label="$t('sidebar.newFolder')"
@@ -24,7 +24,7 @@
         </button>
 
         <button
-          :disabled="isTrash || searchOpen"
+          :disabled="disableCreation"
           @click="$store.commit('showHover', 'newFile')"
           class="action"
           :aria-label="$t('sidebar.newFile')"
@@ -124,6 +124,7 @@ import { version, signup } from "@/utils/constants";
 import ProgressBar from "vue-simple-progress";
 import prettyBytes from "pretty-bytes";
 import {getUsage} from "@/api/folder.js";
+import store from "@/store/index.js";
 
 export default {
   name: "sidebar",
@@ -131,7 +132,7 @@ export default {
     ProgressBar,
   },
   computed: {
-    ...mapState(["user", "perms", "currentFolder", "isTrash", "searchOpen"]),
+    ...mapState(["user", "perms", "currentFolder", "disableCreation"]),
     ...mapGetters(["isLogged", "currentPrompt"]),
     active() {
       return this.currentPrompt?.prompt === "sidebar";
@@ -168,17 +169,17 @@ export default {
     toRoot() {
       //this.$store.commit("setOpenSearchState", false);
       //this.$store.commit("setIsTrash", false);
-
-      this.$router.push({ path: "/files/" }, () => {});
+      this.$router.push({name: `Files`, params: {folderId: this.user.root}}).catch(err => {})
+      //this.$router.go(0)
       this.$store.commit("closeHover");
     },
     toTrash() {
       //this.$store.commit("setOpenSearchState", false);
-      this.$router.push({ path: "/trash/" }, () => {});
+      this.$router.push({name: `Trash`}).catch(err => {})
       this.$store.commit("closeHover");
     },
     toSettings() {
-      this.$router.push({ path: "/settings" }, () => {});
+      this.$router.push({name: `Settings`}).catch(err => {})
       this.$store.commit("closeHover");
     },
     help() {

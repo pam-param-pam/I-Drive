@@ -48,17 +48,17 @@ export default {
     ...mapState(["user", "loading", "perms"]),
   },
   methods: {
-    ...mapMutations(["setIsTrash"])
+    ...mapMutations(["setDisableCreation"])
   },
   mounted() {
     document.title = "Settings - File Browser";
 
   },
   created() {
-    this.setIsTrash(true)
+    this.setDisableCreation(true)
   },
   beforeDestroy() {
-    this.setIsTrash(false)
+    this.setDisableCreation(false)
 
   },
 };

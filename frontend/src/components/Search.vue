@@ -21,7 +21,7 @@ import {mapGetters, mapMutations} from "vuex";
 export default {
   name: "search",
   components: {FileList},
-  emits: ['search-items', 'exit'],
+  emits: ['onSearchQuery', 'exit'],
 
   data: function () {
     return {
@@ -39,6 +39,7 @@ export default {
     ...mapMutations(["setIsTrash"]),
     async search() {
       if (this.query === '') return []
+      this.isSearchActive = true
       const regex = /(\w+):(\S+)\s*/g;
       let match;
       let argumentDict = {};
@@ -53,10 +54,7 @@ export default {
       }
       // Extracting remaining string
       argumentDict["query"] = this.query.substring(lastIndex).trim();
-
-
-      let searchItems = await search(argumentDict)
-      this.$emit('search-items', searchItems);
+      this.$emit('onSearchQuery', argumentDict);
 
     },
 
@@ -70,12 +68,12 @@ export default {
   watch: {
     query() {
       if (this.query === '') {
-        this.$store.commit("setOpenSearchState", false);
+        this.$store.commit("setDisableCreation", false);
         this.$emit('exit');
 
       }
       else {
-        this.$store.commit("setOpenSearchState", true);
+        this.$store.commit("setDisableCreation", true);
         this.search()
 
       }
