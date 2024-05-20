@@ -13,19 +13,19 @@
       <template #actions>
         <template v-if="!isMobile">
           <action
-            v-if="headerButtons.share && !isTrash"
+            v-if="headerButtons.share"
             icon="share"
             :label="$t('buttons.share')"
             show="share"
           />
           <action
-            v-if="headerButtons.modify && !isTrash"
+            v-if="headerButtons.modify"
             icon="mode_edit"
             :label="$t('buttons.rename')"
             show="rename"
           />
           <action
-            v-if="headerButtons.lock && !isTrash"
+            v-if="headerButtons.lock"
             id="lock-button"
             icon="lock"
             :label="$t('buttons.lockFolder')"
@@ -33,28 +33,28 @@
             props
           />
           <action
-            v-if="headerButtons.modify && !isTrash"
+            v-if="headerButtons.modify"
             id="move-button"
             icon="forward"
             :label="$t('buttons.moveFile')"
             show="move"
           />
           <action
-            v-if="headerButtons.moveToTrash && !isTrash"
+            v-if="headerButtons.moveToTrash"
             id="moveToTrash-button"
             icon="delete"
             :label="$t('buttons.moveToTrash')"
             show="moveToTrash"
           />
           <action
-            v-if="headerButtons.moveToTrash && isTrash"
+            v-if="headerButtons.delete"
             id="delete-button"
             icon="delete"
             :label="$t('buttons.delete')"
             show="delete"
           />
           <action
-            v-if="headerButtons.restore && isTrash"
+            v-if="headerButtons.restore"
             icon="restore"
             :label="$t('buttons.restore')"
             show="restoreFromTrash"
@@ -73,14 +73,14 @@
           @action="switchView"
         />
         <action
-          v-if="headerButtons.download && selectedCount > 0  && !isTrash"
+          v-if="headerButtons.download"
           icon="file_download"
           :label="$t('buttons.download')"
           @action="download"
           :counter="selectedCount"
         />
         <action
-          v-if="headerButtons.upload && !isTrash"
+          v-if="headerButtons.upload"
           :disabled="isSearchActive && !selectedCount > 0 "
           icon="file_upload"
           id="upload-button"
@@ -88,7 +88,7 @@
           @action="upload"
         />
         <action
-          v-if="!isTrash || selectedCount > 0"
+          v-if="headerButtons.info"
           icon="info"
           :disabled="isSearchActive && !selectedCount > 0"
           :label="$t('buttons.info')"
@@ -102,43 +102,43 @@
     <div v-if="isMobile" id="file-selection">
       <span v-if="selectedCount > 0">{{ selectedCount }} selected</span>
       <action
-        v-if="headerButtons.restore && isTrash"
+        v-if="headerButtons.restore"
         icon="restore"
         :label="$t('buttons.restore')"
         show="restoreFromTrash"
       />
       <action
-        v-if="headerButtons.share && !isTrash"
+        v-if="headerButtons.share "
         icon="share"
         :label="$t('buttons.share')"
         show="share"
       />
       <action
-        v-if="headerButtons.modify && !isTrash"
+        v-if="headerButtons.modify"
         icon="mode_edit"
         :label="$t('buttons.rename')"
         show="rename"
       />
       <action
-        v-if="headerButtons.lock && !isTrash"
+        v-if="headerButtons.lock"
         icon="lock"
         :label="$t('buttons.lockFolder')"
         show="editFolderPassword"
       />
       <action
-        v-if="headerButtons.modify && !isTrash"
+        v-if="headerButtons.modify"
         icon="forward"
         :label="$t('buttons.moveFile')"
         show="move"
       />
       <action
-        v-if="headerButtons.moveToTrash && !isTrash"
+        v-if="headerButtons.moveToTrash"
         icon="delete"
         :label="$t('buttons.moveToTrash')"
         show="moveToTrash"
       />
       <action
-        v-if="headerButtons.moveToTrash && isTrash"
+        v-if="headerButtons.delete"
         id="delete-button"
         icon="delete"
         :label="$t('buttons.delete')"
@@ -244,6 +244,8 @@
           <item
             v-for="item in dirs" :key="item.id"
             :item="item"
+            :readOnly="false"
+            :mode="mode"
           >
           </item>
         </div>
@@ -254,6 +256,8 @@
           <item
             v-for="item in files" :key="item.id"
             :item="item"
+            :readOnly="false"
+            :mode="mode"
           ></item>
 
         </div>
@@ -303,6 +307,7 @@ export default {
 
   props: {
     isTrash: Boolean,
+    isShares: Boolean,
     isSearchActive: Boolean,
   },
   emits: ['onSearchClosed', 'onSearchQuery'],
@@ -374,6 +379,12 @@ export default {
   computed: {
     ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "disableCreation"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
+
+    mode() {
+      if(this.isTrash) return "trash"
+      if (this.isShares) return "shares"
+      return "files"
+    },
     nameSorted() {
       return this.settings.sortingBy === "name";
     },
@@ -448,14 +459,16 @@ export default {
     },
     headerButtons() {
       return {
-        upload: this.perms.create,
-        download: this.perms.download,
+        upload: this.perms.create && !this.isTrash,
+        info: !this.isTrash || this.selectedCount > 0,
+        download: this.perms.download  && this.selectedCount > 0 && !this.isTrash,
         shell: this.perms.execute && enableExec,
-        moveToTrash: this.selectedCount > 0 && this.perms.delete,
-        restore: this.selectedCount > 0 && this.perms.modify,
-        modify: this.selectedCount === 1 && this.perms.modify,
-        share: this.selectedCount === 1 && this.perms.share,
-        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
+        moveToTrash: this.selectedCount > 0 && this.perms.delete && !this.isTrash,
+        restore: this.selectedCount > 0 && this.perms.modify  && this.isTrash,
+        modify: this.selectedCount === 1 && this.perms.modify  && !this.isTrash,
+        share: this.selectedCount === 1 && this.perms.share && !this.isTrash,
+        delete: this.selectedCount > 0 && this.perms.delete && this.isTrash,
+        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock  && !this.isTrash,
       };
     },
     isMobile() {

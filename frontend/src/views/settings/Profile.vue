@@ -65,6 +65,13 @@
 
         <div class="card-content">
           <input
+            class="input input--block"
+            type="password"
+            :placeholder="$t('settings.currentPassword')"
+            v-model="oldPassword"
+            name="password"
+          />
+          <input
             :class="passwordClass"
             type="password"
             :placeholder="$t('settings.newPassword')"
@@ -145,6 +152,7 @@ export default {
     ...mapMutations(["updateUser", "setLoading"]),
     async updatePassword(event) {
       event.preventDefault();
+      this.$toast.error("Not implemented yet!")
 
       if (this.password !== this.passwordConf || this.password === "") {
         return;

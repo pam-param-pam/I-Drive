@@ -11,8 +11,7 @@
           <table>
             <tr>
               <th>{{ $t("settings.ShareName") }}</th>
-              <th>{{ $t("settings.shareDuration") }}</th>
-              <th v-if="perms.admin">{{ $t("settings.username") }}</th>
+              <th>{{ $t("settings.shareExpiry") }}</th>
               <th></th>
               <th></th>
             </tr>

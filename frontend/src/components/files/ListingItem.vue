@@ -56,6 +56,7 @@ export default {
   props: [
     "readOnly",
     "item",
+    "mode",
   ],
   computed: {
     ...mapState(["user", "perms", "selected", "settings", "items"]),
@@ -70,10 +71,10 @@ export default {
       return this.selected.includes(this.item)
     },
     isDraggable() {
-      return this.readOnly === undefined && this.perms.modify;
+      return this.readOnly === false && this.perms.modify;
     },
     canDrop() {
-      if (!this.item.isDir || this.readOnly !== undefined) return false;
+      if (!this.item.isDir || this.readOnly !== false) return false;
 
       for (let item of this.selected) {
         if (item === this.item) {
@@ -166,7 +167,7 @@ export default {
         return
       }
 
-      this.addSelected(this.item);
+      this.addSelected(this.item)
 
 
       /*
@@ -186,6 +187,13 @@ export default {
 
     },
     open: function () {
+      if (this.mode === "trash") {
+        this.resetSelected()
+        this.addSelected(this.item)
+        this.$store.commit("showHover", "restoreFromTrash")
+        return
+      }
+
       if (this.item.isDir) {
         if (this.item.isLocked === true) {
           let password = this.getFolderPassword(this.item.id)

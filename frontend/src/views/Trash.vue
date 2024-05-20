@@ -5,6 +5,7 @@
 
     <Listing
       :isTrash="true"
+      :isShares="false"
       :isSearchActive="isSearchActive"
       @onSearchClosed="onSearchClosed"
       @onSearchQuery="onSearchQuery"
@@ -51,13 +52,13 @@ export default {
   watch: {
     $route: "fetchFolder",
   },
-  destroyed() {
+  beforeDestroy() {
     this.$store.commit("setItems", null);
     this.$store.commit("setCurrentFolder", null);
-    this.setDisableCreation(false)
 
 
   },
+
   methods: {
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisableCreation"]),
     async onSearchClosed() {

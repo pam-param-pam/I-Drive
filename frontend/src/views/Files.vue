@@ -7,6 +7,7 @@
     <h4 v-else-if="!error">{{$t('files.searchItemsFound', {amount: this.items.length})}}</h4>
     <Listing
       :isTrash="false"
+      :isShares="false"
       :isSearchActive="isSearchActive"
       @onSearchClosed="onSearchClosed"
       @onSearchQuery="onSearchQuery"
@@ -48,6 +49,8 @@ export default {
 
   },
   created() {
+    this.setDisableCreation(false)
+
     this.fetchFolder()
 
   },
@@ -60,7 +63,7 @@ export default {
 
   },
   methods: {
-    ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
+    ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisableCreation"]),
 
     async onSearchClosed() {
       this.isSearchActive = false
@@ -75,6 +78,7 @@ export default {
 
     },
     async fetchFolder() {
+      this.isSearchActive = false
 
       this.searchItemsFound = null
 

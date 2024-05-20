@@ -57,9 +57,6 @@ export default {
   created() {
     this.setDisableCreation(true)
   },
-  beforeDestroy() {
-    this.setDisableCreation(false)
 
-  },
 };
 </script>
