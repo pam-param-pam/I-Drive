@@ -1,6 +1,9 @@
 import time
 
 import asyncio
+from datetime import datetime
+from urllib.parse import urlparse, parse_qs
+
 import httpx
 from django.core.cache import caches
 
@@ -10,7 +13,7 @@ from website.utilities.errors import DiscordError, DiscordBlockError
 
 def retry(func):
     def decorator(*args, **kwargs):
-        #args[0].semaphore.acquire()
+        # args[0].semaphore.acquire()
 
         response = func(*args, **kwargs)
         print(response.headers["X-ratelimit-remaining"])
@@ -29,7 +32,7 @@ def retry(func):
             retry_after = float(response.headers["X-RateLimit-Reset-After"])
             time.sleep(retry_after)
             args[0].switch_token()
-        #args[0].semaphore.release()
+        # args[0].semaphore.release()
 
         return response
 
@@ -101,16 +104,17 @@ class Discord:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
         response = self.client.post(url, headers=self.file_upload_headers, files=files, timeout=None)
         if response.is_success:
-            # expire is 1 day
-            cache.set(response.json()["id"], response, timeout=DISCORD_MESSAGE_EXPIRY)
+            message = response.json()
+            expiry = self._calculate_expiry(message)
+            cache.set(message["id"], response, timeout=expiry)
             return response
+
         if response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)
 
     def get_file_url(self, message_id, attachment_id) -> str:
         message = self.get_message(message_id).json()
-        print(message_id)
         for attachment in message["attachments"]:
             if attachment["id"] == attachment_id:
                 return attachment["url"]
@@ -126,8 +130,9 @@ class Discord:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self.client.get(url, headers=self.headers)
         if response.is_success:
-            # expire is 1 day
-            cache.set(message_id, response, timeout=DISCORD_MESSAGE_EXPIRY)
+            message = response.json()
+            expiry = self._calculate_expiry(message)
+            cache.set(message["id"], response, timeout=expiry)
             return response
 
         if response.status_code == 429:
@@ -154,6 +159,20 @@ class Discord:
         if response.is_success or response.status_code == 429:
             return response
         raise DiscordError(response.text, response.status_code)
+
+    def _calculate_expiry(self, message):
+
+        url = message["attachments"][0]["url"]
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        ex_param = query_params.get('ex', [None])[0]
+        if ex_param is None:
+            raise ValueError("The 'ex' parameter is missing in the URL")
+
+        expiry_time_unix = int(ex_param, 16)
+        current_time_unix = int(datetime.utcnow().timestamp())
+        ttl_seconds = expiry_time_unix - current_time_unix
+        return ttl_seconds
 
 
 discord = Discord()

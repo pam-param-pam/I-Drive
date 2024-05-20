@@ -103,9 +103,9 @@ def create_file_dict(file_obj):
     except Preview.DoesNotExist:
         pass
 
-    base_url = "http://127.0.0.1:8000"
+    #base_url = "http://127.0.0.1:8000"
 
-    #base_url = "https://api.pamparampam.dev"
+    base_url = "https://api.pamparampam.dev"
     signed_file_id = sign_file_id_with_expiry(file_obj.id)
 
     if file_obj.extension in ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
@@ -190,9 +190,12 @@ def get_shared_folder(folder_obj, includeSubfolders):
     return recursive_build(folder_obj)
 
 
-def build_folder_content(folder_obj):
+def build_folder_content(folder_obj, include_folders=True):
     file_children = File.objects.filter(parent=folder_obj, inTrash=False, ready=True)
-    folder_children = Folder.objects.filter(parent=folder_obj, inTrash=False)
+
+    folder_children = []
+    if include_folders:
+        folder_children = Folder.objects.filter(parent=folder_obj, inTrash=False)
 
     file_dicts = []
     for file in file_children:

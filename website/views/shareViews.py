@@ -10,15 +10,17 @@ from website.models import File, Folder, UserSettings, ShareableLink
 from website.utilities.Permissions import SharePerms
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
 from website.utilities.decorators import handle_common_errors
-from website.utilities.other import create_file_dict, create_share_dict, get_shared_folder
+from website.utilities.other import create_file_dict, create_share_dict, get_shared_folder, create_folder_dict, \
+    build_folder_content
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & SharePerms])
+#@permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([UserRateThrottle])
 def get_shares(request):
 
-    shares = ShareableLink.objects.filter(owner=request.user)
+    #todo change owner
+    shares = ShareableLink.objects.filter(owner_id=1)
     items = []
 
     for share in shares:
@@ -33,19 +35,38 @@ def get_shares(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([AnonRateThrottle])
-def view_share(request, token):
+@handle_common_errors
+def view_share(request, token, folder_id=None):
     share = ShareableLink.objects.get(token=token)
     if share.is_expired():
         return HttpResponse(f"Share is expired :(", status=404)
 
-    try:
+    if share.content_type.name == "folder":
         obj = Folder.objects.get(id=share.object_id)
         settings = UserSettings.objects.get(user=obj.owner)
+        response_dict = build_folder_content(obj, include_folders=settings.subfolders_in_shares)
 
-        return JsonResponse(get_shared_folder(obj, settings.subfolders_in_shares), status=200)
-    except Folder.DoesNotExist:
-        file_ob = File.objects.get(id=share.object_id)
-        return JsonResponse(create_file_dict(file_ob), status=200)
+    else:
+        obj = File.objects.get(id=share.object_id)
+        settings = UserSettings.objects.get(user=obj.owner)
+
+        response_dict = create_file_dict(obj)
+
+    if folder_id:
+        if not settings.subfolders_in_shares:
+            raise ResourcePermissionError("Permission error!!!! >:(")
+        requested_folder = Folder.objects.get(id=folder_id)
+        folder = requested_folder
+        while folder.parent:
+            if folder.parent == obj:
+                folder_content = build_folder_content(requested_folder)
+                return JsonResponse(folder_content, status=200)
+            folder = folder.parent
+
+        raise ResourcePermissionError("Permission error!!!! >:(")
+
+
+    return JsonResponse(response_dict, status=200)
 
 
 @api_view(['DELETE'])

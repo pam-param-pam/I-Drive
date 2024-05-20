@@ -121,30 +121,34 @@ def create_file(request):
         if len(fragments) > 1:
             raise BadRequestError(f"Fragments > 1")
 
-        old_fragment = fragments[0]
+        fragment_size = request.data['fragment_size']
         message_id = request.data['message_id']
         attachment_id = request.data['attachment_id']
-        fragment_size = request.data['fragment_size']
 
-        old_message_id = old_fragment.message_id
-        fragments = Fragment.objects.filter(message_id=old_message_id)
-        # multi file in 1 message
-        if len(fragments) > 1:
-            attachment_ids = []
-            for fragment in fragments:
-                if fragment != old_fragment:
-                    attachment_ids.append(fragment.attachment_id)
+        # if file is not empty
+        if len(fragments) > 0:
+            old_fragment = fragments[0]
+            old_message_id = old_fragment.message_id
+            fragments = Fragment.objects.filter(message_id=old_message_id)
+            # multi file in 1 message
+            if len(fragments) > 1:
+                attachment_ids = []
+                for fragment in fragments:
+                    if fragment != old_fragment:
+                        attachment_ids.append(fragment.attachment_id)
 
-            settings = UserSettings.objects.get(user_id=request.user)
-            webhook = settings.discord_webhook
+                settings = UserSettings.objects.get(user_id=request.user)
+                webhook = settings.discord_webhook
 
-            discord.edit_attachments(webhook, old_message_id, attachment_ids)
-        else:
-            # single file in 1 message
+                discord.edit_attachments(webhook, old_message_id, attachment_ids)
+            else:
+                # single file in 1 message
 
-            discord.remove_message(old_message_id)
-        old_message_id = old_fragment.message_id
-        old_fragment.delete()
+                discord.remove_message(old_message_id)
+            old_message_id = old_fragment.message_id
+            old_fragment.delete()
+            # important invalidate caches!
+            cache.delete(old_message_id)
 
         fragment_obj = Fragment(
             sequence=1,
@@ -160,6 +164,4 @@ def create_file(request):
 
         file_obj.save()
 
-        # important invalidate caches!
-        cache.delete(old_message_id)
         return HttpResponse(200)

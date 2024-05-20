@@ -254,6 +254,7 @@ class ShareableLink(models.Model):
     expiration_time = models.DateTimeField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     password = models.TextField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     # GenericForeignKey to point to either Folder or File
     content_type = models.ForeignKey(

@@ -34,8 +34,14 @@ def preview(request, file_obj):
     try:
         preview = Preview.objects.get(file=file_obj)
         url = discord.get_file_url(preview.message_id, preview.attachment_id)
-        file_content = requests.get(url).content
 
+        res = requests.get(url)
+        if not res.ok:
+            raise DiscordError(res.text, res.status_code)
+
+
+
+        file_content = res.content
         fernet = Fernet(preview.key)
         decrypted_data = fernet.decrypt(file_content)
         response = HttpResponse(content_type="image/jpeg")

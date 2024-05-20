@@ -50,7 +50,7 @@ urlpatterns = [
                   path("api/deleteshare", delete_share, name="create share"),
                   path("api/createshare", create_share, name="delete share"),
                   path("api/share/<token>", view_share, name="get share"),
-
+                  path("api/share/<token>/<folder_id>", view_share, name="get folder from share"),
 
                   re_path(r'^api/folder/(?P<folder_id>\w+)/$', get_folder, name="get files and folders from a folder id"),
                   re_path(r'^api/folder/usage/(?P<folder_id>\w+)/$', get_usage, name="get size of all files in that folder to all user's files"),
@@ -62,8 +62,11 @@ urlpatterns = [
                   path("api/item/delete", delete, name="delete file/folder"),
                   path("api/item/moveToTrash", move_to_trash, name="move file/folder to trash"),
                   path("api/item/restore", restore_from_trash, name="move file/folder to trash"),
-
                   path("api/item/rename", rename, name="rename file/folder"),
+
+
+
+
 
 
                   #path("api/upload", upload_file, name="upload"),

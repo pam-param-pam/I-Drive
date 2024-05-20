@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from rest_framework.exceptions import Throttled
 
-from website.models import File, Folder
+from website.models import File, Folder, ShareableLink
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, \
     MissingFolderPassword
@@ -101,6 +101,9 @@ def handle_common_errors(view_func):
                                 status=404)
         except File.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="File not found."),
+                                status=404)
+        except ShareableLink.DoesNotExist:
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Share with provided token not found."),
                                 status=404)
         except ResourceNotFound as e:
             return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
