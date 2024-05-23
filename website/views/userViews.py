@@ -28,8 +28,6 @@ def change_password(request):
     utils.logout_user(request)
 
     token, created = Token.objects.get_or_create(user=user)
-    print(token)
     data = {"auth_token": str(token)}
-    print(data)
     return JsonResponse(data, status=200)
 
