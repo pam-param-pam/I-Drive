@@ -727,7 +727,6 @@ export default {
 
         }
 
-
       }
     },
     async switchView() {
