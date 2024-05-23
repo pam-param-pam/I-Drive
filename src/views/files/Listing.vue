@@ -687,7 +687,6 @@ export default {
       let items = sortItems(this.items)
       this.$store.commit("setItems", items);
 
-
     },
 
     windowsResize: throttle(function () {
