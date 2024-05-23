@@ -199,7 +199,8 @@ REST_FRAMEWORK = {
         'user': '100/min',
         'media': '1000/min',
         'folder_password': '15/min',
-        'search': '109000/s'
+        'password_change': '10/min',
+        'search': '200/m'
     }
 }
 

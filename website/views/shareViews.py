@@ -11,7 +11,7 @@ from website.utilities.Permissions import SharePerms
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import create_file_dict, create_share_dict, get_shared_folder, create_folder_dict, \
-    build_folder_content
+    build_folder_content, create_breadcrumbs, create_share_breadcrumbs
 
 
 @api_view(['GET'])
@@ -38,35 +38,45 @@ def get_shares(request):
 @handle_common_errors
 def view_share(request, token, folder_id=None):
     share = ShareableLink.objects.get(token=token)
+
     if share.is_expired():
-        return HttpResponse(f"Share is expired :(", status=404)
+        return HttpResponse(f"Share is expired", status=404)
 
     if share.content_type.name == "folder":
-        obj = Folder.objects.get(id=share.object_id)
-        settings = UserSettings.objects.get(user=obj.owner)
-        response_dict = build_folder_content(obj, include_folders=settings.subfolders_in_shares)
+        obj_in_share = Folder.objects.get(id=share.object_id)
+        settings = UserSettings.objects.get(user=obj_in_share.owner)
+        response_dict = create_folder_dict(obj_in_share)
+        breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
 
     else:
-        obj = File.objects.get(id=share.object_id)
-        settings = UserSettings.objects.get(user=obj.owner)
-
-        response_dict = create_file_dict(obj)
+        obj_in_share = File.objects.get(id=share.object_id)
+        settings = UserSettings.objects.get(user=obj_in_share.owner)
+        response_dict = create_file_dict(obj_in_share)
+        breadcrumbs = []
 
     if folder_id:
-        if not settings.subfolders_in_shares:
-            raise ResourcePermissionError("Permission error!!!! >:(")
-        requested_folder = Folder.objects.get(id=folder_id)
+
+        try:
+            requested_folder = Folder.objects.get(id=folder_id)
+        except Folder.DoesNotExist:
+            raise ResourcePermissionError()
+
+        if requested_folder != obj_in_share and not settings.subfolders_in_shares:
+            raise ResourcePermissionError()
+
+        breadcrumbs = create_share_breadcrumbs(requested_folder, obj_in_share, True)
+
         folder = requested_folder
-        while folder.parent:
-            if folder.parent == obj:
-                folder_content = build_folder_content(requested_folder)
-                return JsonResponse(folder_content, status=200)
+        while folder:
+            if folder == obj_in_share:
+                folder_content = build_folder_content(requested_folder, include_folders=settings.subfolders_in_shares)["children"]
+
+                return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs}, status=200)
             folder = folder.parent
 
-        raise ResourcePermissionError("Permission error!!!! >:(")
+        raise ResourcePermissionError()
 
-
-    return JsonResponse(response_dict, status=200)
+    return JsonResponse({"share": [response_dict], "breadcrumbs": breadcrumbs}, status=200)
 
 
 @api_view(['DELETE'])

@@ -12,6 +12,7 @@ from website.views.shareViews import get_shares, delete_share, create_share, vie
 from website.views.streamViews import stream_file, download_file, preview  # ,\
     #stream_test, stream_file_test, stream_test
 from website.views.uploadViews import create_file
+from website.views.userViews import change_password
 
 urlpatterns = [
                   path("test/<file_id>", test, name="test"),
@@ -39,7 +40,7 @@ urlpatterns = [
                   #path('auth/logout/', auth_views.LogoutView.as_view(), name='logout'),
 
                   path('auth/user/me', users_me, name="get current user"),
-
+                  path("api/user/changepassword", change_password, name="change password"),
 
                   path("api/user/updatesettings", update_settings, name="update settings"),
 
@@ -52,7 +53,7 @@ urlpatterns = [
                   path("api/share/<token>", view_share, name="get share"),
                   path("api/share/<token>/<folder_id>", view_share, name="get folder from share"),
 
-                  re_path(r'^api/folder/(?P<folder_id>\w+)/$', get_folder, name="get files and folders from a folder id"),
+                  path('api/folder/<folder_id>', get_folder, name="get files and folders from a folder id"),
                   re_path(r'^api/folder/usage/(?P<folder_id>\w+)/$', get_usage, name="get size of all files in that folder to all user's files"),
                   path("api/folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
                   path("api/folder/create", create_folder, name="create folder"),

@@ -71,7 +71,33 @@ def create_temp_file_dir(upload_folder, file_id):
         os.makedirs(out_folder_path)
     return out_folder_path
 
+def create_breadcrumbs(folder_obj):
+    folder_path = []
 
+    while folder_obj.parent:
+        data = {"name": folder_obj.name, "id": folder_obj.id}
+        folder_path.append(data)
+        folder_obj = Folder.objects.get(id=folder_obj.parent.id)
+    folder_path.reverse()
+    return folder_path
+
+
+def create_share_breadcrumbs(folder_obj, obj_in_share, isFolderId=False):
+    folder_path = []
+
+    while folder_obj.parent:
+        data = {"name": folder_obj.name, "id": folder_obj.id}
+        if folder_obj != obj_in_share:
+            folder_path.append(data)
+        if folder_obj == obj_in_share:
+            if isFolderId:
+                folder_path.append(data)
+            break
+
+        folder_obj = Folder.objects.get(id=folder_obj.parent.id)
+
+    folder_path.reverse()
+    return folder_path
 def create_file_dict(file_obj):
     file_dict = {
         'isDir': False,
@@ -90,7 +116,7 @@ def create_file_dict(file_obj):
         #"maintainers": [],
     }
     if file_obj.inTrashSince:
-        file_dict["in_trash_since"] = file_obj.inTrashSince
+        file_dict["inTrashSince"] = file_obj.inTrashSince
 
     try:
         preview = Preview.objects.get(file=file_obj)

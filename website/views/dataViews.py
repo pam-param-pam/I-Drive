@@ -1,22 +1,20 @@
-import time
 from urllib.parse import urlparse
 
-from django.core.cache import caches
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag, last_modified
+from ipware import get_client_ip
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, UserPerms, UserSettings
-from website.utilities.Permissions import ReadPerms, ModifyPerms, SettingsModifyPerms
+from website.utilities.Permissions import ReadPerms, SettingsModifyPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword, BadRequestError
-from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict
+from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs
 from website.utilities.throttle import SearchRateThrottle
-from ipware import get_client_ip
 
 
 def etag_func(request, folder_obj):
@@ -42,7 +40,10 @@ def get_folder(request, folder_obj):
             print("=======using uncached version=======")
             folder_content = build_folder_content(folder_obj)
             cache.set(folder_obj.id, folder_content)
-        return JsonResponse(folder_content)
+
+        breadcrumbs = create_breadcrumbs(folder_obj)
+
+        return JsonResponse({"folder": folder_content, "breadcrumbs": breadcrumbs})
 
     if password:
         raise IncorrectFolderPassword()
@@ -53,13 +54,12 @@ def last_modified_func(request, file_obj):
     last_modified_str = file_obj.last_modified_at  # .strftime('%a, %d %b %Y %H:%M:%S GMT')
     return last_modified_str
 
-
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
-@last_modified(last_modified_func)
+#@last_modified(last_modified_func)
 def get_file(request, file_obj):
     file_content = create_file_dict(file_obj)
 
@@ -96,14 +96,8 @@ def get_usage(request, folder_obj):
 @handle_common_errors
 @check_folder_and_permissions
 def get_breadcrumbs(request, folder_obj):
-    folder_path = []
-
-    while folder_obj.parent:
-        folder_path.append(create_folder_dict(folder_obj))
-        folder_obj = Folder.objects.get(id=folder_obj.parent.id)
-
-    folder_path.reverse()
-    return JsonResponse(folder_path, safe=False)
+    breadcrumbs = create_breadcrumbs(folder_obj)
+    return JsonResponse(breadcrumbs, safe=False)
 
 
 @api_view(['GET'])

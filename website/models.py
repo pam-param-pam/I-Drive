@@ -20,9 +20,10 @@ class Folder(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
     inTrash = models.BooleanField(default=False)
-    password = models.CharField(max_length=255, null=True, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     inTrashSince = models.DateTimeField(null=True)
+    password = models.CharField(max_length=255, null=True, blank=True)
+    autoLock = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -120,6 +121,7 @@ class File(models.Model):
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     inTrashSince = models.DateTimeField(null=True)
+    autoLock = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -275,9 +277,7 @@ class ShareableLink(models.Model):
         return timezone.now() >= self.expiration_time
 
 
-# class Trash(models.Model):
-#    folder_id = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, blank=True)
-#    old_parent_id = models.ForeignKey(Folder, on_delete=models.SET(get_users_root()))
+
 """
 class Thumbnail(models.Model):
     size = models.PositiveBigIntegerField()

@@ -31,6 +31,7 @@ from website.utilities.throttle import MediaRateThrottle
 @handle_common_errors
 def preview(request, file_obj):
     print(file_obj.name)
+
     try:
         preview = Preview.objects.get(file=file_obj)
         url = discord.get_file_url(preview.message_id, preview.attachment_id)
@@ -53,7 +54,8 @@ def preview(request, file_obj):
         pass
 
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-
+    if len(fragments) == 0:
+        return HttpResponse(status=204)
     # RAW IMAGE FILE
     if file_obj.extension not in (
             '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW',
@@ -75,17 +77,12 @@ def preview(request, file_obj):
         raise ResourceNotPreviewable("File too big: size > 100mb")
     try:
         with rawpy.imread(file_like_object) as raw:
-            # raises rawpy.LibRawNoThumbnailError if thumbnail missing
-            # raises rawpy.LibRawUnsupportedThumbnailError if unsupported format
             thumb = raw.extract_thumb()
 
         if thumb.format == rawpy.ThumbFormat.JPEG:
-            print("111111")
-            # thumb.data is already in JPEG format, save as-is
             data = io.BytesIO(thumb.data)
 
         elif thumb.format == rawpy.ThumbFormat.BITMAP:
-            print("222222")
 
             # thumb.data is an RGB numpy array, convert with imageio
             data = io.BytesIO()
