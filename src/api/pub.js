@@ -24,11 +24,11 @@ export async function fetch(url, password = "") {
         item.url += "/"
       }
 
-      return item;
-    });
+      return item
+    })
   }
 
-  return data;
+  return data
 }
 
 export function download(format, hash, token, ...files) {
@@ -63,7 +63,7 @@ export function getDownloadURL(share, inline = false) {
   const params = {
     ...(inline && { inline: "true" }),
     ...(share.token && { token: share.token }),
-  };
+  }
 
-  return createURL("api/public/dl/" + share.hash + share.path, params, false);
+  return createURL("api/public/dl/" + share.hash + share.path, params, false)
 }

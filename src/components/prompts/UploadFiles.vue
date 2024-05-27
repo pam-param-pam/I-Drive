@@ -44,7 +44,6 @@
 
 <script>
 import { mapGetters, mapMutations } from "vuex";
-import { abortAllUploads } from "@/api/tus";
 import buttons from "@/utils/buttons";
 import UploadFile from "@/components/UploadFile.vue";
 

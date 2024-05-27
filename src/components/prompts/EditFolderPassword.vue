@@ -5,6 +5,18 @@
     </div>
 
     <div class="card-content">
+
+      <p v-if="isLocked">
+        {{ $t("prompts.enterOldFolderPassword") }}
+      </p>
+      <input
+        v-if="isLocked"
+        class="input input--block"
+        v-focus
+        type="text"
+        @keyup.enter="submit()"
+        v-model.trim="oldPassword"
+        />
       <p>
         {{ $t("prompts.enterNewFolderPassword") }}
       </p>
@@ -15,19 +27,6 @@
         @keyup.enter="submit()"
         v-model.trim="password"
       />
-      <div v-if="isLocked">
-        <p>
-          {{ $t("prompts.enterOldFolderPassword") }}
-        </p>
-        <input
-          class="input input--block"
-          v-focus
-          type="text"
-          @keyup.enter="submit()"
-          v-model.trim="oldPassword"
-        />
-      </div>
-
     </div>
 
     <div class="card-action">

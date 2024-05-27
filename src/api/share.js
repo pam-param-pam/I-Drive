@@ -1,5 +1,4 @@
 import { fetchURL, fetchJSON} from "./utils"
-import {baseURL} from "@/utils/constants.js";
 
 export async function getAllShares() {
   return fetchJSON("/api/shares")
@@ -18,14 +17,14 @@ export async function removeShare(data) {
     method: "DELETE",
     body: JSON.stringify(data)
 
-  });
+  })
 }
 
 export async function createShare(data) {
   return fetchJSON("/api/createshare", {
     method: "POST",
     body: JSON.stringify(data)
-  });
+  })
 }
 
 

@@ -42,6 +42,7 @@
     "video": "Video (・ω・)"
   },
   "buttons": {
+    "locate": "Locate",
     "restoreFromTrash": "Restore from Trash",
     "moveToTrash": "Move to Trash",
     "ok": "OK (・ω・)",
@@ -154,6 +155,8 @@
     }
   },
   "prompts": {
+    "optionalPassword": "Optional password",
+    "shareDuration": "Share duration",
     "deleteMessageShare": "Are you sure you wish to delete this share?",
     "inTrashSince": "In Trash since",
     "moveToTrashMessageMultiple": "Are you sure you wish to move to trash {count} file(s)?",
@@ -206,9 +209,10 @@
     "setFolderPassword": "Lock folder with password"
   },
   "toasts": {
+    "ItemLocated": "Item located",
     "itemMoved": "Mowed {amount} itwems (ᗒᗨᗕ)",
     "itemMovedToTrash": "Mowed {amount} itwems to twash hehe" ,
-    "itemDeleted": "*blushes* Deleted {amount}",
+    "deletingItems": "*blushes* Deleting {amount} items",
     "folderCreated": "*giggwes* Cweated {name}",
     "itemRenamed": "Nyame changed",
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
@@ -217,7 +221,9 @@
     "passwordUpdated": "Password updated!",
     "itemsRestoredFromTrash": "Restored {amount} items from Trash!",
     "itemsMovedToTrash": "Moved {amount} items to Trash!",
-    "shareDeleted": "Share deleted!"
+    "shareDeleted": "Share deleted!",
+    "downloadingSingle": "Downloading {name}"
+
 
   }
 }

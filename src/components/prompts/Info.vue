@@ -260,11 +260,11 @@ export default {
     },
     inTrashSince() {
       if (this.selectedCount === 0) {
-        return this.currentFolder.inTrashSince
+        return this.currentFolder.in_trash_since
 
       }
       else if (this.selectedCount === 1) {
-        return this.selected[0].inTrashSince
+        return this.selected[0].in_trash_since
       }
       return null
 

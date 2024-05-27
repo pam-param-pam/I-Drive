@@ -27,12 +27,12 @@
       </button>
       <button
         class="button button--flat"
-        :aria-label="$t('buttons.createShare')"
+        :aria-label="$t('buttons.create')"
         id="create-button"
-        :title="$t('buttons.createShare')"
+        :title="$t('buttons.create')"
         @click="submit"
       >
-        {{ $t("buttons.createShare") }}
+        {{ $t("buttons.create") }}
       </button>
     </div>
   </div>

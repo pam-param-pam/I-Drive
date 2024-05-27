@@ -1,25 +1,25 @@
-import "whatwg-fetch";
-import cssVars from "css-vars-ponyfill";
-import { sync } from "vuex-router-sync";
-import store from "@/store";
-import router from "@/router";
-import i18n from "@/i18n";
-import Vue from "@/utils/vue";
-import {loginPage } from "@/utils/constants";
-import { login, validateLogin } from "@/utils/auth";
-import App from "@/App.vue";
-import onEvent from "@/utils/WsEventhandler.js";
+import "whatwg-fetch"
+import cssVars from "css-vars-ponyfill"
+import { sync } from "vuex-router-sync"
+import store from "@/store"
+import router from "@/router"
+import i18n from "@/i18n"
+import Vue from "@/utils/vue"
+import {loginPage } from "@/utils/constants"
+import { login, validateLogin } from "@/utils/auth"
+import App from "@/App.vue"
+import onEvent from "@/utils/WsEventhandler.js"
 
-cssVars();
+cssVars()
 
-sync(store, router);
+sync(store, router)
 
 async function start() {
   try {
     if (loginPage) {
-      await validateLogin();
+      await validateLogin()
     } else {
-      await login("", "",);
+      await login("", "",)
     }
   } catch (e) {
     //ignore cuz the login validation is done under the hood,
@@ -42,7 +42,7 @@ async function start() {
 
 
     }
-  });
+  })
 }
 
-start();
+start()

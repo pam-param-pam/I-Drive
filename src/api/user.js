@@ -1,4 +1,4 @@
-import {fetchJSON, fetchURL} from "./utils";
+import {fetchJSON, fetchURL} from "./utils"
 
 export async function getUser(token) {
   if (!token) return
@@ -16,7 +16,7 @@ export async function changePassword(data) {
   return await fetchJSON(`/api/user/changepassword`, {
     method: "POST",
     body: JSON.stringify(data)
-  });
+  })
 
 }
 
@@ -25,12 +25,12 @@ export async function updateSettings(data) {
     method: "POST",
 
     body: JSON.stringify(data)
-  });
+  })
 
 }
 
 export async function getTrash() {
-  return await fetchJSON(`/api/trash`);
+  return await fetchJSON(`/api/trash`)
 
 }
 

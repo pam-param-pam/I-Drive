@@ -18,7 +18,7 @@
     <div>
       <img
         v-if="item.preview_url && type === 'image'"
-        v-lazy="item.preview_url"
+        :src="item.preview_url"
       />
       <i v-else class="material-icons"></i>
     </div>

@@ -1,9 +1,9 @@
-import Vue from "vue";
-import Vuex from "vuex";
-import mutations from "./mutations";
-import getters from "./getters";
-import upload from "./modules/upload";
-Vue.use(Vuex);
+import Vue from "vue"
+import Vuex from "vuex"
+import mutations from "./mutations"
+import getters from "./getters"
+import upload from "./modules/upload"
+Vue.use(Vuex)
 
 const state = {
   user: null,
@@ -26,7 +26,7 @@ const state = {
   disableCreation: false,
   folderPasswords: {}
 
-};
+}
 
 export default new Vuex.Store({
   strict: true,
@@ -34,4 +34,4 @@ export default new Vuex.Store({
   getters,
   mutations,
   modules: { upload },
-});
+})

@@ -134,6 +134,9 @@ import HeaderBar from "@/components/header/HeaderBar.vue";
 import {getShare} from "@/api/share.js";
 import Action from "@/components/header/Action.vue";
 import Item from "@/components/files/ListingItem.vue";
+import Vue from "vue";
+import css from "@/utils/css.js";
+import throttle from "lodash.throttle";
 
 export default {
   name: "files",
@@ -155,6 +158,10 @@ export default {
       items: [],
       folderList: [],
       viewMode: "mosaic",
+      columnWidth: 280,
+      width: window.innerWidth,
+      itemWeight: 0,
+
     };
   },
   computed: {
@@ -208,8 +215,22 @@ export default {
     this.fetchFolder()
 
   },
+
   watch: {
     $route: "fetchFolder",
+
+
+  },
+  mounted() {
+    // Check the columns size for the first time.
+    this.columnsResize();
+
+    window.addEventListener("resize", this.windowsResize);
+
+  },
+  beforeDestroy() {
+    window.removeEventListener("resize", this.windowsResize);
+
   },
 
   methods: {
@@ -221,11 +242,11 @@ export default {
 
       const modes = ["list", "mosaic", "mosaic gallery"];
 
-
       let currentIndex = modes.indexOf(this.viewMode);
       let nextIndex = (currentIndex + 1) % modes.length;
       this.viewMode = modes[nextIndex];
-      console.log(this.viewMode)
+
+
     },
     download() {
 
@@ -254,7 +275,6 @@ export default {
     },
     async fetchFolder() {
 
-
       this.setLoading(true);
       this.setError(null)
 
@@ -279,6 +299,31 @@ export default {
       }
 
     },
+    windowsResize: throttle(function () {
+      this.columnsResize();
+      this.width = window.innerWidth;
+
+      // Listing element is not displayed
+      if (this.$refs.listing == null) return;
+
+      // How much every listing item affects the window height
+      this.setItemWeight();
+
+      // Fill but not fit the window
+      this.fillWindow();
+    }, 100),
+    columnsResize() {
+      // Update the columns size based on the window width.
+      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
+      if (!items) return;
+
+      let columns = Math.floor(
+        document.querySelector("main").offsetWidth / this.columnWidth
+      );
+      if (columns === 0) columns = 1;
+      items.style.width = `calc(${100 / columns}% - 1em)`;
+    },
+
   },
 };
 </script>

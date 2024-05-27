@@ -1,24 +1,23 @@
-import vue from "@/utils/vue.js";
-import store from "@/store";
-import router from "@/router/index.js";
+import vue from "@/utils/vue.js"
+import store from "@/store"
 
 export default function onEvent(message) {
   let currentFolder = store.state.currentFolder
-  let jsonObject = JSON.parse(message.data);
+  let jsonObject = JSON.parse(message.data)
   if (jsonObject.op_code === 1) { // items created event
     for (let item of jsonObject.data) {
       if (item.parent_id !== currentFolder.id) return
-      store.commit("updateItems", item);
+      store.commit("updateItems", item)
 
     }
 
   }
   if (jsonObject.op_code === 2) { // items deleted event
-    let updatedItems = store.state.items.filter(item => !jsonObject.data.includes(item.id));
-    store.commit("setItems", updatedItems);
+    let updatedItems = store.state.items.filter(item => !jsonObject.data.includes(item.id))
+    store.commit("setItems", updatedItems)
     //if the deleted folder was the current folder, then let's redirect to root
     if (jsonObject.data.includes(currentFolder.id)) {
-      this.$router.push({name: `Files`});
+      this.$router.push({name: `Files`})
 
     }
 
@@ -26,7 +25,7 @@ export default function onEvent(message) {
   if (jsonObject.op_code === 3) { // items name change event
     for (let item of jsonObject.data) {
       if (item.parent_id !== currentFolder.id) return
-      store.commit("renameItem", {id: item.id, newName: item.new_name});
+      store.commit("renameItem", {id: item.id, newName: item.new_name})
     }
   }
 
@@ -34,12 +33,12 @@ export default function onEvent(message) {
     for (let item of jsonObject.data) {
       if (item.old_parent_id === currentFolder.id) {
         //removeShare
-        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.item.id);
-        store.commit("setItems", updatedItems);
+        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.item.id)
+        store.commit("setItems", updatedItems)
       }
       if (item.new_parent_id === currentFolder.id) {
         //add
-        store.commit("updateItems", item.item);
+        store.commit("updateItems", item.item)
 
       }
     }
@@ -49,13 +48,13 @@ export default function onEvent(message) {
       if (item.parent_id !== currentFolder.id) return
       store.commit("updatePreviewInfo", {id: item.id, iso: item.iso,
         model_name: item.model_name, exposure_time: item.exposure_time,
-        aperture: item.aperture, focal_length: item.focal_length});
+        aperture: item.aperture, focal_length: item.focal_length})
 
     }
   }
   if (jsonObject.op_code === 7) { // force folder navigation from server
     let id = jsonObject.data.folder_id
-    this.$router.push({name: `Files`, params: {"folderId": id}});
+    this.$router.push({name: `Files`, params: {"folderId": id}})
 
   }
 
@@ -73,9 +72,9 @@ export default function onEvent(message) {
       console.log(JSON.stringify(jsonObject.data))
       for (let item of jsonObject.data) {
 
-        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.id);
+        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.id)
 
-        store.commit("setItems", updatedItems);
+        store.commit("setItems", updatedItems)
 
         //if the deleted folder was the current folder, then let's redirect to root
         if (jsonObject.data.includes(currentFolder.id)) {
@@ -87,7 +86,7 @@ export default function onEvent(message) {
     else {
       for (let item of jsonObject.data) {
         //add
-        store.commit("updateItems", item);
+        store.commit("updateItems", item)
       }
     }
 
@@ -99,7 +98,7 @@ export default function onEvent(message) {
       for (let item of jsonObject.data) {
         if (item.parent_id === currentFolder.id) {
           //add
-          store.commit("updateItems", item);
+          store.commit("updateItems", item)
         }
 
       }
@@ -107,8 +106,8 @@ export default function onEvent(message) {
     //current view is 'Trash'
     else {
       for (let item of jsonObject.data) {
-        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.id);
-        store.commit("setItems", updatedItems);
+        let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.id)
+        store.commit("setItems", updatedItems)
       }
     }
 
@@ -132,7 +131,7 @@ export default function onEvent(message) {
       content: jsonObject.message,
       options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
 
-    });
+    })
   }
 
 }

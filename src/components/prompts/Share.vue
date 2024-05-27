@@ -78,7 +78,7 @@
 
     <template v-else>
       <div class="card-content">
-        <p>{{ $t("settings.shareDuration") }}</p>
+        <p>{{ $t("prompts.shareDuration") }}</p>
         <div class="input-group input">
           <input
             v-focus

@@ -42,6 +42,7 @@
     "video": "Video"
   },
   "buttons": {
+    "locate": "Locate",
     "restoreFromTrash": "Restore from Trash",
     "moveToTrash": "Move to Trash",
     "ok": "OK",
@@ -155,6 +156,8 @@
     }
   },
   "prompts": {
+    "optionalPassword": "Optional password",
+    "shareDuration": "Share duration",
     "deleteMessageShare": "Are you sure you wish to delete this share?",
     "inTrashSince": "In Trash since",
     "moveToTrashMessageMultiple": "Are you sure you wish to move to trash {count} file(s)?",
@@ -210,9 +213,10 @@
 
   },
   "toasts": {
+    "ItemLocated": "Item located",
     "itemMoved": "Moved {amount} items",
     "itemMovedToTrash": "Moved {amount} items to trash",
-    "itemDeleted": "Deleted {amount}",
+    "deletingItems": "Deleting {amount} items",
     "folderCreated": "Created {name}",
     "itemRenamed": "Name changed",
     "selectFilesFirst": "Select file(s) first!",
@@ -221,7 +225,8 @@
     "passwordUpdated": "Password updated!",
     "itemsRestoredFromTrash": "Restored {amount} items from Trash!",
     "itemsMovedToTrash": "Moved {amount} items to Trash!",
-    "shareDeleted": "Share deleted!"
+    "shareDeleted": "Share deleted!",
+    "downloadingSingle": "Downloading {name}"
 
   }
 }

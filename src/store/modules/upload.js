@@ -1,10 +1,8 @@
-import Vue from "vue";
-import { files as api } from "@/api";
-import throttle from "lodash.throttle";
-import buttons from "@/utils/buttons";
-import {discord_instance} from "@/api/networker.js";
+import Vue from "vue"
+import buttons from "@/utils/buttons"
+import {discord_instance} from "@/api/networker.js"
 
-let MAX_CONCURRENT_REQUESTS = 4;
+let MAX_CONCURRENT_REQUESTS = 4
 
 const state = {
   id: 0,
@@ -15,70 +13,70 @@ const state = {
   filesUploading: [],
   speedMbyte: 0,
   eta: 0,
-};
+}
 
 const mutations = {
   setProgress(state, { id, loaded }) {
-    Vue.set(state.progress, id, loaded);
+    Vue.set(state.progress, id, loaded)
   },
   reset: (state) => {
-    state.id = 0;
-    state.sizes = [];
-    state.progress = [];
+    state.id = 0
+    state.sizes = []
+    state.progress = []
   },
   addJob: (state, item) => {
-    state.queue.push(item);
-    //state.sizes[state.id] = item.file.size;
-    //state.id++;
+    state.queue.push(item)
+    //state.sizes[state.id] = item.file.size
+    //state.id++
   },
   moveJob(state) {
-    state.queue.shift();
+    state.queue.shift()
   },
 
-};
+}
 
 const beforeUnload = (event) => {
-  event.preventDefault();
-  event.returnValue = "";
-};
+  event.preventDefault()
+  event.returnValue = ""
+}
 
 const actions = {
   upload: (context, filesList) => {
 
-    let isQueueEmpty = context.state.queue.length === 0;
-    let isUploadsEmpty = Object.keys(context.state.uploads).length === 0;
+    let isQueueEmpty = context.state.queue.length === 0
+    let isUploadsEmpty = Object.keys(context.state.uploads).length === 0
 
     //if (isQueueEmpty && isUploadsEmpty) {
-    //  window.addEventListener("beforeunload", beforeUnload);
+    //  window.addEventListener("beforeunload", beforeUnload)
     //}
 
     for (let file of filesList) {
-      context.commit("addJob", file);
+      context.commit("addJob", file)
     }
 
   },
   finishUpload: (context, item) => {
-    context.commit("setProgress", {id: item.id, loaded: item.file.size});
-    context.dispatch("processUploads");
+    context.commit("setProgress", {id: item.id, loaded: item.file.size})
+    context.dispatch("processUploads")
   },
   processUploads: async (context) => {
-    let uploadsCount = Object.keys(context.state.uploads).length;
+    let uploadsCount = Object.keys(context.state.uploads).length
 
-    let isBellowLimit = context.state.requestsUploading < MAX_CONCURRENT_REQUESTS;
-    let isQueueEmpty = context.state.queue.length === 0;
-    let isUploadsEmpty = uploadsCount === 0;
+    let isBellowLimit = context.state.requestsUploading < MAX_CONCURRENT_REQUESTS
+    let isQueueEmpty = context.state.queue.length === 0
+    let isUploadsEmpty = uploadsCount === 0
 
-    let isFinished = isQueueEmpty && isUploadsEmpty;
-    let canProcess = isBellowLimit && !isQueueEmpty;
+    let isFinished = isQueueEmpty && isUploadsEmpty
+    let canProcess = isBellowLimit && !isQueueEmpty
 
     if (isFinished) {
-      window.removeEventListener("beforeunload", beforeUnload);
-      buttons.success("upload");
+      window.removeEventListener("beforeunload", beforeUnload)
+      buttons.success("upload")
     }
 
     if (canProcess) {
-      const item = context.state.queue[0];
-      context.commit("moveJob");
+      const item = context.state.queue[0]
+      context.commit("moveJob")
 
       let url = context.rootState.settings.webhook
       discord_instance.post(url, {
@@ -86,7 +84,7 @@ const actions = {
       }, {
         onUploadProgress: function (progressEvent) {
           // Handle upload progress
-          console.log(`Uploaded ${progressEvent.loaded} bytes out of ${progressEvent.total}`);
+          console.log(`Uploaded ${progressEvent.loaded} bytes out of ${progressEvent.total}`)
         }
       })
         .then(response => {
@@ -94,15 +92,15 @@ const actions = {
         })
         .catch(error => {
           // Handle error
-        });
+        })
 
 
 
     }
 
-    context.dispatch("finishUpload", item);
+    context.dispatch("finishUpload", item)
 
   },
-};
+}
 
-export default { state, mutations, actions, namespaced: true };
+export default { state, mutations, actions, namespaced: true }

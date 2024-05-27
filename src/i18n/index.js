@@ -10,7 +10,7 @@ import uwu from "./uwu.json"
 Vue.use(VueI18n)
 
 export function detectLocale() {
-  let locale = (navigator.language || navigator.browserLangugae).toLowerCase();
+  let locale = (navigator.language || navigator.browserLangugae).toLowerCase()
   switch (true) {
     case /^en.*/i.test(locale):
       locale = "en"
@@ -25,7 +25,7 @@ export function detectLocale() {
       locale = "en"
   }
 
-  return locale;
+  return locale
 }
 
 const removeEmpty = (obj) =>
@@ -37,9 +37,9 @@ const removeEmpty = (obj) =>
           ? Object.assign(newObj, { [k]: removeEmpty(obj[k]) }) // Recurse.
           : Object.assign(newObj, { [k]: obj[k] }), // Copy value.
       {}
-    );
+    )
 
-export const rtlLanguages = [];
+export const rtlLanguages = []
 
 const i18n = new VueI18n({
   locale: detectLocale(),
@@ -52,6 +52,6 @@ const i18n = new VueI18n({
 
 
   },
-});
+})
 
-export default i18n;
+export default i18n

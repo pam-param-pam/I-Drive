@@ -97,6 +97,7 @@ export default {
         this.$store.commit("setItems", this.items);
         this.$store.commit("setCurrentFolder", res.folder);
 
+
         if (res.parent_id) { //only set title if its not root folder
           document.title = `${res.name} - ` + name;
         }

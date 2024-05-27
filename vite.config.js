@@ -1,10 +1,10 @@
-import { fileURLToPath, URL } from "node:url";
-import path from "node:path";
-import { defineConfig } from "vite";
-import legacy from "@vitejs/plugin-legacy";
-import vue2 from "@vitejs/plugin-vue2";
-import { compression } from "vite-plugin-compression2";
-import pluginRewriteAll from "vite-plugin-rewrite-all";
+import { fileURLToPath, URL } from "node:url"
+import path from "node:path"
+import { defineConfig } from "vite"
+import legacy from "@vitejs/plugin-legacy"
+import vue2 from "@vitejs/plugin-vue2"
+import { compression } from "vite-plugin-compression2"
+import pluginRewriteAll from "vite-plugin-rewrite-all"
 
 const plugins = [
   vue2(),
@@ -14,14 +14,14 @@ const plugins = [
   }),
   compression({ include: /\.js$/i, deleteOriginalAssets: true }),
   pluginRewriteAll(), // fixes 404 error with paths containing dot in dev server
-];
+]
 
 const resolve = {
   alias: {
     vue: "vue/dist/vue.esm.js",
     "@/": `${path.resolve(__dirname, "src")}/`,
   },
-};
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => {
       },
 
        */
-    };
+    }
   } else {
     // command === 'build'
     return {
@@ -60,14 +60,14 @@ export default defineConfig(({ command }) => {
       experimental: {
         renderBuiltUrl(filename, { hostType }) {
           if (hostType === "js") {
-            return { runtime: `window.__prependStaticUrl("${filename}")` };
+            return { runtime: `window.__prependStaticUrl("${filename}")` }
           } else if (hostType === "html") {
-            return `[{[ .StaticURL ]}]/${filename}`;
+            return `[{[ .StaticURL ]}]/${filename}`
           } else {
-            return { relative: true };
+            return { relative: true }
           }
         },
       },
-    };
+    }
   }
-});
+})

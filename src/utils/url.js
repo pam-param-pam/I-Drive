@@ -1,10 +1,10 @@
 export function removeLastDir(url) {
-  var arr = url.split("/");
+  var arr = url.split("/")
   if (arr.pop() === "") {
-    arr.pop();
+    arr.pop()
   }
 
-  return arr.join("/");
+  return arr.join("/")
 }
 
 // this code borrow from mozilla
@@ -19,18 +19,18 @@ export function encodeRFC5987ValueChars(str) {
       // The following are not required for percent-encoding per RFC5987,
       // so we can allow for a little better readability over the wire: |`^
       .replace(/%(?:7C|60|5E)/g, unescape)
-  );
+  )
 }
 
 export function encodePath(str) {
   return str
     .split("/")
     .map((v) => encodeURIComponent(v))
-    .join("/");
+    .join("/")
 }
 
 export default {
   encodeRFC5987ValueChars,
   removeLastDir,
   encodePath,
-};
+}

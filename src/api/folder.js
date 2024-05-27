@@ -1,5 +1,5 @@
 import {fetchJSON, fetchURL} from "./utils"
-import store from "@/store/index.js";
+import store from "@/store/index.js"
 
 
 export async function breadcrumbs(folder_id) {
@@ -30,7 +30,7 @@ export async function isPasswordCorrect(folder_id, password) {
           "X-Folder-Password": password
         }
     })
-    return response.status === 200;
+    return response.status === 200
 }
 
 export async function lockWithPassword(folder_id, password, oldPassword) {
@@ -58,7 +58,7 @@ export async function create(data) {
 }
 export async function getUsage(folderId) {
 
-    return await fetchJSON(`/api/folder/usage/${folderId}/`, {});
+    return await fetchJSON(`/api/folder/usage/${folderId}/`, {})
 
 }
 

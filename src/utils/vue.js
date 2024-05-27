@@ -1,21 +1,21 @@
-import Vue from "vue";
-import VueLazyload from "vue-lazyload";
-import AsyncComputed from "vue-async-computed";
-import Toast from "vue-toastification";
-import "vue-toastification/dist/index.css";
+import Vue from "vue"
+import VueLazyload from "vue-lazyload"
+import AsyncComputed from "vue-async-computed"
+import Toast from "vue-toastification"
+import "vue-toastification/dist/index.css"
 import VueNativeSock from 'vue-native-websocket'
 import Vue2TouchEvents from 'vue2-touch-events'
-import {baseWS} from "@/utils/constants.js";
-import Dropdown from 'vue-simple-search-dropdown';
+import {baseWS} from "@/utils/constants.js"
+import Dropdown from 'vue-simple-search-dropdown'
 
 Vue.use(Vue2TouchEvents)
-Vue.use(VueLazyload);
-Vue.use(AsyncComputed);
-const token = localStorage.getItem("token");
+Vue.use(VueLazyload)
+Vue.use(AsyncComputed)
+const token = localStorage.getItem("token")
 // todo do this after login cuz token is null
 // todo and so is the the websocket connection one the first login
 Vue.use(VueNativeSock, baseWS + "/user", {reconnectionDelay: 5000, reconnection: true, protocol: token})
-Vue.use(Dropdown);
+Vue.use(Dropdown)
 
 const options = {
   transition: "Vue-Toastification__bounce",
@@ -26,35 +26,35 @@ const options = {
   /*
   filterToasts: toasts => {
     // Keep track of existing types
-    const types = {};
-    const texts = {};
+    const types = {}
+    const texts = {}
     return toasts.reduce((aggToasts, toast) => {
       // Check if type was not seen before
       if (!types[toast.type] && !texts[toast.text]) {
-        aggToasts.push(toast);
-        texts[toast.text] = true;
-        types[toast.type] = true;
+        aggToasts.push(toast)
+        texts[toast.text] = true
+        types[toast.type] = true
 
       }
-      return aggToasts;
-    }, []);
+      return aggToasts
+    }, [])
   }
   
    */
-};
+}
 
-Vue.use(Toast, options);
+Vue.use(Toast, options)
 
-Vue.config.productionTip = true;
+Vue.config.productionTip = true
 
 
 
 Vue.directive("focus", {
   inserted: function (el) {
-    el.focus();
+    el.focus()
   },
-});
+})
 
 
 
-export default Vue;
+export default Vue

@@ -69,11 +69,13 @@ export default {
     query() {
       if (this.query === '') {
         this.$store.commit("setDisableCreation", false);
+        this.$store.commit("resetSelected")
         this.$emit('exit');
 
       }
       else {
         this.$store.commit("setDisableCreation", true);
+        this.$store.commit("resetSelected")
         this.search()
 
       }

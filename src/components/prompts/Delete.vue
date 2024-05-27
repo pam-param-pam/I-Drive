@@ -73,8 +73,7 @@ export default {
 
         let res = await remove({"ids": ids});
 
-        let message = this.$t('toasts.itemDeleted', {amount: ids.length})
-        console.log(message)
+        let message = this.$t('toasts.deletingItems', {amount: ids.length})
         this.$toast.info(message, {
           id: res.task_id,
         });

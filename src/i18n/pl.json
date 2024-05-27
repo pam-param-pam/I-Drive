@@ -41,8 +41,8 @@
     "video": "Wideo"
   },
   "buttons": {
-
-    "restoreFromTrash": "Przenieś z kosza",
+    "locate": "Znajdź",
+    "restoreFromTrash": "Przywróć z kosza",
     "moveToTrash": "Przenieś do kosza",
     "cancel": "Anuluj",
     "close": "Zamknij",
@@ -151,6 +151,8 @@
     }
   },
   "prompts": {
+    "optionalPassword": "Opcjonalne hasło",
+    "shareDuration": "Długość share",
     "deleteMessageShare": "Czy napewno chcesz usunąć ten share?",
     "inTrashSince": "W koszu od",
     "moveToTrashMessageMultiple":  "Czy jesteś pewien, że chcesz przeniesć do kosza {count} plik(ów)?",
@@ -198,16 +200,17 @@
     "focalLength": "Ogniskowa",
     "enterFolderPassword": "Wprowadź hasło by odblokować folder",
     "unlockFolder": "Odblokuj Folder",
-    "enterOldFolderPassword": "Wprowadź nowe hasło",
-    "enterNewFolderPassword": "Wprowadż stare hasło",
+    "enterOldFolderPassword": "Wprowadź stare hasło",
+    "enterNewFolderPassword": "Wprowadż nowe hasło",
     "setFolderPassword": "Zablokuj Folder"
 
 
   },
   "toasts": {
+    "itemLocated": "Zaleziono miejsce przechowywania pliku",
     "itemMoved": "Przenesiono {amount} itemy",
     "itemMovedToTrash": "Przenesiono {amount} itemy do kosza",
-    "itemDeleted": "Usunięto {amount}",
+    "deletingItems": "Usuwanie {amount} itemów",
     "folderCreated": "Stworzono {name}",
     "itemRenamed": "Nazwa zmieniona",
     "selectFilesFirst": "Zaznacz plik(i) najpierw!",
@@ -216,7 +219,9 @@
     "passwordUpdated": "Hasło zmienione",
     "itemsRestoredFromTrash": "Przywrócono z kosza {amount} itemy",
     "itemsMovedToTrash": "Przeniesiono do kosza {amount} itemy",
-    "shareDeleted": "Usunięto share"
+    "shareDeleted": "Usunięto share",
+    "downloadingSingle": "Pobieranie {name}"
+
 
   }
 }

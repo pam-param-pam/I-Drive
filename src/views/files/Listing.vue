@@ -2,16 +2,22 @@
   <div>
     <header-bar showMenu="false" showLogo="false">
 
-    <Search
-      v-if="!isTrash"
-      @onSearchQuery="searchItemsUpdate"
-      @exit="searchExit"
-    />
+      <Search
+        v-if="!isTrash"
+        @onSearchQuery="searchItemsUpdate"
+        @exit="searchExit"
+      />
 
 
-    <title/>
+      <title/>
       <template #actions>
         <template v-if="!isMobile">
+          <action
+            v-if="headerButtons.locate"
+            icon="location_on"
+            :label="$t('buttons.locate')"
+            @action="locateItem"
+          />
           <action
             v-if="headerButtons.share"
             icon="share"
@@ -24,14 +30,7 @@
             :label="$t('buttons.rename')"
             show="rename"
           />
-          <action
-            v-if="headerButtons.lock"
-            id="lock-button"
-            icon="lock"
-            :label="$t('buttons.lockFolder')"
-            show="editFolderPassword"
-            props
-          />
+
           <action
             v-if="headerButtons.modify"
             id="move-button"
@@ -56,11 +55,17 @@
           <action
             v-if="headerButtons.restore"
             icon="restore"
-            :label="$t('buttons.restore')"
+            :label="$t('buttons.restoreFromTrash')"
             show="restoreFromTrash"
           />
-        </template>
 
+        </template>
+        <action
+          v-if="headerButtons.lock"
+          icon="lock"
+          :label="$t('buttons.lockFolder')"
+          show="editFolderPassword"
+        />
         <action
           v-if="headerButtons.shell"
           icon="code"
@@ -102,9 +107,15 @@
     <div v-if="isMobile" id="file-selection">
       <span v-if="selectedCount > 0">{{ selectedCount }} selected</span>
       <action
+        v-if="headerButtons.locate"
+        icon="location_on"
+        :label="$t('buttons.locate')"
+        @action="locateItem"
+      />
+      <action
         v-if="headerButtons.restore"
         icon="restore"
-        :label="$t('buttons.restore')"
+        :label="$t('buttons.restoreFromTrash')"
         show="restoreFromTrash"
       />
       <action
@@ -119,12 +130,7 @@
         :label="$t('buttons.rename')"
         show="rename"
       />
-      <action
-        v-if="headerButtons.lock"
-        icon="lock"
-        :label="$t('buttons.lockFolder')"
-        show="editFolderPassword"
-      />
+
       <action
         v-if="headerButtons.modify"
         icon="forward"
@@ -287,17 +293,17 @@
 <script>
 import Vue from "vue";
 import {mapGetters, mapMutations, mapState} from "vuex";
-import {enableExec, name} from "@/utils/constants";
+import {enableExec} from "@/utils/constants";
 import * as upload from "@/utils/upload";
 import css from "@/utils/css";
 import throttle from "lodash.throttle";
+import CryptoJS from 'crypto-js';
 
 import HeaderBar from "@/components/header/HeaderBar.vue";
 import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
 import {updateSettings} from "@/api/user.js";
-import {getItems} from "@/api/folder.js";
 import {sortItems} from "@/api/utils.js";
 import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import buttons from "@/utils/buttons.js";
@@ -321,7 +327,6 @@ export default {
   },
   data: function () {
     return {
-      showLimit: 50,
       columnWidth: 280,
       dragCounter: 0,
       width: window.innerWidth,
@@ -381,7 +386,7 @@ export default {
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
 
     mode() {
-      if(this.isTrash) return "trash"
+      if (this.isTrash) return "trash"
       if (this.isShares) return "shares"
       return "files"
     },
@@ -461,14 +466,15 @@ export default {
       return {
         upload: this.perms.create && !this.isTrash,
         info: !this.isTrash || this.selectedCount > 0,
-        download: this.perms.download  && this.selectedCount > 0 && !this.isTrash,
+        download: this.perms.download && this.selectedCount === 1 && !this.isTrash && this.selected[0].isDir === false,
         shell: this.perms.execute && enableExec,
         moveToTrash: this.selectedCount > 0 && this.perms.delete && !this.isTrash,
-        restore: this.selectedCount > 0 && this.perms.modify  && this.isTrash,
-        modify: this.selectedCount === 1 && this.perms.modify  && !this.isTrash,
+        restore: this.selectedCount > 0 && this.perms.modify && this.isTrash,
+        modify: this.selectedCount === 1 && this.perms.modify && !this.isTrash,
         share: this.selectedCount === 1 && this.perms.share && !this.isTrash,
         delete: this.selectedCount > 0 && this.perms.delete && this.isTrash,
-        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock  && !this.isTrash,
+        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock && !this.isTrash,
+        locate: this.selectedCount === 1 && this.isSearchActive,
       };
     },
     isMobile() {
@@ -551,39 +557,39 @@ export default {
       }
     },
 
-     columnsResize() {
-       // Update the columns size based on the window width.
-       let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
-       if (!items) return;
+    columnsResize() {
+      // Update the columns size based on the window width.
+      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
+      if (!items) return;
 
-       let columns = Math.floor(
-         document.querySelector("main").offsetWidth / this.columnWidth
-       );
-       if (columns === 0) columns = 1;
-       items.style.width = `calc(${100 / columns}% - 1em)`;
-     },
+      let columns = Math.floor(
+        document.querySelector("main").offsetWidth / this.columnWidth
+      );
+      if (columns === 0) columns = 1;
+      items.style.width = `calc(${100 / columns}% - 1em)`;
+    },
 
-     scrollEvent: throttle(function () {
-       const totalItems = this.filesSize + this.dirsSize;
+    scrollEvent: throttle(function () {
+      const totalItems = this.filesSize + this.dirsSize;
 
-       // All items are displayed
-       if (this.showLimit >= totalItems) return;
+      // All items are displayed
+      if (this.showLimit >= totalItems) return;
 
-       const currentPos = window.innerHeight + window.scrollY;
+      const currentPos = window.innerHeight + window.scrollY;
 
-       // Trigger at the 75% of the window height
-       const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
+      // Trigger at the 75% of the window height
+      const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
 
-       if (currentPos > triggerPos) {
-         // Quantity of items needed to fill 2x of the window height
-         const showQuantity = Math.ceil(
-           (window.innerHeight * 2) / this.itemWeight
-         );
+      if (currentPos > triggerPos) {
+        // Quantity of items needed to fill 2x of the window height
+        const showQuantity = Math.ceil(
+          (window.innerHeight * 2) / this.itemWeight
+        );
 
-         // Increase the number of displayed items
-         this.showLimit += showQuantity;
-       }
-     }, 100),
+        // Increase the number of displayed items
+        this.showLimit += showQuantity;
+      }
+    }, 100),
 
 
     dragEnter() {
@@ -648,9 +654,54 @@ export default {
 
       this.$toast.info(this.$t("toasts.PreparingUpload"))
 
+      // let fileContent = files[0]
+      // let webhook = this.$store.state.settings.webhook
+      //
+      // let secret = "1234567887654321"
+      // const key = CryptoJS.enc.Hex.parse('1234567890abcdef1234567890abcdef');
+      // const iv = CryptoJS.enc.Hex.parse('fedcba0987654321fedcba0987654321');
+      // console.log("IV : " + CryptoJS.enc.Base64.stringify(iv));
+      //
+      // const wordArray = this.arrayBufferToWordArray(fileContent);
+      //
+      // // Encrypt the plaintext
+      // var cipherText = CryptoJS.AES.encrypt(wordArray, key, {
+      //   iv: iv,
+      //   mode: CryptoJS.mode.CBC,
+      //   padding: CryptoJS.pad.Pkcs7
+      // });
+      // cipherText = cipherText
+      //
+      //
+      // // Convert encrypted content to Blob
+      // const blob = new Blob([cipherText], { type: 'text/plain' });
+      //
+      // // Prepare form data
+      // const formData = new FormData();
+      // formData.append('file', blob, "aaaaaaa");
+      //
+      // // Upload the file to Discord via webhook
+      // const response = await fetch(webhook, {
+      //   method: 'POST',
+      //   body: formData
+      // });
+
       await upload.prepareForUpload(files, folder)
 
 
+    },
+    arrayBufferToWordArray(ab) {
+      const i8a = new Uint8Array(ab);
+      const a = [];
+      for (let i = 0; i < i8a.length; i += 4) {
+        a.push(
+          (i8a[i] << 24) |
+          (i8a[i + 1] << 16) |
+          (i8a[i + 2] << 8) |
+          (i8a[i + 3])
+        );
+      }
+      return CryptoJS.lib.WordArray.create(a, i8a.length);
     },
     resetOpacity() {
       let items = document.getElementsByClassName("item");
@@ -703,7 +754,15 @@ export default {
       this.fillWindow();
     }, 100),
 
+    locateItem() {
+      this.$emit('onSearchClosed');
+      let item = this.selected[0]
+      let parent_id = item.parent_id
+      this.$router.push({name: "Files", params: {"folderId": parent_id, "selectItem": item}});
+      let message = this.$t('toasts.itemLocated')
+      this.$toast.info(message)
 
+    },
     download() {
       if (this.selectedCount === 0) {
         let message = this.$t('toasts.selectFilesFirst')
@@ -711,15 +770,18 @@ export default {
         this.$toast.info(message)
       } else {
         let filesNum = 0
-        this.selected.forEach(item => {
-
+        this.selected.forEach((item, index) => {
           if (!item.isDir) {
-            window.open(item.download_url, '_blank');
-            filesNum++
+
+            window.open(item.download_url, '_blank')
+            let message = this.$t("toasts.downloadingSingle", {name: item.name})
+            this.$toast.success(message)
+            filesNum  = filesNum + 1
+
           }
-        })
+
+        });
         if (filesNum > 0) {
-          this.$toast.success(`Downloading ${filesNum} files`)
           this.$store.commit("resetSelected");
         } else {
           this.$toast.info(`You can't download a folder >-<`)
