@@ -30,7 +30,6 @@ from website.utilities.throttle import MediaRateThrottle
 @check_file
 @handle_common_errors
 def preview(request, file_obj):
-    print(file_obj.name)
 
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -39,8 +38,6 @@ def preview(request, file_obj):
         res = requests.get(url)
         if not res.ok:
             raise DiscordError(res.text, res.status_code)
-
-
 
         file_content = res.content
         fernet = Fernet(preview.key)
@@ -150,20 +147,20 @@ def last_modified_func(request, file_obj):
 @handle_common_errors
 @last_modified(last_modified_func)
 def stream_file(request, file_obj):
+    """
+    This view is used only to stream videos and songs as it supports byte range(hence seeking)
+    It should not be used to display images, pdfs or for download purposes
+    """
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     if len(fragments) == 0:
         return HttpResponse(status=204)
 
     def file_iterator(index, start_byte, end_byte, chunk_size=8192):
-        # print(f"==file iterator==\nSTART_BYTE={start_byte}\nEND_BYTE={end_byte}")
         headers = {'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
-        # headers = {}
-        # print(f"fragments lenght: {len(fragments)}")
 
         url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
-        # print(url)
         response = requests.get(url, headers=headers, stream=True)
-        if response.ok:  # Partial content
+        if response.ok:
             for chunk in response.iter_content(chunk_size):
                 yield chunk
         else:
@@ -173,7 +170,6 @@ def stream_file(request, file_obj):
             return 
 
     range_header = request.headers.get('Range')
-    # print(f"range_header: {range_header}")
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
         if range_match:
@@ -186,9 +182,7 @@ def stream_file(request, file_obj):
         end_byte = None
 
     # Find the appropriate file fragment based on byte range request
-    # print(f"start_byte= {start_byte}")
     real_start_byte = start_byte
-    # print(f"real_start_byte= {start_byte}")
     selected_fragment_index = 0
     for index, fragment in enumerate(fragments):
         print("another fragment")
@@ -197,13 +191,8 @@ def stream_file(request, file_obj):
             break
         else:
             start_byte -= fragment.size
-    # print(f"selected_fragment_index = {selected_fragment_index}")
 
-    # print(f"start_byte after= {start_byte}")
-    # print(f"end_byte after= {end_byte}")
-    # print(f"real_start_byte after= {real_start_byte}")
-
-    if len(fragments) == 1 and start_byte == 0:  # and end_byte ==file_obj.size
+    if len(fragments) == 1 and start_byte == 0:
         status = 200
     else:
         status = 206
@@ -220,7 +209,6 @@ def stream_file(request, file_obj):
         real_end_byte += fragments[i].size
         i += 1
     real_end_byte -= 1  # apparently this -1 is vevy important
-    # TODO calculate real fragments size here for real_end_byte
     referer = request.headers.get('Referer')
 
     # Set the X-Frame-Options header to the request's origin
@@ -240,25 +228,8 @@ def stream_file(request, file_obj):
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte, file_size)
         response['Accept-Ranges'] = 'bytes'
-        # response['Content-Length'] = real_end_byte - real_start_byte
         response['Content-Length'] = real_end_byte - real_start_byte + 1  # apparently this +1 is vevy important
     return response
-
-
-@api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-@throttle_classes([MediaRateThrottle])
-@check_signed_url
-@check_file
-@handle_common_errors
-async def download_file(request, file_obj):
-    async def streaming_response():
-        # Do some work here
-        while True:
-            yield "hello"
-
-    return StreamingHttpResponse(streaming_response())
-
 
 """
 async def stream_test(request):

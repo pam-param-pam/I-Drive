@@ -18,8 +18,6 @@ from website.utilities.decorators import handle_common_errors, check_folder_and_
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict
 from website.utilities.throttle import FolderPasswordRateThrottle
 
-
-
 @api_view(['POST'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
@@ -140,13 +138,20 @@ def move_to_trash(request):
         item.inTrash = True
         item.inTrashSince = timezone.now()
         item.save()
+        print("aaaaaaaaaaaaaaaaaaaa")
+        print(type(item))
         if isinstance(item, File):
+            print("bbbbbbbbbbb")
+            file_dict = create_file_dict(item)
             send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
-                       [create_file_dict(item)])
+                       [file_dict])
 
         elif isinstance(item, Folder):
+            print("cccccccccccc")
+            folder_dict = create_folder_dict(item)
+            print(folder_dict)
             send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
-                       [create_folder_dict(item)])
+                       [folder_dict])
 
     return HttpResponse(status=200)
 
@@ -282,6 +287,8 @@ def folder_password(request, folder_obj):
     if request.method == "POST":
         newPassword = request.data['new_password']
         oldPassword = request.data['old_password']
+        print(folder_obj.password)
+        print(oldPassword)
         if folder_obj.password == oldPassword:
             folder_obj.password = newPassword
             folder_obj.save()

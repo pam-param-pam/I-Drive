@@ -7,7 +7,7 @@ from django.utils import timezone
 from website.models import File, Folder, UserSettings, Preview
 from website.tasks import queue_ws_event
 from website.utilities.OPCodes import message_codes
-from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
+from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, SIGNED_URL_EXPIRY_SECONDS
 from website.utilities.errors import ResourcePermissionError
 
 signer = TimestampSigner()
@@ -19,21 +19,20 @@ def sign_file_id_with_expiry(file_id):
     if cached_signed_file_id:
         return cached_signed_file_id
     signed_file_id = signer.sign(file_id)
-    cache.set(file_id, signed_file_id, timeout=43200)
+    cache.set(file_id, signed_file_id, timeout=SIGNED_URL_EXPIRY_SECONDS)
     return signed_file_id
 
 
 # Function to verify and extract the file id
-def verify_signed_file_id(signed_file_id, expiry_days=1):
+def verify_signed_file_id(signed_file_id, expiry_seconds=SIGNED_URL_EXPIRY_SECONDS):
     try:
-        file_id = signer.unsign(signed_file_id, max_age=timedelta(days=expiry_days))
+        file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=expiry_seconds))
         return file_id
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("URL not valid or expired.")
 
 
 def send_event(user_id, op_code, request_id, data):
-
     queue_ws_event.delay(
         'user',
         {
@@ -71,6 +70,7 @@ def create_temp_file_dir(upload_folder, file_id):
         os.makedirs(out_folder_path)
     return out_folder_path
 
+
 def create_breadcrumbs(folder_obj):
     folder_path = []
 
@@ -98,6 +98,8 @@ def create_share_breadcrumbs(folder_obj, obj_in_share, isFolderId=False):
 
     folder_path.reverse()
     return folder_path
+
+
 def create_file_dict(file_obj):
     file_dict = {
         'isDir': False,
@@ -111,12 +113,12 @@ def create_file_dict(file_obj):
         'encrypted_size': file_obj.encrypted_size,
         'created': timezone.localtime(file_obj.created_at).strftime('%Y-%m-%d %H:%M'),
         'last_modified': timezone.localtime(file_obj.last_modified_at).strftime('%Y-%m-%d %H:%M'),
-        #'ready': file_obj.ready,
-        #'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
-        #"maintainers": [],
+        # 'ready': file_obj.ready,
+        # 'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
+        # "maintainers": [],
     }
     if file_obj.inTrashSince:
-        file_dict["inTrashSince"] = file_obj.inTrashSince
+        file_dict["in_trash_since"] = timezone.localtime(file_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
 
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -129,20 +131,19 @@ def create_file_dict(file_obj):
     except Preview.DoesNotExist:
         pass
 
-    #base_url = "http://127.0.0.1:8000"
-
+    # base_url = "http://127.0.0.1:8000"
+    stream_url = "http://192.168.1.14:8050"
     base_url = "https://api.pamparampam.dev"
+    # base_url = "http://127.0.0.1:8050/stream"
     signed_file_id = sign_file_id_with_expiry(file_obj.id)
 
-    if file_obj.extension in ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
+    if file_obj.extension in (
+            '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
         preview_url = f"{base_url}/api/file/preview/{signed_file_id}"
     else:
-        preview_url = f"{base_url}/api/file/stream/{signed_file_id}"
+        preview_url = f"{stream_url}/stream/{signed_file_id}"
 
-    if file_obj.size < MAX_DISCORD_MESSAGE_SIZE:
-        download_url = preview_url
-    else:
-        download_url = f"{base_url}/api/file/download/{signed_file_id}"
+    download_url = f"{stream_url}/stream/{signed_file_id}"
 
     file_dict['preview_url'] = preview_url
     file_dict['download_url'] = download_url
@@ -170,7 +171,7 @@ def create_folder_dict(folder_obj):
         'isLocked': True if folder_obj.password else False
     }
     if folder_obj.inTrashSince:
-        folder_dict["in_trash_since"] = folder_obj.inTrashSince
+        folder_dict["in_trash_since"] = timezone.localtime(folder_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
     return folder_dict
 
 

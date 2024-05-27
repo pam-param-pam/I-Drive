@@ -15,5 +15,7 @@ MAX_MEDIA_CACHE_AGE = 2628000
 # Discord message cache expiry in seconds: 1 day
 DISCORD_MESSAGE_EXPIRY = 79200
 
+SIGNED_URL_EXPIRY_SECONDS = 7200
+
 cache = caches["default"]
 

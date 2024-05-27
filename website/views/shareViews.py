@@ -15,7 +15,7 @@ from website.utilities.other import create_file_dict, create_share_dict, get_sha
 
 
 @api_view(['GET'])
-#@permission_classes([IsAuthenticated & SharePerms])
+@permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([UserRateThrottle])
 def get_shares(request):
 

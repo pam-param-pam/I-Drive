@@ -34,10 +34,9 @@ class UserConsumer(WebsocketConsumer):
                                   "task_id": event["request_id"]}))
 
     def send_event(self, event):
-        print("send event1")
+        print("send event")
 
-        print(self.scope['user'].id)
-        print(event['user_id'])
+        print(event['op_code'])
         if self.scope['user'].id == event['user_id']:
             print("send event")
             self.send(json.dumps({"op_code": event['op_code'], "data": event['data']}))

@@ -14,7 +14,7 @@ os.environ[
     "DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it work? Well until it breaks something, YES IT DOES!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+#TODO
 ALLOWED_HOSTS = ['*']
 
 STATICFILES_DIRS = [

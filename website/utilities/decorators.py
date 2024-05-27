@@ -59,7 +59,7 @@ def check_file(view_func):
                     error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),
                     status=404)
 
-        except (Folder.DoesNotExist, ValidationError):
+        except (File.DoesNotExist, ValidationError):
 
             return JsonResponse(error_res(user=request.user, code=404, error_code=8,
                                           details=f"File with id of '{file_id}' doesn't exist."), status=404)

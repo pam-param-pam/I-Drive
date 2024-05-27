@@ -52,3 +52,8 @@ class SettingsModifyPerms(BasePermission):
     def has_permission(self, request, view):
         perms = UserPerms.objects.get(user=request.user)
         return (perms.settings_modify or perms.admin) and not perms.globalLock
+
+class ChangePassword(BasePermission):
+    def has_permission(self, request, view):
+        perms = UserPerms.objects.get(user=request.user)
+        return (perms.change_password or perms.admin) and not perms.globalLock

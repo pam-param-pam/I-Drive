@@ -222,6 +222,7 @@ class UserPerms(models.Model):
     download = models.BooleanField(default=True)
     read = models.BooleanField(default=True)
     settings_modify = models.BooleanField(default=True)
+    change_password = models.BooleanField(default=True)
 
     def __str__(self):
         return self.user.username + "'s perms"

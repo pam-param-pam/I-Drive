@@ -14,6 +14,8 @@ class FragmentAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
+    search_fields = ["file__name"]
+
     """
     def has_delete_permission(self, request, obj=None):
         # Disable delete
@@ -43,6 +45,7 @@ class FolderAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["name", "owner", "created_at", "inTrash"]
     actions = ['move_to_trash', 'restore_from_trash']
+    search_fields = ["name"]
 
     def delete_queryset(self, request, queryset):
         for folder in queryset:
@@ -76,6 +79,7 @@ class FileAdmin(admin.ModelAdmin):
     list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
                     "inTrash"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready']
+    search_fields = ["name"]
 
 
 

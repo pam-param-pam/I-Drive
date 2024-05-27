@@ -166,6 +166,10 @@ def smart_delete(user_id, request_id, ids):
 
         traceback.print_exc()
 
+@app.task
+def prefetch_discord_message(message_id, attachment_id):
+    discord.get_file_url(message_id, attachment_id)
+
 
 @app.task
 def delete_unready_files():

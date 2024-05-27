@@ -1,6 +1,4 @@
-from urllib.parse import urlparse
-
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag, last_modified
 from ipware import get_client_ip
@@ -8,14 +6,16 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.models import File, Folder, UserPerms, UserSettings
-from website.utilities.Permissions import ReadPerms, SettingsModifyPerms
+from website.models import File, Folder, Fragment
+from website.utilities.Discord import discord
+from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
-from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
+from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
+    check_file, check_signed_url
 from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword, BadRequestError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs
-from website.utilities.throttle import SearchRateThrottle
-
+from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle
+from website.tasks import prefetch_discord_message
 
 def etag_func(request, folder_obj):
     folder_content = cache.get(folder_obj.id)
@@ -50,16 +50,17 @@ def get_folder(request, folder_obj):
     raise MissingFolderPassword("Please enter folder password.")
 
 
-def last_modified_func(request, file_obj):
+def last_modified_func(request, file_obj, sequence=None):
     last_modified_str = file_obj.last_modified_at  # .strftime('%a, %d %b %Y %H:%M:%S GMT')
     return last_modified_str
+
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
-#@last_modified(last_modified_func)
+@last_modified(last_modified_func)
 def get_file(request, file_obj):
     file_content = create_file_dict(file_obj)
 
@@ -101,68 +102,7 @@ def get_breadcrumbs(request, folder_obj):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-@permission_classes([IsAuthenticated])
-@handle_common_errors
-def users_me(request):
-    user = request.user
-    perms = UserPerms.objects.get(user=user)
-    settings = UserSettings.objects.get(user=user)
-    root = Folder.objects.get(owner=request.user, parent=None)
-    response = {"user": {"id": user.id, "name": user.username, "root": root.id},
-                "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
-                          "lock": perms.lock,
-                          "modify": perms.modify, "delete": perms.delete, "share": perms.share,
-                          "download": perms.download},
-                "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders,
-                             "dateFormat": settings.date_format,
-                             "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
-                             "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
-                             "webhook": settings.discord_webhook}}
-
-    return JsonResponse(response, safe=False, status=200)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated & SettingsModifyPerms])
-@throttle_classes([UserRateThrottle])
-@handle_common_errors
-def update_settings(request):
-    locale = request.data.get('locale')
-    hideLockedFolders = request.data.get('hideLockedFolders')
-    dateFormat = request.data.get('dateFormat')
-    viewMode = request.data.get('viewMode')
-    sortingBy = request.data.get('sortingBy')
-    sortByAsc = request.data.get('sortByAsc')
-    subfoldersInShares = request.data.get('subfoldersInShares')
-    webhookURL = request.data.get('webhook')
-
-    settings = UserSettings.objects.get(user=request.user)
-    if locale in ["pl", "en", "uwu"]:
-        settings.locale = locale
-    if isinstance(dateFormat, bool):
-        settings.date_format = dateFormat
-    if isinstance(hideLockedFolders, bool):
-        settings.hide_locked_folders = hideLockedFolders
-    if viewMode in ["list", "mosaic", "mosaic gallery"]:
-        settings.view_mode = viewMode
-    if sortingBy in ["name", "size", "created"]:
-        settings.sorting_by = sortingBy
-    if isinstance(sortByAsc, bool):
-        settings.sort_by_asc = sortByAsc
-    if isinstance(subfoldersInShares, bool):
-        settings.subfolders_in_shares = subfoldersInShares
-    if isinstance(webhookURL, str):
-        obj = urlparse(webhookURL)
-        if obj.hostname != 'discord.com':
-            raise BadRequestError("Only webhook urls from 'discord.com' are allowed")
-        settings.discord_webhook = webhookURL
-    settings.save()
-    return HttpResponse(status=200)
-
-
-@api_view(['GET'])
-# @permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([SearchRateThrottle])
 @handle_common_errors
 def search(request):
@@ -189,14 +129,13 @@ def search(request):
         include_folders = True
 
     # Start with a base queryset
-    files = File.objects.filter(owner_id=user.id).order_by("-created_at")
+    files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False).order_by("-created_at")
     folders = Folder.objects.filter(owner_id=user.id).order_by("-created_at")
     if query is None and file_type is None and extension is None and not include_files and not include_folders:
         raise BadRequestError(
             "Please specify at least one: ['query', 'file_type', 'extension']")
     if query:
         if include_files:
-            
             files = files.filter(name__icontains=query)
         if include_folders:
             folders = folders.filter(name__icontains=query)
@@ -221,13 +160,12 @@ def search(request):
         for file in files:
             file_dict = create_file_dict(file)
             files_list.append(file_dict)
-    # return JsonResponse({"files": files_list, "folders": folders_list})
     return JsonResponse(files_list + folders_list, safe=False)
 
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-# @permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def get_trash(request):
     # todo user perms
@@ -248,7 +186,72 @@ def get_trash(request):
     return JsonResponse({"trash": children})
 
 
+@cache_page(60 * 60 * 24)  # 1 day
+@api_view(['GET'])
+@throttle_classes([MediaRateThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+def get_fragment(request, file_obj, sequence=1):
+    sequence -= 1
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+    fragment = fragments[sequence]
+    url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
+
+    fragment_dict = {
+        "url": url,
+        "size": fragment.size,
+        "sequence": fragment.sequence,
+    }
+    # try:
+    #     prefetch_discord_message.delay(fragments[sequence+1].message_id, fragments[sequence+1].attachment_id)
+    # except IndexError:
+    #     pass
+
+    return JsonResponse(fragment_dict)
+
+
+@api_view(['GET'])
+@throttle_classes([MediaRateThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+@last_modified(last_modified_func)
+def get_fragments_info(request, file_obj):
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+    fragments_list = []
+    for fragment in fragments:
+        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
+    file_obj = {
+        "size": file_obj.size,
+        "mimetype": file_obj.mimetype,
+        "type": file_obj.type,
+        "name": file_obj.name,
+        "key": str(file_obj.key),
+    }
+    return JsonResponse({"file": file_obj, "fragments": fragments_list}, safe=False)
+
 """
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+@last_modified(last_modified_func)
+def get_fragments_info(request, file_obj):
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+
+    file_obj = {
+        "fragments_length": len(fragments),
+        "size": file_obj.size,
+        "mimetype": file_obj.mimetype,
+        "type": file_obj.type,
+        "name": file_obj.name,
+        "key": str(file_obj.key),
+    }
+    return JsonResponse(file_obj, safe=False)
+
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated])
