@@ -1,20 +1,23 @@
 import os
 from datetime import timedelta
+from typing import Union
 
+from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from website.models import File, Folder, UserSettings, Preview
+from website.models import File, Folder, UserSettings, Preview, ShareableLink
 from website.tasks import queue_ws_event
-from website.utilities.OPCodes import message_codes
-from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, SIGNED_URL_EXPIRY_SECONDS
-from website.utilities.errors import ResourcePermissionError
+from website.utilities.OPCodes import message_codes, EventCode
+from website.utilities.TypeHinting import Resource
+from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS
+from website.utilities.errors import ResourcePermissionError, ResourceNotFound
 
 signer = TimestampSigner()
 
 
 # Function to sign a URL with an expiration time
-def sign_file_id_with_expiry(file_id):
+def sign_file_id_with_expiry(file_id: str) -> str:
     cached_signed_file_id = cache.get(file_id)
     if cached_signed_file_id:
         return cached_signed_file_id
@@ -24,7 +27,7 @@ def sign_file_id_with_expiry(file_id):
 
 
 # Function to verify and extract the file id
-def verify_signed_file_id(signed_file_id, expiry_seconds=SIGNED_URL_EXPIRY_SECONDS):
+def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
     try:
         file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=expiry_seconds))
         return file_id
@@ -32,7 +35,7 @@ def verify_signed_file_id(signed_file_id, expiry_seconds=SIGNED_URL_EXPIRY_SECON
         raise ResourcePermissionError("URL not valid or expired.")
 
 
-def send_event(user_id, op_code, request_id, data):
+def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[list, dict]) -> None:
     queue_ws_event.delay(
         'user',
         {
@@ -45,33 +48,7 @@ def send_event(user_id, op_code, request_id, data):
     )
 
 
-def calculate_time(file_size_bytes, bitrate_bps):
-    time_seconds = (file_size_bytes * 8) / bitrate_bps
-    return time_seconds
-
-
-def get_percentage(current, all) -> int:
-    if all == 0:
-        return 0  # To avoid division by zero error
-    percentage = round((current / all) * 100)
-    return percentage
-
-
-def create_temp_request_dir(request_id):
-    upload_folder = os.path.join("temp", request_id)
-    if not os.path.exists(upload_folder):
-        os.makedirs(upload_folder)
-    return upload_folder
-
-
-def create_temp_file_dir(upload_folder, file_id):
-    out_folder_path = os.path.join(upload_folder, str(file_id))
-    if not os.path.exists(out_folder_path):
-        os.makedirs(out_folder_path)
-    return out_folder_path
-
-
-def create_breadcrumbs(folder_obj):
+def create_breadcrumbs(folder_obj: Folder) -> list:
     folder_path = []
 
     while folder_obj.parent:
@@ -82,7 +59,7 @@ def create_breadcrumbs(folder_obj):
     return folder_path
 
 
-def create_share_breadcrumbs(folder_obj, obj_in_share, isFolderId=False):
+def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> list:
     folder_path = []
 
     while folder_obj.parent:
@@ -100,7 +77,7 @@ def create_share_breadcrumbs(folder_obj, obj_in_share, isFolderId=False):
     return folder_path
 
 
-def create_file_dict(file_obj):
+def create_file_dict(file_obj: File) -> dict:
     file_dict = {
         'isDir': False,
         'id': str(file_obj.id),
@@ -132,8 +109,10 @@ def create_file_dict(file_obj):
         pass
 
     # base_url = "http://127.0.0.1:8000"
-    stream_url = "http://192.168.1.14:8050"
+    # stream_url = "http://192.168.1.14:8050"
     base_url = "https://api.pamparampam.dev"
+    stream_url = "https://get.pamparampam.dev"
+
     # base_url = "http://127.0.0.1:8050/stream"
     signed_file_id = sign_file_id_with_expiry(file_obj.id)
 
@@ -151,12 +130,12 @@ def create_file_dict(file_obj):
     return file_dict
 
 
-def create_folder_dict(folder_obj):
+def create_folder_dict(folder_obj: Folder) -> dict:
     """
     Crates partial folder dict, not containing children items
     """
-    file_children = File.objects.filter(parent=folder_obj, ready=True)
-    folder_children = Folder.objects.filter(parent=folder_obj)
+    file_children = folder_obj.files.filter(ready=True)
+    folder_children = folder_obj.folders.all()
 
     folder_dict = {
         'id': str(folder_obj.id),
@@ -168,14 +147,16 @@ def create_folder_dict(folder_obj):
         'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
         'parent_id': folder_obj.parent_id,
         'isDir': True,
-        'isLocked': True if folder_obj.password else False
+        'isLocked': True if folder_obj.password else False,
+        'lockFrom': folder_obj.lockFrom.id
+
     }
     if folder_obj.inTrashSince:
         folder_dict["in_trash_since"] = timezone.localtime(folder_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
     return folder_dict
 
 
-def create_share_dict(share):
+def create_share_dict(share: ShareableLink) -> dict:
     isDir = False
     try:
         obj = File.objects.get(id=share.object_id)
@@ -186,7 +167,7 @@ def create_share_dict(share):
         except Folder.DoesNotExist:
             # looks like folder/file no longer exist, deleting time!
             share.delete()
-            return
+            raise ResourceNotFound(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
     item = {
         "expire": share.expiration_time.strftime('%Y-%m-%d %H:%M'),
         "name": obj.name,
@@ -198,10 +179,11 @@ def create_share_dict(share):
     return item
 
 
-def get_shared_folder(folder_obj, includeSubfolders):
+@DeprecationWarning
+def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> dict:
     def recursive_build(folder):
-        file_children = File.objects.filter(parent=folder, ready=True)
-        folder_children = Folder.objects.filter(parent=folder)
+        file_children = folder_obj.files.filter(ready=True)
+        folder_children = folder_obj.folders.all()
 
         file_dicts = [create_file_dict(file) for file in file_children]
 
@@ -217,12 +199,12 @@ def get_shared_folder(folder_obj, includeSubfolders):
     return recursive_build(folder_obj)
 
 
-def build_folder_content(folder_obj, include_folders=True):
-    file_children = File.objects.filter(parent=folder_obj, inTrash=False, ready=True)
+def build_folder_content(folder_obj: Folder, include_folders: bool = True) -> dict:
+    file_children = folder_obj.files.filter(ready=True, inTrash=False)
 
     folder_children = []
     if include_folders:
-        folder_children = Folder.objects.filter(parent=folder_obj, inTrash=False)
+        folder_children = folder_obj.folders.filter(inTrash=False)
 
     file_dicts = []
     for file in file_children:
@@ -240,11 +222,11 @@ def build_folder_content(folder_obj, include_folders=True):
     return folder_dict
 
 
-def build_response(task_id, message):
+def build_response(task_id: str, message: str) -> dict:
     return {"task_id": task_id, "message": message}
 
 
-def error_res(user, code, error_code, details):  # build_http_error_response
+def error_res(user: User, code: int, error_code: int, details: str) -> dict:  # build_http_error_response
     locale = "en"
 
     if not user.is_anonymous:
@@ -253,7 +235,7 @@ def error_res(user, code, error_code, details):  # build_http_error_response
 
     return {"code": code, "error": message_codes[error_code][locale], "details": details}
 
-
+@DeprecationWarning
 def get_folder_path(folder_id, folder_structure, path=None):
     if path is None:
         path = []
@@ -272,7 +254,31 @@ def get_folder_path(folder_id, folder_structure, path=None):
     # Folder ID not found in the current folder structure
     return []
 
+@DeprecationWarning
+def calculate_time(file_size_bytes, bitrate_bps):
+    time_seconds = (file_size_bytes * 8) / bitrate_bps
+    return time_seconds
 
+@DeprecationWarning
+def get_percentage(current, all):
+    if all == 0:
+        return 0  # To avoid division by zero error
+    percentage = round((current / all) * 100)
+    return percentage
+
+@DeprecationWarning
+def create_temp_request_dir(request_id):
+    upload_folder = os.path.join("temp", request_id)
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+    return upload_folder
+
+@DeprecationWarning
+def create_temp_file_dir(upload_folder, file_id):
+    out_folder_path = os.path.join(upload_folder, str(file_id))
+    if not os.path.exists(out_folder_path):
+        os.makedirs(out_folder_path)
+    return out_folder_path
 """
 def build_folder_tree(folder_objs, parent_folder=None):
     folder_tree = []

@@ -17,7 +17,7 @@ message_codes = {
     14: {"pl": "Discord jest chwilowo zablokowany ", "en": "Discord is temporarily blocked"},
     15: {"pl": "Funkcja jeszcze nie dostępna", "en": "Not yet implemented"},
     16: {"pl": "Hasło do folderu jest nie poprawne", "en": "Folder password is incorrect"},
-    17: {"pl": "Hasło do folderu jest wymagane", "en": "Folder password is required"},
+    17: {"pl": "Hasło do pliku jest nie poprawne", "en": "File password is required"},
 
 }
 

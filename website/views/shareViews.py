@@ -8,10 +8,10 @@ from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 from website.models import File, Folder, UserSettings, ShareableLink
 from website.utilities.Permissions import SharePerms
-from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
 from website.utilities.decorators import handle_common_errors
-from website.utilities.other import create_file_dict, create_share_dict, get_shared_folder, create_folder_dict, \
-    build_folder_content, create_breadcrumbs, create_share_breadcrumbs
+from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
+from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
+    build_folder_content, create_share_breadcrumbs
 
 
 @api_view(['GET'])

@@ -1,8 +1,6 @@
 
 from django.contrib import admin
-from django.core.cache import caches
 from django.template.defaultfilters import filesizeformat
-from django.utils import timezone
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview
 from .utilities.constants import cache
@@ -43,9 +41,10 @@ class FragmentAdmin(admin.ModelAdmin):
 class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
-    list_display = ["name", "owner", "created_at", "inTrash"]
+    list_display = ["name", "owner", "created_at", "inTrash", "_is_locked"]
     actions = ['move_to_trash', 'restore_from_trash']
-    search_fields = ["name"]
+    search_fields = ["id"]
+
 
     def delete_queryset(self, request, queryset):
         for folder in queryset:
@@ -67,6 +66,7 @@ class FolderAdmin(admin.ModelAdmin):
         for folder in queryset:
             folder.restoreFromTrash()
 
+
     def save_model(self, request, obj, form, change):
         cache.delete(obj.id)
         cache.delete(obj.parent.id)
@@ -77,7 +77,7 @@ class FileAdmin(admin.ModelAdmin):
     readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size")
     ordering = ["-created_at"]
     list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
-                    "inTrash"]
+                    "inTrash", "_is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready']
     search_fields = ["name"]
 

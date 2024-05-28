@@ -1,6 +1,3 @@
-import time
-
-from django.core.cache import caches
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
@@ -8,15 +5,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder
-from website.tasks import smart_delete
+from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_task
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
 from website.utilities.constants import MAX_NAME_LENGTH, cache
-from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, IncorrectFolderPassword
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
+from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, RootPermissionError, IncorrectFolderPassword
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict
 from website.utilities.throttle import FolderPasswordRateThrottle
+
 
 @api_view(['POST'])
 @throttle_classes([UserRateThrottle])
@@ -138,20 +135,17 @@ def move_to_trash(request):
         item.inTrash = True
         item.inTrashSince = timezone.now()
         item.save()
-        print("aaaaaaaaaaaaaaaaaaaa")
-        print(type(item))
+
         if isinstance(item, File):
-            print("bbbbbbbbbbb")
             file_dict = create_file_dict(item)
             send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
                        [file_dict])
 
         elif isinstance(item, Folder):
-            print("cccccccccccc")
             folder_dict = create_folder_dict(item)
-            print(folder_dict)
             send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
                        [folder_dict])
+            move_to_trash_task.delay(item.id)
 
     return HttpResponse(status=200)
 
@@ -199,6 +193,8 @@ def restore_from_trash(request):
         elif isinstance(item, Folder):
             send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
                        [create_folder_dict(item)])
+
+            restore_from_trash_task.delay(item.id)
 
     return HttpResponse(status=200)
 
@@ -278,21 +274,18 @@ def rename(request):
 @handle_common_errors
 @check_folder_and_permissions
 def folder_password(request, folder_obj):
+    password = request.headers.get("X-Folder-Password")
+
     if request.method == "GET":
-        password = request.headers.get("X-Folder-Password")
-        if folder_obj.password == password:
-            return HttpResponse(200)
-        raise IncorrectFolderPassword()
+        return HttpResponse(204)
 
     if request.method == "POST":
         newPassword = request.data['new_password']
-        oldPassword = request.data['old_password']
-        print(folder_obj.password)
-        print(oldPassword)
-        if folder_obj.password == oldPassword:
-            folder_obj.password = newPassword
-            folder_obj.save()
-
+        if folder_obj.password == password:
+            if newPassword:
+                folder_obj.applyLock(folder_obj, newPassword)
+            else:
+                folder_obj.removeLock()
             isLocked = True if folder_obj.password else False
 
             send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,

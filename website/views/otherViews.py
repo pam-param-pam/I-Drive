@@ -4,18 +4,11 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.models import File
-from website.utilities.Discord import discord
+from website.models import File, Folder
 from website.utilities.decorators import handle_common_errors
-
-DELAY_TIME = 0
-
-import requests
 from django.http import HttpResponse
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-import base64
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([UserRateThrottle])
@@ -28,7 +21,19 @@ def generate_keys(request):
     return JsonResponse({'key': key.decode()})
 
 def test(request):
-    message = discord.get_message(1244267985858986069)
+    folder = Folder.objects.get(id="kVe2VyB2e3UxC6wo3q3Niy")
+    print(folder.file_set)
+    for file in folder.file_set.all():
+        print(file.name)
+    for folder in folder.folder_set.all():
+        print(folder.name)
+    print(type(folder.file_set))
+    return HttpResponse(f"hello {request.user}")
+
+
+"""
+
+message = discord.get_message(1244267985858986069)
     url = message.json()["attachments"][0]["url"]
 
     # key = request.data.get('key')
@@ -55,9 +60,6 @@ def test(request):
     response = HttpResponse(decrypted_data, content_type='application/octet-stream')
     response['Content-Disposition'] = 'attachment; filename="decrypted_file"'
     return response
-
-
-"""
 # Example usage in a view
 @check_file_and_permissions
 @handle_common_errors

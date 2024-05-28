@@ -6,8 +6,7 @@ from rest_framework.exceptions import Throttled
 
 from website.models import File, Folder, ShareableLink
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, \
-    MissingFolderPassword
+    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, IncorrectFilePassword
 from website.utilities.other import error_res, verify_signed_file_id
 
 
@@ -24,7 +23,7 @@ def check_signed_url(view_func):
 
     return wrapper
 
-# goofy ah code duplication
+
 def check_file_and_permissions(view_func):
     @wraps(view_func)
     def wrapper(request, file_id, *args, **kwargs):
@@ -38,6 +37,10 @@ def check_file_and_permissions(view_func):
                 return JsonResponse(
                     error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),
                     status=404)
+            if file_obj.is_locked:
+                password = request.headers.get("X-Folder-Password")
+                if file_obj.password != password:
+                    raise IncorrectFilePassword()
 
         except (File.DoesNotExist, ValidationError):
 
@@ -75,10 +78,16 @@ def check_folder_and_permissions(view_func):
         try:
 
             folder_obj = Folder.objects.get(id=folder_id)
+
             if folder_obj.owner != request.user:
                 return JsonResponse(
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
                     status=403)
+
+            if folder_obj.is_locked:
+                password = request.headers.get("X-Folder-Password")
+                if folder_obj.password != password:
+                    raise IncorrectFolderPassword()
 
         except (File.DoesNotExist, ValidationError):
             return JsonResponse(error_res(user=request.user, code=404, error_code=8,
@@ -139,7 +148,7 @@ def handle_common_errors(view_func):
         # 469 CUSTOM STATUS CODE - FOLDER PASSWORD MISSING OR INCORRECT
         except IncorrectFolderPassword as e:
             return JsonResponse(error_res(user=request.user, code=469, error_code=16, details=str(e)), status=469)
-        except MissingFolderPassword as e:
+        except IncorrectFilePassword as e:
             return JsonResponse(error_res(user=request.user, code=469, error_code=17, details=str(e)), status=469)
 
     return wrapper

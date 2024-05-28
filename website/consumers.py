@@ -74,7 +74,7 @@ class CommandConsumer(WebsocketConsumer):
                 self.send(dir_content)
             elif command == "cd":
                 print("cd1")
-                send_event(self.scope['user'].id, EventCode.FORCE_FOLDER_NAVIGATION, "0000",
+                send_event(self.scope['user'].id, EventCode.FORCE_FOLDER_NAVIGATION, 0,
                            {"folder_id": "8x9XURqmWZYcCaExwk6vnB"})
                 print("cd2")
             else:

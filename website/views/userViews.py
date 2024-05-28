@@ -46,7 +46,7 @@ def users_me(request):
     perms = UserPerms.objects.get(user=user)
     settings = UserSettings.objects.get(user=user)
     root = Folder.objects.get(owner=request.user, parent=None)
-    response = {"user": {"id": user.id, "name": user.username, "root": root.id},
+    response = {"user": {"name": user.username, "root": root.id},
                 "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
                           "lock": perms.lock,
                           "modify": perms.modify, "delete": perms.delete, "share": perms.share,
@@ -95,5 +95,5 @@ def update_settings(request):
             raise BadRequestError("Only webhook urls from 'discord.com' are allowed")
         settings.discord_webhook = webhookURL
     settings.save()
-    return HttpResponse(status=200)
+    return HttpResponse(status=204)
 

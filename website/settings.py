@@ -198,7 +198,7 @@ REST_FRAMEWORK = {
         'anon': '30/min',
         'user': '100/min',
         'media': '1000/min',
-        'folder_password': '15/min',
+        'folder_password': '150/min',
         'password_change': '10/min',
         'search': '200/m'
     }

@@ -5,11 +5,9 @@ import traceback
 from datetime import timedelta
 
 from asgiref.sync import async_to_sync
-from celery import shared_task, Celery
-from celery.schedules import crontab
+from celery import shared_task
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
-from django.core.cache import caches
 from django.db.utils import IntegrityError
 from django.utils import timezone
 
@@ -17,7 +15,6 @@ from website.celery import app
 from website.models import File, Fragment, Folder, UserSettings, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
-from website.utilities.constants import cache
 from website.utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
@@ -170,6 +167,16 @@ def smart_delete(user_id, request_id, ids):
 def prefetch_discord_message(message_id, attachment_id):
     discord.get_file_url(message_id, attachment_id)
 
+@app.task
+def move_to_trash_task(folder_id):
+    folder = Folder.objects.get(id=folder_id)
+    folder.moveToTrash()
+
+
+@app.task
+def restore_from_trash_task(folder_id):
+    folder = Folder.objects.get(id=folder_id)
+    folder.restoreFromTrash()
 
 @app.task
 def delete_unready_files():

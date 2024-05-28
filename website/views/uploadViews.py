@@ -1,4 +1,3 @@
-from django.core.cache import caches
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes

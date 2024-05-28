@@ -22,8 +22,8 @@ class IncorrectFolderPassword(IDriveException):
     """Raised when folder password is incorrect"""
     pass
 
-class MissingFolderPassword(IDriveException):
-    """Raised when folder password is missing"""
+class IncorrectFilePassword(IDriveException):
+    """Raised when file password is incorrect"""
     pass
 
 class BadRequestError(IDriveException):

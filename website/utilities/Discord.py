@@ -5,9 +5,8 @@ from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 
 import httpx
-from django.core.cache import caches
 
-from website.utilities.constants import DISCORD_MESSAGE_EXPIRY, cache
+from website.utilities.constants import cache
 from website.utilities.errors import DiscordError, DiscordBlockError
 
 
@@ -152,8 +151,8 @@ class Discord:
     @retry
     def edit_attachments(self, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
         attachments_to_keep = []
-        for id in attachment_ids_to_keep:
-            attachments_to_keep.append({"id": id})
+        for attachment_id in attachment_ids_to_keep:
+            attachments_to_keep.append({"id": attachment_id})
         url = f"{webhook}/messages/{message_id}"
         response = self.client.patch(url, json={"attachments": attachments_to_keep}, headers=self.headers)
         if response.is_success or response.status_code == 429:
@@ -165,7 +164,7 @@ class Discord:
         url = message["attachments"][0]["url"]
         parsed_url = urlparse(url)
         query_params = parse_qs(parsed_url.query)
-        ex_param = query_params.get('ex', [None])[0]
+        ex_param = query_params.get(b'ex', [None])[0]
         if ex_param is None:
             raise ValueError("The 'ex' parameter is missing in the URL")
 

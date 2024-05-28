@@ -1,5 +1,4 @@
 import io
-import re
 
 import exifread
 import imageio
@@ -7,16 +6,15 @@ import rawpy
 import requests
 from cryptography.fernet import Fernet
 from django.db.utils import IntegrityError
-from django.http import StreamingHttpResponse, HttpResponseBadRequest, HttpResponse
+from django.http import HttpResponse
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import last_modified
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
 
 from website.models import Fragment, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
-from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, MAX_MEDIA_CACHE_AGE
+from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE
 from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
 from website.utilities.errors import ResourceNotPreviewable, DiscordError
 from website.utilities.other import send_event
@@ -84,6 +82,7 @@ def preview(request, file_obj):
             # thumb.data is an RGB numpy array, convert with imageio
             data = io.BytesIO()
             imageio.imwrite(data, thumb.data)
+
     except (LibRawFileUnsupportedError, LibRawUnsupportedThumbnailError):
         raise ResourceNotPreviewable("Raw file cannot be read properly to extract preview image.")
 
@@ -138,7 +137,7 @@ def last_modified_func(request, file_obj):
     last_modified_str = file_obj.last_modified_at
     return last_modified_str
 
-
+"""
 #@cache_page(60 * 60 * 24)
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
@@ -147,10 +146,10 @@ def last_modified_func(request, file_obj):
 @handle_common_errors
 @last_modified(last_modified_func)
 def stream_file(request, file_obj):
-    """
+    
     This view is used only to stream videos and songs as it supports byte range(hence seeking)
     It should not be used to display images, pdfs or for download purposes
-    """
+    
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     if len(fragments) == 0:
         return HttpResponse(status=204)
@@ -231,7 +230,7 @@ def stream_file(request, file_obj):
         response['Content-Length'] = real_end_byte - real_start_byte + 1  # apparently this +1 is vevy important
     return response
 
-"""
+
 async def stream_test(request):
     async def fake_data_streamer():
         for i in range(10):

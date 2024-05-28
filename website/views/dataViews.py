@@ -12,10 +12,10 @@ from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
-from website.utilities.errors import IncorrectFolderPassword, MissingFolderPassword, BadRequestError
+from website.utilities.errors import BadRequestError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle
-from website.tasks import prefetch_discord_message
+
 
 def etag_func(request, folder_obj):
     folder_content = cache.get(folder_obj.id)
@@ -33,21 +33,16 @@ def get_folder(request, folder_obj):
     client_ip, is_routable = get_client_ip(request)
 
     print(client_ip)
-    password = request.headers.get("X-Folder-Password")
-    if password == folder_obj.password:
-        folder_content = cache.get(folder_obj.id)
-        if not folder_content:
-            print("=======using uncached version=======")
-            folder_content = build_folder_content(folder_obj)
-            cache.set(folder_obj.id, folder_content)
 
-        breadcrumbs = create_breadcrumbs(folder_obj)
+    folder_content = cache.get(folder_obj.id)
+    if not folder_content:
+        print("=======using uncached version=======")
+        folder_content = build_folder_content(folder_obj)
+        cache.set(folder_obj.id, folder_content)
 
-        return JsonResponse({"folder": folder_content, "breadcrumbs": breadcrumbs})
+    breadcrumbs = create_breadcrumbs(folder_obj)
 
-    if password:
-        raise IncorrectFolderPassword()
-    raise MissingFolderPassword("Please enter folder password.")
+    return JsonResponse({"folder": folder_content, "breadcrumbs": breadcrumbs})
 
 
 def last_modified_func(request, file_obj, sequence=None):
@@ -168,8 +163,6 @@ def search(request):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def get_trash(request):
-    # todo user perms
-    request.user.id = 1
 
     files = File.objects.filter(inTrash=True, owner_id=request.user.id, parent__inTrash=False)
     folders = Folder.objects.filter(inTrash=True, owner_id=request.user.id, parent__inTrash=False)
@@ -186,7 +179,7 @@ def get_trash(request):
     return JsonResponse({"trash": children})
 
 
-@cache_page(60 * 60 * 24)  # 1 day
+@cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
 @handle_common_errors
