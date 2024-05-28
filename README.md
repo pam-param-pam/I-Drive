@@ -216,6 +216,7 @@ This endpoint is used to create files
 
     Status: 204 No Content
 
+### Request
 `PUT /api/file/create`
 > [!TIP]
 > This endpoint is to modify a file for example when it's edited
@@ -233,8 +234,6 @@ This endpoint is used to create files
 
 > [!WARNING]
 > You cannot modify a file that is bigger than 25Mb
-
-> [!WARNING]
 > 'total_fragments' cannot be > 1
 ### Response
 
