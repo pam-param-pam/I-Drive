@@ -100,9 +100,9 @@ def create_file(request):
             file_obj.save()
 
             send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
-            return HttpResponse(status=200)
+            return HttpResponse(status=204)
 
-        return HttpResponse(status=200)
+        return HttpResponse(status=204)
 
     if request.method == "PUT":
         file_id = request.data['file_id']
@@ -163,4 +163,4 @@ def create_file(request):
 
         file_obj.save()
 
-        return HttpResponse(200)
+        return HttpResponse(status=204)

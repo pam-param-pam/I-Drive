@@ -164,7 +164,7 @@ class Discord:
         url = message["attachments"][0]["url"]
         parsed_url = urlparse(url)
         query_params = parse_qs(parsed_url.query)
-        ex_param = query_params.get(b'ex', [None])[0]
+        ex_param = query_params.get('ex', [None])[0]
         if ex_param is None:
             raise ValueError("The 'ex' parameter is missing in the URL")
 

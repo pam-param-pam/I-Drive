@@ -1,5 +1,5 @@
-from typing import TypeAlias, Union
+from typing import Union
 
 from website.models import Folder, File
 
-Resource: TypeAlias = Union[Folder, File]
+Resource = Union[Folder, File]
