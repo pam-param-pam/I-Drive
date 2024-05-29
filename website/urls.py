@@ -4,13 +4,13 @@ from django.contrib import admin
 from django.urls import path, include
 
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder
 from website.views.otherViews import test, index
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import preview
-from website.views.uploadViews import create_file
+from website.views.uploadViews import create_file, create_preview
 from website.views.userViews import change_password, users_me, update_settings
 
 urlpatterns = [
@@ -25,6 +25,8 @@ urlpatterns = [
                   path("api/file/create", create_file, name="create file"),
                   path("api/file/<file_id>", get_file, name="get file by file id"),
                   path("api/file/preview/<file_id>", preview, name="get preview by file id"),
+                  path("api/file/thumbnail/create", create_preview, name="create preview"),
+                  path("api/file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
 
                   path('auth/', include('djoser.urls.authtoken')),
                   path('auth/user/me', users_me, name="get current user"),

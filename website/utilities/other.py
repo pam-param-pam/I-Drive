@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from website.models import File, Folder, UserSettings, Preview, ShareableLink
+from website.models import File, Folder, UserSettings, Preview, ShareableLink, Thumbnail
 from website.tasks import queue_ws_event
 from website.utilities.OPCodes import message_codes, EventCode
 from website.utilities.TypeHinting import Resource
@@ -84,16 +84,19 @@ def create_file_dict(file_obj: File) -> dict:
         'name': file_obj.name,
         'parent_id': file_obj.parent_id,
         'extension': file_obj.extension,
-        'streamable': file_obj.streamable,
         'size': file_obj.size,
         'type': file_obj.type,
-        'encrypted_size': file_obj.encrypted_size,
+        #'encrypted_size': file_obj.encrypted_size,
         'created': timezone.localtime(file_obj.created_at).strftime('%Y-%m-%d %H:%M'),
         'last_modified': timezone.localtime(file_obj.last_modified_at).strftime('%Y-%m-%d %H:%M'),
+        'isLocked': file_obj.is_locked
         # 'ready': file_obj.ready,
         # 'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
         # "maintainers": [],
     }
+    if file_obj.is_locked:
+        file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else None
+
     if file_obj.inTrashSince:
         file_dict["in_trash_since"] = timezone.localtime(file_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
 
@@ -118,14 +121,16 @@ def create_file_dict(file_obj: File) -> dict:
 
     if file_obj.extension in (
             '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-        preview_url = f"{base_url}/api/file/preview/{signed_file_id}"
-    else:
-        preview_url = f"{stream_url}/stream/{signed_file_id}"
+        file_dict['preview_url'] = f"{base_url}/api/file/preview/{signed_file_id}"
 
     download_url = f"{stream_url}/stream/{signed_file_id}"
 
-    file_dict['preview_url'] = preview_url
     file_dict['download_url'] = download_url
+
+    thumbnail = Thumbnail.objects.filter(file=file_obj)
+
+    if thumbnail:
+        file_dict['thumbnail_url'] = f"{stream_url}/thumbnail/{signed_file_id}"
 
     return file_dict
 
@@ -147,10 +152,12 @@ def create_folder_dict(folder_obj: Folder) -> dict:
         'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
         'parent_id': folder_obj.parent_id,
         'isDir': True,
-        'isLocked': True if folder_obj.password else False,
-        'lockFrom': folder_obj.lockFrom.id
+        'isLocked': folder_obj.is_locked,
+        'lockFrom': folder_obj.lockFrom.id if folder_obj.lockFrom else None
 
     }
+    if folder_obj.is_locked:
+        folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else None
     if folder_obj.inTrashSince:
         folder_dict["in_trash_since"] = timezone.localtime(folder_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
     return folder_dict

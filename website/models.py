@@ -30,6 +30,8 @@ class Folder(models.Model):
         return self.name
 
     def _is_locked(self):
+        # TODO
+        return False
         if self.password:
             return True
         return False
@@ -70,32 +72,26 @@ class Folder(models.Model):
         super(Folder, self).delete()
 
     def moveToTrash(self):
+        self.inTrash = True
+        self.save()
+
         for file in self.files.all():
             file.moveToTrash()
 
         for folder in self.folders.all():
             folder.moveToTrash()
 
-        self.inTrash = True
+    def restoreFromTrash(self):
+        self.inTrash = False
         self.save()
 
-    def restoreFromTrash(self):
         for file in self.files.all():
             file.restoreFromTrash()
 
         for folder in self.folders.all():
             folder.restoreFromTrash()
 
-        self.inTrash = False
-        self.save()
-
     def applyLock(self, lockFrom, password):
-        for file in self.files.all():
-            file.applyLock(lockFrom, password)
-
-        for folder in self.folders.all():
-            folder.applyLock(lockFrom, password)
-
         if self == lockFrom:
             self.autoLock = False
         else:
@@ -105,18 +101,24 @@ class Folder(models.Model):
         self.lockFrom = lockFrom
         self.save()
 
+        for file in self.files.all():
+            file.applyLock(lockFrom, password)
+
+        for folder in self.folders.all():
+            folder.applyLock(lockFrom, password)
+
     def removeLock(self):
+        self.autoLock = False
+        self.lockFrom = None
+        self.password = None
+        self.save()
+
         for file in self.files.all():
             file.removeLock()
 
         for folder in self.folders.all():
             if folder.autoLock:
                 folder.removeLock()
-
-        self.autoLock = False
-        self.lockFrom = None
-        self.password = None
-        self.save()
 
     def get_all_files(self):
         children = []
@@ -151,10 +153,10 @@ class File(models.Model):
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files')
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    inTrashSince = models.DateTimeField(null=True)
+    inTrashSince = models.DateTimeField(null=True, blank=True)
     autoLock = models.BooleanField(default=False)
     password = models.CharField(max_length=255, null=True, blank=True)
-    lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, related_name='+')
+    lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 
     def _is_locked(self):
         if self.password:
@@ -331,18 +333,17 @@ class ShareableLink(models.Model):
         return timezone.now() >= self.expiration_time
 
 
-"""
 class Thumbnail(models.Model):
+    created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
-    attachment_id = models.CharField(max_length=255, null=True)
+    attachment_id = models.CharField(max_length=255)
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
     key = models.BinaryField()
 
     def __str__(self):
         return self.file.name
-"""
 
 
 class Preview(models.Model):

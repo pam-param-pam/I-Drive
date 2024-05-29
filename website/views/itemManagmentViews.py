@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder
-from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_task
+from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
 from website.utilities.constants import MAX_NAME_LENGTH, cache
@@ -73,6 +73,7 @@ def move(request):
 
         if item.parent == new_parent:
             raise BadRequestError("'new_parent_id' and 'old_parent_id' cannot be the same!")
+        real_new_parent = new_parent
         x = 0
         while new_parent.parent:  # cannot move item to its descendant
             x += 1
@@ -83,6 +84,7 @@ def move(request):
         items.append(item)
 
         ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
+        new_parent = real_new_parent
     new_parent = Folder.objects.get(id=new_parent_id)  # goofy ah redeclaration
 
     # invalidate any cache
@@ -96,7 +98,7 @@ def move(request):
         item.save()
 
     send_event(request.user.id, EventCode.ITEM_MOVED, request.request_id, ws_data)
-    return HttpResponse(status=200)
+    return HttpResponse(status=204)
 
 
 @api_view(['PATCH'])
@@ -131,23 +133,27 @@ def move_to_trash(request):
 
         items.append(item)
 
+    long_process = False
     for item in items:
-        item.inTrash = True
-        item.inTrashSince = timezone.now()
-        item.save()
-
         if isinstance(item, File):
             file_dict = create_file_dict(item)
             send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
                        [file_dict])
+            item.inTrash = True
+            item.inTrashSince = timezone.now()
+            item.save()
 
         elif isinstance(item, Folder):
+
             folder_dict = create_folder_dict(item)
             send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
                        [folder_dict])
-            move_to_trash_task.delay(item.id)
+            move_to_trash_task.delay(request.user.id, request.request_id, item.id)
+            long_process = True
 
-    return HttpResponse(status=200)
+    if long_process:
+        return JsonResponse(build_response(request.request_id, "Restoring from Trash..."))
+    return HttpResponse(status=204)
 
 
 @api_view(['PATCH'])
@@ -182,22 +188,25 @@ def restore_from_trash(request):
 
         items.append(item)
 
+    long_process = False
     for item in items:
-        item.inTrash = False
-        item.inTrashSince = None
-        item.save()
         if isinstance(item, File):
             send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
                        [create_file_dict(item)])
+            item.inTrash = False
+            item.inTrashSince = None
+            item.save()
 
         elif isinstance(item, Folder):
             send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
                        [create_folder_dict(item)])
 
-            restore_from_trash_task.delay(item.id)
+            restore_from_trash_task.delay(request.user.id, request.request_id, item.id)
+            long_process = True
 
-    return HttpResponse(status=200)
-
+    if long_process:
+        return JsonResponse(build_response(request.request_id, "Moving to Trash..."))
+    return HttpResponse(status=204)
 
 @api_view(['DELETE'])
 @throttle_classes([UserRateThrottle])
@@ -265,7 +274,7 @@ def rename(request):
 
     send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
                [{'parent_id': item.parent.id, 'id': item.id, 'new_name': new_name}])
-    return HttpResponse(status=200)
+    return HttpResponse(status=204)
 
 
 @api_view(['POST', 'GET'])
@@ -277,20 +286,26 @@ def folder_password(request, folder_obj):
     password = request.headers.get("X-Folder-Password")
 
     if request.method == "GET":
-        return HttpResponse(204)
+        if folder_obj.password == password:
+
+            return HttpResponse(status=204)
+        raise IncorrectFolderPassword()
 
     if request.method == "POST":
         newPassword = request.data['new_password']
         if folder_obj.password == password:
             if newPassword:
-                folder_obj.applyLock(folder_obj, newPassword)
+                lock_folder.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
             else:
-                folder_obj.removeLock()
-            isLocked = True if folder_obj.password else False
+                unlock_folder.delay(request.user.id, request.request_id, folder_obj.id)
+
+            isLocked = True if newPassword else False
 
             send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
                        [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked}])
-            return HttpResponse(status=200)
+            if isLocked:
+                return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
+            return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
 
         else:
             raise IncorrectFolderPassword()

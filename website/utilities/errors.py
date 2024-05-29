@@ -14,6 +14,9 @@ class ResourceNotPreviewable(IDriveException):
     """Raised when resource is too big to be previewed, or file is too corrupted to generate a preview"""
     pass
 
+class ThumbnailAlreadyExists(IDriveException):
+    """Raised during creation of file thumbnail but one already exists for that file"""
+
 class ResourcePermissionError(IDriveException):
     """Raised when user has not enough privilege to access a resource"""
     pass

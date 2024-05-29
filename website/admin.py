@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.template.defaultfilters import filesizeformat
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail
 from .utilities.constants import cache
 
 
@@ -121,14 +121,33 @@ class FileAdmin(admin.ModelAdmin):
     readable_encrypted_size.short_description = 'ENCRYPTED SIZE'
 
     def save_model(self, request, obj, form, change):
-
         print(change)
         super().save_model(request, obj, form, change)
+
+
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)
 
 @admin.register(Preview)
 class PreviewAdmin(admin.ModelAdmin):
+    ordering = ["-created_at"]
+    list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
+
+    def file_name(self, obj):
+        return obj.file.name
+
+    def owner(self, obj):
+        return obj.file.owner
+
+    def readable_size(self, obj):
+        return filesizeformat(obj.size)
+
+    def readable_encrypted_size(self, obj):
+        return filesizeformat(obj.encrypted_size)
+
+
+@admin.register(Thumbnail)
+class ThumbnailAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
 

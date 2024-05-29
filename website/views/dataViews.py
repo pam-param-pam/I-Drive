@@ -12,7 +12,7 @@ from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
-from website.utilities.errors import BadRequestError
+from website.utilities.errors import BadRequestError, ResourceNotFound
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle
 
@@ -101,9 +101,7 @@ def get_breadcrumbs(request, folder_obj):
 @throttle_classes([SearchRateThrottle])
 @handle_common_errors
 def search(request):
-    # TODO
     user = request.user
-    user.id = 1
 
     query = request.GET.get('query', None)
     file_type = request.GET.get('type', None)
@@ -124,8 +122,8 @@ def search(request):
         include_folders = True
 
     # Start with a base queryset
-    files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False).order_by("-created_at")
-    folders = Folder.objects.filter(owner_id=user.id).order_by("-created_at")
+    files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, lockFrom__isnull=True).order_by("-created_at")
+    folders = Folder.objects.filter(owner_id=user.id, lockFrom__isnull=True).order_by("-created_at")
     if query is None and file_type is None and extension is None and not include_files and not include_folders:
         raise BadRequestError(
             "Please specify at least one: ['query', 'file_type', 'extension']")
@@ -215,14 +213,33 @@ def get_fragments_info(request, file_obj):
     fragments_list = []
     for fragment in fragments:
         fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
-    file_obj = {
+    file_dict = {
         "size": file_obj.size,
         "mimetype": file_obj.mimetype,
         "type": file_obj.type,
         "name": file_obj.name,
         "key": str(file_obj.key),
     }
-    return JsonResponse({"file": file_obj, "fragments": fragments_list}, safe=False)
+    return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
+
+@cache_page(60 * 60 * 12)  # 12 hours
+@api_view(['GET'])
+@throttle_classes([MediaRateThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+def get_thumbnail_info(request, file_obj):
+    thumbnail = file_obj.thumbnail
+
+    url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
+
+    thumbnail_dict = {
+        "size": thumbnail.size,
+        "encrypted_siz": thumbnail.encrypted_size,
+        "url": url,
+        "key": str(thumbnail.key),
+    }
+    return JsonResponse(thumbnail_dict, safe=False)
 
 """
 

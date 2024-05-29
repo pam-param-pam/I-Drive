@@ -4,12 +4,12 @@ from rest_framework.decorators import api_view, throttle_classes, permission_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 
-from website.models import Folder, File, Fragment, UserSettings
+from website.models import Folder, File, Fragment, UserSettings, Thumbnail
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
-from website.utilities.errors import BadRequestError, ResourcePermissionError
+from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExists
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import send_event, create_file_dict
 
@@ -164,3 +164,32 @@ def create_file(request):
         file_obj.save()
 
         return HttpResponse(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated & CreatePerms])
+@throttle_classes([UserRateThrottle])
+@handle_common_errors
+def create_preview(request):
+    file_id = request.data['file_id']
+    message_id = request.data['message_id']
+    attachment_id = request.data['attachment_id']
+    size = request.data['size']
+    encrypted_size = request.data['encrypted_size']
+    key = request.data['key']
+
+    file_obj = File.objects.get(id=file_id)
+    if file_obj.thumbnail:
+        raise ThumbnailAlreadyExists()
+
+    thumbnail_obj = Thumbnail(
+        file=file_obj,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        size=size,
+        encrypted_size=encrypted_size,
+        key=key,
+
+    )
+    thumbnail_obj.save()
+    return HttpResponse(status=204)

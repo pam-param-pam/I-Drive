@@ -156,7 +156,7 @@ def smart_delete(user_id, request_id, ids):
         for item in items:
             item.delete()
 
-        send_message(f"Items deleted!", True, user_id, request_id)
+        send_message("toasts.itemsDeleted", True, user_id, request_id)
 
     except Exception as e:
         send_message(str(e), True, user_id, request_id, True)
@@ -168,15 +168,29 @@ def prefetch_discord_message(message_id, attachment_id):
     discord.get_file_url(message_id, attachment_id)
 
 @app.task
-def move_to_trash_task(folder_id):
+def move_to_trash_task(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
     folder.moveToTrash()
+    send_message("toasts.itemsMovedToTrash", True, user_id, request_id)
+
+@app.task
+def restore_from_trash_task(user_id, request_id, folder_id):
+    folder = Folder.objects.get(id=folder_id)
+    folder.restoreFromTrash()
+    send_message("toasts.itemsRestoredFromTrash", True, user_id, request_id)
+
+@app.task
+def lock_folder(user_id, request_id, folder_id, password):
+    folder = Folder.objects.get(id=folder_id)
+    folder.applyLock(folder, password)
+    send_message("toasts.passwordUpdated", True, user_id, request_id)
 
 
 @app.task
-def restore_from_trash_task(folder_id):
+def unlock_folder(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
-    folder.restoreFromTrash()
+    folder.removeLock()
+    send_message("toasts.passwordUpdated", True, user_id, request_id)
 
 @app.task
 def delete_unready_files():

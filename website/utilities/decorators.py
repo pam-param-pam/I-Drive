@@ -4,9 +4,9 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from rest_framework.exceptions import Throttled
 
-from website.models import File, Folder, ShareableLink
+from website.models import File, Folder, ShareableLink, Thumbnail
 from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, IncorrectFilePassword
+    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, IncorrectFilePassword, ThumbnailAlreadyExists
 from website.utilities.other import error_res, verify_signed_file_id
 
 
@@ -114,6 +114,9 @@ def handle_common_errors(view_func):
         except ShareableLink.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Share with provided token not found."),
                                 status=404)
+        except Thumbnail.DoesNotExist:
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Thumbnail doesn't exist."),
+                                status=404)
         except ResourceNotFound as e:
             return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
 
@@ -128,6 +131,8 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=400, error_code=14, details=str(e)), status=400)
         except ResourceNotPreviewable as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=11, details=str(e)), status=400)
+        except ThumbnailAlreadyExists as e:
+            return JsonResponse(error_res(user=request.user, code=400, error_code=18, details=str(e)), status=400)
         except NotImplementedError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=15, details=str(e)), status=400)
         except KeyError:
