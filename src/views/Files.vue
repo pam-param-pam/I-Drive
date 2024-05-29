@@ -91,7 +91,7 @@ export default {
       this.setError(null)
 
       try {
-        let res = await getItems(this.folderId, false);
+        let res = await getItems(this.folderId, "a");
         this.items = res.folder.children
         this.folderList = res.breadcrumbs
         this.$store.commit("setItems", this.items);

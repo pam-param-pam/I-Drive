@@ -82,9 +82,12 @@ export default {
     submit: async function () {
       if (!(this.password === "" && this.oldPassword === "")) {
         try {
-          await lockWithPassword(this.folder_id, this.password, this.oldPassword)
-          let message = this.$t('toasts.passwordUpdated')
-          this.$toast.success(message);
+          let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
+          let message = this.$t('toasts.passwordIsBeingUpdated')
+          this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id,
+          })
           this.$store.commit("closeHover");
 
         }

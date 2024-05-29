@@ -42,6 +42,7 @@
     "video": "Video (・ω・)"
   },
   "buttons": {
+    "unlock": "Unlock",
     "locate": "Locate",
     "restoreFromTrash": "Restore from Trash",
     "moveToTrash": "Move to Trash",
@@ -210,6 +211,14 @@
   },
   "toasts": {
     "ItemLocated": "Item located",
+    "passwordIsBeingUpdated": "Folder password is updating...",
+    "passwordUpdated": "Password updated!",
+    "itemsAreBeingMovedToTrash": "Moving to Trash...",
+    "itemsMovedToTrash": "Moved to Trash!",
+    "itemsAreBeingRestoredFromTrash": "Restoring from Trash...",
+    "itemsRestoredFromTrash": "Restored items from Trash!",
+    "itemsAreBeingDeleted": "Deleting...",
+    "itemsDeleted": "Deleted!",
     "itemMoved": "Mowed {amount} itwems (ᗒᗨᗕ)",
     "itemMovedToTrash": "Mowed {amount} itwems to twash hehe" ,
     "deletingItems": "*blushes* Deleting {amount} items",
@@ -218,11 +227,9 @@
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
     "PreparingUpload": "Stawted pwoccesing f-fiwes f-f-fow upwoad...",
     "fileSaved": "Fiwe saved",
-    "passwordUpdated": "Password updated!",
-    "itemsRestoredFromTrash": "Restored {amount} items from Trash!",
-    "itemsMovedToTrash": "Moved {amount} items to Trash!",
     "shareDeleted": "Share deleted!",
-    "downloadingSingle": "Downloading {name}"
+    "downloadingSingle": "Downloading {name}",
+    "folderPasswordIncorrect": "Incorrect folder password"
 
 
   }

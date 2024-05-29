@@ -73,10 +73,10 @@ export default {
 
         let res = await remove({"ids": ids});
 
-        let message = this.$t('toasts.deletingItems', {amount: ids.length})
+        let message = this.$t('toasts.itemsAreBeingDeleted', {amount: ids.length})
         this.$toast.info(message, {
           id: res.task_id,
-        });
+        })
         this.currentPrompt?.confirm();
 
       } catch (error) {

@@ -1,5 +1,6 @@
 import vue from "@/utils/vue.js"
 import store from "@/store"
+import i18n from "@/i18n/index.js";
 
 export default function onEvent(message) {
   let currentFolder = store.state.currentFolder
@@ -59,9 +60,16 @@ export default function onEvent(message) {
   }
 
   if (jsonObject.op_code === 8) { // folder lock status change
+    console.log(1111)
     for (let item of jsonObject.data) {
+      console.log(2222)
+
       if (item.parent_id !== currentFolder.id) return
+      console.log(3333)
+
       store.commit("changeLockStatusAndPasswordCache", {folderId: item.id, newLockStatus: item.isLocked})
+      console.log(4444)
+
     }
 
   }
@@ -128,7 +136,8 @@ export default function onEvent(message) {
     }
     vue.$toast.update(jsonObject.task_id, {
 
-      content: jsonObject.message,
+      content: i18n.t(jsonObject.message),
+
       options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
 
     })

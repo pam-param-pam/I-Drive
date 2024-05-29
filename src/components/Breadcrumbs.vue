@@ -22,7 +22,6 @@
 
 <script>
 import {mapState} from "vuex";
-import {breadcrumbs} from "@/api/folder.js";
 
 export default {
   name: "breadcrumbs",

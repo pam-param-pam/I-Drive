@@ -93,8 +93,8 @@
     </template>
 
     <div
+      v-if="$router.currentRoute.path.includes('/files/') && !disableCreation"
       class="credits"
-
       style="width: 90%; margin: 2em 2.5em 3em 2.5em"
     >
       <progress-bar :val="usage.usedPercentage" size="small"></progress-bar>

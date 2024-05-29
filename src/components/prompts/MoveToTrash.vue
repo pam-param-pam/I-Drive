@@ -62,12 +62,24 @@ export default {
     ...mapMutations(["closeHover", "resetSelected"]),
     submit: async function () {
       try {
-        let ids = this.selected.map(item => item.id);
+        let ids = this.selected.map(item => item.id)
 
-        await moveToTrash({"ids": ids});
-        let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
-        this.$toast.info(message);
-        this.currentPrompt?.confirm();
+        let res = await moveToTrash({"ids": ids})
+        if (res.status !== 204) {
+          let message = this.$t('toasts.itemsAreBeingMovedToTrash', {amount: ids.length})
+
+          res = await res.json()
+          this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id,
+          })
+        }
+        else {
+          let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
+
+          this.$toast.info(message)
+        }
+        this.currentPrompt?.confirm()
 
       } catch (error) {
         console.log(error)

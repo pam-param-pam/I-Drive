@@ -1,7 +1,7 @@
 import { fetchURL, fetchJSON} from "./utils"
 
 export async function getAllShares() {
-  return fetchJSON("/api/shares")
+  return fetchJSON("/api/shares", {})
 }
 
 export async function getShare(token, folderId= "") {
@@ -13,7 +13,7 @@ export async function getShare(token, folderId= "") {
 }
 
 export async function removeShare(data) {
-  await fetchURL(`/api/deleteshare`, {
+  await fetchURL(`/api/share/delete`, {
     method: "DELETE",
     body: JSON.stringify(data)
 
@@ -21,7 +21,7 @@ export async function removeShare(data) {
 }
 
 export async function createShare(data) {
-  return fetchJSON("/api/createshare", {
+  return fetchJSON("/api/share/create", {
     method: "POST",
     body: JSON.stringify(data)
   })

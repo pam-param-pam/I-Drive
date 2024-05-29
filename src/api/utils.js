@@ -73,7 +73,14 @@ export async function fetchJSON(url, opts, auth= true) {
   return res.json()
 
 }
-
+export function getHeaders(resource) {
+  const headers = {};
+  let password = store.getters.getFolderPassword(resource.lockFrom);
+  if (password) {
+    headers["X-Folder-Password"] = encodeURIComponent(password);
+  }
+  return headers;
+}
 export function sortItems(items) {
   // Create a shallow copy of the items array
   const itemsCopy = items.slice()

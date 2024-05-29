@@ -41,6 +41,9 @@
     "video": "Wideo"
   },
   "buttons": {
+    "submit": "Zatwierdź",
+    "more": "Więcej",
+    "unlock": "Odblokuj",
     "locate": "Znajdź",
     "restoreFromTrash": "Przywróć z kosza",
     "moveToTrash": "Przenieś do kosza",
@@ -208,6 +211,14 @@
   },
   "toasts": {
     "itemLocated": "Zaleziono miejsce przechowywania pliku",
+    "passwordIsBeingUpdated": "Hasło do folderu jest zmieniane...",
+    "passwordUpdated": "Hasło zostało zaktualizowane!",
+    "itemsAreBeingMovedToTrash": "Przenoszenie do kosza...",
+    "itemsMovedToTrash": "Przeniesiono do kosza!",
+    "itemsAreBeingRestoredFromTrash": "Przywracanie z kosza...",
+    "itemsRestoredFromTrash": "Przywrócono z kosza!",
+    "itemsAreBeingDeleted": "Usuwanie...",
+    "itemsDeleted": "Usunięto!",
     "itemMoved": "Przenesiono {amount} itemy",
     "itemMovedToTrash": "Przenesiono {amount} itemy do kosza",
     "deletingItems": "Usuwanie {amount} itemów",
@@ -216,11 +227,10 @@
     "selectFilesFirst": "Zaznacz plik(i) najpierw!",
     "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
     "fileSaved": "Zapisano plik",
-    "passwordUpdated": "Hasło zmienione",
-    "itemsRestoredFromTrash": "Przywrócono z kosza {amount} itemy",
-    "itemsMovedToTrash": "Przeniesiono do kosza {amount} itemy",
     "shareDeleted": "Usunięto share",
-    "downloadingSingle": "Pobieranie {name}"
+    "downloadingSingle": "Pobieranie {name}",
+    "folderPasswordIncorrect": "Niepoprawne hasło"
+
 
 
   }

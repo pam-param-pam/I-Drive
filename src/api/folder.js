@@ -1,24 +1,12 @@
-import {fetchJSON, fetchURL} from "./utils"
-import store from "@/store/index.js"
+import {fetchJSON, fetchURL, getHeaders} from "./utils"
 
-
-export async function breadcrumbs(folder_id) {
-    return await fetchJSON(`/api/folder/breadcrumbs/${folder_id}`, {})
-
-}
-export async function getItems(folder_id, includeTrash) {
-    let password = store.getters.getFolderPassword(folder_id)
+export async function getItems(folder_id) {
     let url = "/api/folder/" + folder_id
+    //let headers = getHeaders(lockFrom)
+    // headers: headers
 
-    if (password?.length !== undefined) {
-        return await fetchJSON(url, {
-            headers: {
-                "X-Folder-Password": password
-            }
-          }
-        )
-    }
-    return await fetchJSON(url, {})
+    return await fetchJSON(url, {
+    })
 
 }
 export async function isPasswordCorrect(folder_id, password) {
@@ -30,22 +18,29 @@ export async function isPasswordCorrect(folder_id, password) {
           "X-Folder-Password": password
         }
     })
-    return response.status === 200
+    return response.status === 204
 }
 
 export async function lockWithPassword(folder_id, password, oldPassword) {
     let url = `/api/folder/password/${folder_id}`
+    const headers = {}
+
     if (oldPassword === "") {
         oldPassword = null
+    }
+    else {
+        headers["X-Folder-Password"] = encodeURIComponent(oldPassword);
+
     }
     if (password === "") {
         password = null
     }
-    let data = {"new_password": password, "old_password": oldPassword}
+    let data = {"new_password": password}
 
-    return await fetchURL(url, {
+    return await fetchJSON(url, {
         method: "POST",
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        headers: headers,
 
     })
 }
@@ -58,7 +53,7 @@ export async function create(data) {
 }
 export async function getUsage(folderId) {
 
-    return await fetchJSON(`/api/folder/usage/${folderId}/`, {})
+    return await fetchJSON(`/api/folder/usage/${folderId}`, {})
 
 }
 

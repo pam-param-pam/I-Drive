@@ -42,6 +42,7 @@
     "video": "Video"
   },
   "buttons": {
+    "unlock": "Unlock",
     "locate": "Locate",
     "restoreFromTrash": "Restore from Trash",
     "moveToTrash": "Move to Trash",
@@ -214,19 +215,24 @@
   },
   "toasts": {
     "ItemLocated": "Item located",
+    "passwordIsBeingUpdated": "Folder password is updating...",
+    "passwordUpdated": "Password updated!",
+    "itemsAreBeingMovedToTrash": "Moving to Trash...",
+    "itemsMovedToTrash": "Moved to Trash!",
+    "itemsAreBeingRestoredFromTrash": "Restoring from Trash...",
+    "itemsRestoredFromTrash": "Restored items from Trash!",
+    "itemsAreBeingDeleted": "Deleting...",
+    "itemsDeleted": "Deleted!",
     "itemMoved": "Moved {amount} items",
-    "itemMovedToTrash": "Moved {amount} items to trash",
-    "deletingItems": "Deleting {amount} items",
     "folderCreated": "Created {name}",
     "itemRenamed": "Name changed",
     "selectFilesFirst": "Select file(s) first!",
     "PreparingUpload": "Started proccesing files for upload...",
     "fileSaved": "File saved",
-    "passwordUpdated": "Password updated!",
-    "itemsRestoredFromTrash": "Restored {amount} items from Trash!",
-    "itemsMovedToTrash": "Moved {amount} items to Trash!",
     "shareDeleted": "Share deleted!",
-    "downloadingSingle": "Downloading {name}"
+    "downloadingSingle": "Downloading {name}",
+    "folderPasswordIncorrect": "Incorrect folder password"
+
 
   }
 }

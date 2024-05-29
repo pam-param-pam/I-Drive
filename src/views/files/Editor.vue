@@ -35,7 +35,6 @@
 
 <script>
 import {mapMutations, mapState} from "vuex";
-import {files as api} from "@/api";
 import buttons from "@/utils/buttons";
 
 import {version as ace_version} from "ace-builds";
@@ -49,7 +48,7 @@ import {getFile} from "@/api/files.js";
 import store from "@/store/index.js";
 import {fetchURL} from "@/api/utils.js";
 import {theme} from "@/utils/constants.js";
-import {breadcrumbs} from "@/api/folder.js";
+import {breadcrumbs} from "@/api/item.js";
 
 export default {
   name: "editor",
@@ -209,8 +208,7 @@ export default {
     },
     close() {
       try {
-        let uri = `/folder/${this.file.parent_id}`;
-
+        let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
         if (!this.editor.session.getUndoManager().isClean()) {
           this.$store.commit("showHover", {
             prompt: "discardEditorChanges",
@@ -226,7 +224,8 @@ export default {
       }
       // catch every error so user can always close...
       catch {
-        this.$router.push({name: `Files`});
+
+        this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}});
 
       }
 

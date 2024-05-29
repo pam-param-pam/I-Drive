@@ -20,6 +20,14 @@
         v-if="item.preview_url && type === 'image'"
         :src="item.preview_url"
       />
+      <img
+        v-else-if="item.download_url && type === 'image'"
+        :src="item.download_url"
+      />
+      <img
+        v-else-if="item.thumbnail_url && type === 'video'"
+        :src="item.thumbnail_url"
+      />
       <i v-else class="material-icons"></i>
     </div>
     <div>
@@ -142,7 +150,7 @@ export default {
 
         //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id));
         //this.$store.commit("setItems", updatedItem);
-
+        //todo
         let message = `Moved to ${this.item.name}!`
         this.$toast.success(message);
 

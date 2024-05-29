@@ -50,11 +50,11 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="file.type === 'image' &&!loadingImage && file.size > 0" :src="file.preview_url"></ExtendedImage>
+        <ExtendedImage v-if="file.type === 'image' &&!loadingImage && file.size > 0" :src="fileSrcUrl"></ExtendedImage>
         <audio
           v-else-if="file.type === 'audio' && file.size > 0"
           ref="player"
-          :src="file.preview_url"
+          :src="fileSrcUrl"
           controls
           :autoplay="autoPlay"
           @play="autoPlay = true"
@@ -63,7 +63,7 @@
           v-else-if="file.type === 'video' && file.size > 0"
           ref="video"
           controls
-          :src="file.preview_url"
+          :src="fileSrcUrl"
           :autoplay="autoPlay"
           @play="autoPlay = true"
         >
@@ -71,7 +71,7 @@
         <object
           v-else-if="file.extension === '.pdf' && file.size > 0"
           class="pdf"
-          :data="file.preview_url"
+          :data="fileSrcUrl"
         ></object>
         <div v-else class="info">
           <div class="title">
@@ -79,7 +79,7 @@
             {{ $t("files.noPreview") }}
           </div>
           <div>
-            <a target="_blank" :href="file.preview_url" class="button button--flat" download>
+            <a target="_blank" :href="file.download_url" class="button button--flat" download>
               <div>
                 <i class="material-icons">file_download</i
                 >{{ $t("buttons.download") }}
@@ -87,7 +87,7 @@
             </a>
             <a
               target="_blank"
-              :href="file.preview_url"
+              :href="fileSrcUrl + '?isInline=True'"
               class="button button--flat"
               v-if="!file.isDir"
             >
@@ -163,6 +163,12 @@ export default {
   computed: {
     ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
     ...mapGetters(["currentPrompt"]),
+    fileSrcUrl() {
+      if (this.file.preview_url)
+        return this.file.preview_url
+      return this.file.download_url
+    },
+
     currentIndex() {
       if (this.files && this.file) {
         return this.files.findIndex(item => item.id === this.file.id);
@@ -269,7 +275,9 @@ export default {
       this.hoverNav = false;
       if (this.hasPrevious) {
         let previousFile = this.files[this.currentIndex - 1];
-        this.$router.replace({path: previousFile.id});
+        console.log(previousFile)
+
+        this.$router.push({name: "Preview", params: {"fileId": previousFile.id}} );
       }
 
     },
@@ -277,7 +285,8 @@ export default {
       this.hoverNav = false;
       if (this.hasNext) {
         let nextFile = this.files[this.currentIndex + 1];
-        this.$router.replace({path: nextFile.id});
+        console.log(nextFile)
+        this.$router.push({name: "Preview", params: {"fileId": nextFile.id}} );
       }
     },
     key(event) {
@@ -330,7 +339,7 @@ export default {
 
       }
       else {
-        this.$router.push({name: `Files`});
+        this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}});
 
 
       }

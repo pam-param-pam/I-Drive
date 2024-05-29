@@ -33,7 +33,7 @@
         :aria-label="$t('buttons.submit')"
         :title="$t('buttons.submit')"
       >
-        {{ $t("buttons.submit") }}
+        {{ $t("buttons.unlock") }}
       </button>
     </div>
   </div>
@@ -71,7 +71,7 @@ export default {
       }
       else {
         let message = this.$t('toasts.folderPasswordIncorrect')
-        this.$toast.info(message);
+        this.$toast.error(message);
       }
 
     },

@@ -62,11 +62,23 @@ export default {
     ...mapMutations(["closeHover", "resetSelected"]),
     submit: async function () {
       try {
-        let ids = this.selected.map(item => item.id);
+        let ids = this.selected.map(item => item.id)
 
-        await restoreFromTrash({"ids": ids});
-        let message = this.$t('toasts.itemsRestoredFromTrash', {amount: ids.length})
-        this.$toast.info(message);
+        let res = await restoreFromTrash({"ids": ids})
+        if (res.status !== 204) {
+          res = await res.json()
+          let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
+          this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id
+          })
+        }
+        else {
+          let message = this.$t('toasts.itemsRestoredFromTrash', {amount: ids.length})
+
+          this.$toast.success(message)
+        }
+
         this.currentPrompt?.confirm();
 
       } catch (error) {
