@@ -68,7 +68,7 @@ export default {
         if (res.status !== 204) {
           let message = this.$t('toasts.itemsAreBeingMovedToTrash', {amount: ids.length})
 
-          res = await res.json()
+          res = await res.data
           this.$toast.info(message, {
             timeout: null,
             id: res.task_id,
@@ -77,7 +77,7 @@ export default {
         else {
           let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
 
-          this.$toast.info(message)
+          this.$toast.success(message)
         }
         this.currentPrompt?.confirm()
 

@@ -1,12 +1,11 @@
 import { fetchURL, fetchJSON } from "./utils"
+import {backend_instance} from "@/api/networker.js";
 
-export function get() {
-  return fetchJSON(`/api/settings`, {})
-}
 
-export async function update(settings) {
-  await fetchURL(`/api/settings`, {
-    method: "PUT",
-    body: JSON.stringify(settings),
-  })
+
+export async function update(data) {
+  let url = "/api/settings"
+  let response = await backend_instance.put(url, data);
+  return response.data;
+
 }

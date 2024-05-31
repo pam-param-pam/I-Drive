@@ -66,7 +66,7 @@ export default {
 
         let res = await restoreFromTrash({"ids": ids})
         if (res.status !== 204) {
-          res = await res.json()
+          res = await res.data
           let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
           this.$toast.info(message, {
             timeout: null,

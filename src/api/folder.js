@@ -1,23 +1,19 @@
 import {fetchJSON, fetchURL, getHeaders} from "./utils"
+import {backend_instance} from "@/api/networker.js";
 
 export async function getItems(folder_id) {
     let url = "/api/folder/" + folder_id
-    //let headers = getHeaders(lockFrom)
-    // headers: headers
-
-    return await fetchJSON(url, {
-    })
-
+    let response = await backend_instance.get(url);
+    return response.data;
 }
 export async function isPasswordCorrect(folder_id, password) {
     let url = `/api/folder/password/${folder_id}`
-
-    let response = await fetchURL(url, {
-        method: "GET",
+    let response = await backend_instance.get(url, {
         headers: {
-          "X-Folder-Password": password
+            "Content-Type": "application/json",
+            "X-Folder-Password": password
         }
-    })
+    });
     return response.status === 204
 }
 
@@ -36,34 +32,22 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
         password = null
     }
     let data = {"new_password": password}
+    let response = await backend_instance.post(url, data, {
+        headers: headers
+    });
+    return response.data;
 
-    return await fetchJSON(url, {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: headers,
 
-    })
 }
 export async function create(data) {
-    return await fetchJSON(`/api/folder/create`, {
-        method: "POST",
-        body: JSON.stringify(data)
-    })
+    let url = "/api/folder/create"
+    let response = await backend_instance.post(url, data);
+    return response.data;
 
 }
 export async function getUsage(folderId) {
-
-    return await fetchJSON(`/api/folder/usage/${folderId}`, {})
-
-}
-
-export async function changePassword(data) {
-
-    return await fetchJSON(`/api/folder/password`, {
-        method: "PATCH",
-
-        body: JSON.stringify(data)
-    })
-
+    let url = `/api/folder/usage/${folderId}`
+    let response = await backend_instance.get(url);
+    return response.data;
 
 }

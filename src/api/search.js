@@ -1,10 +1,10 @@
 import {fetchJSON} from "./utils"
+import {backend_instance} from "@/api/networker.js";
 
 export async function search(argumentDict) {
   let queryParams = new URLSearchParams(argumentDict)
+
   let url = `/api/search?${queryParams.toString()}`
-
-
-  return await fetchJSON(url)
-
+  let response = await backend_instance.get(url);
+  return response.data;
 }

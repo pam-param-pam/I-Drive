@@ -126,10 +126,9 @@
 
 <script>
 import { mapState, mapGetters } from "vuex";
-import { share as api, pub as pub_api } from "@/api";
+import { share as api} from "@/api";
 import moment from "moment";
 import Clipboard from "clipboard";
-import {baseURL} from "@/utils/constants.js";
 
 export default {
   name: "share",

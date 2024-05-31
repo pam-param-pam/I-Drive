@@ -616,7 +616,7 @@ export default {
     },
 
     drop: async function (event) {
-      event.preventDefault();
+      //event.preventDefault();
       this.dragCounter = 0;
       this.resetOpacity();
       let dt = event.dataTransfer;

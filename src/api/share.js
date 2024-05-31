@@ -1,30 +1,34 @@
 import { fetchURL, fetchJSON} from "./utils"
+import {backend_instance} from "@/api/networker.js";
 
 export async function getAllShares() {
-  return fetchJSON("/api/shares", {})
+  let url = "/api/shares"
+  let response = await backend_instance.get(url);
+  return response.data;
 }
 
 export async function getShare(token, folderId= "") {
   let url = `/api/share/${token}`
-  if (folderId.length > 0)
-    url = `${url}/${folderId}`
-
-  return fetchJSON(url, {}, false)
+  let response = await backend_instance.get(url, {
+    headers: {
+      "Authorization": false,
+    }
+  });
+  return response.data;
 }
 
 export async function removeShare(data) {
-  await fetchURL(`/api/share/delete`, {
-    method: "DELETE",
-    body: JSON.stringify(data)
+  let url = "/api/share/delete"
+  let response = await backend_instance.patch(url, data);
+  return response.data;
 
-  })
 }
 
 export async function createShare(data) {
-  return fetchJSON("/api/share/create", {
-    method: "POST",
-    body: JSON.stringify(data)
-  })
+  let url = "/api/share/create"
+  let response = await backend_instance.post(url, data);
+  return response.data;
+
 }
 
 

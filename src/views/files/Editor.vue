@@ -7,8 +7,9 @@
         v-if="perms.delete"
         id="delete-button"
         icon="delete"
-        :label="$t('buttons.delete')"
-        show="delete"
+        :label="$t('buttons.moveToTrash')"
+        @action="moveToTrash"
+        show="moveToTrash"
       />
       <action
         v-if="perms.modify"
@@ -79,7 +80,6 @@ export default {
 
 
   created() {
-    console.log("aaaaaaaaaa");
     this.fetchData();
 
     window.addEventListener("keydown", this.keyEvent);
@@ -204,6 +204,15 @@ export default {
       buttons.success(button);
       let message = this.$t('toasts.fileSaved')
       this.$toast.success(message);
+
+    },
+    moveToTrash() {
+      this.$store.commit("showHover", {
+        prompt: "moveToTrash",
+        confirm: () => {
+          this.close()
+        },
+      });
 
     },
     close() {

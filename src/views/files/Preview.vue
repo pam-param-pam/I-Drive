@@ -21,8 +21,8 @@
           :disabled="loading"
           v-if="perms.delete"
           icon="delete"
-          :label="$t('buttons.delete')"
-          @action="deleteFile"
+          :label="$t('buttons.moveToTrash')"
+          @action="moveToTrash"
           id="delete-button"
         />
         <action
@@ -258,9 +258,9 @@ export default {
       console.log("loading false")
 
     },
-    deleteFile() {
+    moveToTrash() {
       this.$store.commit("showHover", {
-        prompt: "delete",
+        prompt: "moveToTrash",
         confirm: () => {
           this.close()
         },

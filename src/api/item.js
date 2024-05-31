@@ -1,49 +1,31 @@
-import {fetchJSON, fetchURL, getHeaders} from "@/api/utils.js"
-import store from "@/store/index.js";
+import {backend_instance} from "@/api/networker.js";
 
 export async function moveToTrash(data) {
-
-    return await fetchURL(`/api/item/moveToTrash`, {
-        method: "PATCH",
-        body: JSON.stringify(data)
-    })
+    let url = "/api/item/moveToTrash"
+    return await backend_instance.patch(url, data)
 }
 export async function breadcrumbs(folder_id) {
-    // const headers = getHeaders(resource.lockfrom)
-        //        headers: headers
-    return await fetchJSON(`/api/folder/breadcrumbs/${folder_id}`, {
-    })
-
+    let url = `/api/folder/breadcrumbs/${folder_id}`
+    let response = await backend_instance.get(url)
+    return response.data
 }
 export async function restoreFromTrash(data) {
-    return await fetchURL(`/api/item/restore`, {
-        method: "PATCH",
-        body: JSON.stringify(data)
-    })
+    let url = `/api/folder/breadcrumbs/${folder_id}`
+    return await backend_instance.post(url, data)
 }
 
 export async function rename(data) {
-    return await fetchURL(`/api/item/rename`, {
-        method: "PATCH",
-
-        body: JSON.stringify(data)
-    })
-
+    let url = "/api/item/rename"
+    let response = await backend_instance.patch(url, data)
+    return response.data
 }
 export async function move(data) {
-    return await fetchURL(`/api/item/move`, {
-        method: "PATCH",
-
-        body: JSON.stringify(data)
-    })
-
+    let url = "/api/item/move"
+    let response = await backend_instance.patch(url, data)
+    return response.data
 }
 export async function remove(data) {
-    return await fetchJSON(`/api/item/delete`, {
-        method: "DELETE",
-
-        body: JSON.stringify(data)
-    })
-
-
+    let url = "/api/item/delete"
+    let response = await backend_instance.patch(url, data)
+    return response.data
 }

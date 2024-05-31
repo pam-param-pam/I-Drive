@@ -125,7 +125,7 @@ export default {
     dragOver: function (event) {
       if (!this.canDrop) return;
 
-      event.preventDefault();
+      //event.preventDefault();
       let el = event.target;
 
       for (let i = 0; i < 5; i++) {
@@ -140,7 +140,7 @@ export default {
     drop: async function (event) {
 
       if (!this.canDrop) return;
-      event.preventDefault();
+      //event.preventDefault();
 
       if (this.selectedCount === 0) return;
 

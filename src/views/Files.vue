@@ -91,7 +91,8 @@ export default {
       this.setError(null)
 
       try {
-        let res = await getItems(this.folderId, "a");
+        let res = await getItems(this.folderId, "a")
+        console.log(res)
         this.items = res.folder.children
         this.folderList = res.breadcrumbs
         this.$store.commit("setItems", this.items);
@@ -107,7 +108,7 @@ export default {
 
       } catch (error) {
         this.setError(error);
-
+        console.log(error)
         if (error.status === 469) {
           this.$store.commit("showHover", {
             prompt: "FolderPassword",

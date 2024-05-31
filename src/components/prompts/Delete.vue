@@ -75,6 +75,7 @@ export default {
 
         let message = this.$t('toasts.itemsAreBeingDeleted', {amount: ids.length})
         this.$toast.info(message, {
+          timeout: null,
           id: res.task_id,
         })
         this.currentPrompt?.confirm();
