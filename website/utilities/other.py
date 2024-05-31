@@ -18,9 +18,9 @@ signer = TimestampSigner()
 
 # Function to sign a URL with an expiration time
 def sign_file_id_with_expiry(file_id: str) -> str:
-    cached_signed_file_id = cache.get(file_id)
-    if cached_signed_file_id:
-        return cached_signed_file_id
+    # cached_signed_file_id = cache.get(file_id)
+    # if cached_signed_file_id:
+    #     return cached_signed_file_id
     signed_file_id = signer.sign(file_id)
     cache.set(file_id, signed_file_id, timeout=SIGNED_URL_EXPIRY_SECONDS)
     return signed_file_id

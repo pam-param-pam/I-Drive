@@ -30,8 +30,6 @@ class Folder(models.Model):
         return self.name
 
     def _is_locked(self):
-        # TODO
-        return False
         if self.password:
             return True
         return False
@@ -105,7 +103,8 @@ class Folder(models.Model):
             file.applyLock(lockFrom, password)
 
         for folder in self.folders.all():
-            folder.applyLock(lockFrom, password)
+            if not folder.is_locked:
+                folder.applyLock(lockFrom, password)
 
     def removeLock(self):
         self.autoLock = False

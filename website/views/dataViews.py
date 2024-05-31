@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag, last_modified
 from ipware import get_client_ip
@@ -28,10 +28,12 @@ def etag_func(request, folder_obj):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
-@etag(etag_func)
+# @etag(etag_func)
 def get_folder(request, folder_obj):
     client_ip, is_routable = get_client_ip(request)
-
+    # raise BadRequestError(
+    #     "Please specify at least one: ['query', 'file_type', 'extension']")
+    # return HttpResponse(status=429, headers={'retry-after': 5})
     print(client_ip)
 
     folder_content = cache.get(folder_obj.id)

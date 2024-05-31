@@ -28,6 +28,9 @@ def create_folder(request):
         parent=parent,
         owner=request.user,
     )
+    #  apply lock if needed
+    if parent.is_locked:
+        folder_obj.applyLock(parent, parent.password)
     folder_obj.save()
 
     folder_dict = create_folder_dict(folder_obj)
@@ -95,6 +98,11 @@ def move(request):
         if isinstance(item, File):
             item.last_modified_at = timezone.now()
         item.parent = new_parent
+
+        #  apply lock if needed
+        if new_parent.is_locked:
+            item.applyLock(new_parent, new_parent.password)
+
         item.save()
 
     send_event(request.user.id, EventCode.ITEM_MOVED, request.request_id, ws_data)
@@ -208,7 +216,8 @@ def restore_from_trash(request):
         return JsonResponse(build_response(request.request_id, "Moving to Trash..."))
     return HttpResponse(status=204)
 
-@api_view(['DELETE'])
+
+@api_view(['PATCH'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & DeletePerms])
 @handle_common_errors
@@ -287,7 +296,6 @@ def folder_password(request, folder_obj):
 
     if request.method == "GET":
         if folder_obj.password == password:
-
             return HttpResponse(status=204)
         raise IncorrectFolderPassword()
 

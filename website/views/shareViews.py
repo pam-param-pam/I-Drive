@@ -79,7 +79,7 @@ def view_share(request, token, folder_id=None):
     return JsonResponse({"share": [response_dict], "breadcrumbs": breadcrumbs}, status=200)
 
 
-@api_view(['DELETE'])
+@api_view(['PATCH'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors

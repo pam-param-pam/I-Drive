@@ -45,9 +45,9 @@ def create_file(request):
 
             if file_name == "" or not file_name:
                 raise BadRequestError("'name' cannot be empty")
-            folder_obj = Folder.objects.get(id=parent_id)
+            parent = Folder.objects.get(id=parent_id)
 
-            if folder_obj.owner != request.user:
+            if parent.owner != request.user:
                 raise ResourcePermissionError()
 
             file_type = mimetype.split("/")[0]
@@ -59,8 +59,12 @@ def create_file(request):
                 type=file_type,
                 owner_id=request.user.id,
                 key=b"no key",
-                parent_id=parent_id,
+                parent=parent,
             )
+            #  apply lock if needed
+            if parent.is_locked:
+                file_obj.applyLock(parent, parent.password)
+
             if file_size == 0:
                 file_obj.ready = True
             file_obj.save()

@@ -79,6 +79,9 @@ CORS_ALLOWED_ORIGINS = [
     'https://idrive.pamparampam.dev',
 
 ]
+CORS_EXPOSE_HEADERS = (
+    "retry-after",
+)
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://127.0.0.1:5173',
@@ -196,7 +199,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/min',
-        'user': '10000/min',
+        'user': '500/m',
         'media': '1000/min',
         'folder_password': '150/min',
         'password_change': '10/min',

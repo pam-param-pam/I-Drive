@@ -84,10 +84,10 @@ def check_folder_and_permissions(view_func):
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
                     status=403)
 
-            if folder_obj.is_locked:
-                password = request.headers.get("X-Folder-Password")
-                if folder_obj.password != password:
-                    raise IncorrectFolderPassword()
+            # if folder_obj.is_locked:
+            #     password = request.headers.get("X-Folder-Password")
+            #     if folder_obj.password != password:
+            #         raise IncorrectFolderPassword()
 
         except (File.DoesNotExist, ValidationError):
             return JsonResponse(error_res(user=request.user, code=404, error_code=8,
