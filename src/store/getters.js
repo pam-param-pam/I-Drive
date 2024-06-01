@@ -5,6 +5,9 @@ const getters = {
   getFolderPassword: (state) => (folderId) => {
     return state.folderPasswords[folderId] || null
   },
+  getToken: (state) => {
+    return state.token
+  },
   isFiles: (state) => !state.loading && state.route.name === "Files",
   isListing: (state, getters) => getters.isFiles && state.req.isDir,
   selectedCount: (state) => state.selected.length,

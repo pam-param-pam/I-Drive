@@ -43,9 +43,9 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations } from "vuex";
-import buttons from "@/utils/buttons";
-import UploadFile from "@/components/UploadFile.vue";
+import { mapGetters, mapMutations } from "vuex"
+import buttons from "@/utils/buttons"
+import UploadFile from "@/components/UploadFile.vue"
 
 export default {
   name: "uploadFiles",
@@ -53,7 +53,7 @@ export default {
   data: function () {
     return {
       open: false,
-    };
+    }
   },
   computed: {
     ...mapGetters([
@@ -65,33 +65,33 @@ export default {
     ...mapMutations(["resetUpload"]),
     formattedETA() {
       if (!this.eta || this.eta === Infinity) {
-        return "--:--:--";
+        return "--:--:--"
       }
 
-      let totalSeconds = this.eta;
-      const hours = Math.floor(totalSeconds / 3600);
-      totalSeconds %= 3600;
-      const minutes = Math.floor(totalSeconds / 60);
-      const seconds = Math.round(totalSeconds % 60);
+      let totalSeconds = this.eta
+      const hours = Math.floor(totalSeconds / 3600)
+      totalSeconds %= 3600
+      const minutes = Math.floor(totalSeconds / 60)
+      const seconds = Math.round(totalSeconds % 60)
 
       return `${hours.toString().padStart(2, "0")}:${minutes
         .toString()
-        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
     },
   },
   methods: {
     toggle: function () {
-      this.open = !this.open;
+      this.open = !this.open
     },
     abortAll() {
       if (confirm(this.$t("upload.abortUpload"))) {
-        abortAllUploads();
-        buttons.done("upload");
-        this.open = false;
-        this.$store.commit("resetUpload");
-        this.$store.commit("setReload", true);
+        abortAllUploads()
+        buttons.done("upload")
+        this.open = false
+        this.$store.commit("resetUpload")
+        this.$store.commit("setReload", true)
       }
     },
   },
-};
+}
 </script>

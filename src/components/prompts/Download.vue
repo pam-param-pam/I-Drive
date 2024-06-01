@@ -21,7 +21,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "vuex"
 
 export default {
   name: "download",
@@ -36,10 +36,10 @@ export default {
         tarlz4: "tar.lz4",
         tarsz: "tar.sz",
       },
-    };
+    }
   },
   computed: {
     ...mapGetters(["currentPrompt"]),
   },
-};
+}
 </script>

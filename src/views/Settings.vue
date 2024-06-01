@@ -35,9 +35,9 @@
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex";
+import {mapMutations, mapState} from "vuex"
 
-import HeaderBar from "@/components/header/HeaderBar.vue";
+import HeaderBar from "@/components/header/HeaderBar.vue"
 
 export default {
   name: "settings",
@@ -51,12 +51,12 @@ export default {
     ...mapMutations(["setDisableCreation"])
   },
   mounted() {
-    document.title = "Settings - File Browser";
+    document.title = "Settings - File Browser"
 
   },
   created() {
     this.setDisableCreation(true)
   },
 
-};
+}
 </script>

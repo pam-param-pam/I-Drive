@@ -18,19 +18,19 @@ export default {
         uwu: "uwu",
 
       },
-    };
+    }
 
     Object.defineProperty(dataObj, "locales", {
       configurable: false,
       writable: false,
-    });
+    })
 
-    return dataObj;
+    return dataObj
   },
   methods: {
     change(event) {
-      this.$emit("update:locale", event.target.value);
+      this.$emit("update:locale", event.target.value)
     },
   },
-};
+}
 </script>

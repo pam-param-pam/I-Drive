@@ -13,25 +13,25 @@
 </template>
 
 <script>
-import Help from "./Help.vue";
-import Info from "./Info.vue";
-import Delete from "./Delete.vue";
-import Rename from "./Rename.vue";
-import Download from "./Download.vue";
-import Move from "./Move.vue";
-import NewFile from "./NewFile.vue";
-import NewDir from "./NewDir.vue";
-import DiscardEditorChanges from "./DiscardEditorChanges.vue";
-import Share from "./Share.vue";
-import Upload from "./Upload.vue";
-import ShareDelete from "./ShareDelete.vue";
-import Sidebar from "../Sidebar.vue";
-import { mapGetters } from "vuex";
-import buttons from "@/utils/buttons";
-import FolderPassword from "@/components/prompts/FolderPassword.vue";
-import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue";
-import MoveToTrash from "@/components/prompts/MoveToTrash.vue";
-import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue";
+import Help from "./Help.vue"
+import Info from "./Info.vue"
+import Delete from "./Delete.vue"
+import Rename from "./Rename.vue"
+import Download from "./Download.vue"
+import Move from "./Move.vue"
+import NewFile from "./NewFile.vue"
+import NewDir from "./NewDir.vue"
+import DiscardEditorChanges from "./DiscardEditorChanges.vue"
+import Share from "./Share.vue"
+import Upload from "./Upload.vue"
+import ShareDelete from "./ShareDelete.vue"
+import Sidebar from "../Sidebar.vue"
+import { mapGetters } from "vuex"
+import buttons from "@/utils/buttons"
+import FolderPassword from "@/components/prompts/FolderPassword.vue"
+import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue"
+import MoveToTrash from "@/components/prompts/MoveToTrash.vue"
+import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue"
 
 export default {
   name: "prompts",
@@ -61,21 +61,21 @@ export default {
         store: this.$store,
         router: this.$router,
       },
-    };
+    }
   },
   created() {
 
     window.addEventListener("keydown", (event) => {
-      if (this.currentPrompt == null) return;
+      if (this.currentPrompt == null) return
 
         // Esc!
       if (event.code === "Escape") {
-        event.stopImmediatePropagation();
-        this.$store.commit("closeHover");
+        event.stopImmediatePropagation()
+        this.$store.commit("closeHover")
       }
 
 
-    });
+    })
 
   },
 
@@ -86,13 +86,13 @@ export default {
         this.currentPrompt !== null &&
         this.currentPrompt.prompt !== "search" &&
         this.currentPrompt.prompt !== "more"
-      );
+      )
     },
   },
   methods: {
     resetPrompts() {
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
     },
   },
-};
+}
 </script>

@@ -17,7 +17,7 @@
 
 <script>
 
-import {search} from "@/api/search.js";
+import {search} from "@/api/search.js"
 
 export default {
   name: "file-list",
@@ -28,16 +28,16 @@ export default {
       res = await search(this.query)
       console.log(res)
 
-      res = [{'id': 1, 'name': 'filename1.txt', 'type': 'text'}, {'id': 2, 'name': 'filename2.pdf', 'type': 'pdf'}, {'id': 3, 'name': 'filename3.jpg', 'type': 'image'}, {'id': 4, 'name': 'foldername1', 'type': 'folder'}, {'id': 5, 'name': 'foldername2', 'type': 'folder'}, {'id': 6, 'name': 'foldername3', 'type': 'folder'}];
+      res = [{'id': 1, 'name': 'filename1.txt', 'type': 'text'}, {'id': 2, 'name': 'filename2.pdf', 'type': 'pdf'}, {'id': 3, 'name': 'filename3.jpg', 'type': 'image'}, {'id': 4, 'name': 'foldername1', 'type': 'folder'}, {'id': 5, 'name': 'foldername2', 'type': 'folder'}, {'id': 6, 'name': 'foldername3', 'type': 'folder'}]
 
       return res
-      // const regOption = new RegExp(this.searchFilter, 'ig');
+      // const regOption = new RegExp(this.searchFilter, 'ig')
       // for (const option of this.options) {
       //   if (this.searchFilter.length < 1 || option.name.match(regOption)){
-      //     if (filtered.length < this.maxItem) filtered.push(option);
+      //     if (filtered.length < this.maxItem) filtered.push(option)
       //   }
       // }
-      //return filtered;
+      //return filtered
     },
   },
 
@@ -48,7 +48,7 @@ export default {
 
     }
   }
-};
+}
 </script>
 
 <style lang="scss" scoped>

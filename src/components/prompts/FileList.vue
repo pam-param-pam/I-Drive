@@ -22,8 +22,8 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
-import {getItems} from "@/api/folder.js";
+import { mapState } from "vuex"
+import {getItems} from "@/api/folder.js"
 
 export default {
   name: "file-list",
@@ -33,7 +33,7 @@ export default {
       dirs : [],
       nav: null
 
-    };
+    }
   },
   computed: {
 
@@ -48,17 +48,17 @@ export default {
   },
   methods: {
     async fetchData(folder) {
-      const res = await getItems(folder.id);
-      const dirs = res.children.filter(item => item.isDir);
+      const res = await getItems(folder.id)
+      const dirs = res.children.filter(item => item.isDir)
 
       let folderBack = {name: "...", id: folder.parent_id}
 
 
 
-      dirs.unshift(folderBack);
+      dirs.unshift(folderBack)
       console.log(dirs)
       this.dirs = dirs
-      this.$emit("update:selected", dirs);
+      this.$emit("update:selected", dirs)
       return dirs
     },
 
@@ -66,7 +66,7 @@ export default {
       // Retrieves the URL of the directory the user
       // just clicked in and fill the options with its
       // content.
-      let current = event.currentTarget.dataset.item;
+      let current = event.currentTarget.dataset.item
       current = JSON.parse(current)
       let dirs = await this.fetchData(current)
 
@@ -78,14 +78,14 @@ export default {
     select: function (event) {
       // If the element is already selected, unselect it.
       if (this.selected === event.currentTarget.dataset.item) {
-        this.selected = null;
-        this.$emit("update:selected", this.current);
-        return;
+        this.selected = null
+        this.$emit("update:selected", this.current)
+        return
       }
 
       // Otherwise select the element.
-      this.selected = event.currentTarget.dataset.item;
-      this.$emit("update:selected", this.selected);
+      this.selected = event.currentTarget.dataset.item
+      this.$emit("update:selected", this.selected)
     },
     createDir: async function () {
       this.$store.commit("showHover", {
@@ -94,8 +94,8 @@ export default {
           redirect: false,
           base: this.current === this.$route.path ? null : this.current,
         },
-      });
+      })
     },
   },
-};
+}
 </script>

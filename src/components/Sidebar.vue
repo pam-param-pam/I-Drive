@@ -119,13 +119,12 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex";
-import * as auth from "@/utils/auth";
-import { version, signup } from "@/utils/constants";
-import ProgressBar from "vue-simple-progress";
-import prettyBytes from "pretty-bytes";
-import {getUsage} from "@/api/folder.js";
-import store from "@/store/index.js";
+import { mapState, mapGetters } from "vuex"
+import * as auth from "@/utils/auth"
+import { version, signup } from "@/utils/constants"
+import ProgressBar from "vue-simple-progress"
+import prettyBytes from "pretty-bytes"
+import {getUsage} from "@/api/folder.js"
 
 export default {
   name: "sidebar",
@@ -136,7 +135,7 @@ export default {
     ...mapState(["user", "perms", "currentFolder", "disableCreation"]),
     ...mapGetters(["isLogged", "currentPrompt"]),
     active() {
-      return this.currentPrompt?.prompt === "sidebar";
+      return this.currentPrompt?.prompt === "sidebar"
     },
     signup: () => signup,
     version: () => version,
@@ -145,19 +144,19 @@ export default {
     usage: {
       async get() {
         if (this.currentFolder) {
-          let usageStats = { used: 0, total: 0, usedPercentage: 0 };
+          let usageStats = { used: 0, total: 0, usedPercentage: 0 }
 
           try {
-            let usage = await getUsage(this.currentFolder?.id);
+            let usage = await getUsage(this.currentFolder?.id)
             usageStats = {
               used: prettyBytes(usage.used, { binary: true }),
               total: prettyBytes(usage.total, { binary: true }),
               usedPercentage: Math.round((usage.used / usage.total) * 100),
-            };
+            }
           } catch (error) {
             console.log(error)
           }
-          return usageStats;
+          return usageStats
         }
         return this.usage
 
@@ -168,27 +167,27 @@ export default {
   },
   methods: {
     toRoot() {
-      //this.$store.commit("setOpenSearchState", false);
-      //this.$store.commit("setIsTrash", false);
+      //this.$store.commit("setOpenSearchState", false)
+      //this.$store.commit("setIsTrash", false)
       this.$router.push({name: `Files`, params: {folderId: this.user.root}}).catch(err => {})
       //this.$router.go(0)
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
     },
     toTrash() {
-      //this.$store.commit("setOpenSearchState", false);
+      //this.$store.commit("setOpenSearchState", false)
       this.$router.push({name: `Trash`}).catch(err => {})
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
     },
     toSettings() {
       this.$router.push({name: `Settings`}).catch(err => {})
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
     },
     help() {
-      this.$store.commit("showHover", "help");
+      this.$store.commit("showHover", "help")
     },
     logout: auth.logout,
   },
-};
+}
 </script>
 <style>
 

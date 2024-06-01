@@ -31,8 +31,8 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
-import {moveToTrash} from "@/api/item.js";
+import {mapGetters, mapMutations, mapState} from "vuex"
+import {moveToTrash} from "@/api/item.js"
 
 export default {
   name: "MoveToTrash",
@@ -45,16 +45,16 @@ export default {
     this.keyEvent = (event) => {
       // Enter
       if (event.keyCode === 13) {
-        console.log("calling submit from event listener");
-        this.submit();
+        console.log("calling submit from event listener")
+        this.submit()
       }
-    };
+    }
 
-    window.addEventListener("keydown", this.keyEvent);
+    window.addEventListener("keydown", this.keyEvent)
   },
 
   beforeDestroy() {
-    window.removeEventListener("keydown", this.keyEvent);
+    window.removeEventListener("keydown", this.keyEvent)
   },
 
 
@@ -93,5 +93,5 @@ export default {
       }
     },
   },
-};
+}
 </script>

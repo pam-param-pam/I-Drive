@@ -52,8 +52,8 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
-import {isPasswordCorrect, lockWithPassword} from "@/api/folder.js";
+import {mapGetters, mapMutations, mapState} from "vuex"
+import {lockWithPassword} from "@/api/folder.js"
 
 export default {
   name: "folder-password",
@@ -61,7 +61,7 @@ export default {
     return {
       password: "",
       oldPassword: "",
-    };
+    }
   },
 
   computed: {
@@ -88,7 +88,7 @@ export default {
             timeout: null,
             id: res.task_id,
           })
-          this.$store.commit("closeHover");
+          this.$store.commit("closeHover")
 
         }
     catch
@@ -99,5 +99,5 @@ export default {
     }
     },
   },
-};
+}
 </script>

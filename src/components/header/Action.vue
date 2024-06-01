@@ -16,13 +16,13 @@ export default {
   methods: {
     action: function () {
       if (this.show) {
-        this.$store.commit("showHover", this.show);
+        this.$store.commit("showHover", this.show)
       }
 
-      this.$emit("action");
+      this.$emit("action")
     },
   },
-};
+}
 </script>
 
 <style></style>

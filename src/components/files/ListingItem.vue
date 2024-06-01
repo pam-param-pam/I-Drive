@@ -47,10 +47,10 @@
 </template>
 
 <script>
-import {mapMutations, mapGetters, mapState} from "vuex";
-import {filesize} from "@/utils";
-import moment from "moment";
-import {move} from "@/api/item.js";
+import {mapMutations, mapGetters, mapState} from "vuex"
+import {filesize} from "@/utils"
+import moment from "moment"
+import {move} from "@/api/item.js"
 
 
 export default {
@@ -59,7 +59,7 @@ export default {
   data: function () {
     return {
       touches: 0,
-    };
+    }
   },
   props: [
     "readOnly",
@@ -79,17 +79,17 @@ export default {
       return this.selected.includes(this.item)
     },
     isDraggable() {
-      return this.readOnly === false && this.perms?.modify;
+      return this.readOnly === false && this.perms?.modify
     },
     canDrop() {
-      if (!this.item.isDir || this.readOnly !== false) return false;
+      if (!this.item.isDir || this.readOnly !== false) return false
 
       for (let item of this.selected) {
         if (item === this.item) {
-          return false;
+          return false
         }
       }
-      return true;
+      return true
     },
 
   },
@@ -97,62 +97,61 @@ export default {
     ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
 
     humanSize: function () {
-      return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size);
+      return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size)
     },
     humanTime: function () {
 
       if (this.settings?.dateFormat) {
-        return moment(this.item.created).format("L LT");
+        return moment(this.item.created).format("L LT")
       }
-      return moment(this.item.created).fromNow();
+      return moment(this.item.created).fromNow()
     },
 
     dragStart: function () {
 
       if (this.selectedCount === 0) {
-        this.addSelected(this.item);
-        return;
+        this.addSelected(this.item)
+        return
       }
 
       if (!this.isSelected) {
-        this.resetSelected();
-        this.addSelected(this.item);
+        this.resetSelected()
+        this.addSelected(this.item)
       }
 
 
     },
 
     dragOver: function (event) {
-      if (!this.canDrop) return;
+      if (!this.canDrop) return
 
-      //event.preventDefault();
-      let el = event.target;
-
+      //event.preventDefault()
+      let el = event.target
       for (let i = 0; i < 5; i++) {
         if (!el.classList.contains("item")) {
-          el = el.parentElement;
+          el = el.parentElement
         }
       }
 
-      el.style.opacity = 1;
+      el.style.opacity = 1
 
     },
     drop: async function (event) {
 
-      if (!this.canDrop) return;
-      //event.preventDefault();
+      if (!this.canDrop) return
+      //event.preventDefault()
 
-      if (this.selectedCount === 0) return;
+      if (this.selectedCount === 0) return
 
-      let listOfIds = this.selected.map(obj => obj.id);
+      let listOfIds = this.selected.map(obj => obj.id)
       try {
         await move({ids: listOfIds, "new_parent_id": this.item.id})
 
-        //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id));
-        //this.$store.commit("setItems", updatedItem);
+        //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id))
+        //this.$store.commit("setItems", updatedItem)
         //todo
         let message = `Moved to ${this.item.name}!`
-        this.$toast.success(message);
+        this.$toast.success(message)
 
       } catch (error) {
         console.log(error)
@@ -179,11 +178,11 @@ export default {
 
 
       /*
-      let lastIndex = -1;
+      let lastIndex = -1
       let currentIndex = -1
       for (let i = 0; i < this.items.length; i++) {
         if (this.items[i].id === this.selected[this.selected.length - 1]?.id) {
-          lastIndex = i;
+          lastIndex = i
         }
         if (this.items[i].id === this.item.id) {
           currentIndex = i
@@ -196,7 +195,7 @@ export default {
     },
     open: function () {
       if (this.mode === "share") {
-        this.$emit('onOpen', this.item);
+        this.$emit('onOpen', this.item)
         return
       }
       if (this.mode === "trash") {
@@ -214,27 +213,27 @@ export default {
               prompt: "FolderPassword",
               props: {folderId: this.item.id},
               confirm: () => {
-                this.$router.push({name: "Files", params: {"folderId": this.item.id}});
+                this.$router.push({name: "Files", params: {"folderId": this.item.id}})
               },
-            });
+            })
             return
           }
         }
-        this.$router.push({name: "Files", params: {"folderId": this.item.id}});
+        this.$router.push({name: "Files", params: {"folderId": this.item.id}})
 
       } else {
 
         if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" ||  this.item.size >= 25 * 1024 * 1024 || this.item.extension === ".pdf") {
-          this.$router.push({name: "Preview", params: {"fileId": this.item.id}} );
+          this.$router.push({name: "Preview", params: {"fileId": this.item.id}} )
 
         }
         else {
-          this.$router.push({name: "Editor", params: {"fileId": this.item.id}} );
+          this.$router.push({name: "Editor", params: {"fileId": this.item.id}} )
 
         }
 
       }
     },
   },
-};
+}
 </script>

@@ -74,12 +74,12 @@ export async function fetchJSON(url, opts, auth= true) {
 
 }
 export function getHeaders(resource) {
-  const headers = {};
-  let password = store.getters.getFolderPassword(resource.lockFrom);
+  const headers = {}
+  let password = store.getters.getFolderPassword(resource.lockFrom)
   if (password) {
-    headers["X-Folder-Password"] = encodeURIComponent(password);
+    headers["X-Folder-Password"] = encodeURIComponent(password)
   }
-  return headers;
+  return headers
 }
 export function sortItems(items) {
   // Create a shallow copy of the items array

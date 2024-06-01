@@ -112,9 +112,9 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex";
-import { filesize } from "@/utils";
-import moment from "moment";
+import { mapState, mapGetters } from "vuex"
+import { filesize } from "@/utils"
+import moment from "moment"
 
 
 export default {
@@ -131,7 +131,7 @@ export default {
       if (this.selectedCount >= 1) {
           let sum = 0
           for (let selected of this.selected) {
-          if (!selected.isDir) sum += selected.size;
+          if (!selected.isDir) sum += selected.size
         }
         return sum
       }
@@ -147,7 +147,7 @@ export default {
       if (this.selectedCount >= 1) {
           let sum = 0
           for (let selected of this.selected) {
-              if (!selected.isDir) sum += selected.encrypted_size;
+              if (!selected.isDir) sum += selected.encrypted_size
           }
           return sum
       }
@@ -300,7 +300,7 @@ export default {
         if (folder) {
           let numFolders = folder.numFolders
           let numFiles  = folder.numFiles
-          return {numFolders, numFiles};
+          return {numFolders, numFiles}
 
         }
 
@@ -316,18 +316,18 @@ export default {
               folder = this.selected[0]
           }
         if (folder)  {
-          const folders = [];
-          const files = [];
+          const folders = []
+          const files = []
 
             folder.children.forEach(element => {
               if (element.isDir) {
-                  folders.push(element);
+                  folders.push(element)
               } else {
-                  files.push(element);
+                  files.push(element)
               }
-          });
+          })
 
-          return {folders, files};
+          return {folders, files}
           }
         }
         return null
@@ -338,16 +338,16 @@ export default {
   },
   methods: {
     humanSize(size) {
-        return filesize(size);
+        return filesize(size)
     },
     humanTime(date) {
       let locale = this.settings?.locale || "en"
 
       moment.locale(locale)
       if (this.settings?.dateFormat) {
-        return moment(date).format("L LT");
+        return moment(date).format("L LT")
       }
-      return moment(date).fromNow();
+      return moment(date).fromNow()
 
     },
 
@@ -362,17 +362,17 @@ export default {
         }
         else {
             if (type === "size") {
-                event.target.innerHTML = this.size + " bytes";
+                event.target.innerHTML = this.size + " bytes"
             }
             else if (type === "encryptedSize"){
-                event.target.innerHTML = this.encryptedSize + " bytes";
+                event.target.innerHTML = this.encryptedSize + " bytes"
             }
 
         }
 
     },
   },
-};
+}
 </script>
 <style lang="css" scoped>
 .checkmark-true:after {

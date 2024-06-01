@@ -87,7 +87,7 @@
             </a>
             <a
               target="_blank"
-              :href="fileSrcUrl + '?isInline=True'"
+              :href="fileSrcUrl + '?inline=True'"
               class="button button--flat"
               v-if="!file.isDir"
             >
@@ -125,14 +125,14 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
-import throttle from "lodash.throttle";
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import Action from "@/components/header/Action.vue";
-import ExtendedImage from "@/components/files/ExtendedImage.vue";
-import {getFile} from "@/api/files.js";
-import {getItems} from "@/api/folder.js";
-import {sortItems} from "@/api/utils.js";
+import {mapGetters, mapMutations, mapState} from "vuex"
+import throttle from "lodash.throttle"
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import Action from "@/components/header/Action.vue"
+import ExtendedImage from "@/components/files/ExtendedImage.vue"
+import {getFile} from "@/api/files.js"
+import {getItems} from "@/api/folder.js"
+import {sortItems} from "@/api/utils.js"
 
 export default {
   name: "preview",
@@ -158,7 +158,7 @@ export default {
       autoPlay: true,
       loadingImage: false,
 
-    };
+    }
   },
   computed: {
     ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
@@ -171,18 +171,18 @@ export default {
 
     currentIndex() {
       if (this.files && this.file) {
-        return this.files.findIndex(item => item.id === this.file.id);
+        return this.files.findIndex(item => item.id === this.file.id)
       }
     },
     files() {
-      const items = [];
+      const items = []
 
       if (this.items != null) {
         this.items.forEach((item) => {
           if (!item.isDir && item.type !== "text" && item.type !== "application") {
-            items.push(item);
+            items.push(item)
           }
-        });
+        })
       }
       //return items
       return sortItems(items)
@@ -199,8 +199,8 @@ export default {
   },
   watch: {
     $route: function () {
-      this.fetchData();
-      this.toggleNavigation();
+      this.fetchData()
+      this.toggleNavigation()
     },
   },
   created() {
@@ -208,11 +208,11 @@ export default {
   },
   async mounted() {
 
-    window.addEventListener("keydown", this.key);
+    window.addEventListener("keydown", this.key)
 
   },
   beforeDestroy() {
-    window.removeEventListener("keydown", this.key);
+    window.removeEventListener("keydown", this.key)
   },
   methods: {
     ...mapMutations(["setLoading"]),
@@ -251,10 +251,10 @@ export default {
 
         }
       }
-      this.$store.commit("addSelected", this.file);
+      this.$store.commit("addSelected", this.file)
 
-      this.setLoading(false);
-      this.loadingImage = false;
+      this.setLoading(false)
+      this.loadingImage = false
       console.log("loading false")
 
     },
@@ -264,64 +264,64 @@ export default {
         confirm: () => {
           this.close()
         },
-      });
+      })
 
     },
     rename() {
-      this.$store.commit("showHover", "rename");
+      this.$store.commit("showHover", "rename")
 
     },
     prev() {
-      this.hoverNav = false;
+      this.hoverNav = false
       if (this.hasPrevious) {
-        let previousFile = this.files[this.currentIndex - 1];
+        let previousFile = this.files[this.currentIndex - 1]
         console.log(previousFile)
 
-        this.$router.push({name: "Preview", params: {"fileId": previousFile.id}} );
+        this.$router.push({name: "Preview", params: {"fileId": previousFile.id}} )
       }
 
     },
     next() {
-      this.hoverNav = false;
+      this.hoverNav = false
       if (this.hasNext) {
-        let nextFile = this.files[this.currentIndex + 1];
+        let nextFile = this.files[this.currentIndex + 1]
         console.log(nextFile)
-        this.$router.push({name: "Preview", params: {"fileId": nextFile.id}} );
+        this.$router.push({name: "Preview", params: {"fileId": nextFile.id}} )
       }
     },
     key(event) {
 
       if (this.currentPrompt !== null) {
-        return;
+        return
       }
 
       if (event.which === 13 || event.which === 39) {
         // right arrow
-        this.next();
+        this.next()
       } else if (event.which === 37) {
         // left arrow
-        this.prev();
+        this.prev()
       } else if (event.which === 27) {
         // esc
-        this.close();
+        this.close()
       }
     },
 
 
     resetPrompts() {
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
     },
     toggleNavigation: throttle(function () {
-      this.showNav = true;
+      this.showNav = true
 
       if (this.navTimeout) {
-        clearTimeout(this.navTimeout);
+        clearTimeout(this.navTimeout)
       }
 
       this.navTimeout = setTimeout(() => {
-        this.showNav = this.hoverNav;
-        this.navTimeout = null;
-      }, 1500);
+        this.showNav = this.hoverNav
+        this.navTimeout = null
+      }, 1500)
     }, 500),
     close() {
 
@@ -330,23 +330,23 @@ export default {
 
       if (this.isShare) {
         console.log(this.token)
-        this.$router.push({path: `/share/${this.token}`});
+        this.$router.push({path: `/share/${this.token}`})
         return
       }
       if (parent_id) {
-        //this.$store.commit("updateItems", {});
-        this.$router.push({name: `Files`, params: {"folderId": parent_id}});
+        //this.$store.commit("updateItems", {})
+        this.$router.push({name: `Files`, params: {"folderId": parent_id}})
 
       }
       else {
-        this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}});
+        this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}})
 
 
       }
     },
     download() {
-      //window.open(this.file.preview_url, '_blank');
+      //window.open(this.file.preview_url, '_blank')
     },
   },
-};
+}
 </script>

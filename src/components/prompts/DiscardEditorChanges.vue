@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import {mapGetters, mapState} from "vuex";
+import {mapGetters, mapState} from "vuex"
 
 export default {
   name: "DiscardEditorChanges",
@@ -44,9 +44,9 @@ export default {
   },
   methods: {
     submit: async function () {
-      this.currentPrompt?.confirm();
+      this.currentPrompt?.confirm()
 
     },
   },
-};
+}
 </script>

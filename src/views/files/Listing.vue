@@ -291,22 +291,22 @@
 </template>
 
 <script>
-import Vue from "vue";
-import {mapGetters, mapMutations, mapState} from "vuex";
-import {enableExec} from "@/utils/constants";
-import * as upload from "@/utils/upload";
-import css from "@/utils/css";
-import throttle from "lodash.throttle";
-import CryptoJS from 'crypto-js';
+import Vue from "vue"
+import {mapGetters, mapMutations, mapState} from "vuex"
+import {enableExec} from "@/utils/constants"
+import * as upload from "@/utils/upload"
+import css from "@/utils/css"
+import throttle from "lodash.throttle"
+import CryptoJS from 'crypto-js'
 
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import Action from "@/components/header/Action.vue";
-import Search from "@/components/Search.vue";
-import Item from "@/components/files/ListingItem.vue";
-import {updateSettings} from "@/api/user.js";
-import {sortItems} from "@/api/utils.js";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import buttons from "@/utils/buttons.js";
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import Action from "@/components/header/Action.vue"
+import Search from "@/components/Search.vue"
+import Item from "@/components/files/ListingItem.vue"
+import {updateSettings} from "@/api/user.js"
+import {sortItems} from "@/api/utils.js"
+import Breadcrumbs from "@/components/Breadcrumbs.vue"
+import buttons from "@/utils/buttons.js"
 
 export default {
   name: "listing",
@@ -333,53 +333,53 @@ export default {
       itemWeight: 0,
       searchItemsFound: null
 
-    };
+    }
   },
   watch: {
     items: function () {
       // Ensures that the listing is displayed
       Vue.nextTick(() => {
         // How much every listing item affects the window height
-        this.setItemWeight();
+        this.setItemWeight()
         // Fill and fit the window with listing items
-        this.fillWindow(true);
-      });
+        this.fillWindow(true)
+      })
     }
 
   },
 
   mounted: function () {
     // Check the columns size for the first time.
-    this.columnsResize();
+    this.columnsResize()
 
     // How much every listing item affects the window height
-    this.setItemWeight();
+    this.setItemWeight()
 
     // Fill and fit the window with listing items
-    this.fillWindow(true);
+    this.fillWindow(true)
 
     // Add the needed event listeners to the window and document.
-    window.addEventListener("keydown", this.keyEvent);
-    window.addEventListener("scroll", this.scrollEvent);
-    window.addEventListener("resize", this.windowsResize);
+    window.addEventListener("keydown", this.keyEvent)
+    window.addEventListener("scroll", this.scrollEvent)
+    window.addEventListener("resize", this.windowsResize)
 
-    if (!this.perms.create) return;
-    document.addEventListener("dragover", this.preventDefault);
-    document.addEventListener("dragenter", this.dragEnter);
-    document.addEventListener("dragleave", this.dragLeave);
-    document.addEventListener("drop", this.drop);
+    if (!this.perms.create) return
+    document.addEventListener("dragover", this.preventDefault)
+    document.addEventListener("dragenter", this.dragEnter)
+    document.addEventListener("dragleave", this.dragLeave)
+    document.addEventListener("drop", this.drop)
   },
   beforeDestroy() {
     // Remove event listeners before destroying this page.
-    window.removeEventListener("keydown", this.keyEvent);
-    window.removeEventListener("scroll", this.scrollEvent);
-    window.removeEventListener("resize", this.windowsResize);
+    window.removeEventListener("keydown", this.keyEvent)
+    window.removeEventListener("scroll", this.scrollEvent)
+    window.removeEventListener("resize", this.windowsResize)
 
-    if (this.user && !this.perms.create) return;
-    document.removeEventListener("dragover", this.preventDefault);
-    document.removeEventListener("dragenter", this.dragEnter);
-    document.removeEventListener("dragleave", this.dragLeave);
-    document.removeEventListener("drop", this.drop);
+    if (this.user && !this.perms.create) return
+    document.removeEventListener("dragover", this.preventDefault)
+    document.removeEventListener("dragenter", this.dragEnter)
+    document.removeEventListener("dragleave", this.dragLeave)
+    document.removeEventListener("drop", this.drop)
   },
   computed: {
     ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "disableCreation"]),
@@ -391,34 +391,34 @@ export default {
       return "files"
     },
     nameSorted() {
-      return this.settings.sortingBy === "name";
+      return this.settings.sortingBy === "name"
     },
     sizeSorted() {
-      return this.settings.sortingBy === "size";
+      return this.settings.sortingBy === "size"
     },
     dirs() {
-      const items = [];
+      const items = []
       if (this.items != null) {
         this.items.forEach((item) => {
           if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
-            items.push(item);
+            items.push(item)
           }
 
-        });
+        })
       }
-      return sortItems(items);
+      return sortItems(items)
     },
     files() {
-      const items = [];
+      const items = []
 
       if (this.items != null) {
         this.items.forEach((item) => {
           if (!item.isDir) {
-            items.push(item);
+            items.push(item)
           }
-        });
+        })
       }
-      return sortItems(items);
+      return sortItems(items)
     },
     dirsSize() {
       return this.dirs.length
@@ -427,40 +427,40 @@ export default {
       return this.files.length
     },
     createdSorted() {
-      return this.settings.sortingBy === "created";
+      return this.settings.sortingBy === "created"
     },
     ascOrdered() {
-      return this.settings.sortByAsc;
+      return this.settings.sortByAsc
     },
 
     nameIcon() {
       if (this.nameSorted && !this.ascOrdered) {
-        return "arrow_upward";
+        return "arrow_upward"
       }
 
-      return "arrow_downward";
+      return "arrow_downward"
     },
     sizeIcon() {
       if (this.sizeSorted && this.ascOrdered) {
-        return "arrow_downward";
+        return "arrow_downward"
       }
 
-      return "arrow_upward";
+      return "arrow_upward"
     },
     createdIcon() {
       if (this.createdSorted && this.ascOrdered) {
-        return "arrow_downward";
+        return "arrow_downward"
       }
 
-      return "arrow_upward";
+      return "arrow_upward"
     },
     viewIcon() {
       const icons = {
         list: "view_module",
         mosaic: "grid_view",
         "mosaic gallery": "view_list",
-      };
-      return icons[this.settings.viewMode];
+      }
+      return icons[this.settings.viewMode]
     },
     headerButtons() {
       return {
@@ -475,10 +475,10 @@ export default {
         delete: this.selectedCount > 0 && this.perms.delete && this.isTrash,
         lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock && !this.isTrash,
         locate: this.selectedCount === 1 && this.isSearchActive,
-      };
+      }
     },
     isMobile() {
-      return this.width <= 736;
+      return this.width <= 736
     },
   },
 
@@ -486,72 +486,72 @@ export default {
 
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
     searchItemsUpdate(query) {
-      this.$emit('onSearchQuery', query);
+      this.$emit('onSearchQuery', query)
 
     },
     searchExit() {
-      this.$emit('onSearchClosed');
+      this.$emit('onSearchClosed')
     },
 
     keyEvent(event) {
       // No prompts are shown
       if (this.currentPrompt !== null) {
 
-        return;
+        return
       }
 
       // Esc!
       if (event.keyCode === 27) {
         // Reset files selection.
-        this.$store.commit("resetSelected");
+        this.$store.commit("resetSelected")
       }
 
       // Del!
       if (event.keyCode === 46) {
-        if (!this.perms.delete || this.selectedCount === 0) return;
+        if (!this.perms.delete || this.selectedCount === 0) return
 
         // Show delete prompt.
-        this.$store.commit("showHover", "moveToTrash");
+        this.$store.commit("showHover", "moveToTrash")
       }
 
       // F1!
       if (event.keyCode === 112) {
         event.preventDefault()
         // Show delete prompt.
-        this.$store.commit("showHover", "info");
+        this.$store.commit("showHover", "info")
       }
 
       // F2!
       if (event.keyCode === 113) {
-        if (!this.perms.modify || this.selectedCount !== 1) return;
+        if (!this.perms.modify || this.selectedCount !== 1) return
 
         // Show rename prompt.
-        this.$store.commit("showHover", "rename");
+        this.$store.commit("showHover", "rename")
       }
 
       // Ctrl is pressed
       if ((event.ctrlKey || event.metaKey) && !this.isSearchActive) {
 
-        let key = String.fromCharCode(event.which).toLowerCase();
+        let key = String.fromCharCode(event.which).toLowerCase()
 
         switch (key) {
           case "f":
-            event.preventDefault();
-            this.$store.commit("showHover", "search");
-            break;
+            event.preventDefault()
+            this.$store.commit("showHover", "search")
+            break
           case "a":
-            event.preventDefault();
+            event.preventDefault()
             for (let file of this.files) {
               if (this.selected.indexOf(file.index) === -1) {
-                this.addSelected(file.index);
+                this.addSelected(file.index)
               }
             }
             for (let dir of this.dirs) {
               if (this.selected.indexOf(dir.index) === -1) {
-                this.addSelected(dir.index);
+                this.addSelected(dir.index)
               }
             }
-            break;
+            break
 
         }
       }
@@ -559,97 +559,97 @@ export default {
 
     columnsResize() {
       // Update the columns size based on the window width.
-      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
-      if (!items) return;
+      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"])
+      if (!items) return
 
       let columns = Math.floor(
         document.querySelector("main").offsetWidth / this.columnWidth
-      );
-      if (columns === 0) columns = 1;
-      items.style.width = `calc(${100 / columns}% - 1em)`;
+      )
+      if (columns === 0) columns = 1
+      items.style.width = `calc(${100 / columns}% - 1em)`
     },
 
     scrollEvent: throttle(function () {
-      const totalItems = this.filesSize + this.dirsSize;
+      const totalItems = this.filesSize + this.dirsSize
 
       // All items are displayed
-      if (this.showLimit >= totalItems) return;
+      if (this.showLimit >= totalItems) return
 
-      const currentPos = window.innerHeight + window.scrollY;
+      const currentPos = window.innerHeight + window.scrollY
 
       // Trigger at the 75% of the window height
-      const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25;
+      const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25
 
       if (currentPos > triggerPos) {
         // Quantity of items needed to fill 2x of the window height
         const showQuantity = Math.ceil(
           (window.innerHeight * 2) / this.itemWeight
-        );
+        )
 
         // Increase the number of displayed items
-        this.showLimit += showQuantity;
+        this.showLimit += showQuantity
       }
     }, 100),
 
 
     dragEnter() {
-      this.dragCounter++;
+      this.dragCounter++
 
       // When the user starts dragging an item, put every
       // file on the listing with 50% opacity.
-      let items = document.getElementsByClassName("item");
+      let items = document.getElementsByClassName("item")
 
       Array.from(items).forEach((file) => {
-        file.style.opacity = 0.5;
-      });
+        file.style.opacity = 0.5
+      })
     },
     dragLeave() {
-      this.dragCounter--;
+      this.dragCounter--
 
       if (this.dragCounter === 0) {
-        this.resetOpacity();
+        this.resetOpacity()
       }
     },
     preventDefault(event) {
       // Wrapper around prevent default.
-      event.preventDefault();
+      event.preventDefault()
     },
 
     drop: async function (event) {
-      //event.preventDefault();
-      this.dragCounter = 0;
-      this.resetOpacity();
-      let dt = event.dataTransfer;
+      //event.preventDefault()
+      this.dragCounter = 0
+      this.resetOpacity()
+      let dt = event.dataTransfer
       console.log(dt.files)
-      let el = event.target;
+      let el = event.target
 
-      if (dt.files.length <= 0) return;
+      if (dt.files.length <= 0) return
 
       for (let i = 0; i < 5; i++) {
         if (el !== null && !el.classList.contains("item")) {
-          el = el.parentElement;
+          el = el.parentElement
         }
       }
       console.log(el)
       this.dropHandler(event)
       console.log(dt)
-      let files = await upload.scanFiles(dt);
+      let files = await upload.scanFiles(dt)
       console.log(files)
       let parent_id = this.currentFolder.id
       if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
-        parent_id = el.__vue__.item.id;
+        parent_id = el.__vue__.item.id
 
       }
       console.log(parent_id)
 
-      //upload.handleFiles(files, path);
+      //upload.handleFiles(files, path)
     },
 
     async uploadInput(event) {
-      this.$store.commit("closeHover");
-      buttons.loading("upload");
+      this.$store.commit("closeHover")
+      buttons.loading("upload")
 
-      let files = event.currentTarget.files;
+      let files = event.currentTarget.files
       let folder = this.currentFolder
 
       this.$toast.info(this.$t("toasts.PreparingUpload"))
@@ -658,72 +658,72 @@ export default {
       // let webhook = this.$store.state.settings.webhook
       //
       // let secret = "1234567887654321"
-      // const key = CryptoJS.enc.Hex.parse('1234567890abcdef1234567890abcdef');
-      // const iv = CryptoJS.enc.Hex.parse('fedcba0987654321fedcba0987654321');
-      // console.log("IV : " + CryptoJS.enc.Base64.stringify(iv));
+      // const key = CryptoJS.enc.Hex.parse('1234567890abcdef1234567890abcdef')
+      // const iv = CryptoJS.enc.Hex.parse('fedcba0987654321fedcba0987654321')
+      // console.log("IV : " + CryptoJS.enc.Base64.stringify(iv))
       //
-      // const wordArray = this.arrayBufferToWordArray(fileContent);
+      // const wordArray = this.arrayBufferToWordArray(fileContent)
       //
       // // Encrypt the plaintext
       // var cipherText = CryptoJS.AES.encrypt(wordArray, key, {
       //   iv: iv,
       //   mode: CryptoJS.mode.CBC,
       //   padding: CryptoJS.pad.Pkcs7
-      // });
+      // })
       // cipherText = cipherText
       //
       //
       // // Convert encrypted content to Blob
-      // const blob = new Blob([cipherText], { type: 'text/plain' });
+      // const blob = new Blob([cipherText], { type: 'text/plain' })
       //
       // // Prepare form data
-      // const formData = new FormData();
-      // formData.append('file', blob, "aaaaaaa");
+      // const formData = new FormData()
+      // formData.append('file', blob, "aaaaaaa")
       //
       // // Upload the file to Discord via webhook
       // const response = await fetch(webhook, {
       //   method: 'POST',
       //   body: formData
-      // });
+      // })
 
       await upload.prepareForUpload(files, folder)
 
 
     },
     arrayBufferToWordArray(ab) {
-      const i8a = new Uint8Array(ab);
-      const a = [];
+      const i8a = new Uint8Array(ab)
+      const a = []
       for (let i = 0; i < i8a.length; i += 4) {
         a.push(
           (i8a[i] << 24) |
           (i8a[i + 1] << 16) |
           (i8a[i + 2] << 8) |
           (i8a[i + 3])
-        );
+        )
       }
-      return CryptoJS.lib.WordArray.create(a, i8a.length);
+      return CryptoJS.lib.WordArray.create(a, i8a.length)
     },
     resetOpacity() {
-      let items = document.getElementsByClassName("item");
+      let items = document.getElementsByClassName("item")
 
       Array.from(items).forEach((file) => {
-        file.style.opacity = 1;
-      });
+        file.style.opacity = 1
+      })
     },
     async sort(by) {
-      let asc = false;
+      let asc = false
 
       if (by === "name") {
         if (this.nameIcon === "arrow_upward") {
-          asc = true;
+          asc = true
         }
       } else if (by === "size") {
         if (this.sizeIcon === "arrow_upward") {
-          asc = true;
+          asc = true
         }
       } else if (by === "created") {
         if (this.createdIcon === "arrow_upward") {
-          asc = true;
+          asc = true
         }
       }
       try {
@@ -733,32 +733,32 @@ export default {
         console.log(e)
       }
 
-      this.$store.commit("setSortingBy", by);
-      this.$store.commit("setSortByAsc", asc);
+      this.$store.commit("setSortingBy", by)
+      this.$store.commit("setSortByAsc", asc)
       let items = sortItems(this.items)
-      this.$store.commit("setItems", items);
+      this.$store.commit("setItems", items)
 
     },
 
     windowsResize: throttle(function () {
-      this.columnsResize();
-      this.width = window.innerWidth;
+      this.columnsResize()
+      this.width = window.innerWidth
 
       // Listing element is not displayed
-      if (this.$refs.listing == null) return;
+      if (this.$refs.listing == null) return
 
       // How much every listing item affects the window height
-      this.setItemWeight();
+      this.setItemWeight()
 
       // Fill but not fit the window
-      this.fillWindow();
+      this.fillWindow()
     }, 100),
 
     locateItem() {
-      this.$emit('onSearchClosed');
+      this.$emit('onSearchClosed')
       let item = this.selected[0]
       let parent_id = item.parent_id
-      this.$router.push({name: "Files", params: {"folderId": parent_id, "selectItem": item}});
+      this.$router.push({name: "Files", params: {"folderId": parent_id, "selectItem": item}})
       let message = this.$t('toasts.itemLocated')
       this.$toast.info(message)
 
@@ -780,9 +780,9 @@ export default {
 
           }
 
-        });
+        })
         if (filesNum > 0) {
-          this.$store.commit("resetSelected");
+          this.$store.commit("resetSelected")
         } else {
           this.$toast.info(`You can't download a folder >-<`)
 
@@ -796,18 +796,18 @@ export default {
         list: "mosaic",
         mosaic: "mosaic gallery",
         "mosaic gallery": "list",
-      };
+      }
       console.log(this.settings.viewMode)
       const data = {
         viewMode: modes[this.settings.viewMode] || "list",
-      };
+      }
 
       // Await ensures correct value for setItemWeight()
-      await this.$store.commit("updateSettings", data);
+      await this.$store.commit("updateSettings", data)
 
 
-      this.setItemWeight();
-      this.fillWindow();
+      this.setItemWeight()
+      this.fillWindow()
 
       try {
         await updateSettings(data)
@@ -822,46 +822,46 @@ export default {
         typeof window.DataTransferItem !== "undefined" &&
         typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
       ) {
-        this.$store.commit("showHover", "upload");
+        this.$store.commit("showHover", "upload")
       } else {
-        document.getElementById("upload-input").click();
+        document.getElementById("upload-input").click()
       }
     },
 
     setItemWeight() {
 
-      if (this.$refs.listing == null || this.currentFolder == null) return;
+      if (this.$refs.listing == null || this.currentFolder == null) return
 
 
-      let itemQuantity = this.filesSize + this.dirsSize;
-      if (itemQuantity > this.showLimit) itemQuantity = this.showLimit;
+      let itemQuantity = this.filesSize + this.dirsSize
+      if (itemQuantity > this.showLimit) itemQuantity = this.showLimit
 
       // How much every listing item affects the window height
-      this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity;
+      this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity
     },
     fillWindow(fit = false) {
-      if (this.currentFolder == null) return;
+      if (this.currentFolder == null) return
 
-      const totalItems = this.filesSize + this.dirsSize;
+      const totalItems = this.filesSize + this.dirsSize
 
       // More items are displayed than the total
-      if (this.showLimit >= totalItems && !fit) return;
+      if (this.showLimit >= totalItems && !fit) return
 
-      const windowHeight = window.innerHeight;
+      const windowHeight = window.innerHeight
 
       // Quantity of items needed to fill 2x of the window height
       const showQuantity = Math.ceil(
         (windowHeight + windowHeight * 2) / this.itemWeight
-      );
+      )
 
       // Less items to display than current
-      if (this.showLimit > showQuantity && !fit) return;
+      if (this.showLimit > showQuantity && !fit) return
 
       // Set the number of displayed items
-      this.showLimit = showQuantity > totalItems ? totalItems : showQuantity;
+      this.showLimit = showQuantity > totalItems ? totalItems : showQuantity
     },
 
 
   },
-};
+}
 </script>

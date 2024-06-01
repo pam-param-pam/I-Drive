@@ -100,11 +100,10 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from "vuex";
-import { users as api } from "@/api";
-import Languages from "@/components/settings/Languages.vue";
-import Themes from "@/components/settings/Themes.vue";
-import {changePassword, updateSettings} from "@/api/user.js";
+import { mapState, mapMutations } from "vuex"
+import Languages from "@/components/settings/Languages.vue"
+import Themes from "@/components/settings/Themes.vue"
+import {changePassword, updateSettings} from "@/api/user.js"
 
 export default {
   name: "settings",
@@ -123,56 +122,56 @@ export default {
       locale: "",
       webhook: "",
       theme: "",
-    };
+    }
   },
   computed: {
     ...mapState(["user", "settings"]),
     passwordClass() {
-      const baseClass = "input input--block";
+      const baseClass = "input input--block"
 
       if (this.password === "" && this.passwordConf === "") {
-        return baseClass;
+        return baseClass
       }
 
       if (this.password === this.passwordConf) {
-        return `${baseClass} input--green`;
+        return `${baseClass} input--green`
       }
 
-      return `${baseClass} input--red`;
+      return `${baseClass} input--red`
     },
   },
   created() {
-    this.setLoading(false);
-    this.locale = this.settings.locale;
-    this.hideLockedFolders = this.settings.hideLockedFolders;
-    this.subfoldersInShares = this.settings.subfoldersInShares;
+    this.setLoading(false)
+    this.locale = this.settings.locale
+    this.hideLockedFolders = this.settings.hideLockedFolders
+    this.subfoldersInShares = this.settings.subfoldersInShares
     this.webhook = this.settings.webhook
-    this.dateFormat = this.settings.dateFormat;
+    this.dateFormat = this.settings.dateFormat
   },
   methods: {
     ...mapMutations(["updateUser", "setLoading"]),
     async updatePassword(event) {
-      event.preventDefault();
+      event.preventDefault()
 
       if (this.password !== this.passwordConf || this.password === "") {
-        return;
+        return
       }
 
       try {
-        const data = { current_password: this.currentPassword, new_password: this.password};
+        const data = { current_password: this.currentPassword, new_password: this.password}
         let res = await changePassword(data)
 
-        localStorage.setItem("token", res.auth_token);
-        this.$store.commit("setToken", res.auth_token);
+        localStorage.setItem("token", res.auth_token)
+        this.$store.commit("setToken", res.auth_token)
 
 
-        this.$toast.success(this.$t("settings.passwordUpdated"));
+        this.$toast.success(this.$t("settings.passwordUpdated"))
       } catch (e) {
         console.log(e)
       }
     },
     async updateSettings(event) {
-      event.preventDefault();
+      event.preventDefault()
 
       try {
         const data = {
@@ -181,7 +180,7 @@ export default {
           hideLockedFolders: this.hideLockedFolders,
           dateFormat: this.dateFormat,
           webhook: this.webhook
-        };
+        }
         this.setTheme(this.theme)
 
         await updateSettings(data)
@@ -196,25 +195,25 @@ export default {
     getMediaPreference() {
       let hasDarkPreference = window.matchMedia(
         "(prefers-color-scheme: dark)"
-      ).matches;
+      ).matches
       if (hasDarkPreference) {
-        return "dark";
+        return "dark"
       } else {
-        return "light";
+        return "light"
       }
     },
     setTheme(theme) {
-      const html = document.documentElement;
+      const html = document.documentElement
       if (!theme) {
-        theme = this.getMediaPreference();
+        theme = this.getMediaPreference()
         console.log("theme2 set: " + theme)
 
         html.className = theme
       } else {
         console.log("theme set: " + theme)
-        html.className = theme;
+        html.className = theme
       }
     }
   },
-};
+}
 </script>

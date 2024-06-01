@@ -25,7 +25,7 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "vuex"
 
 export default {
   name: "share-delete",
@@ -34,8 +34,8 @@ export default {
   },
   methods: {
     submit: function () {
-      this.currentPrompt?.confirm();
+      this.currentPrompt?.confirm()
     },
   },
-};
+}
 </script>

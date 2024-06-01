@@ -29,8 +29,7 @@
 
 
 <script>
-import {mapState} from "vuex";
-import {move} from "@/api/item.js";
+import {mapState} from "vuex"
 
 export default {
   name: "breadcrumbs",
@@ -40,10 +39,10 @@ export default {
     ...mapState(["currentFolder", "reload"]),
     element() {
       if (this.noLink !== undefined) {
-        return "span";
+        return "span"
       }
 
-      return "router-link";
+      return "router-link"
 
     },
     maxBreadcrumbs() {
@@ -55,10 +54,10 @@ export default {
     breadcrumbs() {
       if (this.folderList.length >= this.maxBreadcrumbs) {
         while (this.folderList.length !== this.maxBreadcrumbs) {
-          this.folderList.shift();
+          this.folderList.shift()
         }
 
-        this.folderList[0].name = "...";
+        this.folderList[0].name = "..."
       }
 
       return this.folderList
@@ -67,25 +66,25 @@ export default {
   },
   methods: {
     isMobile() {
-      return window.innerWidth <= 736;
+      return window.innerWidth <= 736
 
     },
     dragOver: function (event) {
       console.log("DRAG OVER EVENT")
       console.log(event)
 
-      // if (!this.canDrop) return;
+      // if (!this.canDrop) return
       //
-      // event.preventDefault();
-      // let el = event.target;
+      // event.preventDefault()
+      // let el = event.target
       //
       // for (let i = 0; i < 5; i++) {
       //   if (!el.classList.contains("item")) {
-      //     el = el.parentElement;
+      //     el = el.parentElement
       //   }
       // }
       //
-      // el.style.opacity = 1;
+      // el.style.opacity = 1
 
     },
     drop: async function (event) {
@@ -95,5 +94,5 @@ export default {
   },
 
 
-};
+}
 </script>

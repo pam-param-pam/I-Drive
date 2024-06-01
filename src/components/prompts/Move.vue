@@ -48,11 +48,8 @@
 </template>
 
 <script>
-import { mapState } from "vuex";
-import FileList from "./FileList.vue";
-import { files as api } from "@/api";
-import buttons from "@/utils/buttons";
-import * as upload from "@/utils/upload";
+import { mapState } from "vuex"
+import FileList from "./FileList.vue"
 
 export default {
   name: "move",
@@ -61,7 +58,7 @@ export default {
     return {
       current: window.location.pathname,
       dest: null,
-    };
+    }
   },
   computed: mapState(["settings", "perms", "selected", "user"]),
   methods: {
@@ -70,5 +67,5 @@ export default {
 
     },
   },
-};
+}
 </script>

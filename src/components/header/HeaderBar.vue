@@ -32,11 +32,10 @@
 </template>
 
 <script>
-import { logoURL } from "@/utils/constants";
+import { logoURL } from "@/utils/constants"
 
-import Action from "@/components/header/Action.vue";
-import { mapGetters } from "vuex";
-import {useDark, useToggle} from '@vueuse/core'
+import Action from "@/components/header/Action.vue"
+import { mapGetters } from "vuex"
 
 export default {
   name: "header-bar",
@@ -48,18 +47,18 @@ export default {
     return {
       logoURL,
       isDark: true
-    };
+    }
   },
   methods: {
     openSidebar() {
-      this.$store.commit("showHover", "sidebar");
+      this.$store.commit("showHover", "sidebar")
     },
 
   },
   computed: {
     ...mapGetters(["currentPromptName"]),
   },
-};
+}
 </script>
 
 <style></style>

@@ -42,8 +42,8 @@
 </template>
 
 <script>
-import {mapState, mapGetters} from "vuex";
-import {rename} from "@/api/item.js";
+import {mapState} from "vuex"
+import {rename} from "@/api/item.js"
 
 export default {
   name: "rename",
@@ -51,7 +51,7 @@ export default {
     return {
       name: "",
       oldName: "",
-    };
+    }
   },
 
   computed: {
@@ -69,9 +69,9 @@ export default {
       try {
         let id = this.selected[0].id
         let new_name = this.name
-        await rename({"id": id, "new_name": new_name});
+        await rename({"id": id, "new_name": new_name})
 
-        //this.$store.commit("renameItem", {id: id, newName: new_name});
+        //this.$store.commit("renameItem", {id: id, newName: new_name})
 
         let message = this.$t('toasts.itemRenamed')
         this.$toast.success(message)
@@ -80,10 +80,10 @@ export default {
         console.log(error)
 
       } finally {
-        this.$store.commit("closeHover");
+        this.$store.commit("closeHover")
 
       }
     },
   },
-};
+}
 </script>

@@ -42,9 +42,9 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from "vuex";
-import { users as api } from "@/api";
-import Errors from "@/views/Errors.vue";
+import { mapState, mapMutations } from "vuex"
+import { users as api } from "@/api"
+import Errors from "@/views/Errors.vue"
 
 export default {
   name: "users",
@@ -55,17 +55,17 @@ export default {
     return {
       error: null,
       users: [],
-    };
+    }
   },
   async created() {
-    this.setLoading(true);
+    this.setLoading(true)
 
     try {
-      this.users = await api.getAll();
+      this.users = await api.getAll()
     } catch (e) {
-      this.error = e;
+      this.error = e
     } finally {
-      this.setLoading(false);
+      this.setLoading(false)
     }
   },
   computed: {
@@ -74,5 +74,5 @@ export default {
   methods: {
     ...mapMutations(["setLoading"]),
   },
-};
+}
 </script>

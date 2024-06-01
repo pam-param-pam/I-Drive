@@ -10,8 +10,7 @@
 </template>
 
 <script>
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import {mapMutations} from "vuex";
+import HeaderBar from "@/components/header/HeaderBar.vue"
 
 const errors = {
   0: {
@@ -38,7 +37,7 @@ const errors = {
     icon: "error_outline",
     message: "errors.internal",
   },
-};
+}
 
 export default {
   name: "errors",
@@ -51,8 +50,8 @@ export default {
 
   computed: {
     info() {
-      return errors[this.errorCode] ? errors[this.errorCode] : errors[500];
+      return errors[this.errorCode] ? errors[this.errorCode] : errors[500]
     },
   },
-};
+}
 </script>

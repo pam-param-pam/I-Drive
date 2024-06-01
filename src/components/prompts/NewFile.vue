@@ -37,44 +37,44 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
-import { files as api } from "@/api";
-import url from "@/utils/url";
+import { mapGetters } from "vuex"
+import { files as api } from "@/api"
+import url from "@/utils/url"
 
 export default {
   name: "new-file",
   data: function () {
     return {
       name: "",
-    };
+    }
   },
   computed: {
     ...mapGetters(["isFiles", "isListing"]),
   },
   methods: {
     submit: async function (event) {
-      event.preventDefault();
-      if (this.new === "") return;
+      event.preventDefault()
+      if (this.new === "") return
 
       // Build the path of the new directory.
-      let uri = this.isFiles ? this.$route.path + "/" : "/";
+      let uri = this.isFiles ? this.$route.path + "/" : "/"
 
       if (!this.isListing) {
-        uri = url.removeLastDir(uri) + "/";
+        uri = url.removeLastDir(uri) + "/"
       }
 
-      uri += encodeURIComponent(this.name);
-      uri = uri.replace("//", "/");
+      uri += encodeURIComponent(this.name)
+      uri = uri.replace("//", "/")
 
       try {
-        await api.post(uri);
-        this.$router.push({ path: uri });
+        await api.post(uri)
+        this.$router.push({ path: uri })
       } catch (e) {
-        this.$showError(e);
+        this.$showError(e)
       }
 
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
     },
   },
-};
+}
 </script>

@@ -39,12 +39,9 @@
 </template>
 
 <script>
-import {mapState} from "vuex";
-
-import {create} from "@/api/folder.js";
-import vue from "@/utils/vue.js";
-import Action from "@/components/header/Action.vue";
-import buttons from "@/utils/buttons.js";
+import {mapState} from "vuex"
+import {create} from "@/api/folder.js"
+import Action from "@/components/header/Action.vue"
 
 export default {
   name: "new-dir",
@@ -52,7 +49,7 @@ export default {
   data: function () {
     return {
       name: "",
-    };
+    }
   },
   computed: {
     ...mapState(["currentFolder"]),
@@ -60,20 +57,20 @@ export default {
   
   methods: {
     submit: async function (event) {
-      event.preventDefault();
+      event.preventDefault()
 
       if (this.name.length > 0) {
         try {
 
           await create({"parent_id": this.currentFolder?.id, "name": this.name})
           let message = this.$t('toasts.folderCreated', { name: this.name})
-          this.$toast.success(message);
+          this.$toast.success(message)
 
         } catch (error) {
           console.log(error)
         }
         finally {
-          this.$store.commit("closeHover");
+          this.$store.commit("closeHover")
 
 
         }
@@ -83,5 +80,5 @@ export default {
 
     },
   },
-};
+}
 </script>

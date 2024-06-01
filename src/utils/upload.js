@@ -5,6 +5,7 @@ import {create} from "@/api/folder.js"
 import vue from "@/utils/vue.js"
 import i18n from '../i18n'
 import buttons from "@/utils/buttons.js"
+import {createFile} from "@/api/files.js"
 
 
 export function scanFiles(dt) {
@@ -76,10 +77,8 @@ function detectExtension(filename) {
 async function createFiles(fileList, filesInRequest) {
   let createdFiles = []
 
-  let file_res = await fetchJSON(`/api/file/create`, {
-    method: "POST",
-    body: JSON.stringify({"files": filesInRequest})
-  })
+  let file_res = await createFile({"files": filesInRequest})
+
 
   for (let created_file of file_res) {
     let file = fileList[created_file.index].file

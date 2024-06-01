@@ -1,4 +1,4 @@
-import {backend_instance} from "@/api/networker.js";
+import {backend_instance} from "@/api/networker.js"
 
 export async function moveToTrash(data) {
     let url = "/api/item/moveToTrash"

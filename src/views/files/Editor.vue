@@ -35,21 +35,20 @@
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex";
-import buttons from "@/utils/buttons";
+import {mapMutations, mapState} from "vuex"
+import buttons from "@/utils/buttons"
 
-import {version as ace_version} from "ace-builds";
-import ace from "ace-builds/src-min/ace.js";
-import modelist from "ace-builds/src-noconflict/ext-modelist";
+import {version as ace_version} from "ace-builds"
+import ace from "ace-builds/src-min/ace.js"
+import modelist from "ace-builds/src-noconflict/ext-modelist"
 
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import Action from "@/components/header/Action.vue";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import {getFile} from "@/api/files.js";
-import store from "@/store/index.js";
-import {fetchURL} from "@/api/utils.js";
-import {theme} from "@/utils/constants.js";
-import {breadcrumbs} from "@/api/item.js";
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import Action from "@/components/header/Action.vue"
+import Breadcrumbs from "@/components/Breadcrumbs.vue"
+import {getFile} from "@/api/files.js"
+import {fetchURL} from "@/api/utils.js"
+import {theme} from "@/utils/constants.js"
+import {breadcrumbs} from "@/api/item.js"
 
 export default {
   name: "editor",
@@ -70,7 +69,7 @@ export default {
       res: null,
       editor: null,
       folderList: [],
-    };
+    }
   },
 
 
@@ -80,13 +79,13 @@ export default {
 
 
   created() {
-    this.fetchData();
+    this.fetchData()
 
-    window.addEventListener("keydown", this.keyEvent);
+    window.addEventListener("keydown", this.keyEvent)
   },
   beforeDestroy() {
-    window.removeEventListener("keydown", this.keyEvent);
-    this.editor.destroy();
+    window.removeEventListener("keydown", this.keyEvent)
+    this.editor.destroy()
   },
   async mounted() {
 
@@ -95,41 +94,41 @@ export default {
     ...mapMutations(["setLoading"]),
 
     async fetchData() {
-      this.setLoading(true);
+      this.setLoading(true)
 
       if (this.items) {
         for (let i = 0; i < this.items.length; i++) {
           if (this.items[i].id === this.fileId) {
-            this.file = this.items[i];
+            this.file = this.items[i]
           }
         }
       }
       if (!this.file) {
         try {
           console.log("FILEID: " + this.fileId)
-          this.file = await getFile(this.fileId);
-          this.$store.commit("addSelected", this.file);
+          this.file = await getFile(this.fileId)
+          this.$store.commit("addSelected", this.file)
         } catch (e) {
-          console.log(e);
-          this.error = e;
+          console.log(e)
+          this.error = e
         }
       }
-      this.$store.commit("addSelected", this.file);
+      this.$store.commit("addSelected", this.file)
 
       this.folderList = await breadcrumbs(this.file.parent_id)
       console.log(this.folderList)
 
-      let res = await fetch(this.file.preview_url, {});
+      let res = await fetch(this.file.preview_url, {})
       this.raw = await res.text()
-      this.$nextTick(() => this.setupEditor());
-      this.setLoading(false);
+      this.$nextTick(() => this.setupEditor())
+      this.setLoading(false)
     },
     setupEditor() {
       const fileContent = this.raw || ""
       ace.config.set(
         "basePath",
         `https://cdn.jsdelivr.net/npm/ace-builds@${ace_version}/src-min-noconflict/`
-      );
+      )
 
       this.editor = ace.edit("editor", {
         value: fileContent,
@@ -139,51 +138,51 @@ export default {
         mode: modelist.getModeForPath(this.file.name).mode,
         wrap: true,
 
-      });
+      })
       if (theme === "dark") {
-        this.editor.setTheme("ace/theme/twilight");
+        this.editor.setTheme("ace/theme/twilight")
       }
-      //this.editor.session.getUndoManager().markClean();
+      //this.editor.session.getUndoManager().markClean()
       console.log(this.editor.session)
 
     },
     keyEvent(event) {
       if (!event.ctrlKey && !event.metaKey) {
-        return;
+        return
       }
 
       if (String.fromCharCode(event.which).toLowerCase() !== "s") {
-        return;
+        return
       }
 
-      event.preventDefault();
-      this.save();
+      event.preventDefault()
+      this.save()
     },
     async save() {
 
-      const button = "save";
+      const button = "save"
 
-      buttons.loading(button);
+      buttons.loading(button)
       if (!this.editor.session.getUndoManager().isClean()) {
         let content = this.editor.getValue()
 
         let webhook = this.settings.webhook
 
-        const formData = new FormData();
-        const blob = new Blob([content], {type: 'text/plain'});
+        const formData = new FormData()
+        const blob = new Blob([content], {type: 'text/plain'})
 
-        formData.append('file', blob, `chunk_${1}`);
+        formData.append('file', blob, `chunk_${1}`)
         try {
           const response = await fetch(webhook, {
             method: 'POST',
             body: formData
-          });
+          })
 
           if (!response.ok) {
-            throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`);
+            throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`)
           }
 
-          let json = await response.json();
+          let json = await response.json()
 
           await fetchURL(`/api/file/create`, {
             method: "PUT",
@@ -196,14 +195,14 @@ export default {
           })
 
         } catch (error) {
-          buttons.done(button);
+          buttons.done(button)
 
         }
       }
-      this.editor.session.getUndoManager().markClean();
-      buttons.success(button);
+      this.editor.session.getUndoManager().markClean()
+      buttons.success(button)
       let message = this.$t('toasts.fileSaved')
-      this.$toast.success(message);
+      this.$toast.success(message)
 
     },
     moveToTrash() {
@@ -212,7 +211,7 @@ export default {
         confirm: () => {
           this.close()
         },
-      });
+      })
 
     },
     close() {
@@ -222,23 +221,23 @@ export default {
           this.$store.commit("showHover", {
             prompt: "discardEditorChanges",
             confirm: () => {
-              this.$router.push(uri);
+              this.$router.push(uri)
 
             },
-          });
-          return;
+          })
+          return
         }
 
-        this.$router.push(uri);
+        this.$router.push(uri)
       }
       // catch every error so user can always close...
       catch {
 
-        this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}});
+        this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}})
 
       }
 
     },
   },
-};
+}
 </script>

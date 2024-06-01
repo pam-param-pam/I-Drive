@@ -35,8 +35,8 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
-import {remove} from "@/api/item.js";
+import {mapGetters, mapMutations, mapState} from "vuex"
+import {remove} from "@/api/item.js"
 
 export default {
   name: "delete",
@@ -49,18 +49,18 @@ export default {
     this.keyEvent = (event) => { // fucking spent 3 hours debuging this fucking piece of code fuck you java script, retarded language istg
       // Enter
       if (event.keyCode === 13) {
-        console.log("calling submit from event listener");
-        this.submit();
+        console.log("calling submit from event listener")
+        this.submit()
       }
-    };
+    }
 
     // Add the event listener using the saved function
-    window.addEventListener("keydown", this.keyEvent);
+    window.addEventListener("keydown", this.keyEvent)
   },
 
   beforeDestroy() {
     // Remove the event listener using the saved function
-    window.removeEventListener("keydown", this.keyEvent);
+    window.removeEventListener("keydown", this.keyEvent)
   },
 
 
@@ -69,16 +69,16 @@ export default {
     ...mapMutations(["closeHover", "resetSelected"]),
     submit: async function () {
       try {
-        let ids = this.selected.map(item => item.id);
+        let ids = this.selected.map(item => item.id)
 
-        let res = await remove({"ids": ids});
+        let res = await remove({"ids": ids})
 
         let message = this.$t('toasts.itemsAreBeingDeleted', {amount: ids.length})
         this.$toast.info(message, {
           timeout: null,
           id: res.task_id,
         })
-        this.currentPrompt?.confirm();
+        this.currentPrompt?.confirm()
 
       } catch (error) {
         console.log(error)
@@ -87,11 +87,11 @@ export default {
       finally {
         this.resetSelected()
         this.closeHover()
-        //this.$store.commit("setReload", true);
+        //this.$store.commit("setReload", true)
 
 
       }
     },
   },
-};
+}
 </script>

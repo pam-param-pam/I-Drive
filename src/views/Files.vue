@@ -20,15 +20,15 @@
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex";
+import {mapMutations, mapState} from "vuex"
 
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import Errors from "@/views/Errors.vue";
-import Listing from "@/views/files/Listing.vue";
-import {getItems} from "@/api/folder.js";
-import {name} from "@/utils/constants.js";
-import {search} from "@/api/search.js";
-import HeaderBar from "@/components/header/HeaderBar.vue";
+import Breadcrumbs from "@/components/Breadcrumbs.vue"
+import Errors from "@/views/Errors.vue"
+import Listing from "@/views/files/Listing.vue"
+import {getItems} from "@/api/folder.js"
+import {name} from "@/utils/constants.js"
+import {search} from "@/api/search.js"
+import HeaderBar from "@/components/header/HeaderBar.vue"
 
 export default {
   name: "files",
@@ -47,7 +47,7 @@ export default {
       items: [],
       isSearchActive: false,
       folderList: [],
-    };
+    }
   },
   computed: {
     ...mapState(["error", "user"]),
@@ -63,8 +63,8 @@ export default {
     $route: "fetchFolder",
   },
   destroyed() {
-    this.$store.commit("setItems", null);
-    this.$store.commit("setCurrentFolder", null);
+    this.$store.commit("setItems", null)
+    this.$store.commit("setCurrentFolder", null)
 
   },
   methods: {
@@ -78,8 +78,8 @@ export default {
     async onSearchQuery(query) {
       this.isSearchActive = true
       this.items = await search(query)
-      this.$store.commit("setItems", this.items);
-      this.$store.commit("setCurrentFolder", null);
+      this.$store.commit("setItems", this.items)
+      this.$store.commit("setCurrentFolder", null)
 
     },
     async fetchFolder() {
@@ -87,7 +87,7 @@ export default {
 
       this.searchItemsFound = null
 
-      this.setLoading(true);
+      this.setLoading(true)
       this.setError(null)
 
       try {
@@ -95,36 +95,36 @@ export default {
         console.log(res)
         this.items = res.folder.children
         this.folderList = res.breadcrumbs
-        this.$store.commit("setItems", this.items);
-        this.$store.commit("setCurrentFolder", res.folder);
+        this.$store.commit("setItems", this.items)
+        this.$store.commit("setCurrentFolder", res.folder)
 
 
         if (res.parent_id) { //only set title if its not root folder
-          document.title = `${res.name} - ` + name;
+          document.title = `${res.name} - ` + name
         }
         else {
-          document.title = name;
+          document.title = name
         }
 
       } catch (error) {
-        this.setError(error);
+        this.setError(error)
         console.log(error)
         if (error.status === 469) {
           this.$store.commit("showHover", {
             prompt: "FolderPassword",
             props: {folderId: this.folderId},
             confirm: () => {
-              this.fetchFolder();
+              this.fetchFolder()
 
             },
-          });
+          })
         }
       } finally {
-        this.setLoading(false);
+        this.setLoading(false)
 
       }
 
     },
   },
-};
+}
 </script>

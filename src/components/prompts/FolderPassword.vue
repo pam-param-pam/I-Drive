@@ -40,15 +40,15 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
-import {isPasswordCorrect} from "@/api/folder.js";
+import {mapGetters, mapMutations, mapState} from "vuex"
+import {isPasswordCorrect} from "@/api/folder.js"
 
 export default {
   name: "folder-password",
   data: function () {
     return {
       password: "",
-    };
+    }
   },
   props: {
     folderId: String
@@ -66,15 +66,15 @@ export default {
 
       if (await isPasswordCorrect(this.folderId, this.password) === true) {
         this.setFolderPassword({"folderId": this.folderId, "password": this.password})
-        this.currentPrompt.confirm();
+        this.currentPrompt.confirm()
         this.closeHover()
       }
       else {
         let message = this.$t('toasts.folderPasswordIncorrect')
-        this.$toast.error(message);
+        this.$toast.error(message)
       }
 
     },
   },
-};
+}
 </script>

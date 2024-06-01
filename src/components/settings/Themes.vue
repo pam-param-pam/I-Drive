@@ -11,8 +11,8 @@ export default {
   props: ["theme"],
   methods: {
     change(event) {
-      this.$emit("update:theme", event.target.value);
+      this.$emit("update:theme", event.target.value)
     },
   },
-};
+}
 </script>

@@ -43,13 +43,13 @@
 </template>
 
 <script>
-import * as auth from "@/utils/auth";
+import * as auth from "@/utils/auth"
 import {
   name,
   logoURL,
   signup,
-} from "@/utils/constants";
-import {mapState} from "vuex";
+} from "@/utils/constants"
+import {mapState} from "vuex"
 
 export default {
   name: "login",
@@ -66,55 +66,55 @@ export default {
       username: "",
       password: "",
       passwordConfirm: "",
-    };
+    }
   },
 
   methods: {
     toggleMode() {
-      this.createMode = !this.createMode;
+      this.createMode = !this.createMode
     },
     async submit(event) {
-      event.preventDefault();
-      event.stopPropagation();
+      event.preventDefault()
+      event.stopPropagation()
 
-      let redirect = this.$route.query.redirect;
+      let redirect = this.$route.query.redirect
 
 
       if (this.createMode) {
         if (this.password !== this.passwordConfirm) {
-          this.error = this.$t("login.passwordsDontMatch");
-          return;
+          this.error = this.$t("login.passwordsDontMatch")
+          return
         }
       }
 
       try {
         if (this.createMode) {
-          await auth.signup(this.username, this.password);
+          await auth.signup(this.username, this.password)
         }
 
-        await auth.login(this.username, this.password);
+        await auth.login(this.username, this.password)
         if (redirect === "" || redirect === undefined || redirect === null) {
-          redirect = `/folder/${this.user.root}`;
+          redirect = `/folder/${this.user.root}`
         }
-        await this.$router.push({path: redirect});
+        await this.$router.push({path: redirect})
 
       } catch (e) {
         console.log()
         if (e.status === 409) {
-          this.error = this.$t("login.usernameTaken");
+          this.error = this.$t("login.usernameTaken")
         }
         else if (e.status === 400) {
-          this.error = this.$t("login.wrongCredentials");
+          this.error = this.$t("login.wrongCredentials")
         }
         else if (e.status === 500) {
-          this.error = this.$t("login.unexpectedError");
+          this.error = this.$t("login.unexpectedError")
         }
         else {
-          this.error = this.$t("login.unknownError");
+          this.error = this.$t("login.unknownError")
           alert(e)
         }
       }
     },
   },
-};
+}
 </script>

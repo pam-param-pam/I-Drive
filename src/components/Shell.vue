@@ -45,10 +45,10 @@
 </template>
 
 <script>
-import { mapMutations, mapState, mapGetters } from "vuex";
-import { commands } from "@/api";
-import { throttle } from "lodash";
-import { theme } from "@/utils/constants";
+import { mapMutations, mapState, mapGetters } from "vuex"
+import { commands } from "@/api"
+import { throttle } from "lodash"
+import { theme } from "@/utils/constants"
 
 export default {
   name: "shell",
@@ -57,10 +57,10 @@ export default {
     ...mapGetters(["isFiles", "isLogged"]),
     path: function () {
       if (this.isFiles) {
-        return this.$route.path;
+        return this.$route.path
       }
 
-      return "";
+      return ""
     },
   },
   data: () => ({
@@ -73,130 +73,130 @@ export default {
     fontsize: parseFloat(getComputedStyle(document.documentElement).fontSize),
   }),
   mounted() {
-    window.addEventListener("resize", this.resize);
+    window.addEventListener("resize", this.resize)
   },
   beforeDestroy() {
-    window.removeEventListener("resize", this.resize);
+    window.removeEventListener("resize", this.resize)
   },
   methods: {
     ...mapMutations(["toggleShell"]),
     checkTheme() {
       if (theme === "dark") {
-        return "rgba(255, 255, 255, 0.4)";
+        return "rgba(255, 255, 255, 0.4)"
       }
-      return "rgba(127, 127, 127, 0.4)";
+      return "rgba(127, 127, 127, 0.4)"
     },
     startDrag() {
-      document.addEventListener("pointermove", this.handleDrag);
-      this.shellDrag = true;
+      document.addEventListener("pointermove", this.handleDrag)
+      this.shellDrag = true
     },
     stopDrag() {
-      document.removeEventListener("pointermove", this.handleDrag);
-      this.shellDrag = false;
+      document.removeEventListener("pointermove", this.handleDrag)
+      this.shellDrag = false
     },
     handleDrag: throttle(function (event) {
-      const top = window.innerHeight / this.fontsize - 4;
-      const userPos = (window.innerHeight - event.clientY) / this.fontsize;
+      const top = window.innerHeight / this.fontsize - 4
+      const userPos = (window.innerHeight - event.clientY) / this.fontsize
       const bottom =
         2.25 +
-        document.querySelector(".shell__divider").offsetHeight / this.fontsize;
+        document.querySelector(".shell__divider").offsetHeight / this.fontsize
 
       if (userPos <= top && userPos >= bottom) {
-        this.shellHeight = userPos.toFixed(2);
+        this.shellHeight = userPos.toFixed(2)
       }
     }, 32),
     resize: throttle(function () {
-      const top = window.innerHeight / this.fontsize - 4;
+      const top = window.innerHeight / this.fontsize - 4
       const bottom =
         2.25 +
-        document.querySelector(".shell__divider").offsetHeight / this.fontsize;
+        document.querySelector(".shell__divider").offsetHeight / this.fontsize
 
       if (this.shellHeight > top) {
-        this.shellHeight = top;
+        this.shellHeight = top
       } else if (this.shellHeight < bottom) {
-        this.shellHeight = bottom;
+        this.shellHeight = bottom
       }
     }, 32),
     scroll: function () {
-      this.$refs.scrollable.scrollTop = this.$refs.scrollable.scrollHeight;
+      this.$refs.scrollable.scrollTop = this.$refs.scrollable.scrollHeight
     },
 
 
 
     focusToEnd() {
       this.$nextTick(() => {
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(this.$refs.input);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      });
+        const range = document.createRange()
+        const selection = window.getSelection()
+        range.selectNodeContents(this.$refs.input)
+        range.collapse(false)
+        selection.removeAllRanges()
+        selection.addRange(range)
+      })
     },
     historyUp() {
       if (this.historyPos > 0) {
-        this.$refs.input.innerText = this.history[--this.historyPos];
-        this.focusToEnd();
+        this.$refs.input.innerText = this.history[--this.historyPos]
+        this.focusToEnd()
 
       }
     },
     historyDown() {
       if (this.historyPos >= 0 && this.historyPos < this.history.length - 1) {
-        this.$refs.input.innerText = this.history[++this.historyPos];
-        this.focusToEnd();
+        this.$refs.input.innerText = this.history[++this.historyPos]
+        this.focusToEnd()
       } else {
-        this.historyPos = this.history.length;
-        this.$refs.input.innerText = "";
+        this.historyPos = this.history.length
+        this.$refs.input.innerText = ""
       }
     },
     submit: function (event) {
-      const cmd = event.target.innerText.trim();
+      const cmd = event.target.innerText.trim()
 
       if (cmd === "") {
-        return;
+        return
       }
 
       if (cmd === "clear") {
-        this.content = [];
-        event.target.innerHTML = "";
-        return;
+        this.content = []
+        event.target.innerHTML = ""
+        return
       }
 
       if (cmd === "exit") {
-        event.target.innerHTML = "";
-        this.toggleShell();
-        return;
+        event.target.innerHTML = ""
+        this.toggleShell()
+        return
       }
 
-      this.canInput = false;
-      event.target.innerHTML = "";
+      this.canInput = false
+      event.target.innerHTML = ""
 
       let results = {
         text: `${cmd}\n\n`,
-      };
+      }
 
-      this.history.push(cmd);
-      this.historyPos = this.history.length;
-      this.content.push(results);
+      this.history.push(cmd)
+      this.historyPos = this.history.length
+      this.content.push(results)
 
       commands(
         this.path,
         cmd,
         (event) => {
-          results.text += `${event.data}\n`;
-          this.scroll();
+          results.text += `${event.data}\n`
+          this.scroll()
         },
         () => {
           results.text = results.text
             // eslint-disable-next-line no-control-regex
             .replace(/\u001b\[[0-9;]+m/g, "") // Filter ANSI color for now
-            .trimEnd();
-          this.canInput = true;
-          this.$refs.input.focus();
-          this.scroll();
+            .trimEnd()
+          this.canInput = true
+          this.$refs.input.focus()
+          this.scroll()
         }
-      );
+      )
     },
   },
-};
+}
 </script>

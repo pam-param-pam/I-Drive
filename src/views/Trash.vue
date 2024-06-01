@@ -14,16 +14,12 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
+import {mapMutations, mapState} from "vuex"
 
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import Errors from "@/views/Errors.vue";
-import Listing from "@/views/files/Listing.vue";
-import {getItems} from "@/api/folder.js";
-import {name} from "@/utils/constants.js";
-import {getTrash} from "@/api/user.js";
-import {search} from "@/api/search.js";
+import Breadcrumbs from "@/components/Breadcrumbs.vue"
+import Errors from "@/views/Errors.vue"
+import Listing from "@/views/files/Listing.vue"
+import {getTrash} from "@/api/user.js"
 
 export default {
   name: "trash",
@@ -38,7 +34,7 @@ export default {
       items: [],
       isSearchActive: false
 
-    };
+    }
   },
   computed: {
     ...mapState(["error", "user"]),
@@ -53,8 +49,8 @@ export default {
     $route: "fetchFolder",
   },
   beforeDestroy() {
-    this.$store.commit("setItems", null);
-    this.$store.commit("setCurrentFolder", null);
+    this.$store.commit("setItems", null)
+    this.$store.commit("setCurrentFolder", null)
 
 
   },
@@ -72,22 +68,22 @@ export default {
     },
     async fetchFolder() {
 
-      this.setLoading(true);
+      this.setLoading(true)
       this.setError(null)
 
       try {
-        let res = await getTrash();
+        let res = await getTrash()
         this.items = res.trash
-        this.$store.commit("setItems", this.items);
+        this.$store.commit("setItems", this.items)
 
       } catch (error) {
-        this.setError(error);
+        this.setError(error)
 
       } finally {
         document.title = "Trash"
-        this.setLoading(false);
+        this.setLoading(false)
       }
     },
   },
-};
+}
 </script>

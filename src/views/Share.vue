@@ -125,18 +125,17 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex";
+import {mapGetters, mapMutations, mapState} from "vuex"
 
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import Errors from "@/views/Errors.vue";
-import Listing from "@/views/files/Listing.vue";
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import {getShare} from "@/api/share.js";
-import Action from "@/components/header/Action.vue";
-import Item from "@/components/files/ListingItem.vue";
-import Vue from "vue";
-import css from "@/utils/css.js";
-import throttle from "lodash.throttle";
+import Breadcrumbs from "@/components/Breadcrumbs.vue"
+import Errors from "@/views/Errors.vue"
+import Listing from "@/views/files/Listing.vue"
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import {getShare} from "@/api/share.js"
+import Action from "@/components/header/Action.vue"
+import Item from "@/components/files/ListingItem.vue"
+import css from "@/utils/css.js"
+import throttle from "lodash.throttle"
 
 export default {
   name: "files",
@@ -162,33 +161,33 @@ export default {
       width: window.innerWidth,
       itemWeight: 0,
 
-    };
+    }
   },
   computed: {
     ...mapState(["reload", "selected", "loading", "error", "disableCreation"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
 
     dirs() {
-      const items = [];
+      const items = []
       if (this.items != null) {
         this.items.forEach((item) => {
           if (item.isDir) {
-            items.push(item);
+            items.push(item)
           }
 
-        });
+        })
       }
       return items
     },
     files() {
-      const items = [];
+      const items = []
 
       if (this.items != null) {
         this.items.forEach((item) => {
           if (!item.isDir) {
-            items.push(item);
+            items.push(item)
           }
-        });
+        })
       }
       return items
     },
@@ -204,8 +203,8 @@ export default {
         list: "view_module",
         mosaic: "grid_view",
         "mosaic gallery": "view_list",
-      };
-      return icons[this.viewMode];
+      }
+      return icons[this.viewMode]
     },
 
   },
@@ -223,13 +222,13 @@ export default {
   },
   mounted() {
     // Check the columns size for the first time.
-    this.columnsResize();
+    this.columnsResize()
 
-    window.addEventListener("resize", this.windowsResize);
+    window.addEventListener("resize", this.windowsResize)
 
   },
   beforeDestroy() {
-    window.removeEventListener("resize", this.windowsResize);
+    window.removeEventListener("resize", this.windowsResize)
 
   },
 
@@ -238,13 +237,13 @@ export default {
 
 
     switchView: async function () {
-      this.$store.commit("closeHover");
+      this.$store.commit("closeHover")
 
-      const modes = ["list", "mosaic", "mosaic gallery"];
+      const modes = ["list", "mosaic", "mosaic gallery"]
 
-      let currentIndex = modes.indexOf(this.viewMode);
-      let nextIndex = (currentIndex + 1) % modes.length;
-      this.viewMode = modes[nextIndex];
+      let currentIndex = modes.indexOf(this.viewMode)
+      let nextIndex = (currentIndex + 1) % modes.length
+      this.viewMode = modes[nextIndex]
 
 
     },
@@ -255,18 +254,18 @@ export default {
       console.log("BBBBBB")
 
       if (item.isDir) {
-        this.$router.push({name: "Share", params: {"token": this.token, "folderId": item.id}});
+        this.$router.push({name: "Share", params: {"token": this.token, "folderId": item.id}})
 
       }
 
     else {
         console.log("AAAAAA")
         if (item.type === "audio" || item.type === "video" || item.type === "image" ||  item.size >= 25 * 1024 * 1024 || item.extension === ".pdf") {
-          this.$router.push({name: "Preview", params: {"fileId":item.id, "token": this.token, "isShare": true}} );
+          this.$router.push({name: "Preview", params: {"fileId":item.id, "token": this.token, "isShare": true}} )
 
         }
         else {
-          this.$router.push({name: "Editor", params: {"fileId": item.id, "token": this.token, "isShare": true}} );
+          this.$router.push({name: "Editor", params: {"fileId": item.id, "token": this.token, "isShare": true}} )
 
         }
       }
@@ -275,7 +274,7 @@ export default {
     },
     async fetchFolder() {
 
-      this.setLoading(true);
+      this.setLoading(true)
       this.setError(null)
 
       try {
@@ -291,42 +290,42 @@ export default {
 
       } catch (error) {
         console.log(error)
-        this.setError(error);
+        this.setError(error)
 
 
       } finally {
-        this.setLoading(false);
+        this.setLoading(false)
 
       }
 
     },
     windowsResize: throttle(function () {
-      this.columnsResize();
-      this.width = window.innerWidth;
+      this.columnsResize()
+      this.width = window.innerWidth
 
       // Listing element is not displayed
-      if (this.$refs.listing == null) return;
+      if (this.$refs.listing == null) return
 
       // How much every listing item affects the window height
-      this.setItemWeight();
+      this.setItemWeight()
 
       // Fill but not fit the window
-      this.fillWindow();
+      this.fillWindow()
     }, 100),
     columnsResize() {
       // Update the columns size based on the window width.
-      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"]);
-      if (!items) return;
+      let items = css(["#listing.mosaic .item", ".mosaic#listing .item"])
+      if (!items) return
 
       let columns = Math.floor(
         document.querySelector("main").offsetWidth / this.columnWidth
-      );
-      if (columns === 0) columns = 1;
-      items.style.width = `calc(${100 / columns}% - 1em)`;
+      )
+      if (columns === 0) columns = 1
+      items.style.width = `calc(${100 / columns}% - 1em)`
     },
 
   },
-};
+}
 </script>
 <style>
 .normal-cursor {

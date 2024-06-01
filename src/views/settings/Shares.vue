@@ -59,12 +59,11 @@
 </template>
 
 <script>
-import { share as api, users } from "@/api";
-import { mapState, mapMutations } from "vuex";
-import moment from "moment";
-import Clipboard from "clipboard";
-import Errors from "@/views/Errors.vue";
-import {baseURL, staticURL} from "@/utils/constants.js";
+import { share as api } from "@/api"
+import { mapState, mapMutations } from "vuex"
+import moment from "moment"
+import Clipboard from "clipboard"
+import Errors from "@/views/Errors.vue"
 
 export default {
   name: "shares",
@@ -77,66 +76,66 @@ export default {
       error: null,
       shares: [],
       clip: null,
-    };
+    }
   },
   async created() {
 
-    this.setLoading(true);
+    this.setLoading(true)
 
     try {
-      let links = await api.getAllShares();
+      let links = await api.getAllShares()
       /*
       if (this.perms.admin) {
-        let userMap = new Map();
+        let userMap = new Map()
         for (let user of await users.getAllShares())
-          userMap.set(user.id, user.username);
+          userMap.set(user.id, user.username)
         for (let link of shares)
           link.username = userMap.has(link.userID)
             ? userMap.get(link.userID)
-            : "";
+            : ""
       }
 
        */
-      this.shares = links;
+      this.shares = links
     } catch (e) {
-      this.error = e;
+      this.error = e
     } finally {
-      this.setLoading(false);
+      this.setLoading(false)
     }
     
 
   },
   mounted() {
-    this.clip = new Clipboard(".copy-clipboard");
+    this.clip = new Clipboard(".copy-clipboard")
     this.clip.on("success", () => {
-      this.$toast.success(this.$t("success.linkCopied"));
-    });
+      this.$toast.success(this.$t("success.linkCopied"))
+    })
   },
   beforeDestroy() {
-    this.clip.destroy();
+    this.clip.destroy()
   },
   methods: {
     ...mapMutations(["setLoading"]),
     deleteLink: async function (event, share) {
-      event.preventDefault();
+      event.preventDefault()
 
       this.$store.commit("showHover", {
         prompt: "share-delete",
         confirm: () => {
-          this.$store.commit("closeHover");
+          this.$store.commit("closeHover")
 
           try {
-            api.removeShare({"token": share.token});
-            this.shares = this.shares.filter((item) => item.token !== share.token);
-            this.$toast.success(this.$t("toasts.shareDeleted"));
+            api.removeShare({"token": share.token})
+            this.shares = this.shares.filter((item) => item.token !== share.token)
+            this.$toast.success(this.$t("toasts.shareDeleted"))
           } catch (e) {
             console.log(e)
           }
         },
-      });
+      })
     },
     humanTime(time) {
-      return moment(time).fromNow();
+      return moment(time).fromNow()
     },
     buildLink(share) {
 
@@ -145,5 +144,5 @@ export default {
     },
 
   },
-};
+}
 </script>

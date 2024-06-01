@@ -33,5 +33,5 @@
 </template>
 
 <script>
-export default { name: "help" };
+export default { name: "help" }
 </script>

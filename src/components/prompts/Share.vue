@@ -125,10 +125,10 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex";
-import { share as api} from "@/api";
-import moment from "moment";
-import Clipboard from "clipboard";
+import { mapState, mapGetters } from "vuex"
+import { share as api} from "@/api"
+import moment from "moment"
+import Clipboard from "clipboard"
 
 export default {
   name: "share",
@@ -140,49 +140,49 @@ export default {
       clip: null,
       password: "",
       listing: true,
-    };
+    }
   },
   computed: {
     ...mapState(["selected", "selected"]),
     ...mapGetters(["isListing", "selectedCount"]),
     url() {
       if (!this.isListing) {
-        return this.$route.path;
+        return this.$route.path
       }
 
       if (this.selectedCount === 0 || this.selectedCount > 1) {
         // This shouldn't happen.
-        return;
+        return
       }
 
-      return this.selected[0].url;
+      return this.selected[0].url
     },
   },
   async beforeMount() {
     try {
-      let links = await api.getAllShares();
+      let links = await api.getAllShares()
 
 
       links = links.filter(item => item.resource_id === this.selected[0].id)
 
-      this.links = links;
-      this.sort();
+      this.links = links
+      this.sort()
 
       if (this.links.length === 0) {
-        this.listing = false;
+        this.listing = false
       }
     } catch (e) {
       console.log(e)
     }
   },
   mounted() {
-    this.clip = new Clipboard(".copy-clipboard");
+    this.clip = new Clipboard(".copy-clipboard")
     this.clip.on("success", () => {
-      this.$toast.success(this.$t("success.linkCopied"));
-    });
+      this.$toast.success(this.$t("success.linkCopied"))
+    })
   },
   beforeDestroy() {
-    this.clip.destroy();
+    this.clip.destroy()
   },
   methods: {
     submit: async function () {
@@ -190,59 +190,59 @@ export default {
       try {
 
 
-        let res = await api.createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit});
+        let res = await api.createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
 
-        this.links.push(res);
-        this.sort();
+        this.links.push(res)
+        this.sort()
 
-        this.time = 7;
-        this.unit = "days";
-        this.password = "";
+        this.time = 7
+        this.unit = "days"
+        this.password = ""
 
-        this.listing = true;
-        this.$toast.success(this.$t("settings.shareCreated"));
+        this.listing = true
+        this.$toast.success(this.$t("settings.shareCreated"))
 
       } catch (e) {
-        this.$toast.error(e);
+        this.$toast.error(e)
       }
     },
     deleteLink: async function (event, share) {
-      event.preventDefault();
+      event.preventDefault()
       console.log(JSON.stringify(share))
       try {
-        await api.removeShare({"token": share.token});
-        this.links = this.links.filter((item) => item.hash !== share.hash);
-        this.$toast.success(this.$t("settings.shareDeleted"));
+        await api.removeShare({"token": share.token})
+        this.links = this.links.filter((item) => item.hash !== share.hash)
+        this.$toast.success(this.$t("settings.shareDeleted"))
       } catch (e) {
         console.log(e)
       }
     },
     humanTime(time) {
-      return moment(time).fromNow();
+      return moment(time).fromNow()
     },
     buildLink(share) {
       return " to do lol"
     },
     hasDownloadLink() {
-      return true;
+      return true
     },
     buildDownloadLink(share) {
       return "http://127.0.0.1:9000/stream/" + share.resource_id
     },
     sort() {
       this.links = this.links.sort((a, b) => {
-        if (a.expire === 0) return -1;
-        if (b.expire === 0) return 1;
-        return new Date(a.expire) - new Date(b.expire);
-      });
+        if (a.expire === 0) return -1
+        if (b.expire === 0) return 1
+        return new Date(a.expire) - new Date(b.expire)
+      })
     },
     switchListing() {
       if (this.links.length === 0 && !this.listing) {
-        this.$store.commit("closeHover");
+        this.$store.commit("closeHover")
       }
 
-      this.listing = !this.listing;
+      this.listing = !this.listing
     },
   },
-};
+}
 </script>

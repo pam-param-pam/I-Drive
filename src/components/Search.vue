@@ -14,9 +14,8 @@
 </template>
 
 <script>
-import FileList from "@/components/prompts/FileList.vue";
-import {search} from "@/api/search.js";
-import {mapGetters, mapMutations} from "vuex";
+import FileList from "@/components/prompts/FileList.vue"
+import {mapGetters, mapMutations} from "vuex"
 
 export default {
   name: "search",
@@ -40,26 +39,26 @@ export default {
     async search() {
       if (this.query === '') return []
       this.isSearchActive = true
-      const regex = /(\w+):(\S+)\s*/g;
-      let match;
-      let argumentDict = {};
-      let lastIndex = 0;
+      const regex = /(\w+):(\S+)\s*/g
+      let match
+      let argumentDict = {}
+      let lastIndex = 0
 
       while ((match = regex.exec(this.query)) !== null) {
         // Extracting argument name and value
-        const [, name, value] = match;
-        argumentDict[name] = value;
-        lastIndex = regex.lastIndex;
+        const [, name, value] = match
+        argumentDict[name] = value
+        lastIndex = regex.lastIndex
 
       }
       // Extracting remaining string
-      argumentDict["query"] = this.query.substring(lastIndex).trim();
-      this.$emit('onSearchQuery', argumentDict);
+      argumentDict["query"] = this.query.substring(lastIndex).trim()
+      this.$emit('onSearchQuery', argumentDict)
 
     },
 
     async exit() {
-      this.query = '';
+      this.query = ''
 
 
     },
@@ -68,13 +67,13 @@ export default {
   watch: {
     query() {
       if (this.query === '') {
-        this.$store.commit("setDisableCreation", false);
+        this.$store.commit("setDisableCreation", false)
         this.$store.commit("resetSelected")
-        this.$emit('exit');
+        this.$emit('exit')
 
       }
       else {
-        this.$store.commit("setDisableCreation", true);
+        this.$store.commit("setDisableCreation", true)
         this.$store.commit("resetSelected")
         this.search()
 
@@ -82,5 +81,5 @@ export default {
 
     }
   }
-};
+}
 </script>

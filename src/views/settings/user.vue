@@ -61,11 +61,11 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapGetters } from "vuex";
-import { users as api, settings } from "@/api";
-import UserForm from "@/components/settings/UserForm.vue";
-import Errors from "@/views/Errors.vue";
-import deepClone from "lodash.clonedeep";
+import { mapState, mapMutations, mapGetters } from "vuex"
+import { users as api, settings } from "@/api"
+import UserForm from "@/components/settings/UserForm.vue"
+import Errors from "@/views/Errors.vue"
+import deepClone from "lodash.clonedeep"
 
 export default {
   name: "user",
@@ -79,14 +79,14 @@ export default {
       originalUser: null,
       user: {},
       createUserDir: false,
-    };
+    }
   },
   created() {
-    this.fetchData();
+    this.fetchData()
   },
   computed: {
     isNew() {
-      return this.$route.path === "/settings/users/new";
+      return this.$route.path === "/settings/users/new"
     },
     ...mapState(["loading"]),
     ...mapGetters(["currentPrompt", "currentPromptName"]),
@@ -94,19 +94,19 @@ export default {
   watch: {
     $route: "fetchData",
     "user.perm.admin": function () {
-      if (!this.user.perm.admin) return;
-      this.user.lockPassword = false;
+      if (!this.user.perm.admin) return
+      this.user.lockPassword = false
     },
   },
   methods: {
     ...mapMutations(["closeHovers", "showHover", "setUser", "setLoading"]),
     async fetchData() {
-      this.setLoading(true);
+      this.setLoading(true)
 
       try {
         if (this.isNew) {
-          let { defaults, createUserDir } = await settings.get();
-          this.createUserDir = createUserDir;
+          let { defaults, createUserDir } = await settings.get()
+          this.createUserDir = createUserDir
           this.user = {
             ...defaults,
             username: "",
@@ -114,58 +114,58 @@ export default {
             rules: [],
             lockPassword: false,
             id: 0,
-          };
+          }
         } else {
-          const id = this.$route.params.pathMatch;
-          this.user = { ...(await api.get(id)) };
+          const id = this.$route.params.pathMatch
+          this.user = { ...(await api.get(id)) }
         }
       } catch (e) {
-        this.error = e;
+        this.error = e
       } finally {
-        this.setLoading(false);
+        this.setLoading(false)
       }
     },
     deletePrompt() {
-      this.showHover("deleteUser");
+      this.showHover("deleteUser")
     },
     async deleteUser(event) {
-      event.preventDefault();
+      event.preventDefault()
 
       try {
-        await api.remove(this.user.id);
-        this.$router.push({ path: "/settings/users" });
-        this.$showSuccess(this.$t("settings.userDeleted"));
+        await api.remove(this.user.id)
+        this.$router.push({ path: "/settings/users" })
+        this.$showSuccess(this.$t("settings.userDeleted"))
       } catch (e) {
         e.message === "403"
           ? this.$showError(this.$t("errors.forbidden"), false)
-          : this.$showError(e);
+          : this.$showError(e)
       }
     },
     async save(event) {
-      event.preventDefault();
+      event.preventDefault()
       let user = {
         ...this.originalUser,
         ...this.user,
-      };
+      }
 
       try {
         if (this.isNew) {
-          const loc = await api.create(user);
-          this.$router.push({ path: loc });
-          this.$showSuccess(this.$t("settings.userCreated"));
+          const loc = await api.create(user)
+          this.$router.push({ path: loc })
+          this.$showSuccess(this.$t("settings.userCreated"))
         } else {
-          await api.update(user);
+          await api.update(user)
 
           if (user.id === this.$store.state.user.id) {
-            this.setUser({ ...deepClone(user) });
+            this.setUser({ ...deepClone(user) })
           }
 
-          this.$showSuccess(this.$t("settings.userUpdated"));
+          this.$showSuccess(this.$t("settings.userUpdated"))
         }
       } catch (e) {
-        this.$showError(e);
+        this.$showError(e)
       }
     },
   },
-};
+}
 </script>
