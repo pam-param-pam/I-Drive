@@ -9,7 +9,7 @@ from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
-from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExists
+from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError
 from website.utilities.decorators import handle_common_errors
 from website.utilities.other import send_event, create_file_dict
 
@@ -184,7 +184,7 @@ def create_preview(request):
 
     file_obj = File.objects.get(id=file_id)
     if file_obj.thumbnail:
-        raise ThumbnailAlreadyExists()
+        raise ThumbnailAlreadyExistsError()
 
     thumbnail_obj = Thumbnail(
         file=file_obj,

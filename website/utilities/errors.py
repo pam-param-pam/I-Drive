@@ -6,28 +6,35 @@ class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
 
-class ResourceNotFound(IDriveException):
+class ResourceNotFoundError(IDriveException):
     """Raised when resource can't be found in the database"""
     pass
 
-class ResourceNotPreviewable(IDriveException):
+class ResourceNotPreviewableError(IDriveException):
     """Raised when resource is too big to be previewed, or file is too corrupted to generate a preview"""
     pass
 
-class ThumbnailAlreadyExists(IDriveException):
+class ThumbnailAlreadyExistsError(IDriveException):
     """Raised during creation of file thumbnail but one already exists for that file"""
 
 class ResourcePermissionError(IDriveException):
     """Raised when user has not enough privilege to access a resource"""
     pass
 
-class IncorrectFolderPassword(IDriveException):
-    """Raised when folder password is incorrect"""
-    pass
+class MissingResourcePasswordError(IDriveException):
+    """Raised when password for a resource is missing"""
+    def __init__(self, lockFrom, resourceId, message="Resource password is missing"):
+        self.lockFrom = lockFrom
+        self.resourceId = resourceId
+        self.message = message
+        super().__init__(self.message)
 
-class IncorrectFilePassword(IDriveException):
-    """Raised when file password is incorrect"""
-    pass
+    def __str__(self):
+        return self.message
+
+class IncorrectResourcePasswordError(IDriveException):
+    """Raised when password for a resource is incorrect"""
+
 
 class BadRequestError(IDriveException):
     """Raised when user's request has some bad/missing data in it"""

@@ -5,8 +5,8 @@ from django.http import JsonResponse
 from rest_framework.exceptions import Throttled
 
 from website.models import File, Folder, ShareableLink, Thumbnail
-from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewable, IncorrectFolderPassword, IncorrectFilePassword, ThumbnailAlreadyExists
+from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
+    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewableError, ThumbnailAlreadyExistsError, IncorrectResourcePasswordError, MissingResourcePasswordError
 from website.utilities.other import error_res, verify_signed_file_id
 
 
@@ -39,8 +39,10 @@ def check_file_and_permissions(view_func):
                     status=404)
             if file_obj.is_locked:
                 password = request.headers.get("X-Folder-Password")
+                if not password:
+                    raise MissingResourcePasswordError(lockFrom=file_obj.lockFrom.id, resourceId=file_obj.id)
                 if file_obj.password != password:
-                    raise IncorrectFilePassword()
+                    raise IncorrectResourcePasswordError()
 
         except (File.DoesNotExist, ValidationError):
 
@@ -84,10 +86,12 @@ def check_folder_and_permissions(view_func):
                     error_res(user=request.user, code=403, error_code=5, details="You do not own this resource."),
                     status=403)
 
-            # if folder_obj.is_locked:
-            #     password = request.headers.get("X-Folder-Password")
-            #     if folder_obj.password != password:
-            #         raise IncorrectFolderPassword()
+            if folder_obj.is_locked:
+                password = request.headers.get("X-Folder-Password")
+                if not password:
+                    raise MissingResourcePasswordError(lockFrom=folder_obj.lockFrom.id, resourceId=folder_obj.id)
+                if folder_obj.password != password:
+                    raise IncorrectResourcePasswordError()
 
         except (File.DoesNotExist, ValidationError):
             return JsonResponse(error_res(user=request.user, code=404, error_code=8,
@@ -117,7 +121,7 @@ def handle_common_errors(view_func):
         except Thumbnail.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Thumbnail doesn't exist."),
                                 status=404)
-        except ResourceNotFound as e:
+        except ResourceNotFoundError as e:
             return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
 
         # 400 BAD REQUEST
@@ -129,9 +133,9 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=400, error_code=13, details=str(e)), status=400)
         except DiscordBlockError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=14, details=str(e)), status=400)
-        except ResourceNotPreviewable as e:
+        except ResourceNotPreviewableError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=11, details=str(e)), status=400)
-        except ThumbnailAlreadyExists as e:
+        except ThumbnailAlreadyExistsError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=18, details=str(e)), status=400)
         except NotImplementedError as e:
             return JsonResponse(error_res(user=request.user, code=400, error_code=15, details=str(e)), status=400)
@@ -151,9 +155,13 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=403, error_code=5, details=str(e)), status=403)
 
         # 469 CUSTOM STATUS CODE - FOLDER PASSWORD MISSING OR INCORRECT
-        except IncorrectFolderPassword as e:
+        except IncorrectResourcePasswordError as e:
             return JsonResponse(error_res(user=request.user, code=469, error_code=16, details=str(e)), status=469)
-        except IncorrectFilePassword as e:
-            return JsonResponse(error_res(user=request.user, code=469, error_code=17, details=str(e)), status=469)
+
+        except MissingResourcePasswordError as e:
+            json_error = error_res(user=request.user, code=469, error_code=19, details=str(e))
+            json_error["lockFrom"] = e.lockFrom
+            json_error["resourceId"] = e.resourceId
+            return JsonResponse(json_error, status=469)
 
     return wrapper

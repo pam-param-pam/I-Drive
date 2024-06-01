@@ -9,7 +9,7 @@ from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from website.models import File, Folder, UserSettings, ShareableLink
 from website.utilities.Permissions import SharePerms
 from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError
+from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
     build_folder_content, create_share_breadcrumbs
 
@@ -19,8 +19,7 @@ from website.utilities.other import create_file_dict, create_share_dict, create_
 @throttle_classes([UserRateThrottle])
 def get_shares(request):
 
-    #todo change owner
-    shares = ShareableLink.objects.filter(owner_id=1)
+    shares = ShareableLink.objects.filter(owner=request.user)
     items = []
 
     for share in shares:
@@ -112,7 +111,7 @@ def create_share(request):
         try:
             obj = File.objects.get(id=item_id)
         except File.DoesNotExist:
-            raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
+            raise ResourceNotFoundError(f"Resource with id of '{item_id}' doesn't exist.")
 
     if obj.owner != request.user:
         raise ResourcePermissionError()

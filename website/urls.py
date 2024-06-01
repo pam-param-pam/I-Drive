@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder
 from website.views.otherViews import test, index
@@ -47,9 +47,10 @@ urlpatterns = [
                   path("api/folder/password/<folder_id>", folder_password, name="create folder"),
 
                   path("api/item/move", move, name="move file/folder"),
+                  path("api/item/password/<item_id>", check_password, name="check password"),
                   path("api/item/delete", delete, name="delete file/folder"),
                   path("api/item/moveToTrash", move_to_trash, name="move file/folder to trash"),
-                  path("api/item/restore", restore_from_trash, name="move file/folder to trash"),
+                  path("api/item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
                   path("api/item/rename", rename, name="rename file/folder"),
 
                   path('api/fragments/<file_id>/<int:sequence>', get_fragment, name="get fragments"),

@@ -1,6 +1,7 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag, last_modified
+from django.views.decorators.vary import vary_on_headers
 from ipware import get_client_ip
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
@@ -12,9 +13,9 @@ from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
-from website.utilities.errors import BadRequestError, ResourceNotFound
+from website.utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError, IncorrectResourcePasswordError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs
-from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle
+from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle
 
 
 def etag_func(request, folder_obj):
@@ -65,6 +66,7 @@ def get_file(request, file_obj):
 
 
 @cache_page(60 * 1)
+@vary_on_headers("x-folder-password")
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -178,7 +180,6 @@ def get_trash(request):
 
     return JsonResponse({"trash": children})
 
-
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
@@ -242,6 +243,31 @@ def get_thumbnail_info(request, file_obj):
         "key": str(thumbnail.key),
     }
     return JsonResponse(thumbnail_dict, safe=False)
+
+
+@api_view(['GET'])
+@throttle_classes([FolderPasswordRateThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+def check_password(request, item_id):
+    try:
+        item = Folder.objects.get(id=item_id)
+    except Folder.DoesNotExist:
+        try:
+            item = File.objects.get(id=item_id)
+        except File.DoesNotExist:
+            raise ResourceNotFoundError(f"Resource with id of '{item_id}' doesn't exist.")
+
+    password = request.headers.get("X-Folder-Password")
+
+    if item.owner != request.user:
+        raise ResourcePermissionError()
+
+    if request.method == "GET":
+        if item.password == password:
+            return HttpResponse(status=204)
+
+        raise IncorrectResourcePasswordError()
 
 """
 

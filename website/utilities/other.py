@@ -11,7 +11,7 @@ from website.tasks import queue_ws_event
 from website.utilities.OPCodes import message_codes, EventCode
 from website.utilities.TypeHinting import Resource
 from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS
-from website.utilities.errors import ResourcePermissionError, ResourceNotFound
+from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingResourcePasswordError
 
 signer = TimestampSigner()
 
@@ -95,7 +95,7 @@ def create_file_dict(file_obj: File) -> dict:
         # "maintainers": [],
     }
     if file_obj.is_locked:
-        file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else None
+        file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else file_obj.id
 
     if file_obj.inTrashSince:
         file_dict["in_trash_since"] = timezone.localtime(file_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
@@ -153,7 +153,7 @@ def create_folder_dict(folder_obj: Folder) -> dict:
         'parent_id': folder_obj.parent_id,
         'isDir': True,
         'isLocked': folder_obj.is_locked,
-        'lockFrom': folder_obj.lockFrom.id if folder_obj.lockFrom else None
+        'lockFrom': folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
     }
     if folder_obj.is_locked:
@@ -174,7 +174,7 @@ def create_share_dict(share: ShareableLink) -> dict:
         except Folder.DoesNotExist:
             # looks like folder/file no longer exist, deleting time!
             share.delete()
-            raise ResourceNotFound(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
+            raise ResourceNotFoundError(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
     item = {
         "expire": share.expiration_time.strftime('%Y-%m-%d %H:%M'),
         "name": obj.name,
@@ -241,6 +241,27 @@ def error_res(user: User, code: int, error_code: int, details: str) -> dict:  # 
         locale = settings.locale
 
     return {"code": code, "error": message_codes[error_code][locale], "details": details}
+
+def get_resource(obj_id: str):
+    try:
+        item = Folder.objects.get(id=obj_id)
+    except Folder.DoesNotExist:
+        try:
+            item = File.objects.get(id=obj_id)
+        except File.DoesNotExist:
+            raise ResourceNotFoundError(f"Resource with id of '{obj_id}' doesn't exist.")
+    return item
+
+def check_resource_perms(request, resource: Resource):
+    if resource.owner != request.user:
+        raise ResourcePermissionError()
+
+    if isinstance(resource, Folder) and not resource.parent:
+        raise RootPermissionError("Cannot modify 'root' folder!")
+
+    password = request.headers.get("X-Folder-Password")
+    if password != resource.password:
+        raise MissingResourcePasswordError(lockFrom=resource.lockFrom.id, resourceId=resource.id)
 
 @DeprecationWarning
 def get_folder_path(folder_id, folder_structure, path=None):

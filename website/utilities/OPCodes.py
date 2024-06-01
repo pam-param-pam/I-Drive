@@ -16,9 +16,9 @@ message_codes = {
     13: {"pl": "Discord wysłał błędną odpowiedż", "en": "Unexpected discord response"},
     14: {"pl": "Discord jest chwilowo zablokowany ", "en": "Discord is temporarily blocked"},
     15: {"pl": "Funkcja jeszcze nie dostępna", "en": "Not yet implemented"},
-    16: {"pl": "Hasło do folderu jest nie poprawne", "en": "Folder password is incorrect"},
-    17: {"pl": "Hasło do pliku jest nie poprawne", "en": "File password is required"},
+    16: {"pl": "Hasło jest nie poprawne", "en": "Resource password is incorrect"},
     18: {"pl": "Plik już posiada thumbnail", "en": "File already has a thumbnail"},
+    19: {"pl": "Brak hasła", "en": "Password is missing"},
 
 }
 

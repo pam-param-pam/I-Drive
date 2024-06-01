@@ -19,3 +19,4 @@ SIGNED_URL_EXPIRY_SECONDS = 7200
 
 cache = caches["default"]
 
+RAW_IMAGE_EXTENSIONS = ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2')

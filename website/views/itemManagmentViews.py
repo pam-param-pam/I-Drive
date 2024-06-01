@@ -10,8 +10,8 @@ from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
 from website.utilities.constants import MAX_NAME_LENGTH, cache
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
-from website.utilities.errors import ResourceNotFound, ResourcePermissionError, BadRequestError, RootPermissionError, IncorrectFolderPassword
-from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict
+from website.utilities.errors import BadRequestError, RootPermissionError, IncorrectResourcePasswordError, MissingResourcePasswordError
+from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms
 from website.utilities.throttle import FolderPasswordRateThrottle
 
 
@@ -55,27 +55,23 @@ def move(request):
 
     for item_id in ids:
 
-        try:
-            item = Folder.objects.get(id=item_id)
+        item = get_resource(item_id)
+        if len(ids) > 1 and item.is_locked:
+            raise BadRequestError("Cannot perform task on multiple resourced if at least one is locked. You have to delete locked resources one by one")
+
+        check_resource_perms(request, item)
+
+        if isinstance(item, Folder):
             item_dict = create_folder_dict(item)
-        except Folder.DoesNotExist:
-            try:
-                item = File.objects.get(id=item_id)
-                item_dict = create_file_dict(item)
-
-            except File.DoesNotExist:
-                raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
-
-        if item.owner != request.user:  # owner perms needed
-            raise ResourcePermissionError()
-        if isinstance(item, Folder) and not item.parent:
-            raise RootPermissionError("Cannot move 'root' folder!")
+        else:
+            item_dict = create_file_dict(item)
 
         if item == new_parent:
             raise BadRequestError("'item' and 'new_parent_id' cannot be the same!")
 
         if item.parent == new_parent:
             raise BadRequestError("'new_parent_id' and 'old_parent_id' cannot be the same!")
+
         real_new_parent = new_parent
         x = 0
         while new_parent.parent:  # cannot move item to its descendant
@@ -114,7 +110,6 @@ def move(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move_to_trash(request):
-    user = request.user
     items = []
     ids = request.data['ids']
 
@@ -122,16 +117,11 @@ def move_to_trash(request):
         raise BadRequestError("'ids' must be a list.")
 
     for item_id in ids:
-        try:
-            item = Folder.objects.get(id=item_id)
-        except Folder.DoesNotExist:
-            try:
-                item = File.objects.get(id=item_id)
-            except File.DoesNotExist:
-                raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
+        item = get_resource(item_id)
+        if len(ids) > 1 and item.is_locked:
+            raise BadRequestError("Cannot perform task on multiple resourced if at least one is locked. You have to delete locked resources one by one")
 
-        if item.owner != user:  # owner perms needed
-            raise ResourcePermissionError()
+        check_resource_perms(request, item)
 
         if item.inTrash:
             raise BadRequestError(f"'Cannot move to Trash. At least one item is already in Trash.")
@@ -169,7 +159,6 @@ def move_to_trash(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def restore_from_trash(request):
-    user = request.user
     items = []
     ids = request.data['ids']
 
@@ -177,16 +166,10 @@ def restore_from_trash(request):
         raise BadRequestError("'ids' must be a list.")
 
     for item_id in ids:
-        try:
-            item = Folder.objects.get(id=item_id)
-        except Folder.DoesNotExist:
-            try:
-                item = File.objects.get(id=item_id)
-            except File.DoesNotExist:
-                raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
-
-        if item.owner != user:  # owner perms needed
-            raise ResourcePermissionError()
+        item = get_resource(item_id)
+        if len(ids) > 1 and item.is_locked:
+            raise BadRequestError("Cannot perform task on multiple resourced if at least one is locked. You have to delete locked resources one by one")
+        check_resource_perms(request, item)
 
         if not item.inTrash:
             raise BadRequestError(f"'Cannot restore from Trash. At least one item is not in Trash.")
@@ -231,19 +214,10 @@ def delete(request):
         raise BadRequestError("'ids' length cannot be 0.")
 
     for item_id in ids:
-        try:
-            item = Folder.objects.get(id=item_id)
-        except Folder.DoesNotExist:
-            try:
-                item = File.objects.get(id=item_id)
-            except File.DoesNotExist:
-                raise ResourceNotFound(f"Resource with id of '{item_id}' doesn't exist.")
-
-        if isinstance(item, Folder) and not item.parent:
-            raise RootPermissionError("Cannot delete 'root' folder!")
-
-        if item.owner != user:  # owner perms needed
-            raise ResourcePermissionError()
+        item = get_resource(item_id)
+        if len(ids) > 1 and item.is_locked:
+            raise BadRequestError("Cannot perform task on multiple resourced if at least one is locked. You have to delete locked resources one by one")
+        check_resource_perms(request, item)
 
         items.append(item)
 
@@ -263,22 +237,11 @@ def rename(request):
     new_name = request.data['new_name']
     if len(new_name) > MAX_NAME_LENGTH:
         raise BadRequestError("Name cannot be larger than '30'")
-    try:
-        item = Folder.objects.get(id=obj_id)
-    except Folder.DoesNotExist:
-        try:
-            item = File.objects.get(id=obj_id)
-        except File.DoesNotExist:
-            raise ResourceNotFound(f"Resource with id of '{obj_id}' doesn't exist.")
 
-    if item.owner != request.user:
-        raise ResourcePermissionError()
-
-    if isinstance(item, Folder) and not item.parent:
-        raise RootPermissionError("Cannot rename 'root' folder!")
+    item = get_resource(obj_id)
+    check_resource_perms(request, item)
 
     item.name = new_name
-
     item.save()
 
     send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
@@ -286,34 +249,23 @@ def rename(request):
     return HttpResponse(status=204)
 
 
-@api_view(['POST', 'GET'])
+@api_view(['POST'])
 @throttle_classes([FolderPasswordRateThrottle])
 @permission_classes([IsAuthenticated & LockPerms])
 @handle_common_errors
 @check_folder_and_permissions
 def folder_password(request, folder_obj):
-    password = request.headers.get("X-Folder-Password")
-
-    if request.method == "GET":
-        if folder_obj.password == password:
-            return HttpResponse(status=204)
-        raise IncorrectFolderPassword()
-
     if request.method == "POST":
         newPassword = request.data['new_password']
-        if folder_obj.password == password:
-            if newPassword:
-                lock_folder.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
-            else:
-                unlock_folder.delay(request.user.id, request.request_id, folder_obj.id)
-
-            isLocked = True if newPassword else False
-
-            send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
-                       [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked}])
-            if isLocked:
-                return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
-            return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
-
+        if newPassword:
+            lock_folder.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
         else:
-            raise IncorrectFolderPassword()
+            unlock_folder.delay(request.user.id, request.request_id, folder_obj.id)
+
+        isLocked = True if newPassword else False
+
+        send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
+                   [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked}])
+        if isLocked:
+            return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
+        return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))

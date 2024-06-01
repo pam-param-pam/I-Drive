@@ -14,9 +14,9 @@ from rest_framework.decorators import api_view, throttle_classes
 from website.models import Fragment, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
-from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE
+from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS
 from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
-from website.utilities.errors import ResourceNotPreviewable, DiscordError
+from website.utilities.errors import ResourceNotPreviewableError, DiscordError
 from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
 
@@ -52,11 +52,8 @@ def preview(request, file_obj):
     if len(fragments) == 0:
         return HttpResponse(status=204)
     # RAW IMAGE FILE
-    if file_obj.extension not in (
-            '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW',
-            '.ORF',
-            '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-        raise ResourceNotPreviewable(f"Resource of type {file_obj.type} is not previewable")
+    if file_obj.extension not in RAW_IMAGE_EXTENSIONS:
+        raise ResourceNotPreviewableError(f"Resource of type {file_obj.type} is not previewable")
 
     file_content = b''
     for fragment in fragments:
@@ -69,7 +66,7 @@ def preview(request, file_obj):
     file_like_object = io.BytesIO(file_content)
 
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
-        raise ResourceNotPreviewable("File too big: size > 100mb")
+        raise ResourceNotPreviewableError("File too big: size > 100mb")
     try:
         with rawpy.imread(file_like_object) as raw:
             thumb = raw.extract_thumb()
@@ -84,7 +81,7 @@ def preview(request, file_obj):
             imageio.imwrite(data, thumb.data)
 
     except (LibRawFileUnsupportedError, LibRawUnsupportedThumbnailError):
-        raise ResourceNotPreviewable("Raw file cannot be read properly to extract preview image.")
+        raise ResourceNotPreviewableError("Raw file cannot be read properly to extract preview image.")
 
     tags = exifread.process_file(file_like_object)
     # print(tags)

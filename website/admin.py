@@ -1,9 +1,12 @@
-
+import requests
 from django.contrib import admin
 from django.template.defaultfilters import filesizeformat
+from django.utils.html import format_html
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail
-from .utilities.constants import cache
+from .tasks import smart_delete
+from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS
+from .utilities.other import sign_file_id_with_expiry
 
 
 @admin.register(Fragment)
@@ -42,66 +45,110 @@ class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
     list_display = ["name", "owner", "created_at", "inTrash", "_is_locked"]
-    actions = ['move_to_trash', 'restore_from_trash']
+    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model']
     search_fields = ["id"]
 
-
     def delete_queryset(self, request, queryset):
-        for folder in queryset:
-            folder.force_delete()
+        ids = []
+        for real_obj in queryset:
+            ids.append(real_obj.id)
 
-    # override of default django method(in obj page)
+        smart_delete.delay(request.user.id, request.request_id, ids)
+
     def delete_model(self, request, obj):
-        if isinstance(obj, Folder):
+        if isinstance(obj, File):
+            smart_delete.delay(request.user.id, request.request_id, [obj.id])
+
             obj.force_delete()
         else:
+            ids = []
+
             for real_obj in obj:
-                real_obj.force_delete()
+                ids.append(real_obj.id)
+            smart_delete.delay(request.user.id, request.request_id, ids)
+
+    def force_delete_model(self, request, queryset):
+        for real_obj in queryset:
+            real_obj.force_delete()
 
     def move_to_trash(self, request, queryset):
+        # TODO
         for folder in queryset:
             folder.moveToTrash()
 
     def restore_from_trash(self, request, queryset):
+        # TODO
+
         for folder in queryset:
             folder.restoreFromTrash()
-
 
     def save_model(self, request, obj, form, change):
         cache.delete(obj.id)
         cache.delete(obj.parent.id)
         super().save_model(request, obj, form, change)
 
+
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size")
+    readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size", "image_tag")
     ordering = ["-created_at"]
     list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
                     "inTrash", "_is_locked"]
-    actions = ['move_to_trash', 'restore_from_trash', 'force_ready']
+    actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
     search_fields = ["name"]
 
+    def image_tag(self, obj: File):
+        signed_file_id = sign_file_id_with_expiry(obj.id)
 
+        if obj.extension in RAW_IMAGE_EXTENSIONS:
+            url = f"https://api.pamparampam.dev/api/file/preview/{signed_file_id}"
+            return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+
+        elif obj.type == "image":
+            url = f"https://get.pamparampam.dev/stream/{signed_file_id}"
+            return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+
+        elif obj.type == "video":
+            url = f"https://get.pamparampam.dev/stream/{signed_file_id}"
+            return format_html(
+                '<video controls style="width: 350px; height: auto;">'
+                '<source src="{}" type="video/mp4">'
+                '</video>',
+                url
+            )
+        else:
+
+            return "-"
+    image_tag.short_description = 'PREVIEW MEDIA FILE'
 
     def delete_queryset(self, request, queryset):
+        ids = []
         for real_obj in queryset:
-            real_obj.force_delete()
+            ids.append(real_obj.id)
+
+        smart_delete.delay(request.user.id, request.request_id, ids)
+
+    def delete_model(self, request, obj):
+        if isinstance(obj, File):
+            smart_delete.delay(request.user.id, request.request_id, [obj.id])
+
+            obj.force_delete()
+        else:
+            ids = []
+
+            for real_obj in obj:
+                ids.append(real_obj.id)
+
+            smart_delete.delay(request.user.id, request.request_id, ids)
 
     def force_ready(self, request, queryset):
         for real_obj in queryset:
             real_obj.ready = True
-            cache.delete(real_obj.id)
-            cache.delete(real_obj.parent.id)
             real_obj.save()
 
-    def delete_model(self, request, obj):
-        if isinstance(obj, File):
-
-            obj.force_delete()
-        else:
-            for real_obj in obj:
-
-                real_obj.force_delete()
+    def force_delete_model(self, request, queryset):
+        for real_obj in queryset:
+            real_obj.force_delete()
 
     def move_to_trash(self, request, queryset):
         for file in queryset:
@@ -127,6 +174,7 @@ class FileAdmin(admin.ModelAdmin):
 
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)
+
 
 @admin.register(Preview)
 class PreviewAdmin(admin.ModelAdmin):
@@ -162,9 +210,12 @@ class ThumbnailAdmin(admin.ModelAdmin):
 
     def readable_encrypted_size(self, obj):
         return filesizeformat(obj.encrypted_size)
+
+
 """
 admin.site.register(Thumbnail)
 """
+
 
 class ShareableLinkAdmin(admin.ModelAdmin):
     readonly_fields = ('token',)
