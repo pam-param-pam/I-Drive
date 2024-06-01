@@ -20,7 +20,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="cancelBtn()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -41,7 +41,8 @@
 
 <script>
 import {mapGetters, mapMutations, mapState} from "vuex"
-import {isPasswordCorrect} from "@/api/folder.js"
+
+import {isPasswordCorrect} from "@/api/item.js"
 
 export default {
   name: "folder-password",
@@ -51,7 +52,8 @@ export default {
     }
   },
   props: {
-    folderId: String
+    folderId: String,
+    lockFrom: String,
   },
   computed: {
     ...mapGetters(["currentPrompt", "getFolderPassword"]),
@@ -62,10 +64,10 @@ export default {
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword"]),
 
-    submit: async function () {
+    async submit() {
 
       if (await isPasswordCorrect(this.folderId, this.password) === true) {
-        this.setFolderPassword({"folderId": this.folderId, "password": this.password})
+        this.setFolderPassword({"folderId": this.lockFrom, "password": this.password})
         this.currentPrompt.confirm()
         this.closeHover()
       }
@@ -75,6 +77,12 @@ export default {
       }
 
     },
+    cancelBtn() {
+      if (this.currentPrompt.cancel) this.currentPrompt.cancel()
+
+      this.closeHover()
+
+    }
   },
 }
 </script>

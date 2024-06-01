@@ -1,19 +1,16 @@
 import {backend_instance} from "@/api/networker.js"
+import store from "@/store/index.js";
 
-export async function getItems(folder_id) {
+export async function getItems(folder_id, lockFrom) {
     let url = "/api/folder/" + folder_id
-    let response = await backend_instance.get(url)
-    return response.data
-}
-export async function isPasswordCorrect(folder_id, password) {
-    let url = `/api/folder/password/${folder_id}`
+    let password = store.getters.getFolderPassword(lockFrom)
+
     let response = await backend_instance.get(url, {
         headers: {
-            "Content-Type": "application/json",
-            "X-Folder-Password": password
+            "x-folder-password": password
         }
     })
-    return response.status === 204
+    return response.data
 }
 
 export async function lockWithPassword(folder_id, password, oldPassword) {
@@ -44,9 +41,15 @@ export async function create(data) {
     return response.data
 
 }
-export async function getUsage(folderId) {
+export async function getUsage(folderId, lockFrom) {
+    let password = store.getters.getFolderPassword(lockFrom)
+
     let url = `/api/folder/usage/${folderId}`
-    let response = await backend_instance.get(url)
+    let response = await backend_instance.get(url, {
+        headers: {
+            "x-folder-password": password
+        }
+    })
     return response.data
 
 }

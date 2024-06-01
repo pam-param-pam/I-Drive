@@ -34,6 +34,7 @@ const mutations = {
         confirm: null,
         action: null,
         props: null,
+        cancel: null,
       })
       return
     }
@@ -43,6 +44,8 @@ const mutations = {
       confirm: value?.confirm,
       action: value?.action,
       props: value?.props,
+      cancel: value?.cancel,
+
 
     })
   },

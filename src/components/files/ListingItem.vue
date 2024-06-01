@@ -207,24 +207,24 @@ export default {
 
       if (this.item.isDir) {
         if (this.item.isLocked === true) {
-          let password = this.getFolderPassword(this.item.id)
+          let password = this.getFolderPassword(this.item.lockFrom)
           if (!password) {
             this.$store.commit("showHover", {
               prompt: "FolderPassword",
-              props: {folderId: this.item.id},
+              props: {folderId: this.item.id, lockFrom: this.item.lockFrom},
               confirm: () => {
-                this.$router.push({name: "Files", params: {"folderId": this.item.id}})
+                this.$router.push({name: "Files", params: {"folderId": this.item.id, "lockFrom": this.item.lockFrom}})
               },
             })
             return
           }
         }
-        this.$router.push({name: "Files", params: {"folderId": this.item.id}})
+        this.$router.push({name: "Files", params: {"folderId": this.item.id, "lockFrom": this.item.lockFrom}})
 
       } else {
 
         if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" ||  this.item.size >= 25 * 1024 * 1024 || this.item.extension === ".pdf") {
-          this.$router.push({name: "Preview", params: {"fileId": this.item.id}} )
+          this.$router.push({name: "Preview", params: {"fileId": this.item.id, "lockFrom": this.item.lockFrom}} )
 
         }
         else {

@@ -144,6 +144,7 @@ export default {
 
   props: {
     fileId: String,
+    lockFrom: String,
     token: String,
     isShare: Boolean,
   },
@@ -236,9 +237,9 @@ export default {
 
       if (!this.file) {
         try {
-          this.file = await getFile(this.fileId)
+          this.file = await getFile(this.fileId, this.lockFrom)
           if (!this.currentFolder && ! this.isShare) {
-            const res = await getItems(this.file.parent_id)
+            const res = await getItems(this.file.parent_id, this.file.lockFrom)
 
             this.$store.commit("setItems", res.folder.children)
             this.$store.commit("setCurrentFolder", res.folder)
@@ -277,7 +278,7 @@ export default {
         let previousFile = this.files[this.currentIndex - 1]
         console.log(previousFile)
 
-        this.$router.push({name: "Preview", params: {"fileId": previousFile.id}} )
+        this.$router.push({name: "Preview", params: {"fileId": previousFile.id, "lockFrom": previousFile.lockFrom}} )
       }
 
     },
@@ -286,7 +287,7 @@ export default {
       if (this.hasNext) {
         let nextFile = this.files[this.currentIndex + 1]
         console.log(nextFile)
-        this.$router.push({name: "Preview", params: {"fileId": nextFile.id}} )
+        this.$router.push({name: "Preview", params: {"fileId": nextFile.id, "lockFrom": nextFile.lockFrom}} )
       }
     },
     key(event) {

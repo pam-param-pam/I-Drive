@@ -1,6 +1,8 @@
 import axios from 'axios'
 import {baseURL} from "@/utils/constants.js"
 import vue from "@/utils/vue.js"
+import store from "@/store/index.js"
+import router from "@/router/index.js";
 
 
 export const backend_instance = axios.create({
@@ -58,7 +60,9 @@ discord_instance.interceptors.response.use(
 )
 
 backend_instance.interceptors.request.use(
+
   function(config) {
+
     // Modify headers here
     config.headers['Authorization'] = `Token ${localStorage.getItem("token")}`
     return config
@@ -75,18 +79,7 @@ backend_instance.interceptors.response.use(
   async function(error) {
     const { config, response } = error
 
-    let errorMessage = response.data.error
-    let errorDetails = response.data.details
-    if (!errorMessage) errorMessage = "Unexpected error"
-    if (!errorDetails) errorDetails = "Report this"
-    if (response.status === 401) {
-      errorMessage = "Unauthorized"
-      errorDetails = "Session expired"
-    }
-    vue.$toast.error(`${errorMessage}\n${errorDetails}`, {
-      timeout: 5000,
-      position: "bottom-right",
-    })
+
 
 
     // // Check if the error is 429 Too Many Requests error
@@ -112,6 +105,65 @@ backend_instance.interceptors.response.use(
     //   }
     // }
 
+    // Check if the error is 429 Too Many Requests error
+    if (response && response.status === 469) {
+      console.log(`Received 469`)
+      const lockFrom = response.data.lockFrom
+      if (lockFrom) {
+
+        let password = store.getters.getFolderPassword(response.data.lockFrom)
+        if (password) {
+          config.headers = {
+            ...config.headers,
+            'X-folder-password': password, // Add the folder password to the headers
+          }
+          return new Promise(function(resolve) {
+            resolve(backend_instance(config)) // Retry the request
+          })
+        }
+
+        return new Promise((resolve, reject) => {
+
+          store.commit("showHover", {
+            prompt: "FolderPassword",
+            props: {folderId: response.data.resourceId, lockFrom: lockFrom},
+            cancel: () => {
+              if (router.currentRoute.name !== "Trash") {
+                store.commit("setError", response)
+                store.commit("setLoading", false)
+              }
+
+            },
+            confirm: () => {
+              console.log("confirm")
+              let password = store.getters.getFolderPassword(response.data.lockFrom)
+
+              config.headers = {
+                ...config.headers,
+                'X-folder-password': password, // Add the folder password to the headers
+              }
+
+              // Retry the request
+              backend_instance(config)
+                .then(resolve)  // Resolve the outer promise with the response
+                .catch(reject) // Reject the outer promise with the error
+            },
+          })
+        })
+      }
+    }
+    let errorMessage = response.data.error
+    let errorDetails = response.data.details
+    if (!errorMessage && errorMessage !== "") errorMessage = "Unexpected error"
+    if (!errorDetails && errorDetails !== "") errorDetails = "Report this"
+    if (response.status === 401) {
+      errorMessage = "Unauthorized"
+      errorDetails = "Session expired"
+    }
+    vue.$toast.error(`${errorMessage}\n${errorDetails}`, {
+      timeout: 5000,
+      position: "bottom-right",
+    })
     // If not a 429 error, no Retry-After header, or max retries reached, just return the error
     return Promise.reject(error)
   }

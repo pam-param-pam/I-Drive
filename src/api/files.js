@@ -1,8 +1,14 @@
 import {backend_instance} from "@/api/networker.js"
+import store from "@/store/index.js";
 
-export async function getFile(file_id) {
+export async function getFile(file_id, lockFrom) {
   let url = `/api/file/${file_id}`
-  let response = await backend_instance.get(url)
+  let password = store.getters.getFolderPassword(lockFrom)
+  let response = await backend_instance.get(url, {
+    headers: {
+      "x-folder-password": password
+    }
+  })
   return response.data
 
 }

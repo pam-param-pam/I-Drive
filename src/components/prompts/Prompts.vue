@@ -71,7 +71,7 @@ export default {
         // Esc!
       if (event.code === "Escape") {
         event.stopImmediatePropagation()
-        this.$store.commit("closeHover")
+        this.resetPrompts()
       }
 
 
@@ -91,8 +91,10 @@ export default {
   },
   methods: {
     resetPrompts() {
+      if (this.currentPrompt.cancel) this.currentPrompt.cancel()
       this.$store.commit("closeHover")
     },
+
   },
 }
 </script>

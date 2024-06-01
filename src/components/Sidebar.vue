@@ -147,7 +147,7 @@ export default {
           let usageStats = { used: 0, total: 0, usedPercentage: 0 }
 
           try {
-            let usage = await getUsage(this.currentFolder?.id)
+            let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
             usageStats = {
               used: prettyBytes(usage.used, { binary: true }),
               total: prettyBytes(usage.total, { binary: true }),

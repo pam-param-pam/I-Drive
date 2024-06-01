@@ -40,6 +40,7 @@ export default {
   },
   props: {
     folderId: String,
+    lockFrom: String,
 
   },
   data: function () {
@@ -91,7 +92,7 @@ export default {
       this.setError(null)
 
       try {
-        let res = await getItems(this.folderId, "a")
+        let res = await getItems(this.folderId, this.lockFrom)
         console.log(res)
         this.items = res.folder.children
         this.folderList = res.breadcrumbs
@@ -108,17 +109,8 @@ export default {
 
       } catch (error) {
         this.setError(error)
-        console.log(error)
-        if (error.status === 469) {
-          this.$store.commit("showHover", {
-            prompt: "FolderPassword",
-            props: {folderId: this.folderId},
-            confirm: () => {
-              this.fetchFolder()
 
-            },
-          })
-        }
+
       } finally {
         this.setLoading(false)
 
