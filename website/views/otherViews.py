@@ -2,16 +2,17 @@ from cryptography.fernet import Fernet
 from django.http import JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder
 from website.utilities.decorators import handle_common_errors
 from django.http import HttpResponse
 
+from website.utilities.throttle import MyUserRateThrottle
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
 def index(request):
 
     return HttpResponse(f"hello {request.user}")

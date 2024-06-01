@@ -257,7 +257,7 @@ def check_resource_perms(request, resource: Resource):
         raise ResourcePermissionError()
 
     if isinstance(resource, Folder) and not resource.parent:
-        raise RootPermissionError("Cannot modify 'root' folder!")
+        raise RootPermissionError("Cannot access 'root' folder!")
 
     password = request.headers.get("X-Folder-Password")
     if password != resource.password:

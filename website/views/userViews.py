@@ -4,19 +4,19 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle
 
 from website.models import UserSettings, Folder, UserPerms
 from website.utilities.Permissions import ChangePassword, SettingsModifyPerms
-from website.utilities.decorators import handle_common_errors
+from website.utilities.decorators import handle_common_errors, apply_rate_limit_headers
 from website.utilities.errors import ResourcePermissionError, BadRequestError
-from website.utilities.throttle import PasswordChangeThrottle
+from website.utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle
 from djoser import utils
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ChangePassword])
 @throttle_classes([PasswordChangeThrottle])
+@apply_rate_limit_headers
+@permission_classes([IsAuthenticated & ChangePassword])
 @handle_common_errors
 def change_password(request):
 
@@ -38,7 +38,8 @@ def change_password(request):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def users_me(request):
@@ -61,8 +62,8 @@ def users_me(request):
 
 
 @api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & SettingsModifyPerms])
-@throttle_classes([UserRateThrottle])
 @handle_common_errors
 def update_settings(request):
     locale = request.data.get('locale')

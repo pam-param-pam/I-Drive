@@ -9,14 +9,15 @@ from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_t
 from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
 from website.utilities.constants import MAX_NAME_LENGTH, cache
-from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
+from website.utilities.decorators import handle_common_errors, check_folder_and_permissions, apply_rate_limit_headers
 from website.utilities.errors import BadRequestError, RootPermissionError, IncorrectResourcePasswordError, MissingResourcePasswordError
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms
-from website.utilities.throttle import FolderPasswordRateThrottle
+from website.utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
 
 @api_view(['POST'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_folder(request):
@@ -39,7 +40,8 @@ def create_folder(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move(request):
@@ -106,7 +108,8 @@ def move(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move_to_trash(request):
@@ -155,7 +158,8 @@ def move_to_trash(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def restore_from_trash(request):
@@ -201,7 +205,8 @@ def restore_from_trash(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & DeletePerms])
 @handle_common_errors
 def delete(request):
@@ -228,8 +233,9 @@ def delete(request):
     return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
 
 
-@api_view(['PATCH'])  # this should be a post or delete imo
-@throttle_classes([UserRateThrottle])
+@api_view(['PATCH'])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def rename(request):
@@ -251,6 +257,7 @@ def rename(request):
 
 @api_view(['POST'])
 @throttle_classes([FolderPasswordRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & LockPerms])
 @handle_common_errors
 @check_folder_and_permissions

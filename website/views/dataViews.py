@@ -1,21 +1,20 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import etag, last_modified
+from django.views.decorators.http import last_modified
 from django.views.decorators.vary import vary_on_headers
 from ipware import get_client_ip
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle
 
 from website.models import File, Folder, Fragment
 from website.utilities.Discord import discord
 from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
-    check_file, check_signed_url
-from website.utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError, IncorrectResourcePasswordError
-from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs
-from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle
+    check_file, check_signed_url, apply_rate_limit_headers
+from website.utilities.errors import BadRequestError, ResourcePermissionError, IncorrectResourcePasswordError
+from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource
+from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
 def etag_func(request, folder_obj):
@@ -25,7 +24,8 @@ def etag_func(request, folder_obj):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
@@ -54,7 +54,8 @@ def last_modified_func(request, file_obj, sequence=None):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
@@ -68,7 +69,8 @@ def get_file(request, file_obj):
 @cache_page(60 * 1)
 @vary_on_headers("x-folder-password")
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
@@ -91,7 +93,8 @@ def get_usage(request, folder_obj):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
@@ -101,8 +104,9 @@ def get_breadcrumbs(request, folder_obj):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([SearchRateThrottle])
+@apply_rate_limit_headers
+@permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def search(request):
     user = request.user
@@ -161,11 +165,11 @@ def search(request):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def get_trash(request):
-
     files = File.objects.filter(inTrash=True, owner_id=request.user.id, parent__inTrash=False)
     folders = Folder.objects.filter(inTrash=True, owner_id=request.user.id, parent__inTrash=False)
 
@@ -180,9 +184,11 @@ def get_trash(request):
 
     return JsonResponse({"trash": children})
 
+
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
+@apply_rate_limit_headers
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -207,6 +213,7 @@ def get_fragment(request, file_obj, sequence=1):
 
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
+@apply_rate_limit_headers
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -225,9 +232,11 @@ def get_fragments_info(request, file_obj):
     }
     return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
 
+
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
+@apply_rate_limit_headers
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -247,32 +256,28 @@ def get_thumbnail_info(request, file_obj):
 
 @api_view(['GET'])
 @throttle_classes([FolderPasswordRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def check_password(request, item_id):
-    try:
-        item = Folder.objects.get(id=item_id)
-    except Folder.DoesNotExist:
-        try:
-            item = File.objects.get(id=item_id)
-        except File.DoesNotExist:
-            raise ResourceNotFoundError(f"Resource with id of '{item_id}' doesn't exist.")
+
+    item = get_resource(item_id)
 
     password = request.headers.get("X-Folder-Password")
 
     if item.owner != request.user:
         raise ResourcePermissionError()
 
-    if request.method == "GET":
-        if item.password == password:
-            return HttpResponse(status=204)
+    if item.password == password:
+        return HttpResponse(status=204)
 
-        raise IncorrectResourcePasswordError()
+    raise IncorrectResourcePasswordError()
+
 
 """
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -291,7 +296,7 @@ def get_fragments_info(request, file_obj):
     return JsonResponse(file_obj, safe=False)
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def get_root(request):
@@ -308,7 +313,7 @@ def get_root(request):
 
 
 @api_view(['GET'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def get_folder_tree(request):

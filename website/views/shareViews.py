@@ -4,19 +4,20 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 from website.models import File, Folder, UserSettings, ShareableLink
 from website.utilities.Permissions import SharePerms
-from website.utilities.decorators import handle_common_errors
+from website.utilities.decorators import handle_common_errors, apply_rate_limit_headers
 from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
     build_folder_content, create_share_breadcrumbs
+from website.utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
 @api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & SharePerms])
-@throttle_classes([UserRateThrottle])
 def get_shares(request):
 
     shares = ShareableLink.objects.filter(owner=request.user)
@@ -32,8 +33,9 @@ def get_shares(request):
 
 
 @api_view(['GET'])
+@throttle_classes([MyAnonRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([AllowAny])
-@throttle_classes([AnonRateThrottle])
 @handle_common_errors
 def view_share(request, token, folder_id=None):
     share = ShareableLink.objects.get(token=token)
@@ -79,7 +81,8 @@ def view_share(request, token, folder_id=None):
 
 
 @api_view(['PATCH'])
-@throttle_classes([UserRateThrottle])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors
 def delete_share(request):
@@ -94,8 +97,9 @@ def delete_share(request):
 
 
 @api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & SharePerms])
-@throttle_classes([UserRateThrottle])
 @handle_common_errors
 def create_share(request):
     item_id = request.data['resource_id']

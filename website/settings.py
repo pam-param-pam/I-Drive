@@ -199,9 +199,9 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/min',
-        'user': '500/m',
+        'user': '100/m',
         'media': '1000/min',
-        'folder_password': '150/min',
+        'folder_password': '20/min',
         'password_change': '10/min',
         'search': '200/m'
     }
