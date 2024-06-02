@@ -1,0 +1,5 @@
+Redis
+Django
+django-cors-headers
+requests
+stream-zip
