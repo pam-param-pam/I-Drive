@@ -54,26 +54,30 @@ class Processor:
 
 class ZipBase:
 
-    def __init__(self, files=None, chunksize=1024):
+    def __init__(self, files=None, chunksize=8024):
         """
-        files - list of files, or generator returning files
+        :param files: - list of files, or generator returning files
                 each file entry should be represented as dict with
                 parameters:
                 file - full path to file name
                 name - (optional) name of file in zip archive
-                       if not used, filename stripped from 'file' will be used
+                         if not used, filename stripped from 'file' will be used
                 stream - (optional) can be used as replacement for 'file'
-                         entry, will be treated as generator returnig
+                         entry, will be treated as generator returning
                          chunks of data that will be streamed in archive.
-                         If used, then 'name' entry is required.
-        chunksize - default size of data block streamed from files
+                         If used, then 'name' entry is required.:
+                modification_time - (optional) modification time of file in zip archive.
+                Must be time.struct_time object.
+                If not used current time will be used
+
+        :param chunksize: default size of data block streamed from files
         """
         if files is None:
             files = []
         self._source_of_files = files
         self.__files = []
-        self.__version = consts.ZIP32_VERSION
-        self.zip64 = False
+        self.__version = consts.ZIP64_VERSION
+        self.zip64 = True
         self.chunksize = chunksize
         # this flag tuns on signature for data descriptor record.
         # see section 4.3.9.3 of ZIP File Format Specification

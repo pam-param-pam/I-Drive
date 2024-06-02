@@ -1,4 +1,5 @@
 import io
+import os
 import re
 import time
 import zipfile
@@ -181,39 +182,49 @@ def stream_file(request, signed_file_id):
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def stream_zip_files(request):
-    # Example IDs (should come from request in a real scenario)
-    ids = ["4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU"]
+    # # Example IDs (should come from request in a real scenario)
+    # ids = ["4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU"]
+    #
+    # ids = ["h29WYUZ8cRNqKiofaFSwhv:1sDmBY:Dh3Jsl-sE_gr_WNvu1gFwQXI5AwiHtdhJi_kwOK6mx4"]
+    #
+    # files = []
+    #
+    # def stream_zip_file(file_id, fragments, chunk_size=8192):
+    #
+    #     for fragment in fragments:
+    #         url = f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}"
+    #         print(url)
+    #         response = requests.get(url)
+    #         if response.ok:
+    #             url = response.json()["url"]
+    #             response = requests.get(url, stream=True)
+    #
+    #             for chunk in response.iter_content(chunk_size):
+    #
+    #                 yield chunk
+    # content_length = 0
+    # for file_id in ids:
+    #     url = f"http://127.0.0.1:8000/api/fragments/{file_id}"
+    #     res = requests.get(url)
+    #     if not res.ok:
+    #         return HttpResponse(status=res.status_code)
+    #     res = res.json()
+    #     file = res["file"]
+    #     fragments = res["fragments"]
+    #     modification_time = datetime.fromisoformat(file["modified_at"])
+    #     modification_time_struct = time.localtime(modification_time.timestamp())
+    #     files.append({'name': file['name'], 'stream': stream_zip_file(file_id, fragments), "modification_time": modification_time_struct, "size": file["size"]})
+    #     content_length += file['size']
 
-    ids = ["h29WYUZ8cRNqKiofaFSwhv:1sDmBY:Dh3Jsl-sE_gr_WNvu1gFwQXI5AwiHtdhJi_kwOK6mx4"]
 
-    files = []
-
-    def stream_zip_file(file_id, fragments, chunk_size=8192):
-
-        for fragment in fragments:
-            url = f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}"
-            print(url)
-            response = requests.get(url)
-            if response.ok:
-                url = response.json()["url"]
-                response = requests.get(url, stream=True)
-
-                for chunk in response.iter_content(chunk_size):
-
-                    yield chunk
-    content_length = 0
-    for file_id in ids:
-        url = f"http://127.0.0.1:8000/api/fragments/{file_id}"
-        res = requests.get(url)
-        if not res.ok:
-            return HttpResponse(status=res.status_code)
-        res = res.json()
-        file = res["file"]
-        fragments = res["fragments"]
-        modification_time = datetime.fromisoformat(file["modified_at"])
-        modification_time_struct = time.localtime(modification_time.timestamp())
-        files.append({'name': file['name'], 'stream': stream_zip_file(file_id, fragments), "modification_time": modification_time_struct, "size": file["size"]})
-        content_length += file['size']
+    files = [
+        {'file': 'streamer/The_Little_Mermaid.mp4',
+         'name': 'aaaa.mp4',
+         'compression': None},
+        {'file': 'streamer/The_Little_Mermaid.mp4',
+         'name': 'aaaa.mp4',
+         'compression': None}
+    ]
     zip_stream = ZipStream(files)
     # streamed response
     response = StreamingHttpResponse(
@@ -222,4 +233,23 @@ def stream_zip_files(request):
     response['Content-Disposition'] = 'attachment; filename="aaa.zip"'
     # response['Content-Length'] = content_length
 
+    return response
+
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+def stream_nonzip_files(request):
+    def file_iterator(file_path, chunk_size=8192):
+        with open(file_path, 'rb') as f:
+            while True:
+                chunk = f.read(chunk_size)
+                if chunk:
+                    yield chunk
+                else:
+                    break
+
+    file_name = os.path.basename("The_Little_Mermaid.mp4")
+    response = StreamingHttpResponse(file_iterator("streamer/The_Little_Mermaid.mp4"))
+    response['Content-Type'] = 'application/octet-stream'
+    response['Content-Disposition'] = 'attachment; filename="%s"' % file_name
     return response
