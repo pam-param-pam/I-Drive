@@ -28,6 +28,27 @@ class TokenAuthMiddleware(BaseMiddleware):
         scope['token'] = token_key
         return await super().__call__(scope, receive, send)
 
+class ApplyRateLimitHeadersMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+
+        response = self.get_response(request)
+
+        if "rate_limit_remaining" in request.META:
+            remaining = request.META["rate_limit_remaining"]
+            response["X-RateLimit-Remaining"] = remaining
+
+        if "rate_limit_reset_after" in request.META:
+            reset_after = request.META["rate_limit_reset_after"]
+            response["X-RateLimit-Reset-After"] = reset_after
+
+        if "rate_limit_bucket" in request.META:
+            bucket = request.META["rate_limit_bucket"]
+            response["X-RateLimit-Bucket"] = bucket
+
+        return response
 
 class RequestIdMiddleware(object): #todo base class is object??
     def __init__(self, get_response=None):

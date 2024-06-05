@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS
 from .utilities.other import sign_file_id_with_expiry
@@ -226,3 +226,12 @@ class ShareableLinkAdmin(admin.ModelAdmin):
 
 
 admin.site.register(ShareableLink, ShareableLinkAdmin)
+
+@admin.register(UserZIP)
+class UserZIPAdmin(admin.ModelAdmin):
+    list_display = ('owner_name', 'size')
+    filter_horizontal = ('files', 'folders')
+    ordering = ["-created_at"]
+
+    def owner_name(self, obj):
+        return obj.owner.username

@@ -4,9 +4,9 @@ from django.core.exceptions import ImproperlyConfigured
 from rest_framework.throttling import UserRateThrottle
 
 
-class UserRateThrottleBase(UserRateThrottle):
+class MyUserRateThrottleBase(UserRateThrottle):
 
-    bucket = ""
+    bucket = None
 
     def __init__(self):
         super().__init__()
@@ -66,26 +66,26 @@ class UserRateThrottleBase(UserRateThrottle):
         return self.num_requests - len(self.history)
 
 
-class MyAnonRateThrottle(UserRateThrottleBase):
+class MyAnonRateThrottle(MyUserRateThrottleBase):
     scope = 'anon'
     bucket = "aBcDeFgHiJ"
 
-class MyUserRateThrottle(UserRateThrottleBase):
+class MyUserRateThrottle(MyUserRateThrottleBase):
     scope = 'user'
     bucket = "RpQwXsEfGt"
 
-class FolderPasswordRateThrottle(UserRateThrottleBase):
+class FolderPasswordRateThrottle(MyUserRateThrottleBase):
     scope = 'folder_password'
     bucket = "zYxWvUtSrQ"
 
-class MediaRateThrottle(UserRateThrottleBase):
+class MediaRateThrottle(MyUserRateThrottleBase):
     scope = 'media'
     bucket = "lMnOpQrStU"
 
-class SearchRateThrottle(UserRateThrottleBase):
+class SearchRateThrottle(MyUserRateThrottleBase):
     scope = 'search'
     bucket = "VwXyZaBcDe"
 
-class PasswordChangeThrottle(UserRateThrottleBase):
+class PasswordChangeThrottle(MyUserRateThrottleBase):
     scope = 'password_change'
     bucket = "FgHiJkLmNo"

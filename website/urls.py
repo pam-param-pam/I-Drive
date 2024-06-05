@@ -4,9 +4,9 @@ from django.contrib import admin
 from django.urls import path, include
 
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder
+    delete, folder_password, restore_from_trash, create_folder, create_zip_model
 from website.views.otherViews import test, index
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import preview
@@ -18,6 +18,8 @@ urlpatterns = [
                   # path("help", help1, name="help"),
                   # path("test", test, name="help"),
                   # path('generate-keys/', generate_keys, name='generate-keys'),
+                  path("api/zip/<token>", get_zip_info, name="get zip model info"),
+                  path("api/zip", create_zip_model, name="create zip model"),
 
                   path("api/trash", get_trash, name="trash"),
                   path("api/search", search, name="search"),

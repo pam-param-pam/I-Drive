@@ -1,19 +1,20 @@
 from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import last_modified
+from django.views.decorators.http import last_modified, etag
 from django.views.decorators.vary import vary_on_headers
 from ipware import get_client_ip
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Folder, Fragment
+from website.models import File, Folder, Fragment, UserZIP
 from website.utilities.Discord import discord
 from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
-    check_file, check_signed_url, apply_rate_limit_headers
+    check_file, check_signed_url
 from website.utilities.errors import BadRequestError, ResourcePermissionError, IncorrectResourcePasswordError
-from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource
+from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, get_flattened_children, create_zip_file_dict
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -25,11 +26,10 @@ def etag_func(request, folder_obj):
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
-# @etag(etag_func)
+@etag(etag_func)
 def get_folder(request, folder_obj):
     client_ip, is_routable = get_client_ip(request)
     # raise BadRequestError(
@@ -55,7 +55,6 @@ def last_modified_func(request, file_obj, sequence=None):
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
@@ -70,7 +69,6 @@ def get_file(request, file_obj):
 @vary_on_headers("x-folder-password")
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
@@ -94,7 +92,6 @@ def get_usage(request, folder_obj):
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
@@ -105,7 +102,6 @@ def get_breadcrumbs(request, folder_obj):
 
 @api_view(['GET'])
 @throttle_classes([SearchRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def search(request):
@@ -166,7 +162,6 @@ def search(request):
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def get_trash(request):
@@ -188,10 +183,9 @@ def get_trash(request):
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
-@apply_rate_limit_headers
-@handle_common_errors
 @check_signed_url
 @check_file
+@handle_common_errors
 def get_fragment(request, file_obj, sequence=1):
     sequence -= 1
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
@@ -211,36 +205,15 @@ def get_fragment(request, file_obj, sequence=1):
     return JsonResponse(fragment_dict)
 
 
-@api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
-@apply_rate_limit_headers
-@handle_common_errors
-@check_signed_url
-@check_file
-@last_modified(last_modified_func)
-def get_fragments_info(request, file_obj):
-    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-    fragments_list = []
-    for fragment in fragments:
-        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
-    file_dict = {
-        "size": file_obj.size,
-        "mimetype": file_obj.mimetype,
-        "type": file_obj.type,
-        "name": file_obj.name,
-        "key": str(file_obj.key),
-    }
-    return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
 
 
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
-@apply_rate_limit_headers
 @handle_common_errors
 @check_signed_url
 @check_file
-def get_thumbnail_info(request, file_obj):
+def get_thumbnail_info(request, file_obj: File):
     thumbnail = file_obj.thumbnail
 
     url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
@@ -255,12 +228,53 @@ def get_thumbnail_info(request, file_obj):
 
 
 @api_view(['GET'])
+@throttle_classes([MediaRateThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+@last_modified(last_modified_func)
+def get_fragments_info(request, file_obj: File):
+    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
+    fragments_list = []
+    for fragment in fragments:
+        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
+    file_dict = {
+        "size": file_obj.size,
+        "mimetype": file_obj.mimetype,
+        "type": file_obj.type,
+        "id": file_obj.id,
+        "modified_at": timezone.localtime(file_obj.last_modified_at),
+        "created_at": timezone.localtime(file_obj.created_at),
+        "name": file_obj.name,
+        "key": str(file_obj.key),
+    }
+    return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
+
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@handle_common_errors
+def get_zip_info(request, token):
+    user_zip = UserZIP.objects.get(token=token)
+
+    files = []
+
+    for file in user_zip.files.all():
+        file_dict = create_zip_file_dict(file, file.name)
+        files.append(file_dict)
+
+    for folder in user_zip.folders.all():
+        folder_tree = get_flattened_children(folder)
+        files += folder_tree
+
+    return JsonResponse(files, safe=False)
+
+
+@api_view(['GET'])
 @throttle_classes([FolderPasswordRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def check_password(request, item_id):
-
     item = get_resource(item_id)
 
     password = request.headers.get("X-Folder-Password")
@@ -272,7 +286,6 @@ def check_password(request, item_id):
         return HttpResponse(status=204)
 
     raise IncorrectResourcePasswordError()
-
 
 """
 

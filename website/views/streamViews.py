@@ -15,7 +15,7 @@ from website.models import Fragment, Preview
 from website.utilities.Discord import discord
 from website.utilities.OPCodes import EventCode
 from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS
-from website.utilities.decorators import handle_common_errors, check_signed_url, check_file, apply_rate_limit_headers
+from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
 from website.utilities.errors import ResourceNotPreviewableError, DiscordError
 from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
@@ -24,7 +24,6 @@ from website.utilities.throttle import MediaRateThrottle
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
-@apply_rate_limit_headers
 @check_signed_url
 @check_file
 @handle_common_errors

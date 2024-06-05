@@ -9,14 +9,13 @@ from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
 from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError
-from website.utilities.decorators import handle_common_errors, apply_rate_limit_headers
+from website.utilities.decorators import handle_common_errors
 from website.utilities.other import send_event, create_file_dict
 from website.utilities.throttle import MyUserRateThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_file(request):
@@ -173,7 +172,6 @@ def create_file(request):
 
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
-@apply_rate_limit_headers
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_preview(request):

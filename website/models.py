@@ -16,7 +16,7 @@ from website.utilities.constants import MAX_NAME_LENGTH, cache
 class Folder(models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.TextField(max_length=255, null=False)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='folders')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
     inTrash = models.BooleanField(default=False)
@@ -76,7 +76,7 @@ class Folder(models.Model):
         for file in self.files.all():
             file.moveToTrash()
 
-        for folder in self.folders.all():
+        for folder in self.subfolders.all():
             folder.moveToTrash()
 
     def restoreFromTrash(self):
@@ -86,7 +86,7 @@ class Folder(models.Model):
         for file in self.files.all():
             file.restoreFromTrash()
 
-        for folder in self.folders.all():
+        for folder in self.subfolders.all():
             folder.restoreFromTrash()
 
     def applyLock(self, lockFrom, password):
@@ -102,7 +102,7 @@ class Folder(models.Model):
         for file in self.files.all():
             file.applyLock(lockFrom, password)
 
-        for folder in self.folders.all():
+        for folder in self.subfolders.all():
             if not folder.is_locked:
                 folder.applyLock(lockFrom, password)
 
@@ -115,7 +115,7 @@ class Folder(models.Model):
         for file in self.files.all():
             file.removeLock()
 
-        for folder in self.folders.all():
+        for folder in self.subfolders.all():
             if folder.autoLock:
                 folder.removeLock()
 
@@ -125,7 +125,7 @@ class Folder(models.Model):
         for file in self.files.all():
             children.append(file)
 
-        for folder in self.folders.all():
+        for folder in self.subfolders.all():
             children += folder.get_all_files()
 
         return children
@@ -294,8 +294,7 @@ post_save.connect(Folder._create_user_root, sender=User)
 class Fragment(models.Model):
     sequence = models.SmallIntegerField()
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-
-    file = models.ForeignKey(File, on_delete=models.CASCADE)
+    file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
     message_id = models.CharField(max_length=255)
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
@@ -303,10 +302,11 @@ class Fragment(models.Model):
     attachment_id = models.CharField(max_length=255, null=True)
 
     def __str__(self):
-        return str(self.sequence)
+        return f"Fragment[file={self.file.name}, sequence={self.sequence}, owner={self.file.owner.username}"
 
 
 class ShareableLink(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     token = models.CharField(max_length=255, unique=True)
     expiration_time = models.DateTimeField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -323,6 +323,9 @@ class ShareableLink(models.Model):
 
     resource = GenericForeignKey('content_type', 'object_id')
 
+    def __str__(self):
+        return f"Share[owner={self.owner.username}, created_at={self.created_at}, object_id={self.object_id}"
+
     def save(self, *args, **kwargs):
         if self.token is None or self.token == '':
             self.token = secrets.token_urlsafe(32)
@@ -333,6 +336,7 @@ class ShareableLink(models.Model):
 
 
 class Thumbnail(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
@@ -346,6 +350,7 @@ class Thumbnail(models.Model):
 
 
 class Preview(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
@@ -361,3 +366,23 @@ class Preview(models.Model):
 
     def __str__(self):
         return self.file.name
+
+class UserZIP(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    files = models.ManyToManyField(File, related_name='user_zips', blank=True)
+    folders = models.ManyToManyField(Folder, related_name='user_zips', blank=True)
+    size = models.PositiveBigIntegerField(default=0, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=255, unique=True, blank=True)
+
+    def __str__(self):
+        return f'UserZIP[{self.id} by {self.owner}]'
+
+    def save(self, *args, **kwargs):
+        if self.token is None or self.token == '':
+            self.token = secrets.token_urlsafe(32)
+        super(UserZIP, self).save(*args, **kwargs)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(days=7)

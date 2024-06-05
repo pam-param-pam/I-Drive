@@ -11,26 +11,6 @@ from website.utilities.errors import ResourceNotFoundError, ResourcePermissionEr
 from website.utilities.other import error_res, verify_signed_file_id
 
 
-def apply_rate_limit_headers(view_func):
-    def wrapper(request, *args, **kwargs):
-        response = view_func(request, *args, **kwargs)
-        if "rate_limit_remaining" in request.META:
-            remaining = request.META["rate_limit_remaining"]
-            response["X-RateLimit-Remaining"] = remaining
-
-        if "rate_limit_reset_after" in request.META:
-            reset_after = request.META["rate_limit_reset_after"]
-            response["X-RateLimit-Reset-After"] = reset_after
-
-        if "rate_limit_bucket" in request.META:
-            bucket = request.META["rate_limit_bucket"]
-            response["X-RateLimit-Bucket"] = bucket
-
-        return response
-
-    return wrapper
-
-
 def check_signed_url(view_func):
     @wraps(view_func)
     def wrapper(request, file_id, *args, **kwargs):

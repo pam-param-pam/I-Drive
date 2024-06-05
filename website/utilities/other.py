@@ -140,7 +140,7 @@ def create_folder_dict(folder_obj: Folder) -> dict:
     Crates partial folder dict, not containing children items
     """
     file_children = folder_obj.files.filter(ready=True)
-    folder_children = folder_obj.folders.all()
+    folder_children = folder_obj.subfolders.all()
 
     folder_dict = {
         'id': str(folder_obj.id),
@@ -190,7 +190,7 @@ def create_share_dict(share: ShareableLink) -> dict:
 def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> dict:
     def recursive_build(folder):
         file_children = folder_obj.files.filter(ready=True)
-        folder_children = folder_obj.folders.all()
+        folder_children = folder_obj.subfolders.all()
 
         file_dicts = [create_file_dict(file) for file in file_children]
 
@@ -211,7 +211,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True) -> di
 
     folder_children = []
     if include_folders:
-        folder_children = folder_obj.folders.filter(inTrash=False)
+        folder_children = folder_obj.subfolders.filter(inTrash=False)
 
     file_dicts = []
     for file in file_children:
@@ -263,62 +263,51 @@ def check_resource_perms(request, resource: Resource):
     if password != resource.password:
         raise MissingResourcePasswordError(lockFrom=resource.lockFrom.id, resourceId=resource.id)
 
-@DeprecationWarning
-def get_folder_path(folder_id, folder_structure, path=None):
-    if path is None:
-        path = []
 
-    for folder in folder_structure['children']:
-        if folder['id'] == folder_id:
-            # Found the folder, add it to the path
-            path.append(folder)
-            return path
-        elif folder['children']:
-            # Recursively search in children
-            result = get_folder_path(folder_id, folder, path + [folder])
-            if result:
-                return result
+def create_zip_file_dict(file_obj: File, file_name: str):
+    signed_id = sign_file_id_with_expiry(file_obj.id)
 
-    # Folder ID not found in the current folder structure
-    return []
+    file_dict = {"id": file_obj.id,
+                 "name": file_name,
+                 "signed_id": signed_id,
+                 "isDir": False,
+                 "size": file_obj.size,
+                 #"mimetype": file_obj.mimetype,
+                 "type": file_obj.type,
+                 "modified_at": timezone.localtime(file_obj.last_modified_at),
+                 #"created_at": timezone.localtime(file_obj.created_at),
+                 "key": str(file_obj.key)
+    }
+    fragments_list = []
+    for fragment in file_obj.fragments.all():
+        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
+    file_dict["fragments"] = fragments_list
+    return file_dict
 
-@DeprecationWarning
-def calculate_time(file_size_bytes, bitrate_bps):
-    time_seconds = (file_size_bytes * 8) / bitrate_bps
-    return time_seconds
 
-@DeprecationWarning
-def get_percentage(current, all):
-    if all == 0:
-        return 0  # To avoid division by zero error
-    percentage = round((current / all) * 100)
-    return percentage
+def get_flattened_children(folder: Folder, full_path=""):
+    """
+    Recursively collects all children (folders and files) of the given folder
+    into a flattened list with file IDs and names including folders.
+    """
 
-@DeprecationWarning
-def create_temp_request_dir(request_id):
-    upload_folder = os.path.join("temp", request_id)
-    if not os.path.exists(upload_folder):
-        os.makedirs(upload_folder)
-    return upload_folder
+    children = []
 
-@DeprecationWarning
-def create_temp_file_dir(upload_folder, file_id):
-    out_folder_path = os.path.join(upload_folder, str(file_id))
-    if not os.path.exists(out_folder_path):
-        os.makedirs(out_folder_path)
-    return out_folder_path
-"""
-def build_folder_tree(folder_objs, parent_folder=None):
-    folder_tree = []
+    # Collect all files in the current folder
+    files = folder.files.all()
+    if files:
+        for file in files:
+            file_full_path = f"{full_path}{folder.name}/{file.name}"
+            file_dict = create_zip_file_dict(file, file_full_path)
+            children.append(file_dict)
+    else:
+        folder_full_path = f"{full_path}{folder.name}/"
 
-    # Get all folders with the specified parent folder
-    child_folders = folder_objs.filter(parent=parent_folder)
+        children.append({'id': folder.id, 'name': folder_full_path, "isDir": True})
 
-    for folder in child_folders:
-        folder_dict = create_folder_dict(folder)
-        folder_dict["children"] = build_folder_tree(folder_objs, folder)
+    # Recursively collect all subfolders and their children
+    for subfolder in folder.subfolders.all():
+        subfolder_full_path = f"{full_path}{folder.name}/"
+        children.extend(get_flattened_children(subfolder, subfolder_full_path))
 
-        folder_tree.append(folder_dict)
-
-    return folder_tree
-"""
+    return children

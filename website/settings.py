@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     #'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
+    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware'
     #'silk.middleware.SilkyMiddleware',
 
     #"django.middleware.cache.UpdateCacheMiddleware",
