@@ -1,69 +1,27 @@
-import io
 import os
 import re
 import time
-import zipfile
 from datetime import datetime
-from stat import S_IFREG
 
 import requests
-from stream_zip import ZIP_64, stream_zip, NO_COMPRESSION_64
-
-from django.http import StreamingHttpResponse, HttpResponse, JsonResponse
-
+from django.http import StreamingHttpResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
 from streamer.zipstream import ZipStream
 
-"""
-@api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-def stream_file(request, signed_file_id):
-    res = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}")
-
-    if not res.ok:
-        return HttpResponse(status=res.status_code)
-    file = res.json()
-
-    def file_iterator(index=1):
-        while index <= file["fragments_length"]:
-            res = requests.get(f"http://127.0.0.1:8000/api/fragment/{signed_file_id}/{index}")
-            if not res.ok:
-                return HttpResponse(status=res.status_code)
-
-            fragment = res.json()
-            url = fragment["url"]
-            response = requests.get(url, stream=True, timeout=10)
-            if response.ok:
-                for chunk in response.iter_content(8192):
-                    yield chunk
-
-            index += 1
-
-    response = StreamingHttpResponse(file_iterator(), content_type=file["mimetype"], status=200)
-    response['Content-Disposition'] = f'attachment; filename="{file["name"]}"'
-
-    return response
-
-"""
-
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def thumbnail_file(request, signed_file_id):
-    url = f"http://127.0.0.1:8000/api/file/thumbnail/{signed_file_id}"
-    res = requests.get(url)
+    res = requests.get(f"http://127.0.0.1:8000/api/file/thumbnail/{signed_file_id}")
     if not res.ok:
         return HttpResponse(status=res.status_code)
 
     def file_iterator(url, chunk_size=8192):
-        response = requests.get(res.json()['url'])
-        if not response.ok:
-            return HttpResponse(status=res.status_code)
-        response = requests.get(url, stream=True)
-        if response.ok:
-            for chunk in response.iter_content(chunk_size):
+        discord_response = requests.get(url, stream=True)
+        if discord_response.ok:
+            for chunk in discord_response.iter_content(chunk_size):
                 yield chunk
 
     response = StreamingHttpResponse(file_iterator(res.json()["url"]), content_type="image/jpeg")
@@ -76,38 +34,33 @@ def thumbnail_file(request, signed_file_id):
 def stream_file(request, signed_file_id):
     isInline = request.GET.get('inline', False)
 
-    url = f"http://127.0.0.1:8000/api/fragments/{signed_file_id}"
-    res = requests.get(url)
-    print(url)
+    res = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}")
     if not res.ok:
         return HttpResponse(status=res.status_code)
     res = res.json()
     file = res["file"]
     fragments = res["fragments"]
     if len(fragments) == 0:
-        return HttpResponse(status=204)
+        return HttpResponse(status=200)
 
     def file_iterator(index, start_byte, end_byte, chunk_size=8192):
         while index <= len(fragments):
-            url = f"http://127.0.0.1:8000/api/fragments/{signed_file_id}/{index}"
-            res = requests.get(url)
-            if not res.ok:
-                return HttpResponse(status=res.status_code)
+            fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}/{index}")
+            if not fragment_response.ok:
+                return HttpResponse(status=fragment_response.status_code)
 
-            fragment = res.json()
-            url = fragment["url"]
-            print(url)
+            url = fragment_response.json()["url"]
             headers = {
                 'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
 
-            response = requests.get(url, headers=headers, stream=True)
-            if response.ok:
-                for chunk in response.iter_content(chunk_size):
+            discord_response = requests.get(url, headers=headers, stream=True)
+            if discord_response.ok:
+                for chunk in discord_response.iter_content(chunk_size):
                     yield chunk
             else:
                 print("============DISCORD ERROR============")
-                print(response.status_code)
-                print(response.text)
+                print(discord_response.status_code)
+                print(discord_response.text)
                 return
             index += 1
 
@@ -178,59 +131,53 @@ def stream_file(request, signed_file_id):
         pass
     return response
 
-"""https://get.pamparampam.dev/zip"""
+
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
-def stream_zip_files(request):
-    # # Example IDs (should come from request in a real scenario)
-    # ids = ["4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU", "4z2yiUsVY6ZoJLMjSSRETx:1sDkbz:DDF6Y8tlwDzYpPv67h6I0hAZrYrDrmR86EaRWkI9ruU"]
-    #
-    # ids = ["h29WYUZ8cRNqKiofaFSwhv:1sDmBY:Dh3Jsl-sE_gr_WNvu1gFwQXI5AwiHtdhJi_kwOK6mx4"]
-    #
-    # files = []
-    #
-    # def stream_zip_file(file_id, fragments, chunk_size=8192):
-    #
-    #     for fragment in fragments:
-    #         url = f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}"
-    #         print(url)
-    #         response = requests.get(url)
-    #         if response.ok:
-    #             url = response.json()["url"]
-    #             response = requests.get(url, stream=True)
-    #
-    #             for chunk in response.iter_content(chunk_size):
-    #
-    #                 yield chunk
-    # content_length = 0
-    # for file_id in ids:
-    #     url = f"http://127.0.0.1:8000/api/fragments/{file_id}"
-    #     res = requests.get(url)
-    #     if not res.ok:
-    #         return HttpResponse(status=res.status_code)
-    #     res = res.json()
-    #     file = res["file"]
-    #     fragments = res["fragments"]
-    #     modification_time = datetime.fromisoformat(file["modified_at"])
-    #     modification_time_struct = time.localtime(modification_time.timestamp())
-    #     files.append({'name': file['name'], 'stream': stream_zip_file(file_id, fragments), "modification_time": modification_time_struct, "size": file["size"]})
-    #     content_length += file['size']
+def stream_zip_files(request, token):
+    files = []
 
+    def stream_zip_file(file_id, fragments, chunk_size=8192):
+        for fragment in fragments:
+            fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}")
+            if not fragment_response.ok:
+                print("============ERROR============")
+                print(fragment_response.status_code)
+                print(fragment_response.text)
+                return
 
-    files = [
-        {'file': 'streamer/The_Little_Mermaid.mp4',
-         'name': 'aaaa.mp4',
-         'compression': None},
-        {'file': 'streamer/The_Little_Mermaid.mp4',
-         'name': 'aaaa.mp4',
-         'compression': None}
-    ]
+            url = fragment_response.json()["url"]
+
+            discord_response = requests.get(url, stream=True)
+            for chunk in discord_response.iter_content(chunk_size):
+                yield chunk
+
+    res = requests.get(f"http://127.0.0.1:8000/api/zip/{token}")
+    if not res.ok:
+        return HttpResponse(status=res.status_code)
+    res_json = res.json()
+    for file in res_json["files"]:
+
+        if not file["isDir"]:
+            fragments = file["fragments"]
+
+            modification_time = datetime.fromisoformat(file["modified_at"])
+            modification_time_struct = time.localtime(modification_time.timestamp())
+            file_dict = {'name': file['name'],
+                         'stream': stream_zip_file(file['signed_id'], fragments),
+                         "modification_time": modification_time_struct,
+                         "size": file["size"],
+                         "cmethod": None
+            }
+
+            files.append(file_dict)
+
     zip_stream = ZipStream(files)
     # streamed response
     response = StreamingHttpResponse(
         zip_stream.stream(),
         content_type="application/zip")
-    response['Content-Disposition'] = 'attachment; filename="aaa.zip"'
+    response['Content-Disposition'] = f'attachment; filename="I-Drive-{res_json["id"]}.zip"'
     # response['Content-Length'] = content_length
 
     return response

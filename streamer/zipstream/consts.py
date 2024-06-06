@@ -54,3 +54,52 @@ CD_END_TUPLE = namedtuple("cdend",
                           ("signature", "disk_num", "disk_cdstart", "disk_entries",
                            "total_entries", "cd_size", "cd_offset", "comment_len"))
 CD_END_MAGIC = b'\x50\x4b\x05\x06'
+
+
+
+# Define the ZIP64 end of central directory record signature
+CD_END64_MAGIC = 0x06064b50
+
+# Define the ZIP64 end of central directory locator signature
+CD_END64_LOCATOR_MAGIC = 0x07064b50
+
+# Define the namedtuple and struct for the ZIP64 end of central directory locator
+CD_END64_LOCATOR_TUPLE = namedtuple('CD_END64_LOCATOR_TUPLE', [
+    'signature',
+    'disk_num',
+    'cd_end64_offset',
+    'num_disks'
+])
+CD_END64_LOCATOR_STRUCT = struct.Struct('<IQQI')
+
+# Define the namedtuple and struct for the ZIP64 end of central directory record
+CD_END64_TUPLE = namedtuple('CD_END64_TUPLE', [
+    'signature',
+    'disk_num',
+    'disk_cdstart',
+    'num_entries_disk',
+    'total_entries',
+    'cd_size',
+    'cd_offset'
+])
+CD_END64_STRUCT = struct.Struct('<IQHHQQQQ')
+
+ZIP64_EXTRA_MAGIC = 0x0001
+
+# Define the ZIP64 extra field structure
+ZIP64_EXTRA_TUPLE = namedtuple('ZIP64_EXTRA_TUPLE', [
+    'signature',
+    'size',
+    'uncomp_size',
+    'comp_size',
+    'offset'
+])
+ZIP64_EXTRA_STRUCT = struct.Struct('<HHQQQ')
+
+# Define the ZIP64 data descriptor structure
+ZIP64_DD_TUPLE = namedtuple('ZIP64_DD_TUPLE', [
+    'crc',
+    'comp_size',
+    'uncomp_size'
+])
+ZIP64_DD_STRUCT = struct.Struct('<IQQ')

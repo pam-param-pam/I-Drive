@@ -76,7 +76,7 @@ class ZipBase:
             files = []
         self._source_of_files = files
         self.__files = []
-        self.__version = consts.ZIP64_VERSION
+        self.__version = consts.ZIP32_VERSION
         self.zip64 = True
         self.chunksize = chunksize
         # this flag tuns on signature for data descriptor record.
@@ -190,6 +190,7 @@ class ZipBase:
         descriptor = consts.DD_STRUCT.pack(*descriptor)
         if self.__use_ddmagic:
             descriptor = consts.DD_MAGIC + descriptor
+
         return descriptor
 
     def _make_cdir_file_header(self, file_struct):
@@ -266,7 +267,7 @@ class ZipBase:
 
 class ZipStream(ZipBase):
 
-    def data_generator(self, src, src_type):
+    def _data_generator(self, src, src_type):
         if src_type == 's':
             for chunk in src:
                 yield chunk
@@ -286,7 +287,7 @@ class ZipStream(ZipBase):
         """
         yield self._make_local_file_header(file_struct)
         pcs = Processor(file_struct)
-        for chunk in self.data_generator(file_struct['src'], file_struct['stype']):
+        for chunk in self._data_generator(file_struct['src'], file_struct['stype']):
             chunk = pcs.process(chunk)
             if len(chunk) > 0:
                 yield chunk
