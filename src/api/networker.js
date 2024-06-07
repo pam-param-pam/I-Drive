@@ -78,6 +78,10 @@ backend_instance.interceptors.response.use(
     return response
   },
   async function(error) {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error)
+
+    }
     const { config, response } = error
 
 

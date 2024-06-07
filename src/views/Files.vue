@@ -29,6 +29,7 @@ import {getItems} from "@/api/folder.js"
 import {name} from "@/utils/constants.js"
 import {search} from "@/api/search.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
+import axios from "axios"
 
 export default {
   name: "files",
@@ -48,6 +49,8 @@ export default {
       items: [],
       isSearchActive: false,
       folderList: [],
+      source: null,
+
     }
   },
   computed: {
@@ -78,7 +81,13 @@ export default {
 
     async onSearchQuery(query) {
       this.setLoading(true)
-      this.items = await search(query)
+
+      if (this.source) {
+        this.source.cancel('Cancelled previous request')
+      }
+      this.source = axios.CancelToken.source()
+
+      this.items = await search(query, this.source)
       this.setLoading(false)
       this.isSearchActive = true
       this.$store.commit("setItems", this.items)
