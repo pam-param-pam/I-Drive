@@ -30,6 +30,12 @@ export async function remove(data) {
     return response.data
 }
 
+export async function createZIP(data) {
+    let url = "/api/zip"
+    let response = await backend_instance.post(url, data)
+    return response.data
+}
+
 export async function isPasswordCorrect(folder_id, password) {
     let url = `/api/item/password/${folder_id}`
     let response = await backend_instance.get(url, {

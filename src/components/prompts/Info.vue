@@ -305,35 +305,6 @@ export default {
         }
 
     },
-/*
-    folderItems() {
-        let folder
-        if (this.selectedCount === 0) {
-          folder = this.currentFolder
-        }
-        else if (this.selectedCount === 1) {
-          if (this.selected[0].isDir) {
-              folder = this.selected[0]
-          }
-        if (folder)  {
-          const folders = []
-          const files = []
-
-            folder.children.forEach(element => {
-              if (element.isDir) {
-                  folders.push(element)
-              } else {
-                  files.push(element)
-              }
-          })
-
-          return {folders, files}
-          }
-        }
-        return null
-        }
-       */
-
 
   },
   methods: {

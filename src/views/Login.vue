@@ -1,7 +1,7 @@
 <template>
   <div id="login" >
     <form @submit="submit">
-      <img :src="logoURL" alt="File Browser" />
+      <img :src="logoURL" alt="I Drive" />
       <h1>{{ name }}</h1>
       <div v-if="error !== ''" class="wrong">{{ error }}</div>
 

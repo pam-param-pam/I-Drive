@@ -24,7 +24,8 @@ const state = {
   error: null,
   showShell: false,
   disableCreation: false,
-  folderPasswords: {}
+  folderPasswords: {},
+  searchFilters: {"files": true, "folders": true},
 
 }
 

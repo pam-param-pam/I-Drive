@@ -32,6 +32,7 @@ import FolderPassword from "@/components/prompts/FolderPassword.vue"
 import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue"
 import MoveToTrash from "@/components/prompts/MoveToTrash.vue"
 import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue"
+import SearchTunePrompt from "@/components/prompts/SearchTunePrompt.vue";
 
 export default {
   name: "prompts",
@@ -53,6 +54,7 @@ export default {
     DiscardEditorChanges,
     FolderPassword,
     EditFolderPassword,
+    SearchTunePrompt,
   },
   data: function () {
     return {

@@ -10,6 +10,9 @@ const mutations = {
   resetFolderPassword(state, payload) {
     state.folderPasswords = {}
   },
+  setSearchFilters(state, payload) {
+    state.searchFilters = payload
+  },
   updateFolderPassword(state, payload) {
     if (state.folderPasswords.hasOwnProperty(payload.folderId)) {
       state.folderPasswords[payload.folderId] = payload.password

@@ -1,14 +1,14 @@
 <template>
   <div>
     <header-bar v-if="error" showMenu showLogo />
-
-    <errors v-if="error" :errorCode="error.status"/>
-    <breadcrumbs v-if="!isSearchActive && !error"
-       base="/files"
-      :folderList="folderList"
+    <breadcrumbs v-if="!isSearchActive"
+                 base="/files"
+                 :folderList="folderList"
     />
+    <errors v-if="error" :errorCode="error.response.status"/>
 
-    <h4 v-else-if="!error">{{$t('files.searchItemsFound', {amount: this.items.length})}}</h4>
+
+    <h4 v-if="!error && isSearchActive && !loading">{{$t('files.searchItemsFound', {amount: this.items.length})}}</h4>
     <Listing
       :isTrash="false"
       :isShares="false"
@@ -51,7 +51,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(["error", "user"]),
+    ...mapState(["error", "user", "loading"]),
 
   },
   created() {
@@ -77,8 +77,10 @@ export default {
     },
 
     async onSearchQuery(query) {
-      this.isSearchActive = true
+      this.setLoading(true)
       this.items = await search(query)
+      this.setLoading(false)
+      this.isSearchActive = true
       this.$store.commit("setItems", this.items)
       this.$store.commit("setCurrentFolder", null)
 

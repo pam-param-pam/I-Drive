@@ -2,7 +2,8 @@ import axios from 'axios'
 import {baseURL} from "@/utils/constants.js"
 import vue from "@/utils/vue.js"
 import store from "@/store/index.js"
-import router from "@/router/index.js";
+import i18n from "@/i18n/index.js";
+import {logout} from "@/utils/auth.js";
 
 
 export const backend_instance = axios.create({
@@ -128,10 +129,9 @@ backend_instance.interceptors.response.use(
             prompt: "FolderPassword",
             props: {folderId: response.data.resourceId, lockFrom: lockFrom},
             cancel: () => {
-              if (router.currentRoute.name !== "Trash") {
-                store.commit("setError", response)
-                store.commit("setLoading", false)
-              }
+
+              vue.$toast.error(i18n.t("toasts.passwordIsRequired"))
+
 
             },
             confirm: () => {
@@ -157,8 +157,10 @@ backend_instance.interceptors.response.use(
     if (!errorMessage && errorMessage !== "") errorMessage = "Unexpected error"
     if (!errorDetails && errorDetails !== "") errorDetails = "Report this"
     if (response.status === 401) {
-      errorMessage = "Unauthorized"
-      errorDetails = "Session expired"
+      await logout()
+
+      errorMessage = i18n.t("toasts.unauthorized")
+      errorDetails = i18n.t("toasts.sessionExpired")
     }
     vue.$toast.error(`${errorMessage}\n${errorDetails}`, {
       timeout: 5000,

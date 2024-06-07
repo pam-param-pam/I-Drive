@@ -107,8 +107,8 @@
         <a
           rel="noopener noreferrer"
           target="_blank"
-          href="https://github.com/pam-param-pam/Disney-Plus-api-wrapper"
-          >File Browser {{ version }}</a
+          href="https://github.com/pam-param-pam/I-Drive-Frontend"
+          >I Drive By Pam v{{ version }}</a
         >
       </span>
       <span>

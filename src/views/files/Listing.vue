@@ -307,6 +307,7 @@ import {updateSettings} from "@/api/user.js"
 import {sortItems} from "@/api/utils.js"
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import buttons from "@/utils/buttons.js"
+import {createZIP} from "@/api/item.js";
 
 export default {
   name: "listing",
@@ -466,7 +467,7 @@ export default {
       return {
         upload: this.perms.create && !this.isTrash,
         info: !this.isTrash || this.selectedCount > 0,
-        download: this.perms.download && this.selectedCount === 1 && !this.isTrash && this.selected[0].isDir === false,
+        download: this.perms.download && this.selectedCount > 0 && !this.isTrash,
         shell: this.perms.execute && enableExec,
         moveToTrash: this.selectedCount > 0 && this.perms.delete && !this.isTrash,
         restore: this.selectedCount > 0 && this.perms.modify && this.isTrash,
@@ -759,34 +760,26 @@ export default {
       let item = this.selected[0]
       let parent_id = item.parent_id
       this.$router.push({name: "Files", params: {"folderId": parent_id, "selectItem": item}})
-      let message = this.$t('toasts.itemLocated')
+      let message = this.$t("toasts.itemLocated")
       this.$toast.info(message)
 
     },
-    download() {
-      if (this.selectedCount === 0) {
-        let message = this.$t('toasts.selectFilesFirst')
+    async download() {
+      console.log(this.selectedCount)
+      if (this.selectedCount === 1 && !this.selected[0].isDir) {
+        window.open(this.selected[0].download_url, '_blank')
+        let message = this.$t("toasts.downloadingSingle", {name: this.selected[0].name})
+        this.$toast.success(message)
 
-        this.$toast.info(message)
-      } else {
-        let filesNum = 0
-        this.selected.forEach((item, index) => {
-          if (!item.isDir) {
+      }
+      else {
+        const ids = this.selected.map(obj => obj.id);
+        let res = await createZIP({"ids": ids})
+        window.open(res.download_url, '_blank')
 
-            window.open(item.download_url, '_blank')
-            let message = this.$t("toasts.downloadingSingle", {name: item.name})
-            this.$toast.success(message)
-            filesNum  = filesNum + 1
+        let message = this.$t("toasts.downloadingZIP")
+        this.$toast.success(message)
 
-          }
-
-        })
-        if (filesNum > 0) {
-          this.$store.commit("resetSelected")
-        } else {
-          this.$toast.info(`You can't download a folder >-<`)
-
-        }
 
       }
     },

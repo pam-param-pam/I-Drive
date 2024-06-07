@@ -1,5 +1,5 @@
 <template>
-  <errors v-if="error" :errorCode="error.status" />
+  <errors v-if="error" :errorCode="error.response.status" />
   <div class="row" v-else-if="!loading">
     <div class="column">
       <form @submit="save" class="card">

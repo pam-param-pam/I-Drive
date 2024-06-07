@@ -2,7 +2,7 @@
   <div>
     <header-bar v-if="error" showMenu showLogo />
 
-    <errors v-if="error" :errorCode="error.status"/>
+    <errors v-if="error" :errorCode="error.response.status"/>
     <breadcrumbs v-if="!error"
                  :base="'/share/' + token"
                  :folderList="folderList"

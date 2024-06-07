@@ -1,6 +1,6 @@
 <template>
   <div>
-    <errors v-if="error" :errorCode="error.status"/>
+    <errors v-if="error" :errorCode="error.response.status"/>
     <h4 v-if="!error">{{$t('trash.info', {amount: this.items.length})}}</h4>
 
     <Listing

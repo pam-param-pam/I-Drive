@@ -118,7 +118,7 @@ export default {
       this.folderList = await breadcrumbs(this.file.parent_id)
       console.log(this.folderList)
 
-      let res = await fetch(this.file.preview_url, {})
+      let res = await fetch(this.file.download_url, {})
       this.raw = await res.text()
       this.$nextTick(() => this.setupEditor())
       this.setLoading(false)

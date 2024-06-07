@@ -154,6 +154,13 @@
     }
   },
   "prompts": {
+    "all": "wszystkie",
+    "limit": "Maksymalna liczba zwróconych itemów",
+    "searchTune": "Dostosuj szukanie",
+    "filterMessage": "Wybiersz filtry szukania",
+    "fileType": "Typ pliku",
+    "includeFiles": "Pliki?",
+    "includeFolders": "Foldery?",
     "optionalPassword": "Opcjonalne hasło",
     "shareDuration": "Długość share",
     "deleteMessageShare": "Czy napewno chcesz usunąć ten share?",
@@ -229,9 +236,11 @@
     "fileSaved": "Zapisano plik",
     "shareDeleted": "Usunięto share",
     "downloadingSingle": "Pobieranie {name}",
-    "folderPasswordIncorrect": "Niepoprawne hasło"
-
-
+    "folderPasswordIncorrect": "Niepoprawne hasło",
+    "downloadingZIP": "Pobieranie pliku ZIP",
+    "passwordIsRequired": "Hasło jest wymagane",
+    "unauthorized": "Brak uwierzytelnienia",
+    "sessionExpired": "Sesja wygasła"
 
   }
 }

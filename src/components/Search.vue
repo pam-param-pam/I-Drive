@@ -2,24 +2,24 @@
   <div id="search">
     <div id="input">
       <input
-
         type="text"
         v-model="query"
         ref="input"
         :aria-label="$t('search.search')"
         :placeholder="$t('search.search')"
       />
+      <i v-if="disableCreation" class="material-icons" @click="exit">close</i>
+      <i class="material-icons" @click="onTuneClick">tune</i>
     </div>
   </div>
 </template>
 
+
 <script>
-import FileList from "@/components/prompts/FileList.vue"
-import {mapGetters, mapMutations} from "vuex"
+import {mapGetters, mapMutations, mapState} from "vuex"
 
 export default {
   name: "search",
-  components: {FileList},
   emits: ['onSearchQuery', 'exit'],
 
   data: function () {
@@ -30,6 +30,7 @@ export default {
   },
 
   computed: {
+    ...mapState(["searchFilters", "disableCreation"]),
     ...mapGetters(["getFolderPassword"])
   },
 
@@ -37,29 +38,28 @@ export default {
   methods: {
     ...mapMutations(["setIsTrash"]),
     async search() {
-      if (this.query === '') return []
-      this.isSearchActive = true
-      const regex = /(\w+):(\S+)\s*/g
-      let match
-      let argumentDict = {}
-      let lastIndex = 0
 
-      while ((match = regex.exec(this.query)) !== null) {
-        // Extracting argument name and value
-        const [, name, value] = match
-        argumentDict[name] = value
-        lastIndex = regex.lastIndex
 
-      }
-      // Extracting remaining string
-      argumentDict["query"] = this.query.substring(lastIndex).trim()
-      this.$emit('onSearchQuery', argumentDict)
+      //copying to not mutate vuex store state
+      let searchDict = { ...this.searchFilters }
+      searchDict["query"] = this.query
+      this.$emit('onSearchQuery', searchDict)
 
     },
+    onTuneClick() {
+      this.$store.commit("showHover", {
+        prompt: "SearchTunePrompt",
+        confirm: () => {
+          this.search()
 
+        },
+      })
+
+    },
     async exit() {
-      this.query = ''
-
+      this.$store.commit("setDisableCreation", false)
+      this.$store.commit("resetSelected")
+      this.$emit('exit')
 
     },
 
@@ -67,9 +67,7 @@ export default {
   watch: {
     query() {
       if (this.query === '') {
-        this.$store.commit("setDisableCreation", false)
-        this.$store.commit("resetSelected")
-        this.$emit('exit')
+        this.exit()
 
       }
       else {
@@ -83,3 +81,16 @@ export default {
   }
 }
 </script>
+<style scoped>
+
+.material-icons {
+ cursor: pointer;
+ transition: color 0.3s, transform 0.3s;
+ /* Add other styles as needed */
+}
+
+.material-icons:hover {
+ color: #007BFF; /* Change to the desired hover color */
+ transform: scale(1.1); /* Slightly enlarge the icon on hover */
+}
+</style>

@@ -18,14 +18,17 @@
     <div>
       <img
         v-if="item.preview_url && type === 'image'"
+        v-lazy="item.preview_url"
         :src="item.preview_url"
       />
       <img
         v-else-if="item.download_url && type === 'image'"
+        v-lazy="item.download_url"
         :src="item.download_url"
       />
       <img
         v-else-if="item.thumbnail_url && type === 'video'"
+        v-lazy="item.thumbnail_url"
         :src="item.thumbnail_url"
       />
       <i v-else class="material-icons"></i>

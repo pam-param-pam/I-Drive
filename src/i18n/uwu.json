@@ -91,7 +91,7 @@
     "badRequest": "Bad wequest murr~",
     "connection": "T-The sewvew can't be weached",
     "rateLimit": "Enhance your calm, try again in a few seconds",
-    "folderPasswordRequired": "Password is required for this folder."
+    "folderPasswordRequired": "Password is required to access this folder."
 
   },
   "help": {
@@ -156,6 +156,13 @@
     }
   },
   "prompts": {
+    "all": "all",
+    "limit": "Max search items",
+    "searchTune": "Tune search",
+    "filterMessage": "Select search filters",
+    "fileType": "File type",
+    "includeFiles": "Files?",
+    "includeFolders": "Folders?",
     "optionalPassword": "Optional password",
     "shareDuration": "Share duration",
     "deleteMessageShare": "Are you sure you wish to delete this share?",
@@ -210,7 +217,7 @@
     "setFolderPassword": "Lock folder with password"
   },
   "toasts": {
-    "ItemLocated": "Item located",
+    "itemLocated": "Item located",
     "passwordIsBeingUpdated": "Folder password is updating...",
     "passwordUpdated": "Password updated!",
     "itemsAreBeingMovedToTrash": "Moving to Trash...",
@@ -229,8 +236,11 @@
     "fileSaved": "Fiwe saved",
     "shareDeleted": "Share deleted!",
     "downloadingSingle": "Downloading {name}",
-    "folderPasswordIncorrect": "Incorrect folder password"
-
+    "downloadingZIP": "Downloading ZIP",
+    "folderPasswordIncorrect": "Incorrect folder password",
+    "passwordIsRequired": "Password is required for access",
+    "unauthorized": "Unauthorized",
+    "sessionExpired": "Session Expired"
 
   }
 }

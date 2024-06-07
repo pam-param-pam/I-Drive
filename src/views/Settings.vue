@@ -51,7 +51,7 @@ export default {
     ...mapMutations(["setDisableCreation"])
   },
   mounted() {
-    document.title = "Settings - File Browser"
+    document.title = "Settings - I Drive"
 
   },
   created() {
