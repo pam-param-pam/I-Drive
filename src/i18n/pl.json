@@ -241,6 +241,11 @@
     "passwordIsRequired": "Hasło jest wymagane",
     "unauthorized": "Brak uwierzytelnienia",
     "sessionExpired": "Sesja wygasła"
+  },
+  "uploadFile": {
+    "failed": "Wystąpił bląd, próbowanie ponownie....",
+    "success": "Plik zapisany",
+    "paused": "Zatrzymano"
 
   }
 }

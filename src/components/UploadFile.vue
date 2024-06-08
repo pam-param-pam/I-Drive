@@ -4,20 +4,41 @@
     :class="{
       'failed-border': file.status === 'failed',
       'success-border': file.status === 'success',
+      'paused-border': file.status === 'paused',
+      'shake-animation': isShaking, // Add shake-animation class based on isShaking
     }"
   >
     <!-- Upper -->
-    <div>
-      {{ file.name }}
+    <div class="fileitem-header">
+      <span class="file-name">{{ file.name }}</span>
+      <div class="button-group">
+        <button class="pause-button" @click="togglePause">
+          <i class="material-icons">{{ file.status === 'paused' ? 'play_arrow' : 'pause' }}</i>
+        </button>
+        <button
+          class="cancel-button"
+          @mouseover="startShake"
+          @mouseleave="stopShake"
+          @click="cancel"
+        >
+          <i class="material-icons">close</i>
+        </button>
+      </div>
     </div>
 
     <!-- Lower -->
     <div v-if="file.percentage">
       <span v-if="file.status === 'failed'">
-        <b class="failed">Failed, retrying...</b>
+        <b class="failed">{{ $t('uploadFile.failed') }}</b>
       </span>
       <span v-if="file.status === 'success'">
-        <b class="success">OK</b>
+        <b class="success">{{ $t('uploadFile.success') }}</b>
+      </span>
+      <span v-if="file.status === 'paused'">
+        <b class="paused">{{ $t('uploadFile.paused') }}</b>
+      </span>
+      <span v-if="file.status === 'pausing'">
+        <b class="pausing">{{ $t('uploadFile.pausing') }}</b>
       </span>
       <div class="fileitem-progress">
         <ProgressBar
@@ -33,47 +54,133 @@
 </template>
 
 <script>
-import ProgressBar from "@/components/ProgressBar.vue"
+import ProgressBar from "@/components/ProgressBar.vue";
 
 export default {
-  components: {ProgressBar},
-    props: [
-        "file",
-    ],
+  components: { ProgressBar },
+  props: ["file"],
+  data() {
+    return {
+      isPaused: false,
+      isShaking: false, // Add data property to control shake animation
+
+
+    };
+  },
+  methods: {
+    togglePause() {
+      this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
+    },
+    cancel() {
+      this.file.status = "failed"
+
+    },
+    startShake() {
+      this.isShaking = true; // Start shaking
+    },
+    stopShake() {
+      this.isShaking = false; // Stop shaking
+    },
+  },
+};
+</script>
+
+<style scoped lang="scss">
+.fileitem-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px dashed lightgray;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
 }
 
-</script>
-<style scoped lang="scss">
-  .fileitem-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+.fileitem-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-    border: 1px dashed lightgray;
-    border-radius: 0.5rem;
-    padding: 0.5rem;
-  }
+.file-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  .fileitem-progress {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-  }
+.fileitem-progress {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
 
-  .failed {
-    color: red;
-  }
+.failed {
+  color: red;
+}
 
-  .success {
-    color: green;
-  }
+.success {
+  color: green;
+}
+.paused {
+  color: orange;
+}
 
-  .failed-border {
-    border-color: red;
-  }
+.failed-border {
+  border-color: red;
+}
+.success-border {
+  border-color: green;
+}
+.paused-border {
+  border-color: orange;
+}
 
-  .success-border {
-    border-color: green;
-  }
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+}
 
+.cancel-button, .pause-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.pause-button:hover {
+  background-color: #eeeeee;
+}
+
+.cancel-button:hover {
+  background-color: #eeeeee;
+  color: red;
+
+}
+
+.material-icons {
+  font-size: 22px;
+  vertical-align: middle;
+}
+
+
+
+@keyframes shake {
+  0% { transform: translate(0, 0); }
+  17% { transform: translate(-1px, -1px); }
+  34% { transform: translate(1px, -1px); }
+  51% { transform: translate(-1px, 1px); }
+  68% { transform: translate(1px, 1px); }
+  85% { transform: translate(-1px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+.shake-animation {
+  animation: shake 0.3s ease infinite; /* Make the animation run infinitely */
+}
 </style>

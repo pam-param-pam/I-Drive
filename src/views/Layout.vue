@@ -8,8 +8,8 @@
       <router-view></router-view>
       <shell v-if="true"></shell>
       </main>
-      <prompts></prompts>
       <upload-files></upload-files>
+      <prompts></prompts>
     </div>
   </template>
 

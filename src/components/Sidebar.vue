@@ -35,7 +35,6 @@
         </button>
       </div>
 
-
       <button
         class="action"
         @click="toTrash"
@@ -108,7 +107,7 @@
           rel="noopener noreferrer"
           target="_blank"
           href="https://github.com/pam-param-pam/I-Drive-Frontend"
-          >I Drive By Pam v{{ version }}</a
+        >I Drive By Pam v{{ version }}</a
         >
       </span>
       <span>
@@ -124,12 +123,16 @@ import * as auth from "@/utils/auth"
 import { version, signup } from "@/utils/constants"
 import ProgressBar from "vue-simple-progress"
 import prettyBytes from "pretty-bytes"
-import {getUsage} from "@/api/folder.js"
+import { getUsage } from "@/api/folder.js"
 
 export default {
   name: "sidebar",
   components: {
     ProgressBar,
+  },
+  data() {
+    return {
+    }
   },
   computed: {
     ...mapState(["user", "perms", "currentFolder", "disableCreation"]),
@@ -162,34 +165,30 @@ export default {
 
       },
       default: { used: "0 B", total: "0 B", usedPercentage: 0 },
-        
+
     },
   },
   methods: {
     toRoot() {
       //this.$store.commit("setOpenSearchState", false)
       //this.$store.commit("setIsTrash", false)
-      this.$router.push({name: `Files`, params: {folderId: this.user.root}}).catch(err => {})
-      //this.$router.go(0)
-      this.$store.commit("closeHover")
+      this.$router.push({ name: `Files`, params: { folderId: this.user.root } }).catch(err => {});
+      this.$store.commit("closeHover");
     },
     toTrash() {
-      //this.$store.commit("setOpenSearchState", false)
-      this.$router.push({name: `Trash`}).catch(err => {})
-      this.$store.commit("closeHover")
+      this.$router.push({ name: `Trash` }).catch(err => {});
+      this.$store.commit("closeHover");
     },
     toSettings() {
-      this.$router.push({name: `Settings`}).catch(err => {})
-      this.$store.commit("closeHover")
+      this.$router.push({ name: `Settings` }).catch(err => {});
+      this.$store.commit("closeHover");
     },
     help() {
-      this.$store.commit("showHover", "help")
+      this.$store.commit("showHover", "help");
     },
     logout: auth.logout,
   },
+
 }
 </script>
-<style>
 
-
-</style>

@@ -104,7 +104,7 @@ export default {
     this.extension = this.searchFilters.extension || null
     this.includeFiles = this.searchFilters.files
     this.includeFolders = this.searchFilters.folders
-    this.showLimit = this.searchFilters.showLimit || 20
+    this.showLimit = this.searchFilters.showLimit || 25
   },
   methods: {
     ...mapMutations(["setSearchFilters"]),

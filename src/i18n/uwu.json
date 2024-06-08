@@ -241,6 +241,11 @@
     "passwordIsRequired": "Password is required for access",
     "unauthorized": "Unauthorized",
     "sessionExpired": "Session Expired"
+  },
+  "uploadFile": {
+    "failed": "Failed, retrying...",
+    "success": "Uploaded",
+    "paused": "Paused"
 
   }
 }

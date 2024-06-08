@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="filesInUploadCount > 0"
+    v-if="filesInUploadCount > -1"
     class="upload-files"
     v-bind:class="{ closed: !open }"
   >
@@ -31,11 +31,14 @@
         </button>
       </div>
 
-      <div class="card-content file-icons">
+      <div class="card-content">
         <UploadFile
-          v-for="file in filesInUpload"
+          v-for="file in filesssss"
           :key="file.name"
           :file="file"
+          :data-dir="file.isDir"
+          :data-type="file.type"
+          :aria-label="file.name"
         />
       </div>
     </div>
@@ -53,15 +56,11 @@ export default {
   data: function () {
     return {
       open: false,
+      filesssss: [{name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 50, "isDir": false, "type": "movie"}]
     }
   },
   computed: {
-    ...mapGetters([
-      "filesInUpload",
-      "filesInUploadCount",
-      "uploadSpeed",
-      "eta",
-    ]),
+    ...mapGetters(["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta"]),
     ...mapMutations(["resetUpload"]),
     formattedETA() {
       if (!this.eta || this.eta === Infinity) {

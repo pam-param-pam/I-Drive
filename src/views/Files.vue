@@ -20,7 +20,7 @@
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex"
+import {mapGetters, mapMutations, mapState} from "vuex"
 
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
@@ -55,6 +55,7 @@ export default {
   },
   computed: {
     ...mapState(["error", "user", "loading"]),
+    ...mapGetters(["getFolderPassword"]),
 
   },
   created() {
@@ -75,6 +76,9 @@ export default {
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisableCreation"]),
 
     async onSearchClosed() {
+      if (this.source) {
+        this.source.cancel('Cancelled previous request')
+      }
       this.isSearchActive = false
       await this.fetchFolder()
     },
@@ -86,8 +90,11 @@ export default {
         this.source.cancel('Cancelled previous request')
       }
       this.source = axios.CancelToken.source()
+      let realLockFrom = this.lockFrom || this.folderId
+      let password = this.getFolderPassword(realLockFrom)
+      console.log(password)
 
-      this.items = await search(query, this.source)
+      this.items = await search(query, this.source, realLockFrom, password)
       this.setLoading(false)
       this.isSearchActive = true
       this.$store.commit("setItems", this.items)

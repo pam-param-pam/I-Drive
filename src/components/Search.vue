@@ -16,7 +16,7 @@
 
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
+import {mapGetters, mapState} from "vuex"
 
 export default {
   name: "search",
@@ -36,7 +36,6 @@ export default {
 
 
   methods: {
-    ...mapMutations(["setIsTrash"]),
     async search() {
 
 
@@ -60,7 +59,7 @@ export default {
       this.$store.commit("setDisableCreation", false)
       this.$store.commit("resetSelected")
       this.$emit('exit')
-
+      this.query = ''
     },
 
   },
