@@ -5,7 +5,8 @@
       'failed-border': file.status === 'failed',
       'success-border': file.status === 'success',
       'paused-border': file.status === 'paused',
-      'shake-animation': isShaking, // Add shake-animation class based on isShaking
+      'uploading-border': file.status === 'uploading',
+      'shake-animation': isShaking,
     }"
   >
     <!-- Upper -->
@@ -76,10 +77,10 @@ export default {
 
     },
     startShake() {
-      this.isShaking = true; // Start shaking
+      this.isShaking = true;
     },
     stopShake() {
-      this.isShaking = false; // Stop shaking
+      this.isShaking = false;
     },
   },
 };
@@ -90,9 +91,11 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border: 1px dashed lightgray;
+  border: 0.15em dashed lightgray;
   border-radius: 0.5rem;
   padding: 0.5rem;
+  margin-bottom: 0.4em;
+
 }
 
 .fileitem-header {
@@ -127,6 +130,9 @@ export default {
 
 .failed-border {
   border-color: red;
+}
+.uploading-border {
+
 }
 .success-border {
   border-color: green;
@@ -169,7 +175,6 @@ export default {
 }
 
 
-
 @keyframes shake {
   0% { transform: translate(0, 0); }
   17% { transform: translate(-1px, -1px); }
@@ -182,5 +187,7 @@ export default {
 
 .shake-animation {
   animation: shake 0.3s ease infinite; /* Make the animation run infinitely */
+  border-color: red;
+
 }
 </style>

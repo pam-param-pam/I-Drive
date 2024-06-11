@@ -30,7 +30,6 @@
           }}</i>
         </button>
       </div>
-
       <div class="card-content">
         <UploadFile
           v-for="file in filesssss"
@@ -56,7 +55,30 @@ export default {
   data: function () {
     return {
       open: false,
-      filesssss: [{name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 50, "isDir": false, "type": "movie"}]
+      filesssss: [{name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},
+        {name:"saaa.webm", "id": "aaa", "size": 123, "status": "uploading", "percentage": 70, "isDir": false, "type": "movie"},
+        {name:"bbbb.text", "id": "aaa", "size": 123, "status": "uploading", "percentage": 30, "isDir": false, "type": "movie"},
+        {name:"cccc.mp4", "id": "aaa", "size": 123, "status": "uploading", "percentage": 20, "isDir": false, "type": "movie"},]
     }
   },
   computed: {

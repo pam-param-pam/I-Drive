@@ -19,6 +19,7 @@ export default {
     padding: 0.2rem;
     background-color: rgb(235, 235, 235);
     border-radius: 0.5rem;
+    z-index: -1;
 
   }
 

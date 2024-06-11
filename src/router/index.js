@@ -50,6 +50,9 @@ const router = new Router({
           name: "Share",
           component: Share,
           props: true,
+          meta: {
+            requiresAuth: false,
+          },
 
         },
         {

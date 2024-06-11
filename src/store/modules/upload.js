@@ -3,35 +3,34 @@ import buttons from "@/utils/buttons"
 import {discord_instance} from "@/api/networker.js"
 
 let MAX_CONCURRENT_REQUESTS = 4
+// Add all files in raw format to queue []
+// Add local_id property to each
+// first 5 files will be now displayed with property "creating..."
+// create a better file structure + create folders + create files + get id and parent_id
+// once it's all done
+// start an uploading process, add them to filesUploading grab first 5 files, change their status to "uploading"
+// continue till none left in queue.
 
 const state = {
-  id: 0,
-  sizes: [],
-  progress: [],
   queue: [],
-  requestsUploading: 0,
   filesUploading: [],
+  currentRequests: [],
   speedMbyte: 0,
   eta: 0,
 }
 
 const mutations = {
+
   setProgress(state, { id, loaded }) {
     Vue.set(state.progress, id, loaded)
   },
-  reset: (state) => {
-    state.id = 0
-    state.sizes = []
-    state.progress = []
-  },
   addJob: (state, item) => {
     state.queue.push(item)
-    //state.sizes[state.id] = item.file.size
-    //state.id++
   },
-  moveJob(state) {
-    state.queue.shift()
+  addToQueue: (state, item) => {
+    state.queue.push(item)
   },
+
 
 }
 
@@ -93,7 +92,6 @@ const actions = {
         .catch(error => {
           // Handle error
         })
-
 
 
     }

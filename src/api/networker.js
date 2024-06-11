@@ -63,10 +63,14 @@ discord_instance.interceptors.response.use(
 backend_instance.interceptors.request.use(
 
   function(config) {
-
-    // Modify headers here
-    config.headers['Authorization'] = `Token ${localStorage.getItem("token")}`
+    let token = localStorage.getItem("token")
+    if (token) {
+      // Modify headers here
+      config.headers['Authorization'] = `Token ${token}`
+    }
     return config
+
+
   },
   function(error) {
     return Promise.reject(error)

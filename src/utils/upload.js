@@ -4,7 +4,6 @@ import store from "@/store"
 import {create} from "@/api/folder.js"
 import vue from "@/utils/vue.js"
 import i18n from '../i18n'
-import buttons from "@/utils/buttons.js"
 import {createFile} from "@/api/files.js"
 
 

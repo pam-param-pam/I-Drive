@@ -655,37 +655,7 @@ export default {
 
       this.$toast.info(this.$t("toasts.PreparingUpload"))
 
-      // let fileContent = files[0]
-      // let webhook = this.$store.state.settings.webhook
-      //
-      // let secret = "1234567887654321"
-      // const key = CryptoJS.enc.Hex.parse('1234567890abcdef1234567890abcdef')
-      // const iv = CryptoJS.enc.Hex.parse('fedcba0987654321fedcba0987654321')
-      // console.log("IV : " + CryptoJS.enc.Base64.stringify(iv))
-      //
-      // const wordArray = this.arrayBufferToWordArray(fileContent)
-      //
-      // // Encrypt the plaintext
-      // var cipherText = CryptoJS.AES.encrypt(wordArray, key, {
-      //   iv: iv,
-      //   mode: CryptoJS.mode.CBC,
-      //   padding: CryptoJS.pad.Pkcs7
-      // })
-      // cipherText = cipherText
-      //
-      //
-      // // Convert encrypted content to Blob
-      // const blob = new Blob([cipherText], { type: 'text/plain' })
-      //
-      // // Prepare form data
-      // const formData = new FormData()
-      // formData.append('file', blob, "aaaaaaa")
-      //
-      // // Upload the file to Discord via webhook
-      // const response = await fetch(webhook, {
-      //   method: 'POST',
-      //   body: formData
-      // })
+      console.log(files)
 
       await upload.prepareForUpload(files, folder)
 
