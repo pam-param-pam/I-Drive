@@ -76,12 +76,12 @@ class ZipBase:
             files = []
         self._source_of_files = files
         self.__files = []
-        self.__version = consts.ZIP32_VERSION
+        self.__version = consts.ZIP64_VERSION
         self.zip64 = True
         self.chunksize = chunksize
         # this flag tuns on signature for data descriptor record.
         # see section 4.3.9.3 of ZIP File Format Specification
-        self.__use_ddmagic = True
+        self.__use_data_descriptor_signature = True
         # central directory size and placement
         self.__cdir_size = self.__offset = 0
 
@@ -158,7 +158,7 @@ class ZipBase:
         """
         Create file header
         """
-        fields = {"signature": consts.LF_MAGIC,
+        fields = {"signature": consts.LOCAL_FILE_SIGNATURE,
                   "version": self.__version,
                   "flags": file_struct['flags'],
                   "compression": file_struct['cmpr_id'],
@@ -169,8 +169,8 @@ class ZipBase:
                   "comp_size": 0,
                   "fname_len": len(file_struct['fname']),
                   "extra_len": 0}
-        head = consts.LF_TUPLE(**fields)
-        head = consts.LF_STRUCT.pack(*head)
+        head = consts.LOCAL_FILE_TUPLE(**fields)
+        head = consts.LOCAL_FILE_STRUCT.pack(*head)
         head += file_struct['fname']
         return head
 
@@ -186,10 +186,10 @@ class ZipBase:
         fields = {"uncomp_size": file_struct['size'],
                   "comp_size": file_struct['csize'],
                   "crc": file_struct['crc']}
-        descriptor = consts.DD_TUPLE(**fields)
-        descriptor = consts.DD_STRUCT.pack(*descriptor)
-        if self.__use_ddmagic:
-            descriptor = consts.DD_MAGIC + descriptor
+        descriptor = consts.DATA_DESCRIPTOR_TUPLE(**fields)
+        descriptor = consts.DATA_DESCRIPTOR_STRUCT.pack(*descriptor)
+        if self.__use_data_descriptor_signature:
+            descriptor = consts.DATA_DESCRIPTOR_SIGNATURE + descriptor
 
         return descriptor
 
@@ -197,7 +197,7 @@ class ZipBase:
         """
         Create central directory file header
         """
-        fields = {"signature": consts.CDFH_MAGIC,
+        fields = {"signature": consts.CENTRAL_DIR_FILE_HEADER_SIGNATURE,
                   "system": 0x03,  # 0x03 - unix
                   "version": self.__version,
                   "version_ndd": self.__version,
@@ -215,8 +215,8 @@ class ZipBase:
                   "disk_start": 0,
                   "attrs_int": 0,
                   "attrs_ext": 0}
-        cdfh = consts.CDLF_TUPLE(**fields)
-        cdfh = consts.CDLF_STRUCT.pack(*cdfh)
+        cdfh = consts.CENTRAL_DIR_LOCAL_FILE_TUPLE(**fields)
+        cdfh = consts.CENTRAL_DIR_LOCAL_FILE_STRUCT.pack(*cdfh)
         cdfh += file_struct['fname']
         return cdfh
 
@@ -224,7 +224,7 @@ class ZipBase:
         """
         make end of central directory record
         """
-        fields = {"signature": consts.CD_END_MAGIC,
+        fields = {"signature": consts.CENTRAL_DIR_END_SIGNATURE,
                   "disk_num": 0,
                   "disk_cdstart": 0,
                   "disk_entries": len(self.__files),
@@ -232,8 +232,8 @@ class ZipBase:
                   "cd_size": self.__cdir_size,
                   "cd_offset": self._offset_get(),
                   "comment_len": 0}
-        cdend = consts.CD_END_TUPLE(**fields)
-        cdend = consts.CD_END_STRUCT.pack(*cdend)
+        cdend = consts.CENTRAL_DIR_END_TUPLE(**fields)
+        cdend = consts.CENTRAL_DIR_END_STRUCT.pack(*cdend)
         return cdend
 
     def _make_end_structures(self):

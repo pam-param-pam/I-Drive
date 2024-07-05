@@ -1,14 +1,64 @@
 import os
 import re
 import time
+import wave
 from datetime import datetime
 
 import requests
 from django.http import StreamingHttpResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
+from websocket import create_connection
 
 from streamer.zipstream import ZipStream
+
+
+
+
+
+
+import io
+
+
+def audio_stream(request):
+    def generate_audio():
+        ws = create_connection("wss://api.pamparampam.dev/ws/audio/")
+
+        wav_file = io.BytesIO()
+        wav_writer = wave.open(wav_file, "wb")
+        try:
+            wav_writer.setframerate(44100)
+            wav_writer.setsampwidth(2)  # Assuming 16-bit PCM
+            wav_writer.setnchannels(1)
+
+            while True:
+                message = ws.recv()
+                wav_writer.writeframes(message)
+                wav_data = wav_file.getvalue()
+                yield wav_data
+
+                # Reset the BytesIO object for next iteration
+                wav_file.seek(0)
+                wav_file.truncate()
+
+        finally:
+            wav_writer.close()
+    a = 0
+    for chunk in generate_audio():
+        with open("audio.wav", "wb") as wav_writer:
+            wav_writer.write(chunk)
+            a += 1
+            if a > 1000:
+                print("breaking")
+                break
+    response = StreamingHttpResponse(generate_audio(), content_type="audio/wav")
+    return response
+
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
+def index(request):
+    return HttpResponse(status=404)
 
 
 @api_view(['GET'])
@@ -33,15 +83,20 @@ def thumbnail_file(request, signed_file_id):
 @throttle_classes([UserRateThrottle])
 def stream_file(request, signed_file_id):
     isInline = request.GET.get('inline', False)
-
     res = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}")
     if not res.ok:
         return HttpResponse(status=res.status_code)
     res = res.json()
     file = res["file"]
     fragments = res["fragments"]
+    content_disposition = f'{"inline" if isInline else "attachment"}; filename="{file["name"]}"'
+
+    # If file is empty, return no content but still allow it to be downloaded
     if len(fragments) == 0:
-        return HttpResponse(status=200)
+        response = HttpResponse()
+        if not isInline:
+            response['Content-Disposition'] = content_disposition
+        return response
 
     def file_iterator(index, start_byte, end_byte, chunk_size=8192):
         while index <= len(fragments):
@@ -63,7 +118,7 @@ def stream_file(request, signed_file_id):
                 print(discord_response.text)
                 return
             index += 1
-
+    # parse range header to get start byte and end byte
     range_header = request.headers.get('Range')
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
@@ -87,24 +142,20 @@ def stream_file(request, signed_file_id):
             break
         else:
             start_byte -= fragment["size"]
-
+    # if range header was given then to allow seeking in the browser we need to return 206 - partial response. 
+    # Otherwise the response was probably called by download browser function, and we need to return 200
     if range_header:
         status = 206
     else:
         status = 200
-    response = StreamingHttpResponse(file_iterator(selected_fragment_index, start_byte, end_byte),
-                                     content_type=file["mimetype"],
-                                     status=status
-                                     )
+    response = StreamingHttpResponse(file_iterator(selected_fragment_index, start_byte, end_byte), content_type=file["mimetype"], status=status)
 
     file_size = file["size"]
     i = 0
     real_end_byte = 0
     while i < selected_fragment_index:
-        print(f"IIIIIIII {i}")
         real_end_byte += fragments[i]["size"]
         i += 1
-    real_end_byte -= 1  # apparently this -1 is vevy important
     referer = request.headers.get('Referer')
 
     # Set the X-Frame-Options header to the request's origin
@@ -114,6 +165,7 @@ def stream_file(request, signed_file_id):
         response['X-Frame-Options'] = 'DENY'
 
     response['Content-Length'] = file_size
+    response['Content-Disposition'] = content_disposition
 
     if file["type"] == "text":
         response['Cache-Control'] = "no-cache"
@@ -121,14 +173,11 @@ def stream_file(request, signed_file_id):
         response['Cache-Control'] = f"max-age={2628000}"  # 1 month
 
     if range_header:
-        response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte, file_size)
+        response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size) # this -1 is vevy important
         response['Accept-Ranges'] = 'bytes'
-        response['Content-Length'] = real_end_byte - real_start_byte + 1  # apparently this +1 is vevy important
 
-    else:
-        if not isInline:
-            response['Content-Disposition'] = f'attachment; filename="{file["name"]}"'
-        pass
+        response['Content-Length'] = real_end_byte - real_start_byte
+
     return response
 
 
@@ -168,7 +217,7 @@ def stream_zip_files(request, token):
                          "modification_time": modification_time_struct,
                          "size": file["size"],
                          "cmethod": None
-            }
+                         }
 
             files.append(file_dict)
 
