@@ -82,26 +82,10 @@ export default {
 
     this.setLoading(true)
 
-    try {
-      let links = await api.getAllShares()
-      /*
-      if (this.perms.admin) {
-        let userMap = new Map()
-        for (let user of await users.getAllShares())
-          userMap.set(user.id, user.username)
-        for (let link of shares)
-          link.username = userMap.has(link.userID)
-            ? userMap.get(link.userID)
-            : ""
-      }
+    let links = await api.getAllShares()
 
-       */
-      this.shares = links
-    } catch (e) {
-      this.error = e
-    } finally {
-      this.setLoading(false)
-    }
+    this.shares = links
+
     
 
   },
@@ -124,13 +108,10 @@ export default {
         confirm: () => {
           this.$store.commit("closeHover")
 
-          try {
-            api.removeShare({"token": share.token})
-            this.shares = this.shares.filter((item) => item.token !== share.token)
-            this.$toast.success(this.$t("toasts.shareDeleted"))
-          } catch (e) {
-            console.log(e)
-          }
+          api.removeShare({"token": share.token})
+          this.shares = this.shares.filter((item) => item.token !== share.token)
+          this.$toast.success(this.$t("toasts.shareDeleted"))
+
         },
       })
     },

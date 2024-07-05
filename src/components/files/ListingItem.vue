@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="wrapper"
     class="item"
     role="button"
     tabindex="0"
@@ -7,7 +8,7 @@
     @dragstart="dragStart"
     @dragover="dragOver"
     @drop="drop"
-    @dblclick="open"
+    @dblclick="$emit('onOpen', item)"
     @click="click"
     :data-dir="item.isDir"
     :data-type="type"
@@ -64,10 +65,11 @@ export default {
       touches: 0,
     }
   },
+  emits: ['onOpen'],
+
   props: [
     "readOnly",
     "item",
-    "mode",
   ],
   computed: {
     ...mapState(["user", "perms", "selected", "settings", "items"]),
@@ -96,9 +98,14 @@ export default {
     },
 
   },
+
   methods: {
     ...mapMutations(["addSelected", "removeSelected", "resetSelected"]),
-
+    myScroll() {
+      let wrapper = this.$refs.wrapper
+      wrapper.scrollIntoView()
+      this.addSelected(this.item)
+    },
     humanSize: function () {
       return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size)
     },
@@ -147,22 +154,18 @@ export default {
       if (this.selectedCount === 0) return
 
       let listOfIds = this.selected.map(obj => obj.id)
-      try {
-        await move({ids: listOfIds, "new_parent_id": this.item.id})
 
-        //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id))
-        //this.$store.commit("setItems", updatedItem)
-        //todo
-        let message = `Moved to ${this.item.name}!`
-        this.$toast.success(message)
+      await move({ids: listOfIds, "new_parent_id": this.item.id})
 
-      } catch (error) {
-        console.log(error)
-        //nothing has to be done
-      }
+      //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id))
+      //this.$store.commit("setItems", updatedItem)
+      //todo TODO what? Extract translation or the commented code...
+      let message = `Moved to ${this.item.name}!`
+      this.$toast.success(message)
+
+
 
     },
-
 
     click: function (event) {
 
@@ -196,47 +199,7 @@ export default {
        */
 
     },
-    open: function () {
-      if (this.mode === "share") {
-        this.$emit('onOpen', this.item)
-        return
-      }
-      if (this.mode === "trash") {
-        this.resetSelected()
-        this.addSelected(this.item)
-        this.$store.commit("showHover", "restoreFromTrash")
-        return
-      }
 
-      if (this.item.isDir) {
-        if (this.item.isLocked === true) {
-          let password = this.getFolderPassword(this.item.lockFrom)
-          if (!password) {
-            this.$store.commit("showHover", {
-              prompt: "FolderPassword",
-              props: {folderId: this.item.id, lockFrom: this.item.lockFrom},
-              confirm: () => {
-                this.$router.push({name: "Files", params: {"folderId": this.item.id, "lockFrom": this.item.lockFrom}})
-              },
-            })
-            return
-          }
-        }
-        this.$router.push({name: "Files", params: {"folderId": this.item.id, "lockFrom": this.item.lockFrom}})
-
-      } else {
-
-        if (this.item.type === "audio" || this.item.type === "video" || this.item.type === "image" ||  this.item.size >= 25 * 1024 * 1024 || this.item.extension === ".pdf") {
-          this.$router.push({name: "Preview", params: {"fileId": this.item.id, "lockFrom": this.item.lockFrom}} )
-
-        }
-        else {
-          this.$router.push({name: "Editor", params: {"fileId": this.item.id}} )
-
-        }
-
-      }
-    },
   },
 }
 </script>

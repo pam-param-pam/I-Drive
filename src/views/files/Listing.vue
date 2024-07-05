@@ -1,156 +1,5 @@
 <template>
   <div>
-    <header-bar showMenu="false" showLogo="false">
-
-      <Search
-        v-if="!isTrash"
-        @onSearchQuery="searchItemsUpdate"
-        @exit="searchExit"
-      />
-
-
-      <title/>
-      <template #actions>
-        <template v-if="!isMobile">
-          <action
-            v-if="headerButtons.locate"
-            icon="location_on"
-            :label="$t('buttons.locate')"
-            @action="locateItem"
-          />
-          <action
-            v-if="headerButtons.share"
-            icon="share"
-            :label="$t('buttons.share')"
-            show="share"
-          />
-          <action
-            v-if="headerButtons.modify"
-            icon="mode_edit"
-            :label="$t('buttons.rename')"
-            show="rename"
-          />
-
-          <action
-            v-if="headerButtons.modify"
-            id="move-button"
-            icon="forward"
-            :label="$t('buttons.moveFile')"
-            show="move"
-          />
-          <action
-            v-if="headerButtons.moveToTrash"
-            id="moveToTrash-button"
-            icon="delete"
-            :label="$t('buttons.moveToTrash')"
-            show="moveToTrash"
-          />
-          <action
-            v-if="headerButtons.delete"
-            id="delete-button"
-            icon="delete"
-            :label="$t('buttons.delete')"
-            show="delete"
-          />
-          <action
-            v-if="headerButtons.restore"
-            icon="restore"
-            :label="$t('buttons.restoreFromTrash')"
-            show="restoreFromTrash"
-          />
-
-        </template>
-        <action
-          v-if="headerButtons.lock"
-          icon="lock"
-          :label="$t('buttons.lockFolder')"
-          show="editFolderPassword"
-        />
-        <action
-          v-if="headerButtons.shell"
-          icon="code"
-          :label="$t('buttons.shell')"
-          @action="$store.commit('toggleShell')"
-        />
-        <action
-          :icon="viewIcon"
-          :label="$t('buttons.switchView')"
-          @action="switchView"
-        />
-        <action
-          v-if="headerButtons.download"
-          icon="file_download"
-          :label="$t('buttons.download')"
-          @action="download"
-          :counter="selectedCount"
-        />
-        <action
-          v-if="headerButtons.upload"
-          :disabled="isSearchActive && !selectedCount > 0 "
-          icon="file_upload"
-          id="upload-button"
-          :label="$t('buttons.upload')"
-          @action="upload"
-        />
-        <action
-          v-if="headerButtons.info"
-          icon="info"
-          :disabled="isSearchActive && !selectedCount > 0"
-          :label="$t('buttons.info')"
-          show="info"
-        />
-
-
-      </template>
-    </header-bar>
-
-    <div v-if="isMobile" id="file-selection">
-      <span v-if="selectedCount > 0">{{ selectedCount }} selected</span>
-      <action
-        v-if="headerButtons.locate"
-        icon="location_on"
-        :label="$t('buttons.locate')"
-        @action="locateItem"
-      />
-      <action
-        v-if="headerButtons.restore"
-        icon="restore"
-        :label="$t('buttons.restoreFromTrash')"
-        show="restoreFromTrash"
-      />
-      <action
-        v-if="headerButtons.share "
-        icon="share"
-        :label="$t('buttons.share')"
-        show="share"
-      />
-      <action
-        v-if="headerButtons.modify"
-        icon="mode_edit"
-        :label="$t('buttons.rename')"
-        show="rename"
-      />
-
-      <action
-        v-if="headerButtons.modify"
-        icon="forward"
-        :label="$t('buttons.moveFile')"
-        show="move"
-      />
-      <action
-        v-if="headerButtons.moveToTrash"
-        icon="delete"
-        :label="$t('buttons.moveToTrash')"
-        show="moveToTrash"
-      />
-      <action
-        v-if="headerButtons.delete"
-        id="delete-button"
-        icon="delete"
-        :label="$t('buttons.delete')"
-        show="delete"
-      />
-    </div>
 
     <div v-if="loading">
       <h2 class="message delayed">
@@ -163,7 +12,6 @@
       </h2>
     </div>
 
-
     <template v-else-if="error == null">
 
       <div v-if="dirsSize + filesSize === 0">
@@ -171,7 +19,7 @@
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
             <img
               src="https://steamuserimages-a.akamaihd.net/ugc/2153341894595795931/DCCF2A0051A51653A133FB1A8123EA4D3696AB6C/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true"
-              alt="You look lonely, I can fix that~">
+              :alt="$t('listing.noFiles')">
           </a>
         </h2>
         <input
@@ -251,7 +99,8 @@
             v-for="item in dirs" :key="item.id"
             :item="item"
             :readOnly="false"
-            :mode="mode"
+            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
+            @onOpen="$emit('onOpen', item)"
           >
           </item>
         </div>
@@ -263,7 +112,9 @@
             v-for="item in files" :key="item.id"
             :item="item"
             :readOnly="false"
-            :mode="mode"
+            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
+            @onOpen="$emit('onOpen', item)"
+
           ></item>
 
         </div>
@@ -293,11 +144,9 @@
 <script>
 import Vue from "vue"
 import {mapGetters, mapMutations, mapState} from "vuex"
-import {enableExec} from "@/utils/constants"
 import * as upload from "@/utils/upload"
 import css from "@/utils/css"
 import throttle from "lodash.throttle"
-import CryptoJS from 'crypto-js'
 
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
@@ -306,18 +155,15 @@ import Item from "@/components/files/ListingItem.vue"
 import {updateSettings} from "@/api/user.js"
 import {sortItems} from "@/api/utils.js"
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
-import buttons from "@/utils/buttons.js"
-import {createZIP} from "@/api/item.js";
 
 export default {
   name: "listing",
 
   props: {
-    isTrash: Boolean,
-    isShares: Boolean,
     isSearchActive: Boolean,
+    locatedItem: {},
   },
-  emits: ['onSearchClosed', 'onSearchQuery'],
+  emits: ['uploadInput', 'drop', 'onOpen'],
 
   components: {
     Breadcrumbs,
@@ -330,7 +176,6 @@ export default {
     return {
       columnWidth: 280,
       dragCounter: 0,
-      width: window.innerWidth,
       itemWeight: 0,
       searchItemsFound: null
 
@@ -344,6 +189,13 @@ export default {
         this.setItemWeight()
         // Fill and fit the window with listing items
         this.fillWindow(true)
+
+        if (this.locatedItem === undefined) return
+        const selectedItem = this.$refs.locatedItem[0]
+
+
+        selectedItem.myScroll()
+
       })
     }
 
@@ -364,11 +216,15 @@ export default {
     window.addEventListener("scroll", this.scrollEvent)
     window.addEventListener("resize", this.windowsResize)
 
-    if (!this.perms.create) return
+    if (this.perms?.create) return
     document.addEventListener("dragover", this.preventDefault)
     document.addEventListener("dragenter", this.dragEnter)
     document.addEventListener("dragleave", this.dragLeave)
     document.addEventListener("drop", this.drop)
+
+
+
+
   },
   beforeDestroy() {
     // Remove event listeners before destroying this page.
@@ -376,21 +232,16 @@ export default {
     window.removeEventListener("scroll", this.scrollEvent)
     window.removeEventListener("resize", this.windowsResize)
 
-    if (this.user && !this.perms.create) return
+    if (this.user && !this.perms?.create) return
     document.removeEventListener("dragover", this.preventDefault)
     document.removeEventListener("dragenter", this.dragEnter)
     document.removeEventListener("dragleave", this.dragLeave)
     document.removeEventListener("drop", this.drop)
   },
   computed: {
-    ...mapState(["items", "reload", "selected", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "folderPasswords", "disableCreation"]),
-    ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName"]),
+    ...mapState(["items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder"]),
+    ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName", "isLogged"]),
 
-    mode() {
-      if (this.isTrash) return "trash"
-      if (this.isShares) return "shares"
-      return "files"
-    },
     nameSorted() {
       return this.settings.sortingBy === "name"
     },
@@ -455,43 +306,15 @@ export default {
 
       return "arrow_upward"
     },
-    viewIcon() {
-      const icons = {
-        list: "view_module",
-        mosaic: "grid_view",
-        "mosaic gallery": "view_list",
-      }
-      return icons[this.settings.viewMode]
-    },
-    headerButtons() {
-      return {
-        upload: this.perms.create && !this.isTrash,
-        info: !this.isTrash || this.selectedCount > 0,
-        download: this.perms.download && this.selectedCount > 0 && !this.isTrash,
-        shell: this.perms.execute && enableExec,
-        moveToTrash: this.selectedCount > 0 && this.perms.delete && !this.isTrash,
-        restore: this.selectedCount > 0 && this.perms.modify && this.isTrash,
-        modify: this.selectedCount === 1 && this.perms.modify && !this.isTrash,
-        share: this.selectedCount === 1 && this.perms.share && !this.isTrash,
-        delete: this.selectedCount > 0 && this.perms.delete && this.isTrash,
-        lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock && !this.isTrash,
-        locate: this.selectedCount === 1 && this.isSearchActive,
-      }
-    },
-    isMobile() {
-      return this.width <= 736
-    },
+
   },
 
   methods: {
 
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
-    searchItemsUpdate(query) {
-      this.$emit('onSearchQuery', query)
 
-    },
-    searchExit() {
-      this.$emit('onSearchClosed')
+    async uploadInput(event) {
+      this.$emit('uploadInput', event)
     },
 
     keyEvent(event) {
@@ -620,6 +443,8 @@ export default {
       //event.preventDefault()
       this.dragCounter = 0
       this.resetOpacity()
+      //todo emit drop
+
       let dt = event.dataTransfer
       console.log(dt.files)
       let el = event.target
@@ -642,38 +467,12 @@ export default {
 
       }
       console.log(parent_id)
+      this.$emit('drop', files)
 
       //upload.handleFiles(files, path)
     },
 
-    async uploadInput(event) {
-      this.$store.commit("closeHover")
-      buttons.loading("upload")
 
-      let files = event.currentTarget.files
-      let folder = this.currentFolder
-
-      this.$toast.info(this.$t("toasts.PreparingUpload"))
-
-      console.log(files)
-
-      await upload.prepareForUpload(files, folder)
-
-
-    },
-    arrayBufferToWordArray(ab) {
-      const i8a = new Uint8Array(ab)
-      const a = []
-      for (let i = 0; i < i8a.length; i += 4) {
-        a.push(
-          (i8a[i] << 24) |
-          (i8a[i + 1] << 16) |
-          (i8a[i + 2] << 8) |
-          (i8a[i + 3])
-        )
-      }
-      return CryptoJS.lib.WordArray.create(a, i8a.length)
-    },
     resetOpacity() {
       let items = document.getElementsByClassName("item")
 
@@ -697,12 +496,8 @@ export default {
           asc = true
         }
       }
-      try {
-        await updateSettings({"sortingBy": by, "sortByAsc": asc})
 
-      } catch (e) {
-        console.log(e)
-      }
+      await updateSettings({"sortingBy": by, "sortByAsc": asc})
 
       this.$store.commit("setSortingBy", by)
       this.$store.commit("setSortByAsc", asc)
@@ -713,7 +508,6 @@ export default {
 
     windowsResize: throttle(function () {
       this.columnsResize()
-      this.width = window.innerWidth
 
       // Listing element is not displayed
       if (this.$refs.listing == null) return
@@ -725,75 +519,9 @@ export default {
       this.fillWindow()
     }, 100),
 
-    locateItem() {
-      this.$emit('onSearchClosed')
-      let item = this.selected[0]
-      let parent_id = item.parent_id
-      this.$router.push({name: "Files", params: {"folderId": parent_id, "selectItem": item}})
-      let message = this.$t("toasts.itemLocated")
-      this.$toast.info(message)
-
-    },
-    async download() {
-      console.log(this.selectedCount)
-      if (this.selectedCount === 1 && !this.selected[0].isDir) {
-        window.open(this.selected[0].download_url, '_blank')
-        let message = this.$t("toasts.downloadingSingle", {name: this.selected[0].name})
-        this.$toast.success(message)
-
-      }
-      else {
-        const ids = this.selected.map(obj => obj.id);
-        let res = await createZIP({"ids": ids})
-        window.open(res.download_url, '_blank')
-
-        let message = this.$t("toasts.downloadingZIP")
-        this.$toast.success(message)
-
-
-      }
-    },
-    async switchView() {
-
-      const modes = {
-        list: "mosaic",
-        mosaic: "mosaic gallery",
-        "mosaic gallery": "list",
-      }
-      console.log(this.settings.viewMode)
-      const data = {
-        viewMode: modes[this.settings.viewMode] || "list",
-      }
-
-      // Await ensures correct value for setItemWeight()
-      await this.$store.commit("updateSettings", data)
-
-
-      this.setItemWeight()
-      this.fillWindow()
-
-      try {
-        await updateSettings(data)
-      } catch (error) {
-        console.log(error)
-      }
-
-
-    },
-    upload: function () {
-      if (
-        typeof window.DataTransferItem !== "undefined" &&
-        typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
-      ) {
-        this.$store.commit("showHover", "upload")
-      } else {
-        document.getElementById("upload-input").click()
-      }
-    },
-
     setItemWeight() {
-
-      if (this.$refs.listing == null || this.currentFolder == null) return
+      //if (this.$refs.listing == null || this.currentFolder == null) return
+      if (this.$refs.listing == null) return
 
 
       let itemQuantity = this.filesSize + this.dirsSize
@@ -801,9 +529,10 @@ export default {
 
       // How much every listing item affects the window height
       this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity
+      console.log(121212121)
     },
     fillWindow(fit = false) {
-      if (this.currentFolder == null) return
+      //if (this.currentFolder == null) return
 
       const totalItems = this.filesSize + this.dirsSize
 
@@ -822,9 +551,37 @@ export default {
 
       // Set the number of displayed items
       this.showLimit = showQuantity > totalItems ? totalItems : showQuantity
+      console.log(31313131)
+
+    },
+    async switchView() {
+      console.log("switch view")
+      const modes = {
+        list: "mosaic",
+        mosaic: "mosaic gallery",
+        "mosaic gallery": "list",
+      }
+      const data = {
+        viewMode: modes[this.settings.viewMode] || "list",
+      }
+
+      // Await ensures correct value for setItemWeight()
+      await this.$store.commit("updateSettings", data)
+
+
+      this.setItemWeight()
+      this.fillWindow()
+
+      if (this.isLogged) {
+        await updateSettings(data)
+      }
+
     },
 
-
   },
+
+
+
+
 }
 </script>

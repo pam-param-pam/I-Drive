@@ -15,6 +15,7 @@
       <slot name="actions" />
     </div>
 
+
     <action
       v-if="this.$slots.actions"
       id="more"
@@ -22,7 +23,6 @@
       :label="$t('buttons.more')"
       @action="$store.commit('showHover', 'more')"
     />
-
     <div
       class="overlay"
       v-show="this.currentPromptName === 'more'"
@@ -35,7 +35,8 @@
 import { logoURL } from "@/utils/constants"
 
 import Action from "@/components/header/Action.vue"
-import { mapGetters } from "vuex"
+import {mapGetters, mapState} from "vuex"
+import {updateSettings} from "@/api/user.js";
 
 export default {
   name: "header-bar",
@@ -43,21 +44,60 @@ export default {
   components: {
     Action,
   },
+  emits: ['switchView'],
+
   data: function () {
     return {
       logoURL,
       isDark: true
     }
   },
+  computed: {
+    ...mapState(["settings","perms", "isSearchActive"]),
+    ...mapGetters(["currentPromptName", "selectedCount"]),
+    viewIcon() {
+      const icons = {
+        list: "view_module",
+        mosaic: "grid_view",
+        "mosaic gallery": "view_list",
+      }
+      return icons[this.settings.viewMode]
+    },
+    isMobile() {
+      return window.innerWidth <= 736
+    },
+
+  },
   methods: {
     openSidebar() {
       this.$store.commit("showHover", "sidebar")
     },
+    async switchView() {
+
+      const modes = {
+        list: "mosaic",
+        mosaic: "mosaic gallery",
+        "mosaic gallery": "list",
+      }
+      console.log(this.settings.viewMode)
+      const data = {
+        viewMode: modes[this.settings.viewMode] || "list",
+      }
+
+      // Await ensures correct value for setItemWeight()
+      await this.$store.commit("updateSettings", data)
+
+
+      //this.setItemWeight()
+      //this.fillWindow()
+
+
+      await updateSettings(data)
+
+    },
 
   },
-  computed: {
-    ...mapGetters(["currentPromptName"]),
-  },
+
 }
 </script>
 

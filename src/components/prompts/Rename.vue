@@ -76,10 +76,7 @@ export default {
         let message = this.$t('toasts.itemRenamed')
         this.$toast.success(message)
 
-      } catch (error) {
-        console.log(error)
-
-      } finally {
+      }  finally {
         this.$store.commit("closeHover")
 
       }

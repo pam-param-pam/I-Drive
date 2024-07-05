@@ -236,21 +236,17 @@ export default {
        */
 
       if (!this.file) {
-        try {
-          this.file = await getFile(this.fileId, this.lockFrom)
-          if (!this.currentFolder && ! this.isShare) {
-            const res = await getItems(this.file.parent_id, this.file.lockFrom)
 
-            this.$store.commit("setItems", res.folder.children)
-            this.$store.commit("setCurrentFolder", res.folder)
+        this.file = await getFile(this.fileId, this.lockFrom)
+        if (!this.currentFolder && ! this.isShare) {
+          const res = await getItems(this.file.parent_id, this.file.lockFrom)
 
-          }
-
-        } catch (e) {
-          console.log(e)
-          this.error = e
+          this.$store.commit("setItems", res.folder.children)
+          this.$store.commit("setCurrentFolder", res.folder)
 
         }
+
+
       }
       this.$store.commit("addSelected", this.file)
 
@@ -346,7 +342,9 @@ export default {
       }
     },
     download() {
-      //window.open(this.file.preview_url, '_blank')
+      window.open(this.selected[0].download_url, '_blank')
+      let message = this.$t("toasts.downloadingSingle", {name: this.selected[0].name})
+      this.$toast.success(message)
     },
   },
 }

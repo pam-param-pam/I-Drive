@@ -48,14 +48,14 @@ export default {
     ...mapState(["user", "loading", "perms"]),
   },
   methods: {
-    ...mapMutations(["setDisableCreation"])
+    ...mapMutations(["setDisabledCreation"])
   },
   mounted() {
     document.title = "Settings - I Drive"
 
   },
   created() {
-    this.setDisableCreation(true)
+    this.setDisabledCreation(true)
   },
 
 }

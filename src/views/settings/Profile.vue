@@ -157,40 +157,34 @@ export default {
         return
       }
 
-      try {
-        const data = { current_password: this.currentPassword, new_password: this.password}
-        let res = await changePassword(data)
+      const data = { current_password: this.currentPassword, new_password: this.password}
+      let res = await changePassword(data)
 
-        localStorage.setItem("token", res.auth_token)
-        this.$store.commit("setToken", res.auth_token)
+      localStorage.setItem("token", res.auth_token)
+      this.$store.commit("setToken", res.auth_token)
 
 
-        this.$toast.success(this.$t("settings.passwordUpdated"))
-      } catch (e) {
-        console.log(e)
-      }
+      this.$toast.success(this.$t("settings.passwordUpdated"))
+
     },
     async updateSettings(event) {
       event.preventDefault()
 
-      try {
-        const data = {
-          locale: this.locale,
-          subfoldersInShares: this.subfoldersInShares,
-          hideLockedFolders: this.hideLockedFolders,
-          dateFormat: this.dateFormat,
-          webhook: this.webhook
-        }
-        this.setTheme(this.theme)
-
-        await updateSettings(data)
-        this.$store.commit("updateSettings", data)
-
-
-        this.$toast.success(this.$t("settings.settingsUpdated"))
-      } catch (e) {
-        console.log(e)
+      const data = {
+        locale: this.locale,
+        subfoldersInShares: this.subfoldersInShares,
+        hideLockedFolders: this.hideLockedFolders,
+        dateFormat: this.dateFormat,
+        webhook: this.webhook
       }
+      this.setTheme(this.theme)
+
+      await updateSettings(data)
+      this.$store.commit("updateSettings", data)
+
+
+      this.$toast.success(this.$t("settings.settingsUpdated"))
+
     },
     getMediaPreference() {
       let hasDarkPreference = window.matchMedia(

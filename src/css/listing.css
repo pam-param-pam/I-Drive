@@ -154,6 +154,10 @@ body.rtl #listing {
   width: 100%;
   height: 100%;
 }
+#listing.mosaic.gallery .item p {
+  word-wrap: break-word; /* Allows long words to break and wrap onto the next line */
+  word-break: break-word; /* Breaks words at arbitrary points */
+  white-space: normal;   /* Default white space handling */}
 
 #listing.gallery .size,
 #listing.gallery .created {
@@ -293,4 +297,16 @@ body.rtl #listing {
 #listing #multiple-selection p,
 #listing #multiple-selection i {
   color: var(--item-selected);
+}
+
+.listing-notice {
+  background-color: #cee0fd; /* Light grey background to match the overall theme */
+  color: #3f3f3f; /* Darker text color for contrast */
+  font-size: 16px; /* Larger font size */
+  font-weight: bold; /* Bold text */
+  padding: 10px; /* Padding around the text */
+  border-radius: 5px; /* Rounded corners */
+  margin: 15px 0; /* Margin to separate it from other elements */
+  text-align: center; /* Center align the text */
+  border: 1px solid #d3dce6; /* Subtle border to define the notice area */
 }

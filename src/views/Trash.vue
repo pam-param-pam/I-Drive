@@ -1,29 +1,71 @@
 <template>
   <div>
     <errors v-if="error" :errorCode="error.response.status"/>
-    <h4 v-if="!error">{{$t('trash.info', {amount: this.items.length})}}</h4>
+    <h4 v-if="!error" class="listing-notice">{{$t('trash.info')}}</h4>
+    <header-bar showMenu="false" showLogo="false">
+      <title></title>
 
+      <template #actions>
+        <template v-if="!isMobile">
+          <action
+            v-if="headerButtons.delete"
+            id="delete-button"
+            icon="delete"
+            :label="$t('buttons.delete')"
+            show="delete"
+          />
+          <action
+            v-if="headerButtons.restore"
+            icon="restore"
+            :label="$t('buttons.restoreFromTrash')"
+            show="restoreFromTrash"
+          />
+        </template>
+        <action
+          v-if="headerButtons.shell"
+          icon="code"
+          :label="$t('buttons.shell')"
+          @action="$store.commit('toggleShell')"
+        />
+        <action
+          :icon="viewIcon"
+          :label="$t('buttons.switchView')"
+          @action="onSwitchView"
+        />
+        <action
+          v-if="headerButtons.info"
+          icon="info"
+          :disabled="isSearchActive && !selectedCount > 0"
+          :label="$t('buttons.info')"
+          show="info"
+        />
+      </template>
+
+    </header-bar>
     <Listing
-      :isTrash="true"
-      :isShares="false"
-      :isSearchActive="isSearchActive"
-      @onSearchClosed="onSearchClosed"
-      @onSearchQuery="onSearchQuery"
+      ref="listing"
+      :isSearchActive="false"
+      @onOpen="onOpen"
+
     ></Listing>
   </div>
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex"
+import {mapGetters, mapMutations, mapState} from "vuex"
 
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import Listing from "@/views/files/Listing.vue"
 import {getTrash} from "@/api/user.js"
+import HeaderBar from "@/components/header/HeaderBar.vue";
+import Action from "@/components/header/Action.vue";
+import Search from "@/components/Search.vue";
 
 export default {
   name: "trash",
   components: {
+    Search, Action, HeaderBar,
     Breadcrumbs,
     Errors,
     Listing,
@@ -37,11 +79,31 @@ export default {
     }
   },
   computed: {
-    ...mapState(["error", "user"]),
+    ...mapGetters(["selectedCount"]),
+    ...mapState(["error", "items", "selected", "settings", "perms", "user", "loading", "currentFolder", "disabledCreation"]),
+    headerButtons() {
+      return {
+        shell: this.perms.execute,
+        info: this.selectedCount > 0,
+        restore: this.selectedCount > 0 && this.perms.modify,
+        delete: this.selectedCount > 0 && this.perms.delete,
+      }
+    },
+    viewIcon() {
+      const icons = {
+        list: "view_module",
+        mosaic: "grid_view",
+        "mosaic gallery": "view_list",
+      }
+      return icons[this.settings.viewMode]
+    },
+    isMobile() {
+      return this.width <= 736
+    },
 
   },
   created() {
-    this.setDisableCreation(true)
+    this.setDisabledCreation(true)
     this.fetchFolder()
 
   },
@@ -56,34 +118,32 @@ export default {
   },
 
   methods: {
-    ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisableCreation"]),
-    async onSearchClosed() {
-      //this.isSearchActive = false
-      //await this.fetchFolder()
-    },
+    ...mapMutations(["updateUser", "addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation"]),
 
-    async onSearchQuery(query) {
-      //this.items = await search(query)
-
-    },
     async fetchFolder() {
 
       this.setLoading(true)
       this.setError(null)
 
-      try {
-        let res = await getTrash()
-        this.items = res.trash
-        this.$store.commit("setItems", this.items)
+      document.title = "Trash"
 
-      } catch (error) {
-        this.setError(error)
+      let res = await getTrash()
+      this.items = res.trash
+      this.$store.commit("setItems", this.items)
 
-      } finally {
-        document.title = "Trash"
-        this.setLoading(false)
-      }
     },
+
+    onSwitchView() {
+      this.$refs.listing.switchView();
+    },
+    onOpen(item) {
+      this.resetSelected()
+      this.addSelected(item)
+      this.$store.commit("showHover", "restoreFromTrash")
+    }
   },
 }
 </script>
+<style>
+
+</style>

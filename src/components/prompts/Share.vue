@@ -14,7 +14,7 @@
             <th></th>
           </tr>
 
-          <tr v-for="link in links" :key="link.hash">
+          <tr v-for="link in links" :key="link.id">
             <td>{{ link.hash }}</td>
             <td>
               <template v-if="link.expire !== 0">{{
@@ -89,7 +89,6 @@
             v-model.trim="time"
           />
           <select class="right" v-model="unit" :aria-label="$t('time.unit')">
-            <option value="seconds">{{ $t("time.seconds") }}</option>
             <option value="minutes">{{ $t("time.minutes") }}</option>
             <option value="hours">{{ $t("time.hours") }}</option>
             <option value="days">{{ $t("time.days") }}</option>
@@ -159,21 +158,19 @@ export default {
     },
   },
   async beforeMount() {
-    try {
-      let links = await api.getAllShares()
+
+    let links = await api.getAllShares()
 
 
-      links = links.filter(item => item.resource_id === this.selected[0].id)
+    links = links.filter(item => item.resource_id === this.selected[0].id)
 
-      this.links = links
-      this.sort()
+    this.links = links
+    this.sort()
 
-      if (this.links.length === 0) {
-        this.listing = false
-      }
-    } catch (e) {
-      console.log(e)
+    if (this.links.length === 0) {
+      this.listing = false
     }
+
   },
   mounted() {
     this.clip = new Clipboard(".copy-clipboard")
@@ -187,35 +184,26 @@ export default {
   methods: {
     submit: async function () {
 
-      try {
+      let res = await api.createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
 
+      this.links.push(res)
+      this.sort()
 
-        let res = await api.createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
+      this.time = 7
+      this.unit = "days"
+      this.password = ""
 
-        this.links.push(res)
-        this.sort()
+      this.listing = true
+      this.$toast.success(this.$t("settings.shareCreated"))
 
-        this.time = 7
-        this.unit = "days"
-        this.password = ""
-
-        this.listing = true
-        this.$toast.success(this.$t("settings.shareCreated"))
-
-      } catch (e) {
-        this.$toast.error(e)
-      }
     },
     deleteLink: async function (event, share) {
       event.preventDefault()
-      console.log(JSON.stringify(share))
-      try {
-        await api.removeShare({"token": share.token})
-        this.links = this.links.filter((item) => item.hash !== share.hash)
-        this.$toast.success(this.$t("settings.shareDeleted"))
-      } catch (e) {
-        console.log(e)
-      }
+
+      await api.removeShare({"token": share.token})
+      this.links = this.links.filter((item) => item.id !== share.id)
+      this.$toast.success(this.$t("settings.shareDeleted"))
+
     },
     humanTime(time) {
       return moment(time).fromNow()

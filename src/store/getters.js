@@ -22,25 +22,22 @@ const getters = {
     // return Math.ceil((sum / totalSize) * 100)
   },
   filesInUploadCount: (state) => {
-    return 1
-    return Object.keys(state.upload.uploads).length + state.upload.queue.length
+
+    return state.upload.queue.length
   },
   filesInUpload: (state) => {
     let files = []
-    for (let i = 0; i < state.upload.queue.length; i++) {
+    for (let file of state.upload.filesUploading.values()) {
 
-      let file = state.upload.queue[i]
       let id = file.file_id
       let name = file.name
       let parent_id = file.parent_id
       let size = file.file.size
-      let progress = 50
+      let progress =  file.progress
       let type = file.type
-      let status = "uploading"
-      let percentage = 50
+      let status = file.status
       files.push({
         status,
-        percentage,
         type,
         size,
         id,
@@ -48,8 +45,11 @@ const getters = {
         name,
         progress,
       })
+
     }
-    return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
+    return files
+    //console.log(files)
+    //return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
   },
   currentPrompt: (state) => {
     return state.prompts.length > 0

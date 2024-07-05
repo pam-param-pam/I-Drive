@@ -1,6 +1,7 @@
 import * as i18n from "@/i18n"
 import moment from "moment"
 import store from "@/store/index.js"
+import {getCountry} from "@/utils/other.js";
 
 const mutations = {
 
@@ -20,8 +21,8 @@ const mutations = {
       // Handle if the folder password doesn't exist
     }
   },
-  setDisableCreation: (state, payload) => {
-    state.disableCreation = payload
+  setDisabledCreation: (state, payload) => {
+    state.disabledCreation = payload
   },
   closeHover: (state) => {
     state.prompts.pop()
@@ -211,14 +212,22 @@ const mutations = {
     state.settings = value
 
   },
+  setAnonState: (state) => {
+    let country = getCountry()
+    moment.locale(country)
+    i18n.default.locale = country.toLowerCase()
+    state.settings = {sortByAsc: false, sortingBy: "name", viewMode: "list", dateFormat: false, locale: country}
+  },
+
   updateSettings: (state, value) => {
     if (typeof value !== "object") return
 
     for (let field in value) {
+      console.log(field)
       state.settings[field] = value[field]
 
     }
-
+    console.log(state.settings)
     let locale = value?.locale
     if (locale) {
 

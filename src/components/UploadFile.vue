@@ -28,7 +28,10 @@
     </div>
 
     <!-- Lower -->
-    <div v-if="file.percentage">
+    <div v-if="file.progress">
+      <span v-if="file.status === 'creating'">
+        <b class="creating">{{ $t('uploadFile.creating') }}</b>
+      </span>
       <span v-if="file.status === 'failed'">
         <b class="failed">{{ $t('uploadFile.failed') }}</b>
       </span>
@@ -44,10 +47,10 @@
       <div class="fileitem-progress">
         <ProgressBar
           v-if="file.status === 'uploading'"
-          :progress="file.percentage"
+          :progress="file.progress"
         />
         <span v-if="file.status === 'uploading'">
-          <b> {{ file.percentage }}% </b>
+          <b> {{ file.progress }}% </b>
         </span>
       </div>
     </div>
@@ -56,6 +59,7 @@
 
 <script>
 import ProgressBar from "@/components/ProgressBar.vue";
+import {mapMutations} from "vuex";
 
 export default {
   components: { ProgressBar },
@@ -63,17 +67,20 @@ export default {
   data() {
     return {
       isPaused: false,
-      isShaking: false, // Add data property to control shake animation
+      isShaking: false,
 
 
     };
+  },
+  computed: {
+    ...mapMutations([])
   },
   methods: {
     togglePause() {
       this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
     },
     cancel() {
-      this.file.status = "failed"
+      this.$store.commit("upload/cancelJob", this.file.id)
 
     },
     startShake() {

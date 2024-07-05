@@ -103,27 +103,22 @@ export default {
     async fetchData() {
       this.setLoading(true)
 
-      try {
-        if (this.isNew) {
-          let { defaults, createUserDir } = await settings.get()
-          this.createUserDir = createUserDir
-          this.user = {
-            ...defaults,
-            username: "",
-            passsword: "",
-            rules: [],
-            lockPassword: false,
-            id: 0,
-          }
-        } else {
-          const id = this.$route.params.pathMatch
-          this.user = { ...(await api.get(id)) }
+      if (this.isNew) {
+        let { defaults, createUserDir } = await settings.get()
+        this.createUserDir = createUserDir
+        this.user = {
+          ...defaults,
+          username: "",
+          passsword: "",
+          rules: [],
+          lockPassword: false,
+          id: 0,
         }
-      } catch (e) {
-        this.error = e
-      } finally {
-        this.setLoading(false)
+      } else {
+        const id = this.$route.params.pathMatch
+        this.user = { ...(await api.get(id)) }
       }
+
     },
     deletePrompt() {
       this.showHover("deleteUser")

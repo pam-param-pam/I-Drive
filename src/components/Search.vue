@@ -8,7 +8,7 @@
         :aria-label="$t('search.search')"
         :placeholder="$t('search.search')"
       />
-      <i v-if="disableCreation" class="material-icons" @click="exit">close</i>
+      <i v-if="disabledCreation" class="material-icons" @click="exit">close</i>
       <i class="material-icons" @click="onTuneClick">tune</i>
     </div>
   </div>
@@ -30,7 +30,7 @@ export default {
   },
 
   computed: {
-    ...mapState(["searchFilters", "disableCreation"]),
+    ...mapState(["searchFilters", "disabledCreation"]),
     ...mapGetters(["getFolderPassword"])
   },
 
@@ -56,7 +56,7 @@ export default {
 
     },
     async exit() {
-      this.$store.commit("setDisableCreation", false)
+      this.$store.commit("setDisabledCreation", false)
       this.$store.commit("resetSelected")
       this.$emit('exit')
       this.query = ''
@@ -70,7 +70,7 @@ export default {
 
       }
       else {
-        this.$store.commit("setDisableCreation", true)
+        this.$store.commit("setDisabledCreation", true)
         this.$store.commit("resetSelected")
         this.search()
 

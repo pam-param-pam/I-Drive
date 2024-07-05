@@ -6,7 +6,7 @@
     <sidebar></sidebar>
     <main>
       <router-view></router-view>
-      <shell v-if="true"></shell>
+      <shell v-if="isExecEnabled"></shell>
       </main>
       <upload-files></upload-files>
       <prompts></prompts>
@@ -19,7 +19,6 @@
   import Prompts from "@/components/prompts/Prompts.vue"
   import Shell from "@/components/Shell.vue"
   import UploadFiles from "../components/prompts/UploadFiles.vue"
-  import { enableExec } from "@/utils/constants"
 
   export default {
     name: "layout",
@@ -32,7 +31,10 @@
     computed: {
       ...mapGetters(["isLogged", "progress", "currentPrompt"]),
       ...mapState(["user", "perms"]),
-      isExecEnabled: () => enableExec,
+
+      isExecEnabled() {
+        return this.perms?.execute
+      }
     },
     watch: {
       $route: function () {

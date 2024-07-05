@@ -78,9 +78,8 @@
     "openFile": "Open file",
     "discardChanges": "Discard",
     "lockFolder": "Lock folder",
-    "moveFile": "Move file"
-
-
+    "moveFile": "Move file",
+    "proceedAnyway": "Proceed anyway"
   },
   "languages": {
     "en": "English",
@@ -217,8 +216,9 @@
     "unlockFolder": "Unlock Folder",
     "enterOldFolderPassword": "Enter old password",
     "enterNewFolderPassword": "Enter new password",
-    "setFolderPassword": "Lock Folder"
-
+    "setFolderPassword": "Lock Folder",
+    "iDriveNotOptimizedMessage": "I Drive is not optimized to handle both uploading and downloading of large number of small files. Consider ziping them and uploading again.",
+    "iDriveNotOptimized": "Too Many small files"
   },
   "toasts": {
     "itemLocated": "Item located",
@@ -242,13 +242,20 @@
     "folderPasswordIncorrect": "Incorrect folder password",
     "passwordIsRequired": "Password is required for access",
     "unauthorized": "Unauthorized",
-    "sessionExpired": "Session Expired"
+    "sessionExpired": "Session Expired",
+    "websocketError": "Couldn't connect to websocket, site will not function properly."
 
   },
   "uploadFile": {
     "failed": "Failed, retrying...",
     "success": "Uploaded",
     "paused": "Paused"
+  },
+  "listing": {
+    "noFiles": "You look lonely, I can fix that~"
+  },
+  "share": {
+    "info": "This share expires {expiry}"
   }
 }
 

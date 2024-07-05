@@ -110,7 +110,7 @@ export default {
     ...mapMutations(["setSearchFilters"]),
 
     async submit() {
-      this.$store.commit("setDisableCreation", true)
+      this.$store.commit("setDisabledCreation", true)
       this.$store.commit("resetSelected")
       if (this.fileType === "all") this.fileType = null
 
@@ -126,8 +126,6 @@ export default {
       try {
 
         this.currentPrompt.confirm()
-      } catch (error) {
-        console.log(error)
       } finally {
         this.$store.commit("closeHover")
       }

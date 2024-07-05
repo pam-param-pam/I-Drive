@@ -29,10 +29,10 @@ discord_instance.interceptors.response.use(
 
     // Check if the error is 429 Too Many Requests errors
     if (error.response && error.response.status === 429) {
-      const retryAfter = error.response.headers['retry-after']
+      let retryAfter = error.response.headers['retry-after']
 
       if (retryAfter) {
-        const waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
+        let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
         console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
 
         // Wait for the specified time before retrying the request
@@ -46,7 +46,7 @@ discord_instance.interceptors.response.use(
     if (!error.response && error.code === 'ERR_NETWORK') {
 
       function retry() {
-        const delay = 5000 // waiting for 5 seconds cuz, I felt like it.
+        let delay = 5000 // waiting for 5 seconds cuz, I felt like it.
         console.log(`Retrying request after ${delay} milliseconds`)
         return new Promise(resolve => setTimeout(resolve, delay)).then(() => discord_instance(error.config))
       }
@@ -79,6 +79,8 @@ backend_instance.interceptors.request.use(
 
 backend_instance.interceptors.response.use(
   function(response) {
+    store.commit("setLoading", false)
+
     return response
   },
   async function(error) {
@@ -86,14 +88,14 @@ backend_instance.interceptors.response.use(
       return Promise.reject(error)
 
     }
-    const { config, response } = error
+    let { config, response } = error
 
 
 
 
     // // Check if the error is 429 Too Many Requests error
     // if (response && response.status === 429) {
-    //   const retryAfter = response.headers['retry-after']
+    //   let retryAfter = response.headers['retry-after']
     //   config.__retryCount = config.__retryCount || 0 // Initialize retry count if not already set
     //
     //   // If the retry count is less than 3
@@ -101,7 +103,7 @@ backend_instance.interceptors.response.use(
     //     config.__retryCount += 1 // Increment the retry count
     //
     //     if (retryAfter) {
-    //       const waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
+    //       let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
     //       console.log(`Received 429, retrying after ${waitTime} milliseconds. Attempt ${config.__retryCount}`)
     //
     //       // Wait for the specified time before retrying the request
@@ -117,7 +119,7 @@ backend_instance.interceptors.response.use(
     // Check if the error is 429 Too Many Requests error
     if (response && response.status === 469) {
       console.log(`Received 469`)
-      const lockFrom = response.data.lockFrom
+      let lockFrom = response.data.lockFrom
       if (lockFrom) {
 
         let password = store.getters.getFolderPassword(response.data.lockFrom)
@@ -174,6 +176,14 @@ backend_instance.interceptors.response.use(
       timeout: 5000,
       position: "bottom-right",
     })
+    //we want to ignore bad requests and wrong passwords
+    if (response.status !== 400 && response.status !== 469) {
+      store.commit("setError", error)
+    }
+    store.commit("setLoading", false)
+
+
+
     // If not a 429 error, no Retry-After header, or max retries reached, just return the error
     return Promise.reject(error)
   }

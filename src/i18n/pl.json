@@ -73,8 +73,8 @@
     "file": "Pliki",
     "folder": "Foldery",
     "discardChanges": "Odrzuć",
-    "lockFolder": "Zablokuj folder"
-
+    "lockFolder": "Zablokuj folder",
+    "proceedAnyway": "Zignoruj ostrzeżenie"
 
   },
   "languages": {
@@ -212,7 +212,9 @@
     "unlockFolder": "Odblokuj Folder",
     "enterOldFolderPassword": "Wprowadź stare hasło",
     "enterNewFolderPassword": "Wprowadż nowe hasło",
-    "setFolderPassword": "Zablokuj Folder"
+    "setFolderPassword": "Zablokuj Folder",
+    "iDriveNotOptimizedMessage": "I Drive nie jest zoptymalizowany by przechowywać wiele bardzo małych plików. Rozważ z-zipowanie ich i wgranie ponownie.",
+    "iDriveNotOptimized": "Za dużo małych plików"
 
 
   },
@@ -240,12 +242,17 @@
     "downloadingZIP": "Pobieranie pliku ZIP",
     "passwordIsRequired": "Hasło jest wymagane",
     "unauthorized": "Brak uwierzytelnienia",
-    "sessionExpired": "Sesja wygasła"
+    "sessionExpired": "Sesja wygasła",
+    "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie."
+
   },
   "uploadFile": {
     "failed": "Wystąpił bląd, próbowanie ponownie....",
     "success": "Plik zapisany",
     "paused": "Zatrzymano"
 
+  },
+  "share": {
+    "info": "Ten link wygasa {expiry}"
   }
 }

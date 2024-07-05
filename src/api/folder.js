@@ -15,7 +15,7 @@ export async function getItems(folder_id, lockFrom) {
 
 export async function lockWithPassword(folder_id, password, oldPassword) {
     let url = `/api/folder/password/${folder_id}`
-    const headers = {}
+    let headers = {}
 
     if (oldPassword === "") {
         oldPassword = null

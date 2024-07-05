@@ -2,18 +2,11 @@ import Vue from "vue"
 import Router from "vue-router"
 import Login from "@/views/Login.vue"
 import Layout from "@/views/Layout.vue"
-import Files from "@/views/Files.vue"
-import Share from "@/views/Share.vue"
-import Settings from "@/views/Settings.vue"
-import ProfileSettings from "@/views/settings/Profile.vue"
-import Shares from "@/views/settings/Shares.vue"
-import Errors from "@/views/Errors.vue"
+
 import store from "@/store"
 import { baseURL} from "@/utils/constants"
 import i18n, { rtlLanguages } from "@/i18n"
-import Preview from "@/views/files/Preview.vue"
-import Editor from "@/views/files/Editor.vue"
-import Trash from "@/views/Trash.vue"
+
 
 Vue.use(Router)
 
@@ -38,17 +31,12 @@ const router = new Router({
       path: "/*",
       component: Layout,
       children: [
-        {
-          path: "/share/:token/:folderId",
-          name: "Share",
-          component: Share,
-          props: true,
 
-        },
+
         {
-          path: "/share/:token",
+          path: "/share/:token/:folderId", // kolejnosc tych dwóch share childrenów tu ma znaczenie :3
           name: "Share",
-          component: Share,
+          component: () => import('../views/Share.vue'),
           props: true,
           meta: {
             requiresAuth: false,
@@ -56,9 +44,20 @@ const router = new Router({
 
         },
         {
+          path: "/share/:token",
+          name: "Share",
+          component: () => import('../views/Share.vue'),
+          props: true,
+          meta: {
+            requiresAuth: false,
+          },
+
+        },
+
+        {
           path: "/trash",
           name: "Trash",
-          component: Trash,
+          component: () => import('../views/Trash.vue'),
           meta: {
             requiresAuth: true,
           },
@@ -67,7 +66,7 @@ const router = new Router({
         {
           path: "/files/:folderId",
           name: "Files",
-          component: Files,
+          component: () => import('../views/Files.vue'),
           props: true,
           meta: {
             requiresAuth: true,
@@ -77,7 +76,7 @@ const router = new Router({
         {
           path: "/editor/:fileId",
           name: "Editor",
-          component: Editor,
+          component: () => import('../views/files/Editor.vue'),
           props: true,
           meta: {
             requiresAuth: true,
@@ -86,7 +85,7 @@ const router = new Router({
         {
           path: "/preview/:fileId",
           name: "Preview",
-          component: Preview,
+          component: () => import('../views/files/Preview.vue'),
           props: true,
           meta: {
             requiresAuth: true,
@@ -96,7 +95,7 @@ const router = new Router({
         {
           path: "/settings",
           name: "Settings",
-          component: Settings,
+          component: () => import('../views/Settings.vue'),
           redirect: {
             path: "/settings/profile",
           },
@@ -107,12 +106,13 @@ const router = new Router({
             {
               path: "/settings/profile",
               name: "ProfileSettings",
-              component: ProfileSettings,
+              component: () => import('../views/settings/Profile.vue'),
+
             },
             {
               path: "/settings/shares",
               name: "Shares",
-              component: Shares,
+              component: () => import('../views/settings/Shares.vue'),
             },
 
           ],
@@ -120,7 +120,7 @@ const router = new Router({
         {
           path: "/403",
           name: "Forbidden",
-          component: Errors,
+          component: () => import('../views/Errors.vue'),
           props: {
             errorCode: 403,
             showHeader: true,
@@ -129,7 +129,7 @@ const router = new Router({
         {
           path: "/404",
           name: "NotFound",
-          component: Errors,
+          component: () => import('../views/Errors.vue'),
           props: {
             errorCode: 404,
             showHeader: true,
@@ -138,7 +138,7 @@ const router = new Router({
         {
           path: "/500",
           name: "InternalServerError",
-          component: Errors,
+          component: () => import('../views/Errors.vue'),
           props: {
             errorCode: 500,
             showHeader: true,

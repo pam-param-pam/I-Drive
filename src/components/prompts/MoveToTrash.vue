@@ -81,9 +81,6 @@ export default {
         }
         this.currentPrompt?.confirm()
 
-      } catch (error) {
-        console.log(error)
-        //nothing has to be done
       }
       finally {
         this.resetSelected()

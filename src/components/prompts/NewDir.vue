@@ -66,8 +66,6 @@ export default {
           let message = this.$t('toasts.folderCreated', { name: this.name})
           this.$toast.success(message)
 
-        } catch (error) {
-          console.log(error)
         }
         finally {
           this.$store.commit("closeHover")

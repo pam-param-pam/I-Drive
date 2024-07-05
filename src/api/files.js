@@ -26,3 +26,9 @@ export async function createFile(data) {
   return response.data
 
 }
+export async function patchFile(data) {
+  let url = `/api/file/create`
+  let response = await backend_instance.patch(url, data)
+  return response.data
+
+}

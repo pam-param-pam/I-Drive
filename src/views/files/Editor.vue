@@ -74,7 +74,7 @@ export default {
 
 
   computed: {
-    ...mapState(["loading", "items", "perms", "currentFolder", "settings"]),
+    ...mapState(["loading", "items", "perms", "currentFolder", "settings", "error"]),
   },
 
 
@@ -104,14 +104,10 @@ export default {
         }
       }
       if (!this.file) {
-        try {
-          console.log("FILEID: " + this.fileId)
-          this.file = await getFile(this.fileId)
-          this.$store.commit("addSelected", this.file)
-        } catch (e) {
-          console.log(e)
-          this.error = e
-        }
+        console.log("FILEID: " + this.fileId)
+        this.file = await getFile(this.fileId)
+        this.$store.commit("addSelected", this.file)
+
       }
       this.$store.commit("addSelected", this.file)
 
@@ -194,9 +190,8 @@ export default {
             )
           })
 
-        } catch (error) {
+        } finally {
           buttons.done(button)
-
         }
       }
       this.editor.session.getUndoManager().markClean()

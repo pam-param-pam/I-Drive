@@ -79,10 +79,6 @@ export default {
           id: res.task_id,
         })
         this.currentPrompt?.confirm()
-
-      } catch (error) {
-        console.log(error)
-        //nothing has to be done
       }
       finally {
         this.resetSelected()

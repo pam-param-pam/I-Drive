@@ -13,7 +13,7 @@
 
       <div v-if="perms.create">
         <button
-          :disabled="disableCreation"
+          :disabled="disabledCreation"
           @click="$store.commit('showHover', 'newDir')"
           class="action"
           :aria-label="$t('sidebar.newFolder')"
@@ -24,7 +24,7 @@
         </button>
 
         <button
-          :disabled="disableCreation"
+          :disabled="disabledCreation"
           @click="$store.commit('showHover', 'newFile')"
           class="action"
           :aria-label="$t('sidebar.newFile')"
@@ -92,7 +92,7 @@
     </template>
 
     <div
-      v-if="$router.currentRoute.path.includes('/files/') && !disableCreation"
+      v-if="$router.currentRoute.path.includes('/files/') && !disabledCreation"
       class="credits"
       style="width: 90%; margin: 2em 2.5em 3em 2.5em"
     >
@@ -135,7 +135,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(["user", "perms", "currentFolder", "disableCreation"]),
+    ...mapState(["user", "perms", "currentFolder", "disabledCreation"]),
     ...mapGetters(["isLogged", "currentPrompt"]),
     active() {
       return this.currentPrompt?.prompt === "sidebar"
@@ -149,16 +149,13 @@ export default {
         if (this.currentFolder) {
           let usageStats = { used: 0, total: 0, usedPercentage: 0 }
 
-          try {
-            let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
-            usageStats = {
-              used: prettyBytes(usage.used, { binary: true }),
-              total: prettyBytes(usage.total, { binary: true }),
-              usedPercentage: Math.round((usage.used / usage.total) * 100),
-            }
-          } catch (error) {
-            console.log(error)
+          let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
+          usageStats = {
+            used: prettyBytes(usage.used, { binary: true }),
+            total: prettyBytes(usage.total, { binary: true }),
+            usedPercentage: Math.round((usage.used / usage.total) * 100),
           }
+
           return usageStats
         }
         return this.usage
@@ -172,19 +169,19 @@ export default {
     toRoot() {
       //this.$store.commit("setOpenSearchState", false)
       //this.$store.commit("setIsTrash", false)
-      this.$router.push({ name: `Files`, params: { folderId: this.user.root } }).catch(err => {});
-      this.$store.commit("closeHover");
+      this.$router.push({ name: `Files`, params: { folderId: this.user.root } }).catch(err => {})
+      this.$store.commit("closeHover")
     },
     toTrash() {
-      this.$router.push({ name: `Trash` }).catch(err => {});
-      this.$store.commit("closeHover");
+      this.$router.push({ name: `Trash` }).catch(err => {})
+      this.$store.commit("closeHover")
     },
     toSettings() {
-      this.$router.push({ name: `Settings` }).catch(err => {});
-      this.$store.commit("closeHover");
+      this.$router.push({ name: `Settings` }).catch(err => {})
+      this.$store.commit("closeHover")
     },
     help() {
-      this.$store.commit("showHover", "help");
+      this.$store.commit("showHover", "help")
     },
     logout: auth.logout,
   },

@@ -23,7 +23,7 @@ const state = {
   prompts: [],
   error: null,
   showShell: false,
-  disableCreation: false,
+  disabledCreation: false,
   folderPasswords: {},
   searchFilters: {"files": true, "folders": true},
 
