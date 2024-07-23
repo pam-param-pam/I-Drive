@@ -46,7 +46,7 @@ import Action from "@/components/header/Action.vue"
 export default {
   name: "new-dir",
   components: {Action},
-  data: function () {
+  data() {
     return {
       name: "",
     }

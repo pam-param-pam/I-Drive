@@ -2,6 +2,9 @@ const getters = {
   isLogged: (state) => {
     return state.user !== null
   },
+  isLoading: (state) => {
+    return state.loading
+  },
   getFolderPassword: (state) => (folderId) => {
     return state.folderPasswords[folderId] || null
   },

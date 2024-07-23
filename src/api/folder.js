@@ -33,7 +33,6 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
     })
     return response.data
 
-
 }
 export async function create(data) {
     let url = "/api/folder/create"
@@ -50,6 +49,15 @@ export async function getUsage(folderId, lockFrom) {
             "x-folder-password": password
         }
     })
+    return response.data
+
+}
+export async function resetPassword(folderId, accountPassword, newPassword) {
+    let url = `/api/folder/password/reset/${folderId}`
+
+
+    let data = {"accountPassword": accountPassword, "folderPassword": newPassword}
+    let response = await backend_instance.post(url, data)
     return response.data
 
 }

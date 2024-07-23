@@ -87,7 +87,7 @@
             </a>
             <a
               target="_blank"
-              :href="fileSrcUrl + '?inline=True'"
+              :href="fileSrcUrl"
               class="button button--flat"
               v-if="!file.isDir"
             >
@@ -149,7 +149,7 @@ export default {
     isShare: Boolean,
   },
 
-  data: function () {
+  data() {
     return {
       fullSize: false,
       showNav: true,
@@ -166,8 +166,8 @@ export default {
     ...mapGetters(["currentPrompt"]),
     fileSrcUrl() {
       if (this.file.preview_url)
-        return this.file.preview_url
-      return this.file.download_url
+        return this.file.preview_url + "?inline=True"
+      return this.file.download_url + "?inline=True"
     },
 
     currentIndex() {

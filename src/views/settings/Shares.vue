@@ -61,7 +61,7 @@
 <script>
 import { share as api } from "@/api"
 import { mapState, mapMutations } from "vuex"
-import moment from "moment"
+import moment from "moment/min/moment-with-locales.js";
 import Clipboard from "clipboard"
 import Errors from "@/views/Errors.vue"
 
@@ -70,8 +70,9 @@ export default {
   components: {
     Errors,
   },
-  computed: mapState(["user", "perms", "loading"]),
-  data: function () {
+  computed: mapState(["user", "settings", "perms", "loading"]),
+
+  data() {
     return {
       error: null,
       shares: [],
@@ -85,6 +86,7 @@ export default {
     let links = await api.getAllShares()
 
     this.shares = links
+    this.setLoading(false)
 
     
 
@@ -116,7 +118,12 @@ export default {
       })
     },
     humanTime(time) {
-      return moment(time).fromNow()
+      //todo czm globalny local nie dzIała?
+      let locale = this.settings?.locale || "en"
+
+      moment.locale(locale)
+      // Parse the target date
+      return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
     },
     buildLink(share) {
 

@@ -6,32 +6,22 @@ const baseWS = "ws://localhost:8000"
 const baseURL = "http://localhost:8000"
 //const baseURL = "http://192.168.1.14:8000"
 //const baseURL = "https://api.pamparampam.dev"
+const author = window.FileBrowser.author
 
-const staticURL = window.FileBrowser.StaticURL
 const signup = window.FileBrowser.Signup
 const version = window.FileBrowser.Version
 const logoURL = `https://i.redd.it/i5s5x4bzffdb1.jpg`
 const loginPage = window.FileBrowser.LoginPage
 const theme = window.FileBrowser.Theme
-const enableThumbs = window.FileBrowser.EnableThumbs
-const resizePreview = window.FileBrowser.ResizePreview
-const tusSettings = window.FileBrowser.TusSettings
-const origin = window.location.origin
-const tusEndpoint = `/api/tus`
 
 export {
   name,
   baseURL,
-  staticURL,
   logoURL,
   signup,
   version,
+  author,
   loginPage,
   theme,
-  enableThumbs,
-  resizePreview,
-  tusSettings,
-  origin,
-  tusEndpoint,
   baseWS,
 }

@@ -178,9 +178,10 @@ backend_instance.interceptors.response.use(
     })
     //we want to ignore bad requests and wrong passwords
     if (response.status !== 400 && response.status !== 469) {
-      store.commit("setError", error)
+      //store.commit("setError", error)
+      //store.commit("setLoading", false)
+
     }
-    store.commit("setLoading", false)
 
 
 

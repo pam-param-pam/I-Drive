@@ -111,7 +111,7 @@ export default {
     Themes,
     Languages,
   },
-  data: function () {
+  data() {
     return {
       password: "",
       currentPassword: "",

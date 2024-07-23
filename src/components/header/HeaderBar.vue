@@ -46,7 +46,7 @@ export default {
   },
   emits: ['switchView'],
 
-  data: function () {
+  data() {
     return {
       logoURL,
       isDark: true

@@ -73,12 +73,13 @@ export default {
     folderId: String,
 
   },
-  data: function () {
+  data() {
     return {
       items: [],
       folderList: [],
       isSearchActive: false,
-      expiry: null
+      expiry: null,
+      shareObj: {},
 
     }
   },
@@ -109,11 +110,11 @@ export default {
     }
 
     this.setDisabledCreation(true)
-    this.fetchFolder()
+    this.fetchShare()
   },
 
   watch: {
-    $route: "fetchFolder",
+    $route: "fetchShare",
 
   },
 
@@ -148,30 +149,30 @@ export default {
 
     else {
         if (item.type === "audio" || item.type === "video" || item.type === "image" ||  item.size >= 25 * 1024 * 1024 || item.extension === ".pdf") {
-          this.$router.push({name: "Preview", params: {"fileId":item.id, "token": this.token, "isShare": true}} )
+          this.$router.push({name: "Preview", params: {"fileId":item.id, "shareObj": this.shareObj, "isShare": true}} )
 
         }
         else {
-          this.$router.push({name: "Editor", params: {"fileId": item.id, "token": this.token, "isShare": true}} )
+          this.$router.push({name: "ShareEditor", params: {"folderId": item.parent_id,"fileId":item.id, "token": this.token}} )
 
         }
       }
 
 
     },
-    async fetchFolder() {
+    async fetchShare() {
 
       this.setLoading(true)
       this.setError(null)
 
 
       let res = await getShare(this.token, this.folderId)
+      this.shareObj = res
       this.items = res.share
       this.folderList = res.breadcrumbs
       this.expiry = res.expiry
       this.$store.commit("setItems", this.items)
 
-      this.folderList = res.breadcrumbs
 
       document.title = "share"
 

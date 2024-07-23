@@ -3,6 +3,8 @@
     <div id="input">
       <input
         type="text"
+        autocomplete="off"
+
         v-model="query"
         ref="input"
         :aria-label="$t('search.search')"
@@ -22,7 +24,7 @@ export default {
   name: "search",
   emits: ['onSearchQuery', 'exit'],
 
-  data: function () {
+  data() {
     return {
       selected: {},
       query: '',

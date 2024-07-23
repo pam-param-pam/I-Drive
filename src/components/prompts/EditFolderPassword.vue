@@ -57,7 +57,7 @@ import {lockWithPassword} from "@/api/folder.js"
 
 export default {
   name: "folder-password",
-  data: function () {
+  data() {
     return {
       password: "",
       oldPassword: "",

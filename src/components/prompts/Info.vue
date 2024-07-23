@@ -114,7 +114,7 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import { filesize } from "@/utils"
-import moment from "moment"
+import moment from "moment/min/moment-with-locales.js";
 
 
 export default {
@@ -312,13 +312,15 @@ export default {
         return filesize(size)
     },
     humanTime(date) {
+      if (this.settings.dateFormat) {
+        return moment(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
+      }
+      //todo czm globalny local nie dzIała?
       let locale = this.settings?.locale || "en"
 
       moment.locale(locale)
-      if (this.settings?.dateFormat) {
-        return moment(date).format("L LT")
-      }
-      return moment(date).fromNow()
+      // Parse the target date
+      return moment(date, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
 
     },
 

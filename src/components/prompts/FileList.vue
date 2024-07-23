@@ -27,7 +27,7 @@ import {getItems} from "@/api/folder.js"
 
 export default {
   name: "file-list",
-  data: function () {
+  data() {
     return {
       selected: null,
       dirs : [],

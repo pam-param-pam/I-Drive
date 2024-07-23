@@ -17,7 +17,6 @@ import Help from "./Help.vue"
 import Info from "./Info.vue"
 import Delete from "./Delete.vue"
 import Rename from "./Rename.vue"
-import Download from "./Download.vue"
 import Move from "./Move.vue"
 import NewFile from "./NewFile.vue"
 import NewDir from "./NewDir.vue"
@@ -27,13 +26,13 @@ import Upload from "./Upload.vue"
 import ShareDelete from "./ShareDelete.vue"
 import Sidebar from "../Sidebar.vue"
 import { mapGetters } from "vuex"
-import buttons from "@/utils/buttons"
 import FolderPassword from "@/components/prompts/FolderPassword.vue"
 import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue"
 import MoveToTrash from "@/components/prompts/MoveToTrash.vue"
 import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue"
 import SearchTunePrompt from "@/components/prompts/SearchTunePrompt.vue";
 import NotOptimizedForSmallFiles from "@/components/prompts/NotOptimizedForSmallFiles.vue";
+import ResetFolderPassword from "@/components/prompts/ResetFolderPassword.vue";
 
 export default {
   name: "prompts",
@@ -43,7 +42,6 @@ export default {
     MoveToTrash,
     RestoreFromTrash,
     Rename,
-    Download,
     Move,
     Share,
     NewFile,
@@ -57,15 +55,7 @@ export default {
     EditFolderPassword,
     SearchTunePrompt,
     NotOptimizedForSmallFiles,
-  },
-  data: function () {
-    return {
-      pluginData: {
-        buttons,
-        store: this.$store,
-        router: this.$router,
-      },
-    }
+    ResetFolderPassword,
   },
   created() {
 

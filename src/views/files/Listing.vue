@@ -172,12 +172,12 @@ export default {
     Search,
     Item,
   },
-  data: function () {
+  data() {
     return {
       columnWidth: 280,
       dragCounter: 0,
       itemWeight: 0,
-      searchItemsFound: null
+      searchItemsFound: null,
 
     }
   },

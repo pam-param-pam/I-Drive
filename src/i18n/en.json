@@ -42,6 +42,8 @@
     "video": "Video"
   },
   "buttons": {
+    "reset": "Reset password",
+    "forgotFolderPassword": "Forgot password?",
     "unlock": "Unlock",
     "locate": "Locate",
     "restoreFromTrash": "Restore from Trash",
@@ -218,7 +220,12 @@
     "enterNewFolderPassword": "Enter new password",
     "setFolderPassword": "Lock Folder",
     "iDriveNotOptimizedMessage": "I Drive is not optimized to handle both uploading and downloading of large number of small files. Consider ziping them and uploading again.",
-    "iDriveNotOptimized": "Too Many small files"
+    "iDriveNotOptimized": "Too Many small files",
+    "resetFolderPassword": "Reset Folder Password",
+    "resetMessage": "Enter the passwords below",
+    "accountPassword": "Account password",
+    "newFolderPassword": "New folder password",
+    "pinkyPromiseResetFolderPassword": "I pinky promise i am not a robot!"
   },
   "toasts": {
     "itemLocated": "Item located",

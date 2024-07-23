@@ -126,12 +126,12 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import { share as api} from "@/api"
-import moment from "moment"
+import moment from "moment/min/moment-with-locales.js";
 import Clipboard from "clipboard"
 
 export default {
   name: "share",
-  data: function () {
+  data() {
     return {
       time: 7,
       unit: "days",
@@ -206,7 +206,13 @@ export default {
 
     },
     humanTime(time) {
-      return moment(time).fromNow()
+    //todo czm globalny local nie działa?
+      let locale = this.settings?.locale || "en"
+
+      moment.locale(locale)
+
+      // Parse the target date
+      return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
     },
     buildLink(share) {
       return " to do lol"

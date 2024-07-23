@@ -107,7 +107,7 @@
           rel="noopener noreferrer"
           target="_blank"
           href="https://github.com/pam-param-pam/I-Drive-Frontend"
-        >I Drive By Pam v{{ version }}</a
+        >{{ name }} By {{  author }} v{{ version }}</a
         >
       </span>
       <span>
@@ -124,6 +124,7 @@ import { version, signup } from "@/utils/constants"
 import ProgressBar from "vue-simple-progress"
 import prettyBytes from "pretty-bytes"
 import { getUsage } from "@/api/folder.js"
+import {name, author} from "@/utils/constants.js"
 
 export default {
   name: "sidebar",
@@ -132,6 +133,8 @@ export default {
   },
   data() {
     return {
+      name: name,
+      author: author,
     }
   },
   computed: {

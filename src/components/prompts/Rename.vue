@@ -47,7 +47,7 @@ import {rename} from "@/api/item.js"
 
 export default {
   name: "rename",
-  data: function () {
+  data() {
     return {
       name: "",
       oldName: "",

@@ -18,12 +18,12 @@
   >
     <div>
       <img
-        v-if="item.preview_url && type === 'image'"
+        v-if="item.preview_url && type === 'image' && item.size > 0"
         v-lazy="item.preview_url"
         :src="item.preview_url"
       />
       <img
-        v-else-if="item.download_url && type === 'image'"
+        v-else-if="item.download_url && type === 'image' && item.size > 0"
         v-lazy="item.download_url"
         :src="item.download_url"
       />
@@ -53,18 +53,14 @@
 <script>
 import {mapMutations, mapGetters, mapState} from "vuex"
 import {filesize} from "@/utils"
-import moment from "moment"
+import moment from "moment/min/moment-with-locales.js";
 import {move} from "@/api/item.js"
 
 
 export default {
 
   name: "item",
-  data: function () {
-    return {
-      touches: 0,
-    }
-  },
+
   emits: ['onOpen'],
 
   props: [
@@ -111,10 +107,15 @@ export default {
     },
     humanTime: function () {
 
-      if (this.settings?.dateFormat) {
-        return moment(this.item.created).format("L LT")
+      if (this.settings.dateFormat) {
+        return moment(this.item.created, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
       }
-      return moment(this.item.created).fromNow()
+      //todo czm globalny local nie dzIała?
+      let locale = this.settings?.locale || "en"
+
+      moment.locale(locale)
+      // Parse the target date
+      return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
     },
 
     dragStart: function () {

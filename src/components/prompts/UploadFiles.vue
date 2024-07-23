@@ -52,7 +52,7 @@ import UploadFile from "@/components/UploadFile.vue"
 export default {
   name: "uploadFiles",
   components: {UploadFile},
-  data: function () {
+  data() {
     return {
       open: true,
     }

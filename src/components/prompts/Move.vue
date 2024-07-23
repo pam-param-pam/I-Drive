@@ -54,7 +54,7 @@ import FileList from "./FileList.vue"
 export default {
   name: "move",
   components: { FileList },
-  data: function () {
+  data() {
     return {
       current: window.location.pathname,
       dest: null,

@@ -25,12 +25,18 @@ main .spinner {
   padding: 1em 0;
 }
 
+main .message {
+  margin-top: 5em;
+  margin-right: 12em;
+  color: #505050;
+
+}
 main .spinner > div {
   width: 0.8em;
   height: 0.8em;
   margin: 0 0.1em;
   font-size: 1em;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: #1d99f3;
   border-radius: 100%;
   display: inline-block;
   animation: sk-bouncedelay 1.4s infinite ease-in-out both;
@@ -256,7 +262,6 @@ main .spinner .bounce2 {
   border-radius: 50%;
   cursor: pointer;
   border: 0;
-  margin: 0;
   padding: 0;
   transition: 0.2s ease all;
 }

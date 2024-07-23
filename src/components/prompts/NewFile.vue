@@ -43,7 +43,7 @@ import url from "@/utils/url"
 
 export default {
   name: "new-file",
-  data: function () {
+  data() {
     return {
       name: "",
     }

@@ -59,7 +59,7 @@ export default {
     name: () => name,
     logoURL: () => logoURL,
   },
-  data: function () {
+  data() {
     return {
       createMode: false,
       error: "",

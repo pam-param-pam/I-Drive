@@ -74,6 +74,16 @@ const router = new Router({
 
         },
         {
+          path: "/editor/:folderId/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3
+          name: "ShareEditor",
+          component: () => import('../views/files/Editor.vue'),
+          props: true,
+          meta: {
+            requiresAuth: false,
+          },
+
+        },
+        {
           path: "/editor/:fileId",
           name: "Editor",
           component: () => import('../views/files/Editor.vue'),
@@ -88,7 +98,7 @@ const router = new Router({
           component: () => import('../views/files/Preview.vue'),
           props: true,
           meta: {
-            requiresAuth: true,
+            requiresAuth: false,
           },
 
         },

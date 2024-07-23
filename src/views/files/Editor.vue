@@ -4,7 +4,7 @@
       <action icon="close" :label="$t('buttons.close')" @action="close()"/>
       <title>{{ file?.name }}</title>
       <action
-        v-if="perms.delete"
+        v-if="perms?.delete && !isInShareContext"
         id="delete-button"
         icon="delete"
         :label="$t('buttons.moveToTrash')"
@@ -12,7 +12,7 @@
         show="moveToTrash"
       />
       <action
-        v-if="perms.modify"
+        v-if="perms?.modify && !isInShareContext"
         id="save-button"
         icon="save"
         :label="$t('buttons.save')"
@@ -21,7 +21,7 @@
 
     </header-bar>
 
-    <breadcrumbs base="/files/" :folderList="folderList"/>
+    <breadcrumbs :base="'/share/' + token" :folderList="folderList"/>
     <div class="loading delayed" v-if="loading">
       <div class="spinner">
         <div class="bounce1"></div>
@@ -49,6 +49,7 @@ import {getFile} from "@/api/files.js"
 import {fetchURL} from "@/api/utils.js"
 import {theme} from "@/utils/constants.js"
 import {breadcrumbs} from "@/api/item.js"
+import {getShare} from "@/api/share.js";
 
 export default {
   name: "editor",
@@ -60,10 +61,10 @@ export default {
   props: {
     fileId: String,
     token: String,
-    isShare: Boolean,
+    folderId: String,
   },
 
-  data: function () {
+  data() {
     return {
       file: null,
       res: null,
@@ -75,6 +76,10 @@ export default {
 
   computed: {
     ...mapState(["loading", "items", "perms", "currentFolder", "settings", "error"]),
+
+    isInShareContext() {
+      return this.token !== undefined
+    },
   },
 
 
@@ -96,23 +101,45 @@ export default {
     async fetchData() {
       this.setLoading(true)
 
-      if (this.items) {
+      // if editor is opened from Share
+      if (this.isInShareContext) {
+        let res = await getShare(this.token, this.folderId)
+        this.shareObj = res
+        console.log(res)
+
+        this.$store.commit("setItems", res.share)
+
+        console.log(this.items)
+        this.folderList = res.breadcrumbs
+
         for (let i = 0; i < this.items.length; i++) {
           if (this.items[i].id === this.fileId) {
             this.file = this.items[i]
           }
         }
-      }
-      if (!this.file) {
-        console.log("FILEID: " + this.fileId)
-        this.file = await getFile(this.fileId)
-        this.$store.commit("addSelected", this.file)
 
       }
+      // if its opened from Files, hence we know the user
+      else {
+        if (this.items) {
+          for (let i = 0; i < this.items.length; i++) {
+            if (this.items[i].id === this.fileId) {
+              this.file = this.items[i]
+            }
+          }
+        }
+        if (!this.file) {
+          console.log("FILEID: " + this.fileId)
+          this.file = await getFile(this.fileId)
+          this.$store.commit("addSelected", this.file)
+
+        }
+        this.folderList = await breadcrumbs(this.file.parent_id)
+
+      }
+
       this.$store.commit("addSelected", this.file)
 
-      this.folderList = await breadcrumbs(this.file.parent_id)
-      console.log(this.folderList)
 
       let res = await fetch(this.file.download_url, {})
       this.raw = await res.text()
@@ -211,6 +238,10 @@ export default {
     },
     close() {
       try {
+        if (this.isInShareContext) {
+          this.$router.push({name: "Share", params: {"token": this.token, "folderId":this.folderId}})
+          return
+        }
         let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
         if (!this.editor.session.getUndoManager().isClean()) {
           this.$store.commit("showHover", {
@@ -227,7 +258,7 @@ export default {
       }
       // catch every error so user can always close...
       catch {
-
+        alert("Error closing properly... report this")
         this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}})
 
       }

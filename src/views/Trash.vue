@@ -71,7 +71,7 @@ export default {
     Listing,
   },
 
-  data: function () {
+  data() {
     return {
       items: [],
       isSearchActive: false
