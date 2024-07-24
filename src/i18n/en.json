@@ -225,7 +225,8 @@
     "resetMessage": "Enter the passwords below",
     "accountPassword": "Account password",
     "newFolderPassword": "New folder password",
-    "pinkyPromiseResetFolderPassword": "I pinky promise i am not a robot!"
+    "pinkyPromiseResetFolderPassword": "I pinky promise i am not a robot!",
+    "editFolderPassword": "Edit folder password"
   },
   "toasts": {
     "itemLocated": "Item located",
@@ -262,7 +263,8 @@
     "noFiles": "You look lonely, I can fix that~"
   },
   "share": {
-    "info": "This share expires {expiry}"
+    "info": "This share expires {expiry}",
+    "shareNotFound": "Share Not found. Maybe the link expired or is invalid?"
   }
 }
 

@@ -11,9 +11,12 @@
     @wheel="wheelMove"
   >
     <img class="image-ex-img image-ex-img-center" ref="imgex" @load="onLoad" alt="Failed to load image" />
+
+
   </div>
 </template>
 <script>
+
 import throttle from "lodash.throttle"
 import UTIF from "utif"
 
@@ -67,6 +70,7 @@ export default {
     }
 
     window.addEventListener("resize", this.onResize)
+
   },
   beforeDestroy() {
     window.removeEventListener("resize", this.onResize)
@@ -97,6 +101,9 @@ export default {
       xhr.onload = UTIF._imgLoaded
       xhr.send()
       return true
+    },
+    onProgress() {
+      console.log("on progress")
     },
     onLoad() {
       let img = this.$refs.imgex

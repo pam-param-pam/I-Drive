@@ -192,7 +192,7 @@ table th {
   background: var(--surfacePrimary);
 }
 
-@media (max-width: 736px) {
+@media (max-width: 950px) {
   #file-selection {
     background: var(--surfaceSecondary) !important;
   }

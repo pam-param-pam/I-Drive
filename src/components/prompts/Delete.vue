@@ -64,7 +64,6 @@ export default {
   },
 
 
-
   methods: {
     ...mapMutations(["closeHover", "resetSelected"]),
     submit: async function () {
@@ -88,6 +87,7 @@ export default {
 
       }
     },
+
   },
 }
 </script>

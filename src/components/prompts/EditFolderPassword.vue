@@ -1,7 +1,9 @@
 <template>
   <div class="card floating">
     <div class="card-title">
-      <h2>{{ $t("prompts.setFolderPassword") }}</h2>
+      <h2 v-if="!isLocked">{{ $t("prompts.setFolderPassword") }}</h2>
+      <h2 v-if="isLocked">{{ $t("prompts.editFolderPassword") }}</h2>
+
     </div>
 
     <div class="card-content">

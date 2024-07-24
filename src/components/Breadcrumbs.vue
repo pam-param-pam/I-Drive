@@ -66,7 +66,7 @@ export default {
   },
   methods: {
     isMobile() {
-      return window.innerWidth <= 736
+      return window.innerWidth <= 950
 
     },
     dragOver: function (event) {

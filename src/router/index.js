@@ -93,12 +93,22 @@ const router = new Router({
           },
         },
         {
+          path: "/preview/:folderId/:fileId/:token", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
+          name: "SharePreview",
+          component: () => import('../views/files/Preview.vue'),
+          props: true,
+          meta: {
+            requiresAuth: false,
+          },
+
+        },
+        {
           path: "/preview/:fileId",
           name: "Preview",
           component: () => import('../views/files/Preview.vue'),
           props: true,
           meta: {
-            requiresAuth: false,
+            requiresAuth: true,
           },
 
         },

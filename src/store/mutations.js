@@ -1,7 +1,6 @@
 import * as i18n from "@/i18n"
 import moment from "moment"
 import store from "@/store/index.js"
-import {getCountry} from "@/utils/other.js";
 
 const mutations = {
 
@@ -213,9 +212,9 @@ const mutations = {
 
   },
   setAnonState: (state) => {
-    let country = getCountry()
+    let country = "pl"
     moment.locale(country)
-    i18n.default.locale = country.toLowerCase()
+    i18n.default.locale = country
     state.settings = {sortByAsc: false, sortingBy: "name", viewMode: "list", dateFormat: false, locale: country}
   },
 

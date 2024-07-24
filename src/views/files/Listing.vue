@@ -163,7 +163,7 @@ export default {
     isSearchActive: Boolean,
     locatedItem: {},
   },
-  emits: ['uploadInput', 'drop', 'onOpen'],
+  emits: ['uploadInput', 'drop', 'onOpen', 'dragEnter', 'dragLeave'],
 
   components: {
     Breadcrumbs,
@@ -216,7 +216,7 @@ export default {
     window.addEventListener("scroll", this.scrollEvent)
     window.addEventListener("resize", this.windowsResize)
 
-    if (this.perms?.create) return
+    if (!this.perms?.create) return
     document.addEventListener("dragover", this.preventDefault)
     document.addEventListener("dragenter", this.dragEnter)
     document.addEventListener("dragleave", this.dragLeave)
@@ -232,7 +232,7 @@ export default {
     window.removeEventListener("scroll", this.scrollEvent)
     window.removeEventListener("resize", this.windowsResize)
 
-    if (this.user && !this.perms?.create) return
+    if (!this.user || !this.perms?.create) return
     document.removeEventListener("dragover", this.preventDefault)
     document.removeEventListener("dragenter", this.dragEnter)
     document.removeEventListener("dragleave", this.dragLeave)
@@ -417,22 +417,26 @@ export default {
 
 
     dragEnter() {
-      this.dragCounter++
+      this.$emit('dragEnter')
 
-      // When the user starts dragging an item, put every
-      // file on the listing with 50% opacity.
-      let items = document.getElementsByClassName("item")
-
-      Array.from(items).forEach((file) => {
-        file.style.opacity = 0.5
-      })
+      // this.dragCounter++
+      //
+      // // When the user starts dragging an item, put every
+      // // file on the listing with 50% opacity.
+      // let items = document.getElementsByClassName("item")
+      //
+      // Array.from(items).forEach((file) => {
+      //   file.style.opacity = 0.5
+      // })
     },
     dragLeave() {
-      this.dragCounter--
+      this.$emit('dragLeave')
 
-      if (this.dragCounter === 0) {
-        this.resetOpacity()
-      }
+      // this.dragCounter--
+      //
+      // if (this.dragCounter === 0) {
+      //   this.resetOpacity()
+      // }
     },
     preventDefault(event) {
       // Wrapper around prevent default.

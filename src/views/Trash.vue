@@ -98,7 +98,7 @@ export default {
       return icons[this.settings.viewMode]
     },
     isMobile() {
-      return this.width <= 736
+      return this.width <= 950
     },
 
   },

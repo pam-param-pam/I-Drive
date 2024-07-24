@@ -13,49 +13,34 @@
 </template>
 
 <script>
-import Help from "./Help.vue"
-import Info from "./Info.vue"
-import Delete from "./Delete.vue"
-import Rename from "./Rename.vue"
-import Move from "./Move.vue"
-import NewFile from "./NewFile.vue"
-import NewDir from "./NewDir.vue"
-import DiscardEditorChanges from "./DiscardEditorChanges.vue"
-import Share from "./Share.vue"
-import Upload from "./Upload.vue"
-import ShareDelete from "./ShareDelete.vue"
-import Sidebar from "../Sidebar.vue"
+
 import { mapGetters } from "vuex"
-import FolderPassword from "@/components/prompts/FolderPassword.vue"
-import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue"
-import MoveToTrash from "@/components/prompts/MoveToTrash.vue"
-import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue"
-import SearchTunePrompt from "@/components/prompts/SearchTunePrompt.vue";
-import NotOptimizedForSmallFiles from "@/components/prompts/NotOptimizedForSmallFiles.vue";
-import ResetFolderPassword from "@/components/prompts/ResetFolderPassword.vue";
+
 
 export default {
   name: "prompts",
   components: {
-    Info,
-    Delete,
-    MoveToTrash,
-    RestoreFromTrash,
-    Rename,
-    Move,
-    Share,
-    NewFile,
-    NewDir,
-    Help,
-    Upload,
-    ShareDelete,
-    Sidebar,
-    DiscardEditorChanges,
-    FolderPassword,
-    EditFolderPassword,
-    SearchTunePrompt,
-    NotOptimizedForSmallFiles,
-    ResetFolderPassword,
+    // Import components dynamically
+    // Note: You can add more components as needed
+    Info: () => import("./Info.vue"),
+    Delete: () => import("./Delete.vue"),
+    MoveToTrash: () => import("@/components/prompts/MoveToTrash.vue"),
+    RestoreFromTrash: () => import("@/components/prompts/RestoreFromTrash.vue"),
+    Rename: () => import("./Rename.vue"),
+    Move: () => import("./Move.vue"),
+    Share: () => import("./Share.vue"),
+    NewFile: () => import("./NewFile.vue"),
+    NewDir: () => import("./NewDir.vue"),
+    Help: () => import("./Help.vue"),
+    Upload: () => import("./Upload.vue"),
+    ShareDelete: () => import("./ShareDelete.vue"),
+    Sidebar: () => import("../Sidebar.vue"),
+    DiscardEditorChanges: () => import("./DiscardEditorChanges.vue"),
+    FolderPassword: () => import("@/components/prompts/FolderPassword.vue"),
+    EditFolderPassword: () => import("@/components/prompts/EditFolderPassword.vue"),
+    SearchTunePrompt: () => import("@/components/prompts/SearchTunePrompt.vue"),
+    NotOptimizedForSmallFiles: () => import("@/components/prompts/NotOptimizedForSmallFiles.vue"),
+    ResetFolderPassword: () => import("@/components/prompts/ResetFolderPassword.vue"),
   },
   created() {
 
@@ -85,8 +70,18 @@ export default {
   },
   methods: {
     resetPrompts() {
-      if (this.currentPrompt.cancel) this.currentPrompt.cancel()
-      this.$store.commit("closeHover")
+      if (this.currentPrompt && this.currentPromptName && this.$refs[this.currentPromptName]) {
+        let componentInstance = this.$refs[this.currentPromptName]
+        // Check if the component instance has a cancel method
+        if (typeof componentInstance.cancel === 'function') {
+          componentInstance.cancel()
+        }
+        else {
+          console.warn("Cancel method is missing for a prompt lol")
+          this.$store.commit("closeHover")
+
+        }
+      }
     },
 
   },

@@ -1,3 +1,5 @@
+//todo yamete kudasai its too big oni chan
+
 var timezones = {
   "Africa/Abidjan": {
     u: 0,

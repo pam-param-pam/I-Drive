@@ -12,14 +12,14 @@
       <template #actions>
         <action
           :disabled="loading"
-          v-if="perms.modify"
+          v-if="perms?.modify && !isInShareContext"
           icon="mode_edit"
           :label="$t('buttons.rename')"
           @action="rename()"
         />
         <action
           :disabled="loading"
-          v-if="perms.delete"
+          v-if="perms?.delete && !isInShareContext"
           icon="delete"
           :label="$t('buttons.moveToTrash')"
           @action="moveToTrash"
@@ -27,7 +27,7 @@
         />
         <action
           :disabled="loading"
-          v-if="perms.download"
+          v-if="perms?.download"
           icon="file_download"
           :label="$t('buttons.download')"
           @action="download"
@@ -50,7 +50,9 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="file.type === 'image' &&!loadingImage && file.size > 0" :src="fileSrcUrl"></ExtendedImage>
+        <ExtendedImage v-if="file.type === 'image' && file.size > 0" :src="fileSrcUrl">
+
+        </ExtendedImage>
         <audio
           v-else-if="file.type === 'audio' && file.size > 0"
           ref="player"
@@ -133,6 +135,7 @@ import ExtendedImage from "@/components/files/ExtendedImage.vue"
 import {getFile} from "@/api/files.js"
 import {getItems} from "@/api/folder.js"
 import {sortItems} from "@/api/utils.js"
+import {getShare} from "@/api/share.js";
 
 export default {
   name: "preview",
@@ -144,9 +147,8 @@ export default {
 
   props: {
     fileId: String,
-    lockFrom: String,
     token: String,
-    isShare: Boolean,
+    folderId: String,
   },
 
   data() {
@@ -157,13 +159,17 @@ export default {
       navTimeout: null,
       hoverNav: false,
       autoPlay: true,
-      loadingImage: false,
 
     }
   },
   computed: {
     ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
     ...mapGetters(["currentPrompt"]),
+
+    isInShareContext() {
+      return this.token !== undefined
+    },
+
     fileSrcUrl() {
       if (this.file.preview_url)
         return this.file.preview_url + "?inline=True"
@@ -205,7 +211,12 @@ export default {
     },
   },
   created() {
+    if (!this.isLogged) {
+      this.$store.commit("setAnonState")
+
+    }
     this.fetchData()
+
   },
   async mounted() {
 
@@ -221,38 +232,52 @@ export default {
     async fetchData() {
 
       this.setLoading(true)
-      this.loadingImage = true
 
+      // Ensure loadingImage state is updated in the DOM
       this.file = null
-      /*
-      if (this.items) {
-        for (let i = 0; i < this.items.length; i++) {
-          if (this.items[i].id === fileId) {
-            this.file = this.items[i]
+      this.$nextTick(() => {
+        if (this.items) {
+          for (let i = 0; i < this.items.length; i++) {
+            if (this.items[i].id === this.fileId) {
+              this.file = this.items[i]
 
+            }
           }
         }
-      }
-       */
-
+      })
+      //only if file is null:
       if (!this.file) {
 
-        this.file = await getFile(this.fileId, this.lockFrom)
-        if (!this.currentFolder && ! this.isShare) {
-          const res = await getItems(this.file.parent_id, this.file.lockFrom)
+        if (this.isInShareContext) {
+          let res = await getShare(this.token, this.folderId)
+          this.shareObj = res
+          console.log(res)
 
-          this.$store.commit("setItems", res.folder.children)
-          this.$store.commit("setCurrentFolder", res.folder)
+          this.$store.commit("setItems", res.share)
+
+          console.log(this.items)
+          this.folderList = res.breadcrumbs
+
+          for (let i = 0; i < this.items.length; i++) {
+            if (this.items[i].id === this.fileId) {
+              this.file = this.items[i]
+            }
+          }
+
+        } else {
+
+          this.file = await getFile(this.fileId, this.lockFrom)
+          if (!this.currentFolder) {
+            const res = await getItems(this.file.parent_id, this.file.lockFrom)
+
+            this.$store.commit("setItems", res.folder.children)
+            this.$store.commit("setCurrentFolder", res.folder)
+          }
 
         }
-
-
       }
       this.$store.commit("addSelected", this.file)
-
       this.setLoading(false)
-      this.loadingImage = false
-      console.log("loading false")
 
     },
     moveToTrash() {
@@ -273,8 +298,14 @@ export default {
       if (this.hasPrevious) {
         let previousFile = this.files[this.currentIndex - 1]
         console.log(previousFile)
+        if (this.isInShareContext) {
+          this.$router.push({name: "SharePreview", params: {"folderId": previousFile.parent_id,"fileId":previousFile.id, "token": this.token}} )
 
-        this.$router.push({name: "Preview", params: {"fileId": previousFile.id, "lockFrom": previousFile.lockFrom}} )
+        }
+        else {
+          this.$router.push({name: "Preview", params: {"fileId": previousFile.id, "lockFrom": previousFile.lockFrom}})
+
+        }
       }
 
     },
@@ -283,7 +314,14 @@ export default {
       if (this.hasNext) {
         let nextFile = this.files[this.currentIndex + 1]
         console.log(nextFile)
-        this.$router.push({name: "Preview", params: {"fileId": nextFile.id, "lockFrom": nextFile.lockFrom}} )
+        if (this.isInShareContext) {
+          this.$router.push({name: "SharePreview", params: {"folderId": nextFile.parent_id,"fileId":nextFile.id, "token": this.token}} )
+
+        }
+        else {
+          this.$router.push({name: "Preview", params: {"fileId": nextFile.id, "lockFrom": nextFile.lockFrom}} )
+
+        }
       }
     },
     key(event) {
@@ -325,9 +363,8 @@ export default {
 
       let parent_id = this.file?.parent_id
 
-      if (this.isShare) {
-        console.log(this.token)
-        this.$router.push({path: `/share/${this.token}`})
+      if (this.isInShareContext) {
+        this.$router.push({name: "Share", params: {"token": this.token, "folderId":this.folderId}})
         return
       }
       if (parent_id) {

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "serve": "vite serve",
+    "preview": "vite preview --port 8080",
     "build": "vite build",
     "watch": "vite build --watch",
     "clean": "find ./dist -maxdepth 1 -mindepth 1 ! -name '.gitkeep' -exec rm -r {} +",

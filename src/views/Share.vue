@@ -1,10 +1,11 @@
 <template>
   <div>
+    <h4 v-if="!isShareValid" class="listing-notice">{{$t('share.shareNotFound')}}</h4>
 
-    <errors v-if="error" :errorCode="error.response.status"/>
-    <h4 v-if="!error" class="listing-notice">{{$t('share.info', {expiry: humanExpiry(expiry)})}}</h4>
 
-    <breadcrumbs v-if="!error"
+    <h4 v-if="isShareValid && !this.loading" class="listing-notice">{{$t('share.info', {expiry: humanExpiry(expiry)})}}</h4>
+
+    <breadcrumbs v-if="isShareValid && !this.loading"
                  :base="'/share/' + token"
                  :folderList="folderList"
     />
@@ -58,6 +59,7 @@ import {getShare} from "@/api/share.js"
 import Action from "@/components/header/Action.vue"
 import {createZIP} from "@/api/item.js";
 import moment from "moment/min/moment-with-locales.js";
+import store from "@/store/index.js";
 
 export default {
   name: "files",
@@ -77,9 +79,9 @@ export default {
     return {
       items: [],
       folderList: [],
-      isSearchActive: false,
       expiry: null,
       shareObj: {},
+      shareErrored: false
 
     }
   },
@@ -88,7 +90,9 @@ export default {
     ...mapState(["selected", "loading", "error", "disabledCreation", "settings"]),
     ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName", "isLogged"]),
 
-
+    isShareValid() {
+      return !this.shareErrored
+    },
     viewIcon() {
       const icons = {
         list: "view_module",
@@ -149,7 +153,8 @@ export default {
 
     else {
         if (item.type === "audio" || item.type === "video" || item.type === "image" ||  item.size >= 25 * 1024 * 1024 || item.extension === ".pdf") {
-          this.$router.push({name: "Preview", params: {"fileId":item.id, "shareObj": this.shareObj, "isShare": true}} )
+          this.$router.push({name: "SharePreview", params: {"folderId": item.parent_id,"fileId":item.id, "token": this.token}} )
+
 
         }
         else {
@@ -165,16 +170,25 @@ export default {
       this.setLoading(true)
       this.setError(null)
 
+      try {
+        let res = await getShare(this.token, this.folderId)
+        this.shareObj = res
+        this.items = res.share
+        this.folderList = res.breadcrumbs
+        this.expiry = res.expiry
+        this.$store.commit("setItems", this.items)
 
-      let res = await getShare(this.token, this.folderId)
-      this.shareObj = res
-      this.items = res.share
-      this.folderList = res.breadcrumbs
-      this.expiry = res.expiry
-      this.$store.commit("setItems", this.items)
+      } catch {
+        this.shareErrored = true
+        //todo networked bullshit with seterror and setloaidng uh
+      } finally {
+        this.setLoading(false)
+        document.title = "share"
+
+      }
 
 
-      document.title = "share"
+
 
 
 

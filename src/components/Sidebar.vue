@@ -149,7 +149,7 @@ export default {
   asyncComputed: {
     usage: {
       async get() {
-        if (this.currentFolder) {
+        if (this.currentFolder && !this.$route.path.includes("preview")) {
           let usageStats = { used: 0, total: 0, usedPercentage: 0 }
 
           let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)

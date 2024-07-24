@@ -69,7 +69,7 @@ export default {
   },
   computed: {
     ...mapGetters(["currentPrompt", "getFolderPassword", "isLoading"]),
-    ...mapState(["selected"]),
+    ...mapState(["selected", "loading"]),
   },
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword"]),
@@ -85,7 +85,7 @@ export default {
     },
     cancel() {
       if (this.currentPrompt.cancel) this.currentPrompt.cancel()
-      if (this.isLoading) store.commit("setError", { "response": { "status": 469 } })
+      if (this.loading) store.commit("setError", { "response": { "status": 469 } })
       store.commit("setLoading", false)
 
       this.closeHover()

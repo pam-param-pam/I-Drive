@@ -9,7 +9,7 @@
       </template>
       <title></title>
       <template #actions>
-        <template v-if="!isMobile">
+        <template v-if="!isMobile()">
           <action
             v-if="headerButtons.locate"
             icon="location_on"
@@ -94,7 +94,7 @@
 
     </header-bar>
 
-    <div v-if="isMobile" id="file-selection">
+    <div v-if="isMobile()" id="file-selection">
       <span v-if="selectedCount > 0">{{ selectedCount }} selected</span>
       <action
         v-if="headerButtons.locate"
@@ -154,6 +154,9 @@
       :locatedItem=locatedItem
       :isSearchActive="isSearchActive"
       @onOpen="onOpen"
+      @dragEnter="onDragEnter"
+      @dragLeave="onDragLeave"
+      @uploadInput="onUploadInput"
 
     ></Listing>
   </div>
@@ -172,7 +175,7 @@ import HeaderBar from "@/components/header/HeaderBar.vue"
 import axios from "axios"
 import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
-import {checkFilesSizes} from "@/utils/upload.js";
+import {checkFilesSizes, createNeededFolders} from "@/utils/upload.js";
 import {createZIP} from "@/api/item.js";
 
 export default {
@@ -224,9 +227,7 @@ export default {
       }
       return icons[this.settings.viewMode]
     },
-    isMobile() {
-      return window.innerWidth <= 736
-    },
+
   },
   created() {
     this.setDisabledCreation(false)
@@ -244,7 +245,28 @@ export default {
   },
   methods: {
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisabledCreation"]),
+    isMobile() {
+      return window.innerWidth <= 950
+    },
+    onDragEnter() {
+      this.dragCounter++
 
+      // When the user starts dragging an item, put every
+      // file on the listing with 50% opacity.
+      let items = document.getElementsByClassName("item")
+
+      Array.from(items).forEach((file) => {
+        file.style.opacity = 0.5
+      })
+    },
+    onDragLeave() {
+
+      this.dragCounter--
+
+      if (this.dragCounter === 0) {
+        this.resetOpacity()
+      }
+    },
     async onSearchClosed() {
       if (this.source) {
         this.source.cancel('Cancelled previous request')
@@ -273,7 +295,7 @@ export default {
 
       }
     },
-    async uploadInput(event) {
+    async onUploadInput(event) {
       this.$store.commit("closeHover")
 
       let files = event.currentTarget.files
@@ -293,6 +315,7 @@ export default {
         // await upload.createNeededFolders(files, folder)
       }
 
+      //await createNeededFolders(files, folder)
 
 
 
