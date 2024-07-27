@@ -53,7 +53,7 @@
 <script>
 import {mapMutations, mapGetters, mapState} from "vuex"
 import {filesize} from "@/utils"
-import moment from "moment/min/moment-with-locales.js";
+import moment from "moment/min/moment-with-locales.js"
 import {move} from "@/api/item.js"
 
 

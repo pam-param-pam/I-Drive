@@ -18,7 +18,7 @@
         <h2 class="message">
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
             <img
-              src="https://steamuserimages-a.akamaihd.net/ugc/2153341894595795931/DCCF2A0051A51653A133FB1A8123EA4D3696AB6C/?imw=637&imh=358&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true"
+              src="/img/youLookLonelyICanFixThat.jpg"
               :alt="$t('listing.noFiles')">
           </a>
         </h2>
@@ -501,12 +501,12 @@ export default {
         }
       }
 
-      await updateSettings({"sortingBy": by, "sortByAsc": asc})
 
       this.$store.commit("setSortingBy", by)
       this.$store.commit("setSortByAsc", asc)
       let items = sortItems(this.items)
       this.$store.commit("setItems", items)
+      await updateSettings({"sortingBy": by, "sortByAsc": asc})
 
     },
 

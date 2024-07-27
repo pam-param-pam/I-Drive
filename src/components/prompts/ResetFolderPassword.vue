@@ -60,9 +60,8 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations} from "vuex";
-import store from "@/store/index.js";
-import {resetPassword} from "@/api/folder.js";
+import {mapGetters, mapMutations} from "vuex"
+import {resetPassword} from "@/api/folder.js"
 
 export default {
   name: "resetFolderPassword",
@@ -75,7 +74,7 @@ export default {
       accountPassword: "",
       folderPassword: "",
       pinkyPromise: false,
-    };
+    }
   },
   computed: {
   ...mapGetters(["currentPrompt"]),
@@ -86,7 +85,7 @@ export default {
     async submit() {
       if (!this.pinkyPromise) {
         alert(this.$t("prompts.pinkyPromiseError"))
-        return;
+        return
       }
 
       try {
@@ -106,7 +105,7 @@ export default {
       }
     },
   },
-};
+}
 </script>
 
 <style scoped>

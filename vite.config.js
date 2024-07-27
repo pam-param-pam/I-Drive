@@ -1,18 +1,12 @@
 import { fileURLToPath, URL } from "node:url";
 import path from "node:path";
 import { defineConfig } from "vite";
-import legacy from "@vitejs/plugin-legacy";
 import vue2 from "@vitejs/plugin-vue2";
 import { compression } from "vite-plugin-compression2";
 import pluginRewriteAll from "vite-plugin-rewrite-all";
-
 const plugins = [
   vue2(),
-  legacy({
-    targets: ["ie >= 11"],
-    additionalLegacyPolyfills: ["regenerator-runtime/runtime"],
-  }),
-  compression({ include: /\.js$/i, deleteOriginalAssets: true }),
+  compression({ include: /\.js$/i, deleteOriginalAssets: false }),
   pluginRewriteAll(), // fixes 404 error with paths containing dot in dev server
 ];
 
@@ -44,27 +38,28 @@ export default defineConfig(({ command }) => {
     return {
       plugins,
       resolve,
-      base: "",
-      build: {
-        rollupOptions: {
-          input: {
-            index: fileURLToPath(
-              new URL(`./public/index.html`, import.meta.url)
-            ),
-          },
-        },
-      },
-      experimental: {
-        renderBuiltUrl(filename, { hostType }) {
-          if (hostType === "js") {
-            return { runtime: `window.__prependStaticUrl("${filename}")` };
-          } else if (hostType === "html") {
-            return `[{[ .StaticURL ]}]/${filename}`;
-          } else {
-            return { relative: true };
-          }
-        },
-      },
+      base: "/", //its vevy important that this is "/" and not "" lol ((learned the hard way)
+      // build: {
+      //   rollupOptions: {
+      //     // input: {
+      //     //   index: fileURLToPath(
+      //     //     new URL(`./public/index.html`, import.meta.url)
+      //     //   ),
+      //     // },
+      //   },
+      // },
+      // experimental: {
+      //   renderBuiltUrl(filename, { hostType }) {
+      //     console.log(filename)
+      //     if (hostType === "js") {
+      //       return { runtime: `window.__prependStaticUrl("${filename}")` };
+      //     } else if (hostType === "html") {
+      //       return `${filename}`;
+      //     } else {
+      //       return { relative: true };
+      //     }
+      //   },
+      // },
     };
   }
 });

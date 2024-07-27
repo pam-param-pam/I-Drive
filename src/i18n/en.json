@@ -32,6 +32,8 @@
     "info": "Items in trash will be deleted after 30 days!"
   },
   "search": {
+    "close": "close",
+    "tuneSearch": "Tune search",
     "images": "Images",
     "music": "Music",
     "pdf": "PDF",
@@ -42,6 +44,7 @@
     "video": "Video"
   },
   "buttons": {
+    "copyToClipboard": "Copy to clipboard",
     "reset": "Reset password",
     "forgotFolderPassword": "Forgot password?",
     "unlock": "Unlock",
@@ -214,7 +217,7 @@
     "exposureTime": "Exposure time",
     "aperture": "Aperture",
     "focalLength": "Focal length",
-    "enterFolderPassword": "Enter password to unlock this folder.",
+    "enterFolderPassword": "Enter password to unlock ",
     "unlockFolder": "Unlock Folder",
     "enterOldFolderPassword": "Enter old password",
     "enterNewFolderPassword": "Enter new password",
@@ -257,7 +260,9 @@
   "uploadFile": {
     "failed": "Failed, retrying...",
     "success": "Uploaded",
-    "paused": "Paused"
+    "paused": "Paused",
+    "creating": "Creating...",
+    "pausing": "Pausing..."
   },
   "listing": {
     "noFiles": "You look lonely, I can fix that~"

@@ -135,7 +135,7 @@ import ExtendedImage from "@/components/files/ExtendedImage.vue"
 import {getFile} from "@/api/files.js"
 import {getItems} from "@/api/folder.js"
 import {sortItems} from "@/api/utils.js"
-import {getShare} from "@/api/share.js";
+import {getShare} from "@/api/share.js"
 
 export default {
   name: "preview",

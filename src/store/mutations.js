@@ -26,11 +26,17 @@ const mutations = {
   closeHover: (state) => {
     state.prompts.pop()
   },
+  closeHovers: (state) => {
+    state.prompts = []
+  },
   toggleShell: (state) => {
     state.show = null
     state.showShell = !state.showShell
   },
   showHover: (state, value) => {
+    console.log("showHover")
+    console.log(value)
+
     if (typeof value !== "object") {
       state.prompts.push({
         prompt: value,

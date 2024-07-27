@@ -344,7 +344,7 @@ body.rtl .card .card-title>*:first-child {
   z-index: 9999;
   visibility: hidden;
   opacity: 0;
-  animation: .1s show forwards;
+  animation: 0.15s show forwards;
 }
 
 

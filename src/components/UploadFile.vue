@@ -58,8 +58,8 @@
 </template>
 
 <script>
-import ProgressBar from "@/components/ProgressBar.vue";
-import {mapMutations} from "vuex";
+import ProgressBar from "@/components/ProgressBar.vue"
+import {mapMutations} from "vuex"
 
 export default {
   components: { ProgressBar },
@@ -70,7 +70,7 @@ export default {
       isShaking: false,
 
 
-    };
+    }
   },
   computed: {
     ...mapMutations([])
@@ -84,13 +84,13 @@ export default {
 
     },
     startShake() {
-      this.isShaking = true;
+      this.isShaking = true
     },
     stopShake() {
-      this.isShaking = false;
+      this.isShaking = false
     },
   },
-};
+}
 </script>
 
 <style scoped lang="scss">

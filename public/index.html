@@ -65,6 +65,8 @@
       window.FileBrowser = [{[ .Json ]}];
       // Global function to prepend static url
       window.__prependStaticUrl = (url) => {
+        // //todo
+        // return url
         return `${window.FileBrowser.StaticURL}/${url.replace(/^\/+/, "")}`;
       };
       var dynamicManifest = {
@@ -82,7 +84,8 @@
             type: "image/png",
           },
         ],
-        start_url: window.location.origin + window.FileBrowser.BaseURL,
+        //start_url: window.location.origin + window.FileBrowser.BaseURL,
+        start_url: window.location.origin,
         display: "standalone",
         background_color: "#ffffff",
         theme_color: window.FileBrowser.Color || "#455a64",

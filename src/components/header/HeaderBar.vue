@@ -36,7 +36,7 @@ import { logoURL } from "@/utils/constants"
 
 import Action from "@/components/header/Action.vue"
 import {mapGetters, mapState} from "vuex"
-import {updateSettings} from "@/api/user.js";
+import {updateSettings} from "@/api/user.js"
 
 export default {
   name: "header-bar",

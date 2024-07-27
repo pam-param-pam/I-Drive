@@ -14,13 +14,10 @@
             <th></th>
           </tr>
 
-          <tr v-for="link in links" :key="link.id">
-            <td>{{ link.hash }}</td>
+          <tr v-for="(link, index) in links" :key="link.id">
+            <td>{{ index + 1 }}</td>
             <td>
-              <template v-if="link.expire !== 0">{{
-                humanTime(link.expire)
-              }}</template>
-              <template v-else>{{ $t("permanent") }}</template>
+              <template>{{ humanTime(link.expire) }}</template>
             </td>
             <td class="small">
               <button
@@ -30,16 +27,6 @@
                 :title="$t('buttons.copyToClipboard')"
               >
                 <i class="material-icons">content_paste</i>
-              </button>
-            </td>
-            <td class="small" v-if="hasDownloadLink()">
-              <button
-                class="action copy-clipboard"
-                :data-clipboard-text="buildDownloadLink(link)"
-                :aria-label="$t('buttons.copyDownloadLinkToClipboard')"
-                :title="$t('buttons.copyDownloadLinkToClipboard')"
-              >
-                <i class="material-icons">content_paste_go</i>
               </button>
             </td>
             <td class="small">
@@ -125,9 +112,9 @@
 
 <script>
 import { mapState, mapGetters } from "vuex"
-import { share as api} from "@/api"
-import moment from "moment/min/moment-with-locales.js";
+import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
+import {createShare, getAllShares} from "@/api/share.js"
 
 export default {
   name: "share",
@@ -159,7 +146,7 @@ export default {
   },
   async beforeMount() {
 
-    let links = await api.getAllShares()
+    let links = await getAllShares()
 
 
     links = links.filter(item => item.resource_id === this.selected[0].id)
@@ -184,7 +171,7 @@ export default {
   methods: {
     submit: async function () {
 
-      let res = await api.createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
+      let res = await createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
 
       this.links.push(res)
       this.sort()
@@ -215,13 +202,9 @@ export default {
       return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
     },
     buildLink(share) {
-      return " to do lol"
-    },
-    hasDownloadLink() {
-      return true
-    },
-    buildDownloadLink(share) {
-      return "http://127.0.0.1:9000/stream/" + share.resource_id
+      let { protocol, host } = window.location
+      let base = `${protocol}//${host}`
+      return `${base}/share/${share.token}`
     },
     sort() {
       this.links = this.links.sort((a, b) => {

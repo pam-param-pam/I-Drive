@@ -2,8 +2,9 @@ import axios from 'axios'
 import {baseURL} from "@/utils/constants.js"
 import vue from "@/utils/vue.js"
 import store from "@/store/index.js"
-import i18n from "@/i18n/index.js";
-import {logout} from "@/utils/auth.js";
+import i18n from "@/i18n/index.js"
+import {logout} from "@/utils/auth.js"
+
 
 
 export const backend_instance = axios.create({
@@ -65,9 +66,10 @@ backend_instance.interceptors.request.use(
   function(config) {
     let token = localStorage.getItem("token")
     if (token) {
-      // Modify headers here
+
       config.headers['Authorization'] = `Token ${token}`
     }
+
     return config
 
 
@@ -90,76 +92,97 @@ backend_instance.interceptors.response.use(
     }
     let { config, response } = error
 
-
-
-
-    // // Check if the error is 429 Too Many Requests error
-    // if (response && response.status === 429) {
-    //   let retryAfter = response.headers['retry-after']
-    //   config.__retryCount = config.__retryCount || 0 // Initialize retry count if not already set
-    //
-    //   // If the retry count is less than 3
-    //   if (config.__retryCount < 3) {
-    //     config.__retryCount += 1 // Increment the retry count
-    //
-    //     if (retryAfter) {
-    //       let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
-    //       console.log(`Received 429, retrying after ${waitTime} milliseconds. Attempt ${config.__retryCount}`)
-    //
-    //       // Wait for the specified time before retrying the request
-    //       return new Promise(function(resolve) {
-    //         setTimeout(function() {
-    //           resolve(backend_instance(config)) // Retry the request
-    //         }, waitTime)
-    //       })
-    //     }
-    //   }
-    // }
-
-    // Check if the error is 429 Too Many Requests error
+    // Check if the error is 469 INCORRECT OR MISSING FOLDER PASSWORD
     if (response && response.status === 469) {
       console.log(`Received 469`)
-      let lockFrom = response.data.lockFrom
-      if (lockFrom) {
+      let requiredFolderPasswords = response.data.requiredFolderPasswords
 
-        let password = store.getters.getFolderPassword(response.data.lockFrom)
-        if (password) {
-          config.headers = {
-            ...config.headers,
-            'X-folder-password': password, // Add the folder password to the headers
+      let passwordExists = []
+      let passwordMissing = []
+
+      function retry469Request() {
+        return new Promise((resolve, reject) => {
+          // Ensure config.data is an object and not a parsed JSON into a string
+          if (typeof config.data === 'string') {
+            config.data = JSON.parse(config.data)
           }
-          return new Promise(function(resolve) {
-            resolve(backend_instance(config)) // Retry the request
+
+          passwordMissing.forEach(folder => {
+            let password = store.getters.getFolderPassword(folder.id)
+            if (password) {
+              passwordExists.push({ id: folder.id, password: password })
+            }
           })
+
+          console.log(config.method)
+
+          if (config.method === 'get') {
+            config.headers = {
+              ...config.headers,
+              'X-folder-password': passwordExists[0]?.password || '', // Add the folder password to the headers
+            }
+
+            // Retry the request
+            backend_instance(config)
+              .then(resolve) // Resolve the outer promise with the response
+              .catch(reject) // Reject the outer promise with the error
+          } else {
+            config.data.resourcePasswords = {}
+            passwordExists.forEach(folder => {
+              let folder_id = folder.id
+              config.data.resourcePasswords[folder_id] = folder.password
+            })
+
+            // Retry the request
+            backend_instance(config)
+              .then(resolve) // Resolve the outer promise with the response
+              .catch(reject) // Reject the outer promise with the error
+          }
+        })
+      }
+
+      if (requiredFolderPasswords) {
+
+        // Iterate through requiredFolderPasswords
+        response.data.requiredFolderPasswords.forEach(folder => {
+          let password = store.getters.getFolderPassword(folder.id)
+          if (password) {
+            // Password exists in cache
+            passwordExists.push({ id: folder.id, password: password })
+          } else {
+            // Password does not exist in cache
+            passwordMissing.push({ id: folder.id, name: folder.name })
+          }
+        })
+        console.log("passwordExists")
+        console.log(passwordExists)
+        console.log("passwordMissing")
+        console.log(passwordMissing)
+
+        if (passwordMissing.length > 0) {
+
+          return new Promise((resolve, reject) => {
+            store.commit("showHover", {
+              prompt: "FolderPassword",
+              props: {requiredFolderPasswords: response.data.requiredFolderPasswords},
+
+              confirm: () => {
+                console.log("confirm")
+
+                retry469Request(config)
+                  .then(resolve)
+                  .catch(reject)
+              },
+            })
+          })
+
+        }
+        else {
+
+          return retry469Request()
         }
 
-        return new Promise((resolve, reject) => {
 
-          store.commit("showHover", {
-            prompt: "FolderPassword",
-            props: {folderId: response.data.resourceId, lockFrom: lockFrom},
-            cancel: () => {
-
-              vue.$toast.error(i18n.t("toasts.passwordIsRequired"))
-
-
-            },
-            confirm: () => {
-              console.log("confirm")
-              let password = store.getters.getFolderPassword(response.data.lockFrom)
-
-              config.headers = {
-                ...config.headers,
-                'X-folder-password': password, // Add the folder password to the headers
-              }
-
-              // Retry the request
-              backend_instance(config)
-                .then(resolve)  // Resolve the outer promise with the response
-                .catch(reject) // Reject the outer promise with the error
-            },
-          })
-        })
       }
     }
     let errorMessage = response.data.error
@@ -177,9 +200,9 @@ backend_instance.interceptors.response.use(
       position: "bottom-right",
     })
     //we want to ignore bad requests and wrong passwords
-    if (response.status !== 400 && response.status !== 469) {
-      //store.commit("setError", error)
-      //store.commit("setLoading", false)
+    if (response.status === 404) {
+      store.commit("setError", error)
+      store.commit("setLoading", false)
 
     }
 

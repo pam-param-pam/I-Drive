@@ -38,8 +38,7 @@
 
 <script>
 import { mapGetters } from "vuex"
-import { files as api } from "@/api"
-import url from "@/utils/url"
+
 
 export default {
   name: "new-file",
@@ -53,27 +52,7 @@ export default {
   },
   methods: {
     submit: async function (event) {
-      event.preventDefault()
-      if (this.new === "") return
 
-      // Build the path of the new directory.
-      let uri = this.isFiles ? this.$route.path + "/" : "/"
-
-      if (!this.isListing) {
-        uri = url.removeLastDir(uri) + "/"
-      }
-
-      uri += encodeURIComponent(this.name)
-      uri = uri.replace("//", "/")
-
-      try {
-        await api.post(uri)
-        this.$router.push({ path: uri })
-      } catch (e) {
-        this.$showError(e)
-      }
-
-      this.$store.commit("closeHover")
     },
   },
 }

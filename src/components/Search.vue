@@ -8,10 +8,19 @@
         v-model="query"
         ref="input"
         :aria-label="$t('search.search')"
+        :title="$t('search.search')"
         :placeholder="$t('search.search')"
       />
-      <i v-if="disabledCreation" class="material-icons" @click="exit">close</i>
-      <i class="material-icons" @click="onTuneClick">tune</i>
+      <i v-if="disabledCreation" class="material-icons"
+         @click="exit"
+         :aria-label="$t('search.close')"
+         :title="$t('search.close')"
+      >close</i>
+      <i class="material-icons"
+         @click="onTuneClick"
+         :aria-label="$t('search.tuneSearch')"
+         :title="$t('search.tuneSearch')"
+        >tune</i>
     </div>
   </div>
 </template>

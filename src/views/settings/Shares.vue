@@ -59,11 +59,11 @@
 </template>
 
 <script>
-import { share as api } from "@/api"
 import { mapState, mapMutations } from "vuex"
-import moment from "moment/min/moment-with-locales.js";
+import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
 import Errors from "@/views/Errors.vue"
+import {getAllShares, removeShare} from "@/api/share.js"
 
 export default {
   name: "shares",
@@ -83,7 +83,7 @@ export default {
 
     this.setLoading(true)
 
-    let links = await api.getAllShares()
+    let links = await getAllShares()
 
     this.shares = links
     this.setLoading(false)
@@ -110,7 +110,7 @@ export default {
         confirm: () => {
           this.$store.commit("closeHover")
 
-          api.removeShare({"token": share.token})
+          removeShare({"token": share.token})
           this.shares = this.shares.filter((item) => item.token !== share.token)
           this.$toast.success(this.$t("toasts.shareDeleted"))
 

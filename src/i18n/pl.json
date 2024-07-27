@@ -31,16 +31,15 @@
     "sortByExtension": "Sortuj wg. typu pliku"
   },
   "search": {
-    "images": "Zdjęcia",
-    "music": "Muzyka",
-    "pdf": "PDF",
+    "exit": "zamknij",
+    "tuneSearch": "Dostosuj szukanie",
     "pressToSearch": "Wciśnij enter, aby wyszukać...",
     "search": "Szukaj...",
     "typeToSearch": "Zacznij pisać, aby wyszukać...",
-    "types": "Typy",
-    "video": "Wideo"
+    "types": "Typy"
   },
   "buttons": {
+    "copyToClipboard": "Skopiuj do schowka",
     "submit": "Zatwierdź",
     "more": "Więcej",
     "unlock": "Odblokuj",
@@ -249,7 +248,9 @@
   "uploadFile": {
     "failed": "Wystąpił bląd, próbowanie ponownie....",
     "success": "Plik zapisany",
-    "paused": "Zatrzymano"
+    "paused": "Zatrzymano",
+    "creating": "Tworzenie...",
+    "pausing": "Zatrzymywanie..."
 
   },
   "share": {

@@ -57,9 +57,8 @@ import Listing from "@/views/files/Listing.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import {getShare} from "@/api/share.js"
 import Action from "@/components/header/Action.vue"
-import {createZIP} from "@/api/item.js";
-import moment from "moment/min/moment-with-locales.js";
-import store from "@/store/index.js";
+import {createZIP} from "@/api/item.js"
+import moment from "moment/min/moment-with-locales.js"
 
 export default {
   name: "files",
@@ -136,7 +135,7 @@ export default {
 
       }
       else {
-        const ids = this.selected.map(obj => obj.id);
+        const ids = this.selected.map(obj => obj.id)
         let res = await createZIP({"ids": ids})
         window.open(res.download_url, '_blank')
 

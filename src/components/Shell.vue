@@ -46,9 +46,9 @@
 
 <script>
 import { mapMutations, mapState, mapGetters } from "vuex"
-import { commands } from "@/api"
 import { throttle } from "lodash"
 import { theme } from "@/utils/constants"
+import command from "@/api/commands.js"
 
 export default {
   name: "shell",
@@ -179,7 +179,7 @@ export default {
       this.historyPos = this.history.length
       this.content.push(results)
 
-      commands(
+      command(
         this.path,
         cmd,
         (event) => {

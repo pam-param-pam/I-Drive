@@ -1,5 +1,5 @@
 import {backend_instance} from "@/api/networker.js"
-import store from "@/store/index.js";
+import store from "@/store/index.js"
 
 export async function getItems(folder_id, lockFrom) {
     let url = "/api/folder/" + folder_id

@@ -300,13 +300,13 @@ body.rtl #listing {
 }
 
 .listing-notice {
-  background-color: #cee0fd; /* Light grey background to match the overall theme */
-  color: #3f3f3f; /* Darker text color for contrast */
-  font-size: 16px; /* Larger font size */
-  font-weight: bold; /* Bold text */
-  padding: 10px; /* Padding around the text */
-  border-radius: 5px; /* Rounded corners */
-  margin: 15px 0; /* Margin to separate it from other elements */
-  text-align: center; /* Center align the text */
-  border: 1px solid #d3dce6; /* Subtle border to define the notice area */
+  background-color: #cee0fd;
+  color: #3f3f3f;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 15px 0;
+  text-align: center;
+  border: 1px solid #d3dce6;
 }

@@ -80,7 +80,7 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapState } from "vuex";
+import { mapGetters, mapMutations, mapState } from "vuex"
 
 export default {
   name: "filterFiles",
@@ -92,7 +92,7 @@ export default {
       includeFolders: null,
       showLimit: null,
       fileTypes: ["application", "audio", "document", "image", "video", "text"],
-    };
+    }
   },
   computed: {
     ...mapState(["searchFilters"]),
@@ -118,7 +118,7 @@ export default {
         files: this.includeFiles,
         folders: this.includeFolders,
         showLimit: this.showLimit,
-      };
+      }
       if (this.fileType !== null) searchFilterDict.type = this.fileType
       if (this.extension !== null) searchFilterDict.extension = this.extension
 
@@ -132,7 +132,7 @@ export default {
 
     },
   },
-};
+}
 </script>
 
 <style scoped>

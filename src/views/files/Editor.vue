@@ -49,7 +49,7 @@ import {getFile} from "@/api/files.js"
 import {fetchURL} from "@/api/utils.js"
 import {theme} from "@/utils/constants.js"
 import {breadcrumbs} from "@/api/item.js"
-import {getShare} from "@/api/share.js";
+import {getShare} from "@/api/share.js"
 
 export default {
   name: "editor",

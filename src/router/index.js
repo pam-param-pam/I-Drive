@@ -12,7 +12,7 @@ Vue.use(Router)
 
 
 const router = new Router({
-  base: import.meta.env.PROD ? baseURL : "",
+  base: "",
   mode: "history",
   routes: [
     {

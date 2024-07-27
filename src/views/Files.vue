@@ -173,10 +173,10 @@ import {name} from "@/utils/constants.js"
 import {search} from "@/api/search.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import axios from "axios"
-import Action from "@/components/header/Action.vue";
-import Search from "@/components/Search.vue";
-import {checkFilesSizes, createNeededFolders} from "@/utils/upload.js";
-import {createZIP} from "@/api/item.js";
+import Action from "@/components/header/Action.vue"
+import Search from "@/components/Search.vue"
+import {checkFilesSizes} from "@/utils/upload.js"
+import {createZIP} from "@/api/item.js"
 
 export default {
   name: "files",
@@ -285,7 +285,7 @@ export default {
 
       }
       else {
-        const ids = this.selected.map(obj => obj.id);
+        const ids = this.selected.map(obj => obj.id)
         let res = await createZIP({"ids": ids})
         window.open(res.download_url, '_blank')
 
@@ -376,6 +376,7 @@ export default {
 
       let res = await getItems(this.folderId, this.lockFrom)
 
+      console.log("GET ITEMS")
       this.items = res.folder.children
       this.folderList = res.breadcrumbs
       this.$store.commit("setItems", this.items)
@@ -390,7 +391,7 @@ export default {
 
     },
     onSwitchView() {
-      this.$refs.listing.switchView();
+      this.$refs.listing.switchView()
     },
     onOpen(item) {
       if (item.isDir) {
@@ -399,7 +400,8 @@ export default {
           if (!password) {
             this.$store.commit("showHover", {
               prompt: "FolderPassword",
-              props: {folderId: item.id, lockFrom: item.lockFrom},
+              //todo name should be lockfrom_name not just item_name
+              props: {requiredFolderPasswords: [{'id': item.lockFrom, "name": item.name}]},
               confirm: () => {
                 this.$router.push({name: "Files", params: {"folderId": item.id, "lockFrom": item.lockFrom}})
               },

@@ -3,7 +3,6 @@
 @import "./_buttons.css";
 @import "./_inputs.css";
 @import "./_shell.css";
-@import "./_share.css";
 @import "./fonts.css";
 @import "./base.css";
 @import "./header.css";
@@ -365,16 +364,6 @@ body.rtl .breadcrumbs .chevron {
   100% {
     transform: rotate(360deg);
   }
-}
-
-/* * * * * * * * * * * * * * * *
- *         SETTINGS TUS        *
- * * * * * * * * * * * * * * * */
-
-.tusConditionalSettings input:disabled {
-  background-color: #ddd;
-  color: #999;
-  cursor: not-allowed;
 }
 
 /* * * * * * * * * * * * * * * *

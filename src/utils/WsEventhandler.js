@@ -1,6 +1,6 @@
 import vue from "@/utils/vue.js"
 import store from "@/store"
-import i18n from "@/i18n/index.js";
+import i18n from "@/i18n/index.js"
 
 export default function onEvent(message) {
   let currentFolder = store.state.currentFolder

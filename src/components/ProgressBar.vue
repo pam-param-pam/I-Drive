@@ -10,7 +10,7 @@
 <script>
 export default {
   props: ["progress"],
-};
+}
 </script>
 
 <style scoped lang="scss">

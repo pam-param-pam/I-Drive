@@ -5,10 +5,6 @@
       </div>
 
     <div class="card-content">
-      <p v-if="selected.length > 1">
-        {{ $t("prompts.itemsSelected", { count: selected.length }) }}
-      </p>
-
       <p class="break-word" v-if="name">
         <strong>{{ $t("prompts.displayName") }}:</strong> {{ name }}
       </p>
@@ -114,7 +110,7 @@
 <script>
 import { mapState, mapGetters } from "vuex"
 import { filesize } from "@/utils"
-import moment from "moment/min/moment-with-locales.js";
+import moment from "moment/min/moment-with-locales.js"
 
 
 export default {
@@ -271,11 +267,11 @@ export default {
     },
     owner() {
       if (this.selectedCount === 0) {
-          return this.currentFolder.owner?.name
+          return this.currentFolder.owner
 
       }
       else if (this.selectedCount === 1) {
-          return this.selected[0].owner?.name
+          return this.selected[0].owner
       }
       return null
     },

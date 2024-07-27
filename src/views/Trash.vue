@@ -58,9 +58,9 @@ import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import Listing from "@/views/files/Listing.vue"
 import {getTrash} from "@/api/user.js"
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import Action from "@/components/header/Action.vue";
-import Search from "@/components/Search.vue";
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import Action from "@/components/header/Action.vue"
+import Search from "@/components/Search.vue"
 
 export default {
   name: "trash",
@@ -134,7 +134,7 @@ export default {
     },
 
     onSwitchView() {
-      this.$refs.listing.switchView();
+      this.$refs.listing.switchView()
     },
     onOpen(item) {
       this.resetSelected()

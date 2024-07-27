@@ -1,5 +1,5 @@
 import {backend_instance} from "@/api/networker.js"
-import store from "@/store/index.js";
+import store from "@/store/index.js"
 
 export async function getFile(file_id, lockFrom) {
   let url = `/api/file/${file_id}`

@@ -6,7 +6,8 @@
 
     <div class="card-content">
       <p>
-        {{ $t("prompts.enterFolderPassword") }}
+        {{ $t("prompts.enterFolderPassword") }} <code>{{ folder.name }}</code>
+
       </p>
       <input
         class="input input--block"
@@ -51,10 +52,8 @@
 <script>
 import { mapGetters, mapMutations, mapState } from "vuex"
 import { isPasswordCorrect } from "@/api/item.js"
-import store from "@/store/index.js";
-import vue from "@/utils/vue.js";
-import i18n from "@/i18n/index.js";
-import {backend_instance} from "@/api/networker.js";
+import store from "@/store/index.js"
+import i18n from "@/i18n/index.js"
 
 export default {
   name: "folder-password",
@@ -64,31 +63,75 @@ export default {
     }
   },
   props: {
-    folderId: String,
-    lockFrom: String,
+    requiredFolderPasswords: [],
+  },
+  created() {
+    console.log("requiredFolderPasswords")
+
+    console.log(this.requiredFolderPasswords)
+  },
+  beforeDestroy() {
+    console.log("aaaaaaaa")
+
+    console.log(this.requiredFolderPasswords)
   },
   computed: {
-    ...mapGetters(["currentPrompt", "getFolderPassword", "isLoading"]),
+    ...mapGetters(["currentPrompt", "getFolderPassword"]),
     ...mapState(["selected", "loading"]),
+    folder() {
+      let folder = this.requiredFolderPasswords[0]
+      console.log("folder")
+      console.log(folder)
+      return folder
+    }
   },
   methods: {
-    ...mapMutations(["closeHover", "setFolderPassword"]),
+    ...mapMutations(["closeHover", "setFolderPassword", "closeHovers"]),
     async submit() {
-      if (await isPasswordCorrect(this.folderId, this.password) === true) {
-        this.setFolderPassword({ "folderId": this.lockFrom, "password": this.password })
-        this.currentPrompt.confirm()
-        this.closeHover()
+      if (await isPasswordCorrect(this.folder.id, this.password) === true) {
+        this.setFolderPassword({ "folderId": this.folder.id, "password": this.password })
+
+        this.finishAndShowAnotherPrompt()
+
       } else {
         let message = this.$t('toasts.folderPasswordIncorrect')
         this.$toast.error(message)
       }
     },
     cancel() {
-      if (this.currentPrompt.cancel) this.currentPrompt.cancel()
       if (this.loading) store.commit("setError", { "response": { "status": 469 } })
       store.commit("setLoading", false)
+      this.$toast.error(i18n.t("toasts.passwordIsRequired"))
 
       this.closeHover()
+    },
+    finishAndShowAnotherPrompt() {
+      console.log("finishAndShowAnotherPrompt")
+
+      let requiredFolderPasswordsCopy = [...this.requiredFolderPasswords]
+      requiredFolderPasswordsCopy.shift()
+      if (requiredFolderPasswordsCopy.length === 0) {
+        if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+        this.closeHovers()
+
+      }
+      else {
+        console.log("showHovershowHovershowHover")
+        console.log(requiredFolderPasswordsCopy)
+        let confirm = this.currentPrompt.confirm
+        this.closeHover()
+        this.$nextTick(() => {
+
+          store.commit("showHover", {
+            prompt: "FolderPassword",
+            props: {requiredFolderPasswords: requiredFolderPasswordsCopy},
+
+            confirm: confirm
+          })
+          console.log("closeHovercloseHovercloseHover")
+        })
+
+      }
     },
     forgotPassword() {
       store.commit("showHover", {
@@ -96,8 +139,7 @@ export default {
         props: {folderId: this.folderId, lockFrom: this.lockFrom},
 
         confirm: () => {
-          this.closeHover()
-          this.currentPrompt.confirm()
+          this.finishAndShowAnotherPrompt()
 
         },
       })
