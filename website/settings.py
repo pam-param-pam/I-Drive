@@ -69,6 +69,7 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8080',
     'http://127.0.0.1:5173',
+    'http://localhost:63342',
     'http://172.24.240.1:5173',
     'http://172.23.16.1:5173',
     'http://192.168.56.1:5173',
@@ -200,7 +201,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/min',
-        'user': '100/m',
+        'user': '10000/m',
         'media': '1000/min',
         'folder_password': '20/min',
         'password_change': '10/min',

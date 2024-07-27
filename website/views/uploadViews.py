@@ -5,12 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from website.models import Folder, File, Fragment, UserSettings, Thumbnail
 from website.utilities.Discord import discord
-from website.utilities.OPCodes import EventCode
 from website.utilities.Permissions import CreatePerms
-from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache
-from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError
+from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
+from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError, MissingResourcePasswordError
 from website.utilities.decorators import handle_common_errors
-from website.utilities.other import send_event, create_file_dict
+from website.utilities.other import send_event, create_file_dict, check_folder_password
 from website.utilities.throttle import MyUserRateThrottle
 
 
@@ -88,7 +87,7 @@ def create_file(request):
         if file_obj.owner != request.user:
             raise ResourcePermissionError()
         if file_obj.ready:
-            raise BadRequestError(f"You cannot further modify a 'ready' file!")
+            raise BadRequestError("You cannot further modify a 'ready' file!")
 
         fragment_obj = Fragment(
             sequence=fragment_sequence,
@@ -115,14 +114,14 @@ def create_file(request):
         if file_obj.owner != request.user:
             raise ResourcePermissionError()
         if not file_obj.ready:
-            raise BadRequestError(f"You cannot edit a 'not ready' file!")
+            raise BadRequestError("You cannot edit a 'not ready' file!")
 
         fragments = Fragment.objects.filter(file=file_obj)
 
         if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
-            raise BadRequestError(f"You cannot edit a file larger than 25Mb!")
+            raise BadRequestError("You cannot edit a file larger than 25Mb!")
         if len(fragments) > 1:
-            raise BadRequestError(f"Fragments > 1")
+            raise BadRequestError("Fragments > 1")
 
         fragment_size = request.data['fragment_size']
         message_id = request.data['message_id']
@@ -149,6 +148,7 @@ def create_file(request):
 
                 discord.remove_message(old_message_id)
             old_message_id = old_fragment.message_id
+
             old_fragment.delete()
             # important invalidate caches!
             cache.delete(old_message_id)
@@ -183,6 +183,12 @@ def create_preview(request):
     key = request.data['key']
 
     file_obj = File.objects.get(id=file_id)
+
+    if file_obj.owner != request.user:
+        raise ResourcePermissionError()
+
+    check_folder_password(request, file_obj)
+
     if file_obj.thumbnail:
         raise ThumbnailAlreadyExistsError()
 

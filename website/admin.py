@@ -1,13 +1,19 @@
-import requests
+from typing import Union, List
+
 from django.contrib import admin
+from django.db.models import QuerySet
+from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP
 from .tasks import smart_delete
-from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS
+from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, GET_BASE_URL, API_BASE_URL
 from .utilities.other import sign_file_id_with_expiry
 
+
+admin.site.register(UserSettings)
+admin.site.register(UserPerms)
 
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
@@ -23,20 +29,19 @@ class FragmentAdmin(admin.ModelAdmin):
         return False
     """
 
-    def owner(self, obj):
+    def owner(self, obj: Fragment):
         return obj.file.owner
 
-    def folder(self, obj):
+    def folder(self, obj: Fragment):
         return f"{obj.file.parent.name}({obj.file.parent.id})"
 
-    def readable_size(self, obj):
+    def readable_size(self, obj: Fragment):
         return filesizeformat(obj.size)
 
-    def file_name(self, obj):
-        a = obj.file.name
-
-        if len(a) < 100:
-            return a
+    def file_name(self, obj: Fragment):
+        file_name = obj.file.name
+        if len(file_name) < 100:
+            return file_name
         return "*File name to long to display*"
 
 
@@ -48,14 +53,14 @@ class FolderAdmin(admin.ModelAdmin):
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model']
     search_fields = ["id"]
 
-    def delete_queryset(self, request, queryset):
+    def delete_queryset(self, request, queryset: QuerySet[Folder]):
         ids = []
         for real_obj in queryset:
             ids.append(real_obj.id)
 
         smart_delete.delay(request.user.id, request.request_id, ids)
 
-    def delete_model(self, request, obj):
+    def delete_model(self, request, obj: Union[Folder, List[Folder]]):
         if isinstance(obj, File):
             smart_delete.delay(request.user.id, request.request_id, [obj.id])
 
@@ -67,22 +72,23 @@ class FolderAdmin(admin.ModelAdmin):
                 ids.append(real_obj.id)
             smart_delete.delay(request.user.id, request.request_id, ids)
 
-    def force_delete_model(self, request, queryset):
+    def force_delete_model(self, request, queryset: QuerySet[Folder]):
         for real_obj in queryset:
+
             real_obj.force_delete()
 
-    def move_to_trash(self, request, queryset):
+    def move_to_trash(self, request, queryset: QuerySet[Folder]):
         # TODO
         for folder in queryset:
             folder.moveToTrash()
 
-    def restore_from_trash(self, request, queryset):
+    def restore_from_trash(self, request, queryset: QuerySet[Folder]):
         # TODO
 
         for folder in queryset:
             folder.restoreFromTrash()
 
-    def save_model(self, request, obj, form, change):
+    def save_model(self, request, obj: Folder, form: ModelForm, change: bool):
         cache.delete(obj.id)
         cache.delete(obj.parent.id)
         super().save_model(request, obj, form, change)
@@ -101,15 +107,15 @@ class FileAdmin(admin.ModelAdmin):
         signed_file_id = sign_file_id_with_expiry(obj.id)
 
         if obj.extension in RAW_IMAGE_EXTENSIONS:
-            url = f"https://api.pamparampam.dev/api/file/preview/{signed_file_id}"
+            url = f"{API_BASE_URL}/api/file/preview/{signed_file_id}"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "image":
-            url = f"https://get.pamparampam.dev/stream/{signed_file_id}"
+            url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "video":
-            url = f"https://get.pamparampam.dev/stream/{signed_file_id}"
+            url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html(
                 '<video controls style="width: 350px; height: auto;">'
                 '<source src="{}" type="video/mp4">'
@@ -117,18 +123,19 @@ class FileAdmin(admin.ModelAdmin):
                 url
             )
         else:
+            url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
+            return format_html(f'<a href="{url}" target="_blank">{url}</a>')
 
-            return "-"
     image_tag.short_description = 'PREVIEW MEDIA FILE'
 
-    def delete_queryset(self, request, queryset):
+    def delete_queryset(self, request, queryset: QuerySet[File]):
         ids = []
         for real_obj in queryset:
             ids.append(real_obj.id)
 
         smart_delete.delay(request.user.id, request.request_id, ids)
 
-    def delete_model(self, request, obj):
+    def delete_model(self, request, obj: Union[File, List[File]]):
         if isinstance(obj, File):
             smart_delete.delay(request.user.id, request.request_id, [obj.id])
 
@@ -141,39 +148,35 @@ class FileAdmin(admin.ModelAdmin):
 
             smart_delete.delay(request.user.id, request.request_id, ids)
 
-    def force_ready(self, request, queryset):
+    def force_ready(self, request, queryset: QuerySet[File]):
         for real_obj in queryset:
             real_obj.ready = True
             real_obj.save()
 
-    def force_delete_model(self, request, queryset):
+    def force_delete_model(self, request, queryset: QuerySet[File]):
         for real_obj in queryset:
             real_obj.force_delete()
 
-    def move_to_trash(self, request, queryset):
+    def move_to_trash(self, request, queryset: QuerySet[File]):
         for file in queryset:
             file.moveToTrash()
 
-    def restore_from_trash(self, request, queryset):
+    def restore_from_trash(self, request, queryset: QuerySet[File]):
         for file in queryset:
             file.restoreFromTrash()
 
-    def readable_size(self, obj):
+    def readable_size(self, obj: File):
         return filesizeformat(obj.size)
 
-    def readable_encrypted_size(self, obj):
+    def readable_encrypted_size(self, obj: File):
         return filesizeformat(obj.encrypted_size)
 
     readable_size.short_description = 'SIZE'
     readable_encrypted_size.short_description = 'ENCRYPTED SIZE'
 
-    def save_model(self, request, obj, form, change):
+    def save_model(self, request, obj: File, form: ModelForm, change: bool):
         print(change)
         super().save_model(request, obj, form, change)
-
-
-admin.site.register(UserSettings)
-admin.site.register(UserPerms)
 
 
 @admin.register(Preview)
@@ -181,16 +184,16 @@ class PreviewAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
 
-    def file_name(self, obj):
+    def file_name(self, obj: Preview):
         return obj.file.name
 
-    def owner(self, obj):
+    def owner(self, obj: Preview):
         return obj.file.owner
 
-    def readable_size(self, obj):
+    def readable_size(self, obj: Preview):
         return filesizeformat(obj.size)
 
-    def readable_encrypted_size(self, obj):
+    def readable_encrypted_size(self, obj: Preview):
         return filesizeformat(obj.encrypted_size)
 
 
@@ -199,39 +202,34 @@ class ThumbnailAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
 
-    def file_name(self, obj):
+    def file_name(self, obj: Thumbnail):
         return obj.file.name
 
-    def owner(self, obj):
+    def owner(self, obj: Thumbnail):
         return obj.file.owner
 
-    def readable_size(self, obj):
+    def readable_size(self, obj: Thumbnail):
         return filesizeformat(obj.size)
 
-    def readable_encrypted_size(self, obj):
+    def readable_encrypted_size(self, obj: Thumbnail):
         return filesizeformat(obj.encrypted_size)
 
 
-"""
-admin.site.register(Thumbnail)
-"""
-
-
+@admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
     readonly_fields = ('token',)
 
-    list_display = ('token', 'expiration_time', 'owner', 'content_type', 'object_id')
+    list_display = ('token', 'expiration_time', 'owner', 'content_type', 'object_id', 'is_expired')
 
-    # Add other configurations as needed
+    def readable_size(self, obj: ShareableLink):
+        return filesizeformat(obj.is_expired)
 
-
-admin.site.register(ShareableLink, ShareableLinkAdmin)
 
 @admin.register(UserZIP)
 class UserZIPAdmin(admin.ModelAdmin):
-    list_display = ('owner_name', 'size')
+    list_display = ('owner_name', 'created_at')
     filter_horizontal = ('files', 'folders')
     ordering = ["-created_at"]
 
-    def owner_name(self, obj):
+    def owner_name(self, obj: UserZIP):
         return obj.owner.username

@@ -1,7 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -10,7 +11,7 @@ from website.utilities.Permissions import SharePerms
 from website.utilities.decorators import handle_common_errors
 from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
-    build_folder_content, create_share_breadcrumbs
+    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_folder_password
 from website.utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -39,7 +40,7 @@ def view_share(request, token, folder_id=None):
     share = ShareableLink.objects.get(token=token)
 
     if share.is_expired():
-        return HttpResponse(f"Share is expired", status=404)
+        return HttpResponse("Share is expired", status=404)
 
     if share.content_type.name == "folder":
         obj_in_share = Folder.objects.get(id=share.object_id)
@@ -53,15 +54,21 @@ def view_share(request, token, folder_id=None):
         response_dict = create_file_dict(obj_in_share)
         breadcrumbs = []
 
+    if obj_in_share.inTrash:
+        raise ResourceNotFoundError()
+
     if folder_id:
 
         try:
             requested_folder = Folder.objects.get(id=folder_id)
         except Folder.DoesNotExist:
-            raise ResourcePermissionError()
+            raise ResourceNotFoundError()
+
+        if requested_folder.inTrash:
+            raise ResourceNotFoundError()
 
         if requested_folder != obj_in_share and not settings.subfolders_in_shares:
-            raise ResourcePermissionError()
+            raise ResourceNotFoundError()
 
         breadcrumbs = create_share_breadcrumbs(requested_folder, obj_in_share, True)
 
@@ -70,12 +77,12 @@ def view_share(request, token, folder_id=None):
             if folder == obj_in_share:
                 folder_content = build_folder_content(requested_folder, include_folders=settings.subfolders_in_shares)["children"]
 
-                return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs}, status=200)
+                return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
             folder = folder.parent
 
-        raise ResourcePermissionError()
+        raise ResourceNotFoundError()
 
-    return JsonResponse({"share": [response_dict], "breadcrumbs": breadcrumbs}, status=200)
+    return JsonResponse({"share": [response_dict], "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
 
 
 @api_view(['PATCH'])
@@ -90,7 +97,7 @@ def delete_share(request):
     if share.owner != request.user:
         raise ResourcePermissionError()
     share.delete()
-    return HttpResponse(f"Share deleted!", status=204)
+    return HttpResponse("Share deleted!", status=204)
 
 
 @api_view(['POST'])
@@ -104,17 +111,14 @@ def create_share(request):
     unit = request.data['unit']
     password = request.data.get('password')
 
-    current_time = datetime.now()
-    try:
-        obj = Folder.objects.get(id=item_id)
-    except Folder.DoesNotExist:
-        try:
-            obj = File.objects.get(id=item_id)
-        except File.DoesNotExist:
-            raise ResourceNotFoundError(f"Resource with id of '{item_id}' doesn't exist.")
+    item = get_resource(item_id)
 
-    if obj.owner != request.user:
+    if item.owner != request.user:
         raise ResourcePermissionError()
+
+    check_folder_password(request, item)
+
+    current_time = timezone.now()
 
     if unit == 'minutes':
         expiration_time = current_time + timedelta(minutes=value)
@@ -128,8 +132,8 @@ def create_share(request):
     share = ShareableLink.objects.create(
         expiration_time=expiration_time,
         owner_id=1,
-        content_type=ContentType.objects.get_for_model(obj),
-        object_id=obj.id
+        content_type=ContentType.objects.get_for_model(item),
+        object_id=item.id
     )
     if password:
         share.password = password

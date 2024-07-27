@@ -1,17 +1,17 @@
-import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Union
 
 from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from django.db.models import DateTimeField
 from django.utils import timezone
 
 from website.models import File, Folder, UserSettings, Preview, ShareableLink, Thumbnail
 from website.tasks import queue_ws_event
-from website.utilities.OPCodes import message_codes, EventCode
 from website.utilities.TypeHinting import Resource
-from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS
-from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingResourcePasswordError
+from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, message_codes, EventCode
+from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingResourcePasswordError, \
+    MissingOrIncorrectResourcePasswordError
 
 signer = TimestampSigner()
 
@@ -34,6 +34,8 @@ def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("URL not valid or expired.")
 
+def formatDate(date: datetime) -> str:
+    return timezone.localtime(date).strftime('%Y-%m-%d %H:%M')
 
 def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[list, dict]) -> None:
     queue_ws_event.delay(
@@ -77,7 +79,7 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolde
     return folder_path
 
 
-def create_file_dict(file_obj: File) -> dict:
+def create_file_dict(file_obj: File, hide=False) -> dict:
     file_dict = {
         'isDir': False,
         'id': str(file_obj.id),
@@ -87,18 +89,18 @@ def create_file_dict(file_obj: File) -> dict:
         'size': file_obj.size,
         'type': file_obj.type,
         #'encrypted_size': file_obj.encrypted_size,
-        'created': timezone.localtime(file_obj.created_at).strftime('%Y-%m-%d %H:%M'),
-        'last_modified': timezone.localtime(file_obj.last_modified_at).strftime('%Y-%m-%d %H:%M'),
+        'created': formatDate(file_obj.created_at),
+        'last_modified': formatDate(file_obj.last_modified_at),
         'isLocked': file_obj.is_locked
         # 'ready': file_obj.ready,
-        # 'owner': {"name": file_obj.owner.username, "id": file_obj.owner.id},
+        # 'owner': file_obj.owner.username,
         # "maintainers": [],
     }
     if file_obj.is_locked:
         file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else file_obj.id
 
     if file_obj.inTrashSince:
-        file_dict["in_trash_since"] = timezone.localtime(file_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
+        file_dict["in_trash_since"] = formatDate(file_obj.inTrashSince)
 
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -113,24 +115,24 @@ def create_file_dict(file_obj: File) -> dict:
 
     # base_url = "http://127.0.0.1:8000"
     # stream_url = "http://192.168.1.14:8050"
-    base_url = "https://api.pamparampam.dev"
-    stream_url = "https://get.pamparampam.dev"
 
     # base_url = "http://127.0.0.1:8050/stream"
-    signed_file_id = sign_file_id_with_expiry(file_obj.id)
+    # hide media from files in trash for example
+    if not hide or not file_obj.is_locked:
+        signed_file_id = sign_file_id_with_expiry(file_obj.id)
 
-    if file_obj.extension in (
-            '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-        file_dict['preview_url'] = f"{base_url}/api/file/preview/{signed_file_id}"
+        if file_obj.extension in (
+                '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
+            file_dict['preview_url'] = f"{API_BASE_URL}/api/file/preview/{signed_file_id}"
 
-    download_url = f"{stream_url}/stream/{signed_file_id}"
+        download_url = f"{GET_BASE_URL}/stream/{signed_file_id}"
 
-    file_dict['download_url'] = download_url
+        file_dict['download_url'] = download_url
 
-    thumbnail = Thumbnail.objects.filter(file=file_obj)
+        thumbnail = Thumbnail.objects.filter(file=file_obj)
 
-    if thumbnail:
-        file_dict['thumbnail_url'] = f"{stream_url}/thumbnail/{signed_file_id}"
+        if thumbnail:
+            file_dict['thumbnail_url'] = f"{GET_BASE_URL}/thumbnail/{signed_file_id}"
 
     return file_dict
 
@@ -147,19 +149,18 @@ def create_folder_dict(folder_obj: Folder) -> dict:
         'name': folder_obj.name,
         "numFiles": len(file_children),
         "numFolders": len(folder_children),
-        'created': timezone.localtime(folder_obj.created_at).strftime('%Y-%m-%d %H:%M'),
-        'last_modified': timezone.localtime(folder_obj.last_modified_at).strftime('%Y-%m-%d %H:%M'),
-        'owner': {"name": folder_obj.owner.username, "id": folder_obj.owner.id},
+        'created': formatDate(folder_obj.created_at),
+        'last_modified': formatDate(folder_obj.last_modified_at),
+        # 'owner': folder_obj.owner.username,
         'parent_id': folder_obj.parent_id,
         'isDir': True,
         'isLocked': folder_obj.is_locked,
-        'lockFrom': folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
     }
     if folder_obj.is_locked:
         folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else None
     if folder_obj.inTrashSince:
-        folder_dict["in_trash_since"] = timezone.localtime(folder_obj.inTrashSince).strftime('%Y-%m-%d %H:%M'),
+        folder_dict["in_trash_since"] = formatDate(folder_obj.inTrashSince),
     return folder_dict
 
 
@@ -176,12 +177,13 @@ def create_share_dict(share: ShareableLink) -> dict:
             share.delete()
             raise ResourceNotFoundError(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
     item = {
-        "expire": share.expiration_time.strftime('%Y-%m-%d %H:%M'),
+        "expire": formatDate(share.expiration_time),
         "name": obj.name,
         "isDir": isDir,
         "token": share.token,
         "resource_id": share.object_id,
-        "id": share.pk
+        "id": share.pk,
+        #"download_url": f"{GET_BASE_URL}/"
     }
     return item
 
@@ -242,7 +244,7 @@ def error_res(user: User, code: int, error_code: int, details: str) -> dict:  # 
 
     return {"code": code, "error": message_codes[error_code][locale], "details": details}
 
-def get_resource(obj_id: str):
+def get_resource(obj_id: str) -> Resource:
     try:
         item = Folder.objects.get(id=obj_id)
     except Folder.DoesNotExist:
@@ -252,19 +254,32 @@ def get_resource(obj_id: str):
             raise ResourceNotFoundError(f"Resource with id of '{obj_id}' doesn't exist.")
     return item
 
-def check_resource_perms(request, resource: Resource):
-    if resource.owner != request.user:
-        raise ResourcePermissionError()
+def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True) -> None:
+    if checkOwnership:
+        if resource.owner != request.user:
+            raise ResourcePermissionError()
 
-    if isinstance(resource, Folder) and not resource.parent:
-        raise RootPermissionError("Cannot access 'root' folder!")
+    if checkRoot:
+        if isinstance(resource, Folder) and not resource.parent:
+            raise RootPermissionError("Cannot access 'root' folder!")
+    if checkFolderLock:
+        check_folder_password(request, resource)
 
+def check_folder_password(request, resource: Resource) -> None:
     password = request.headers.get("X-Folder-Password")
-    if password != resource.password:
-        raise MissingResourcePasswordError(lockFrom=resource.lockFrom.id, resourceId=resource.id)
+    passwords = request.data.get('resourcePasswords')
+    if resource.is_locked:
+        if password:
+            if resource.password != password:
+                raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
+        elif passwords:
+            if resource.lockFrom and resource.password != passwords.get(resource.lockFrom.id):
+                raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
+        else:
+            raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
 
 
-def create_zip_file_dict(file_obj: File, file_name: str):
+def create_zip_file_dict(file_obj: File, file_name: str) -> dict:
     signed_id = sign_file_id_with_expiry(file_obj.id)
 
     file_dict = {"id": file_obj.id,
@@ -272,11 +287,12 @@ def create_zip_file_dict(file_obj: File, file_name: str):
                  "signed_id": signed_id,
                  "isDir": False,
                  "size": file_obj.size,
-                 #"mimetype": file_obj.mimetype,
+                 "mimetype": file_obj.mimetype,
                  "type": file_obj.type,
                  "modified_at": timezone.localtime(file_obj.last_modified_at),
                  #"created_at": timezone.localtime(file_obj.created_at),
-                 "key": str(file_obj.key)
+                 "key": str(file_obj.key),
+                 "fragments": [],
     }
     fragments_list = []
     for fragment in file_obj.fragments.all():
@@ -285,7 +301,7 @@ def create_zip_file_dict(file_obj: File, file_name: str):
     return file_dict
 
 
-def get_flattened_children(folder: Folder, full_path=""):
+def get_flattened_children(folder: Folder, full_path="") -> list:
     """
     Recursively collects all children (folders and files) of the given folder
     into a flattened list with file IDs and names including folders.
@@ -301,6 +317,8 @@ def get_flattened_children(folder: Folder, full_path=""):
             file_dict = create_zip_file_dict(file, file_full_path)
             children.append(file_dict)
     else:
+        pass
+        #todo remove pass?
         folder_full_path = f"{full_path}{folder.name}/"
 
         children.append({'id': folder.id, 'name': folder_full_path, "isDir": True})

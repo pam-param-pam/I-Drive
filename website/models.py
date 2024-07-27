@@ -10,7 +10,7 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from website.utilities.constants import MAX_NAME_LENGTH, cache
+from website.utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH
 
 
 class Folder(models.Model):
@@ -46,13 +46,14 @@ class Folder(models.Model):
             folder, created = Folder.objects.get_or_create(owner=instance, name="root")
 
     def save(self, *args, **kwargs):
-        self.name = self.name[:MAX_NAME_LENGTH]
+        self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
 
         self.last_modified_at = timezone.now()
 
         # invalidate any cache
         cache.delete(self.id)
-        cache.delete(self.parent.id)
+        if self.parent:
+            cache.delete(self.parent.id)
         # invalidate also cache of 'old' parent if the parent was changed
         # we make a db lookup to get the old parent
         # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
@@ -106,7 +107,7 @@ class Folder(models.Model):
             if not folder.is_locked:
                 folder.applyLock(lockFrom, password)
 
-    def removeLock(self):
+    def removeLock(self, password):
         self.autoLock = False
         self.lockFrom = None
         self.password = None
@@ -116,8 +117,8 @@ class Folder(models.Model):
             file.removeLock()
 
         for folder in self.subfolders.all():
-            if folder.autoLock:
-                folder.removeLock()
+            if folder.autoLock and folder.password == password:
+                folder.removeLock(password)
 
     def get_all_files(self):
         children = []
@@ -170,7 +171,7 @@ class File(models.Model):
 
     def save(self, *args, **kwargs):
         print("================SAVE MODEL================")
-        if len(self.name) > MAX_NAME_LENGTH:
+        if len(self.name) > MAX_RESOURCE_NAME_LENGTH:
             # Find the last occurrence of '.' to handle possibility of no extension
             last_dot_index = self.name.rfind('.')
 
@@ -183,7 +184,7 @@ class File(models.Model):
                 file_name_without_extension = self.name
 
             # Keeping only the first 'max_name_length' characters
-            shortened_file_name = file_name_without_extension[:MAX_NAME_LENGTH]
+            shortened_file_name = file_name_without_extension[:MAX_RESOURCE_NAME_LENGTH]
 
             # Adding the extension back if it exists
             if file_extension:
@@ -372,9 +373,9 @@ class UserZIP(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     files = models.ManyToManyField(File, related_name='user_zips', blank=True)
     folders = models.ManyToManyField(Folder, related_name='user_zips', blank=True)
-    size = models.PositiveBigIntegerField(default=0, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     token = models.CharField(max_length=255, unique=True, blank=True)
+    name = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return f'UserZIP[{self.id} by {self.owner}]'
@@ -382,7 +383,14 @@ class UserZIP(models.Model):
     def save(self, *args, **kwargs):
         if self.token is None or self.token == '':
             self.token = secrets.token_urlsafe(32)
+
+        if len(self.files.all()) == 0 and len(self.folders.all()) == 1:
+            self.name = self.folders.all()[0].name
+        else:
+            self.name = f"I-Drive-{self.id}"
         super(UserZIP, self).save(*args, **kwargs)
+
+
 
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(days=7)

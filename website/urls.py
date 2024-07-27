@@ -6,18 +6,19 @@ from django.urls import path, include
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
     get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder, create_zip_model
-from website.views.otherViews import test, index
+    delete, folder_password, restore_from_trash, create_folder, create_zip_model, reset_folder_password
+from website.views.otherViews import index, generate_keys
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
-from website.views.streamViews import preview
+from website.views.streamViews import get_preview
 from website.views.uploadViews import create_file, create_preview
 from website.views.userViews import change_password, users_me, update_settings
 
 urlpatterns = [
-                  path("test", test, name="test"),
+                  #path("test", test, name="test"),
                   # path("help", help1, name="help"),
                   # path("test", test, name="help"),
-                  # path('generate-keys/', generate_keys, name='generate-keys'),
+
+                  path('generate-keys', generate_keys, name='generate-keys'),
                   path("api/zip/<token>", get_zip_info, name="get zip model info"),
                   path("api/zip", create_zip_model, name="create zip model"),
 
@@ -26,7 +27,7 @@ urlpatterns = [
 
                   path("api/file/create", create_file, name="create file"),
                   path("api/file/<file_id>", get_file, name="get file by file id"),
-                  path("api/file/preview/<file_id>", preview, name="get preview by file id"),
+                  path("api/file/preview/<file_id>", get_preview, name="get preview by file id"),
                   path("api/file/thumbnail/create", create_preview, name="create preview"),
                   path("api/file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
 
@@ -47,6 +48,8 @@ urlpatterns = [
                   path('api/folder/usage/<folder_id>', get_usage, name="get size of all files in that folder to all user's files"),
                   path("api/folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
                   path("api/folder/password/<folder_id>", folder_password, name="create folder"),
+                  path("api/folder/password/reset/<folder_id>", reset_folder_password, name="create folder"),
+
 
                   path("api/item/move", move, name="move file/folder"),
                   path("api/item/password/<item_id>", check_password, name="check password"),

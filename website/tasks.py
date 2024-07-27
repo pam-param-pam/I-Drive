@@ -12,9 +12,9 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from website.celery import app
-from website.models import File, Fragment, Folder, UserSettings, Preview
+from website.models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP
 from website.utilities.Discord import discord
-from website.utilities.OPCodes import EventCode
+from website.utilities.constants import EventCode
 from website.utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
@@ -76,7 +76,7 @@ def save_preview(file_id, celery_file):
 
 @app.task
 def smart_delete(user_id, request_id, ids):
-    send_message(f"Deleting 0%...", False, user_id, request_id)
+    send_message("Deleting 0%...", False, user_id, request_id)
 
     try:
         items = []
@@ -189,12 +189,11 @@ def lock_folder(user_id, request_id, folder_id, password):
 @app.task
 def unlock_folder(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
-    folder.removeLock()
+    folder.removeLock(folder.password)
     send_message("toasts.passwordUpdated", True, user_id, request_id)
 
 @app.task
 def delete_unready_files():
-    print("deleting un ready files!")
     files = File.objects.filter(ready=False)
     current_datetime = timezone.now()
     request_id = str(random.randint(0, 100000))
@@ -202,12 +201,44 @@ def delete_unready_files():
         elapsed_time = current_datetime - file.created_at
 
         # if at least one day has elapsed
-        # then remove the file, with every fragment
+        # then remove the file
         if elapsed_time >= timedelta(days=1):
-            print(f"found {file.name}!")
 
             smart_delete.delay(file.owner.id, request_id, [file.id])
 
+@app.task
+def delete_files_from_trash():
+    files = File.objects.filter(inTrash=True)
+    folders = Folder.objects.filter(inTrash=True)
 
+    current_datetime = timezone.now()
 
+    request_id = str(random.randint(0, 100000))
 
+    for file in files:
+        elapsed_time = current_datetime - file.inTrashSince
+        # if file is in trash for at least 30 days
+        # remove the file
+        if elapsed_time >= timedelta(days=30):
+            smart_delete.delay(file.owner.id, request_id, [file.id])
+
+    for folder in folders:
+        elapsed_time = current_datetime - folder.inTrashSince
+        # if file is in trash for at least 30 days
+        # remove the file
+        if elapsed_time >= timedelta(days=30):
+            smart_delete.delay(folder.owner.id, request_id, [folder.id])
+
+@app.task
+def delete_expired_shares():
+    shares = ShareableLink.objects.filter()
+    for share in shares:
+        if share.is_expired():
+            share.delete()
+
+@app.task
+def delete_expired_zips():
+    zips = UserZIP.objects.filter()
+    for zipObj in zips:
+        if zipObj.is_expired():
+            zipObj.delete()

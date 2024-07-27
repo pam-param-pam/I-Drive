@@ -15,6 +15,8 @@ def retry(func):
         # args[0].semaphore.acquire()
 
         response = func(*args, **kwargs)
+
+
         print(response.headers["X-ratelimit-remaining"])
         if response.status_code == 429:
             print("hit 429!!!!!!!!!!!!!!!")
@@ -23,13 +25,14 @@ def retry(func):
                 time.sleep(retry_after)
                 args[0].switch_token()
 
-            except KeyError:
-                raise DiscordBlockError("Discord is stupid :(")
+            # discord returns an error json that doesn't contain retry_after if it blocked us for longer period of time. Should make it cleaner
+            except KeyError as e:
+                raise DiscordBlockError("Discord is stupid :(") from e
             return decorator(*args, **kwargs)
 
         if response.headers["X-ratelimit-remaining"] == "1":
             retry_after = float(response.headers["X-RateLimit-Reset-After"])
-            time.sleep(retry_after)
+            #time.sleep(retry_after)
             args[0].switch_token()
         # args[0].semaphore.release()
 
@@ -68,7 +71,12 @@ class Discord:
                            "MTE4ODk1MTQyODYxNDU4NjQ4OA.G4CVRG.dMvoxd0Z7nQF5reiLIoFQNkstfalQmcTaGcXOY",
                            "MTIwMDExODYzNTkyMjk4OTE2Nw.GUkoOq.n6e-5qYwwiRacyKqZIsNClM5gD8G0x7e23rtxM",
                            "MTIwMDExODkyMTQ0MTg0NTI5MA.Gq4BiA.7ChveurWbuTHPBqYpFOch-P6BvPfAX5A9yVRsI",
-                           ]
+                           "MTI0NzkxNzIzMTQwNTI2OTAwMg.GLdikW.q3k7Yr-PPCB8_ghodWw2ZwLDgoSXQPA88PzgXM",
+                           "MTI0NzkxNzg0Nzk4MDUzOTk4Ng.G8k7yv.AZu04IEHxjgAD9OIkBJSis4xICyWVt31NW3NGE",
+                           "MTI0NzkxODExODg3Mzk4OTE4MA.GB2H-r.LqKQaQQjyOHYZicvDBdaN0G6M6CXBVbHFUm8wA",
+                           "MTI0NzkxODMwODc3MDk3NTc3NQ.GGDekW.D5_lDEGgdEeR3OeM-vbErMtvywANbe9MBBbYdA",
+                           "MTI0NzkxODQ4NDI1MjI2NjUwNg.Gm6JJU.-PfEMzcYuaD-82XB8PGOR3BV526B6MOaea3rP0"
+        ]
         # self.semaphore = asyncio.Semaphore(len(self.bot_tokens))
         self.semaphore = asyncio.Semaphore(1)
 

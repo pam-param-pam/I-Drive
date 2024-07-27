@@ -2,12 +2,13 @@ from functools import wraps
 
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
-from django.utils.http import urlsafe_base64_decode
+from httpx import ConnectError
+from requests.exceptions import SSLError
 from rest_framework.exceptions import Throttled
 
-from website.models import File, Folder, ShareableLink, Thumbnail
+from website.models import File, Folder, ShareableLink, Thumbnail, UserZIP
 from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewableError, ThumbnailAlreadyExistsError, IncorrectResourcePasswordError, MissingResourcePasswordError
+    RootPermissionError, DiscordError, DiscordBlockError, ResourceNotPreviewableError, ThumbnailAlreadyExistsError, MissingOrIncorrectResourcePasswordError
 from website.utilities.other import error_res, verify_signed_file_id
 
 
@@ -40,10 +41,8 @@ def check_file_and_permissions(view_func):
                     status=404)
             if file_obj.is_locked:
                 password = request.headers.get("X-Folder-Password")
-                if not password:
-                    raise MissingResourcePasswordError(lockFrom=file_obj.lockFrom.id, resourceId=file_obj.id)
-                if file_obj.password != password:
-                    raise IncorrectResourcePasswordError()
+                if file_obj.password and file_obj.password != password:
+                    raise MissingOrIncorrectResourcePasswordError([file_obj.lockFrom])
 
         except (File.DoesNotExist, ValidationError):
 
@@ -89,10 +88,8 @@ def check_folder_and_permissions(view_func):
 
             if folder_obj.is_locked:
                 password = request.headers.get("X-Folder-Password")
-                if not password:
-                    raise MissingResourcePasswordError(lockFrom=folder_obj.lockFrom.id, resourceId=folder_obj.id)
-                if folder_obj.password != password:
-                    raise IncorrectResourcePasswordError()
+                if folder_obj.password and folder_obj.password != password:
+                    raise MissingOrIncorrectResourcePasswordError([folder_obj.lockFrom])
 
         except (File.DoesNotExist, ValidationError):
             return JsonResponse(error_res(user=request.user, code=404, error_code=8,
@@ -123,6 +120,8 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Thumbnail doesn't exist."),
                                 status=404)
         except ResourceNotFoundError as e:
+            return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
+        except UserZIP.DoesNotExist as e:
             return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
 
         # 400 BAD REQUEST
@@ -155,14 +154,17 @@ def handle_common_errors(view_func):
         except Throttled as e:
             return JsonResponse(error_res(user=request.user, code=403, error_code=5, details=str(e)), status=403)
 
-        # 469 CUSTOM STATUS CODE - FOLDER PASSWORD MISSING OR INCORRECT
-        except IncorrectResourcePasswordError as e:
-            return JsonResponse(error_res(user=request.user, code=469, error_code=16, details=str(e)), status=469)
-
-        except MissingResourcePasswordError as e:
+        except MissingOrIncorrectResourcePasswordError as e:
             json_error = error_res(user=request.user, code=469, error_code=19, details=str(e))
-            json_error["lockFrom"] = e.lockFrom
-            json_error["resourceId"] = e.resourceId
+            list_of_dicts = []
+            for folder in e.requiredPasswords:
+                list_of_dicts.append({"id": folder.id, "name": folder.name})
+            json_error["requiredFolderPasswords"] = list_of_dicts
+
             return JsonResponse(json_error, status=469)
+
+        # 500 SERVER ERROR
+        except (ConnectError, SSLError) as e:
+            return JsonResponse(error_res(user=request.user, code=500, error_code=20, details=str(e)), status=500)
 
     return wrapper
