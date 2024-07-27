@@ -5,6 +5,7 @@ import store from "@/store/index.js"
 import i18n from "@/i18n/index.js"
 import {logout} from "@/utils/auth.js"
 
+const cancelTokenMap = new Map();
 
 
 export const backend_instance = axios.create({
@@ -51,9 +52,7 @@ discord_instance.interceptors.response.use(
         console.log(`Retrying request after ${delay} milliseconds`)
         return new Promise(resolve => setTimeout(resolve, delay)).then(() => discord_instance(error.config))
       }
-
       return retry()
-
     }
 
       // If not a 429 error or no Retry-After header, just return the error
@@ -64,6 +63,17 @@ discord_instance.interceptors.response.use(
 backend_instance.interceptors.request.use(
 
   function(config) {
+
+    if (cancelTokenMap.has(config.__cancelSignature)) {
+      cancelTokenMap.get(config.__cancelSignature).cancel("Request cancelled due to a new request with the same cancel signature.");
+    }
+    // Create a new cancel token for the current request
+    let cancelSource = axios.CancelToken.source();
+    // Attach the cancel token to the request
+    config.cancelToken = cancelSource.token;
+    // Store the cancel token in the map
+    cancelTokenMap.set(config.__cancelSignature, cancelSource);
+
     let token = localStorage.getItem("token")
     if (token) {
 
@@ -71,7 +81,6 @@ backend_instance.interceptors.request.use(
     }
 
     return config
-
 
   },
   function(error) {
@@ -91,10 +100,18 @@ backend_instance.interceptors.response.use(
 
     }
     let { config, response } = error
+    // Initialize retry counter if it doesn't exist
+    if (!config.__retryCount) {
+      config.__retryCount = 0;
+    }
 
     // Check if the error is 469 INCORRECT OR MISSING FOLDER PASSWORD
     if (response && response.status === 469) {
-      console.log(`Received 469`)
+      if (config.__retryCount > 3) {
+        store.commit("resetFolderPassword")
+      }
+      config.__retryCount++;
+
       let requiredFolderPasswords = response.data.requiredFolderPasswords
 
       let passwordExists = []
@@ -114,18 +131,11 @@ backend_instance.interceptors.response.use(
             }
           })
 
-          console.log(config.method)
-
           if (config.method === 'get') {
             config.headers = {
               ...config.headers,
               'X-folder-password': passwordExists[0]?.password || '', // Add the folder password to the headers
             }
-
-            // Retry the request
-            backend_instance(config)
-              .then(resolve) // Resolve the outer promise with the response
-              .catch(reject) // Reject the outer promise with the error
           } else {
             config.data.resourcePasswords = {}
             passwordExists.forEach(folder => {
@@ -133,11 +143,11 @@ backend_instance.interceptors.response.use(
               config.data.resourcePasswords[folder_id] = folder.password
             })
 
-            // Retry the request
-            backend_instance(config)
-              .then(resolve) // Resolve the outer promise with the response
-              .catch(reject) // Reject the outer promise with the error
           }
+          // Retry the request
+          backend_instance(config)
+            .then(resolve) // Resolve the outer promise with the response
+            .catch(reject) // Reject the outer promise with the error
         })
       }
 
@@ -154,35 +164,24 @@ backend_instance.interceptors.response.use(
             passwordMissing.push({ id: folder.id, name: folder.name })
           }
         })
-        console.log("passwordExists")
-        console.log(passwordExists)
-        console.log("passwordMissing")
-        console.log(passwordMissing)
 
         if (passwordMissing.length > 0) {
-
           return new Promise((resolve, reject) => {
+
             store.commit("showHover", {
               prompt: "FolderPassword",
               props: {requiredFolderPasswords: response.data.requiredFolderPasswords},
-
               confirm: () => {
-                console.log("confirm")
-
                 retry469Request(config)
                   .then(resolve)
                   .catch(reject)
               },
             })
           })
-
         }
         else {
-
           return retry469Request()
         }
-
-
       }
     }
     let errorMessage = response.data.error
@@ -199,13 +198,11 @@ backend_instance.interceptors.response.use(
       timeout: 5000,
       position: "bottom-right",
     })
-    //we want to ignore bad requests and wrong passwords
+    //we want to only catch not found errors
     if (response.status === 404) {
       store.commit("setError", error)
       store.commit("setLoading", false)
-
     }
-
 
 
     // If not a 429 error, no Retry-After header, or max retries reached, just return the error

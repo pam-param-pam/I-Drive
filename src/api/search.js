@@ -1,6 +1,6 @@
 import {backend_instance} from "@/api/networker.js"
 
-export async function search(argumentDict, source, lockFrom=null, password=null) {
+export async function search(argumentDict, lockFrom=null, password=null) {
   let headers = {}
   if (lockFrom && password) {
     argumentDict["lockFrom"] = lockFrom
@@ -12,7 +12,7 @@ export async function search(argumentDict, source, lockFrom=null, password=null)
 
 
   let response = await backend_instance.get(url, {
-    cancelToken: source.token,
+    __cancelSignature: 'getItems',
     headers: headers
   })
   return response.data

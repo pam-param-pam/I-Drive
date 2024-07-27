@@ -73,7 +73,6 @@ export default {
 
   data() {
     return {
-      items: [],
       isSearchActive: false
 
     }
@@ -128,8 +127,8 @@ export default {
       document.title = "Trash"
 
       let res = await getTrash()
-      this.items = res.trash
-      this.$store.commit("setItems", this.items)
+      let items = res.trash
+      this.$store.commit("setItems", items)
 
     },
 

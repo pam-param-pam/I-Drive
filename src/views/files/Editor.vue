@@ -187,6 +187,7 @@ export default {
 
       buttons.loading(button)
       if (!this.editor.session.getUndoManager().isClean()) {
+        //TODO update editor save
         let content = this.editor.getValue()
 
         let webhook = this.settings.webhook

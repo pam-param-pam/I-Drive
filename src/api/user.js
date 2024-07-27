@@ -27,7 +27,9 @@ export async function updateSettings(data) {
 
 export async function getTrash() {
   let url = `/api/trash`
-  let response = await backend_instance.get(url)
+  let response = await backend_instance.get(url, {
+    __cancelSignature: 'getItems',
+  })
   return response.data
 }
 

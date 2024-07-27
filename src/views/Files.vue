@@ -339,15 +339,10 @@ export default {
       this.setLoading(true)
 
 
-      if (this.source) {
-        this.source.cancel('Cancelled previous request')
-      }
-      this.source = axios.CancelToken.source()
       let realLockFrom = this.lockFrom || this.folderId
       let password = this.getFolderPassword(realLockFrom)
-      console.log(password)
 
-      this.items = await search(query, this.source, realLockFrom, password)
+      this.items = await search(query, realLockFrom, password)
       this.setLoading(false)
       this.isSearchActive = true
       this.$store.commit("setItems", this.items)
