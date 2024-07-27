@@ -9,7 +9,7 @@ from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
 from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError, MissingResourcePasswordError
 from website.utilities.decorators import handle_common_errors
-from website.utilities.other import send_event, create_file_dict, check_folder_password
+from website.utilities.other import send_event, create_file_dict, check_folder_password, get_resource, check_resource_perms
 from website.utilities.throttle import MyUserRateThrottle
 
 
@@ -83,9 +83,9 @@ def create_file(request):
         fragment_size = request.data['fragment_size']
         # return fragment ID
 
-        file_obj = File.objects.get(id=file_id)
-        if file_obj.owner != request.user:
-            raise ResourcePermissionError()
+        file_obj = get_resource(file_id)
+        check_resource_perms(request, file_obj)
+
         if file_obj.ready:
             raise BadRequestError("You cannot further modify a 'ready' file!")
 
@@ -110,9 +110,9 @@ def create_file(request):
     if request.method == "PUT":
         file_id = request.data['file_id']
 
-        file_obj = File.objects.get(id=file_id)
-        if file_obj.owner != request.user:
-            raise ResourcePermissionError()
+        file_obj = get_resource(file_id)
+        check_resource_perms(request, file_obj)
+
         if not file_obj.ready:
             raise BadRequestError("You cannot edit a 'not ready' file!")
 
@@ -182,12 +182,8 @@ def create_preview(request):
     encrypted_size = request.data['encrypted_size']
     key = request.data['key']
 
-    file_obj = File.objects.get(id=file_id)
-
-    if file_obj.owner != request.user:
-        raise ResourcePermissionError()
-
-    check_folder_password(request, file_obj)
+    file_obj = get_resource(file_id)
+    check_resource_perms(request, file_obj)
 
     if file_obj.thumbnail:
         raise ThumbnailAlreadyExistsError()

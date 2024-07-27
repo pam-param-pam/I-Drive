@@ -8,7 +8,7 @@ from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_t
 from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, DownloadPerms
 from website.utilities.constants import cache, GET_BASE_URL, EventCode, MAX_RESOURCE_NAME_LENGTH
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
-from website.utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingResourcePasswordError, MissingOrIncorrectResourcePasswordError
+from website.utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms
 from website.utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
@@ -22,7 +22,7 @@ def create_folder(request):
     parent_id = request.data['parent_id']
 
     parent = get_resource(parent_id)
-    check_resource_perms(request, parent, checkRoot=False)
+    check_resource_perms(request, parent, checkRoot=False, checkFolderLock=False)
 
     folder_obj = Folder(
         name=name,

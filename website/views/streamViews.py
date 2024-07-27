@@ -129,6 +129,3 @@ def get_preview(request, file_obj):
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
 
-def last_modified_func(request, file_obj):
-    last_modified_str = file_obj.last_modified_at
-    return last_modified_str

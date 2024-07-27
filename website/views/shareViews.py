@@ -11,7 +11,7 @@ from website.utilities.Permissions import SharePerms
 from website.utilities.decorators import handle_common_errors
 from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
-    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_folder_password
+    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms
 from website.utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -58,11 +58,8 @@ def view_share(request, token, folder_id=None):
         raise ResourceNotFoundError()
 
     if folder_id:
-
-        try:
-            requested_folder = Folder.objects.get(id=folder_id)
-        except Folder.DoesNotExist:
-            raise ResourceNotFoundError()
+        requested_folder = get_resource(folder_id)
+        check_resource_perms(request, requested_folder, checkRoot=False)
 
         if requested_folder.inTrash:
             raise ResourceNotFoundError()
@@ -112,11 +109,7 @@ def create_share(request):
     password = request.data.get('password')
 
     item = get_resource(item_id)
-
-    if item.owner != request.user:
-        raise ResourcePermissionError()
-
-    check_folder_password(request, item)
+    check_resource_perms(request, item, checkRoot=False)
 
     current_time = timezone.now()
 
