@@ -38,7 +38,7 @@ export default defineConfig(({ command }) => {
     return {
       plugins,
       resolve,
-      base: "/", //its vevy important that this is "/" and not "" lol ((learned the hard way)
+      base: "/",
       // build: {
       //   rollupOptions: {
       //     // input: {

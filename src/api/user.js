@@ -1,4 +1,5 @@
 import {backend_instance} from "@/api/networker.js"
+import store from "@/store/index.js";
 
 export async function getUser(token) {
   if (!token) return
@@ -27,10 +28,20 @@ export async function updateSettings(data) {
 
 export async function getTrash() {
   let url = `/api/trash`
-  let response = await backend_instance.get(url, {
+  store.commit("setLoading", true)
+
+  return backend_instance.get(url, {
     __cancelSignature: 'getItems',
+
   })
-  return response.data
+    .then(response => {
+      store.commit("setLoading", false)
+      return response.data;
+    })
+    .catch(error => {
+      store.commit("setError", error)
+      throw error;
+    });
 }
 
 

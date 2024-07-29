@@ -59,6 +59,8 @@ const mutations = {
     })
   },
   setLoading: (state, value) => {
+    console.log("SETLOADING")
+    console.log(value)
     state.loading = value
   },
   setReload: (state, value) => {

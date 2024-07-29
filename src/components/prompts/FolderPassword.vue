@@ -66,14 +66,10 @@ export default {
     requiredFolderPasswords: [],
   },
   created() {
-    console.log("requiredFolderPasswords")
-
-    console.log(this.requiredFolderPasswords)
+    console.log("CREATED")
   },
   beforeDestroy() {
-    console.log("aaaaaaaa")
 
-    console.log(this.requiredFolderPasswords)
   },
   computed: {
     ...mapGetters(["currentPrompt", "getFolderPassword"]),
@@ -86,7 +82,7 @@ export default {
     }
   },
   methods: {
-    ...mapMutations(["closeHover", "setFolderPassword", "closeHovers"]),
+    ...mapMutations(["closeHover", "setFolderPassword", "closeHovers", "setLoading"]),
     async submit() {
       if (await isPasswordCorrect(this.folder.id, this.password) === true) {
         this.setFolderPassword({ "folderId": this.folder.id, "password": this.password })

@@ -2,16 +2,24 @@ import {backend_instance} from "@/api/networker.js"
 import store from "@/store/index.js"
 
 export async function getItems(folder_id, lockFrom) {
-    let url = "/api/folder/" + folder_id
-    let password = store.getters.getFolderPassword(lockFrom)
+    let url = "/api/folder/" + folder_id;
+    let password = store.getters.getFolderPassword(lockFrom);
+    store.commit("setLoading", true)
 
-    let response = await backend_instance.get(url, {
+    return backend_instance.get(url, {
         __cancelSignature: 'getItems',
         headers: {
             "x-folder-password": password
         }
     })
-    return response.data
+      .then(response => {
+          store.commit("setLoading", false)
+          return response.data;
+      })
+      .catch(error => {
+          store.commit("setError", error)
+          throw error;
+      });
 }
 
 export async function lockWithPassword(folder_id, password, oldPassword) {

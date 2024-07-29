@@ -90,7 +90,7 @@ backend_instance.interceptors.request.use(
 
 backend_instance.interceptors.response.use(
   function(response) {
-    store.commit("setLoading", false)
+    //store.commit("setLoading", false)
 
     return response
   },
@@ -198,12 +198,12 @@ backend_instance.interceptors.response.use(
       timeout: 5000,
       position: "bottom-right",
     })
-    //we want to only catch not found errors
-    if (response.status === 404) {
-      store.commit("setError", error)
-      store.commit("setLoading", false)
-    }
-
+    // //we want to only catch not found errors
+    // if (response.status === 404) {
+    //   store.commit("setError", error)
+    //   store.commit("setLoading", false)
+    // }
+    //
 
     // If not a 429 error, no Retry-After header, or max retries reached, just return the error
     return Promise.reject(error)

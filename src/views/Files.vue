@@ -324,10 +324,8 @@ export default {
       this.$emit('onSearchClosed')
       let item = this.selected[0]
       let parent_id = item.parent_id
-      console.log("PARENT ID")
-      console.log(parent_id)
+
       this.$router.push({name: "Files", params: {"folderId": "stupidAhHack"}})
-      console.log(item)
       this.$router.push({name: "Files", params: {"folderId": parent_id, "locatedItem": item}})
 
       let message = this.$t("toasts.itemLocated")
@@ -365,13 +363,10 @@ export default {
 
       this.searchItemsFound = null
 
-      this.setLoading(true)
       this.setError(null)
-
 
       let res = await getItems(this.folderId, this.lockFrom)
 
-      console.log("GET ITEMS")
       this.items = res.folder.children
       this.folderList = res.breadcrumbs
       this.$store.commit("setItems", this.items)

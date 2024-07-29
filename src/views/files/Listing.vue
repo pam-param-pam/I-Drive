@@ -98,7 +98,7 @@
           <item
             v-for="item in dirs" :key="item.id"
             :item="item"
-            :readOnly="false"
+            :readOnly="readonly"
             :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
             @onOpen="$emit('onOpen', item)"
           >
@@ -111,7 +111,7 @@
           <item
             v-for="item in files" :key="item.id"
             :item="item"
-            :readOnly="false"
+            :readOnly="readonly"
             :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
             @onOpen="$emit('onOpen', item)"
 
@@ -162,6 +162,7 @@ export default {
   props: {
     isSearchActive: Boolean,
     locatedItem: {},
+    readonly: Boolean,
   },
   emits: ['uploadInput', 'drop', 'onOpen', 'dragEnter', 'dragLeave'],
 

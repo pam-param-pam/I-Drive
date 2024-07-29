@@ -46,6 +46,7 @@
       ref="listing"
       :isSearchActive="false"
       @onOpen="onOpen"
+      :readonly="true"
 
     ></Listing>
   </div>
