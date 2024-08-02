@@ -19,7 +19,7 @@
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
             <img
               src="/img/youLookLonelyICanFixThat.jpg"
-              :alt="$t('listing.noFiles')">
+              :alt="$t('files.noFiles')">
           </a>
         </h2>
         <input

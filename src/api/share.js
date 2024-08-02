@@ -7,7 +7,6 @@ export async function getAllShares() {
 }
 
 export async function getShare(token, folderId= "") {
-  console.log("SHAREEEE")
   let url = `/api/share/${token}`
   if (folderId) url = url + `/${folderId}`
   let response = await backend_instance.get(url, {

@@ -70,9 +70,7 @@ export default {
 
     },
     dragOver: function (event) {
-      console.log("DRAG OVER EVENT")
-      console.log(event)
-
+      //todo
       // if (!this.canDrop) return
       //
       // event.preventDefault()
@@ -88,8 +86,7 @@ export default {
 
     },
     drop: async function (event) {
-      console.log("DROP EVENT")
-      console.log(event)
+      //todo
     },
   },
 

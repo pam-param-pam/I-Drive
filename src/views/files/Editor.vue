@@ -46,7 +46,6 @@ import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import {getFile} from "@/api/files.js"
-import {fetchURL} from "@/api/utils.js"
 import {theme} from "@/utils/constants.js"
 import {breadcrumbs} from "@/api/item.js"
 import {getShare} from "@/api/share.js"
@@ -188,45 +187,45 @@ export default {
       buttons.loading(button)
       if (!this.editor.session.getUndoManager().isClean()) {
         //TODO update editor save
-        let content = this.editor.getValue()
-
-        let webhook = this.settings.webhook
-
-        const formData = new FormData()
-        const blob = new Blob([content], {type: 'text/plain'})
-
-        formData.append('file', blob, `chunk_${1}`)
-        try {
-          const response = await fetch(webhook, {
-            method: 'POST',
-            body: formData
-          })
-
-          if (!response.ok) {
-            throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`)
-          }
-
-          let json = await response.json()
-
-          await fetchURL(`/api/file/create`, {
-            method: "PUT",
-            body: JSON.stringify(
-              {
-                "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
-                "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
-              }
-            )
-          })
-
-        } finally {
-          buttons.done(button)
-        }
+        //   let content = this.editor.getValue()
+        //
+        //   let webhook = this.settings.webhook
+        //
+        //   const formData = new FormData()
+        //   const blob = new Blob([content], {type: 'text/plain'})
+        //
+        //   formData.append('file', blob, `chunk_${1}`)
+        //   try {
+        //     const response = await fetch(webhook, {
+        //       method: 'POST',
+        //       body: formData
+        //     })
+        //
+        //     if (!response.ok) {
+        //       throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`)
+        //     }
+        //
+        //     let json = await response.json()
+        //
+        //     await fetchURL(`/api/file/create`, {
+        //       method: "PUT",
+        //       body: JSON.stringify(
+        //         {
+        //           "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
+        //           "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
+        //         }
+        //       )
+        //     })
+        //
+        //   } finally {
+        //     buttons.done(button)
+        //   }
+        // }
+        // this.editor.session.getUndoManager().markClean()
+        // buttons.success(button)
+        // let message = this.$t('toasts.fileSaved')
+        // this.$toast.success(message)
       }
-      this.editor.session.getUndoManager().markClean()
-      buttons.success(button)
-      let message = this.$t('toasts.fileSaved')
-      this.$toast.success(message)
-
     },
     moveToTrash() {
       this.$store.commit("showHover", {

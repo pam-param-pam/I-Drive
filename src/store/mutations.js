@@ -246,6 +246,7 @@ const mutations = {
   },
   setError(state, value) {
     state.error = value
+    state.loading = false
   }
 }
 

@@ -11,6 +11,7 @@
     "register": "Register"
   },
   "files": {
+    "noFiles": "You look lonely, I can fix that~",
     "searchItemsFound": "Found {amount} items",
     "closePreview": "Close preview",
     "files": "Files",
@@ -264,9 +265,7 @@
     "creating": "Creating...",
     "pausing": "Pausing..."
   },
-  "listing": {
-    "noFiles": "You look lonely, I can fix that~"
-  },
+
   "share": {
     "info": "This share expires {expiry}",
     "shareNotFound": "Share Not found. Maybe the link expired or is invalid?"

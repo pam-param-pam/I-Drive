@@ -1,5 +1,4 @@
-import {fetchJSON, fetchURL} from "@/api/utils.js"
-import CryptoJS from 'crypto-js'
+
 import store from "@/store"
 import {create} from "@/api/folder.js"
 import vue from "@/utils/vue.js"

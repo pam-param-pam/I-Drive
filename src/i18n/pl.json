@@ -14,6 +14,7 @@
     "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!"
   },
   "files": {
+    "noFiles": "You look lonely, I can fix that~",
     "searchItemsFound": "Znaleziono {amount} plików/folderów",
     "clear": "Wyczyść",
     "files": "Pliki",
@@ -39,6 +40,8 @@
     "types": "Typy"
   },
   "buttons": {
+    "reset": "zresetuj",
+    "forgotFolderPassword": "Nie pamiętam hasła?",
     "copyToClipboard": "Skopiuj do schowka",
     "submit": "Zatwierdź",
     "more": "Więcej",
@@ -80,7 +83,6 @@
     "en": "English",
     "pl": "Polski",
     "uwu": "UwU"
-
   },
   "errors": {
     "forbidden": "Nie posiadasz uprawnień potrzebnych, by uzyskać do tego dostęp.",
@@ -90,8 +92,6 @@
     "connection": "Serwer nie odpowiada.",
     "rateLimit": "Za szybko wysyłasz zapytania!",
     "folderPasswordRequired": "Hasło jest wymagane by odblokować folder."
-
-
   },
   "help": {
     "click": "wybierz plik lub foler",
@@ -129,6 +129,8 @@
     "unit": "Jednostka czasu"
   },
   "settings": {
+    "shareDeleted": "usunięto Udostępnienie!",
+    "shareCreated": "Link z udostępnieniem gotowy",
     "ShareName": "Nazwa",
     "changePassword": "Zmień Hasło",
     "hideLockedFolders": "Ukryj zablokowane foldery",
@@ -153,6 +155,13 @@
     }
   },
   "prompts": {
+    "resetFolderPassword": "Zresetuj hasło do folderu",
+    "resetMessage": "Wpisz wymagane hasła by zresetowac hasło do folderu",
+    "accountPassword": "Hasło do konta",
+    "newFolderPassword": "Nowe hasło do folderu",
+    "pinkyPromiseResetFolderPassword": "Obiecuje że nie jestem botem",
+    "editFolderPassword": "Zmień hasło do folderu",
+    "lastModified": "Ostatnio zmodyfikowane",
     "all": "wszystkie",
     "limit": "Maksymalna liczba zwróconych itemów",
     "searchTune": "Dostosuj szukanie",

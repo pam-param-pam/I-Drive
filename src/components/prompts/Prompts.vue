@@ -88,7 +88,11 @@ export default {
       if (promptComponent && typeof promptComponent.cancel === 'function') {
         promptComponent.cancel()
       }
-      this.$store.commit("closeHover")
+      else {
+        console.warn("couldn't find cancel method for prompt:")
+        console.warn(this.currentPromptName)
+        this.$store.commit("closeHover")
+      }
     },
 
   },

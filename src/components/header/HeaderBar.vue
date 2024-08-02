@@ -79,7 +79,6 @@ export default {
         mosaic: "mosaic gallery",
         "mosaic gallery": "list",
       }
-      console.log(this.settings.viewMode)
       const data = {
         viewMode: modes[this.settings.viewMode] || "list",
       }

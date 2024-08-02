@@ -114,7 +114,7 @@
 import { mapState, mapGetters } from "vuex"
 import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
-import {createShare, getAllShares} from "@/api/share.js"
+import {createShare, getAllShares, removeShare} from "@/api/share.js"
 
 export default {
   name: "share",
@@ -131,23 +131,11 @@ export default {
   computed: {
     ...mapState(["selected", "selected"]),
     ...mapGetters(["isListing", "selectedCount"]),
-    url() {
-      if (!this.isListing) {
-        return this.$route.path
-      }
-
-      if (this.selectedCount === 0 || this.selectedCount > 1) {
-        // This shouldn't happen.
-        return
-      }
-
-      return this.selected[0].url
-    },
   },
-  async beforeMount() {
+
+  async created() {
 
     let links = await getAllShares()
-
 
     links = links.filter(item => item.resource_id === this.selected[0].id)
 
@@ -182,18 +170,17 @@ export default {
 
       this.listing = true
       this.$toast.success(this.$t("settings.shareCreated"))
-
     },
     deleteLink: async function (event, share) {
       event.preventDefault()
 
-      await api.removeShare({"token": share.token})
+      await removeShare({"token": share.token})
       this.links = this.links.filter((item) => item.id !== share.id)
       this.$toast.success(this.$t("settings.shareDeleted"))
 
     },
     humanTime(time) {
-    //todo czm globalny local nie działa?
+      //todo czm globalny local nie działa?
       let locale = this.settings?.locale || "en"
 
       moment.locale(locale)
@@ -220,6 +207,7 @@ export default {
 
       this.listing = !this.listing
     },
+
   },
 }
 </script>

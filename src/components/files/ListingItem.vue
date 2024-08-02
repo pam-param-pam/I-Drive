@@ -182,7 +182,7 @@ export default {
       }
 
       this.addSelected(this.item)
-
+      //todo fix item click
 
       /*
       let lastIndex = -1

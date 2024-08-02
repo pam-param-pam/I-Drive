@@ -102,9 +102,7 @@ export default {
       xhr.send()
       return true
     },
-    onProgress() {
-      console.log("on progress")
-    },
+
     onLoad() {
       let img = this.$refs.imgex
 
