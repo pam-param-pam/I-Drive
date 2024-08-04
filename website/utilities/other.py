@@ -208,8 +208,10 @@ def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> dict:
     return recursive_build(folder_obj)
 
 
-def build_folder_content(folder_obj: Folder, include_folders: bool = True) -> dict:
-    file_children = folder_obj.files.filter(ready=True, inTrash=False)
+def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> dict:
+    file_children = []
+    if include_files:
+        file_children = folder_obj.files.filter(ready=True, inTrash=False)
 
     folder_children = []
     if include_folders:
@@ -300,6 +302,20 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> dict:
     file_dict["fragments"] = fragments_list
     return file_dict
 
+
+def calculate_size(folder: Folder) -> int:
+    """
+    Function to recursively calculate size of a folder
+    """
+
+    size = 0
+    for file_in_folder in folder.files.filter(ready=True, inTrash=False):
+        size += file_in_folder.size
+
+    # Recursively calculate size for subfolders
+    for subfolder in folder.subfolders.filter(inTrash=False):
+        size += calculate_size(subfolder)
+    return size
 
 def get_flattened_children(folder: Folder, full_path="") -> list:
     """

@@ -48,14 +48,7 @@ class DiscordBlockError(IDriveException):
 class DiscordError(IDriveException):
     def __init__(self, message="Unexpected Discord Error.", status=0):
         self.status = status
-        try:
-            json_message = json.loads(message)
-
-            self.message = json_message.get("message")
-        except (JSONDecodeError, KeyError):
-            print(message)
-            self.message = "Unknown"
-
+        self.message = message
         super().__init__(self.message)
 
     def __str__(self):

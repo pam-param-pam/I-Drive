@@ -18,7 +18,7 @@ from website.utilities.decorators import check_folder_and_permissions, check_fil
     check_file, check_signed_url
 from website.utilities.errors import BadRequestError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, get_flattened_children, \
-    create_zip_file_dict, check_resource_perms, error_res
+    create_zip_file_dict, check_resource_perms, error_res, calculate_size
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -54,7 +54,14 @@ def get_folder(request, folder_obj):
     return JsonResponse({"folder": folder_content, "breadcrumbs": breadcrumbs})
 
 
-
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+@check_folder_and_permissions
+def get_dirs(request, folder_obj):
+    folder_content = build_folder_content(folder_obj, include_files=False)
+    return JsonResponse(folder_content)
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
@@ -77,19 +84,16 @@ def get_file(request, file_obj):
 @check_folder_and_permissions
 def get_usage(request, folder_obj):
     total_used_size = 0
-    folder_used_size = 0
     all_files = cache.get(f"ALL_FILES:{request.user}")
     if not all_files:
-        all_files = File.objects.filter(owner=request.user, inTrash=False).select_related("parent")
+        all_files = File.objects.filter(owner=request.user, inTrash=False, ready=True).select_related("parent")
         cache.set(f"ALL_FILES:{request.user}", all_files, 60)
 
     for file in all_files:
         if not file.inTrash and file.ready:
             total_used_size += file.size
 
-        if file.parent.id == folder_obj.id:
-            if not file.inTrash and file.ready:
-                folder_used_size += file.size
+    folder_used_size = calculate_size(folder_obj)
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
 

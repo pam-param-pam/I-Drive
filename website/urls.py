@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info, get_dirs
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, create_zip_model, reset_folder_password
 from website.views.otherViews import index, generate_keys
@@ -45,6 +45,7 @@ urlpatterns = [
 
                   path("api/folder/create", create_folder, name="create folder"),
                   path('api/folder/<folder_id>', get_folder, name="get files and folders from a folder id"),
+                  path('api/folder/dirs/<folder_id>', get_dirs, name="get folders from a folder id"),
                   path('api/folder/usage/<folder_id>', get_usage, name="get size of all files in that folder to all user's files"),
                   path("api/folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
                   path("api/folder/password/<folder_id>", folder_password, name="create folder"),

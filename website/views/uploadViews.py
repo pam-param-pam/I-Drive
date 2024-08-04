@@ -1,3 +1,5 @@
+import base64
+
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
@@ -57,7 +59,6 @@ def create_file(request):
                 mimetype=mimetype,
                 type=file_type,
                 owner_id=request.user.id,
-                key=b"no key",
                 parent=parent,
             )
             #  apply lock if needed
@@ -70,7 +71,7 @@ def create_file(request):
 
             response_json.append(
                 {"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
-                 "type": file_type})
+                 "type": file_type, "key": base64.b64encode(file_obj.key).decode('utf-8')})
 
         return JsonResponse(response_json, safe=False)
 

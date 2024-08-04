@@ -125,7 +125,7 @@ class Discord:
         for attachment in message["attachments"]:
             if attachment["id"] == attachment_id:
                 return attachment["url"]
-        raise KeyError(f"File with {attachment_id} not found")
+        raise DiscordError(f"File with {attachment_id} not found")
 
     @retry
     def get_message(self, message_id) -> httpx.Response:

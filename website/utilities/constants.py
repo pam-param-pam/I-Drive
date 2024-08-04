@@ -6,7 +6,7 @@ from django.core.cache import caches
 
 GET_BASE_URL = "https://get.pamparampam.dev"
 API_BASE_URL = "https://api.pamparampam.dev"
-#
+# #
 # GET_BASE_URL = "http://localhost:8050"
 # API_BASE_URL = "http://localhost:8000"
 

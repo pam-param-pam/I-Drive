@@ -17,7 +17,7 @@ admin.site.register(UserPerms)
 
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
+    #readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
@@ -96,7 +96,7 @@ class FolderAdmin(admin.ModelAdmin):
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size", "image_tag")
+    #readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size", "image_tag")
     ordering = ["-created_at"]
     list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
                     "inTrash", "_is_locked"]

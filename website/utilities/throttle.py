@@ -20,6 +20,22 @@ class MyUserRateThrottleBase(UserRateThrottle):
 
         return super().get_cache_key(request, view)
 
+    def parse_rate(self, rate):
+        if rate is None:
+            return None, None
+        num_requests, duration = rate.split('/')
+        num_requests = int(num_requests)
+        duration = duration.lower()
+        period = duration[-1]
+        try:
+            duration_time = int(duration[:-1])
+        except ValueError:
+            # default to 1 if not found
+            # for example: '10/1s' is equal to '10/s'
+            duration_time = 1
+        duration_time *= {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period]
+        return num_requests, duration_time
+
     def throttle_success(self):
 
         self.request.META["rate_limit_remaining"] = self.get_remaining_requests()

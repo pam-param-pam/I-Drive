@@ -195,16 +195,16 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+
     ],
     'EXCEPTION_HANDLER': 'website.utilities.CustomExceptionHandler.custom_exception_handler',
 
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '30/min',
-        'user': '10000/m',
-        'media': '1000/min',
-        'folder_password': '20/min',
-        'password_change': '10/min',
+        'anon': '30/m',
+        'user': '10/5s',
+        'media': '1000/m',
+        'folder_password': '20/m',
+        'password_change': '10/m',
         'search': '200/m'
     }
 }

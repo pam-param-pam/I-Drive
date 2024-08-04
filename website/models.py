@@ -145,7 +145,7 @@ class File(models.Model):
     size = models.PositiveBigIntegerField()
     mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
     type = models.CharField(max_length=15, null=False, blank=False, default="text")
-    key = models.BinaryField()
+    key = models.BinaryField(default=secrets.token_bytes(32))
     inTrash = models.BooleanField(default=False)
     encrypted_size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
@@ -191,10 +191,6 @@ class File(models.Model):
                 shortened_file_name += "." + file_extension
             self.name = shortened_file_name
 
-        if self.encrypted_size is None:
-            self.encrypted_size = self.size
-        self.last_modified_at = timezone.now()
-
         # invalidate any cache
         cache.delete(self.id)
         cache.delete(self.parent.id)
@@ -207,6 +203,11 @@ class File(models.Model):
 
         except File.DoesNotExist:
             pass
+
+        if self.encrypted_size is None:
+            self.encrypted_size = self.size
+
+        self.last_modified_at = timezone.now()
 
         super(File, self).save(*args, **kwargs)
 

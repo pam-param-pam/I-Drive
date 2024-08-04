@@ -75,17 +75,19 @@ def move(request):
             item_dict = create_file_dict(item)
 
         if item == new_parent:
-            raise BadRequestError("'item' and 'new_parent_id' cannot be the same!")
+            # 'item' and 'new_parent_id' cannot be the same!
+            raise BadRequestError("Invalid move destination.")
 
         if item.parent == new_parent:
-            raise BadRequestError("'new_parent_id' and 'old_parent_id' cannot be the same!")
+            # 'new_parent_id' and 'old_parent_id' cannot be the same!
+            raise BadRequestError("Invalid move destination.")
 
         real_new_parent = new_parent
         x = 0
         while new_parent.parent:  # cannot move item to its descendant
             x += 1
             if new_parent.parent == item.parent and x > 1:
-                raise BadRequestError("I beg you not.")
+                raise BadRequestError("Invalid move destination.")
             new_parent = Folder.objects.get(id=new_parent.parent.id)
 
         items.append(item)

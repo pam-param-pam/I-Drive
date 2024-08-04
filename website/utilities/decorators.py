@@ -103,9 +103,10 @@ def check_folder_and_permissions(view_func):
 def handle_common_errors(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        try:
-            return view_func(request, *args, **kwargs)
+        return view_func(request, *args, **kwargs)
 
+        try:
+            pass
         # 404 NOT FOUND
         except Folder.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder not found."),
@@ -120,9 +121,9 @@ def handle_common_errors(view_func):
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Thumbnail doesn't exist."),
                                 status=404)
         except ResourceNotFoundError as e:
-            return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details=str(e)), status=404)
         except UserZIP.DoesNotExist as e:
-            return JsonResponse(error_res(user=request.user, code=404, error_code=1, details=str(e)), status=404)
+            return JsonResponse(error_res(user=request.user, code=404, error_code=8, details=str(e)), status=404)
 
         # 400 BAD REQUEST
         except ValidationError as e:
