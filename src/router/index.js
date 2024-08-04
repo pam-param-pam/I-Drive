@@ -34,24 +34,13 @@ const router = new Router({
 
 
         {
-          path: "/share/:token/:folderId", // kolejnosc tych dwóch share childrenów tu ma znaczenie :3
+          path: "/share/:token/:folderId?",
           name: "Share",
           component: () => import('../views/Share.vue'),
           props: true,
           meta: {
             requiresAuth: false,
           },
-
-        },
-        {
-          path: "/share/:token",
-          name: "Share",
-          component: () => import('../views/Share.vue'),
-          props: true,
-          meta: {
-            requiresAuth: false,
-          },
-
         },
 
         {
@@ -74,7 +63,7 @@ const router = new Router({
 
         },
         {
-          path: "/editor/:folderId/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3
+          path: "/editor/:folderId?/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3
           name: "ShareEditor",
           component: () => import('../views/files/Editor.vue'),
           props: true,
@@ -93,7 +82,7 @@ const router = new Router({
           },
         },
         {
-          path: "/preview/:folderId/:fileId/:token", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
+          path: "/preview/:folderId?/:fileId/:token", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
           name: "SharePreview",
           component: () => import('../views/files/Preview.vue'),
           props: true,

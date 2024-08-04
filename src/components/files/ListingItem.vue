@@ -170,7 +170,7 @@ export default {
       // Deselect items if no shift or ctrl key is pressed and there are selected items
       // then add current item to selected if it wasn't previously selected
       if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {
-        let shouldAdd = !this.isSelected
+        let shouldAdd = !this.isSelected || this.selected.length >= this.items.length
         this.resetSelected()
         if (shouldAdd) {
           this.addSelected(this.item)

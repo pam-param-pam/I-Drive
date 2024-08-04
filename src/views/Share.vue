@@ -153,12 +153,11 @@ export default {
 
     else {
         if (item.type === "audio" || item.type === "video" || item.type === "image" ||  item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
-          this.$router.push({name: "SharePreview", params: {"folderId": item.parent_id,"fileId":item.id, "token": this.token}} )
-
+          this.$router.push({name: "SharePreview", params: {"folderId": item.parent_id, "fileId":item.id, "token": this.token}} )
 
         }
         else {
-          this.$router.push({name: "ShareEditor", params: {"folderId": item.parent_id,"fileId":item.id, "token": this.token}} )
+          this.$router.push({name: "ShareEditor", params: {"folderId": item.parent_id, "fileId":item.id, "token": this.token}} )
 
         }
       }

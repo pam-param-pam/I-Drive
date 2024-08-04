@@ -67,10 +67,11 @@ const mutations = {
     let file = {
       name: item.name,
       file_id: item.file_id,
-      fileObj: item.file,
+      systemFile: item.file,
       size: item.file.size,
       parent_id: item.parent_id,
       type: item.type,
+      encryption_key: item.key,
       status: "creating",
       progress: 1
     }

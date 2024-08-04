@@ -212,7 +212,7 @@ export async function uploadCreatedFiles() {
 
     let fileObj = await store.dispatch("upload/getFileFromQueue")
 
-    let size = fileObj.file.size
+    let size = fileObj.systemFile.size
     if (size !== 0) {
       if (size > chunkSize) {
         let chunks = []

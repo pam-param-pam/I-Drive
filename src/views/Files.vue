@@ -172,7 +172,6 @@ import {getItems} from "@/api/folder.js"
 import {name} from "@/utils/constants.js"
 import {search} from "@/api/search.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
-import axios from "axios"
 import Action from "@/components/header/Action.vue"
 import Search from "@/components/Search.vue"
 import {checkFilesSizes} from "@/utils/upload.js"
@@ -246,6 +245,7 @@ export default {
   },
   methods: {
     isMobile,
+
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisabledCreation"]),
 
     onDragEnter() {

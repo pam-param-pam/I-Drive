@@ -32,8 +32,7 @@ export function sortItems(items) {
   return itemsCopy
 }
 export function isMobile() {
-  console.log("window.innerWidth <= 950")
-
+  console.log("isMobile")
   console.log(window.innerWidth <= 950)
   return window.innerWidth <= 950
 }

@@ -12,15 +12,15 @@
       <template #actions>
         <action
           v-if="isEpub"
-          icon="add"
-          :label="$t('buttons.increaseFontSize')"
-          @action="increaseFontSize"
-        />
-        <action
-          v-if="isEpub"
           icon="remove"
           :label="$t('buttons.decreaseFontSize')"
           @action="decreaseFontSize"
+        />
+        <action
+          v-if="isEpub"
+          icon="add"
+          :label="$t('buttons.increaseFontSize')"
+          @action="increaseFontSize"
         />
         <action
           :disabled="loading"
@@ -163,8 +163,7 @@ import {getFile} from "@/api/files.js"
 import {getItems} from "@/api/folder.js"
 import {getShare} from "@/api/share.js"
 import { VueReader } from "vue-reader"
-import { useStorage } from '@vueuse/core'
-import {isMobile, sortItems} from "@/utils/common.js";
+import {sortItems} from "@/utils/common.js";
 
 export default {
   name: "preview",
@@ -292,13 +291,11 @@ export default {
       if (!this.file) {
 
         if (this.isInShareContext) {
+
           let res = await getShare(this.token, this.folderId)
           this.shareObj = res
-          console.log(res)
 
           this.$store.commit("setItems", res.share)
-
-          console.log(this.items)
           this.folderList = res.breadcrumbs
 
           for (let i = 0; i < this.items.length; i++) {
@@ -320,10 +317,11 @@ export default {
         }
       }
       this.$store.commit("addSelected", this.file)
-      if (!this.isEpub) return
       this.setLoading(false)
+      if (!this.isEpub) return
       this.bookLocation = localStorage.getItem('book-progress-' + this.file.id)
-      this.fontSize = localStorage.getItem('font-size') || 100
+      let fontsize = localStorage.getItem('font-size')
+      this.fontSize = (fontsize < 600) ? fontsize : 100
 
 
     },

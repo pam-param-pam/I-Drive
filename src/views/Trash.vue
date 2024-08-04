@@ -6,7 +6,7 @@
       <title></title>
 
       <template #actions>
-        <template v-if="!isMobile">
+        <template v-if="!isMobile()">
           <action
             v-if="headerButtons.delete"
             id="delete-button"
@@ -81,7 +81,7 @@ export default {
   },
   computed: {
     ...mapGetters(["selectedCount"]),
-    ...mapState(["error", "items", "selected", "settings", "perms", "user", "loading", "currentFolder", "disabledCreation"]),
+    ...mapState(["error", "items", "selected", "settings", "perms", "loading", "currentFolder", "disabledCreation"]),
     headerButtons() {
       return {
         shell: this.perms.execute,
@@ -103,7 +103,7 @@ export default {
   created() {
     this.setDisabledCreation(true)
     this.fetchFolder()
-
+    console.log(this.headerButtons)
   },
   watch: {
     $route: "fetchFolder",
