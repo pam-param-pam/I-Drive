@@ -79,7 +79,7 @@ export default {
 
           this.$toast.success(message)
         }
-        this.currentPrompt?.confirm()
+        if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
       }
       finally {

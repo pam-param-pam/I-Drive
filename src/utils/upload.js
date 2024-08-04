@@ -4,7 +4,7 @@ import {create} from "@/api/folder.js"
 import vue from "@/utils/vue.js"
 import i18n from '../i18n'
 import {createFile, patchFile} from "@/api/files.js"
-import {discord_instance} from "@/api/networker.js";
+import {discord_instance} from "@/api/networker.js"
 
 
 export function scanFiles(dt) {
@@ -207,53 +207,54 @@ export async function uploadCreatedFiles() {
   let attachmentJson = []
   let filesForRequest = []
 
-  let queue = store.state.upload.queue
   let i = 0
-  while (totalSize < chunkSize || filesForRequest.length >= 10)
-    //let fileObj = queue[i]
-  await store.commit("upload/moveJob")
+  while (totalSize < chunkSize || filesForRequest.length >= 10) {
 
-  let size = fileObj.file.size
-  if (size !== 0) {
-    if (size > chunkSize) {
-      let chunks = []
-      for (let j = 0; j < size; j += chunkSize) {
-        let chunk = fileObj.file.slice(j, j + chunkSize)
-        chunks.push(chunk)
+    let fileObj = await store.dispatch("upload/getFileFromQueue")
+
+    let size = fileObj.file.size
+    if (size !== 0) {
+      if (size > chunkSize) {
+        let chunks = []
+        for (let j = 0; j < size; j += chunkSize) {
+          let chunk = fileObj.file.slice(j, j + chunkSize)
+          chunks.push(chunk)
+        }
+
+
+        // Upload each chunk
+        for (let j = 0; j < chunks.length; j++) {
+          await uploadChunk(chunks[j], j + 1, chunks.length, fileObj.file_id)
+        }
+      } else {
+        console.log("ultra size: " + totalSize + size)
+        console.log("filesforrequest: " + filesForRequest)
+        if (totalSize + size > chunkSize || filesForRequest.length >= 10) {
+          await uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest)
+          filesForRequest = []
+          attachmentJson = []
+          fileFormList = new FormData()
+          totalSize = 0
+        }
+
+        filesForRequest.push(fileObj)
+
+        fileFormList.append(`File ${i + 1}`, fileObj.file, `files[${i}]`)
+
+        attachmentJson.push({
+          "id": i + 1,
+          "description": `File ${i + 1}`,
+          "filename": `file${i + 1}`
+        })
+        totalSize = totalSize + size
       }
 
-
-      // Upload each chunk
-      for (let j = 0; j < chunks.length; j++) {
-        await uploadChunk(chunks[j], j + 1, chunks.length, fileObj.file_id)
-      }
-    } else {
-      console.log("ultra size: " + totalSize + size)
-      console.log("filesforrequest: " + filesForRequest)
-      if (totalSize + size > chunkSize || filesForRequest.length >= 10) {
-        await uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest)
-        filesForRequest = []
-        attachmentJson = []
-        fileFormList = new FormData()
-        totalSize = 0
-      }
-
-      filesForRequest.push(fileObj)
-
-      fileFormList.append(`File ${i + 1}`, fileObj.file, `files[${i}]`)
-
-      attachmentJson.push({
-        "id": i + 1,
-        "description": `File ${i + 1}`,
-        "filename": `file${i + 1}`
-      })
-      totalSize = totalSize + size
     }
-
   }
   if (attachmentJson.length > 0) {
     await uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest)
   }
+
 
 }
 export async function checkFilesSizes(files) {
@@ -347,6 +348,7 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, file_id) {
     "fragment_size": chunk.size, "message_id": response.data.id, "attachment_id": response.data.attachments[0].id
   }
   await patchFile(file_data)
+
 
 }
 // function encrypt(file, key) {

@@ -58,6 +58,12 @@ const mutations = {
 
     })
   },
+  SET_ITEM_INDEX(state, { id, index }) {
+    let item = state.items.find(item => item.id === id);
+    if (item) {
+      item.index = index;
+    }
+  },
   setLoading: (state, value) => {
     console.log("SETLOADING")
     console.log(value)
@@ -79,19 +85,16 @@ const mutations = {
   },
   addSelected: (state, value) => {
     if (typeof value !== "object") return
-    console.log("adding to selected " + JSON.stringify(value))
+    //console.log("adding to selected " + JSON.stringify(value))
     state.selected.push(value)
-    console.log("selected count is: " + store.getters.selectedCount)
+    //console.log("selected count is: " + store.getters.selectedCount)
 
   },
   removeSelected: (state, value) => {
-    console.log("removing from selected " + JSON.stringify(value))
     state.selected = state.selected.filter(item => item.id !== value.id)
-    console.log("removed from selected " + JSON.stringify(state.selected))
 
   },
   resetSelected: (state) => {
-    console.log("reseting selected")
     state.selected = []
   },
   updateUser: (state, value) => {

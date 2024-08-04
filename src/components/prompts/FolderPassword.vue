@@ -72,7 +72,7 @@ export default {
 
   },
   computed: {
-    ...mapGetters(["currentPrompt", "getFolderPassword"]),
+    ...mapGetters(["currentPrompt", "getFolderPassword", "currentPromptName"]),
     ...mapState(["selected", "loading"]),
     folder() {
       let folder = this.requiredFolderPasswords[0]
@@ -132,7 +132,7 @@ export default {
     forgotPassword() {
       store.commit("showHover", {
         prompt: "ResetFolderPassword",
-        props: {folderId: this.folderId, lockFrom: this.lockFrom},
+        props: {folderId: this.folder.id, lockFrom: this.folder.lockFrom},
 
         confirm: () => {
           this.finishAndShowAnotherPrompt()

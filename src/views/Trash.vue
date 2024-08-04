@@ -62,6 +62,7 @@ import {getTrash} from "@/api/user.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
 import Search from "@/components/Search.vue"
+import {isMobile} from "@/utils/common.js";
 
 export default {
   name: "trash",
@@ -97,9 +98,6 @@ export default {
       }
       return icons[this.settings.viewMode]
     },
-    isMobile() {
-      return this.width <= 950
-    },
 
   },
   created() {
@@ -118,6 +116,7 @@ export default {
   },
 
   methods: {
+    isMobile,
     ...mapMutations(["updateUser", "addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation"]),
 
     async fetchFolder() {

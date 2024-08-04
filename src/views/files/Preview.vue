@@ -11,6 +11,18 @@
 
       <template #actions>
         <action
+          v-if="isEpub"
+          icon="add"
+          :label="$t('buttons.increaseFontSize')"
+          @action="increaseFontSize"
+        />
+        <action
+          v-if="isEpub"
+          icon="remove"
+          :label="$t('buttons.decreaseFontSize')"
+          @action="decreaseFontSize"
+        />
+        <action
           :disabled="loading"
           v-if="perms?.modify && !isInShareContext"
           icon="mode_edit"
@@ -50,9 +62,24 @@
     </div>
     <template v-else>
       <div class="preview">
-        <ExtendedImage v-if="file.type === 'image' && file.size > 0" :src="fileSrcUrl">
+        <div v-if="isEpub" class="epub-reader">
 
-        </ExtendedImage>
+          <vue-reader
+            :epubInitOptions="{ openAs: 'epub'}"
+            :location="bookLocation"
+            @update:location="locationChange"
+            :url="fileSrcUrl"
+            :getRendition="getRendition"
+            :tocChanged="tocChanged">
+
+          </vue-reader>
+          <div class="page">
+            {{ page }}
+          </div>
+
+        </div>
+
+        <ExtendedImage v-else-if="file.type === 'image' && file.size > 0" :src="fileSrcUrl"/>
         <audio
           v-else-if="file.type === 'audio' && file.size > 0"
           ref="player"
@@ -134,13 +161,16 @@ import Action from "@/components/header/Action.vue"
 import ExtendedImage from "@/components/files/ExtendedImage.vue"
 import {getFile} from "@/api/files.js"
 import {getItems} from "@/api/folder.js"
-import {sortItems} from "@/api/utils.js"
 import {getShare} from "@/api/share.js"
+import { VueReader } from "vue-reader"
+import { useStorage } from '@vueuse/core'
+import {isMobile, sortItems} from "@/utils/common.js";
 
 export default {
   name: "preview",
   components: {
     HeaderBar,
+    VueReader,
     Action,
     ExtendedImage,
   },
@@ -160,12 +190,25 @@ export default {
       hoverNav: false,
       autoPlay: true,
 
+      //epub reader data
+      bookLocation: null,
+      firstRenderDone: false,
+      page: null,
+      size: null,
+      rendition: null,
+      toc: [],
+      fontSize: 100, // Default font size percentage
+
+
     }
   },
   computed: {
     ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
     ...mapGetters(["currentPrompt"]),
-
+    isEpub() {
+      if (!this.file) return false
+      return this.file.extension === ".epub"
+    },
     isInShareContext() {
       return this.token !== undefined
     },
@@ -182,17 +225,17 @@ export default {
       }
     },
     files() {
-      const items = []
+      let files = []
 
       if (this.items != null) {
         this.items.forEach((item) => {
           if (!item.isDir && item.type !== "text" && item.type !== "application") {
-            items.push(item)
+            files.push(item)
           }
         })
       }
       //return items
-      return sortItems(items)
+      return sortItems(files)
     },
     hasNext() {
       return this.currentIndex < this.files.length - 1 // list starts at 0 lul
@@ -277,7 +320,11 @@ export default {
         }
       }
       this.$store.commit("addSelected", this.file)
+      if (!this.isEpub) return
       this.setLoading(false)
+      this.bookLocation = localStorage.getItem('book-progress-' + this.file.id)
+      this.fontSize = localStorage.getItem('font-size') || 100
+
 
     },
     moveToTrash() {
@@ -383,6 +430,154 @@ export default {
       let message = this.$t("toasts.downloadingSingle", {name: this.selected[0].name})
       this.$toast.success(message)
     },
+    getRendition(rendition) {
+      console.log("get rendition")
+      // rendition.hooks.content.register((contents) => {
+      //   rendition.manager.container.style['scroll-behavior'] = 'smooth'
+      // })
+      this.rendition = rendition
+      // Wait for the content to be fully rendered
+
+
+      this.applyStyles()
+
+    },
+    applyStyles() {
+      if (this.rendition) {
+        this.rendition.themes.default({
+          body: {
+            'font-size': `${this.fontSize}%`,
+
+
+          },
+        });
+        this.rendition.flow('paginated'); // For continuous scrolling
+
+      }
+    },
+    increaseFontSize() {
+      if (this.fontSize < 500) {
+        this.fontSize += 20
+        localStorage.setItem('font-size', this.fontSize)
+        this.applyStyles()
+      }
+    },
+    calcCurrentLocation() {
+      let { displayed } = this.rendition.location.start
+      let percentage =  Math.round(displayed.page / displayed.total * 100)
+      this.page = `${percentage}% finished • ${displayed.total - displayed.page} pages left in this chapter`
+
+    },
+
+    decreaseFontSize() {
+      if (this.fontSize > 60) {
+        this.fontSize -= 20
+        localStorage.setItem('font-size', this.fontSize)
+        this.applyStyles()
+      }
+    },
+    tocChanged(toc){
+      console.log("tocChanged")
+      this.toc = toc
+    },
+
+    locationChange(epubcifi) {
+      console.log(this.rendition)
+      this.calcCurrentLocation()
+      //todo one day fix padding and location and mobile support etc
+      // if (isMobile) {
+      //   let container = this.rendition.manager.container;
+      //   console.log(container)
+      //   let iframe = container.querySelector('iframe');
+      //   console.log(iframe)
+      //
+      //   if (iframe) {
+      //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+      //     console.log(iframeDocument)
+      //     const body = iframeDocument.querySelector('body');
+      //
+      //     if (body) {
+      //       // Modify body styles directly
+      //       body.style.setProperty('padding-left', '30px', 'important');
+      //       body.style.setProperty('padding-right', '30px', 'important');
+      //       body.style.setProperty('padding-top', '20px', 'important');
+      //       body.style.setProperty('padding-bottom', '20px', 'important');
+      //     }
+      //   }
+      // }
+
+        // let container = this.rendition.manager.container;
+        // console.log(container)
+        // let iframe = container.querySelector('iframe');
+        // console.log(iframe)
+        //
+        // if (iframe) {
+        //   const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+        //   console.log(iframeDocument)
+        //
+        //   iframeDocument.addEventListener('scroll', (event) => {
+        //     const scrollDirection = event.deltaX < 0 ? 'left' : 'right';
+        //     // Handle the scroll direction and adjust navigation accordingly
+        //     console.log(`Scrolled ${scrollDirection}`);
+        //   });
+        // }
+
+      localStorage.setItem('book-progress-'+this.file.id, epubcifi)
+      this.bookLocation = epubcifi
+    },
   },
 }
 </script>
+<style >
+
+.page {
+  position: fixed;
+  left: 50%;
+  padding: 10px;
+  transform: translateX(-50%);
+  color: #5e727e;
+  z-index: 1;
+  font-size: 12px;
+}
+.epub-reader {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+ -webkit-column-break-before: always;
+ break-before: column;
+
+}
+
+
+.epub-reader .arrow.pre {
+  left: 0;
+}
+.epub-reader .size {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  z-index: 111;
+  right: 25px;
+  outline: none;
+  position: absolute;
+  top: 78px;
+
+}
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+ .epub-reader .arrow {
+  font-size: 1.5rem;
+ }
+
+ .epub-reader .arrow.pre {
+  left: 0;
+ }
+
+ .epub-reader .arrow.next {
+  right: 0;
+ }
+}
+html body {
+ padding-left: 1px !important;
+}
+</style>

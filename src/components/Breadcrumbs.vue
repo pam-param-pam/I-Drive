@@ -30,6 +30,7 @@
 
 <script>
 import {mapState} from "vuex"
+import {isMobile} from "@/utils/common.js";
 
 export default {
   name: "breadcrumbs",
@@ -47,7 +48,7 @@ export default {
     },
     maxBreadcrumbs() {
       return 5
-      if (this.isMobile()) {
+      if (isMobile()) {
         return 3
       } else return 5
     },
@@ -65,10 +66,7 @@ export default {
 
   },
   methods: {
-    isMobile() {
-      return window.innerWidth <= 950
 
-    },
     dragOver: function (event) {
       //todo
       // if (!this.canDrop) return

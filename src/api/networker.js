@@ -5,7 +5,7 @@ import store from "@/store/index.js"
 import i18n from "@/i18n/index.js"
 import {logout} from "@/utils/auth.js"
 
-const cancelTokenMap = new Map();
+const cancelTokenMap = new Map()
 
 
 export const backend_instance = axios.create({
@@ -65,14 +65,14 @@ backend_instance.interceptors.request.use(
   function(config) {
 
     if (cancelTokenMap.has(config.__cancelSignature)) {
-      cancelTokenMap.get(config.__cancelSignature).cancel("Request cancelled due to a new request with the same cancel signature.");
+      cancelTokenMap.get(config.__cancelSignature).cancel("Request cancelled due to a new request with the same cancel signature.")
     }
     // Create a new cancel token for the current request
-    let cancelSource = axios.CancelToken.source();
+    let cancelSource = axios.CancelToken.source()
     // Attach the cancel token to the request
-    config.cancelToken = cancelSource.token;
+    config.cancelToken = cancelSource.token
     // Store the cancel token in the map
-    cancelTokenMap.set(config.__cancelSignature, cancelSource);
+    cancelTokenMap.set(config.__cancelSignature, cancelSource)
 
     let token = localStorage.getItem("token")
     if (token) {
@@ -102,7 +102,7 @@ backend_instance.interceptors.response.use(
     let { config, response } = error
     // Initialize retry counter if it doesn't exist
     if (!config.__retryCount) {
-      config.__retryCount = 0;
+      config.__retryCount = 0
     }
 
     // Check if the error is 469 INCORRECT OR MISSING FOLDER PASSWORD
@@ -110,7 +110,7 @@ backend_instance.interceptors.response.use(
       if (config.__retryCount > 3) {
         store.commit("resetFolderPassword")
       }
-      config.__retryCount++;
+      config.__retryCount++
 
       let requiredFolderPasswords = response.data.requiredFolderPasswords
 

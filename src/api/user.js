@@ -1,5 +1,5 @@
 import {backend_instance} from "@/api/networker.js"
-import store from "@/store/index.js";
+import store from "@/store/index.js"
 
 export async function getUser(token) {
   if (!token) return
@@ -36,12 +36,12 @@ export async function getTrash() {
   })
     .then(response => {
       store.commit("setLoading", false)
-      return response.data;
+      return response.data
     })
     .catch(error => {
       store.commit("setError", error)
-      throw error;
-    });
+      throw error
+    })
 }
 
 

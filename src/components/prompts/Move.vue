@@ -5,7 +5,7 @@
     </div>
 
     <div class="card-content">
-      <file-list ref="fileList" @update:selected="(val) => (dest = val)">
+      <file-list ref="fileList" @update:current="(val) => (dest = val)">
       </file-list>
     </div>
 
@@ -36,7 +36,7 @@
         <button
           class="button button--flat"
           @click="move"
-          :disabled="$route.path === dest"
+          :disabled="isMoveDisabled"
           :aria-label="$t('buttons.move')"
           :title="$t('buttons.move')"
         >
@@ -50,19 +50,34 @@
 <script>
 import { mapState } from "vuex"
 import FileList from "./FileList.vue"
+import {move} from "@/api/item.js"
 
 export default {
   name: "move",
   components: { FileList },
   data() {
     return {
-      current: window.location.pathname,
       dest: null,
     }
   },
-  computed: mapState(["settings", "perms", "selected", "user"]),
+  computed: {
+    ...mapState(["perms", "selected"]),
+
+    isMoveDisabled() {
+      return this.selected[0].parent_id === this.dest?.id
+    }
+  },
+
   methods: {
-    move: async function (event) {
+    async move() {
+
+      let listOfIds = this.selected.map(obj => obj.id)
+
+      await move({ids: listOfIds, "new_parent_id": this.dest.id})
+
+      let message = this.$t('toasts.movedItems')
+      this.$toast.success(message)
+      this.$store.commit("closeHover")
 
 
     },

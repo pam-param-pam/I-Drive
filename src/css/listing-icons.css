@@ -10,6 +10,7 @@
 .file-icons [data-type=image] i::before { content: 'image' }
 .file-icons [data-type=pdf] i::before { content: 'description' }
 .file-icons [data-type=text] i::before { content: 'description' }
+.file-icons [data-type=ebook] i::before { content: 'menu_book' }
 .file-icons [data-type=video] i::before { content: 'movie' }
 .file-icons [data-type=invalid_link] i::before { content: 'link_off' }
 
@@ -119,6 +120,11 @@
 .file-icons [aria-label$=".woff2"] i::before
 { content: 'font_download' }
 
+/* E-Books */
+.file-icons [aria-label$=".mobi"] i,
+.file-icons [aria-label$=".epub"] i
+{ content: 'font_download' }
+
 /* Colors */
 
 /* General */
@@ -196,6 +202,12 @@
 .file-icons [aria-label$=".php"] i,
 .file-icons [aria-label$=".rar"] i
 { color: var(--icon-violet) }
+
+/* E-Books */
+.file-icons [aria-label$=".mobi"] i,
+.file-icons [aria-label$=".epub"] i
+{ color: var(--icon-green) }
+
 
 /* Overrides */
 

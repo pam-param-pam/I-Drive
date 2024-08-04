@@ -45,6 +45,8 @@
     "video": "Video"
   },
   "buttons": {
+    "increaseFontSize": "Increase font size",
+    "decreaseFontSize": "Decrease font size",
     "copyToClipboard": "Copy to clipboard",
     "reset": "Reset password",
     "forgotFolderPassword": "Forgot password?",
@@ -178,7 +180,7 @@
     "restoreFromTrashMessageMultiple": "Are you sure you wish to restore from trash {count} file(s)?",
     "restoreFromTrashMessageSingle": "Are you sure you wish to restore from trash this file/folder?",
     "itemInfo": "Information",
-    "currentlyNavigating": "Currently navigating on:",
+    "moveTo": "Move to: ",
     "deleteMessageMultiple": "Are you sure you wish to delete {count} file(s)? This action is irreversible!",
     "deleteMessageSingle": "Are you sure you wish to delete this file/folder?",
     "irreversibleAction": " This action is irreversible!",
@@ -255,7 +257,9 @@
     "passwordIsRequired": "Password is required for access",
     "unauthorized": "Unauthorized",
     "sessionExpired": "Session Expired",
-    "websocketError": "Couldn't connect to websocket, site will not function properly."
+    "websocketError": "Couldn't connect to websocket, site will not function properly.",
+    "movedItems": "Moved items!"
+
 
   },
   "uploadFile": {

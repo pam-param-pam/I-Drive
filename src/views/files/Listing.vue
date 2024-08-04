@@ -153,8 +153,8 @@ import Action from "@/components/header/Action.vue"
 import Search from "@/components/Search.vue"
 import Item from "@/components/files/ListingItem.vue"
 import {updateSettings} from "@/api/user.js"
-import {sortItems} from "@/api/utils.js"
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
+import {sortItems} from "@/utils/common.js";
 
 export default {
   name: "listing",
@@ -249,30 +249,32 @@ export default {
     sizeSorted() {
       return this.settings.sortingBy === "size"
     },
-    dirs() {
-      const items = []
+    allItems() {
+      // Combine directories and files into a single array
+      const allItems = [];
+
       if (this.items != null) {
         this.items.forEach((item) => {
           if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
-            items.push(item)
+            allItems.push({ ...item, isDir: true });
+          } else if (!item.isDir) {
+            allItems.push({ ...item, isDir: false });
           }
-
-        })
+        });
       }
-      return sortItems(items)
+      // Sort the combined array
+      this.$store.commit("setItems", allItems)
+      return sortItems(allItems)
     },
+
+    dirs() {
+      return this.allItems.filter(item => item.isDir);
+    },
+
     files() {
-      const items = []
-
-      if (this.items != null) {
-        this.items.forEach((item) => {
-          if (!item.isDir) {
-            items.push(item)
-          }
-        })
-      }
-      return sortItems(items)
+      return this.allItems.filter(item => !item.isDir);
     },
+
     dirsSize() {
       return this.dirs.length
     },
@@ -366,16 +368,12 @@ export default {
             break
           case "a":
             event.preventDefault()
-            for (let file of this.files) {
-              if (this.selected.indexOf(file.index) === -1) {
-                this.addSelected(file.index)
-              }
-            }
-            for (let dir of this.dirs) {
-              if (this.selected.indexOf(dir.index) === -1) {
-                this.addSelected(dir.index)
-              }
-            }
+
+            this.items.forEach((item) => {
+              this.addSelected(item)
+            })
+
+
             break
 
         }

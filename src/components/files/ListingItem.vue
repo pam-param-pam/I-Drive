@@ -73,10 +73,10 @@ export default {
     type() {
       if (this.item.isDir) return "folder"
       if (this.item.type === "application") return "pdf"
+      if (this.item.extension === ".epub" || this.item.extension === ".mobi") return "ebook"
       return this.item.type
     },
     isSelected() {
-
       return this.selected.includes(this.item)
     },
     isDraggable() {
@@ -158,10 +158,7 @@ export default {
 
       await move({ids: listOfIds, "new_parent_id": this.item.id})
 
-      //let updatedItem = this.items.filter(item => !listOfIds.includes(item.id))
-      //this.$store.commit("setItems", updatedItem)
-      //todo TODO what? Extract translation or the commented code...
-      let message = `Moved to ${this.item.name}!`
+      let message = this.$t('toasts.movedItems')
       this.$toast.success(message)
 
 
@@ -170,34 +167,45 @@ export default {
 
     click: function (event) {
 
-      if (!event.shiftKey && this.selected.length > 0) {
-        if (! this.isSelected) {
-          this.resetSelected()
+      // Deselect items if no shift or ctrl key is pressed and there are selected items
+      // then add current item to selected if it wasn't previously selected
+      if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {
+        let shouldAdd = !this.isSelected
+        this.resetSelected()
+        if (shouldAdd) {
+          this.addSelected(this.item)
         }
-      }
-
-      if (this.isSelected && this.selected.length > 0)  {
-        this.removeSelected(this.item)
         return
       }
 
-      this.addSelected(this.item)
-      //todo fix item click
+      // Shift+Click functionality for range selection
+      if (event.shiftKey && this.selectedCount > 0) {
 
-      /*
-      let lastIndex = -1
-      let currentIndex = -1
-      for (let i = 0; i < this.items.length; i++) {
-        if (this.items[i].id === this.selected[this.selected.length - 1]?.id) {
-          lastIndex = i
-        }
-        if (this.items[i].id === this.item.id) {
-          currentIndex = i
-        }
+        let fromItem = this.item
+        let toItem = this.selected[this.selected.length-1]
+
+        let fromIndex = fromItem.index
+        let toIndex = toItem.index
+
+        let start = Math.min(fromIndex, toIndex)
+        let end = Math.max(fromIndex, toIndex)
+        this.resetSelected()
+
+        this.items.forEach(item => {
+          if (item.index >= start && item.index <= end) {
+            this.addSelected(item)
+          }
+        })
+        return
+
       }
-      console.log("lastIndex: " + lastIndex)
-      console.log("currentIndex: " + currentIndex)
-       */
+      // Remove the selected item if it is already selected and there are selected items
+      if (this.isSelected) {
+        this.removeSelected(this.item)
+      }
+      else {
+        this.addSelected(this.item)
+      }
 
     },
 

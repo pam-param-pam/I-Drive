@@ -63,9 +63,6 @@ export default {
       }
       return icons[this.settings.viewMode]
     },
-    isMobile() {
-      return window.innerWidth <= 950
-    },
 
   },
   methods: {

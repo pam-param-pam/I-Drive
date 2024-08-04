@@ -2,9 +2,8 @@ import buttons from "@/utils/buttons"
 import {
   createNeededFolders,
   handleCreatingFiles,
-  uploadChunk, uploadCreatedFiles,
-  uploadMultiAttachments
-} from "@/utils/upload.js";
+  uploadCreatedFiles
+} from "@/utils/upload.js"
 
 let MAX_CONCURRENT_REQUESTS = 4
 const chunkSize = 25 * 1023 * 1024 // <25MB in bytes
@@ -59,14 +58,27 @@ const mutations = {
   },
 
   moveJob(state) {
-    const item = state.queue[0]
+    let item = state.queue[0]
     state.queue.shift()
     state.filesUploading.set(item.file_id, item)
   },
   addToQueue: (state, item) => {
-    item.status = "creating"
-    item.progress = 1
-    state.queue.push(item)
+    console.log(item.file)
+    let file = {
+      name: item.name,
+      file_id: item.file_id,
+      fileObj: item.file,
+      size: item.file.size,
+      parent_id: item.parent_id,
+      type: item.type,
+      status: "creating",
+      progress: 1
+    }
+
+    state.queue.push(file)
+    console.log("add to queue")
+    console.log(state.queue)
+    console.log(item)
   },
   cancelJob: (state, file_id) => {
     let index = state.queue.findIndex(item => item.file_id === file_id)
@@ -78,10 +90,10 @@ const mutations = {
 
   },
   replaceInQueue: (state, { queue_id, newItem }) => {
-    const index = state.queue.findIndex(item => item.queue_id === queue_id);
+    const index = state.queue.findIndex(item => item.queue_id === queue_id)
     if (index !== -1) {
-      newItem.queue_id = queue_id; // Ensure the new item retains the same queue_id
-      state.queue.splice(index, 1, newItem);
+      newItem.queue_id = queue_id // Ensure the new item retains the same queue_id
+      state.queue.splice(index, 1, newItem)
     }
 
   },
@@ -98,11 +110,11 @@ const beforeUnload = (event) => {
 }
 
 const actions = {
-  // takeJob: (context) => {
-  //   let fileObj = context.queue[0]
-  //   context.commit("moveJob")
-  //   return fileObj
-  // },
+  getFileFromQueue: (context) => {
+    let fileObj = context.state.queue[0]
+    context.commit("moveJob")
+    return fileObj
+  },
   upload: async (context, { filesList, parent_folder }) => {
     buttons.loading("upload")
 
@@ -125,6 +137,7 @@ const actions = {
     for (let createdFile of createdFiles) {
       context.commit("addToQueue", createdFile)
     }
+
 
     await context.dispatch("processUploads")
 
@@ -153,6 +166,7 @@ const actions = {
     }
 
   },
+
 }
 
 export default { state, mutations, actions, namespaced: true }

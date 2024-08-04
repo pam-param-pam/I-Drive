@@ -15,7 +15,7 @@
     </ul>
 
     <p>
-      {{ $t("prompts.currentlyNavigating") }} <code>{{ nav.name }}</code
+      {{ $t("prompts.moveTo") }} <code>{{ nav?.name }}</code
       >.
     </p>
   </div>
@@ -23,7 +23,7 @@
 
 <script>
 import { mapState } from "vuex"
-import {getItems} from "@/api/folder.js"
+import {getDirs} from "@/api/folder.js"
 
 export default {
   name: "file-list",
@@ -44,56 +44,36 @@ export default {
 
   mounted() {
     this.fetchData(this.currentFolder)
-    this.nav = this.currentFolder
   },
   methods: {
     async fetchData(folder) {
-      const res = await getItems(folder.id)
-      const dirs = res.children.filter(item => item.isDir)
+      let res = await getDirs(folder.id)
+      let dirs = res.children
 
-      let folderBack = {name: "...", id: folder.parent_id}
+      if (res.parent_id) {
+        let folderBack = {name: "...", id: res.parent_id}
+        dirs.unshift(folderBack)
+      }
 
-
-
-      dirs.unshift(folderBack)
-      console.log(dirs)
       this.dirs = dirs
-      this.$emit("update:selected", dirs)
-      return dirs
+      this.nav = {name: res.name, id: res.id}
+      this.$emit("update:current", this.nav)
     },
 
     async next(event) {
-      // Retrieves the URL of the directory the user
-      // just clicked in and fill the options with its
-      // content.
       let current = event.currentTarget.dataset.item
       current = JSON.parse(current)
-      let dirs = await this.fetchData(current)
-
-      console.log(dirs)
-      this.nav = current
+      await this.fetchData(current)
 
     },
 
     select: function (event) {
-      // If the element is already selected, unselect it.
-      if (this.selected === event.currentTarget.dataset.item) {
-        this.selected = null
-        this.$emit("update:selected", this.current)
-        return
-      }
 
-      // Otherwise select the element.
-      this.selected = event.currentTarget.dataset.item
-      this.$emit("update:selected", this.selected)
     },
     createDir: async function () {
       this.$store.commit("showHover", {
         prompt: "newDir",
-        props: {
-          redirect: false,
-          base: this.current === this.$route.path ? null : this.current,
-        },
+
       })
     },
   },

@@ -145,7 +145,7 @@
                  base="/files"
                  :folderList="folderList"
     />
-    <errors v-if="error" :errorCode="error.response.status"/>
+    <errors v-if="error" :errorCode="error.response?.status"/>
 
 
     <h4 v-if="!error && isSearchActive && !loading">{{$t('files.searchItemsFound', {amount: this.items.length})}}</h4>
@@ -177,6 +177,7 @@ import Action from "@/components/header/Action.vue"
 import Search from "@/components/Search.vue"
 import {checkFilesSizes} from "@/utils/upload.js"
 import {createZIP} from "@/api/item.js"
+import {isMobile} from "@/utils/common.js";
 
 export default {
   name: "files",
@@ -244,10 +245,9 @@ export default {
 
   },
   methods: {
+    isMobile,
     ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisabledCreation"]),
-    isMobile() {
-      return window.innerWidth <= 950
-    },
+
     onDragEnter() {
       this.dragCounter++
 
@@ -311,7 +311,8 @@ export default {
         })
       }
       else {
-        this.$store.dispatch("upload/upload", {filesList: files, parent_folder: folder})
+        await this.$store.dispatch("upload/upload", {filesList: files, parent_folder: folder})
+
         // await upload.createNeededFolders(files, folder)
       }
 
@@ -403,7 +404,7 @@ export default {
 
       } else {
 
-        if (item.type === "audio" || item.type === "video" || item.type === "image" ||  item.size >= 25 * 1024 * 1024 || item.extension === ".pdf") {
+        if (item.type === "audio" || item.type === "video" || item.type === "image" ||  item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
           this.$router.push({name: "Preview", params: {"fileId": item.id, "lockFrom": item.lockFrom}} )
 
         }

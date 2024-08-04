@@ -40,6 +40,8 @@
     "types": "Typy"
   },
   "buttons": {
+    "increaseFontSize": "Zwiększ rozmiar czcionki",
+    "decreaseFontSize": "Zmniejsz rozmiar czcionki",
     "reset": "zresetuj",
     "forgotFolderPassword": "Nie pamiętam hasła?",
     "copyToClipboard": "Skopiuj do schowka",
@@ -163,6 +165,7 @@
     "editFolderPassword": "Zmień hasło do folderu",
     "lastModified": "Ostatnio zmodyfikowane",
     "all": "wszystkie",
+    "showLimit": "Maksymalna liczba itemów",
     "limit": "Maksymalna liczba zwróconych itemów",
     "searchTune": "Dostosuj szukanie",
     "filterMessage": "Wybiersz filtry szukania",
@@ -173,11 +176,11 @@
     "shareDuration": "Długość share",
     "deleteMessageShare": "Czy napewno chcesz usunąć ten share?",
     "inTrashSince": "W koszu od",
-    "moveToTrashMessageMultiple":  "Czy jesteś pewien, że chcesz przeniesć do kosza {count} plik(ów)?",
-    "moveToTrashMessageSingle":  "Czy jesteś pewien, że chcesz przeniesć do kosza ten plik/folder?",
+    "moveToTrashMessageMultiple": "Czy jesteś pewien, że chcesz przeniesć do kosza {count} plik(ów)?",
+    "moveToTrashMessageSingle": "Czy jesteś pewien, że chcesz przeniesć do kosza ten plik/folder?",
     "restoreFromTrashMessageMultiple": "Czy jesteś pewien, że chcesz przywrócić z kosza {count} plik(ów)?",
     "restoreFromTrashMessageSingle": "Czy jesteś pewien, że chcesz przywrócić z kosza ten plik/folder?",
-    "currentlyNavigating": "Obecnie przeglądasz:",
+    "moveTo": "Przenieś do: ",
     "deleteMessageMultiple": "Czy jesteś pewien że chcesz usunąć {count} plik(ów)?",
     "deleteMessageSingle": "Czy jesteś pewien, że chcesz usunąć ten plik/folder?",
     "deleteTitle": "Usuń pliki",
@@ -251,7 +254,8 @@
     "passwordIsRequired": "Hasło jest wymagane",
     "unauthorized": "Brak uwierzytelnienia",
     "sessionExpired": "Sesja wygasła",
-    "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie."
+    "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie.",
+    "movedItems": "Przeniesiono itemy!"
 
   },
   "uploadFile": {
