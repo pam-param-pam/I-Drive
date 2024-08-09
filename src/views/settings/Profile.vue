@@ -104,6 +104,7 @@ import { mapState, mapMutations } from "vuex"
 import Languages from "@/components/settings/Languages.vue"
 import Themes from "@/components/settings/Themes.vue"
 import {changePassword, updateSettings} from "@/api/user.js"
+import router from "@/router/index.js";
 
 export default {
   name: "settings",
@@ -158,13 +159,20 @@ export default {
       }
 
       const data = { current_password: this.currentPassword, new_password: this.password}
+
       let res = await changePassword(data)
+
+
 
       localStorage.setItem("token", res.auth_token)
       this.$store.commit("setToken", res.auth_token)
 
-
       this.$toast.success(this.$t("settings.passwordUpdated"))
+
+      setTimeout(() => {
+        router.go(0)
+      }, 2000)
+
 
     },
     async updateSettings(event) {
@@ -200,11 +208,9 @@ export default {
       const html = document.documentElement
       if (!theme) {
         theme = this.getMediaPreference()
-        console.log("theme2 set: " + theme)
 
         html.className = theme
       } else {
-        console.log("theme set: " + theme)
         html.className = theme
       }
     }

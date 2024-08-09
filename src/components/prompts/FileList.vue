@@ -36,9 +36,7 @@ export default {
     }
   },
   computed: {
-
     ...mapState(["items", "currentFolder", "user"]),
-
 
   },
 
@@ -47,7 +45,12 @@ export default {
   },
   methods: {
     async fetchData(folder) {
+      //todo known bug that causes lack of state in move/file list:
+      //when new prompt is displayed like folder password or new dir
+      //the previous one is destroyed causing it to go back to initial state
+
       let res = await getDirs(folder.id)
+
       let dirs = res.children
 
       if (res.parent_id) {
@@ -67,10 +70,7 @@ export default {
 
     },
 
-    select: function (event) {
-
-    },
-    createDir: async function () {
+    async createDir() {
       this.$store.commit("showHover", {
         prompt: "newDir",
 

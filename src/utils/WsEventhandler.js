@@ -5,9 +5,10 @@ import i18n from "@/i18n/index.js"
 export default function onEvent(message) {
   let currentFolder = store.state.currentFolder
   let jsonObject = JSON.parse(message.data)
+
   if (jsonObject.op_code === 1) { // items created event
     for (let item of jsonObject.data) {
-      if (item.parent_id !== currentFolder.id) return
+      if (item.parent_id !== currentFolder?.id) return
       store.commit("updateItems", item)
 
     }
@@ -17,7 +18,7 @@ export default function onEvent(message) {
     let updatedItems = store.state.items.filter(item => !jsonObject.data.includes(item.id))
     store.commit("setItems", updatedItems)
     //if the deleted folder was the current folder, then let's redirect to root
-    if (jsonObject.data.includes(currentFolder.id)) {
+    if (jsonObject.data.includes(currentFolder?.id)) {
       this.$router.push({name: `Files`})
 
     }
@@ -25,19 +26,19 @@ export default function onEvent(message) {
   }
   if (jsonObject.op_code === 3) { // items name change event
     for (let item of jsonObject.data) {
-      if (item.parent_id !== currentFolder.id) return
+      if (item.parent_id !== currentFolder?.id) return
       store.commit("renameItem", {id: item.id, newName: item.new_name})
     }
   }
 
   if (jsonObject.op_code === 5) { // items moved event
     for (let item of jsonObject.data) {
-      if (item.old_parent_id === currentFolder.id) {
+      if (item.old_parent_id === currentFolder?.id) {
         //removeShare
         let updatedItems = store.state.items.filter(ListItem => ListItem.id !== item.item.id)
         store.commit("setItems", updatedItems)
       }
-      if (item.new_parent_id === currentFolder.id) {
+      if (item.new_parent_id === currentFolder?.id) {
         //add
         store.commit("updateItems", item.item)
 
@@ -46,7 +47,7 @@ export default function onEvent(message) {
   }
   if (jsonObject.op_code === 6) { // items preview info add event
     for (let item of jsonObject.data) {
-      if (item.parent_id !== currentFolder.id) return
+      if (item.parent_id !== currentFolder?.id) return
       store.commit("updatePreviewInfo", {id: item.id, iso: item.iso,
         model_name: item.model_name, exposure_time: item.exposure_time,
         aperture: item.aperture, focal_length: item.focal_length})
@@ -64,7 +65,7 @@ export default function onEvent(message) {
     for (let item of jsonObject.data) {
       console.log(2222)
 
-      if (item.parent_id !== currentFolder.id) return
+      if (item.parent_id !== currentFolder?.id) return
       console.log(3333)
 
       store.commit("changeLockStatusAndPasswordCache", {folderId: item.id, newLockStatus: item.isLocked})

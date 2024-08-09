@@ -52,6 +52,11 @@ const getters = {
     //console.log(files)
     //return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
   },
+  previousPrompt: (state) => {
+    return state.prompts.length > 1
+      ? state.prompts[state.prompts.length - 2]
+      : null
+  },
   currentPrompt: (state) => {
     return state.prompts.length > 0
       ? state.prompts[state.prompts.length - 1]
@@ -59,6 +64,9 @@ const getters = {
   },
   currentPromptName: (_, getters) => {
     return getters.currentPrompt?.prompt
+  },
+  previousPromptName: (_, getters) => {
+    return getters.previousPrompt?.prompt
   },
   uploadSpeed: (state) => state.upload.speedMbyte,
   eta: (state) => state.upload.eta,

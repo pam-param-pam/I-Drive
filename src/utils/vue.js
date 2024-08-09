@@ -11,10 +11,7 @@ import Dropdown from 'vue-simple-search-dropdown'
 Vue.use(Vue2TouchEvents)
 Vue.use(VueLazyload)
 Vue.use(AsyncComputed)
-const token = localStorage.getItem("token")
-// todo do this after login cuz token is null
-// todo and so is the the websocket connection one the first login
-Vue.use(VueNativeSock, baseWS + "/user", {reconnectionDelay: 5000, reconnection: true, protocol: token})
+
 Vue.use(Dropdown)
 
 const options = {

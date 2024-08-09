@@ -16,7 +16,9 @@ export async function getUser(token) {
 
 export async function changePassword(data) {
   let url = `/api/user/changepassword`
-  await backend_instance.post(url, data)
+  let response = await backend_instance.post(url, data)
+  return response.data
+
 
 }
 

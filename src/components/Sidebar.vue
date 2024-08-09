@@ -125,6 +125,7 @@ import ProgressBar from "vue-simple-progress"
 import prettyBytes from "pretty-bytes"
 import { getUsage } from "@/api/folder.js"
 import {name, author} from "@/utils/constants.js"
+import {filesize} from "@/utils/index.js";
 
 export default {
   name: "sidebar",
@@ -154,8 +155,8 @@ export default {
 
           let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
           usageStats = {
-            used: prettyBytes(usage.used, { binary: true }),
-            total: prettyBytes(usage.total, { binary: true }),
+            used: filesize(usage.used),
+            total: filesize(usage.total),
             usedPercentage: Math.round((usage.used / usage.total) * 100),
           }
 

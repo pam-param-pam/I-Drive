@@ -37,12 +37,12 @@ async function start() {
     i18n,
     template: "<App/>",
     components: { App },
-    mounted() {
-      this.$options.sockets.onmessage = (data) => onEvent(data)
-      //this.$options.sockets.onerror = (event) => this.$toast.error(this.$t("toasts.websocketError"))
-
-
-    }
+    // mounted() {
+    //   this.$options.sockets.onmessage = (data) => onEvent(data)
+    //   //this.$options.sockets.onerror = (event) => this.$toast.error(this.$t("toasts.websocketError"))
+    //
+    //
+    // }
   })
 }
 

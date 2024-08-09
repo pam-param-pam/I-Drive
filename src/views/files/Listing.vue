@@ -336,9 +336,17 @@ export default {
       // Del!
       if (event.keyCode === 46) {
         if (!this.perms.delete || this.selectedCount === 0) return
+        // if (this.$route.name.includes("trash"))
 
+        if (this.$route.name === "Trash") {
+          this.$store.commit("showHover", "delete")
+
+        }
+        else {
+          this.$store.commit("showHover", "moveToTrash")
+
+        }
         // Show delete prompt.
-        this.$store.commit("showHover", "moveToTrash")
       }
 
       // F1!
@@ -442,7 +450,7 @@ export default {
       event.preventDefault()
     },
 
-    drop: async function (event) {
+    async drop(event) {
       //event.preventDefault()
       this.dragCounter = 0
       this.resetOpacity()
@@ -532,7 +540,6 @@ export default {
 
       // How much every listing item affects the window height
       this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity
-      console.log(121212121)
     },
     fillWindow(fit = false) {
       //if (this.currentFolder == null) return
@@ -554,7 +561,6 @@ export default {
 
       // Set the number of displayed items
       this.showLimit = showQuantity > totalItems ? totalItems : showQuantity
-      console.log(31313131)
 
     },
     async switchView() {

@@ -342,7 +342,6 @@ export default {
       this.hoverNav = false
       if (this.hasPrevious) {
         let previousFile = this.files[this.currentIndex - 1]
-        console.log(previousFile)
         if (this.isInShareContext) {
           this.$router.push({name: "SharePreview", params: {"folderId": previousFile.parent_id,"fileId":previousFile.id, "token": this.token}} )
 
@@ -358,7 +357,6 @@ export default {
       this.hoverNav = false
       if (this.hasNext) {
         let nextFile = this.files[this.currentIndex + 1]
-        console.log(nextFile)
         if (this.isInShareContext) {
           this.$router.push({name: "SharePreview", params: {"folderId": nextFile.parent_id,"fileId":nextFile.id, "token": this.token}} )
 
@@ -429,7 +427,6 @@ export default {
       this.$toast.success(message)
     },
     getRendition(rendition) {
-      console.log("get rendition")
       // rendition.hooks.content.register((contents) => {
       //   rendition.manager.container.style['scroll-behavior'] = 'smooth'
       // })
@@ -475,12 +472,10 @@ export default {
       }
     },
     tocChanged(toc){
-      console.log("tocChanged")
       this.toc = toc
     },
 
     locationChange(epubcifi) {
-      console.log(this.rendition)
       this.calcCurrentLocation()
       //todo one day fix padding and location and mobile support etc
       // if (isMobile) {
@@ -545,7 +540,6 @@ export default {
  break-before: column;
 
 }
-
 
 .epub-reader .arrow.pre {
   left: 0;

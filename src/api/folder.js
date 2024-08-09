@@ -21,16 +21,10 @@ export async function getItems(folder_id, lockFrom) {
           throw error
       })
 }
-export async function getDirs(folder_id, lockFrom) {
+export async function getDirs(folder_id) {
     let url = "/api/folder/dirs/" + folder_id
-    let password = store.getters.getFolderPassword(lockFrom)
 
-    let response = await backend_instance.get(url, {
-        __cancelSignature: 'getItems',
-        headers: {
-            "x-folder-password": password
-        }
-    })
+    let response = await backend_instance.get(url)
     return response.data
 
 }
@@ -81,6 +75,13 @@ export async function resetPassword(folderId, accountPassword, newPassword) {
 
     let data = {"accountPassword": accountPassword, "folderPassword": newPassword}
     let response = await backend_instance.post(url, data)
+    return response.data
+
+}
+export async function fetchAdditionalInfo(folderId) {
+
+    let url = `/api/folder/moreinfo/${folderId}`
+    let response = await backend_instance.get(url)
     return response.data
 
 }

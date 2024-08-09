@@ -43,8 +43,8 @@ export default {
     }
   },
   methods: {
-    submit: async function () {
-      this.currentPrompt?.confirm()
+    async submit() {
+      if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
     },
   },

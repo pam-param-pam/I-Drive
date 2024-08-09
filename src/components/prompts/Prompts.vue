@@ -67,6 +67,21 @@ export default {
         event.stopImmediatePropagation()
         this.resetPrompts()
       }
+      // Enter!
+      if (event.code === "Enter") {
+        event.preventDefault()
+
+        let promptComponent = this.$refs[this.currentPromptName]
+        if (promptComponent && typeof promptComponent.submit === 'function') {
+          promptComponent.submit()
+        }
+        else {
+          console.warn("couldn't find submit method for prompt:")
+          console.warn(this.currentPromptName)
+          this.$store.commit("closeHover")
+        }
+
+      }
 
     })
 

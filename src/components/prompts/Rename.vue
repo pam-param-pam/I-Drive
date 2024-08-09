@@ -30,6 +30,7 @@
       </button>
       <button
         @click="submit()"
+        :disabled="!canSubmit"
         class="button button--flat"
         type="submit"
         :aria-label="$t('buttons.rename')"
@@ -56,6 +57,9 @@ export default {
 
   computed: {
     ...mapState(["selected"]),
+    canSubmit() {
+      return this.name !== this.selected[0].name
+    }
 
   },
   created() {
@@ -64,19 +68,20 @@ export default {
   },
   methods: {
 
-    submit: async function () {
+    async submit() {
+      if (this.canSubmit) {
 
-      let id = this.selected[0].id
-      let new_name = this.name
-      await rename({"id": id, "new_name": new_name})
+        let id = this.selected[0].id
+        let new_name = this.name
+        await rename({"id": id, "new_name": new_name})
 
-      //this.$store.commit("renameItem", {id: id, newName: new_name})
+        //this.$store.commit("renameItem", {id: id, newName: new_name})
 
-      let message = this.$t('toasts.itemRenamed')
-      this.$toast.success(message)
+        let message = this.$t('toasts.itemRenamed')
+        this.$toast.success(message)
 
-      this.$store.commit("closeHover")
-
+        this.$store.commit("closeHover")
+      }
     },
   },
 }

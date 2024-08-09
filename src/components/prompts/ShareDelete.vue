@@ -34,7 +34,7 @@ export default {
   },
   methods: {
     submit: function () {
-      this.currentPrompt?.confirm()
+      if (this.currentPrompt.confirm) this.currentPrompt.confirm()
     },
   },
 }

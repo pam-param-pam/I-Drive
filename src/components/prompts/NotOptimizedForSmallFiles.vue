@@ -43,9 +43,9 @@ export default {
   methods: {
     ...mapMutations(["closeHover"]),
 
-    submit: async function () {
+    async submit() {
 
-      this.currentPrompt?.confirm()
+      if (this.currentPrompt.confirm) this.currentPrompt.confirm()
       this.closeHover()
 
     },

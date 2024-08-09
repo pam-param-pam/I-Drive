@@ -50,8 +50,8 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapState } from "vuex"
-import { isPasswordCorrect } from "@/api/item.js"
+import {mapGetters, mapMutations, mapState} from "vuex"
+import {isPasswordCorrect} from "@/api/item.js"
 import store from "@/store/index.js"
 import i18n from "@/i18n/index.js"
 
@@ -65,9 +65,7 @@ export default {
   props: {
     requiredFolderPasswords: [],
   },
-  created() {
-    console.log("CREATED")
-  },
+
   beforeDestroy() {
 
   },
@@ -75,10 +73,7 @@ export default {
     ...mapGetters(["currentPrompt", "getFolderPassword", "currentPromptName"]),
     ...mapState(["selected", "loading"]),
     folder() {
-      let folder = this.requiredFolderPasswords[0]
-      console.log("folder")
-      console.log(folder)
-      return folder
+      return this.requiredFolderPasswords[0]
     }
   },
   methods: {
@@ -106,14 +101,16 @@ export default {
 
       let requiredFolderPasswordsCopy = [...this.requiredFolderPasswords]
       requiredFolderPasswordsCopy.shift()
+
       if (requiredFolderPasswordsCopy.length === 0) {
-        if (this.currentPrompt.confirm) this.currentPrompt.confirm()
-        this.closeHovers()
+
+        let confirmFunc = this.currentPrompt.confirm
+        this.closeHover()
+        if (confirmFunc) confirmFunc()
 
       }
       else {
         console.log("showHovershowHovershowHover")
-        console.log(requiredFolderPasswordsCopy)
         let confirm = this.currentPrompt.confirm
         this.closeHover()
         this.$nextTick(() => {
@@ -124,10 +121,14 @@ export default {
 
             confirm: confirm
           })
-          console.log("closeHovercloseHovercloseHover")
         })
 
       }
+    },
+    onPasswordReset() {
+      console.log("onPasswordReset")
+      this.finishAndShowAnotherPrompt()
+
     },
     forgotPassword() {
       store.commit("showHover", {
@@ -135,9 +136,9 @@ export default {
         props: {folderId: this.folder.id, lockFrom: this.folder.lockFrom},
 
         confirm: () => {
-          this.finishAndShowAnotherPrompt()
-
+          this.onPasswordReset()
         },
+
       })
     }
   },

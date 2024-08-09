@@ -27,6 +27,7 @@
       </button>
       <button
         class="button button--flat"
+        :disabled="!canSubmit"
         :aria-label="$t('buttons.create')"
         id="create-button"
         :title="$t('buttons.create')"
@@ -53,13 +54,15 @@ export default {
   },
   computed: {
     ...mapState(["currentFolder"]),
+    canSubmit() {
+      return this.name.length > 0
+    }
   },
   
   methods: {
-    submit: async function (event) {
-      event.preventDefault()
+    async submit(event) {
 
-      if (this.name.length > 0) {
+      if (this.canSubmit) {
         try {
 
           await create({"parent_id": this.currentFolder?.id, "name": this.name})
@@ -69,13 +72,8 @@ export default {
         }
         finally {
           this.$store.commit("closeHover")
-
-
         }
-
-
       }
-
     },
   },
 }

@@ -77,16 +77,12 @@ export default {
     }
   },
   computed: {
-  ...mapGetters(["currentPrompt"]),
+  ...mapGetters(["currentPrompt", "previousPromptName"]),
   },
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword"]),
 
     async submit() {
-      if (!this.pinkyPromise) {
-        alert(this.$t("prompts.pinkyPromiseError"))
-        return
-      }
 
       try {
         let res =  await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
@@ -97,13 +93,26 @@ export default {
         })
         this.setFolderPassword({ "folderId": this.folderId, "password": this.folderPassword })
 
-        this.currentPrompt.confirm()
-        this.closeHover()
+        if (this.previousPromptName === "FolderPassword") {
+
+          let confirmFunc = this.currentPrompt.confirm
+
+          this.closeHover()
+          if (confirmFunc) confirmFunc()
+
+
+        }
+        else {
+          this.closeHover()
+          this.currentPrompt.confirm()
+        }
+
 
       } catch (error) {
         console.error("Error resetting password:", error)
       }
     },
+
   },
 }
 </script>

@@ -102,7 +102,7 @@ export default {
   },
   methods: {
     ...mapMutations(["setLoading"]),
-    deleteLink: async function (event, share) {
+    async deleteLink(event, share) {
       event.preventDefault()
 
       this.$store.commit("showHover", {

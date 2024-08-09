@@ -64,8 +64,8 @@ backend_instance.interceptors.request.use(
 
   function(config) {
 
-    if (cancelTokenMap.has(config.__cancelSignature)) {
-      cancelTokenMap.get(config.__cancelSignature).cancel("Request cancelled due to a new request with the same cancel signature.")
+    if (config.__cancelSignature !== undefined && cancelTokenMap.has(config.__cancelSignature)) {
+      cancelTokenMap.get(config.__cancelSignature).cancel(`Request cancelled due to a new request with the same cancel signature (${config.__cancelSignature}).`)
     }
     // Create a new cancel token for the current request
     let cancelSource = axios.CancelToken.source()

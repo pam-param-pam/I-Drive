@@ -3,9 +3,9 @@ const name = window.FileBrowser.Name || "File Browser"
 const baseWS = "ws://localhost:8000"
 //const baseWS = "ws://192.168.1.14:8000"
 //const baseWS = "wss://api.pamparampam.dev"
-//const baseURL = "http://localhost:8000"
+const baseURL = "http://localhost:8000"
 //const baseURL = "http://192.168.1.14:8000"
-const baseURL = "https://api.pamparampam.dev"
+//const baseURL = "https://api.pamparampam.dev"
 const author = window.FileBrowser.author
 
 const signup = window.FileBrowser.Signup

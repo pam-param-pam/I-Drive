@@ -39,7 +39,6 @@
 
       </p>
 
-
       <p v-if="streamable">
           <strong>{{ $t("prompts.streamable") }}:</strong>
           <span v-if="streamable" class="checkmark-true"></span> <!-- Green checkmark emoji -->
@@ -83,17 +82,36 @@
       <p v-if="modelName">
         <strong>{{ $t("prompts.modelName") }}:</strong> {{ modelName }}
       </p>
-      <template v-if="folderItemsCount">
-        <p>
-          <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ folderItemsCount.numFiles }}
-        </p>
-        <p>
-          <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ folderItemsCount.numFolders }}
-        </p>
-      </template>
+
+      <!-- Expandable section -->
+      <div v-if="isDir" class="expandable-section">
+        <div
+          class="expandable-header"
+          @click="isExpanded = !isExpanded"
+        >
+          <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
+          <i class="material-icons expand-icon" :class="{ 'expanded': isExpanded }">
+            keyboard_arrow_down
+          </i>
+        </div>
+
+        <div v-if="isExpanded" class="expandable-content">
+          <p><strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}</p>
+          <p><strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}</p>
+          <p>
+            <strong>{{ $t("prompts.size") }}: </strong>
+            <code>
+              <a v-if="!isMoreDataFetched" @click="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
+              <a v-else @click="changeView($event, 'folderSize')">{{ humanSize(folderSize) }}</a>
+            </code>
+          </p>
+        </div>
+      </div>
+
     </div>
 
     <div class="card-action">
+
       <button
         type="submit"
         @click="$store.commit('closeHover')"
@@ -111,13 +129,33 @@
 import { mapState, mapGetters } from "vuex"
 import { filesize } from "@/utils"
 import moment from "moment/min/moment-with-locales.js"
+import {fetchAdditionalInfo} from "@/api/folder.js";
 
 
 export default {
   name: "info",
+  data() {
+    return {
+      numberDirs: "Loading...",
+      numberFiles: "Loading...",
+      folderSize: "Loading...",
+      isExpanded: false,
+
+    }
+  },
+  watch: {
+    isExpanded(newVal) {
+      if (newVal) {
+        this.fetchAdditionalInfo()
+      }
+    }
+  },
   computed: {
     ...mapState(["selected","settings", "currentFolder"]),
     ...mapGetters(["selectedCount"]),
+    isMoreDataFetched() {
+      return this.folderSize !== "Loading..."
+    },
     size() {
       if (this.selectedCount === 0) {
           //return this.currentFolder.size
@@ -284,26 +322,29 @@ export default {
 
     },
 
-    folderItemsCount() {
-        let folder
-        if (this.selectedCount === 0 && this.currentFolder) {
-            folder = this.currentFolder
-        } else if (this.selectedCount === 1) {
-            if (this.selected[0].isDir) {
-                folder = this.selected[0]
-            }
-        }
-        if (folder) {
-          let numFolders = folder.numFolders
-          let numFiles  = folder.numFiles
-          return {numFolders, numFiles}
 
-        }
-
-    },
 
   },
   methods: {
+    async fetchAdditionalInfo() {
+      // we want to fetch data only once
+      if (this.isMoreDataFetched) return
+      let folder
+      if (this.selectedCount === 1 && this.selected[0].isDir) {
+        folder = this.selected[0]
+      } else if (this.selectedCount === 0) {
+        folder = this.currentFolder
+      }
+
+      if (folder) {
+        let res = await fetchAdditionalInfo(folder.id)
+        this.folderSize = res.folder_size
+        this.numberDirs = res.folder_count
+        this.numberFiles = res.file_count
+
+      }
+
+    },
     humanSize(size) {
         return filesize(size)
     },
@@ -320,13 +361,16 @@ export default {
 
     },
 
-    changeView: async function (event, type) {
+    async changeView(event, type) {
         if (event.target.innerHTML.toString().includes("bytes")) {
             if (type === "size") {
                 event.target.innerHTML = this.humanSize(this.size)
             }
             else if (type === "encryptedSize"){
                 event.target.innerHTML = this.humanSize(this.encryptedSize)
+            }
+            else if (type === "folderSize"){
+              event.target.innerHTML = this.humanSize(this.folderSize)
             }
         }
         else {
@@ -336,7 +380,9 @@ export default {
             else if (type === "encryptedSize"){
                 event.target.innerHTML = this.encryptedSize + " bytes"
             }
-
+            else if (type === "folderSize"){
+              event.target.innerHTML =this.folderSize + " bytes"
+            }
         }
 
     },
@@ -344,20 +390,44 @@ export default {
 }
 </script>
 <style lang="css" scoped>
-.checkmark-true:after {
-    content: "\002705";
- color: #2ecc71;
-
- margin-left: 5px; /* Adjust the margin value based on your preference */
-    /* Add other styles for the green checkmark icon if needed */
+.expandable-section {
+ margin-top: 20px;
+ border-top: 1px solid #ccc;
+ padding-top: 10px;
 }
 
+.expandable-header {
+ cursor: pointer;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+}
+
+.expand-icon {
+ transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+ transform: rotate(180deg); /* Rotate the icon when expanded */
+}
+
+.expandable-content {
+ margin-top: 10px;
+ padding-left: 10px;
+ border-left: 2px solid #3498db; /* Optional: visual indicator */
+}
+
+/* Additional existing styles */
+.checkmark-true:after {
+ content: "\002705";
+ color: #2ecc71;
+ margin-left: 5px;
+}
 
 .checkmark-false:after {
  content: "\00274C";
  color: #d31010;
-
- margin-left: 5px; /* Adjust the margin value based on your preference */
- /* Add other styles for the green checkmark icon if needed */
+ margin-left: 5px;
 }
 </style>
+

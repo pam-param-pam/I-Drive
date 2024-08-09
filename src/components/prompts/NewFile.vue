@@ -51,7 +51,7 @@ export default {
     ...mapGetters(["isFiles", "isListing"]),
   },
   methods: {
-    submit: async function (event) {
+    async submit(event) {
 
     },
   },

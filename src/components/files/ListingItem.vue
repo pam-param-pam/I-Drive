@@ -147,7 +147,7 @@ export default {
       el.style.opacity = 1
 
     },
-    drop: async function (event) {
+    async drop(event) {
 
       if (!this.canDrop) return
       //event.preventDefault()

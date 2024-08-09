@@ -95,7 +95,7 @@
     </header-bar>
 
     <div v-if="isMobile()" id="file-selection">
-      <span v-if="selectedCount > 0">{{ selectedCount }} selected</span>
+      <span v-if="selectedCount > 0">{{ $t('files.selected', {amount: selectedCount}) }}</span>
       <action
         v-if="headerButtons.locate"
         icon="location_on"

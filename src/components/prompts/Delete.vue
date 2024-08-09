@@ -44,29 +44,10 @@ export default {
     ...mapGetters(["selectedCount", "currentPrompt"]),
     ...mapState(["selected", "items"]),
   },
-  created() {
-    // Save the event listener function to a property
-    this.keyEvent = (event) => { // fucking spent 3 hours debuging this fucking piece of code fuck you java script, retarded language istg
-      // Enter
-      if (event.keyCode === 13) {
-        console.log("calling submit from event listener")
-        this.submit()
-      }
-    }
-
-    // Add the event listener using the saved function
-    window.addEventListener("keydown", this.keyEvent)
-  },
-
-  beforeDestroy() {
-    // Remove the event listener using the saved function
-    window.removeEventListener("keydown", this.keyEvent)
-  },
-
 
   methods: {
     ...mapMutations(["closeHover", "resetSelected"]),
-    submit: async function () {
+    async submit() {
       try {
         let ids = this.selected.map(item => item.id)
 
@@ -77,13 +58,13 @@ export default {
           timeout: null,
           id: res.task_id,
         })
-        this.currentPrompt?.confirm()
+        if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+
       }
       finally {
         this.resetSelected()
         this.closeHover()
         //this.$store.commit("setReload", true)
-
 
       }
     },

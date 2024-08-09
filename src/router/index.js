@@ -4,7 +4,6 @@ import Login from "@/views/Login.vue"
 import Layout from "@/views/Layout.vue"
 
 import store from "@/store"
-import { baseURL} from "@/utils/constants"
 import i18n, { rtlLanguages } from "@/i18n"
 
 

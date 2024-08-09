@@ -35,7 +35,7 @@
         </button>
         <button
           class="button button--flat"
-          @click="move"
+          @click="submit"
           :disabled="isMoveDisabled"
           :aria-label="$t('buttons.move')"
           :title="$t('buttons.move')"
@@ -69,7 +69,7 @@ export default {
   },
 
   methods: {
-    async move() {
+    async submit() {
 
       let listOfIds = this.selected.map(obj => obj.id)
 

@@ -13,39 +13,39 @@
       </p>
       <input
         v-if="isLocked"
-        class="input input--block"
         v-focus
+        v-model.trim="oldPassword"
+        class="input input--block"
         type="text"
         @keyup.enter="submit()"
-        v-model.trim="oldPassword"
-        />
+      />
       <p>
         {{ $t("prompts.enterNewFolderPassword") }}
       </p>
       <input
-        class="input input--block"
         v-focus
+        v-model.trim="password"
+        class="input input--block"
         type="text"
         @keyup.enter="submit()"
-        v-model.trim="password"
       />
     </div>
 
     <div class="card-action">
       <button
-        class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
+        class="button button--flat button--grey"
+        @click="$store.commit('closeHover')"
       >
         {{ $t("buttons.cancel") }}
       </button>
       <button
-        @click="submit()"
-        class="button button--flat"
-        type="submit"
         :aria-label="$t('buttons.submit')"
         :title="$t('buttons.submit')"
+        class="button button--flat"
+        type="submit"
+        @click="submit()"
       >
         {{ $t("buttons.submit") }}
       </button>
@@ -72,7 +72,7 @@ export default {
     isLocked() {
       return this.selected[0].isLocked
     },
-    folder_id(){
+    folder_id() {
       return this.selected[0].id
 
     }
@@ -81,24 +81,18 @@ export default {
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword"]),
 
-    submit: async function () {
+    async submit() {
       if (!(this.password === "" && this.oldPassword === "")) {
-        try {
-          let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
-          let message = this.$t('toasts.passwordIsBeingUpdated')
-          this.$toast.info(message, {
-            timeout: null,
-            id: res.task_id,
-          })
-          this.$store.commit("closeHover")
 
-        }
-    catch
-      (error)
-      {
-        console.log(error)
+        let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
+        let message = this.$t('toasts.passwordIsBeingUpdated')
+        this.$toast.info(message, {
+          timeout: null,
+          id: res.task_id,
+        })
+        this.$store.commit("closeHover")
+
       }
-    }
     },
   },
 }

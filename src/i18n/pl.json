@@ -14,6 +14,7 @@
     "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!"
   },
   "files": {
+    "selected": "Wybrano {amount} itemów",
     "noFiles": "You look lonely, I can fix that~",
     "searchItemsFound": "Znaleziono {amount} plików/folderów",
     "clear": "Wyczyść",
@@ -157,6 +158,8 @@
     }
   },
   "prompts": {
+    "fetchMoreInfo": "Więcej informacji",
+    "resolution": "Rozdzielczość",
     "resetFolderPassword": "Zresetuj hasło do folderu",
     "resetMessage": "Wpisz wymagane hasła by zresetowac hasło do folderu",
     "accountPassword": "Hasło do konta",

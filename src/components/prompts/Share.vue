@@ -157,7 +157,7 @@ export default {
     this.clip.destroy()
   },
   methods: {
-    submit: async function () {
+    async submit () {
 
       let res = await createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
 
@@ -171,7 +171,7 @@ export default {
       this.listing = true
       this.$toast.success(this.$t("settings.shareCreated"))
     },
-    deleteLink: async function (event, share) {
+    async deleteLink(event, share) {
       event.preventDefault()
 
       await removeShare({"token": share.token})

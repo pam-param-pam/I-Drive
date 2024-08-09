@@ -60,7 +60,7 @@ export default {
 
   methods: {
     ...mapMutations(["closeHover", "resetSelected"]),
-    submit: async function () {
+    async submit() {
       try {
         let ids = this.selected.map(item => item.id)
 

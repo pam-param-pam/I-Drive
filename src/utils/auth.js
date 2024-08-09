@@ -4,18 +4,31 @@ import {baseURL, baseWS} from "@/utils/constants"
 import {getUser} from "@/api/user.js"
 import Vue from "vue"
 import VueNativeSock from "vue-native-websocket"
+import onEvent from "@/utils/WsEventhandler.js";
 
+export async function closeWebsocket() {
+  console.log("closing ws")
+  console.log(Vue.prototype.$socket)
 
+//uh uh stupid library
+  // todo
+  //Vue.prototype.$socket.close()
+  //Vue.prototype.$socket = null
+
+}
+export async function openWebsocket(token) {
+  Vue.use(VueNativeSock, baseWS + "/user", {reconnection: false, protocol: token})
+  Vue.prototype.$socket.onmessage = (data) => onEvent(data)
+}
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
-
   const token = localStorage.getItem("token")
   const body = await getUser(token)
   store.commit("setUser", body.user)
   store.commit("setSettings", body.settings)
   store.commit("setPerms", body.perms)
   store.commit("setToken", token)
-  Vue.use(VueNativeSock, baseWS + "/user", {reconnectionDelay: 5000, reconnection: true, protocol: token})
+  await openWebsocket(token)
 
 }
 
@@ -39,11 +52,13 @@ export async function login(username, password) {
 
     localStorage.setItem("token", token)
     await validateLogin()
+
   } else {
     const error = new Error()
     error.status = res.status
     throw error
   }
+
 }
 
 
@@ -75,6 +90,7 @@ export async function logout() {
     })
   }
 
+  await closeWebsocket()
 
   store.commit("setUser", null)
   store.commit("setSettings", null)
@@ -85,6 +101,6 @@ export async function logout() {
   store.commit("resetFolderPassword", null)
 
   localStorage.removeItem("token")
-
-  router.push({path: "/login"})
+  await router.push({path: "/login"})
+  router.go(0) // make sure every state is removed just in case
 }
