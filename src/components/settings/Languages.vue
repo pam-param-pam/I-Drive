@@ -10,13 +10,13 @@
 export default {
   name: "languages",
   props: ["locale"],
+  emits: ["update:locale"],
   data() {
     let dataObj = {
       locales: {
         en: "en",
         pl: "pl",
         uwu: "uwu",
-
       },
     }
 

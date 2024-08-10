@@ -42,30 +42,27 @@ export default {
 
   computed: {
     ...mapState(["searchFilters", "disabledCreation"]),
-    ...mapGetters(["getFolderPassword"])
   },
 
 
   methods: {
     async search() {
-
-
       //copying to not mutate vuex store state
       let searchDict = { ...this.searchFilters }
       searchDict["query"] = this.query
       this.$emit('onSearchQuery', searchDict)
 
     },
+
     onTuneClick() {
       this.$store.commit("showHover", {
         prompt: "SearchTunePrompt",
         confirm: () => {
           this.search()
-
         },
       })
-
     },
+
     async exit() {
       this.$store.commit("setDisabledCreation", false)
       this.$store.commit("resetSelected")
@@ -78,15 +75,12 @@ export default {
     query() {
       if (this.query === '') {
         this.exit()
-
       }
       else {
         this.$store.commit("setDisabledCreation", true)
         this.$store.commit("resetSelected")
         this.search()
-
       }
-
     }
   }
 }
@@ -96,11 +90,10 @@ export default {
 .material-icons {
  cursor: pointer;
  transition: color 0.3s, transform 0.3s;
- /* Add other styles as needed */
 }
 
 .material-icons:hover {
- color: #007BFF; /* Change to the desired hover color */
- transform: scale(1.1); /* Slightly enlarge the icon on hover */
+ color: #007BFF;
+ transform: scale(1.1);
 }
 </style>

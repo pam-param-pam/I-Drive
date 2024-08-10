@@ -7,7 +7,6 @@
     <div class="card-content">
       <p>
         {{ $t("prompts.enterFolderPassword") }} <code>{{ folder.name }}</code>
-
       </p>
       <input
         class="input input--block"
@@ -16,7 +15,6 @@
         @keyup.enter="submit()"
         v-model.trim="password"
       />
-      <!-- Forgot Password Button added below the input -->
       <button
         @click="forgotPassword()"
         class="button button--small button--text-blue"
@@ -63,21 +61,25 @@ export default {
     }
   },
   props: {
-    requiredFolderPasswords: [],
+    requiredFolderPasswords: {
+      type: Array,
+      default: () => [],
+    },
   },
 
   beforeDestroy() {
 
   },
   computed: {
-    ...mapGetters(["currentPrompt", "getFolderPassword", "currentPromptName"]),
-    ...mapState(["selected", "loading"]),
+    ...mapGetters(["currentPrompt"]),
+    ...mapState(["loading"]),
     folder() {
       return this.requiredFolderPasswords[0]
     }
   },
   methods: {
-    ...mapMutations(["closeHover", "setFolderPassword", "closeHovers", "setLoading"]),
+    ...mapMutations(["closeHover", "setFolderPassword", "setLoading"]),
+
     async submit() {
       if (await isPasswordCorrect(this.folder.id, this.password) === true) {
         this.setFolderPassword({ "folderId": this.folder.id, "password": this.password })
@@ -89,6 +91,7 @@ export default {
         this.$toast.error(message)
       }
     },
+
     cancel() {
       if (this.loading) store.commit("setError", { "response": { "status": 469 } })
       store.commit("setLoading", false)
@@ -96,6 +99,7 @@ export default {
 
       this.closeHover()
     },
+
     finishAndShowAnotherPrompt() {
       console.log("finishAndShowAnotherPrompt")
 
@@ -118,18 +122,18 @@ export default {
           store.commit("showHover", {
             prompt: "FolderPassword",
             props: {requiredFolderPasswords: requiredFolderPasswordsCopy},
-
             confirm: confirm
           })
         })
-
       }
     },
+
     onPasswordReset() {
       console.log("onPasswordReset")
       this.finishAndShowAnotherPrompt()
 
     },
+
     forgotPassword() {
       store.commit("showHover", {
         prompt: "ResetFolderPassword",

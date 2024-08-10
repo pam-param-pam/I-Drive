@@ -37,10 +37,8 @@
     <div>
       <p class="name">{{ item.name }}</p>
 
-
       <p v-if="item.isDir" class="size" data-order="-1">&mdash;</p>
       <p v-else class="size" :data-order="item.size">{{ humanSize() }}</p>
-
 
       <p class="created">
         <time :datetime="item.created">{{ humanTime() }}</time>
@@ -68,8 +66,8 @@ export default {
     "item",
   ],
   computed: {
-    ...mapState(["user", "perms", "selected", "settings", "items"]),
-    ...mapGetters(["selectedCount", "getFolderPassword"]),
+    ...mapState(["perms", "selected", "settings", "items"]),
+    ...mapGetters(["selectedCount"]),
     type() {
       if (this.item.isDir) return "folder"
       if (this.item.type === "application") return "pdf"
@@ -119,7 +117,6 @@ export default {
     },
 
     dragStart: function () {
-
       if (this.selectedCount === 0) {
         this.addSelected(this.item)
         return
@@ -129,44 +126,32 @@ export default {
         this.resetSelected()
         this.addSelected(this.item)
       }
-
-
     },
 
     dragOver: function (event) {
       if (!this.canDrop) return
 
-      //event.preventDefault()
       let el = event.target
       for (let i = 0; i < 5; i++) {
         if (!el.classList.contains("item")) {
           el = el.parentElement
         }
       }
-
       el.style.opacity = 1
-
     },
+
     async drop(event) {
-
       if (!this.canDrop) return
-      //event.preventDefault()
-
       if (this.selectedCount === 0) return
 
       let listOfIds = this.selected.map(obj => obj.id)
-
       await move({ids: listOfIds, "new_parent_id": this.item.id})
 
       let message = this.$t('toasts.movedItems')
       this.$toast.success(message)
-
-
-
     },
 
-    click: function (event) {
-
+    click(event) {
       // Deselect items if no shift or ctrl key is pressed and there are selected items
       // then add current item to selected if it wasn't previously selected
       if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {

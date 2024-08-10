@@ -193,7 +193,7 @@ export default {
 }
 
 .shake-animation {
-  animation: shake 0.3s ease infinite; /* Make the animation run infinitely */
+  animation: shake 0.3s ease infinite;
   border-color: red;
 
 }

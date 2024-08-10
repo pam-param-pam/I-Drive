@@ -165,6 +165,7 @@
     }
   },
   "prompts": {
+    "itemsSelected": "Selected {count} items",
     "fetchMoreInfo": "More info",
     "resolution": "Resolution",
     "all": "all",

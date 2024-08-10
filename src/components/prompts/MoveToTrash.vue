@@ -40,23 +40,6 @@ export default {
     ...mapGetters(["selectedCount", "currentPrompt"]),
     ...mapState(["selected", "items"]),
   },
-  created() {
-    // Save the event listener function to a property
-    this.keyEvent = (event) => {
-      // Enter
-      if (event.keyCode === 13) {
-        console.log("calling submit from event listener")
-        this.submit()
-      }
-    }
-
-    window.addEventListener("keydown", this.keyEvent)
-  },
-
-  beforeDestroy() {
-    window.removeEventListener("keydown", this.keyEvent)
-  },
-
 
   methods: {
     ...mapMutations(["closeHover", "resetSelected"]),
@@ -85,7 +68,6 @@ export default {
       finally {
         this.resetSelected()
         this.closeHover()
-
 
       }
     },

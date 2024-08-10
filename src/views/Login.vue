@@ -1,7 +1,7 @@
 <template>
   <div id="login" >
     <form @submit="submit">
-      <img :src="logoURL" alt="I Drive" />
+      <img :src="logoURL" :alt="name" />
       <h1>{{ name }}</h1>
       <div v-if="error !== ''" class="wrong">{{ error }}</div>
 
@@ -79,7 +79,6 @@ export default {
 
       let redirect = this.$route.query.redirect
 
-
       if (this.createMode) {
         if (this.password !== this.passwordConfirm) {
           this.error = this.$t("login.passwordsDontMatch")
@@ -98,23 +97,20 @@ export default {
         }
         await this.$router.push({path: redirect})
 
-        // } catch (e) {
-        //   console.log()
-        //   if (e.status === 409) {
-        //     this.error = this.$t("login.usernameTaken")
-        //   }
-        //   else if (e.status === 400) {
-        //     this.error = this.$t("login.wrongCredentials")
-        //   }
-        //   else if (e.status === 500) {
-        //     this.error = this.$t("login.unexpectedError")
-        //   }
-        //   else {
-        //     this.error = this.$t("login.unknownError")
-        //     alert(e)
-        //   }
-      } finally {
-
+        } catch (e) {
+          if (e.status === 409) {
+            this.error = this.$t("login.usernameTaken")
+          }
+          else if (e.status === 400) {
+            this.error = this.$t("login.wrongCredentials")
+          }
+          else if (e.status === 500) {
+            this.error = this.$t("login.unexpectedError")
+          }
+          else {
+            this.error = this.$t("login.unknownError")
+            alert(e)
+          }
       }
     },
   },

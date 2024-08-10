@@ -175,9 +175,18 @@ export default {
   },
 
   props: {
-    fileId: String,
-    token: String,
-    folderId: String,
+    fileId: {
+      type: String,
+      required: true,
+    },
+    token: {
+      type: String,
+      default: () => "",
+    },
+    folderId: {
+      type: String,
+      default: () => "",
+    },
   },
 
   data() {
@@ -196,13 +205,13 @@ export default {
       size: null,
       rendition: null,
       toc: [],
-      fontSize: 100, // Default font size percentage
+      fontSize: 100,
 
 
     }
   },
   computed: {
-    ...mapState(["items", "user", "selected", "loading", "settings", "perms", "currentFolder"]),
+    ...mapState(["items", "user", "selected", "loading", "perms", "currentFolder"]),
     ...mapGetters(["currentPrompt"]),
     isEpub() {
       if (!this.file) return false

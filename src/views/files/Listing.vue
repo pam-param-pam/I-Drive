@@ -314,7 +314,7 @@ export default {
 
   methods: {
 
-    ...mapMutations(["updateUser", "addSelected", "setLoading", "setError"]),
+    ...mapMutations(["addSelected"]),
 
     async uploadInput(event) {
       this.$emit('uploadInput', event)
@@ -323,7 +323,6 @@ export default {
     keyEvent(event) {
       // No prompts are shown
       if (this.currentPrompt !== null) {
-
         return
       }
 
@@ -336,8 +335,6 @@ export default {
       // Del!
       if (event.keyCode === 46) {
         if (!this.perms.delete || this.selectedCount === 0) return
-        // if (this.$route.name.includes("trash"))
-
         if (this.$route.name === "Trash") {
           this.$store.commit("showHover", "delete")
 
@@ -346,21 +343,17 @@ export default {
           this.$store.commit("showHover", "moveToTrash")
 
         }
-        // Show delete prompt.
       }
 
       // F1!
       if (event.keyCode === 112) {
         event.preventDefault()
-        // Show delete prompt.
         this.$store.commit("showHover", "info")
       }
 
       // F2!
       if (event.keyCode === 113) {
         if (!this.perms.modify || this.selectedCount !== 1) return
-
-        // Show rename prompt.
         this.$store.commit("showHover", "rename")
       }
 
@@ -376,12 +369,9 @@ export default {
             break
           case "a":
             event.preventDefault()
-
             this.items.forEach((item) => {
               this.addSelected(item)
             })
-
-
             break
 
         }

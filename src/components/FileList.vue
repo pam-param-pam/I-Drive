@@ -15,8 +15,8 @@
     </ul>
 
     <p>
-      {{ $t("prompts.moveTo") }} <code>{{ nav?.name }}</code
-      >.
+      {{ $t("prompts.moveTo") }} <code>{{ nav?.name }}</code>
+      .
     </p>
   </div>
 </template>
@@ -27,6 +27,7 @@ import {getDirs} from "@/api/folder.js"
 
 export default {
   name: "file-list",
+  emits: ["update:current"],
   data() {
     return {
       selected: null,
@@ -36,13 +37,13 @@ export default {
     }
   },
   computed: {
-    ...mapState(["items", "currentFolder", "user"]),
-
+    ...mapState(["currentFolder"]),
   },
 
   mounted() {
     this.fetchData(this.currentFolder)
   },
+
   methods: {
     async fetchData(folder) {
       //todo known bug that causes lack of state in move/file list:
@@ -73,7 +74,6 @@ export default {
     async createDir() {
       this.$store.commit("showHover", {
         prompt: "newDir",
-
       })
     },
   },

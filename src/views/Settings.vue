@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <header-bar showMenu showLogo />
+    <header-bar/>
 
     <div id="nav">
       <div class="wrapper">
@@ -36,8 +36,8 @@
 
 <script>
 import {mapMutations, mapState} from "vuex"
-
 import HeaderBar from "@/components/header/HeaderBar.vue"
+import {name} from "@/utils/constants.js";
 
 export default {
   name: "settings",
@@ -45,13 +45,14 @@ export default {
     HeaderBar,
   },
   computed: {
-    ...mapState(["user", "loading", "perms"]),
+    ...mapState(["loading", "perms"]),
+
   },
   methods: {
     ...mapMutations(["setDisabledCreation"])
   },
   mounted() {
-    document.title = "Settings - I Drive"
+    document.title = "Settings - " + name
 
   },
   created() {

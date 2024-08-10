@@ -80,11 +80,8 @@ export default {
           console.warn(this.currentPromptName)
           this.$store.commit("closeHover")
         }
-
       }
-
     })
-
   },
 
   computed: {

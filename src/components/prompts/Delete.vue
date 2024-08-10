@@ -50,7 +50,6 @@ export default {
     async submit() {
       try {
         let ids = this.selected.map(item => item.id)
-
         let res = await remove({"ids": ids})
 
         let message = this.$t('toasts.itemsAreBeingDeleted', {amount: ids.length})
@@ -64,8 +63,6 @@ export default {
       finally {
         this.resetSelected()
         this.closeHover()
-        //this.$store.commit("setReload", true)
-
       }
     },
 

@@ -58,9 +58,19 @@ export default {
     Breadcrumbs,
   },
   props: {
-    fileId: String,
-    token: String,
-    folderId: String,
+    fileId: {
+      type: String,
+      required: true,
+    },
+    token: {
+      type: String,
+      default: () => "",
+    },
+    folderId: {
+      type: String,
+      default: () => "",
+    },
+
   },
 
   data() {
@@ -72,15 +82,13 @@ export default {
     }
   },
 
-
   computed: {
-    ...mapState(["loading", "items", "perms", "currentFolder", "settings", "error"]),
+    ...mapState(["loading", "items", "perms", "settings", "error"]),
 
     isInShareContext() {
       return this.token !== undefined
     },
   },
-
 
   created() {
     this.fetchData()

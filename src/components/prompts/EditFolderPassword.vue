@@ -3,11 +3,9 @@
     <div class="card-title">
       <h2 v-if="!isLocked">{{ $t("prompts.setFolderPassword") }}</h2>
       <h2 v-if="isLocked">{{ $t("prompts.editFolderPassword") }}</h2>
-
     </div>
 
     <div class="card-content">
-
       <p v-if="isLocked">
         {{ $t("prompts.enterOldFolderPassword") }}
       </p>
@@ -67,7 +65,6 @@ export default {
   },
 
   computed: {
-    ...mapGetters(["currentPrompt"]),
     ...mapState(["selected"]),
     isLocked() {
       return this.selected[0].isLocked

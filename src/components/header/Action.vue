@@ -13,12 +13,12 @@
 export default {
   name: "action",
   props: ["icon", "label", "counter", "show"],
+  emits: ['action'],
   methods: {
     action: function () {
       if (this.show) {
         this.$store.commit("showHover", this.show)
       }
-
       this.$emit("action")
     },
   },

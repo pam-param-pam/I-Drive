@@ -1,8 +1,8 @@
 <template>
   <header>
-    <img v-if="showLogo !== undefined" :src="logoURL" />
+    <img v-if="showLogo" :src="logoURL" />
     <action
-      v-if="showMenu !== undefined"
+      v-if="showMenu"
       class="menu-button"
       icon="menu"
       :label="$t('buttons.toggleSidebar')"
@@ -14,7 +14,6 @@
     <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
       <slot name="actions" />
     </div>
-
 
     <action
       v-if="this.$slots.actions"
@@ -40,11 +39,20 @@ import {updateSettings} from "@/api/user.js"
 
 export default {
   name: "header-bar",
-  props: ["showLogo", "showMenu"],
-  components: {
-    Action,
-  },
+
+  components: {Action},
   emits: ['switchView'],
+
+  props: {
+    showLogo: {
+      type: Boolean,
+      default: () => true,
+    },
+    showMenu: {
+      type: Boolean,
+      default: () => true,
+    },
+  },
 
   data() {
     return {
@@ -53,8 +61,8 @@ export default {
     }
   },
   computed: {
-    ...mapState(["settings","perms", "isSearchActive"]),
-    ...mapGetters(["currentPromptName", "selectedCount"]),
+    ...mapState(["settings"]),
+    ...mapGetters(["currentPromptName"]),
     viewIcon() {
       const icons = {
         list: "view_module",
@@ -70,7 +78,6 @@ export default {
       this.$store.commit("showHover", "sidebar")
     },
     async switchView() {
-
       const modes = {
         list: "mosaic",
         mosaic: "mosaic gallery",
@@ -82,12 +89,6 @@ export default {
 
       // Await ensures correct value for setItemWeight()
       await this.$store.commit("updateSettings", data)
-
-
-      //this.setItemWeight()
-      //this.fillWindow()
-
-
       await updateSettings(data)
 
     },

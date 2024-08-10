@@ -122,7 +122,6 @@ import { mapState, mapGetters } from "vuex"
 import * as auth from "@/utils/auth"
 import { version, signup } from "@/utils/constants"
 import ProgressBar from "vue-simple-progress"
-import prettyBytes from "pretty-bytes"
 import { getUsage } from "@/api/folder.js"
 import {name, author} from "@/utils/constants.js"
 import {filesize} from "@/utils/index.js";
@@ -171,8 +170,6 @@ export default {
   },
   methods: {
     toRoot() {
-      //this.$store.commit("setOpenSearchState", false)
-      //this.$store.commit("setIsTrash", false)
       this.$router.push({ name: `Files`, params: { folderId: this.user.root } }).catch(err => {})
       this.$store.commit("closeHover")
     },

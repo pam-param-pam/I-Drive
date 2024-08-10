@@ -233,19 +233,13 @@ const mutations = {
     if (typeof value !== "object") return
 
     for (let field in value) {
-      console.log(field)
       state.settings[field] = value[field]
-
     }
-    console.log(state.settings)
     let locale = value?.locale
     if (locale) {
-
       moment.locale(locale)
       i18n.default.locale = locale
-
     }
-
   },
   setError(state, value) {
     state.error = value

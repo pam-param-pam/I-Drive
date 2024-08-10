@@ -20,8 +20,6 @@
           class="input input--block styled-input"
           :placeholder="$t('prompts.newFolderPassword')"
           v-model.trim="folderPassword"
-
-
         />
       </div>
 
@@ -66,8 +64,15 @@ import {resetPassword} from "@/api/folder.js"
 export default {
   name: "resetFolderPassword",
   props: {
-    folderId: String,
-    lockFrom: String,
+    folderId: {
+      type: String,
+      required: true
+    },
+    lockFrom: {
+      type: String,
+      required: true
+    },
+
   },
   data() {
     return {
@@ -100,19 +105,16 @@ export default {
           this.closeHover()
           if (confirmFunc) confirmFunc()
 
-
         }
         else {
           this.closeHover()
           this.currentPrompt.confirm()
         }
 
-
       } catch (error) {
         console.error("Error resetting password:", error)
       }
     },
-
   },
 }
 </script>

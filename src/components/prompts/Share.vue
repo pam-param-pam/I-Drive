@@ -130,7 +130,6 @@ export default {
   },
   computed: {
     ...mapState(["selected", "selected"]),
-    ...mapGetters(["isListing", "selectedCount"]),
   },
 
   async created() {

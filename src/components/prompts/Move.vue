@@ -49,7 +49,7 @@
 
 <script>
 import { mapState } from "vuex"
-import FileList from "./FileList.vue"
+import FileList from "@/components/FileList.vue"
 import {move} from "@/api/item.js"
 
 export default {
@@ -70,15 +70,13 @@ export default {
 
   methods: {
     async submit() {
-
       let listOfIds = this.selected.map(obj => obj.id)
-
       await move({ids: listOfIds, "new_parent_id": this.dest.id})
 
       let message = this.$t('toasts.movedItems')
       this.$toast.success(message)
-      this.$store.commit("closeHover")
 
+      this.$store.commit("closeHover")
 
     },
   },

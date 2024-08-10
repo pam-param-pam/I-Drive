@@ -5,6 +5,11 @@
       </div>
 
     <div class="card-content">
+
+      <p v-if="selected.length > 1">
+        {{ $t("prompts.itemsSelected", { count: selected.length }) }}
+      </p>
+
       <p class="break-word" v-if="name">
         <strong>{{ $t("prompts.displayName") }}:</strong> {{ name }}
       </p>
@@ -157,11 +162,6 @@ export default {
       return this.folderSize !== "Loading..."
     },
     size() {
-      if (this.selectedCount === 0) {
-          //return this.currentFolder.size
-          return null
-          //todo
-      }
       if (this.selectedCount >= 1) {
           let sum = 0
           for (let selected of this.selected) {
@@ -173,9 +173,7 @@ export default {
     },
     encryptedSize() {
       if (this.selectedCount === 0) {
-          //return this.currentFolder.size
-          return 0
-          //todo
+          return this.currentFolder.encrypted_size
       }
 
       if (this.selectedCount >= 1) {
@@ -199,6 +197,7 @@ export default {
     },
 
     resolution() {
+      //todo
         return null
     },
     created() {
@@ -314,14 +313,16 @@ export default {
       return null
     },
     isDir() {
+      if (this.selectedCount === 0 ) {
+        return this.currentFolder.isDir
+      }
       if (this.selectedCount === 1) {
-
         return this.selected[0].isDir
       }
-      return true
+
+      return false
 
     },
-
 
 
   },
@@ -329,12 +330,10 @@ export default {
     async fetchAdditionalInfo() {
       // we want to fetch data only once
       if (this.isMoreDataFetched) return
+
       let folder
-      if (this.selectedCount === 1 && this.selected[0].isDir) {
-        folder = this.selected[0]
-      } else if (this.selectedCount === 0) {
-        folder = this.currentFolder
-      }
+      if (this.selectedCount === 0) folder = this.currentFolder
+      else if(this.selected[0].isDir) folder = this.selected[0]
 
       if (folder) {
         let res = await fetchAdditionalInfo(folder.id)
@@ -408,16 +407,15 @@ export default {
 }
 
 .expand-icon.expanded {
- transform: rotate(180deg); /* Rotate the icon when expanded */
+ transform: rotate(180deg);
 }
 
 .expandable-content {
  margin-top: 10px;
  padding-left: 10px;
- border-left: 2px solid #3498db; /* Optional: visual indicator */
+ border-left: 2px solid #3498db;
 }
 
-/* Additional existing styles */
 .checkmark-true:after {
  content: "\002705";
  color: #2ecc71;

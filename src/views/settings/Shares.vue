@@ -70,7 +70,7 @@ export default {
   components: {
     Errors,
   },
-  computed: mapState(["user", "settings", "perms", "loading"]),
+  computed: mapState(["settings", "loading"]),
 
   data() {
     return {
@@ -88,20 +88,22 @@ export default {
     this.shares = links
     this.setLoading(false)
 
-    
-
   },
+
   mounted() {
     this.clip = new Clipboard(".copy-clipboard")
     this.clip.on("success", () => {
       this.$toast.success(this.$t("success.linkCopied"))
     })
   },
+
   beforeDestroy() {
     this.clip.destroy()
   },
+
   methods: {
     ...mapMutations(["setLoading"]),
+
     async deleteLink(event, share) {
       event.preventDefault()
 
@@ -117,6 +119,7 @@ export default {
         },
       })
     },
+
     humanTime(time) {
       //todo czm globalny local nie dzIała?
       let locale = this.settings?.locale || "en"
@@ -125,12 +128,10 @@ export default {
       // Parse the target date
       return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
     },
+
     buildLink(share) {
-
       return "/share/" + share.token
-
     },
-
   },
 }
 </script>

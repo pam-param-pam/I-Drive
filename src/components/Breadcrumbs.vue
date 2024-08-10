@@ -34,24 +34,22 @@ import {isMobile} from "@/utils/common.js";
 
 export default {
   name: "breadcrumbs",
-  props: ["base", "noLink", "folderList"],
+  props: ["base", "folderList"],
 
   computed: {
-    ...mapState(["currentFolder", "reload"]),
+    ...mapState(["currentFolder"]),
     element() {
-      if (this.noLink !== undefined) {
-        return "span"
-      }
-
       return "router-link"
-
     },
+
     maxBreadcrumbs() {
+      //todo
       return 5
       if (isMobile()) {
         return 3
       } else return 5
     },
+
     breadcrumbs() {
       if (this.folderList.length >= this.maxBreadcrumbs) {
         while (this.folderList.length !== this.maxBreadcrumbs) {
@@ -66,28 +64,15 @@ export default {
 
   },
   methods: {
-
     dragOver: function (event) {
       //todo
-      // if (!this.canDrop) return
-      //
-      // event.preventDefault()
-      // let el = event.target
-      //
-      // for (let i = 0; i < 5; i++) {
-      //   if (!el.classList.contains("item")) {
-      //     el = el.parentElement
-      //   }
-      // }
-      //
-      // el.style.opacity = 1
 
     },
+
     async drop(event) {
       //todo
     },
+
   },
-
-
 }
 </script>

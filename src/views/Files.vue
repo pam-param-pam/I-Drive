@@ -1,6 +1,6 @@
 <template>
   <div>
-    <header-bar showMenu="false" showLogo="false">
+    <header-bar >
       <template>
         <Search
           @onSearchQuery="onSearchQuery"
@@ -187,10 +187,20 @@ export default {
     Errors,
     Listing,
   },
+
   props: {
-    folderId: String,
-    lockFrom: String,
-    locatedItem: {},
+    folderId: {
+      type: String,
+      required: true,
+    },
+    lockFrom: {
+      type: String,
+      required: true,
+    },
+    locatedItem: {
+      type: Object,
+      default: () => {},
+    },
 
   },
   data() {

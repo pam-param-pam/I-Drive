@@ -2,7 +2,7 @@
   <div>
     <errors v-if="error" :errorCode="error.response.status"/>
     <h4 v-if="!error" class="listing-notice">{{$t('trash.info')}}</h4>
-    <header-bar showMenu="false" showLogo="false">
+    <header-bar>
       <title></title>
 
       <template #actions>
@@ -111,13 +111,11 @@ export default {
   beforeDestroy() {
     this.$store.commit("setItems", null)
     this.$store.commit("setCurrentFolder", null)
-
-
   },
 
   methods: {
     isMobile,
-    ...mapMutations(["updateUser", "addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation"]),
+    ...mapMutations(["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation"]),
 
     async fetchFolder() {
 

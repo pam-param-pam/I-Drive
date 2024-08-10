@@ -2,15 +2,15 @@
   <div>
     <h4 v-if="!isShareValid" class="listing-notice">{{$t('share.shareNotFound')}}</h4>
 
-
     <h4 v-if="isShareValid && !this.loading" class="listing-notice">{{$t('share.info', {expiry: humanExpiry(expiry)})}}</h4>
 
-    <breadcrumbs v-if="isShareValid && !this.loading"
-                 :base="'/share/' + token"
-                 :folderList="folderList"
+    <breadcrumbs
+      v-if="isShareValid && !this.loading"
+      :base="'/share/' + token"
+      :folderList="folderList"
     />
 
-    <header-bar showMenu="false" showLogo="false">
+    <header-bar>
 
     <title/>
     <template #actions>
@@ -88,7 +88,7 @@ export default {
   computed: {
 
     ...mapState(["selected", "loading", "error", "disabledCreation", "settings"]),
-    ...mapGetters(["selectedCount", "currentPrompt", "currentPromptName", "isLogged"]),
+    ...mapGetters(["selectedCount", "currentPrompt", "isLogged"]),
 
     isShareValid() {
       return !this.shareErrored
@@ -106,8 +106,6 @@ export default {
   created() {
 
     //if anonymous user, we need to set state like locale or viewMode etc
-
-    console.log(this.user)
     if (!this.isLogged) {
       this.$store.commit("setAnonState")
 
@@ -125,7 +123,7 @@ export default {
 
 
   methods: {
-    ...mapMutations(["addSelected", "setLoading", "setError", "setDisabledCreation"]),
+    ...mapMutations(["setLoading", "setError", "setDisabledCreation"]),
 
     async download() {
       console.log(this.selectedCount)
@@ -145,6 +143,7 @@ export default {
 
       }
     },
+
     onOpen(item) {
       if (item.isDir) {
         this.$router.push({name: "Share", params: {"token": this.token, "folderId": item.id}})
@@ -164,6 +163,7 @@ export default {
 
 
     },
+
     async fetchShare() {
 
       this.setLoading(true)
@@ -185,17 +185,12 @@ export default {
         document.title = "share"
 
       }
-
-
-
-
-
-
-
     },
+
     onSwitchView() {
       this.$refs.listing.switchView()
     },
+
     humanExpiry(date) {
       //todo czm globalny local nie działa?
       let locale = this.settings?.locale || "en"
