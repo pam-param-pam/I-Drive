@@ -54,6 +54,9 @@ def view_share(request, token, folder_id=None):
         response_dict = create_file_dict(obj_in_share)
         breadcrumbs = []
 
+    # hide parent_id since upper parent is not shared
+    del response_dict["parent_id"]
+
     if obj_in_share.inTrash:
         raise ResourceNotFoundError()
 

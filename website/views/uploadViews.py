@@ -9,9 +9,9 @@ from website.models import Folder, File, Fragment, UserSettings, Thumbnail
 from website.utilities.Discord import discord
 from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
-from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError, MissingResourcePasswordError
 from website.utilities.decorators import handle_common_errors
-from website.utilities.other import send_event, create_file_dict, check_folder_password, get_resource, check_resource_perms
+from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError
+from website.utilities.other import send_event, create_file_dict, get_resource, check_resource_perms
 from website.utilities.throttle import MyUserRateThrottle
 
 

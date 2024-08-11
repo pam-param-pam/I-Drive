@@ -9,7 +9,8 @@ from website.utilities.CommandLine.ArgumentException import IncorrectArgumentErr
 from website.utilities.CommandLine.ArgumentParser import ArgumentParser
 from website.utilities.errors import IDriveException
 
-
+# todo i think we should check if token is still valid every now and then just in case
+# maybe create a base class for websocket consumer thats also includes logout method
 class TallyConsumer(WebsocketConsumer):
     def connect(self):
         print(self.scope['headers'])
@@ -62,6 +63,7 @@ class UserConsumer(WebsocketConsumer):
 
     def connect(self):
         user = self.scope['user']
+        print(user)
         if not user.is_anonymous:
             async_to_sync(self.channel_layer.group_add)("user", self.channel_name)
             self.accept(self.scope['token'])
@@ -69,6 +71,7 @@ class UserConsumer(WebsocketConsumer):
             self.close()
 
     def disconnect(self, close_code):
+        print("disscconect")
         async_to_sync(self.channel_layer.group_discard)("user", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
@@ -88,6 +91,10 @@ class UserConsumer(WebsocketConsumer):
         if self.scope['user'].id == event['user_id']:
             print("send event")
             self.send(json.dumps({"op_code": event['op_code'], "data": event['data']}))
+
+    def logout(self, event):
+        if self.scope['user'].id == event['user_id']:
+            self.close()
 
 
 class CommandConsumer(WebsocketConsumer):
@@ -123,7 +130,6 @@ class CommandConsumer(WebsocketConsumer):
             for chunk in self.parser.parse_arguments(command):
                 self.send(chunk)
 
-
         except IncorrectArgumentError as e:
             self.send(str(e))
 
@@ -136,4 +142,8 @@ class CommandConsumer(WebsocketConsumer):
             self.send(traceback_text)
 
         finally:
+            self.close()
+
+    def logout_and_close(self, event):
+        if self.scope['user'].id == event['user_id']:
             self.close()

@@ -1,6 +1,8 @@
 from urllib.parse import urlparse
 
 from django.http import HttpResponse, JsonResponse
+from djoser import utils
+from djoser.views import TokenDestroyView
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
@@ -9,8 +11,8 @@ from website.models import UserSettings, Folder, UserPerms
 from website.utilities.Permissions import ChangePassword, SettingsModifyPerms
 from website.utilities.decorators import handle_common_errors
 from website.utilities.errors import ResourcePermissionError, BadRequestError
+from website.utilities.other import logout_and_close_websockets
 from website.utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle
-from djoser import utils
 
 
 @api_view(['POST'])
@@ -28,8 +30,8 @@ def change_password(request):
 
     user.set_password(new_password)
     user.save()
-
     utils.logout_user(request)
+    logout_and_close_websockets(request.user.id)
 
     token, created = Token.objects.get_or_create(user=user)
     data = {"auth_token": str(token)}
@@ -93,6 +95,16 @@ def update_settings(request):
         if obj.hostname != 'discord.com':
             raise BadRequestError("Only webhook urls from 'discord.com' are allowed")
         settings.discord_webhook = webhookURL
+
     settings.save()
     return HttpResponse(status=204)
 
+class MyTokenDestroyView(TokenDestroyView):
+    """
+    Override view to include closing websocket connection
+    Use this endpoint to logout user (remove user authentication token).
+    """
+
+    def post(self, request):
+        logout_and_close_websockets(request.user.id)
+        return super().post(request)

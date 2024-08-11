@@ -1,17 +1,18 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path
+from djoser.views import TokenCreateView
 
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info, get_dirs
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info, get_dirs, fetch_additional_info
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, create_zip_model, reset_folder_password
 from website.views.otherViews import index, generate_keys
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import get_preview
 from website.views.uploadViews import create_file, create_preview
-from website.views.userViews import change_password, users_me, update_settings
+from website.views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
 
 urlpatterns = [
                   #path("test", test, name="test"),
@@ -31,7 +32,8 @@ urlpatterns = [
                   path("api/file/thumbnail/create", create_preview, name="create preview"),
                   path("api/file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
 
-                  path('auth/', include('djoser.urls.authtoken')),
+                  path("auth/token/login", TokenCreateView.as_view(), name="login"),
+                  path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
                   path('auth/user/me', users_me, name="get current user"),
 
                   path("api/user/changepassword", change_password, name="change password"),
@@ -50,7 +52,7 @@ urlpatterns = [
                   path("api/folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
                   path("api/folder/password/<folder_id>", folder_password, name="create folder"),
                   path("api/folder/password/reset/<folder_id>", reset_folder_password, name="create folder"),
-
+                  path("api/folder/moreinfo/<folder_id>", fetch_additional_info, name="fetch more info about a folder"),
 
                   path("api/item/move", move, name="move file/folder"),
                   path("api/item/password/<item_id>", check_password, name="check password"),

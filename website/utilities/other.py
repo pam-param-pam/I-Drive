@@ -34,8 +34,27 @@ def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("URL not valid or expired.")
 
+
 def formatDate(date: datetime) -> str:
     return timezone.localtime(date).strftime('%Y-%m-%d %H:%M')
+
+
+def logout_and_close_websockets(user_id: int) -> None:
+    queue_ws_event.delay(
+        'user',
+        {
+            "type": "logout",
+            "user_id": user_id,
+        }
+    )
+    queue_ws_event.delay(
+        'command',
+        {
+            "type": "logout",
+            "user_id": user_id,
+        }
+    )
+
 
 def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[list, dict]) -> None:
     queue_ws_event.delay(
@@ -64,7 +83,7 @@ def create_breadcrumbs(folder_obj: Folder) -> list:
 def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> list:
     folder_path = []
 
-    while folder_obj.parent:
+    while folder_obj:
         data = {"name": folder_obj.name, "id": folder_obj.id}
         if folder_obj != obj_in_share:
             folder_path.append(data)
@@ -72,7 +91,8 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolde
             if isFolderId:
                 folder_path.append(data)
             break
-
+        if not folder_obj.parent:
+            break
         folder_obj = Folder.objects.get(id=folder_obj.parent.id)
 
     folder_path.reverse()
@@ -88,7 +108,7 @@ def create_file_dict(file_obj: File, hide=False) -> dict:
         'extension': file_obj.extension,
         'size': file_obj.size,
         'type': file_obj.type,
-        #'encrypted_size': file_obj.encrypted_size,
+        # 'encrypted_size': file_obj.encrypted_size,
         'created': formatDate(file_obj.created_at),
         'last_modified': formatDate(file_obj.last_modified_at),
         'isLocked': file_obj.is_locked
@@ -141,8 +161,8 @@ def create_folder_dict(folder_obj: Folder) -> dict:
     """
     Crates partial folder dict, not containing children items
     """
-    file_children = folder_obj.files.filter(ready=True)
-    folder_children = folder_obj.subfolders.all()
+    file_children = folder_obj.files.filter(ready=True, inTrash=False)
+    folder_children = folder_obj.subfolders.filter(inTrash=False)
 
     folder_dict = {
         'id': str(folder_obj.id),
@@ -183,7 +203,7 @@ def create_share_dict(share: ShareableLink) -> dict:
         "token": share.token,
         "resource_id": share.object_id,
         "id": share.pk,
-        #"download_url": f"{GET_BASE_URL}/"
+        # "download_url": f"{GET_BASE_URL}/"
     }
     return item
 
@@ -246,6 +266,7 @@ def error_res(user: User, code: int, error_code: int, details: str) -> dict:  # 
 
     return {"code": code, "error": message_codes[error_code][locale], "details": details}
 
+
 def get_resource(obj_id: str) -> Resource:
     try:
         item = Folder.objects.get(id=obj_id)
@@ -255,6 +276,7 @@ def get_resource(obj_id: str) -> Resource:
         except File.DoesNotExist:
             raise ResourceNotFoundError(f"Resource with id of '{obj_id}' doesn't exist.")
     return item
+
 
 def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True) -> None:
     if checkOwnership:
@@ -266,6 +288,7 @@ def check_resource_perms(request, resource: Resource, checkOwnership=True, check
             raise RootPermissionError("Cannot access 'root' folder!")
     if checkFolderLock:
         check_folder_password(request, resource)
+
 
 def check_folder_password(request, resource: Resource) -> None:
     password = request.headers.get("X-Folder-Password")
@@ -292,10 +315,10 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> dict:
                  "mimetype": file_obj.mimetype,
                  "type": file_obj.type,
                  "modified_at": timezone.localtime(file_obj.last_modified_at),
-                 #"created_at": timezone.localtime(file_obj.created_at),
+                 # "created_at": timezone.localtime(file_obj.created_at),
                  "key": str(file_obj.key),
                  "fragments": [],
-    }
+                 }
     fragments_list = []
     for fragment in file_obj.fragments.all():
         fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
@@ -317,6 +340,28 @@ def calculate_size(folder: Folder) -> int:
         size += calculate_size(subfolder)
     return size
 
+
+def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
+    """
+    Function to recursively calculate entire file & folder count of a given folder
+    """
+    folder_count = 0
+    file_count = 0
+
+    file_count += len(folder.files.filter(ready=True, inTrash=False))
+
+    # Recursively calculate size for subfolders
+    subfolders = folder.subfolders.filter(inTrash=False)
+    folder_count += len(subfolders)
+
+    for subfolder in subfolders:
+        folders, files = calculate_file_and_folder_count(subfolder)
+        folder_count += folders
+        file_count += files
+
+    return folder_count, file_count
+
+
 def get_flattened_children(folder: Folder, full_path="") -> list:
     """
     Recursively collects all children (folders and files) of the given folder
@@ -334,7 +379,7 @@ def get_flattened_children(folder: Folder, full_path="") -> list:
             children.append(file_dict)
     else:
         pass
-        #todo remove pass?
+        # todo remove pass?
         folder_full_path = f"{full_path}{folder.name}/"
 
         children.append({'id': folder.id, 'name': folder_full_path, "isDir": True})

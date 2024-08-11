@@ -103,10 +103,10 @@ def check_folder_and_permissions(view_func):
 def handle_common_errors(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        return view_func(request, *args, **kwargs)
 
         try:
-            pass
+            return view_func(request, *args, **kwargs)
+
         # 404 NOT FOUND
         except Folder.DoesNotExist:
             return JsonResponse(error_res(user=request.user, code=404, error_code=8, details="Folder not found."),

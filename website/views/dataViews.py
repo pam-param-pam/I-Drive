@@ -18,7 +18,7 @@ from website.utilities.decorators import check_folder_and_permissions, check_fil
     check_file, check_signed_url
 from website.utilities.errors import BadRequestError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, get_flattened_children, \
-    create_zip_file_dict, check_resource_perms, error_res, calculate_size
+    create_zip_file_dict, check_resource_perms, error_res, calculate_size, calculate_file_and_folder_count
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -84,17 +84,29 @@ def get_file(request, file_obj):
 @check_folder_and_permissions
 def get_usage(request, folder_obj):
     total_used_size = 0
-    all_files = cache.get(f"ALL_FILES:{request.user}")
-    if not all_files:
-        all_files = File.objects.filter(owner=request.user, inTrash=False, ready=True).select_related("parent")
-        cache.set(f"ALL_FILES:{request.user}", all_files, 60)
+    all_user_files = cache.get(f"ALL_FILES:{request.user}")
+    if not all_user_files:
+        all_user_files = File.objects.filter(owner=request.user, inTrash=False, ready=True).select_related("parent")
+        cache.set(f"ALL_FILES:{request.user}", all_user_files, 60)
 
-    for file in all_files:
+    for file in all_user_files:
         if not file.inTrash and file.ready:
             total_used_size += file.size
 
     folder_used_size = calculate_size(folder_obj)
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
+
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+@check_folder_and_permissions
+def fetch_additional_info(request, folder_obj):
+    folder_used_size = calculate_size(folder_obj)
+    folder_count, file_count = calculate_file_and_folder_count(folder_obj)
+
+    return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
 
 
 @api_view(['GET'])
@@ -117,11 +129,11 @@ def search(request):
     query = request.GET.get('query', None)
     file_type = request.GET.get('type', None)
     extension = request.GET.get('extension', None)
-    showLimit = int(request.GET.get('showLimit', 20))
+    resultLimit = int(request.GET.get('resultLimit', 20))
 
     lockFrom = request.GET.get('lockFrom', None)
     password = request.headers.get("X-Folder-Password")
-    if showLimit > 500:
+    if resultLimit > 500:
         raise BadRequestError("'showLimit' cannot be > 500")
 
     # goofy ah
@@ -161,19 +173,19 @@ def search(request):
         lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password).order_by("-created_at")
         files = list(chain(lockedFiles, files))
 
-    files = files[:showLimit]
-    folders = folders[:showLimit]
-    folders_list = []
-    files_list = []
+    files = files[:resultLimit]
+    folders = folders[:resultLimit]
+    folder_dicts = []
+    file_dicts = []
     if include_folders and query and not file_type and not extension:
         for folder in folders:
             folder_dict = create_folder_dict(folder)
-            folders_list.append(folder_dict)
+            folder_dicts .append(folder_dict)
     if include_files:
         for file in files:
             file_dict = create_file_dict(file)
-            files_list.append(file_dict)
-    return JsonResponse(files_list + folders_list, safe=False)
+            file_dicts.append(file_dict)
+    return JsonResponse(file_dicts + folder_dicts, safe=False)
 
 
 @api_view(['GET'])
@@ -184,16 +196,16 @@ def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False)
     folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False)
 
-    children = []
+    trash_items = []
     for file in files:
         file_dict = create_file_dict(file, hide=True)
-        children.append(file_dict)
+        trash_items.append(file_dict)
 
     for folder in folders:
         folder_dict = create_folder_dict(folder)
-        children.append(folder_dict)
+        trash_items.append(folder_dict)
 
-    return JsonResponse({"trash": children})
+    return JsonResponse({"trash": trash_items})
 
 
 @api_view(['GET'])
