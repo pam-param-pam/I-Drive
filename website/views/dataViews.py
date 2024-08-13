@@ -61,6 +61,13 @@ def get_folder(request, folder_obj):
 @check_folder_and_permissions
 def get_dirs(request, folder_obj):
     folder_content = build_folder_content(folder_obj, include_files=False)
+    breadcrumbs = create_breadcrumbs(folder_obj)
+
+    folder_path = "root"
+    for folder in breadcrumbs:
+        folder_path += f"/{folder['name']}"
+
+    folder_content['folder_path'] = folder_path
     return JsonResponse(folder_content)
 
 @api_view(['GET'])

@@ -9,6 +9,7 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
+from simple_history.models import HistoricalRecords
 
 from website.utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH
 
@@ -253,6 +254,7 @@ class UserSettings(models.Model):
     hide_locked_folders = models.BooleanField(default=False)
     subfolders_in_shares = models.BooleanField(default=False)
     discord_webhook = models.TextField(null=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.user.username + "'s settings"

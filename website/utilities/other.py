@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime
-from typing import Union
+from typing import Union, List
 
 from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from website.models import File, Folder, UserSettings, Preview, ShareableLink, Thumbnail
 from website.tasks import queue_ws_event
-from website.utilities.TypeHinting import Resource
+from website.utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ErrorDict, ZipFileDict, PartialFragmentDict
 from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, message_codes, EventCode
 from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingResourcePasswordError, \
     MissingOrIncorrectResourcePasswordError
@@ -56,7 +56,7 @@ def logout_and_close_websockets(user_id: int) -> None:
     )
 
 
-def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[list, dict]) -> None:
+def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[List, dict]) -> None:
     queue_ws_event.delay(
         'user',
         {
@@ -69,7 +69,7 @@ def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[li
     )
 
 
-def create_breadcrumbs(folder_obj: Folder) -> list:
+def create_breadcrumbs(folder_obj: Folder) -> List[Breadcrumbs]:
     folder_path = []
 
     while folder_obj.parent:
@@ -80,7 +80,7 @@ def create_breadcrumbs(folder_obj: Folder) -> list:
     return folder_path
 
 
-def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> list:
+def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> List[Breadcrumbs]:
     folder_path = []
 
     while folder_obj:
@@ -99,16 +99,16 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolde
     return folder_path
 
 
-def create_file_dict(file_obj: File, hide=False) -> dict:
+def create_file_dict(file_obj: File, hide=False) -> FileDict:
     file_dict = {
         'isDir': False,
-        'id': str(file_obj.id),
+        'id': file_obj.id,
         'name': file_obj.name,
-        'parent_id': file_obj.parent_id,
+        'parent_id': file_obj.parent.id,
         'extension': file_obj.extension,
         'size': file_obj.size,
         'type': file_obj.type,
-        # 'encrypted_size': file_obj.encrypted_size,
+        'encrypted_size': file_obj.encrypted_size,
         'created': formatDate(file_obj.created_at),
         'last_modified': formatDate(file_obj.last_modified_at),
         'isLocked': file_obj.is_locked
@@ -151,13 +151,13 @@ def create_file_dict(file_obj: File, hide=False) -> dict:
 
         thumbnail = Thumbnail.objects.filter(file=file_obj)
 
-        if thumbnail:
+        if thumbnail.exists():
             file_dict['thumbnail_url'] = f"{GET_BASE_URL}/thumbnail/{signed_file_id}"
 
     return file_dict
 
 
-def create_folder_dict(folder_obj: Folder) -> dict:
+def create_folder_dict(folder_obj: Folder) -> FolderDict:
     """
     Crates partial folder dict, not containing children items
     """
@@ -165,26 +165,28 @@ def create_folder_dict(folder_obj: Folder) -> dict:
     folder_children = folder_obj.subfolders.filter(inTrash=False)
 
     folder_dict = {
-        'id': str(folder_obj.id),
+        'isDir': True,
+        'id': folder_obj.id,
         'name': folder_obj.name,
+        'parent_id': folder_obj.parent.id,
         "numFiles": len(file_children),
         "numFolders": len(folder_children),
         'created': formatDate(folder_obj.created_at),
         'last_modified': formatDate(folder_obj.last_modified_at),
         # 'owner': folder_obj.owner.username,
-        'parent_id': folder_obj.parent_id,
-        'isDir': True,
         'isLocked': folder_obj.is_locked,
 
     }
     if folder_obj.is_locked:
-        folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else None
+        folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
+
     if folder_obj.inTrashSince:
-        folder_dict["in_trash_since"] = formatDate(folder_obj.inTrashSince),
+        folder_dict["in_trash_since"] = formatDate(folder_obj.inTrashSince)
+
     return folder_dict
 
 
-def create_share_dict(share: ShareableLink) -> dict:
+def create_share_dict(share: ShareableLink) -> ShareDict:
     isDir = False
     try:
         obj = File.objects.get(id=share.object_id)
@@ -202,14 +204,14 @@ def create_share_dict(share: ShareableLink) -> dict:
         "isDir": isDir,
         "token": share.token,
         "resource_id": share.object_id,
-        "id": share.pk,
+        "id": share.id,
         # "download_url": f"{GET_BASE_URL}/"
     }
     return item
 
 
 @DeprecationWarning
-def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> dict:
+def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> FolderDict:
     def recursive_build(folder):
         file_children = folder_obj.files.filter(ready=True)
         folder_children = folder_obj.subfolders.all()
@@ -228,7 +230,7 @@ def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> dict:
     return recursive_build(folder_obj)
 
 
-def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> dict:
+def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
     file_children = []
     if include_files:
         file_children = folder_obj.files.filter(ready=True, inTrash=False)
@@ -248,16 +250,17 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
         folder_dicts.append(folder_dict)
 
     folder_dict = create_folder_dict(folder_obj)
-    folder_dict["children"] = file_dicts + folder_dicts
+
+    folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
 
     return folder_dict
 
 
-def build_response(task_id: str, message: str) -> dict:
+def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}
 
 
-def error_res(user: User, code: int, error_code: int, details: str) -> dict:  # build_http_error_response
+def error_res(user: User, code: int, error_code: int, details: str) -> ErrorDict:  #todo  maybe change to build_http_error_response?
     locale = "en"
 
     if not user.is_anonymous:
@@ -304,7 +307,7 @@ def check_folder_password(request, resource: Resource) -> None:
             raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
 
 
-def create_zip_file_dict(file_obj: File, file_name: str) -> dict:
+def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
     signed_id = sign_file_id_with_expiry(file_obj.id)
 
     file_dict = {"id": file_obj.id,
@@ -315,13 +318,14 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> dict:
                  "mimetype": file_obj.mimetype,
                  "type": file_obj.type,
                  "modified_at": timezone.localtime(file_obj.last_modified_at),
-                 # "created_at": timezone.localtime(file_obj.created_at),
                  "key": str(file_obj.key),
+                 "created_at": timezone.localtime(file_obj.created_at),
                  "fragments": [],
                  }
     fragments_list = []
     for fragment in file_obj.fragments.all():
-        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
+        frag_dict: PartialFragmentDict = {"sequence": fragment.sequence, "size": fragment.size}
+        fragments_list.append(frag_dict)
     file_dict["fragments"] = fragments_list
     return file_dict
 
@@ -362,7 +366,7 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     return folder_count, file_count
 
 
-def get_flattened_children(folder: Folder, full_path="") -> list:
+def get_flattened_children(folder: Folder, full_path="") -> List:
     """
     Recursively collects all children (folders and files) of the given folder
     into a flattened list with file IDs and names including folders.

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from simple_history.middleware import HistoryRequestMiddleware
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'simple_history',
+
 ]
 
 DJOSER = {
@@ -54,8 +57,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     #'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
-    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware'
+    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     #'silk.middleware.SilkyMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 
     #"django.middleware.cache.UpdateCacheMiddleware",
     #"django.middleware.common.CommonMiddleware",

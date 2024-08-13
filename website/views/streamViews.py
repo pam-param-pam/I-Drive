@@ -50,9 +50,13 @@ def get_preview(request, file_obj):
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     if len(fragments) == 0:
         return HttpResponse(status=204)
+
     # RAW IMAGE FILE
     if file_obj.extension not in RAW_IMAGE_EXTENSIONS:
         raise ResourceNotPreviewableError(f"Resource of type {file_obj.type} is not previewable")
+
+    if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
+        raise ResourceNotPreviewableError("File too big: size > 100mb")
 
     file_content = b''
     for fragment in fragments:
@@ -64,8 +68,6 @@ def get_preview(request, file_obj):
         file_content += response.content
     file_like_object = io.BytesIO(file_content)
 
-    if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
-        raise ResourceNotPreviewableError("File too big: size > 100mb")
     try:
         with rawpy.imread(file_like_object) as raw:
             thumb = raw.extract_thumb()

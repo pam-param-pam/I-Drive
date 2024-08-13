@@ -1,9 +1,11 @@
+import json
+
 from colorama import Fore, Style
 
 from website.utilities.CommandLine.Commands import HelpCommand, LsCommand, CdCommand
 
 
-class ArgumentParser:
+class CommandParser:
     def __init__(self, commandLineState):
         self.commands = []
         self.commandLineState = commandLineState
@@ -11,25 +13,25 @@ class ArgumentParser:
         self.register_command_class(LsCommand(self.commands, "ls"))
         self.register_command_class(CdCommand(self.commands, "cd"))
 
-
     def get_commands(self):
         return self.commands
 
     def register_command_class(self, command):
         self.commands.append(command)
 
-    def parse_arguments(self, input_str):
+    def process_command(self, command_message):
+        """command_message: {"cmd_name": string, "args": list[string], "working_dir_id": string}"""
+        json_command = json.loads(command_message)
+        cmd_name = json_command["cmd_name"]
+        args = json_command["args"]
+        working_dir_id = json_command["working_dir_id"]
 
         try:
-
-            input_list = input_str.split()
-
-            prefix = input_list[0].lower()
+            cmd_name = cmd_name.lower()
 
             for command in self.commands:
-                if prefix == command.getName():
-                    args = input_list[1:]
-                    for chunk in command.execute(args, self.commandLineState):
+                if cmd_name == command.getName():
+                    for chunk in command.execute(args, working_dir_id):
                         yield chunk
                     return
 

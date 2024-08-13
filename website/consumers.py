@@ -6,7 +6,7 @@ from channels.generic.websocket import WebsocketConsumer
 
 from website.models import Folder, UserPerms
 from website.utilities.CommandLine.ArgumentException import IncorrectArgumentError
-from website.utilities.CommandLine.ArgumentParser import ArgumentParser
+from website.utilities.CommandLine.CommandParser import CommandParser
 from website.utilities.errors import IDriveException
 
 # todo i think we should check if token is still valid every now and then just in case
@@ -106,34 +106,39 @@ class CommandConsumer(WebsocketConsumer):
 
     def connect(self):
         user = self.scope['user']
-        if not user.is_anonymous:
-            async_to_sync(self.channel_layer.group_add)("command", self.channel_name)
-            self.accept(self.scope['token'])
-            root_folder = Folder.objects.get(owner=user, parent=None)
-            self.commandLineState["folder_id"] = root_folder.id
-            self.parser = ArgumentParser(self.commandLineState)
-        else:
+        if user.is_anonymous:
             self.close()
+        else:
+            self.accept()
+            async_to_sync(self.channel_layer.group_add)("command", self.channel_name)
+            self.parser = CommandParser(self.commandLineState)
 
     def disconnect(self, close_code):
         async_to_sync(self.channel_layer.group_discard)("command", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
+        """
+        command protocol is made from json messages each representing a different command
+        An example json message can look like this:
+        {"cmd_name": string, "args": list[string], "working_dir_id": string}
+        then the server sends replies in this format:
+        {"type": string, "message: string, "action" {"type": "", "args": {} } }
+        """
+
         perms = UserPerms.objects.get(user=self.scope['user'])
         if (not (perms.execute or perms.admin)) or perms.globalLock:
             self.send("Permission Denied\nYou are not allowed to perform this action")
             self.close()
             return
         try:
-            json_data = json.loads(text_data)
-            command = json_data["command"]
-            for chunk in self.parser.parse_arguments(command):
+
+            for chunk in self.parser.process_command(text_data):
                 self.send(chunk)
 
         except IncorrectArgumentError as e:
             self.send(str(e))
 
-        # Intentionally broad, dont annoy me
+        # Intentionally broad, don't annoy me
         except (ValueError, KeyError, IDriveException) as error:
             etype = type(error)
             trace = error.__traceback__

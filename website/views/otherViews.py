@@ -5,6 +5,7 @@ import secrets
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes
 
+from website.models import UserSettings
 from website.utilities.throttle import MyUserRateThrottle
 
 
@@ -12,6 +13,13 @@ from website.utilities.throttle import MyUserRateThrottle
 @throttle_classes([MyUserRateThrottle])
 def index(request):
 
+    return HttpResponse(f"hello {request.user}")
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+def test(request):
+    perms = UserSettings.objects.get(user_id=1)
+    print(perms.history.all())
     return HttpResponse(f"hello {request.user}")
 
 def generate_keys(request):
