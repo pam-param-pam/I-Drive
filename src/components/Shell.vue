@@ -47,8 +47,9 @@
 <script>
 import { mapMutations, mapState, mapGetters } from "vuex"
 import { throttle } from "lodash"
-import { theme } from "@/utils/constants"
+import {baseWS, theme} from "@/utils/constants"
 import command from "@/api/commands.js"
+import store from "@/store/index.js";
 
 export default {
   name: "shell",
@@ -64,36 +65,57 @@ export default {
     },
   },
   data: () => ({
+    websocket: null,
     content: [],
     history: [],
     historyPos: 0,
-    canInput: true,
+    canInput: false,
     shellDrag: false,
     shellHeight: 25,
     fontsize: parseFloat(getComputedStyle(document.documentElement).fontSize),
   }),
+
   mounted() {
     window.addEventListener("resize", this.resize)
+    // let url = `${baseWS}/command`
+    // let token = localStorage.getItem("token")
+    //
+    // this.websocket = new window.WebSocket(url, token)
+    // let current_folder = store.state.currentFolder
+    // this.websocket.onopen = () => this.canInput = true
+    // this.websocket.onmessage = this.onMessage
+    // this.websocket.onclose = this.onClose
+    // // while (this.websocket.readyState !== 1) {
+    // //
+    // // }
+    // this.websocket.send(JSON.stringify({"cmd_name": "test", "args": "Hello World!", working_dir_id: current_folder?.id}))
+    // alert("1111")
   },
+
   beforeDestroy() {
     window.removeEventListener("resize", this.resize)
   },
+
   methods: {
     ...mapMutations(["toggleShell"]),
+
     checkTheme() {
       if (theme === "dark") {
         return "rgba(255, 255, 255, 0.4)"
       }
       return "rgba(127, 127, 127, 0.4)"
     },
+
     startDrag() {
       document.addEventListener("pointermove", this.handleDrag)
       this.shellDrag = true
     },
+
     stopDrag() {
       document.removeEventListener("pointermove", this.handleDrag)
       this.shellDrag = false
     },
+
     handleDrag: throttle(function (event) {
       const top = window.innerHeight / this.fontsize - 4
       const userPos = (window.innerHeight - event.clientY) / this.fontsize
@@ -105,6 +127,7 @@ export default {
         this.shellHeight = userPos.toFixed(2)
       }
     }, 32),
+
     resize: throttle(function () {
       const top = window.innerHeight / this.fontsize - 4
       const bottom =
@@ -117,11 +140,10 @@ export default {
         this.shellHeight = bottom
       }
     }, 32),
+
     scroll: function () {
       this.$refs.scrollable.scrollTop = this.$refs.scrollable.scrollHeight
     },
-
-
 
     focusToEnd() {
       this.$nextTick(() => {
@@ -133,6 +155,7 @@ export default {
         selection.addRange(range)
       })
     },
+
     historyUp() {
       if (this.historyPos > 0) {
         this.$refs.input.innerText = this.history[--this.historyPos]
@@ -140,6 +163,7 @@ export default {
 
       }
     },
+
     historyDown() {
       if (this.historyPos >= 0 && this.historyPos < this.history.length - 1) {
         this.$refs.input.innerText = this.history[++this.historyPos]
@@ -149,19 +173,30 @@ export default {
         this.$refs.input.innerText = ""
       }
     },
-    submit: function (event) {
-      const cmd = event.target.innerText.trim()
+    onClose(){
+      // results.text = results.text
+      //   // eslint-disable-next-line no-control-regex
+      //   .replace(/\u001b\[[0-9;]+m/g, "") // Filter ANSI color for now
+      //   .trimEnd()
+      this.canInput = true
+      this.$refs.input.focus()
+      this.scroll()
+    },
+    onMessage(event) {
+      results.text += `${event.data}\n`
+      this.scroll()
+    },
+    submit(event) {
+      let cmd = event.target.innerText.trim()
 
       if (cmd === "") {
         return
       }
-
       if (cmd === "clear") {
         this.content = []
         event.target.innerHTML = ""
         return
       }
-
       if (cmd === "exit") {
         event.target.innerHTML = ""
         this.toggleShell()
@@ -179,23 +214,7 @@ export default {
       this.historyPos = this.history.length
       this.content.push(results)
 
-      command(
-        this.path,
-        cmd,
-        (event) => {
-          results.text += `${event.data}\n`
-          this.scroll()
-        },
-        () => {
-          results.text = results.text
-            // eslint-disable-next-line no-control-regex
-            .replace(/\u001b\[[0-9;]+m/g, "") // Filter ANSI color for now
-            .trimEnd()
-          this.canInput = true
-          this.$refs.input.focus()
-          this.scroll()
-        }
-      )
+
     },
   },
 }

@@ -158,6 +158,9 @@
     }
   },
   "prompts": {
+    "irreversibleAction": "Ta akcja jest nie odwracalna!",
+    "uploadFiles": "Przesyłanie {amount} plików...",
+    "currentFolder": "Obecny folder: ",
     "fetchMoreInfo": "Więcej informacji",
     "resolution": "Rozdzielczość",
     "resetFolderPassword": "Zresetuj hasło do folderu",
@@ -168,7 +171,7 @@
     "editFolderPassword": "Zmień hasło do folderu",
     "lastModified": "Ostatnio zmodyfikowane",
     "all": "wszystkie",
-    "showLimit": "Maksymalna liczba itemów",
+    "resultLimit": "Maksymalna liczba itemów",
     "limit": "Maksymalna liczba zwróconych itemów",
     "searchTune": "Dostosuj szukanie",
     "filterMessage": "Wybiersz filtry szukania",
@@ -233,6 +236,7 @@
 
   },
   "toasts": {
+    "deleting": "Usuwanie {percentage}%...",
     "itemLocated": "Zaleziono miejsce przechowywania pliku",
     "passwordIsBeingUpdated": "Hasło do folderu jest zmieniane...",
     "passwordUpdated": "Hasło zostało zaktualizowane!",
@@ -266,7 +270,9 @@
     "success": "Plik zapisany",
     "paused": "Zatrzymano",
     "creating": "Tworzenie...",
-    "pausing": "Zatrzymywanie..."
+    "pausing": "Zatrzymywanie...",
+    "waiting": "Czekanie na przesył..."
+
 
   },
   "share": {

@@ -13,8 +13,6 @@
         class="input input--block"
         v-focus
         type="text"
-        @keyup.enter="submit()"
-
         v-model.trim="name"
       />
     </div>
@@ -45,6 +43,7 @@
 <script>
 import {mapState} from "vuex"
 import {rename} from "@/api/item.js"
+import throttle from "lodash.throttle";
 
 export default {
   name: "rename",
@@ -67,7 +66,7 @@ export default {
     this.oldName = this.name
   },
   methods: {
-    async submit() {
+    submit: throttle(async function (event) {
       if (this.canSubmit) {
 
         let id = this.selected[0].id
@@ -79,7 +78,7 @@ export default {
 
         this.$store.commit("closeHover")
       }
-    },
+    }, 1000)
   },
 }
 </script>

@@ -156,7 +156,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(["selected","settings", "currentFolder"]),
+    ...mapState(["selected", "settings", "currentFolder"]),
     ...mapGetters(["selectedCount"]),
     isMoreDataFetched() {
       return this.folderSize !== "Loading..."

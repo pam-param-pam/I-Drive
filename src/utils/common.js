@@ -1,12 +1,13 @@
 import store from "@/store/index.js";
 
 export function sortItems(items) {
+  console.warn("====SORTING====")
   // Create a shallow copy of the items array
-  const itemsCopy = items.slice()
+  let itemsCopy = items.slice()
 
-  const sortingKey = store.state.settings.sortingBy
-  const isAscending = store.state.settings.sortByAsc
-
+  let sortingKey = store.state.settings.sortingBy
+  let isAscending = store.state.settings.sortByAsc
+  console.log(store.state.settings.sortingBy)
   // Sort the items so directories come before files
   itemsCopy.sort((a, b) => {
     // First, ensure directories come before files

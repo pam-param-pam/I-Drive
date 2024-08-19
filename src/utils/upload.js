@@ -119,16 +119,11 @@ export async function createNeededFolders(files, parent_folder) {
       let folder_list_str = folder_list.join("/") // convert that list to str "example:
       // folder_list_str np: "nowyFolder/kolejnyFolder"
 
-
-      console.log(`1:  ${folder_list}`)
-      console.log(`2:  ${folder_list_str}`)
-
       for (let i = 1; i <= folder_list.length; i++) {
         // idziemy od tyłu po liscie czyli jesli lista to np [a1, b2, c3, d4, e5, f6]
         // to najpierw bedziemy mieli a1
         // potem a1, b2
         // potem a1, b2, c3
-        console.log(`4:  ${folder_list.slice(0, i)}`)
         let folder_list_key = folder_list.slice(0, i).join("/")
         if (!(folder_list_key in folder_structure)) {
 
@@ -147,8 +142,6 @@ export async function createNeededFolders(files, parent_folder) {
             vue.$toast.success(message)
           }
 
-          console.log("creating " + chatgpt_folder_name)
-          console.log(parent_list_id)
           folder = await create({"parent_id": parent_list_id, "name": chatgpt_folder_name})
           folder_structure[folder_list_key] = {"id": folder.id, "parent_id": parent_list_id}
 
@@ -168,6 +161,7 @@ export async function createNeededFolders(files, parent_folder) {
 }
 
 export async function handleCreatingFiles(fileList) {
+  console.log(fileList)
   //sortujemy rozmiarami
   fileList.sort((a, b) => a.file.size - b.file.size)
   let createdFiles = []
@@ -175,6 +169,9 @@ export async function handleCreatingFiles(fileList) {
 
   for (let i = 0; i < fileList.length; i++) {
     let fileObj = fileList[i]
+    console.log("fileObj")
+    console.log(fileObj)
+
     let file_obj =
       {
         "name": fileObj.file.name,
@@ -211,22 +208,29 @@ export async function uploadCreatedFiles() {
   while (totalSize < chunkSize || filesForRequest.length >= 10) {
 
     let fileObj = await store.dispatch("upload/getFileFromQueue")
+    if (fileObj === undefined) break
 
+    console.log(fileObj)
     let size = fileObj.systemFile.size
     if (size !== 0) {
+
       if (size > chunkSize) {
         let chunks = []
         for (let j = 0; j < size; j += chunkSize) {
-          let chunk = fileObj.file.slice(j, j + chunkSize)
+          let chunk = fileObj.systemFile.slice(j, j + chunkSize)
           chunks.push(chunk)
         }
-
-
         // Upload each chunk
         for (let j = 0; j < chunks.length; j++) {
           await uploadChunk(chunks[j], j + 1, chunks.length, fileObj.file_id)
         }
-      } else {
+        store.commit("upload/setStatus", {
+          "file_id": fileObj.file_id ,
+          "status": "success"
+        })
+      }
+
+      else {
         console.log("ultra size: " + totalSize + size)
         console.log("filesforrequest: " + filesForRequest)
         if (totalSize + size > chunkSize || filesForRequest.length >= 10) {
@@ -239,17 +243,17 @@ export async function uploadCreatedFiles() {
 
         filesForRequest.push(fileObj)
 
-        fileFormList.append(`File ${i + 1}`, fileObj.file, `files[${i}]`)
+        fileFormList.append(`files[${i}]`, fileObj.systemFile, `custom_filename_here${i}`)
 
         attachmentJson.push({
-          "id": i + 1,
-          "description": `File ${i + 1}`,
-          "filename": `file${i + 1}`
+          "id": i,
+          "filename": `custom_filename_here${i}`
         })
         totalSize = totalSize + size
       }
 
     }
+    i++
   }
   if (attachmentJson.length > 0) {
     await uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest)
@@ -273,47 +277,55 @@ export async function checkFilesSizes(files) {
   return false
 }
 export async function uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest) {
+  console.log(fileFormList)
+  console.log(attachmentJson)
+  console.log(filesForRequest)
 
   let webhook = store.state.settings.webhook
 
   fileFormList.append('json_payload', JSON.stringify({"attachments": attachmentJson}))
   let file_ids = filesForRequest.map(obj => obj.file_id)
-  const totalBytes = filesForRequest.reduce((accumulator, currentValue) => accumulator + currentValue.file.size, 0)
 
   let response = await discord_instance.post(webhook, fileFormList, {
     headers: {
       'Content-Type': 'multipart/form-data'
     },
     onUploadProgress: function (progressEvent) {
-      const loadedBytes = progressEvent.loaded
-      // console.log("OON UPLOAD PROGRESSS")
-      // console.log("loaded: "+ progressEvent.loaded)
-      // console.log("total: "+ progressEvent.total)
-      // console.log("estimated: "+ progressEvent.estimated)
+
+      let progress = progressEvent.progress
 
       // Pass the progress details to Vuex
       store.commit("upload/setMultiAttachmentProgress", {
         file_ids,
-        loadedBytes,
-        totalBytes,
+        progress,
       })
 
     }
   })
+
+
+  store.commit("upload/setMultiAttachmentProgress", {
+    file_ids,
+    progress: 1,
+  })
+
+  let response_list = []
   for (let i = 0; i < response.data.attachments.length; i++) {
     let attachment = response.data.attachments[i]
+
     let file_data ={
       "file_id": filesForRequest[i].file_id,
       "fragment_sequence": 1,
       "total_fragments": 1,
-      "fragment_size": filesForRequest[i].file.size,
+      "fragment_size": filesForRequest[i].systemFile.size,
       "message_id": response.data.id,
       "attachment_id": attachment.id
     }
-    await patchFile(file_data)
-
+    response_list.push(file_data)
 
     }
+    await patchFile({"files": response_list})
+
 
 }
 
@@ -328,8 +340,8 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, file_id) {
       'Content-Type': 'multipart/form-data'
     },
     onUploadProgress: function (progressEvent) {
-      const loadedBytes = progressEvent.loaded
-      const totalBytes = progressEvent.total
+      let loadedBytes = progressEvent.loaded
+      let totalBytes = progressEvent.total
       console.log("OON UPLOAD PROGRESSS")
       // Pass the progress details to Vuex
       store.commit("upload/setProgress", {
@@ -347,7 +359,7 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, file_id) {
     "file_id": file_id, "fragment_sequence": chunkNumber, "total_fragments": totalChunks,
     "fragment_size": chunk.size, "message_id": response.data.id, "attachment_id": response.data.attachments[0].id
   }
-  await patchFile(file_data)
+  await patchFile({"files": [file_data]})
 
 
 }

@@ -4,7 +4,9 @@ import Login from "@/views/Login.vue"
 import Layout from "@/views/Layout.vue"
 
 import store from "@/store"
-import i18n, { rtlLanguages } from "@/i18n"
+// import Editor from "@/views/files/Editor.vue";
+import Preview from "@/views/files/Preview.vue";
+import Trash from "@/views/Trash.vue";
 
 
 Vue.use(Router)
@@ -45,7 +47,7 @@ const router = new Router({
         {
           path: "/trash",
           name: "Trash",
-          component: () => import('../views/Trash.vue'),
+          component: Trash,
           meta: {
             requiresAuth: true,
           },
@@ -64,6 +66,7 @@ const router = new Router({
         {
           path: "/editor/:folderId?/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3
           name: "ShareEditor",
+          // component: Editor,
           component: () => import('../views/files/Editor.vue'),
           props: true,
           meta: {
@@ -74,7 +77,9 @@ const router = new Router({
         {
           path: "/editor/:fileId",
           name: "Editor",
+          // component: Editor,
           component: () => import('../views/files/Editor.vue'),
+
           props: true,
           meta: {
             requiresAuth: true,
@@ -83,7 +88,7 @@ const router = new Router({
         {
           path: "/preview/:folderId?/:fileId/:token", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
           name: "SharePreview",
-          component: () => import('../views/files/Preview.vue'),
+          component: Preview,
           props: true,
           meta: {
             requiresAuth: false,
@@ -93,7 +98,7 @@ const router = new Router({
         {
           path: "/preview/:fileId",
           name: "Preview",
-          component: () => import('../views/files/Preview.vue'),
+          component: Preview,
           props: true,
           meta: {
             requiresAuth: true,
@@ -170,20 +175,6 @@ const router = new Router({
 })
 
 router.beforeEach((to, from, next) => {
-
-
-  /*** RTL related settings per route ****/
-
-  const rtlSet = document.querySelector("body").classList.contains("rtl")
-  const shouldSetRtl = rtlLanguages.includes(i18n.locale)
-  switch (true) {
-    case shouldSetRtl && !rtlSet:
-      document.querySelector("body").classList.add("rtl")
-      break
-    case !shouldSetRtl && rtlSet:
-      document.querySelector("body").classList.remove("rtl")
-      break
-  }
 
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!store.getters.isLogged) {

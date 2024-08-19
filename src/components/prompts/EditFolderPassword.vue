@@ -15,7 +15,6 @@
         v-model.trim="oldPassword"
         class="input input--block"
         type="text"
-        @keyup.enter="submit()"
       />
       <p>
         {{ $t("prompts.enterNewFolderPassword") }}
@@ -25,7 +24,6 @@
         v-model.trim="password"
         class="input input--block"
         type="text"
-        @keyup.enter="submit()"
       />
     </div>
 
@@ -54,6 +52,7 @@
 <script>
 import {mapGetters, mapMutations, mapState} from "vuex"
 import {lockWithPassword} from "@/api/folder.js"
+import throttle from "lodash.throttle";
 
 export default {
   name: "folder-password",
@@ -78,7 +77,7 @@ export default {
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword"]),
 
-    async submit() {
+    submit: throttle(async function (event) {
       if (!(this.password === "" && this.oldPassword === "")) {
 
         let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
@@ -90,7 +89,7 @@ export default {
         this.$store.commit("closeHover")
 
       }
-    },
+    }, 1000)
   },
 }
 </script>

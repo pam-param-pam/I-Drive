@@ -17,10 +17,11 @@ const getters = {
     //
     // let sum = state.upload.progress.reduce((acc, val) => acc + val)
     // return Math.ceil((sum / totalSize) * 100)
+    // return 20
   },
   filesInUploadCount: (state) => {
 
-    return state.upload.queue.length
+    return state.upload.queue.length + state.upload.filesUploading.length
   },
   filesInUpload: (state) => {
     let files = []
@@ -29,7 +30,7 @@ const getters = {
       let id = file.file_id
       let name = file.name
       let parent_id = file.parent_id
-      let size = file.file.size
+      let size = file.systemFile.size
       let progress =  file.progress
       let type = file.type
       let status = file.status
@@ -44,9 +45,10 @@ const getters = {
       })
 
     }
-    return files
-    //console.log(files)
-    //return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
+
+    // return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
+    return files.sort((a, b) => a.progress - b.progress)
+
   },
   previousPrompt: (state) => {
     return state.prompts.length > 1

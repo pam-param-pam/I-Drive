@@ -1,7 +1,7 @@
 <template>
   <div class="row">
     <div class="column">
-      <form class="card" @submit="updateSettings">
+      <form class="card" @submit.prevent="updateSettings">
         <div class="card-title">
           <h2>{{ $t("settings.profileSettings") }}</h2>
         </div>
@@ -58,7 +58,7 @@
     </div>
 
     <div class="column">
-      <form class="card" v-if="!user.lockPassword" @submit="updatePassword">
+      <form class="card" v-if="!user.lockPassword" @submit.prevent="updatePassword">
         <div class="card-title">
           <h2>{{ $t("settings.changePassword") }}</h2>
         </div>
@@ -105,6 +105,7 @@ import Languages from "@/components/settings/Languages.vue"
 import Themes from "@/components/settings/Themes.vue"
 import {changePassword, updateSettings} from "@/api/user.js"
 import router from "@/router/index.js";
+import throttle from "lodash.throttle";
 
 export default {
   name: "settings",
@@ -151,9 +152,8 @@ export default {
   },
   methods: {
     ...mapMutations(["updateUser", "setLoading"]),
-    async updatePassword(event) {
-      event.preventDefault()
 
+    updatePassword: throttle(async function (event) {
       if (this.password !== this.passwordConf || this.password === "") {
         return
       }
@@ -161,8 +161,6 @@ export default {
       const data = { current_password: this.currentPassword, new_password: this.password}
 
       let res = await changePassword(data)
-
-
 
       localStorage.setItem("token", res.auth_token)
       this.$store.commit("setToken", res.auth_token)
@@ -173,11 +171,9 @@ export default {
         router.go(0)
       }, 2000)
 
+    }, 1000),
 
-    },
-    async updateSettings(event) {
-      event.preventDefault()
-
+    updateSettings: throttle(async function (event) {
       const data = {
         locale: this.locale,
         subfoldersInShares: this.subfoldersInShares,
@@ -185,15 +181,13 @@ export default {
         dateFormat: this.dateFormat,
         webhook: this.webhook
       }
-      this.setTheme(this.theme)
 
       await updateSettings(data)
       this.$store.commit("updateSettings", data)
-
-
       this.$toast.success(this.$t("settings.settingsUpdated"))
 
-    },
+    }, 1000),
+
     getMediaPreference() {
       let hasDarkPreference = window.matchMedia(
         "(prefers-color-scheme: dark)"

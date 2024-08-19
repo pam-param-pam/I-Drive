@@ -60,6 +60,7 @@
 <script>
 import {mapGetters, mapMutations} from "vuex"
 import {resetPassword} from "@/api/folder.js"
+import throttle from "lodash.throttle";
 
 export default {
   name: "resetFolderPassword",
@@ -87,34 +88,30 @@ export default {
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword"]),
 
-    async submit() {
+    submit: throttle(async function (event) {
 
-      try {
-        let res =  await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
-        let message = this.$t('toasts.passwordIsBeingUpdated')
-        this.$toast.info(message, {
-          timeout: null,
-          id: res.task_id,
-        })
-        this.setFolderPassword({ "folderId": this.folderId, "password": this.folderPassword })
+      let res =  await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
+      let message = this.$t('toasts.passwordIsBeingUpdated')
+      this.$toast.info(message, {
+        timeout: null,
+        id: res.task_id,
+      })
+      this.setFolderPassword({ "folderId": this.folderId, "password": this.folderPassword })
 
-        if (this.previousPromptName === "FolderPassword") {
+      if (this.previousPromptName === "FolderPassword") {
 
-          let confirmFunc = this.currentPrompt.confirm
+        let confirmFunc = this.currentPrompt.confirm
 
-          this.closeHover()
-          if (confirmFunc) confirmFunc()
+        this.closeHover()
+        if (confirmFunc) confirmFunc()
 
-        }
-        else {
-          this.closeHover()
-          this.currentPrompt.confirm()
-        }
-
-      } catch (error) {
-        console.error("Error resetting password:", error)
       }
-    },
+      else {
+        this.closeHover()
+        this.currentPrompt.confirm()
+      }
+
+    }, 1000),
   },
 }
 </script>

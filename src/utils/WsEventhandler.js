@@ -137,7 +137,7 @@ export default function onEvent(message) {
     }
     vue.$toast.update(jsonObject.task_id, {
 
-      content: i18n.t(jsonObject.message),
+      content: i18n.t(jsonObject.message, jsonObject.args),
 
       options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
 

@@ -70,11 +70,17 @@ export default {
     Errors,
     Listing,
   },
-  props: {
-    token: String,
-    folderId: String,
 
+  props: {
+    token: {
+      type: String,
+      required: true,
+    },
+    folderId: {
+      type: String,
+    }
   },
+
   data() {
     return {
       items: [],

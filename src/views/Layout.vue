@@ -7,10 +7,10 @@
     <main>
       <router-view></router-view>
       <shell v-if="isExecEnabled"></shell>
-      </main>
-      <upload-files></upload-files>
-      <prompts></prompts>
-    </div>
+    </main>
+    <upload-files></upload-files>
+    <prompts></prompts>
+  </div>
   </template>
 
   <script>
@@ -28,20 +28,22 @@
       Shell,
       UploadFiles,
     },
+     renderTriggered({key, target, type}) {
+        console.log(`Render triggered on component 'Layout'`, {key, target, type});
+     },
     computed: {
-      ...mapGetters(["isLogged", "progress", "currentPrompt"]),
-      ...mapState(["user", "perms"]),
+      ...mapGetters(["progress"]),
+      ...mapState(["perms"]),
 
       isExecEnabled() {
         return this.perms?.execute
       }
     },
-    watch: {
-      $route: function () {
-        this.$store.commit("resetSelected")
-        if (this.currentPrompt?.prompt !== "success")
-          this.$store.commit("closeHover")
-      },
-    },
+    // watch: {
+    //   $route() {
+    //     this.$store.commit("resetSelected")
+    //
+    //   },
+    // },
   }
   </script>

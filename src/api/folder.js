@@ -14,6 +14,7 @@ export async function getItems(folder_id, lockFrom) {
     })
       .then(response => {
           store.commit("setLoading", false)
+          console.log("seting loading false")
           return response.data
       })
       .catch(error => {

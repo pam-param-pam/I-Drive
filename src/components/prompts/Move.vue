@@ -51,6 +51,7 @@
 import { mapState } from "vuex"
 import FileList from "@/components/FileList.vue"
 import {move} from "@/api/item.js"
+import throttle from "lodash.throttle";
 
 export default {
   name: "move",
@@ -69,7 +70,7 @@ export default {
   },
 
   methods: {
-    async submit() {
+    submit: throttle(async function (event) {
       let listOfIds = this.selected.map(obj => obj.id)
       await move({ids: listOfIds, "new_parent_id": this.dest.id})
 
@@ -78,7 +79,7 @@ export default {
 
       this.$store.commit("closeHover")
 
-    },
+    }, 1000)
   },
 }
 </script>

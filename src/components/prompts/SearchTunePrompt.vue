@@ -48,11 +48,11 @@
       </div>
 
       <div>
-        <label>{{ $t("prompts.showLimit") }}</label>
+        <label>{{ $t("prompts.resultLimit") }}</label>
         <input
           class="input input--block styled-input"
           type="number"
-          v-model.number="showLimit"
+          v-model.number="resultLimit"
         />
       </div>
     </div>
@@ -90,7 +90,7 @@ export default {
       extension: null,
       includeFiles: null,
       includeFolders: null,
-      showLimit: null,
+      resultLimit: null,
       fileTypes: ["application", "audio", "document", "image", "video", "text"],
     }
   },
@@ -104,7 +104,7 @@ export default {
     this.extension = this.searchFilters.extension || null
     this.includeFiles = this.searchFilters.files
     this.includeFolders = this.searchFilters.folders
-    this.showLimit = this.searchFilters.showLimit || 25
+    this.resultLimit = this.searchFilters.resultLimit || 25
   },
   methods: {
     ...mapMutations(["setSearchFilters"]),
@@ -117,7 +117,7 @@ export default {
       let searchFilterDict = {
         files: this.includeFiles,
         folders: this.includeFolders,
-        showLimit: this.showLimit,
+        resultLimit: this.resultLimit,
       }
       if (this.fileType !== null) searchFilterDict.type = this.fileType
       if (this.extension !== null) searchFilterDict.extension = this.extension

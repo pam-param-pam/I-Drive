@@ -11,7 +11,6 @@
         ref="input"
         class="input input--block"
         type="text"
-        @keyup.enter="submit"
         v-model.trim="name"
       />
     </div>

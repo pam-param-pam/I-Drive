@@ -6,7 +6,7 @@
   >
     <div class="card floating">
       <div class="card-title">
-        <h2>{{ $t("prompts.uploadFiles", { files: filesInUploadCount }) }}</h2>
+        <h2>{{ $t("prompts.uploadFiles", { amount: filesInUploadCount }) }}</h2>
         <div class="upload-info">
           <div class="upload-speed">{{ uploadSpeed.toFixed(2) }} MB/s</div>
           <div class="upload-eta">{{ formattedETA }} remaining</div>

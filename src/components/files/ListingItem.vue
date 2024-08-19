@@ -61,10 +61,7 @@ export default {
 
   emits: ['onOpen'],
 
-  props: [
-    "readOnly",
-    "item",
-  ],
+  props: ["readOnly", "item"],
   computed: {
     ...mapState(["perms", "selected", "settings", "items"]),
     ...mapGetters(["selectedCount"]),

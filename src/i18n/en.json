@@ -165,11 +165,12 @@
     }
   },
   "prompts": {
+    "currentFolder": "Current folder: ",
     "itemsSelected": "Selected {count} items",
     "fetchMoreInfo": "More info",
     "resolution": "Resolution",
     "all": "all",
-    "showLimit": "Max search items",
+    "resultLimit": "Max search items",
     "searchTune": "Tune search",
     "filterMessage": "Select search filters",
     "fileType": "File type",
@@ -217,7 +218,7 @@
     "size": "Size",
     "upload": "Upload",
     "uploadMessage": "Please pick upload method",
-    "uploadFiles": "Uploading {files} files...",
+    "uploadFiles": "Uploading {amount} files...",
     "discardEditorChanges": "Are you sure you wish to discard the changes you've made?",
     "modelName": "Model name",
     "iso": "ISO",
@@ -239,6 +240,7 @@
     "editFolderPassword": "Edit folder password"
   },
   "toasts": {
+    "deleting": "Deleting {percentage}%...",
     "itemLocated": "Item located",
     "passwordIsBeingUpdated": "Folder password is updating...",
     "passwordUpdated": "Password updated!",
@@ -271,7 +273,8 @@
     "success": "Uploaded",
     "paused": "Paused",
     "creating": "Creating...",
-    "pausing": "Pausing..."
+    "pausing": "Pausing...",
+    "waiting": "Waiting for upload..."
   },
 
   "share": {

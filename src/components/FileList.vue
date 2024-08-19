@@ -1,5 +1,9 @@
 <template>
   <div>
+    <p>
+      {{ $t("prompts.currentFolder") }} <code>{{ nav?.name }}</code>
+      .
+    </p>
     <ul class="file-list">
       <li
         v-for="item in dirs"
@@ -15,7 +19,7 @@
     </ul>
 
     <p>
-      {{ $t("prompts.moveTo") }} <code>{{ nav?.name }}</code>
+      {{ $t("prompts.moveTo") }} <code>{{ nav?.folder_path }}</code>
       .
     </p>
   </div>
@@ -60,7 +64,7 @@ export default {
       }
 
       this.dirs = dirs
-      this.nav = {name: res.name, id: res.id}
+      this.nav = {name: res.name, id: res.id, folder_path: res.folder_path}
       this.$emit("update:current", this.nav)
     },
 

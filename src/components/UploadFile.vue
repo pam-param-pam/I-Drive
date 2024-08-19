@@ -12,7 +12,7 @@
     <!-- Upper -->
     <div class="fileitem-header">
       <span class="file-name">{{ file.name }}</span>
-      <div class="button-group">
+      <div v-if="showButtons" class="button-group">
         <button class="pause-button" @click="togglePause">
           <i class="material-icons">{{ file.status === 'paused' ? 'play_arrow' : 'pause' }}</i>
         </button>
@@ -34,6 +34,9 @@
       </span>
       <span v-if="file.status === 'failed'">
         <b class="failed">{{ $t('uploadFile.failed') }}</b>
+      </span>
+      <span v-if="file.status === 'waiting'">
+        <b class="creating">{{ $t('uploadFile.waiting') }}</b>
       </span>
       <span v-if="file.status === 'success'">
         <b class="success">{{ $t('uploadFile.success') }}</b>
@@ -59,37 +62,38 @@
 
 <script>
 import ProgressBar from "@/components/ProgressBar.vue"
-import {mapMutations} from "vuex"
 
 export default {
-  components: { ProgressBar },
-  props: ["file"],
-  data() {
-    return {
-      isPaused: false,
-      isShaking: false,
+    components: {ProgressBar},
+    props: ["file"],
+    data() {
+        return {
+            isPaused: false,
+            isShaking: false,
 
 
-    }
-  },
-  computed: {
-    ...mapMutations([])
-  },
-  methods: {
-    togglePause() {
-      this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
+        }
     },
-    cancel() {
-      this.$store.commit("upload/cancelJob", this.file.id)
+    computed: {
+        showButtons() {
+            return this.file.status !== "success" & this.file.status !== "failed" & this.file.status !== "waiting"
+        }
+    },
+    methods: {
+        togglePause() {
+            this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
+        },
+        cancel() {
+            this.$store.commit("upload/cancelJob", this.file.id)
 
+        },
+        startShake() {
+            this.isShaking = true
+        },
+        stopShake() {
+            this.isShaking = false
+        },
     },
-    startShake() {
-      this.isShaking = true
-    },
-    stopShake() {
-      this.isShaking = false
-    },
-  },
 }
 </script>
 
@@ -128,24 +132,36 @@ export default {
   color: red;
 }
 
+.failed-border {
+  border-color: red;
+}
+
 .success {
   color: green;
 }
+
+.success-border {
+  border-color: green;
+}
+
 .paused {
   color: orange;
 }
 
-.failed-border {
-  border-color: red;
-}
-.uploading-border {
-
-}
-.success-border {
-  border-color: green;
-}
 .paused-border {
   border-color: orange;
+}
+
+.waiting {
+  color: #57e9f6;
+}
+
+.paused-border {
+  border-color: orange;
+}
+
+.uploading-border {
+
 }
 
 .button-group {
@@ -183,13 +199,27 @@ export default {
 
 
 @keyframes shake {
-  0% { transform: translate(0, 0); }
-  17% { transform: translate(-1px, -1px); }
-  34% { transform: translate(1px, -1px); }
-  51% { transform: translate(-1px, 1px); }
-  68% { transform: translate(1px, 1px); }
-  85% { transform: translate(-1px, -1px); }
-  100% { transform: translate(0, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+  17% {
+    transform: translate(-1px, -1px);
+  }
+  34% {
+    transform: translate(1px, -1px);
+  }
+  51% {
+    transform: translate(-1px, 1px);
+  }
+  68% {
+    transform: translate(1px, 1px);
+  }
+  85% {
+    transform: translate(-1px, -1px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
 }
 
 .shake-animation {

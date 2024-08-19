@@ -72,7 +72,6 @@
             type="number"
             max="2147483647"
             min="1"
-            @keyup.enter="submit"
             v-model.trim="time"
           />
           <select class="right" v-model="unit" :aria-label="$t('time.unit')">
@@ -157,7 +156,6 @@ export default {
   },
   methods: {
     async submit () {
-
       let res = await createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
 
       this.links.push(res)

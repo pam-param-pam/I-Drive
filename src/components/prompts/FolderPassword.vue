@@ -12,7 +12,6 @@
         class="input input--block"
         v-focus
         type="text"
-        @keyup.enter="submit()"
         v-model.trim="password"
       />
       <button
@@ -52,6 +51,7 @@ import {mapGetters, mapMutations, mapState} from "vuex"
 import {isPasswordCorrect} from "@/api/item.js"
 import store from "@/store/index.js"
 import i18n from "@/i18n/index.js"
+import throttle from "lodash.throttle";
 
 export default {
   name: "folder-password",
@@ -67,9 +67,6 @@ export default {
     },
   },
 
-  beforeDestroy() {
-
-  },
   computed: {
     ...mapGetters(["currentPrompt"]),
     ...mapState(["loading"]),
@@ -80,7 +77,7 @@ export default {
   methods: {
     ...mapMutations(["closeHover", "setFolderPassword", "setLoading"]),
 
-    async submit() {
+    submit: throttle(async function (event) {
       if (await isPasswordCorrect(this.folder.id, this.password) === true) {
         this.setFolderPassword({ "folderId": this.folder.id, "password": this.password })
 
@@ -90,7 +87,7 @@ export default {
         let message = this.$t('toasts.folderPasswordIncorrect')
         this.$toast.error(message)
       }
-    },
+    }, 1000),
 
     cancel() {
       if (this.loading) store.commit("setError", { "response": { "status": 469 } })
