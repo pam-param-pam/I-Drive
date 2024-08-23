@@ -8,11 +8,10 @@ import time
 import zlib
 from . import consts
 
+__all__ = ("ZipStream",)
 
-__all__ = ("ZipStream", )
 
-
-class Processor:
+class Compressor:
     def __init__(self, file_struct):
         self.crc = 0
         self.o_size = self.c_size = 0
@@ -83,7 +82,8 @@ class ZipBase:
         # see section 4.3.9.3 of ZIP File Format Specification
         self.__use_data_descriptor_signature = True
         # central directory size and placement
-        self.__cdir_size = self.__offset = 0
+        self.__cdir_size = 0
+        self.__offset = 0
 
     def zip64_required(self):
         """
@@ -100,9 +100,9 @@ class ZipBase:
         dt = data.get("modification_time", time.localtime())
 
         dosdate = ((dt[0] - 1980) << 9 | dt[1] << 5 | dt[2]) \
-            & 0xffff
+                  & 0xffff
         dostime = (dt[3] << 11 | dt[4] << 5 | (dt[5] // 2)) \
-            & 0xffff
+                  & 0xffff
 
         # check zip32 limit
         # stats = os.stat(data['file'])
@@ -112,7 +112,7 @@ class ZipBase:
         file_struct = {'mod_time': dostime,
                        'mod_date': dosdate,
                        'crc': 0,  # will be calculated during data streaming
-                       "offset": 0,  # file header offset in zip file
+                       "offset": self._offset_get(),  # file header offset in zip file
                        'flags': 0b00001000}  # flag about using data descriptor is always on
 
         if 'file' in data:
@@ -168,7 +168,9 @@ class ZipBase:
                   "uncomp_size": 0,
                   "comp_size": 0,
                   "fname_len": len(file_struct['fname']),
-                  "extra_len": 0}
+                  "extra_len": 0
+                  }
+
         head = consts.LOCAL_FILE_TUPLE(**fields)
         head = consts.LOCAL_FILE_STRUCT.pack(*head)
         head += file_struct['fname']
@@ -224,16 +226,21 @@ class ZipBase:
         """
         make end of central directory record
         """
-        fields = {"signature": consts.CENTRAL_DIR_END_SIGNATURE,
-                  "disk_num": 0,
-                  "disk_cdstart": 0,
-                  "disk_entries": len(self.__files),
-                  "total_entries": len(self.__files),
+
+        fields = {"signature": consts.ZIP64_CENTRAL_DIR_END_SIGNATURE,
+                  "size_of_zip64_end_of_central_dir_record": self.__cdir_size,
+                  "version_made_by": 0x03,  # UNIX
+                  "version_needed_to_extract": self.__version,
+                  "number_of_this_disk": 0,
+                  "cd_start": 0,
+                  "cd_entries_this_disk": len(self.__files),
+                  "cd_entries_total": len(self.__files),
                   "cd_size": self.__cdir_size,
-                  "cd_offset": self._offset_get(),
-                  "comment_len": 0}
-        cdend = consts.CENTRAL_DIR_END_TUPLE(**fields)
-        cdend = consts.CENTRAL_DIR_END_STRUCT.pack(*cdend)
+                  "cd_offset": self.__offset
+                  }
+
+        cdend = consts.ZIP64_CENTRAL_DIR_END_TUPLE(**fields)
+        cdend = consts.ZIP64_CENTRAL_DIR_END_STRUCT.pack(*cdend)
         return cdend
 
     def _make_end_structures(self):
@@ -286,7 +293,7 @@ class ZipStream(ZipBase):
         stream single zip file with header and descriptor at the end
         """
         yield self._make_local_file_header(file_struct)
-        pcs = Processor(file_struct)
+        pcs = Compressor(file_struct)
         for chunk in self._data_generator(file_struct['src'], file_struct['stype']):
             chunk = pcs.process(chunk)
             if len(chunk) > 0:
@@ -304,7 +311,6 @@ class ZipStream(ZipBase):
         for idx, source in enumerate(self._source_of_files):
             file_struct = self._create_file_struct(source)
             # file offset in archive
-            file_struct['offset'] = self._offset_get()
             self._add_file_to_cdir(file_struct)
             # file data
             for chunk in self._stream_single_file(file_struct):

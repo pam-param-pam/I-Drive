@@ -1,58 +1,16 @@
 import os
 import re
 import time
-import wave
 from datetime import datetime
+from urllib.parse import quote
 
 import requests
 from django.http import StreamingHttpResponse, HttpResponse
+from django.utils.encoding import smart_str
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
-from websocket import create_connection
 
 from streamer.zipstream import ZipStream
-
-
-
-
-
-
-import io
-
-
-def audio_stream(request):
-    def generate_audio():
-        ws = create_connection("wss://api.pamparampam.dev/ws/audio/")
-
-        wav_file = io.BytesIO()
-        wav_writer = wave.open(wav_file, "wb")
-        try:
-            wav_writer.setframerate(44100)
-            wav_writer.setsampwidth(2)  # Assuming 16-bit PCM
-            wav_writer.setnchannels(1)
-
-            while True:
-                message = ws.recv()
-                wav_writer.writeframes(message)
-                wav_data = wav_file.getvalue()
-                yield wav_data
-
-                # Reset the BytesIO object for next iteration
-                wav_file.seek(0)
-                wav_file.truncate()
-
-        finally:
-            wav_writer.close()
-    a = 0
-    for chunk in generate_audio():
-        with open("audio.wav", "wb") as wav_writer:
-            wav_writer.write(chunk)
-            a += 1
-            if a > 1000:
-                print("breaking")
-                break
-    response = StreamingHttpResponse(generate_audio(), content_type="audio/wav")
-    return response
 
 
 @api_view(['GET'])
@@ -89,8 +47,12 @@ def stream_file(request, signed_file_id):
     res = res.json()
     file = res["file"]
     fragments = res["fragments"]
-    content_disposition = f'{"inline" if isInline else "attachment"}; filename="{file["name"]}"'
 
+    filename_ascii = quote(smart_str(file["name"]))
+    # Encode the filename using RFC 5987
+    encoded_filename = quote(file["name"])
+
+    content_disposition = f'{"inline" if isInline else "attachment"}; filename="{filename_ascii}"; filename*=UTF-8\'\'{encoded_filename}'
     # If file is empty, return no content but still allow it to be downloaded
     if len(fragments) == 0:
         response = HttpResponse()
@@ -118,6 +80,7 @@ def stream_file(request, signed_file_id):
                 print(discord_response.text)
                 return
             index += 1
+
     # parse range header to get start byte and end byte
     range_header = request.headers.get('Range')
     if range_header:
@@ -151,11 +114,10 @@ def stream_file(request, signed_file_id):
     response = StreamingHttpResponse(file_iterator(selected_fragment_index, start_byte, end_byte), content_type=file["mimetype"], status=status)
 
     file_size = file["size"]
-    i = 0
+    print(file)
     real_end_byte = 0
-    while i < selected_fragment_index:
+    for i in range(selected_fragment_index):
         real_end_byte += fragments[i]["size"]
-        i += 1
     referer = request.headers.get('Referer')
 
     # Set the X-Frame-Options header to the request's origin
@@ -173,7 +135,7 @@ def stream_file(request, signed_file_id):
         response['Cache-Control'] = f"max-age={2628000}"  # 1 month
 
     if range_header:
-        response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size) # this -1 is vevy important
+        response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
         response['Accept-Ranges'] = 'bytes'
 
         response['Content-Length'] = real_end_byte - real_start_byte
@@ -189,6 +151,7 @@ def stream_zip_files(request, token):
     def stream_zip_file(file_id, fragments, chunk_size=8192):
         for fragment in fragments:
             fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}")
+            print(f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}")
             if not fragment_response.ok:
                 print("============ERROR============")
                 print(fragment_response.status_code)
@@ -202,6 +165,7 @@ def stream_zip_files(request, token):
                 yield chunk
 
     res = requests.get(f"http://127.0.0.1:8000/api/zip/{token}")
+    print(f"http://127.0.0.1:8000/api/zip/{token}")
     if not res.ok:
         return HttpResponse(status=res.status_code)
     res_json = res.json()
@@ -226,7 +190,7 @@ def stream_zip_files(request, token):
     response = StreamingHttpResponse(
         zip_stream.stream(),
         content_type="application/zip")
-    response['Content-Disposition'] = f'attachment; filename="I-Drive-{res_json["id"]}.zip"'
+    response['Content-Disposition'] = f'attachment; filename="{res_json["name"]}.zip"'
     # response['Content-Length'] = content_length
 
     return response

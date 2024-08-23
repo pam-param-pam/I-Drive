@@ -54,9 +54,9 @@ CENTRAL_DIR_FILE_HEADER_SIGNATURE = b'\x50\x4b\x01\x02'
 #                                     "total_entries", "cd_size", "cd_offset", "comment_len"))
 # CENTRAL_DIR_END_SIGNATURE = b'\x50\x4b\x05\x06'
 
-ZIP64_END_STRUCT = struct.Struct(b"<4sQHHIIQQQQQ")
-ZIP64_END_TUPLE = namedtuple("zip64end",
-                             ("signature", "size_of_zip64_end_of_central_dir_record", "version_made_by", "version_needed_to_extract",
-                              "number_of_this_disk", "cd_start", "cd_entries_this_disk", "cd_entries_total",
-                              "cd_size", "cd_offset"))
-ZIP64_END_SIGNATURE = b'\x50\x4b\x06\x06'
+ZIP64_CENTRAL_DIR_END_STRUCT = struct.Struct(b"<4sQHHIIQQQQ")
+ZIP64_CENTRAL_DIR_END_TUPLE = namedtuple("zip64end",
+                                         ("signature", "size_of_zip64_end_of_central_dir_record", "version_made_by", "version_needed_to_extract",
+                                          "number_of_this_disk", "cd_start", "cd_entries_this_disk", "cd_entries_total",
+                                          "cd_size", "cd_offset"))
+ZIP64_CENTRAL_DIR_END_SIGNATURE = b'\x50\x4b\x06\x06'
