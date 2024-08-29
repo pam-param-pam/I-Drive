@@ -29,7 +29,7 @@
         <div class="bounce3"></div>
       </div>
     </div>
-    <CodeEditor v-model="raw || ''"></CodeEditor>
+<!--    <CodeEditor v-model="raw || ''"></CodeEditor>-->
   </div>
 </template>
 
@@ -45,14 +45,14 @@ import {theme} from "@/utils/constants.js"
 import {breadcrumbs} from "@/api/item.js"
 import {getShare} from "@/api/share.js"
 
-import CodeEditor from 'simple-code-editor';
+// import CodeEditor from 'simple-code-editor';
 
 
 export default {
    name: "editor",
    components: {
       HeaderBar,
-      CodeEditor,
+      // CodeEditor,
       Action,
       Breadcrumbs,
 

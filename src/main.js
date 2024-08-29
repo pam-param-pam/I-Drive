@@ -25,7 +25,7 @@ async function start() {
     //ignore cuz the login validation is done under the hood,
     // so if the error is thrown, it's already handled by other parts of the code
     // and to be precise, the ones that redirect to log-in when 403 or token/settings/user is null or incorrect.
-    // don't tell me it's stupid - I didn't createShare this system lol
+    // don't tell me it's stupid - I didn't create this system lol
 
   }
 

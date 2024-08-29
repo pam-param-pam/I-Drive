@@ -10,14 +10,7 @@ Vue.use(VueLazyload)
 Vue.use(AsyncComputed)
 
 
-const options = {
-  transition: "Vue-Toastification__bounce",
-  maxToasts: 20,
-  position: "bottom-right",
-  timeout: 2500,
-  newestOnTop: true,
 
-}
 
 Vue.use(Toast, options)
 
