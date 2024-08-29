@@ -9,7 +9,8 @@
 
 <script>
 export default {
-  props: ["progress"],
+   name: "UploadProgressBar",
+   props: ["progress"],
 }
 </script>
 
@@ -45,7 +46,11 @@ export default {
 }
 
 @keyframes moveStripe {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 </style>

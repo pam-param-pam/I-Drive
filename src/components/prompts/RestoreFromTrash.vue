@@ -10,7 +10,7 @@
     </div>
     <div class="card-action">
       <button
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         class="button button--flat button--grey"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
@@ -31,46 +31,44 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 import {restoreFromTrash} from "@/api/item.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "RestoreFromTrash",
-  computed: {
-    ...mapGetters(["selectedCount", "currentPrompt"]),
-    ...mapState(["selected", "items"]),
-  },
+   name: "RestoreFromTrash",
+   computed: {
+      ...mapState(useMainStore, ["selectedCount", "currentPrompt", "selected", "items"]),
+   },
 
-  methods: {
-    ...mapMutations(["closeHover", "resetSelected"]),
-    async submit() {
-      try {
-        let ids = this.selected.map(item => item.id)
+   methods: {
+      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
+      async submit() {
+         try {
+            let ids = this.selected.map(item => item.id)
 
-        let res = await restoreFromTrash({"ids": ids})
-        if (res.status !== 204) {
-          res = await res.data
-          let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
-          this.$toast.info(message, {
-            timeout: null,
-            id: res.task_id
-          })
-        }
-        else {
-          let message = this.$t('toasts.itemsRestoredFromTrash', {amount: ids.length})
+            let res = await restoreFromTrash({"ids": ids})
+            if (res.status !== 204) {
+               res = await res.data
+               let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
+               this.$toast.info(message, {
+                  timeout: null,
+                  id: res.task_id
+               })
+            } else {
+               let message = this.$t('toasts.itemsRestoredFromTrash', {amount: ids.length})
 
-          this.$toast.success(message)
-        }
+               this.$toast.success(message)
+            }
 
-        this.currentPrompt?.confirm()
+            this.currentPrompt?.confirm()
 
-      }
-      finally {
-        this.closeHover()
-        this.resetSelected()
+         } finally {
+            this.closeHover()
+            this.resetSelected()
 
-      }
-    },
-  },
+         }
+      },
+   },
 }
 </script>

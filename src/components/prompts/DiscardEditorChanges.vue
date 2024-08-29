@@ -8,7 +8,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
         tabindex="2"
@@ -30,23 +30,23 @@
 </template>
 
 <script>
-import {mapGetters, mapState} from "vuex"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "DiscardEditorChanges",
-  computed: {
-    ...mapState(["selected"]),
-    ...mapGetters(["currentPrompt"]),
+   name: "DiscardEditorChanges",
+   computed: {
+      ...mapState(useMainStore, ["selected", "currentPrompt"]),
+      file() {
+         return this.selected[0]
+      }
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+      async submit() {
+         if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
-    file() {
-      return this.selected[0]
-    }
-  },
-  methods: {
-    async submit() {
-      if (this.currentPrompt.confirm) this.currentPrompt.confirm()
-
-    },
-  },
+      },
+   },
 }
 </script>

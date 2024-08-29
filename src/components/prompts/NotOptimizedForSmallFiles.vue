@@ -12,7 +12,7 @@
     </div>
     <div class="card-action">
       <button
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         class="button button--flat button--grey"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
@@ -33,22 +33,24 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations} from "vuex"
+
+import {mapActions, mapState} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
 
 export default {
-  name: "NotOptimizedForSmallFiles",
-  computed: {
-    ...mapGetters(["currentPrompt"]),
-  },
-  methods: {
-    ...mapMutations(["closeHover"]),
+   name: "NotOptimizedForSmallFiles",
+   computed: {
+      ...mapState(useMainStore, ["currentPrompt"]),
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
 
-    async submit() {
+      async submit() {
 
-      if (this.currentPrompt.confirm) this.currentPrompt.confirm()
-      this.closeHover()
+         if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+         this.closeHover()
 
-    },
-  },
+      },
+   },
 }
 </script>

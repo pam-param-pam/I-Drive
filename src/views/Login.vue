@@ -1,7 +1,7 @@
 <template>
-  <div id="login" >
+  <div id="login">
     <form @submit="submit">
-      <img :src="logoURL" :alt="name" />
+      <img :src="logoURL" :alt="name"/>
       <h1>{{ name }}</h1>
       <div v-if="error !== ''" class="wrong">{{ error }}</div>
 
@@ -44,75 +44,69 @@
 
 <script>
 import * as auth from "@/utils/auth"
-import {
-  name,
-  logoURL,
-  signup,
-} from "@/utils/constants"
-import {mapState} from "vuex"
+import {logoURL, name, signup,} from "@/utils/constants"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapState} from "pinia"
 
 export default {
-  name: "login",
-  computed: {
-    ...mapState(["user"]),
-    signup: () => signup,
-    name: () => name,
-    logoURL: () => logoURL,
-  },
-  data() {
-    return {
-      createMode: false,
-      error: "",
-      username: "",
-      password: "",
-      passwordConfirm: "",
-    }
-  },
-
-  methods: {
-    toggleMode() {
-      this.createMode = !this.createMode
-    },
-    async submit(event) {
-      event.preventDefault()
-      event.stopPropagation()
-
-      let redirect = this.$route.query.redirect
-
-      if (this.createMode) {
-        if (this.password !== this.passwordConfirm) {
-          this.error = this.$t("login.passwordsDontMatch")
-          return
-        }
+   name: "login",
+   computed: {
+      ...mapState(useMainStore, ["user"]),
+      signup: () => signup,
+      name: () => name,
+      logoURL: () => logoURL,
+   },
+   data() {
+      return {
+         createMode: false,
+         error: "",
+         username: "",
+         password: "",
+         passwordConfirm: "",
       }
+   },
 
-      try {
-        if (this.createMode) {
-          await auth.signup(this.username, this.password)
-        }
+   methods: {
+      toggleMode() {
+         this.createMode = !this.createMode
+      },
+      async submit(event) {
+         event.preventDefault()
+         event.stopPropagation()
 
-        await auth.login(this.username, this.password)
-        if (redirect === "" || redirect === undefined || redirect === null) {
-          redirect = `/folder/${this.user.root}`
-        }
-        await this.$router.push({path: redirect})
+         let redirect = this.$route.query.redirect
 
-        } catch (e) {
-          if (e.status === 409) {
-            this.error = this.$t("login.usernameTaken")
-          }
-          else if (e.status === 400) {
-            this.error = this.$t("login.wrongCredentials")
-          }
-          else if (e.status === 500) {
-            this.error = this.$t("login.unexpectedError")
-          }
-          else {
-            this.error = this.$t("login.unknownError")
-            alert(e)
-          }
-      }
-    },
-  },
+         if (this.createMode) {
+            if (this.password !== this.passwordConfirm) {
+               this.error = this.$t("login.passwordsDontMatch")
+               return
+            }
+         }
+
+         try {
+            if (this.createMode) {
+               await auth.signup(this.username, this.password)
+            }
+
+            await auth.login(this.username, this.password)
+            if (redirect === "" || redirect === undefined || redirect === null) {
+               redirect = `/files/${this.user.root}`
+            }
+            await this.$router.push({path: redirect})
+
+         } catch (e) {
+            if (e.status === 409) {
+               this.error = this.$t("login.usernameTaken")
+            } else if (e.status === 400) {
+               this.error = this.$t("login.wrongCredentials")
+            } else if (e.status === 500) {
+               this.error = this.$t("login.unexpectedError")
+            } else {
+               this.error = this.$t("login.unknownError")
+               alert(e)
+            }
+         }
+      },
+   },
 }
 </script>

@@ -29,7 +29,6 @@
     "sortByCreated": "Sortuj wg. daty stworzenia",
     "sortByName": "Sortuj wg. nazwy",
     "sortBySize": "Sortuj wg. rozmiaru",
-    "sortBySizeEncrypted": "Sortuj wg. zaszyfrowanego rozmiaru",
     "sortByExtension": "Sortuj wg. typu pliku"
   },
   "search": {
@@ -132,6 +131,9 @@
     "unit": "Jednostka czasu"
   },
   "settings": {
+    "concurrentUploadRequests": "Ilość równoległych requestów z uploadem plików",
+    "encryptFiles": "Szyfrowanie plików",
+    "settingsName": "Ustawienia",
     "shareDeleted": "usunięto Udostępnienie!",
     "shareCreated": "Link z udostępnieniem gotowy",
     "ShareName": "Nazwa",
@@ -158,6 +160,7 @@
     }
   },
   "prompts": {
+    "isEncrypted": "Zaszyfrowany",
     "irreversibleAction": "Ta akcja jest nie odwracalna!",
     "uploadFiles": "Przesyłanie {amount} plików...",
     "currentFolder": "Obecny folder: ",
@@ -200,7 +203,6 @@
     "ready": "Gotowy",
     "type": "Rodzaj Pliku",
     "extension": "Rozszerzenie Pliku",
-    "encryptedSize": "Rozmiar po zaszyfrowaniu",
     "identifier": "Identyfikator",
     "created": "Utworzone",
     "streamable": "Strumieniowalne",
@@ -236,6 +238,7 @@
 
   },
   "toasts": {
+    "aborting": "Przerywanie...",
     "deleting": "Usuwanie {percentage}%...",
     "itemLocated": "Zaleziono miejsce przechowywania pliku",
     "passwordIsBeingUpdated": "Hasło do folderu jest zmieniane...",
@@ -266,7 +269,8 @@
 
   },
   "uploadFile": {
-    "failed": "Wystąpił bląd, próbowanie ponownie....",
+    "noInternet": "Brak internetu",
+    "failed": "Wystąpił nieznany bląd",
     "success": "Plik zapisany",
     "paused": "Zatrzymano",
     "creating": "Tworzenie...",

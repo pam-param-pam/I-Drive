@@ -154,7 +154,6 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 import throttle from "lodash.throttle"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
@@ -163,7 +162,9 @@ import {getFile} from "@/api/files.js"
 import {getItems} from "@/api/folder.js"
 import {getShare} from "@/api/share.js"
 import {VueReader} from "vue-reader"
-import {sortItems} from "@/utils/common.js";
+import {sortItems} from "@/utils/common.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
    name: "preview",
@@ -209,8 +210,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(["items", "user", "selected", "loading", "perms", "currentFolder"]),
-      ...mapGetters(["currentPrompt", "isLogged"]),
+      ...mapState(useMainStore, ["items", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
       isEpub() {
          if (!this.file) return false
          return this.file.extension === ".epub"
@@ -229,6 +229,7 @@ export default {
          if (this.files && this.file) {
             return this.files.findIndex(item => item.id === this.file.id)
          }
+
       },
 
       files() {
@@ -262,7 +263,7 @@ export default {
    },
    created() {
       if (!this.isLogged) {
-         this.$store.commit("setAnonState")
+         this.setAnonState()
 
       }
       this.fetchData()
@@ -273,11 +274,11 @@ export default {
       window.addEventListener("keydown", this.key)
 
    },
-   beforeDestroy() {
+   beforeUnmount() {
       window.removeEventListener("keydown", this.key)
    },
    methods: {
-      ...mapMutations(["setLoading"]),
+      ...mapActions(useMainStore, ["setLoading", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
 
       async fetchData() {
 
@@ -303,7 +304,7 @@ export default {
                let res = await getShare(this.token, this.folderId)
                this.shareObj = res
 
-               this.$store.commit("setItems", res.share)
+               this.setItems(res.share)
                this.folderList = res.breadcrumbs
 
                for (let i = 0; i < this.items.length; i++) {
@@ -318,13 +319,14 @@ export default {
                if (!this.currentFolder) {
                   const res = await getItems(this.file.parent_id, this.file.lockFrom)
 
-                  this.$store.commit("setItems", res.folder.children)
-                  this.$store.commit("setCurrentFolder", res.folder)
+                  this.setItems(res.folder.children)
+                  this.setCurrentFolder(res.folder)
                }
 
             }
          }
-         this.$store.commit("addSelected", this.file)
+         this.addSelected(this.file)
+
          this.setLoading(false)
          if (!this.isEpub) return
          this.bookLocation = localStorage.getItem('book-progress-' + this.file.id)
@@ -334,7 +336,7 @@ export default {
 
       },
       moveToTrash() {
-         this.$store.commit("showHover", {
+         this.showHover({
             prompt: "moveToTrash",
             confirm: () => {
                this.close()
@@ -343,7 +345,7 @@ export default {
 
       },
       rename() {
-         this.$store.commit("showHover", "rename")
+         this.showHover("rename")
 
       },
       prev() {
@@ -402,7 +404,7 @@ export default {
 
 
       resetPrompts() {
-         this.$store.commit("closeHover")
+         this.closeHover()
       },
       toggleNavigation: throttle(function () {
          this.showNav = true
@@ -459,8 +461,8 @@ export default {
 
 
                },
-            });
-            this.rendition.flow('paginated'); // For continuous scrolling
+            })
+            this.rendition.flow('paginated') // For continuous scrolling
 
          }
       },
@@ -493,40 +495,40 @@ export default {
          this.calcCurrentLocation()
          //todo one day fix padding and location and mobile support etc
          // if (isMobile) {
-         //   let container = this.rendition.manager.container;
+         //   let container = this.rendition.manager.container
          //   console.log(container)
-         //   let iframe = container.querySelector('iframe');
+         //   let iframe = container.querySelector('iframe')
          //   console.log(iframe)
          //
          //   if (iframe) {
-         //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+         //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
          //     console.log(iframeDocument)
-         //     const body = iframeDocument.querySelector('body');
+         //     const body = iframeDocument.querySelector('body')
          //
          //     if (body) {
          //       // Modify body styles directly
-         //       body.style.setProperty('padding-left', '30px', 'important');
-         //       body.style.setProperty('padding-right', '30px', 'important');
-         //       body.style.setProperty('padding-top', '20px', 'important');
-         //       body.style.setProperty('padding-bottom', '20px', 'important');
+         //       body.style.setProperty('padding-left', '30px', 'important')
+         //       body.style.setProperty('padding-right', '30px', 'important')
+         //       body.style.setProperty('padding-top', '20px', 'important')
+         //       body.style.setProperty('padding-bottom', '20px', 'important')
          //     }
          //   }
          // }
 
-         // let container = this.rendition.manager.container;
+         // let container = this.rendition.manager.container
          // console.log(container)
-         // let iframe = container.querySelector('iframe');
+         // let iframe = container.querySelector('iframe')
          // console.log(iframe)
          //
          // if (iframe) {
-         //   const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+         //   const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
          //   console.log(iframeDocument)
          //
          //   iframeDocument.addEventListener('scroll', (event) => {
-         //     const scrollDirection = event.deltaX < 0 ? 'left' : 'right';
+         //     const scrollDirection = event.deltaX < 0 ? 'left' : 'right'
          //     // Handle the scroll direction and adjust navigation accordingly
-         //     console.log(`Scrolled ${scrollDirection}`);
-         //   });
+         //     console.log(`Scrolled ${scrollDirection}`)
+         //   })
          // }
 
          localStorage.setItem('book-progress-' + this.file.id, epubcifi)

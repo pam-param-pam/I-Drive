@@ -7,13 +7,13 @@
 
 <script>
 export default {
-  name: "themes",
-  props: ["theme"],
-  emits: ["update:theme"],
-  methods: {
-    change(event) {
-      this.$emit("update:theme", event.target.value)
-    },
-  },
+   name: "themes",
+   props: ["theme"],
+   emits: ["update:theme"],
+   methods: {
+      change(event) {
+         this.$emit("update:theme", event.target.value)
+      },
+   },
 }
 </script>

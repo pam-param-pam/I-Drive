@@ -1,6 +1,6 @@
 <template>
   <header>
-    <img v-if="showLogo" :src="logoURL" />
+    <img v-if="showLogo" :src="logoURL"/>
     <action
       v-if="showMenu"
       class="menu-button"
@@ -9,10 +9,10 @@
       @action="openSidebar()"
     />
 
-    <slot />
+    <slot/>
 
     <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
-      <slot name="actions" />
+      <slot name="actions"/>
     </div>
 
     <action
@@ -20,80 +20,82 @@
       id="more"
       icon="more_vert"
       :label="$t('buttons.more')"
-      @action="$store.commit('showHover', 'more')"
+      @action="showHover('more')"
+
     />
     <div
       class="overlay"
       v-show="this.currentPromptName === 'more'"
-      @click="$store.commit('closeHover')"
+      @click="closeHover()"
     />
   </header>
 </template>
 
 <script>
-import { logoURL } from "@/utils/constants"
+import {logoURL} from "@/utils/constants"
 
 import Action from "@/components/header/Action.vue"
-import {mapGetters, mapState} from "vuex"
 import {updateSettings} from "@/api/user.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "header-bar",
+   name: "header-bar",
 
-  components: {Action},
-  emits: ['switchView'],
+   components: {Action},
+   emits: ['switchView'],
 
-  props: {
-    showLogo: {
-      type: Boolean,
-      default: () => true,
-    },
-    showMenu: {
-      type: Boolean,
-      default: () => true,
-    },
-  },
+   props: {
+      showLogo: {
+         type: Boolean,
+         default: () => true,
+      },
+      showMenu: {
+         type: Boolean,
+         default: () => true,
+      },
+   },
 
-  data() {
-    return {
-      logoURL,
-      isDark: true
-    }
-  },
-  computed: {
-    ...mapState(["settings"]),
-    ...mapGetters(["currentPromptName"]),
-    viewIcon() {
-      const icons = {
-        list: "view_module",
-        mosaic: "grid_view",
-        "mosaic gallery": "view_list",
+   data() {
+      return {
+         logoURL,
+         isDark: true
       }
-      return icons[this.settings.viewMode]
-    },
+   },
+   computed: {
+      ...mapState(useMainStore, ["settings", "currentPromptName"]),
+      viewIcon() {
+         const icons = {
+            list: "view_module",
+            mosaic: "grid_view",
+            "mosaic gallery": "view_list",
+         }
+         return icons[this.settings.viewMode]
+      },
 
-  },
-  methods: {
-    openSidebar() {
-      this.$store.commit("showHover", "sidebar")
-    },
-    async switchView() {
-      const modes = {
-        list: "mosaic",
-        mosaic: "mosaic gallery",
-        "mosaic gallery": "list",
-      }
-      const data = {
-        viewMode: modes[this.settings.viewMode] || "list",
-      }
+   },
+   methods: {
+      ...mapActions(useMainStore, ["showHover"]),
+      openSidebar() {
+         this.showHover("sidebar")
+      },
+      async switchView() {
+         const modes = {
+            list: "mosaic",
+            mosaic: "mosaic gallery",
+            "mosaic gallery": "list",
+         }
+         const data = {
+            viewMode: modes[this.settings.viewMode] || "list",
+         }
 
-      // Await ensures correct value for setItemWeight()
-      await this.$store.commit("updateSettings", data)
-      await updateSettings(data)
+         // Await ensures correct value for setItemWeight()
+         await this.updateSettings(data)
+         await updateSettings(data)
 
-    },
+      },
 
-  },
+   },
 
 }
 </script>

@@ -8,29 +8,22 @@
 
 <script>
 export default {
-  name: "languages",
-  props: ["locale"],
-  emits: ["update:locale"],
-  data() {
-    let dataObj = {
-      locales: {
-        en: "en",
-        pl: "pl",
-        uwu: "uwu",
+   name: "languages",
+   props: ["locale"],
+   emits: ["update:locale"],
+   data() {
+      return {
+         locales: {
+            en: "en",
+            pl: "pl",
+            uwu: "uwu",
+         },
+      }
+   },
+   methods: {
+      change(event) {
+         this.$emit("update:locale", event.target.value)
       },
-    }
-
-    Object.defineProperty(dataObj, "locales", {
-      configurable: false,
-      writable: false,
-    })
-
-    return dataObj
-  },
-  methods: {
-    change(event) {
-      this.$emit("update:locale", event.target.value)
-    },
-  },
+   },
 }
 </script>

@@ -1,12 +1,12 @@
 <template>
   <div>
     <header-bar>
-      <template>
-        <Search
-          @onSearchQuery="onSearchQuery"
-          @exit="onSearchClosed"
-        />
-      </template>
+
+      <Search
+        @onSearchQuery="onSearchQuery"
+        @exit="onSearchClosed"
+      />
+
       <title></title>
       <template #actions>
         <template v-if="!isMobile()">
@@ -76,7 +76,7 @@
           v-if="headerButtons.shell"
           icon="code"
           :label="$t('buttons.shell')"
-          @action="$store.commit('toggleShell')"
+          @action="toggleShell()"
         />
         <action
           :icon="viewIcon"
@@ -149,7 +149,7 @@
 
 
     <h4 v-if="!error && isSearchActive && !loading">{{ $t('files.searchItemsFound', {amount: this.items.length}) }}</h4>
-    <Listing
+    <FileListing
       ref="listing"
       :locatedItem=locatedItem
       :isSearchActive="isSearchActive"
@@ -158,16 +158,15 @@
       @dragLeave="onDragLeave"
       @uploadInput="onUploadInput"
 
-    ></Listing>
+    ></FileListing>
   </div>
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
-import Listing from "@/views/files/Listing.vue"
+import FileListing from "@/views/files/FileListing.vue"
 import {getItems} from "@/api/folder.js"
 import {name} from "@/utils/constants.js"
 import {search} from "@/api/search.js"
@@ -176,16 +175,20 @@ import Action from "@/components/header/Action.vue"
 import Search from "@/components/Search.vue"
 import {checkFilesSizes} from "@/utils/upload.js"
 import {createZIP} from "@/api/item.js"
-import {isMobile} from "@/utils/common.js";
+import {isMobile} from "@/utils/common.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
+import {useUploadStore} from "@/stores/uploadStore.js"
 
 export default {
    name: "files",
    components: {
-      Search, Action,
+      Search,
+      Action,
       HeaderBar,
       Breadcrumbs,
       Errors,
-      Listing,
+      FileListing,
    },
 
    props: {
@@ -211,8 +214,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(["error", "user", "loading", "selected", "settings", "perms", "selected", "currentFolder", "disabledCreation"]),
-      ...mapGetters(["getFolderPassword", "selectedCount"]),
+      ...mapState(useMainStore, ["error", "user", "loading", "selected", "settings", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
 
       headerButtons() {
          return {
@@ -244,22 +246,21 @@ export default {
 
    },
    renderTriggered({key, target, type}) {
-      console.log(`Render triggered on component 'Files'`, {key, target, type});
+      console.log(`Render triggered on component 'Files'`, {key, target, type})
    },
    watch: {
       $route: "fetchFolder",
    },
-   destroyed() {
-      console.log("FILES DESTOYRED")
-      this.$store.commit("setItems", null)
-      this.$store.commit("setCurrentFolder", null)
+   unmounted() {
+      this.setItems(null)
+      this.setCurrentFolder(null)
 
    },
    methods: {
+      ...mapActions(useMainStore, ["updateUser", "addSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "toggleShell"]),
+      ...mapActions(useUploadStore, ["startUpload"]),
+
       isMobile,
-
-      ...mapMutations(["updateUser", "addSelected", "setLoading", "setError", "setDisabledCreation"]),
-
       onDragEnter() {
          this.dragCounter++
 
@@ -307,27 +308,23 @@ export default {
          }
       },
       async onUploadInput(event) {
-         this.$store.commit("closeHover")
+         this.closeHover()
 
          let files = event.currentTarget.files
          let folder = this.currentFolder
 
          if (await checkFilesSizes(files)) {
-            this.$store.commit("showHover", {
+            this.showHover({
                prompt: "NotOptimizedForSmallFiles",
                confirm: () => {
-                  this.$store.dispatch("upload/upload", {filesList: files, parent_folder: folder})
+                  this.startUpload(files, folder)
 
                },
             })
          } else {
-            await this.$store.dispatch("upload/upload", {filesList: files, parent_folder: folder})
+            this.startUpload(files, folder)
 
-            // await upload.createNeededFolders(files, folder)
          }
-
-         //await createNeededFolders(files, folder)
-
 
       },
       locateItem() {
@@ -353,16 +350,17 @@ export default {
          this.items = await search(query, realLockFrom, password)
          this.setLoading(false)
          this.isSearchActive = true
-         this.$store.commit("setItems", this.items)
-         this.$store.commit("setCurrentFolder", null)
+         this.setItems(this.items)
+         this.setCurrentFolder(null)
+
 
       },
-      upload: function () {
+      upload() {
          if (
             typeof window.DataTransferItem !== "undefined" &&
             typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
          ) {
-            this.$store.commit("showHover", "upload")
+            this.showHover("upload")
          } else {
             document.getElementById("upload-input").click()
          }
@@ -379,8 +377,9 @@ export default {
 
          this.items = res.folder.children
          this.folderList = res.breadcrumbs
-         this.$store.commit("setItems", this.items)
-         this.$store.commit("setCurrentFolder", res.folder)
+         console.log("seting items from files")
+         this.setItems(this.items)
+         this.setCurrentFolder(res.folder)
 
          if (res.parent_id) { //only set title if its not root folder
             document.title = `${res.name} - ` + name
@@ -397,7 +396,7 @@ export default {
             if (item.isLocked === true) {
                let password = this.getFolderPassword(item.lockFrom)
                if (!password) {
-                  this.$store.commit("showHover", {
+                  this.showHover({
                      prompt: "FolderPassword",
                      //todo name should be lockfrom_name not just item _name
                      props: {requiredFolderPasswords: [{'id': item.lockFrom, "name": item.name}]},

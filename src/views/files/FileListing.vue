@@ -142,22 +142,18 @@
 </template>
 
 <script>
-import Vue from "vue"
-import {mapGetters, mapMutations, mapState} from "vuex"
 import * as upload from "@/utils/upload"
 import css from "@/utils/css"
 import throttle from "lodash.throttle"
 
-import HeaderBar from "@/components/header/HeaderBar.vue"
-import Action from "@/components/header/Action.vue"
-import Search from "@/components/Search.vue"
 import Item from "@/components/files/ListingItem.vue"
 import {updateSettings} from "@/api/user.js"
-import Breadcrumbs from "@/components/Breadcrumbs.vue"
-import {sortItems} from "@/utils/common.js";
-
+import {sortItems} from "@/utils/common.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
+//todo reset selected on navigation
 export default {
-   name: "listing",
+   name: "FileListing",
 
    props: {
       isSearchActive: Boolean,
@@ -167,10 +163,6 @@ export default {
    emits: ['uploadInput', 'drop', 'onOpen', 'dragEnter', 'dragLeave'],
 
    components: {
-      Breadcrumbs,
-      HeaderBar,
-      Action,
-      Search,
       Item,
    },
    data() {
@@ -183,13 +175,13 @@ export default {
       }
    },
    watch: {
-      items: function () {
+      items() {
          // Ensures that the listing is displayed
-         Vue.nextTick(() => {
-            // How much every listing item affects the window height
-            this.setItemWeight()
-            // Fill and fit the window with listing items
-            this.fillWindow(true)
+         this.$nextTick(() => {
+            // // How much every listing item affects the window height
+            // this.setItemWeight()
+            // // Fill and fit the window with listing items
+            // this.fillWindow(true)
 
             // if (this.locatedItem === undefined) return
             // const selectedItem = this.$refs.locatedItem[0]
@@ -204,7 +196,8 @@ export default {
       console.log("beforeUpdate")
 
    },
-   mounted: function () {
+   mounted() {
+
       console.log("MOUNTED")
       // Check the columns size for the first time.
       this.columnsResize()
@@ -227,55 +220,39 @@ export default {
       document.addEventListener("drop", this.drop)
 
 
+   },
+   beforeUnmount() {
+      this.resetSelected()
 
-
-  },
-  beforeDestroy() {
-    // Remove event listeners before destroying this page.
-    window.removeEventListener("keydown", this.keyEvent)
-    window.removeEventListener("scroll", this.scrollEvent)
-    window.removeEventListener("resize", this.windowsResize)
+      // Remove event listeners before destroying this page.
+      window.removeEventListener("keydown", this.keyEvent)
+      window.removeEventListener("scroll", this.scrollEvent)
+      window.removeEventListener("resize", this.windowsResize)
 
       if (!this.user || !this.perms?.create) return
       document.removeEventListener("dragover", this.preventDefault)
       document.removeEventListener("dragenter", this.dragEnter)
       document.removeEventListener("dragleave", this.dragLeave)
       document.removeEventListener("drop", this.drop)
+
+
    },
    computed: {
-      ...mapState(["items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder"]),
-      ...mapGetters(["selectedCount", "isLogged", "currentPrompt"]),
+      ...mapState(useMainStore, ["items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
 
-    nameSorted() {
-      return this.settings.sortingBy === "name"
-    },
-    sizeSorted() {
-      return this.settings.sortingBy === "size"
-    },
-    allItems() {
-      // Combine directories and files into a single array
-      const allItems = [];
-
-      if (this.items != null) {
-        this.items.forEach((item) => {
-          if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
-            allItems.push({ ...item, isDir: true });
-          } else if (!item.isDir) {
-            allItems.push({ ...item, isDir: false });
-          }
-        });
-      }
-      // Sort the combined array
-      this.$store.commit("setItems", allItems)
-      return sortItems(allItems)
-    },
+      nameSorted() {
+         return this.settings.sortingBy === "name"
+      },
+      sizeSorted() {
+         return this.settings.sortingBy === "size"
+      },
 
       dirs() {
-         return this.allItems.filter(item => item.isDir)
+         return this.sortedItems.filter(item => item.isDir)
       },
 
       files() {
-         return this.allItems.filter(item => !item.isDir)
+         return this.sortedItems.filter(item => !item.isDir)
       },
 
       dirsSize() {
@@ -317,14 +294,13 @@ export default {
 
    methods: {
 
-      ...mapMutations(["addSelected"]),
+      ...mapActions(useMainStore, ["addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
          this.$emit('uploadInput', event)
       },
 
       keyEvent(event) {
-         console.log(this.currentPrompt)
          // If prompts are shown return
          if (this.currentPrompt !== null) {
             return
@@ -333,31 +309,30 @@ export default {
          // Esc!
          if (event.keyCode === 27) {
             // Reset files selection.
-            this.$store.commit("resetSelected")
+            this.resetSelected()
          }
 
          // Del!
          if (event.keyCode === 46) {
             if (!this.perms.delete || this.selectedCount === 0) return
             if (this.$route.name === "Trash") {
-               this.$store.commit("showHover", "delete")
+               this.showHover("delete")
 
             } else {
-               this.$store.commit("showHover", "moveToTrash")
-
+               this.showHover("moveToTrash")
             }
          }
 
          // F1!
          if (event.keyCode === 112) {
             event.preventDefault()
-            this.$store.commit("showHover", "info")
+            this.showHover("info")
          }
 
          // F2!
          if (event.keyCode === 113) {
             if (!this.perms.modify || this.selectedCount !== 1) return
-            this.$store.commit("showHover", "rename")
+            this.showHover("rename")
          }
 
          // Ctrl is pressed
@@ -469,7 +444,6 @@ export default {
          //upload.handleFiles(files, path)
       },
 
-
       resetOpacity() {
          let items = document.getElementsByClassName("item")
 
@@ -477,6 +451,7 @@ export default {
             file.style.opacity = 1
          })
       },
+
       async sort(by) {
          let asc = false
 
@@ -494,11 +469,12 @@ export default {
             }
          }
 
+         this.setSortingBy(by)
+         this.setSortByAsc(asc)
 
-         this.$store.commit("setSortingBy", by)
-         this.$store.commit("setSortByAsc", asc)
          let items = sortItems(this.items)
-         this.$store.commit("setItems", items)
+         this.setItems(items)
+
          await updateSettings({"sortingBy": by, "sortByAsc": asc})
 
       },
@@ -561,7 +537,7 @@ export default {
          }
 
          // Await ensures correct value for setItemWeight()
-         await this.$store.commit("updateSettings", data)
+         await this.updateSettings(data)
 
 
          this.setItemWeight()

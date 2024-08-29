@@ -37,7 +37,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -58,61 +58,61 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations} from "vuex"
 import {resetPassword} from "@/api/folder.js"
-import throttle from "lodash.throttle";
+import throttle from "lodash.throttle"
+import {mapActions, mapState} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
 
 export default {
-  name: "resetFolderPassword",
-  props: {
-    folderId: {
-      type: String,
-      required: true
-    },
-    lockFrom: {
-      type: String,
-      required: true
-    },
+   name: "resetFolderPassword",
+   props: {
+      folderId: {
+         type: String,
+         required: true
+      },
+      lockFrom: {
+         type: String,
+         required: true
+      },
 
-  },
-  data() {
-    return {
-      accountPassword: "",
-      folderPassword: "",
-      pinkyPromise: false,
-    }
-  },
-  computed: {
-  ...mapGetters(["currentPrompt", "previousPromptName"]),
-  },
-  methods: {
-    ...mapMutations(["closeHover", "setFolderPassword"]),
-
-    submit: throttle(async function (event) {
-
-      let res =  await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
-      let message = this.$t('toasts.passwordIsBeingUpdated')
-      this.$toast.info(message, {
-        timeout: null,
-        id: res.task_id,
-      })
-      this.setFolderPassword({ "folderId": this.folderId, "password": this.folderPassword })
-
-      if (this.previousPromptName === "FolderPassword") {
-
-        let confirmFunc = this.currentPrompt.confirm
-
-        this.closeHover()
-        if (confirmFunc) confirmFunc()
-
+   },
+   data() {
+      return {
+         accountPassword: "",
+         folderPassword: "",
+         pinkyPromise: false,
       }
-      else {
-        this.closeHover()
-        this.currentPrompt.confirm()
-      }
+   },
+   computed: {
+      ...mapState(useMainStore, ["currentPrompt", "previousPromptName"]),
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword"]),
 
-    }, 1000),
-  },
+      submit: throttle(async function (event) {
+
+         let res = await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
+         let message = this.$t('toasts.passwordIsBeingUpdated')
+         this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id,
+         })
+         this.setFolderPassword({"folderId": this.folderId, "password": this.folderPassword})
+
+         if (this.previousPromptName === "FolderPassword") {
+
+            let confirmFunc = this.currentPrompt.confirm
+
+            this.closeHover()
+            if (confirmFunc) confirmFunc()
+
+         } else {
+            this.closeHover()
+            this.currentPrompt.confirm()
+         }
+
+      }, 1000),
+   },
 }
 </script>
 

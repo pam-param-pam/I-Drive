@@ -1,21 +1,21 @@
 <template>
   <div class="card floating">
-      <div class="card-title">
-          <h2 >{{ $t("prompts.itemInfo") }}</h2>
-      </div>
+    <div class="card-title">
+      <h2>{{ $t("prompts.itemInfo") }}</h2>
+    </div>
 
     <div class="card-content">
 
       <p v-if="selected.length > 1">
-        {{ $t("prompts.itemsSelected", { count: selected.length }) }}
+        {{ $t("prompts.itemsSelected", {count: selected.length}) }}
       </p>
 
-      <p class="break-word" v-if="name">
+      <p v-if="name" class="break-word">
         <strong>{{ $t("prompts.displayName") }}:</strong> {{ name }}
       </p>
 
-      <p class="break-word" v-if="id">
-          <strong>{{ $t("prompts.identifier") }}:</strong> {{ id }}
+      <p v-if="id" class="break-word">
+        <strong>{{ $t("prompts.identifier") }}:</strong> {{ id }}
       </p>
       <p v-if="inTrashSince">
         <strong>{{ $t("prompts.inTrashSince") }}:</strong> {{ humanTime(inTrashSince) }}
@@ -25,40 +25,32 @@
       </p>
 
       <p v-if="extension">
-          <strong>{{ $t("prompts.extension") }}:</strong> {{ extension }}
+        <strong>{{ $t("prompts.extension") }}:</strong> {{ extension }}
       </p>
 
       <p v-if="size">
-          <strong>{{ $t("prompts.size") }}: </strong>
-          <code>
-              <a @click="changeView($event, 'size')">{{ humanSize(size) }}</a>
-          </code>
+        <strong>{{ $t("prompts.size") }}: </strong>
+        <code>
+          <a @dblclick="changeView($event, 'size')">{{ humanSize(size) }}</a>
+        </code>
 
       </p>
 
-      <p v-if="encryptedSize">
-          <strong>{{ $t("prompts.encryptedSize") }}: </strong>
-          <code>
-              <a @click="changeView($event, 'encryptedSize')">{{ humanSize(encryptedSize) }}</a>
-          </code>
-
-      </p>
 
       <p v-if="streamable">
-          <strong>{{ $t("prompts.streamable") }}:</strong>
-          <span v-if="streamable" class="checkmark-true"></span> <!-- Green checkmark emoji -->
-          <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
+        <strong>{{ $t("prompts.streamable") }}:</strong>
+        <span v-if="streamable" class="checkmark-true"></span> <!-- Green checkmark emoji -->
+        <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
       </p>
 
-      <!--<p v-if="!isDir">-->
-      <p v-if="ready">
-        <strong>{{ $t("prompts.ready") }}:</strong>
-        <span v-if="ready" class="checkmark-true"></span> <!-- Green checkmark emoji -->
+      <p v-if="is_encrypted !== null">
+        <strong>{{ $t("prompts.isEncrypted") }}:</strong>
+        <span v-if="is_encrypted" class="checkmark-true"></span> <!-- Green checkmark emoji -->
         <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
       </p>
 
       <p v-if="owner">
-          <strong>{{ $t("prompts.owner") }}:</strong> {{ owner }}
+        <strong>{{ $t("prompts.owner") }}:</strong> {{ owner }}
       </p>
 
       <div v-if="resolution">
@@ -95,7 +87,7 @@
           @click="isExpanded = !isExpanded"
         >
           <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
-          <i class="material-icons expand-icon" :class="{ 'expanded': isExpanded }">
+          <i :class="{ 'expanded': isExpanded }" class="material-icons expand-icon">
             keyboard_arrow_down
           </i>
         </div>
@@ -106,7 +98,7 @@
           <p>
             <strong>{{ $t("prompts.size") }}: </strong>
             <code>
-              <a v-if="!isMoreDataFetched" @click="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
+              <a v-if="!isMoreDataFetched" @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
               <a v-else @click="changeView($event, 'folderSize')">{{ humanSize(folderSize) }}</a>
             </code>
           </p>
@@ -118,11 +110,11 @@
     <div class="card-action">
 
       <button
-        type="submit"
-        @click="$store.commit('closeHover')"
-        class="button button--flat"
         :aria-label="$t('buttons.ok')"
         :title="$t('buttons.ok')"
+        class="button button--flat"
+        type="submit"
+        @click="closeHover()"
       >
         {{ $t("buttons.ok") }}
       </button>
@@ -131,261 +123,240 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
-import { filesize } from "@/utils"
+import {filesize} from "@/utils"
 import moment from "moment/min/moment-with-locales.js"
-import {fetchAdditionalInfo} from "@/api/folder.js";
+import {fetchAdditionalInfo} from "@/api/folder.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 
 export default {
-  name: "info",
-  data() {
-    return {
-      numberDirs: "Loading...",
-      numberFiles: "Loading...",
-      folderSize: "Loading...",
-      isExpanded: false,
-
-    }
-  },
-  watch: {
-    isExpanded(newVal) {
-      if (newVal) {
-        this.fetchAdditionalInfo()
-      }
-    }
-  },
-  computed: {
-    ...mapState(["selected", "settings", "currentFolder"]),
-    ...mapGetters(["selectedCount"]),
-    isMoreDataFetched() {
-      return this.folderSize !== "Loading..."
-    },
-    size() {
-      if (this.selectedCount >= 1) {
-          let sum = 0
-          for (let selected of this.selected) {
-          if (!selected.isDir) sum += selected.size
-        }
-        return sum
-      }
-      return null
-    },
-    encryptedSize() {
-      if (this.selectedCount === 0) {
-          return this.currentFolder.encrypted_size
-      }
-
-      if (this.selectedCount >= 1) {
-          let sum = 0
-          for (let selected of this.selected) {
-              if (!selected.isDir) sum += selected.encrypted_size
-          }
-          return sum
-      }
-      return null
-    },
-    name() {
-      if (this.selectedCount === 0) {
-          return this.currentFolder.name
+   name: "info",
+   data() {
+      return {
+         numberDirs: "Loading...",
+         numberFiles: "Loading...",
+         folderSize: "Loading...",
+         isExpanded: false,
 
       }
-      else if (this.selectedCount === 1) {
-          return this.selected[0].name
+   },
+   watch: {
+      isExpanded(newVal) {
+         if (newVal) {
+            this.fetchAdditionalInfo()
+         }
       }
-      return null
-    },
+   },
+   computed: {
+      ...mapState(useMainStore, ["selected", "settings", "currentFolder", "selectedCount"]),
+      isMoreDataFetched() {
+         return this.folderSize !== "Loading..."
+      },
+      size() {
+         if (this.selectedCount >= 1) {
+            let sum = 0
+            for (let selected of this.selected) {
+               if (!selected.isDir) sum += selected.size
+            }
+            return sum
+         }
+         return null
+      },
 
-    resolution() {
-      //todo
-        return null
-    },
-    created() {
-      if (this.selectedCount === 0) {
-          return this.currentFolder.created
+      name() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.name
 
-      }
-      else if (this.selectedCount === 1) {
-          return this.selected[0].created
-      }
-      return null
+         } else if (this.selectedCount === 1) {
+            return this.selected[0].name
+         }
+         return null
+      },
 
-    },
-    last_modified() {
-      if (this.selectedCount === 0) {
-        return this.currentFolder.last_modified
+      resolution() {
+         //todo
+         return null
+      },
+      created() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.created
 
-      }
-      else if (this.selectedCount === 1) {
-        return this.selected[0].last_modified
-      }
-      return null
+         } else if (this.selectedCount === 1) {
+            return this.selected[0].created
+         }
+         return null
 
-    },
-    id() {
-      if (this.selectedCount === 0) {
-          return this.currentFolder.id
+      },
+      last_modified() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.last_modified
 
-      }
-      else if (this.selectedCount === 1) {
-          return this.selected[0].id
-      }
-      return null
-    },
-    ready() {
-      if (this.selectedCount === 1) {
-          return this.selected[0].ready
-      }
-      return null
+         } else if (this.selectedCount === 1) {
+            return this.selected[0].last_modified
+         }
+         return null
 
-    },
-    streamable() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].streamable
-      }
-      return null
+      },
+      id() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.id
 
-    },
-    type() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].type
-      }
-      return null
-    },
-    iso() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].iso
-      }
-      return null
-    },
-    exposureTime() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].exposure_time
-      }
-      return null
-    },
-    aperture() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].aperture
-      }
-      return null
-    },
-    focalLength() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].focal_length
-      }
-      return null
-    },
-    modelName() {
-      if (this.selectedCount === 1) {
-        return this.selected[0].model_name
-      }
-      return null
-    },
-    extension() {
-      if (this.selectedCount === 1) {
-          let extension = this.selected[0].extension
-          if (extension) return extension.replace(".", "")
+         } else if (this.selectedCount === 1) {
+            return this.selected[0].id
+         }
+         return null
+      },
+      ready() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].ready
+         }
+         return null
 
-      }
-      return null
+      },
+      streamable() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].streamable
+         }
+         return null
 
-    },
-    inTrashSince() {
-      if (this.selectedCount === 0) {
-        return this.currentFolder.in_trash_since
+      },
+      is_encrypted() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].is_encrypted
+         }
+         return null
+      },
+      type() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].type
+         }
+         return null
+      },
+      iso() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].iso
+         }
+         return null
+      },
+      exposureTime() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].exposure_time
+         }
+         return null
+      },
+      aperture() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].aperture
+         }
+         return null
+      },
+      focalLength() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].focal_length
+         }
+         return null
+      },
+      modelName() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].model_name
+         }
+         return null
+      },
+      extension() {
+         if (this.selectedCount === 1) {
+            let extension = this.selected[0].extension
+            if (extension) return extension.replace(".", "")
 
-      }
-      else if (this.selectedCount === 1) {
-        return this.selected[0].in_trash_since
-      }
-      return null
+         }
+         return null
 
-    },
-    owner() {
-      if (this.selectedCount === 0) {
-          return this.currentFolder.owner
+      },
+      inTrashSince() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.in_trash_since
 
-      }
-      else if (this.selectedCount === 1) {
-          return this.selected[0].owner
-      }
-      return null
-    },
-    isDir() {
-      if (this.selectedCount === 0 ) {
-        return this.currentFolder.isDir
-      }
-      if (this.selectedCount === 1) {
-        return this.selected[0].isDir
-      }
+         } else if (this.selectedCount === 1) {
+            return this.selected[0].in_trash_since
+         }
+         return null
 
-      return false
+      },
+      owner() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.owner
 
-    },
+         } else if (this.selectedCount === 1) {
+            return this.selected[0].owner
+         }
+         return null
+      },
+      isDir() {
+         if (this.selectedCount === 0) {
+            return this.currentFolder.isDir
+         }
+         if (this.selectedCount === 1) {
+            return this.selected[0].isDir
+         }
+
+         return false
+
+      },
 
 
-  },
-  methods: {
-    async fetchAdditionalInfo() {
-      // we want to fetch data only once
-      if (this.isMoreDataFetched) return
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+      async fetchAdditionalInfo() {
+         // we want to fetch data only once
+         if (this.isMoreDataFetched) return
 
-      let folder
-      if (this.selectedCount === 0) folder = this.currentFolder
-      else if(this.selected[0].isDir) folder = this.selected[0]
+         let folder
+         if (this.selectedCount === 0) folder = this.currentFolder
+         else if (this.selected[0].isDir) folder = this.selected[0]
 
-      if (folder) {
-        let res = await fetchAdditionalInfo(folder.id)
-        this.folderSize = res.folder_size
-        this.numberDirs = res.folder_count
-        this.numberFiles = res.file_count
+         if (folder) {
+            let res = await fetchAdditionalInfo(folder.id)
+            this.folderSize = res.folder_size
+            this.numberDirs = res.folder_count
+            this.numberFiles = res.file_count
 
-      }
+         }
 
-    },
-    humanSize(size) {
-        return filesize(size)
-    },
-    humanTime(date) {
-      if (this.settings.dateFormat) {
-        return moment(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
-      }
-      //todo czm globalny local nie dzIała?
-      let locale = this.settings?.locale || "en"
+      },
+      humanSize(size) {
+         return filesize(size)
+      },
+      humanTime(date) {
+         if (this.settings.dateFormat) {
+            return moment(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
+         }
+         //todo czm globalny local nie dzIała?
+         let locale = this.settings?.locale || "en"
 
-      moment.locale(locale)
-      // Parse the target date
-      return moment(date, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
+         moment.locale(locale)
+         // Parse the target date
+         return moment(date, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
 
-    },
+      },
 
-    async changeView(event, type) {
-        if (event.target.innerHTML.toString().includes("bytes")) {
+      async changeView(event, type) {
+         if (event.target.innerHTML.toString().includes("bytes")) {
             if (type === "size") {
-                event.target.innerHTML = this.humanSize(this.size)
+               event.target.innerHTML = this.humanSize(this.size)
+            } else if (type === "folderSize") {
+               event.target.innerHTML = this.humanSize(this.folderSize)
             }
-            else if (type === "encryptedSize"){
-                event.target.innerHTML = this.humanSize(this.encryptedSize)
-            }
-            else if (type === "folderSize"){
-              event.target.innerHTML = this.humanSize(this.folderSize)
-            }
-        }
-        else {
+         } else {
             if (type === "size") {
-                event.target.innerHTML = this.size + " bytes"
+               event.target.innerHTML = this.size + " bytes"
+            } else if (type === "folderSize") {
+               event.target.innerHTML = this.folderSize + " bytes"
             }
-            else if (type === "encryptedSize"){
-                event.target.innerHTML = this.encryptedSize + " bytes"
-            }
-            else if (type === "folderSize"){
-              event.target.innerHTML =this.folderSize + " bytes"
-            }
-        }
+         }
 
-    },
-  },
+      },
+   },
 }
 </script>
 <style lang="css" scoped>

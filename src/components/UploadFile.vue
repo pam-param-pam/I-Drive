@@ -28,9 +28,12 @@
     </div>
 
     <!-- Lower -->
-    <div v-if="file.progress">
+    <div v-if="file.progress && isInternet">
       <span v-if="file.status === 'creating'">
         <b class="creating">{{ $t('uploadFile.creating') }}</b>
+      </span>
+      <span v-if="file.status === 'finishing'">
+        <b class="creating">{{ $t('uploadFile.finishing') }}</b>
       </span>
       <span v-if="file.status === 'failed'">
         <b class="failed">{{ $t('uploadFile.failed') }}</b>
@@ -47,53 +50,60 @@
       <span v-if="file.status === 'pausing'">
         <b class="pausing">{{ $t('uploadFile.pausing') }}</b>
       </span>
-      <div class="fileitem-progress">
+      <div class="fileitem-progress" v-if="file.status === 'uploading' && isInternet">
         <ProgressBar
-          v-if="file.status === 'uploading'"
           :progress="file.progress"
         />
-        <span v-if="file.status === 'uploading'">
+        <span>
           <b> {{ file.progress }}% </b>
         </span>
       </div>
+    </div>
+    <div v-if="!isInternet">
+      <span>
+        <b class="failed">{{ $t('uploadFile.noInternet') }}</b>
+      </span>
     </div>
   </div>
 </template>
 
 <script>
-import ProgressBar from "@/components/ProgressBar.vue"
+import ProgressBar from "@/components/UploadProgressBar.vue"
+import {mapState} from "pinia";
+import {useUploadStore} from "@/stores/uploadStore.js";
 
 export default {
-    components: {ProgressBar},
-    props: ["file"],
-    data() {
-        return {
-            isPaused: false,
-            isShaking: false,
+   components: {ProgressBar},
+   props: ["file"],
+   data() {
+      return {
+         isPaused: false,
+         isShaking: false,
 
 
-        }
-    },
-    computed: {
-        showButtons() {
-            return this.file.status !== "success" & this.file.status !== "failed" & this.file.status !== "waiting"
-        }
-    },
-    methods: {
-        togglePause() {
-            this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
-        },
-        cancel() {
-            this.$store.commit("upload/cancelJob", this.file.id)
+      }
+   },
+   computed: {
+      ...mapState(useUploadStore, ['isInternet']),
+      showButtons() {
+         return this.file.status !== "success" & this.file.status !== "failed" & this.file.status !== "waiting" && this.isInternet
+      }
+   },
+   methods: {
+      togglePause() {
+         this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
+      },
+      cancel() {
+         // this.$store.commit("upload/cancelJob", this.file.id)
 
-        },
-        startShake() {
-            this.isShaking = true
-        },
-        stopShake() {
-            this.isShaking = false
-        },
-    },
+      },
+      startShake() {
+         this.isShaking = true
+      },
+      stopShake() {
+         this.isShaking = false
+      },
+   },
 }
 </script>
 

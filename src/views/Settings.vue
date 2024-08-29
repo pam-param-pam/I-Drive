@@ -6,14 +6,18 @@
       <div class="wrapper">
         <ul>
           <router-link to="/settings/profile"
-          ><li :class="{ active: $route.path === '/settings/profile' }">
-            {{ $t("settings.profileSettings") }}
-          </li></router-link
+          >
+            <li :class="{ active: $route.path === '/settings/profile' }">
+              {{ $t("settings.profileSettings") }}
+            </li>
+          </router-link
           >
           <router-link to="/settings/shares" v-if="perms.share"
-          ><li :class="{ active: $route.path === '/settings/shares' }">
-            {{ $t("settings.shareManagement") }}
-          </li></router-link
+          >
+            <li :class="{ active: $route.path === '/settings/shares' }">
+              {{ $t("settings.shareManagement") }}
+            </li>
+          </router-link
           >
         </ul>
       </div>
@@ -35,29 +39,30 @@
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex"
 import HeaderBar from "@/components/header/HeaderBar.vue"
-import {name} from "@/utils/constants.js";
+import {name} from "@/utils/constants.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "settings",
-  components: {
-    HeaderBar,
-  },
-  computed: {
-    ...mapState(["loading", "perms"]),
+   name: "settings",
+   components: {
+      HeaderBar,
+   },
+   computed: {
+      ...mapState(useMainStore, ["loading", "perms"]),
 
-  },
-  methods: {
-    ...mapMutations(["setDisabledCreation"])
-  },
-  mounted() {
-    document.title = "Settings - " + name
+   },
+   methods: {
+      ...mapActions(useMainStore, ["setDisabledCreation"])
+   },
+   mounted() {
+      document.title = this.$t("settings.settingsName") + " - " + name
 
-  },
-  created() {
-    this.setDisabledCreation(true)
-  },
+   },
+   created() {
+      this.setDisabledCreation(true)
+   },
 
 }
 </script>

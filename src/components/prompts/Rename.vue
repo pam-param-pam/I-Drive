@@ -20,7 +20,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -41,44 +41,47 @@
 </template>
 
 <script>
-import {mapState} from "vuex"
 import {rename} from "@/api/item.js"
-import throttle from "lodash.throttle";
+import throttle from "lodash.throttle"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "rename",
-  data() {
-    return {
-      name: "",
-      oldName: "",
-    }
-  },
-
-  computed: {
-    ...mapState(["selected"]),
-    canSubmit() {
-      return this.name !== this.selected[0].name
-    }
-
-  },
-  created() {
-    this.name = this.selected[0].name
-    this.oldName = this.name
-  },
-  methods: {
-    submit: throttle(async function (event) {
-      if (this.canSubmit) {
-
-        let id = this.selected[0].id
-        let new_name = this.name
-        await rename({"id": id, "new_name": new_name})
-
-        let message = this.$t('toasts.itemRenamed')
-        this.$toast.success(message)
-
-        this.$store.commit("closeHover")
+   name: "rename",
+   data() {
+      return {
+         name: "",
+         oldName: "",
       }
-    }, 1000)
-  },
+   },
+
+   computed: {
+      ...mapState(useMainStore, ["selected"]),
+      canSubmit() {
+         return this.name !== this.selected[0].name
+      }
+
+   },
+   created() {
+      this.name = this.selected[0].name
+      this.oldName = this.name
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+
+      submit: throttle(async function (event) {
+         if (this.canSubmit) {
+
+            let id = this.selected[0].id
+            let new_name = this.name
+            await rename({"id": id, "new_name": new_name})
+
+            let message = this.$t('toasts.itemRenamed')
+            this.$toast.success(message)
+            this.closeHover()
+
+         }
+      }, 1000)
+   },
 }
 </script>

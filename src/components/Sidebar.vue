@@ -14,7 +14,7 @@
       <div v-if="perms.create">
         <button
           :disabled="disabledCreation"
-          @click="$store.commit('showHover', 'newDir')"
+          @click="showHover('newDir')"
           class="action"
           :aria-label="$t('sidebar.newFolder')"
           :title="$t('sidebar.newFolder')"
@@ -25,7 +25,7 @@
 
         <button
           :disabled="disabledCreation"
-          @click="$store.commit('showHover', 'newFile')"
+          @click="showHover('newFile')"
           class="action"
           :aria-label="$t('sidebar.newFile')"
           :title="$t('sidebar.newFile')"
@@ -92,12 +92,12 @@
     </template>
 
     <div
-      v-if="$router.currentRoute.path.includes('/files/') && !disabledCreation"
+      v-if="$route.name === 'Files' && !disabledCreation"
       class="credits"
-      style="width: 90%; margin: 2em 2.5em 3em 2.5em"
+      style="width: 80%; margin: 2em 2.5em 3em 2.5em"
     >
       <progress-bar :val="usage.usedPercentage" size="small"></progress-bar>
-      <br />
+      <br/>
       {{ usage.used }} of {{ usage.total }} used
     </div>
 
@@ -107,7 +107,7 @@
           rel="noopener noreferrer"
           target="_blank"
           href="https://github.com/pam-param-pam/I-Drive-Frontend"
-        >{{ name }} By {{  author }} v{{ version }}</a
+        >{{ name }} By {{ author }} v{{ version }}</a
         >
       </span>
       <span>
@@ -118,74 +118,85 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
 import * as auth from "@/utils/auth"
-import { version, signup } from "@/utils/constants"
-import ProgressBar from "vue-simple-progress"
-import { getUsage } from "@/api/folder.js"
-import {name, author} from "@/utils/constants.js"
-import {filesize} from "@/utils/index.js";
+import {signup, version} from "@/utils/constants"
+import {getUsage} from "@/api/folder.js"
+import {author, name} from "@/utils/constants.js"
+import {filesize} from "@/utils/index.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
+import ProgressBar from "@/components/SimpleProgressBar.vue"
 
 export default {
-  name: "sidebar",
-  components: {
-    ProgressBar,
-  },
-  data() {
-    return {
-      name: name,
-      author: author,
-    }
-  },
-  computed: {
-    ...mapState(["user", "perms", "currentFolder", "disabledCreation"]),
-    ...mapGetters(["isLogged", "currentPrompt"]),
-    active() {
-      return this.currentPrompt?.prompt === "sidebar"
-    },
-    signup: () => signup,
-    version: () => version,
-  },
-  asyncComputed: {
-    usage: {
-      async get() {
-        if (this.currentFolder && this.$route.path.includes("files") && this.$route.path.includes(this.currentFolder.id)) {
-          let usageStats = { used: 0, total: 0, usedPercentage: 0 }
+   name: "sidebar",
+   components: {
+      ProgressBar,
+   },
+   data() {
+      return {
+         name: name,
+         author: author,
+      }
+   },
+   computed: {
+      ...mapState(useMainStore, ["user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt"]),
+      active() {
+         return this.currentPrompt?.prompt === "sidebar"
+      },
+      signup: () => signup,
+      version: () => version,
+   },
+   created() {
+      console.log("created")
+      console.log(this.$route)
 
-          let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
-          usageStats = {
-            used: filesize(usage.used),
-            total: filesize(usage.total),
-            usedPercentage: Math.round((usage.used / usage.total) * 100),
-          }
+   },
+   asyncComputed: {
+      usage: {
+         async get() {
+            if (this.currentFolder && this.$route.name === "Files") {
+               let usageStats = {used: 0, total: 0, usedPercentage: 0}
 
-          return usageStats
-        }
-        return this.usage
+               let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
+               console.log(usage)
+               usageStats = {
+                  used: filesize(usage.used),
+                  total: filesize(usage.total),
+                  usedPercentage: Math.round((usage.used / usage.total) * 100),
+               }
+
+               return usageStats
+            }
+            return this.usage
+
+         },
+         default: {used: "0 B", total: "0 B", usedPercentage: 0},
 
       },
-      default: { used: "0 B", total: "0 B", usedPercentage: 0 },
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover", "showHover"]),
+      toRoot() {
+         this.$router.push({name: `Files`, params: {folderId: this.user.root}}).catch(err => {
+         })
+         this.closeHover()
+      },
+      toTrash() {
+         this.$router.push({name: `Trash`}).catch(err => {
+         })
+         this.closeHover()
+      },
+      toSettings() {
+         this.$router.push({name: `Settings`}).catch(err => {
+         })
+         this.closeHover()
+      },
+      help() {
+         this.showHover("help")
 
-    },
-  },
-  methods: {
-    toRoot() {
-      this.$router.push({ name: `Files`, params: { folderId: this.user.root } }).catch(err => {})
-      this.$store.commit("closeHover")
-    },
-    toTrash() {
-      this.$router.push({ name: `Trash` }).catch(err => {})
-      this.$store.commit("closeHover")
-    },
-    toSettings() {
-      this.$router.push({ name: `Settings` }).catch(err => {})
-      this.$store.commit("closeHover")
-    },
-    help() {
-      this.$store.commit("showHover", "help")
-    },
-    logout: auth.logout,
-  },
+      },
+      logout: auth.logout,
+   },
 
 }
 </script>

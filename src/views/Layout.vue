@@ -11,39 +11,39 @@
     <upload-files></upload-files>
     <prompts></prompts>
   </div>
-  </template>
+</template>
 
-  <script>
-  import { mapState, mapGetters } from "vuex"
-  import Sidebar from "@/components/Sidebar.vue"
-  import Prompts from "@/components/prompts/Prompts.vue"
-  import Shell from "@/components/Shell.vue"
-  import UploadFiles from "../components/prompts/UploadFiles.vue"
+<script>
+import Sidebar from "@/components/Sidebar.vue"
+import Prompts from "@/components/prompts/Prompts.vue"
+import Shell from "@/components/Shell.vue"
+import UploadFiles from "../components/prompts/UploadFiles.vue"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapState} from "pinia"
 
-  export default {
-    name: "layout",
-    components: {
+export default {
+   name: "layout",
+   components: {
       Sidebar,
       Prompts,
       Shell,
       UploadFiles,
-    },
-     renderTriggered({key, target, type}) {
-        console.log(`Render triggered on component 'Layout'`, {key, target, type});
-     },
-    computed: {
-      ...mapGetters(["progress"]),
-      ...mapState(["perms"]),
+   },
+   renderTriggered({key, target, type}) {
+      console.log(`Render triggered on component 'Layout'`, {key, target, type})
+   },
+   computed: {
+      ...mapState(useMainStore, ["perms", "progress"]),
 
       isExecEnabled() {
-        return this.perms?.execute
+         return this.perms?.execute
       }
-    },
-    // watch: {
-    //   $route() {
-    //     this.$store.commit("resetSelected")
-    //
-    //   },
-    // },
-  }
-  </script>
+   },
+   // watch: {
+   //   $route() {
+   //     this.$store.commit("resetSelected")
+   //
+   //   },
+   // },
+}
+</script>

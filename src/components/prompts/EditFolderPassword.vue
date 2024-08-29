@@ -32,7 +32,7 @@
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
       >
         {{ $t("buttons.cancel") }}
       </button>
@@ -50,46 +50,48 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 import {lockWithPassword} from "@/api/folder.js"
-import throttle from "lodash.throttle";
+import throttle from "lodash.throttle"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "folder-password",
-  data() {
-    return {
-      password: "",
-      oldPassword: "",
-    }
-  },
+   name: "folder-password",
+   data() {
+      return {
+         password: "",
+         oldPassword: "",
+      }
+   },
 
-  computed: {
-    ...mapState(["selected"]),
-    isLocked() {
-      return this.selected[0].isLocked
-    },
-    folder_id() {
-      return this.selected[0].id
+   computed: {
+      ...mapState(useMainStore, ["selected"]),
 
-    }
-  },
-
-  methods: {
-    ...mapMutations(["closeHover", "setFolderPassword"]),
-
-    submit: throttle(async function (event) {
-      if (!(this.password === "" && this.oldPassword === "")) {
-
-        let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
-        let message = this.$t('toasts.passwordIsBeingUpdated')
-        this.$toast.info(message, {
-          timeout: null,
-          id: res.task_id,
-        })
-        this.$store.commit("closeHover")
+      isLocked() {
+         return this.selected[0].isLocked
+      },
+      folder_id() {
+         return this.selected[0].id
 
       }
-    }, 1000)
-  },
+   },
+
+   methods: {
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword"]),
+
+      submit: throttle(async function (event) {
+         if (!(this.password === "" && this.oldPassword === "")) {
+
+            let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
+            let message = this.$t('toasts.passwordIsBeingUpdated')
+            this.$toast.info(message, {
+               timeout: null,
+               id: res.task_id,
+            })
+            this.closeHover()
+
+         }
+      }, 1000)
+   },
 }
 </script>

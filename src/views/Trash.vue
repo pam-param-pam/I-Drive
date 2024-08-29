@@ -1,7 +1,7 @@
 <template>
   <div>
     <errors v-if="error" :errorCode="error.response.status"/>
-    <h4 v-if="!error" class="listing-notice">{{$t('trash.info')}}</h4>
+    <h4 v-if="!error" class="listing-notice">{{ $t('trash.info') }}</h4>
     <header-bar>
       <title></title>
 
@@ -25,7 +25,7 @@
           v-if="headerButtons.shell"
           icon="code"
           :label="$t('buttons.shell')"
-          @action="$store.commit('toggleShell')"
+          @action="toggleShell()"
         />
         <action
           :icon="viewIcon"
@@ -42,103 +42,102 @@
       </template>
 
     </header-bar>
-    <Listing
+    <FileListing
       ref="listing"
       :isSearchActive="false"
       @onOpen="onOpen"
       :readonly="true"
 
-    ></Listing>
+    ></FileListing>
   </div>
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 
-import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
-import Listing from "@/views/files/Listing.vue"
 import {getTrash} from "@/api/user.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
-import Search from "@/components/Search.vue"
-import {isMobile} from "@/utils/common.js";
+import {isMobile} from "@/utils/common.js"
+import {mapActions, mapState} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
+import FileListing from "@/views/files/FileListing.vue"
 
 export default {
-  name: "trash",
-  components: {
-    Search, Action, HeaderBar,
-    Breadcrumbs,
-    Errors,
-    Listing,
-  },
+   name: "trash",
+   components: {
+      Action,
+      HeaderBar,
+      Errors,
+      FileListing,
+   },
 
-  data() {
-    return {
-      isSearchActive: false
-
-    }
-  },
-  computed: {
-    ...mapGetters(["selectedCount"]),
-    ...mapState(["error", "items", "selected", "settings", "perms", "loading", "currentFolder", "disabledCreation"]),
-    headerButtons() {
+   data() {
       return {
-        shell: this.perms.execute,
-        info: this.selectedCount > 0,
-        restore: this.selectedCount > 0 && this.perms.modify,
-        delete: this.selectedCount > 0 && this.perms.delete,
+         isSearchActive: false
+
       }
-    },
-    viewIcon() {
-      const icons = {
-        list: "view_module",
-        mosaic: "grid_view",
-        "mosaic gallery": "view_list",
+   },
+   computed: {
+      ...mapState(useMainStore, ["error", "items", "selected", "settings", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount"]),
+      headerButtons() {
+         return {
+            shell: this.perms.execute,
+            info: this.selectedCount > 0,
+            restore: this.selectedCount > 0 && this.perms.modify,
+            delete: this.selectedCount > 0 && this.perms.delete,
+         }
+      },
+      viewIcon() {
+         const icons = {
+            list: "view_module",
+            mosaic: "grid_view",
+            "mosaic gallery": "view_list",
+         }
+         return icons[this.settings.viewMode]
+      },
+
+   },
+   created() {
+      this.setDisabledCreation(true)
+      this.fetchFolder()
+      console.log(this.headerButtons)
+   },
+   watch: {
+      $route: "fetchFolder",
+   },
+   beforeUnmount() {
+      this.setItems(null)
+      this.setCurrentFolder(null)
+
+   },
+
+   methods: {
+      isMobile,
+      ...mapActions(useMainStore, ["toggleShell", "addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
+
+      async fetchFolder() {
+
+         this.setLoading(true)
+         this.setError(null)
+
+         document.title = "Trash"
+
+         let res = await getTrash()
+         let items = res.trash
+         this.setItems(items)
+
+      },
+
+      onSwitchView() {
+         this.$refs.listing.switchView()
+      },
+      onOpen(item) {
+         this.resetSelected()
+         this.addSelected(item)
+         this.showHover("restoreFromTrash")
       }
-      return icons[this.settings.viewMode]
-    },
-
-  },
-  created() {
-    this.setDisabledCreation(true)
-    this.fetchFolder()
-    console.log(this.headerButtons)
-  },
-  watch: {
-    $route: "fetchFolder",
-  },
-  beforeDestroy() {
-    this.$store.commit("setItems", null)
-    this.$store.commit("setCurrentFolder", null)
-  },
-
-  methods: {
-    isMobile,
-    ...mapMutations(["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation"]),
-
-    async fetchFolder() {
-
-      this.setLoading(true)
-      this.setError(null)
-
-      document.title = "Trash"
-
-      let res = await getTrash()
-      let items = res.trash
-      this.$store.commit("setItems", items)
-
-    },
-
-    onSwitchView() {
-      this.$refs.listing.switchView()
-    },
-    onOpen(item) {
-      this.resetSelected()
-      this.addSelected(item)
-      this.$store.commit("showHover", "restoreFromTrash")
-    }
-  },
+   },
 }
 </script>
 <style>

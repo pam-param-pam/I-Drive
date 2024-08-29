@@ -1,37 +1,40 @@
-import store from "@/store/index.js";
+import {useMainStore} from "@/stores/mainStore.js"
 
 export function sortItems(items) {
-  console.warn("====SORTING====")
-  // Create a shallow copy of the items array
-  let itemsCopy = items.slice()
+   const store = useMainStore()
 
-  let sortingKey = store.state.settings.sortingBy
-  let isAscending = store.state.settings.sortByAsc
-  console.log(store.state.settings.sortingBy)
-  // Sort the items so directories come before files
-  itemsCopy.sort((a, b) => {
-    // First, ensure directories come before files
-    if (a.isDir && !b.isDir) return -1
-    if (!a.isDir && b.isDir) return 1
+   console.warn("====SORTING====")
+   // Create a shallow copy of the items array
+   let itemsCopy = items.slice()
 
-    // If both are directories or both are files, sort by the sorting key
-    let aValue = a[sortingKey]
-    let bValue = b[sortingKey]
+   let sortingKey = store.settings.sortingBy
+   let isAscending = store.settings.sortByAsc
+   console.log(store.settings.sortingBy)
+   // Sort the items so directories come before files
+   itemsCopy.sort((a, b) => {
+      // First, ensure directories come before files
+      if (a.isDir && !b.isDir) return -1
+      if (!a.isDir && b.isDir) return 1
 
-    if (isAscending) {
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
-    } else {
-      return bValue < aValue ? -1 : bValue > aValue ? 1 : 0
-    }
-  })
+      // If both are directories or both are files, sort by the sorting key
+      let aValue = a[sortingKey]
+      let bValue = b[sortingKey]
 
-  // Add index property
-  itemsCopy.forEach((item, index) => {
-    store.commit('SET_ITEM_INDEX', {id: item.id, index})
-  })
+      if (isAscending) {
+         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0
+      } else {
+         return bValue < aValue ? -1 : bValue > aValue ? 1 : 0
+      }
+   })
 
-  return itemsCopy
+   // Add index property
+   itemsCopy.forEach((item, index) => {
+     store.setItemIndex({id: item.id, index})
+   })
+
+   return itemsCopy
 }
+
 export function isMobile() {
-  return window.innerWidth <= 950
+   return window.innerWidth <= 950
 }

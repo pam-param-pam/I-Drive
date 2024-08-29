@@ -23,16 +23,16 @@
 
 <script>
 export default {
-  name: "upload",
-  methods: {
-    uploadFile: function () {
-      document.getElementById("upload-input").value = ""
-      document.getElementById("upload-input").click()
-    },
-    uploadFolder: function () {
-      document.getElementById("upload-folder-input").value = ""
-      document.getElementById("upload-folder-input").click()
-    },
-  },
+   name: "upload",
+   methods: {
+      uploadFile: function () {
+         document.getElementById("upload-input").value = ""
+         document.getElementById("upload-input").click()
+      },
+      uploadFolder: function () {
+         document.getElementById("upload-folder-input").value = ""
+         document.getElementById("upload-folder-input").click()
+      },
+   },
 }
 </script>

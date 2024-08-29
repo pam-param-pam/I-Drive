@@ -132,6 +132,7 @@
     "unit": "Time Unyit UwU"
   },
   "settings": {
+    "settingsName": "Settings",
     "ShareName": "Nyame *blushes*",
     "changePassword": "Change passwowd ɾ⚈▿⚈ɹ",
     "hideLockedFolders": "H-hide l-lwocked f-fowdewss",
@@ -187,7 +188,6 @@
     "ready": "Ready",
     "type": "Type",
     "extension": "Extension",
-    "encryptedSize": "Encrypted size",
     "identifier": "Unique ID",
     "created": "Created at",
     "streamable": "Streamable",

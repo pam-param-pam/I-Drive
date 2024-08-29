@@ -1,5 +1,5 @@
 <template>
-  <errors v-if="error" :errorCode="error.response.status" />
+  <errors v-if="error" :errorCode="error.response.status"/>
   <div class="row" v-else-if="!loading">
     <div class="column">
       <div class="card">
@@ -22,8 +22,9 @@
               </td>
               <td>
                 <template v-if="share.expire !== 0">{{
-                  humanTime(share.expire)
-                }}</template>
+                    humanTime(share.expire)
+                  }}
+                </template>
                 <template v-else>{{ $t("permanent") }}</template>
               </td>
               <td class="small">
@@ -59,79 +60,77 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from "vuex"
 import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
 import Errors from "@/views/Errors.vue"
 import {getAllShares, removeShare} from "@/api/share.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "shares",
-  components: {
-    Errors,
-  },
-  computed: mapState(["settings", "loading"]),
+   name: "shares",
+   components: {
+      Errors,
+   },
+   computed: mapState(useMainStore, ["settings", "loading"]),
 
-  data() {
-    return {
-      error: null,
-      shares: [],
-      clip: null,
-    }
-  },
-  async created() {
+   data() {
+      return {
+         error: null,
+         shares: [],
+         clip: null,
+      }
+   },
+   async created() {
 
-    this.setLoading(true)
+      this.setLoading(true)
 
-    let links = await getAllShares()
+      this.shares = await getAllShares()
+      this.setLoading(false)
 
-    this.shares = links
-    this.setLoading(false)
+   },
 
-  },
-
-  mounted() {
-    this.clip = new Clipboard(".copy-clipboard")
-    this.clip.on("success", () => {
-      this.$toast.success(this.$t("success.linkCopied"))
-    })
-  },
-
-  beforeDestroy() {
-    this.clip.destroy()
-  },
-
-  methods: {
-    ...mapMutations(["setLoading"]),
-
-    async deleteLink(event, share) {
-      event.preventDefault()
-
-      this.$store.commit("showHover", {
-        prompt: "share-delete",
-        confirm: () => {
-          this.$store.commit("closeHover")
-
-          removeShare({"token": share.token})
-          this.shares = this.shares.filter((item) => item.token !== share.token)
-          this.$toast.success(this.$t("toasts.shareDeleted"))
-
-        },
+   mounted() {
+      this.clip = new Clipboard(".copy-clipboard")
+      this.clip.on("success", () => {
+         this.$toast.success(this.$t("success.linkCopied"))
       })
-    },
+   },
 
-    humanTime(time) {
-      //todo czm globalny local nie dzIała?
-      let locale = this.settings?.locale || "en"
+   beforeUnmount() {
+      this.clip.destroy()
+   },
 
-      moment.locale(locale)
-      // Parse the target date
-      return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
-    },
+   methods: {
+      ...mapActions(useMainStore, ["setLoading", "closeHover"]),
 
-    buildLink(share) {
-      return "/share/" + share.token
-    },
-  },
+      async deleteLink(event, share) {
+         event.preventDefault()
+
+         this.showHover({
+            prompt: "share-delete",
+            confirm: () => {
+               this.closeHover()
+               removeShare({"token": share.token})
+               this.shares = this.shares.filter((item) => item.token !== share.token)
+               this.$toast.success(this.$t("toasts.shareDeleted"))
+
+            },
+         })
+      },
+
+      humanTime(time) {
+         //todo czm globalny local nie dzIała?
+         let locale = this.settings?.locale || "en"
+
+         moment.locale(locale)
+         // Parse the target date
+         return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
+      },
+
+      buildLink(share) {
+         return "/share/" + share.token
+      },
+   },
 }
 </script>

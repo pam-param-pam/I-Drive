@@ -29,50 +29,51 @@
 
 
 <script>
-import {mapState} from "vuex"
-import {isMobile} from "@/utils/common.js";
+import {isMobile} from "@/utils/common.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapState} from "pinia"
 
 export default {
-  name: "breadcrumbs",
-  props: ["base", "folderList"],
+   name: "breadcrumbs",
+   props: ["base", "folderList"],
 
-  computed: {
-    ...mapState(["currentFolder"]),
-    element() {
-      return "router-link"
-    },
+   computed: {
+      ...mapState(useMainStore, ["currentFolder"]),
+      element() {
+         return "router-link"
+      },
 
-    maxBreadcrumbs() {
-      //todo
-      return 5
-      if (isMobile()) {
-        return 3
-      } else return 5
-    },
+      maxBreadcrumbs() {
+         //todo
+         return 5
+         if (isMobile()) {
+            return 3
+         } else return 5
+      },
 
-    breadcrumbs() {
-      if (this.folderList.length >= this.maxBreadcrumbs) {
-        while (this.folderList.length !== this.maxBreadcrumbs) {
-          this.folderList.shift()
-        }
+      breadcrumbs() {
+         if (this.folderList.length >= this.maxBreadcrumbs) {
+            while (this.folderList.length !== this.maxBreadcrumbs) {
+               this.folderList.shift()
+            }
 
-        this.folderList[0].name = "..."
-      }
+            this.folderList[0].name = "..."
+         }
 
-      return this.folderList
-    },
+         return this.folderList
+      },
 
-  },
-  methods: {
-    dragOver: function (event) {
-      //todo
+   },
+   methods: {
+      dragOver: function (event) {
+         //todo
 
-    },
+      },
 
-    async drop(event) {
-      //todo
-    },
+      async drop(event) {
+         //todo
+      },
 
-  },
+   },
 }
 </script>

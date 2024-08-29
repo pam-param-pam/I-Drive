@@ -10,7 +10,7 @@
     </div>
     <div class="card-action">
       <button
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         class="button button--flat button--grey"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
@@ -31,46 +31,44 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 import {moveToTrash} from "@/api/item.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "MoveToTrash",
-  computed: {
-    ...mapGetters(["selectedCount", "currentPrompt"]),
-    ...mapState(["selected", "items"]),
-  },
+   name: "MoveToTrash",
+   computed: {
+      ...mapState(useMainStore, ["selected", "items", "selectedCount", "currentPrompt"]),
+   },
 
-  methods: {
-    ...mapMutations(["closeHover", "resetSelected"]),
-    async submit() {
-      try {
-        let ids = this.selected.map(item => item.id)
+   methods: {
+      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
+      async submit() {
+         try {
+            let ids = this.selected.map(item => item.id)
 
-        let res = await moveToTrash({"ids": ids})
-        if (res.status !== 204) {
-          let message = this.$t('toasts.itemsAreBeingMovedToTrash', {amount: ids.length})
+            let res = await moveToTrash({"ids": ids})
+            if (res.status !== 204) {
+               let message = this.$t('toasts.itemsAreBeingMovedToTrash', {amount: ids.length})
 
-          res = await res.data
-          this.$toast.info(message, {
-            timeout: null,
-            id: res.task_id,
-          })
-        }
-        else {
-          let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
+               res = await res.data
+               this.$toast.info(message, {
+                  timeout: null,
+                  id: res.task_id,
+               })
+            } else {
+               let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
 
-          this.$toast.success(message)
-        }
-        if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+               this.$toast.success(message)
+            }
+            if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
-      }
-      finally {
-        this.resetSelected()
-        this.closeHover()
+         } finally {
+            this.resetSelected()
+            this.closeHover()
 
-      }
-    },
-  },
+         }
+      },
+   },
 }
 </script>

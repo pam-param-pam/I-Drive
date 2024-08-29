@@ -14,7 +14,7 @@
     </div>
     <div class="card-action">
       <button
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         class="button button--flat button--grey"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
@@ -35,37 +35,38 @@
 </template>
 
 <script>
-import {mapGetters, mapMutations, mapState} from "vuex"
 import {remove} from "@/api/item.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
+
 
 export default {
-  name: "delete",
-  computed: {
-    ...mapGetters(["selectedCount", "currentPrompt"]),
-    ...mapState(["selected", "items"]),
-  },
+   name: "delete",
+   computed: {
+      ...mapState(useMainStore, ["selected", "items", "selectedCount", "currentPrompt"]),
 
-  methods: {
-    ...mapMutations(["closeHover", "resetSelected"]),
-    async submit() {
-      try {
-        let ids = this.selected.map(item => item.id)
-        let res = await remove({"ids": ids})
+   },
 
-        let message = this.$t('toasts.itemsAreBeingDeleted', {amount: ids.length})
-        this.$toast.info(message, {
-          timeout: null,
-          id: res.task_id,
-        })
-        if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+   methods: {
+      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
+      async submit() {
+         try {
+            let ids = this.selected.map(item => item.id)
+            let res = await remove({"ids": ids})
 
-      }
-      finally {
-        this.resetSelected()
-        this.closeHover()
-      }
-    },
+            let message = this.$t('toasts.itemsAreBeingDeleted', {amount: ids.length})
+            this.$toast.info(message, {
+               timeout: null,
+               id: res.task_id,
+            })
+            if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
-  },
+         } finally {
+            this.resetSelected()
+            this.closeHover()
+         }
+      },
+
+   },
 }
 </script>

@@ -17,7 +17,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -36,23 +36,26 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex"
 
+
+import {mapActions, mapState} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
 
 export default {
-  name: "new-file",
-  data() {
-    return {
-      name: "",
-    }
-  },
-  computed: {
-    ...mapGetters(["isFiles", "isListing"]),
-  },
-  methods: {
-    async submit(event) {
-      //todo
-    },
-  },
+   name: "new-file",
+   data() {
+      return {
+         name: "",
+      }
+   },
+   computed: {
+      ...mapState(useMainStore, ["isFiles", "isListing"]),
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+      async submit(event) {
+         //todo
+      },
+   },
 }
 </script>

@@ -10,18 +10,22 @@
 
 <script>
 
+import {mapActions} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
+
 export default {
-  name: "action",
-  props: ["icon", "label", "counter", "show"],
-  emits: ['action'],
-  methods: {
-    action: function () {
-      if (this.show) {
-        this.$store.commit("showHover", this.show)
-      }
-      this.$emit("action")
-    },
-  },
+   name: "action",
+   props: ["icon", "label", "counter", "show"],
+   emits: ['action'],
+   methods: {
+      ...mapActions(useMainStore, ["showHover"]),
+      action() {
+         if (this.show) {
+            this.showHover(this.show)
+         }
+         this.$emit("action")
+      },
+   },
 }
 </script>
 

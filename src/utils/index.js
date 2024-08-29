@@ -1,4 +1,4 @@
-import { partial } from "filesize"
+import {partial} from "filesize"
 
 /**
  * Formats filesize as KiB/MiB/...

@@ -27,7 +27,7 @@
       <div>
         <button
           class="button button--flat button--grey"
-          @click="$store.commit('closeHover')"
+          @click="closeHover()"
           :aria-label="$t('buttons.cancel')"
           :title="$t('buttons.cancel')"
         >
@@ -48,38 +48,41 @@
 </template>
 
 <script>
-import { mapState } from "vuex"
 import FileList from "@/components/FileList.vue"
 import {move} from "@/api/item.js"
-import throttle from "lodash.throttle";
+import throttle from "lodash.throttle"
+import {mapActions, mapState} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
 
 export default {
-  name: "move",
-  components: { FileList },
-  data() {
-    return {
-      dest: null,
-    }
-  },
-  computed: {
-    ...mapState(["perms", "selected"]),
+   name: "move",
+   components: {FileList},
+   data() {
+      return {
+         dest: null,
+      }
+   },
+   computed: {
+      ...mapState(useMainStore, ["perms", "selected"]),
 
-    isMoveDisabled() {
-      return this.selected[0].parent_id === this.dest?.id
-    }
-  },
+      isMoveDisabled() {
+         return this.selected[0].parent_id === this.dest?.id
+      }
+   },
 
-  methods: {
-    submit: throttle(async function (event) {
-      let listOfIds = this.selected.map(obj => obj.id)
-      await move({ids: listOfIds, "new_parent_id": this.dest.id})
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
 
-      let message = this.$t('toasts.movedItems')
-      this.$toast.success(message)
+      submit: throttle(async function (event) {
+         let listOfIds = this.selected.map(obj => obj.id)
+         await move({ids: listOfIds, "new_parent_id": this.dest.id})
 
-      this.$store.commit("closeHover")
+         let message = this.$t('toasts.movedItems')
+         this.$toast.success(message)
 
-    }, 1000)
-  },
+         this.closeHover()
+
+      }, 1000)
+   },
 }
 </script>

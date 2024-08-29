@@ -60,7 +60,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -80,58 +80,61 @@
 </template>
 
 <script>
-import { mapGetters, mapMutations, mapState } from "vuex"
+
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "filterFiles",
-  data() {
-    return {
-      fileType: null,
-      extension: null,
-      includeFiles: null,
-      includeFolders: null,
-      resultLimit: null,
-      fileTypes: ["application", "audio", "document", "image", "video", "text"],
-    }
-  },
-  computed: {
-    ...mapState(["searchFilters"]),
-    ...mapGetters(["currentPrompt"]),
-  },
-  created() {
-    console.log(this.searchFilters)
-    this.fileType = this.searchFilters.type || "all"
-    this.extension = this.searchFilters.extension || null
-    this.includeFiles = this.searchFilters.files
-    this.includeFolders = this.searchFilters.folders
-    this.resultLimit = this.searchFilters.resultLimit || 25
-  },
-  methods: {
-    ...mapMutations(["setSearchFilters"]),
-
-    async submit() {
-      this.$store.commit("setDisabledCreation", true)
-      this.$store.commit("resetSelected")
-      if (this.fileType === "all") this.fileType = null
-
-      let searchFilterDict = {
-        files: this.includeFiles,
-        folders: this.includeFolders,
-        resultLimit: this.resultLimit,
+   name: "filterFiles",
+   data() {
+      return {
+         fileType: null,
+         extension: null,
+         includeFiles: null,
+         includeFolders: null,
+         resultLimit: null,
+         fileTypes: ["application", "audio", "document", "image", "video", "text"],
       }
-      if (this.fileType !== null) searchFilterDict.type = this.fileType
-      if (this.extension !== null) searchFilterDict.extension = this.extension
+   },
+   computed: {
+      ...mapState(useMainStore, ["searchFilters", "currentPrompt"]),
+   },
+   created() {
+      console.log(this.searchFilters)
+      this.fileType = this.searchFilters.type || "all"
+      this.extension = this.searchFilters.extension || null
+      this.includeFiles = this.searchFilters.files
+      this.includeFolders = this.searchFilters.folders
+      this.resultLimit = this.searchFilters.resultLimit || 25
+   },
+   methods: {
+      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover"]),
 
-      this.setSearchFilters(searchFilterDict)
-      try {
+      async submit() {
+         this.setDisabledCreation(true)
+         this.resetSelected()
 
-        this.currentPrompt.confirm()
-      } finally {
-        this.$store.commit("closeHover")
-      }
 
-    },
-  },
+         if (this.fileType === "all") this.fileType = null
+
+         let searchFilterDict = {
+            files: this.includeFiles,
+            folders: this.includeFolders,
+            resultLimit: this.resultLimit,
+         }
+         if (this.fileType !== null) searchFilterDict.type = this.fileType
+         if (this.extension !== null) searchFilterDict.extension = this.extension
+
+         this.setSearchFilters(searchFilterDict)
+         try {
+
+            this.currentPrompt.confirm()
+         } finally {
+            this.closeHover()
+         }
+
+      },
+   },
 }
 </script>
 

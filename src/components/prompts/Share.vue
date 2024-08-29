@@ -46,7 +46,7 @@
       <div class="card-action">
         <button
           class="button button--flat button--grey"
-          @click="$store.commit('closeHover')"
+          @click="closeHover()"
           :aria-label="$t('buttons.close')"
           :title="$t('buttons.close')"
         >
@@ -110,101 +110,108 @@
 </template>
 
 <script>
-import { mapState, mapGetters } from "vuex"
 import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
 import {createShare, getAllShares, removeShare} from "@/api/share.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "share",
-  data() {
-    return {
-      time: 7,
-      unit: "days",
-      links: [],
-      clip: null,
-      password: "",
-      listing: true,
-    }
-  },
-  computed: {
-    ...mapState(["selected", "selected"]),
-  },
+   name: "share",
+   data() {
+      return {
+         time: 7,
+         unit: "days",
+         links: [],
+         clip: null,
+         password: "",
+         listing: true,
+      }
+   },
+   computed: {
+      ...mapState(useMainStore, ["selected", "selected"]),
+   },
 
-  async created() {
+   async created() {
 
-    let links = await getAllShares()
+      let links = await getAllShares()
 
-    links = links.filter(item => item.resource_id === this.selected[0].id)
+      links = links.filter(item => item.resource_id === this.selected[0].id)
 
-    this.links = links
-    this.sort()
-
-    if (this.links.length === 0) {
-      this.listing = false
-    }
-
-  },
-  mounted() {
-    this.clip = new Clipboard(".copy-clipboard")
-    this.clip.on("success", () => {
-      this.$toast.success(this.$t("success.linkCopied"))
-    })
-  },
-  beforeDestroy() {
-    this.clip.destroy()
-  },
-  methods: {
-    async submit () {
-      let res = await createShare({ "resource_id": this.selected[0].id, "password": this.password, "value": this.time, "unit": this.unit})
-
-      this.links.push(res)
+      this.links = links
       this.sort()
 
-      this.time = 7
-      this.unit = "days"
-      this.password = ""
-
-      this.listing = true
-      this.$toast.success(this.$t("settings.shareCreated"))
-    },
-    async deleteLink(event, share) {
-      event.preventDefault()
-
-      await removeShare({"token": share.token})
-      this.links = this.links.filter((item) => item.id !== share.id)
-      this.$toast.success(this.$t("settings.shareDeleted"))
-
-    },
-    humanTime(time) {
-      //todo czm globalny local nie działa?
-      let locale = this.settings?.locale || "en"
-
-      moment.locale(locale)
-
-      // Parse the target date
-      return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
-    },
-    buildLink(share) {
-      let { protocol, host } = window.location
-      let base = `${protocol}//${host}`
-      return `${base}/share/${share.token}`
-    },
-    sort() {
-      this.links = this.links.sort((a, b) => {
-        if (a.expire === 0) return -1
-        if (b.expire === 0) return 1
-        return new Date(a.expire) - new Date(b.expire)
-      })
-    },
-    switchListing() {
-      if (this.links.length === 0 && !this.listing) {
-        this.$store.commit("closeHover")
+      if (this.links.length === 0) {
+         this.listing = false
       }
 
-      this.listing = !this.listing
-    },
+   },
+   mounted() {
+      this.clip = new Clipboard(".copy-clipboard")
+      this.clip.on("success", () => {
+         this.$toast.success(this.$t("success.linkCopied"))
+      })
+   },
+   beforeUnmount() {
+      this.clip.destroy()
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+      async submit() {
+         let res = await createShare({
+            "resource_id": this.selected[0].id,
+            "password": this.password,
+            "value": this.time,
+            "unit": this.unit
+         })
 
-  },
+         this.links.push(res)
+         this.sort()
+
+         this.time = 7
+         this.unit = "days"
+         this.password = ""
+
+         this.listing = true
+         this.$toast.success(this.$t("settings.shareCreated"))
+      },
+      async deleteLink(event, share) {
+         event.preventDefault()
+
+         await removeShare({"token": share.token})
+         this.links = this.links.filter((item) => item.id !== share.id)
+         this.$toast.success(this.$t("settings.shareDeleted"))
+
+      },
+      humanTime(time) {
+         //todo czm globalny local nie działa?
+         let locale = this.settings?.locale || "en"
+
+         moment.locale(locale)
+
+         // Parse the target date
+         return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
+      },
+      buildLink(share) {
+         let {protocol, host} = window.location
+         let base = `${protocol}//${host}`
+         return `${base}/share/${share.token}`
+      },
+      sort() {
+         this.links = this.links.sort((a, b) => {
+            if (a.expire === 0) return -1
+            if (b.expire === 0) return 1
+            return new Date(a.expire) - new Date(b.expire)
+         })
+      },
+      switchListing() {
+         if (this.links.length === 0 && !this.listing) {
+            this.closeHover()
+         }
+
+         this.listing = !this.listing
+      },
+
+   },
 }
 </script>

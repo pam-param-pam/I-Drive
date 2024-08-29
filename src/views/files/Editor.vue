@@ -1,60 +1,58 @@
 <template>
+
   <div id="editor-container">
-    <header-bar>
-      <action icon="close" :label="$t('buttons.close')" @action="close()"/>
-      <title>{{ file?.name }}</title>
-      <action
-        v-if="perms?.delete && !isInShareContext"
-        id="delete-button"
-        icon="delete"
-        :label="$t('buttons.moveToTrash')"
-        @action="moveToTrash"
-        show="moveToTrash"
-      />
-      <action
-        v-if="perms?.modify && !isInShareContext"
-        id="save-button"
-        icon="save"
-        :label="$t('buttons.save')"
-        @action="save()"
-      />
 
-    </header-bar>
-
-    <breadcrumbs :base="'/share/' + token" :folderList="folderList"/>
-    <div class="loading delayed" v-if="loading">
-      <div class="spinner">
-        <div class="bounce1"></div>
-        <div class="bounce2"></div>
-        <div class="bounce3"></div>
-      </div>
+    <CodeEditor
+      v-if="!loading"
+      v-model="raw"
+      :line-nums="true"
+      width="100%"
+      height="100%"
+      border-radius="0px"
+      padding="20px"
+      :displayLanguage="true"
+      :saveFile="!isInShareContext"
+      :header="true"
+      :font-size="fontSize"
+      :isSaveBtnLoading="isSaveBtnLoading"
+      @lang="getLanguage()"
+      :display-language="false"
+      @close="onClose()"
+      @saveFile="onSave()"
+      :read-only="isInShareContext"
+      :themes='[["atom-one-dark", "Atom One Dark"], ["gradient-dark", "Gradient Dark"], ["devibeans", "Devibeans"], ["night-owl", "Night Owl"], ["github-dark", "Github Dark"]]'
+    >
+    </CodeEditor>
+    <div v-if="loading">
+      <h2 class="message delayed editor-loading">
+        <div class="spinner">
+          <div class="bounce1"></div>
+          <div class="bounce2"></div>
+          <div class="bounce3"></div>
+        </div>
+        <span>{{ $t("files.loading") }}</span>
+      </h2>
     </div>
-<!--    <CodeEditor v-model="raw || ''"></CodeEditor>-->
   </div>
 </template>
 
 <script>
-import {mapMutations, mapState} from "vuex"
-import buttons from "@/utils/buttons"
-
-import HeaderBar from "@/components/header/HeaderBar.vue"
-import Action from "@/components/header/Action.vue"
-import Breadcrumbs from "@/components/Breadcrumbs.vue"
-import {getFile} from "@/api/files.js"
-import {theme} from "@/utils/constants.js"
+import {editFile, getEncryptionSecrets, getFile} from "@/api/files.js"
 import {breadcrumbs} from "@/api/item.js"
 import {getShare} from "@/api/share.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
-// import CodeEditor from 'simple-code-editor';
+import CodeEditor from "@/components/SimpleCodeEditor/CodeEditor.vue"
+import {discord_instance} from "@/utils/networker.js";
+import {encrypt} from "@/utils/upload.js";
+import {isMobile} from "@/utils/common.js";
 
 
 export default {
    name: "editor",
    components: {
-      HeaderBar,
-      // CodeEditor,
-      Action,
-      Breadcrumbs,
+      CodeEditor,
 
    },
    props: {
@@ -75,18 +73,24 @@ export default {
       return {
          file: null,
          res: null,
-         raw: null,
+         raw: '',
          editor: null,
          folderList: [],
+         isSaveBtnLoading: false
       }
    },
 
    computed: {
-      ...mapState(["loading", "items", "perms", "settings", "error"]),
+      ...mapState(useMainStore, ["loading", "items", "perms", "settings", "error", "user"]),
 
       isInShareContext() {
          return this.token !== undefined
       },
+      fontSize() {
+         if (isMobile()) return "10px"
+         else return "15px"
+      }
+
    },
 
    created() {
@@ -94,17 +98,17 @@ export default {
 
       window.addEventListener("keydown", this.keyEvent)
    },
-   beforeDestroy() {
+   beforeUnmount() {
       window.removeEventListener("keydown", this.keyEvent)
-      this.editor.destroy()
    },
    async mounted() {
 
    },
    methods: {
-      ...mapMutations(["setLoading"]),
-      highlighter(code) {
-         return highlight(code, languages.js); // languages.<insert language> to return html with markup
+      ...mapActions(useMainStore, ["setLoading", "setItems", "addSelected", "showHover"]),
+      getLanguage(lang) {
+         console.log("The current language is: " + lang)
+         return ['python', 'Python']
       },
       async fetchData() {
          this.setLoading(true)
@@ -115,8 +119,7 @@ export default {
             this.shareObj = res
             console.log(res)
 
-            this.$store.commit("setItems", res.share)
-
+            this.setItems(res.share)
             console.log(this.items)
             this.folderList = res.breadcrumbs
 
@@ -139,44 +142,24 @@ export default {
             if (!this.file) {
                console.log("FILEID: " + this.fileId)
                this.file = await getFile(this.fileId)
-               this.$store.commit("addSelected", this.file)
-
             }
             this.folderList = await breadcrumbs(this.file.parent_id)
 
          }
 
-         this.$store.commit("addSelected", this.file)
+         this.addSelected(this.file)
 
+         console.log("STARTED FETCHING")
 
          let res = await fetch(this.file.download_url, {})
-         this.raw = await res.text()
-         this.$nextTick(() => this.setupEditor())
+         console.log("STOPPED FETCHING")
          this.setLoading(false)
+
+         // this.raw = "aaaa"
+         this.raw = await res.text()
+         this.copyRaw = this.raw
       },
-      setupEditor() {
-         const fileContent = this.raw || ""
-         ace.config.set(
-            "basePath",
-            `https://cdn.jsdelivr.net/npm/ace-builds@${ace_version}/src-min-noconflict/`
-         )
 
-         this.editor = ace.edit("editor", {
-            value: fileContent,
-            showPrintMargin: false,
-            readOnly: false,
-            theme: "ace/theme/chrome",
-            mode: modelist.getModeForPath(this.file.name).mode,
-            wrap: true,
-
-         })
-         if (theme === "dark") {
-            this.editor.setTheme("ace/theme/twilight")
-         }
-         //this.editor.session.getUndoManager().markClean()
-         console.log(this.editor.session)
-
-      },
       keyEvent(event) {
          if (!event.ctrlKey && !event.metaKey) {
             return
@@ -187,57 +170,60 @@ export default {
          }
 
          event.preventDefault()
-         this.save()
+         this.onSave()
       },
-      async save() {
+      async onSave() {
+         document.querySelector('#save-button').classList.add('loading'); // Set to loading
 
-         const button = "save"
+         if (this.raw !== this.copyRaw) {
+            // this.isSaveBtnLoading = true
+            let webhook = this.settings.webhook
 
-         buttons.loading(button)
-         if (!this.editor.session.getUndoManager().isClean()) {
-            //TODO update editor save
-            //   let content = this.editor.getValue()
-            //
-            //   let webhook = this.settings.webhook
-            //
-            //   const formData = new FormData()
-            //   const blob = new Blob([content], {type: 'text/plain'})
-            //
-            //   formData.append('file', blob, `chunk_${1}`)
-            //   try {
-            //     const response = await fetch(webhook, {
-            //       method: 'POST',
-            //       body: formData
-            //     })
-            //
-            //     if (!response.ok) {
-            //       throw new Error(`Error uploading chunk ${1}/${1}: ${response.statusText}`)
-            //     }
-            //
-            //     let json = await response.json()
-            //
-            //     await fetchURL(`/api/file/create`, {
-            //       method: "PUT",
-            //       body: JSON.stringify(
-            //         {
-            //           "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
-            //           "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
-            //         }
-            //       )
-            //     })
-            //
-            //   } finally {
-            //     buttons.done(button)
-            //   }
-            // }
-            // this.editor.session.getUndoManager().markClean()
-            // buttons.success(button)
-            // let message = this.$t('toasts.fileSaved')
-            // this.$toast.success(message)
+            let formData = new FormData()
+            let content = this.raw
+
+            if (this.file.is_encrypted) {
+               let secrets = await getEncryptionSecrets(this.file.id)
+               // Ensure content is a Blob before encrypting
+               if (typeof content === 'string') {
+                  content = new Blob([content], {type: 'text/plain'})
+               }
+               content = await encrypt(secrets.key, secrets.iv, content)
+
+            }
+            let blob = new Blob([content])
+
+            formData.append('file', blob, `chunk_${1}`)
+
+            let response = await discord_instance.post(webhook, formData, {
+               headers: {
+                  'Content-Type': 'multipart/form-data'
+               },
+            })
+
+            let json = response.data
+            let file_data = {
+               "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
+               "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
+            }
+
+
+            await editFile(file_data)
+            this.copyRaw = this.raw
          }
+         document.querySelector('#save-button').classList.remove('loading'); // Remove loading
+
+         document.querySelector('#save-button').classList.add('success'); // Set to success
+         setTimeout(() => {
+            document.querySelector('#save-button').classList.remove('success'); // Remove loading
+         }, 2500)
+         let message = this.$t('toasts.fileSaved')
+         this.$toast.success(message)
+
       },
+
       moveToTrash() {
-         this.$store.commit("showHover", {
+         this.showHover({
             prompt: "moveToTrash",
             confirm: () => {
                this.close()
@@ -245,34 +231,44 @@ export default {
          })
 
       },
-      close() {
+      onClose() {
          try {
-            if (this.isInShareContext) {
-               this.$router.push({name: "Share", params: {"token": this.token, "folderId": this.folderId}})
-               return
-            }
-            let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
-            if (!this.editor.session.getUndoManager().isClean()) {
-               this.$store.commit("showHover", {
-                  prompt: "discardEditorChanges",
-                  confirm: () => {
-                     this.$router.push(uri)
+         if (this.isInShareContext) {
+            this.$router.push({name: "Share", params: {"token": this.token, "folderId": this.folderId}})
+            return
+         }
+         let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
+         if (this.raw !== this.copyRaw) {
+            this.showHover({
+               prompt: "discardEditorChanges",
+               confirm: () => {
+                  this.$router.push(uri)
 
-                  },
-               })
-               return
-            }
+               },
+            })
+            return
+         }
 
-            this.$router.push(uri)
+         this.$router.push(uri)
          }
             // catch every error so user can always close...
-         catch {
+         catch (e) {
+            console.error(e)
             alert("Error closing properly... report this")
-            this.$router.push({name: `Files`, params: {folderId: this.$store.state.user.root}})
+            this.$router.push({name: `Files`, params: {folderId: this.user.root}})
 
          }
 
+
       },
-   },
+
+   }
 }
 </script>
+
+<style>
+.editor-loading {
+ width: 103%;
+ padding-top: 3em;
+}
+</style>

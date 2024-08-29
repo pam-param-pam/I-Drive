@@ -20,69 +20,71 @@
          @click="onTuneClick"
          :aria-label="$t('search.tuneSearch')"
          :title="$t('search.tuneSearch')"
-        >tune</i>
+      >tune</i>
     </div>
   </div>
 </template>
 
 
 <script>
-import {mapGetters, mapState} from "vuex"
+
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapActions, mapState} from "pinia"
 
 export default {
-  name: "search",
-  emits: ['onSearchQuery', 'exit'],
+   name: "search",
+   emits: ['onSearchQuery', 'exit'],
 
-  data() {
-    return {
-      selected: {},
-      query: '',
-    }
-  },
-
-  computed: {
-    ...mapState(["searchFilters", "disabledCreation"]),
-  },
-
-
-  methods: {
-    async search() {
-      //copying to not mutate vuex store state
-      let searchDict = { ...this.searchFilters }
-      searchDict["query"] = this.query
-      this.$emit('onSearchQuery', searchDict)
-
-    },
-
-    onTuneClick() {
-      this.$store.commit("showHover", {
-        prompt: "SearchTunePrompt",
-        confirm: () => {
-          this.search()
-        },
-      })
-    },
-
-    async exit() {
-      this.$store.commit("setDisabledCreation", false)
-      this.$store.commit("resetSelected")
-      this.$emit('exit')
-      this.query = ''
-    },
-
-  },
-  watch: {
-    query() {
-      if (this.query === '') {
-        this.exit()
+   data() {
+      return {
+         selected: {},
+         query: '',
       }
-      else {
-        this.$store.commit("setDisabledCreation", true)
-        this.$store.commit("resetSelected")
-        this.search()
+   },
+
+   computed: {
+      ...mapState(useMainStore, ["searchFilters", "disabledCreation"]),
+   },
+
+
+   methods: {
+      ...mapActions(useMainStore, ["showHover", "setDisabledCreation", "resetSelected"]),
+      async search() {
+         //copying to not mutate vuex store state
+         let searchDict = {...this.searchFilters}
+         searchDict["query"] = this.query
+         this.$emit('onSearchQuery', searchDict)
+
+      },
+
+      onTuneClick() {
+         this.showHover({
+            prompt: "SearchTunePrompt",
+            confirm: () => {
+               this.search()
+            },
+         })
+      },
+
+      async exit() {
+         this.setDisabledCreation(false)
+         this.resetSelected()
+         this.$emit('exit')
+         this.query = ''
+      },
+
+   },
+   watch: {
+      query() {
+         if (this.query === '') {
+            this.exit()
+         } else {
+            this.setDisabledCreation(true)
+            this.resetSelected()
+            this.search()
+         }
       }
-    }
-  }
+   }
 }
 </script>
 <style scoped>

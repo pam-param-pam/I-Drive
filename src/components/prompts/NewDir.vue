@@ -18,7 +18,7 @@
     <div class="card-action">
       <button
         class="button button--flat button--grey"
-        @click="$store.commit('closeHover')"
+        @click="closeHover()"
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
       >
@@ -39,41 +39,39 @@
 </template>
 
 <script>
-import {mapState} from "vuex"
 import {create} from "@/api/folder.js"
-import Action from "@/components/header/Action.vue"
+import {mapActions, mapState} from "pinia"
+import {useMainStore} from "@/stores/mainStore.js"
 
 export default {
-  name: "new-dir",
-  components: {Action},
-  data() {
-    return {
-      name: "",
-    }
-  },
-  computed: {
-    ...mapState(["currentFolder"]),
-    canSubmit() {
-      return this.name.length > 0
-    }
-  },
-  
-  methods: {
-    async submit(event) {
-
-      if (this.canSubmit) {
-        try {
-
-          await create({"parent_id": this.currentFolder?.id, "name": this.name})
-          let message = this.$t('toasts.folderCreated', { name: this.name})
-          this.$toast.success(message)
-
-        }
-        finally {
-          this.$store.commit("closeHover")
-        }
+   name: "new-dir",
+   data() {
+      return {
+         name: "",
       }
-    },
-  },
+   },
+   computed: {
+      ...mapState(useMainStore, ["currentFolder"]),
+      canSubmit() {
+         return this.name.length > 0
+      }
+   },
+
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+      async submit(event) {
+         if (this.canSubmit) {
+            try {
+
+               await create({"parent_id": this.currentFolder?.id, "name": this.name})
+               let message = this.$t('toasts.folderCreated', {name: this.name})
+               this.$toast.success(message)
+
+            } finally {
+               this.closeHover()
+            }
+         }
+      },
+   },
 }
 </script>
