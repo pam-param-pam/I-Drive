@@ -11,38 +11,12 @@
       :folderList="folderList"
     />
 
-    <header-bar>
-
-      <title/>
-      <template #actions>
-
-        <action
-          icon="file_download"
-          :label="$t('buttons.download')"
-          @action="download"
-          :counter="selectedCount"
-        />
-        <action
-          :icon="viewIcon"
-          :label="$t('buttons.switchView')"
-          @action="onSwitchView"
-        />
-        <action
-          v-if="selectedCount > 0"
-          icon="info"
-          :disabled="!selectedCount > 0"
-          :label="$t('buttons.info')"
-          show="info"
-        />
-
-      </template>
-    </header-bar>
-
     <FileListing
       ref="listing"
       :isSearchActive="false"
-      @onOpen="onOpen"
       :readonly="true"
+      :headerButtons="headerButtons"
+      @onOpen="onOpen"
 
     ></FileListing>
 
@@ -67,8 +41,6 @@ export default {
    components: {
       FileListing,
       Breadcrumbs,
-      Action,
-      HeaderBar,
    },
 
    props: {
@@ -97,14 +69,12 @@ export default {
       isShareValid() {
          return !this.shareErrored
       },
-      viewIcon() {
-         const icons = {
-            list: "view_module",
-            mosaic: "grid_view",
-            "mosaic gallery": "view_list",
+      headerButtons() {
+         return {
+            download: this.selectedCount > 0,
+            info:  this.selectedCount > 0
          }
-         return icons[this.settings.viewMode]
-      },
+      }
 
    },
    created() {
@@ -190,10 +160,6 @@ export default {
             //todo share i18n name
 
          }
-      },
-
-      onSwitchView() {
-         this.$refs.listing.switchView()
       },
 
       humanExpiry(date) {

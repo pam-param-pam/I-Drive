@@ -29,6 +29,7 @@ export default {
       Shell,
       UploadFiles,
    },
+
    renderTriggered({key, target, type}) {
       console.log(`Render triggered on component 'Layout'`, {key, target, type})
    },

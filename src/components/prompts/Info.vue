@@ -223,6 +223,7 @@ export default {
       },
       is_encrypted() {
          if (this.selectedCount === 1) {
+            if (this.selected[0].isDir) return null
             return this.selected[0].is_encrypted
          }
          return null

@@ -45,7 +45,7 @@ export default {
    computed: {
       ...mapState(useMainStore, ["searchFilters", "disabledCreation"]),
    },
-
+    //TODO FIX THIS SHIT
 
    methods: {
       ...mapActions(useMainStore, ["showHover", "setDisabledCreation", "resetSelected"]),

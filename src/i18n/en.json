@@ -243,6 +243,7 @@
     "editFolderPassword": "Edit folder password"
   },
   "toasts": {
+    "thumbnailError": "Couldn't generate thumbnail for video: {name}",
     "aborting": "Aborting...",
     "deleting": "Deleting {percentage}%...",
     "itemLocated": "Item located",
@@ -273,6 +274,8 @@
 
   },
   "uploadFile": {
+    "generatingThumbnail": "Generating thumbnails",
+    "finishing": "Saving file...",
     "noInternet": "Internet connection lost",
     "failed": "Failed, unknown error",
     "success": "Uploaded",

@@ -71,6 +71,7 @@ export const useMainStore = defineStore('main', {
    },
 
    actions: {
+
       setFolderPassword(payload) {
          this.folderPasswords[payload.folderId] = payload.password
       },

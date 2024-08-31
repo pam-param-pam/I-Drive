@@ -3,20 +3,18 @@
   <div id="editor-container">
 
     <CodeEditor
-      v-if="!loading"
+      v-if="currentlanguage"
       v-model="raw"
       :line-nums="true"
       width="100%"
       height="100%"
       border-radius="0px"
       padding="20px"
-      :displayLanguage="true"
       :saveFile="!isInShareContext"
       :header="true"
       :font-size="fontSize"
       :isSaveBtnLoading="isSaveBtnLoading"
-      @lang="getLanguage()"
-      :display-language="false"
+      :languages="currentlanguage"
       @close="onClose()"
       @saveFile="onSave()"
       :read-only="isInShareContext"
@@ -76,7 +74,8 @@ export default {
          raw: '',
          editor: null,
          folderList: [],
-         isSaveBtnLoading: false
+         isSaveBtnLoading: false,
+         currentlanguage: null
       }
    },
 
@@ -89,26 +88,78 @@ export default {
       fontSize() {
          if (isMobile()) return "10px"
          else return "15px"
-      }
+      },
+
 
    },
 
    created() {
+      console.log("CREATED0")
       this.fetchData()
-
+      console.log("CREATED1")
       window.addEventListener("keydown", this.keyEvent)
    },
    beforeUnmount() {
       window.removeEventListener("keydown", this.keyEvent)
    },
    async mounted() {
+      console.log("mounted")
 
    },
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setItems", "addSelected", "showHover"]),
-      getLanguage(lang) {
-         console.log("The current language is: " + lang)
-         return ['python', 'Python']
+      guessLanguage() {
+         console.log("aaaaa")
+
+         let extensionMap = {
+            'js': 'javascript',
+            'vue': "js",
+            'py': 'python',
+            'java': 'java',
+            'cpp': 'Cpp',
+            'cs': 'Cs',
+            'php': 'php',
+            'rb': 'ruby',
+            'ts': 'typescript',
+            'swift': 'swift',
+            'go': 'go',
+            'kt': 'kotlin',
+            'rs': 'rust',
+            'dart': 'dart',
+            'sh': 'shell',
+            'css': 'css',
+            'sql': 'sql',
+            'pl': 'perl',
+            'r': 'r',
+            'scala': 'scala',
+            'lua': 'lua',
+            'm': 'matlab',
+            'json': 'json',
+            'bash': 'bash',
+            'yml': 'yaml',
+            'yaml': 'yaml',
+            'ps1': 'powershell',
+            'txt': 'plaintext',
+            'mk': 'makefile',
+            'nginx': 'nginx',
+            'gradle': 'gradle',
+            'http': 'http',
+            'jl': 'julia',
+            'ex': 'elixir',
+            'exs': 'elixir',
+            'html': 'html',
+            'dockerfile': 'dockerfile',
+            'md': 'markdown',
+            'apache': 'apache',
+            'ino': 'arduino',
+            'xml': 'xml'
+         };
+         console.log(this.file)
+         let ext = this.file.name.split('.').pop().toLowerCase()
+         console.warn(extensionMap[ext])
+         let lang = extensionMap[ext] || 'plaintext'
+         console.log([[lang, lang]])
+         return [[lang, lang]]
       },
       async fetchData() {
          this.setLoading(true)
@@ -158,6 +209,9 @@ export default {
          // this.raw = "aaaa"
          this.raw = await res.text()
          this.copyRaw = this.raw
+
+         this.currentlanguage = this.guessLanguage()
+
       },
 
       keyEvent(event) {
@@ -233,23 +287,23 @@ export default {
       },
       onClose() {
          try {
-         if (this.isInShareContext) {
-            this.$router.push({name: "Share", params: {"token": this.token, "folderId": this.folderId}})
-            return
-         }
-         let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
-         if (this.raw !== this.copyRaw) {
-            this.showHover({
-               prompt: "discardEditorChanges",
-               confirm: () => {
-                  this.$router.push(uri)
+            if (this.isInShareContext) {
+               this.$router.push({name: "Share", params: {"token": this.token, "folderId": this.folderId}})
+               return
+            }
+            let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
+            if (this.raw !== this.copyRaw) {
+               this.showHover({
+                  prompt: "discardEditorChanges",
+                  confirm: () => {
+                     this.$router.push(uri)
 
-               },
-            })
-            return
-         }
+                  },
+               })
+               return
+            }
 
-         this.$router.push(uri)
+            this.$router.push(uri)
          }
             // catch every error so user can always close...
          catch (e) {

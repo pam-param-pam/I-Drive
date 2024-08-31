@@ -1,6 +1,151 @@
 <template>
   <div>
+    <header-bar>
+      <Search
+        v-if="headerButtons.search"
+        @onSearchQuery="$emit('onSearchQuery')"
+        @exit="$emit('onSearchClosed')"
+      />
 
+      <title></title>
+      <template #actions>
+        <template v-if="!isMobile()">
+          <action
+            v-if="headerButtons.locate"
+            icon="location_on"
+            :label="$t('buttons.locate')"
+            @action="locateItem"
+          />
+          <action
+            v-if="headerButtons.share"
+            icon="share"
+            :label="$t('buttons.share')"
+            show="share"
+          />
+          <action
+            v-if="headerButtons.modify"
+            icon="mode_edit"
+            :label="$t('buttons.rename')"
+            show="rename"
+          />
+
+          <action
+            v-if="headerButtons.modify"
+            id="move-button"
+            icon="forward"
+            :label="$t('buttons.moveFile')"
+            show="move"
+          />
+          <action
+            v-if="headerButtons.moveToTrash"
+            id="moveToTrash-button"
+            icon="delete"
+            :label="$t('buttons.moveToTrash')"
+            show="moveToTrash"
+          />
+          <action
+            v-if="headerButtons.restore"
+            icon="restore"
+            :label="$t('buttons.restoreFromTrash')"
+            show="restoreFromTrash"
+          />
+          <action
+            v-if="headerButtons.delete"
+            id="delete-button"
+            icon="delete"
+            :label="$t('buttons.delete')"
+            show="delete"
+          />
+
+        </template>
+        <action
+          v-if="headerButtons.lock"
+          icon="lock"
+          :label="$t('buttons.lockFolder')"
+          show="editFolderPassword"
+        />
+        <action
+          v-if="headerButtons.download"
+          icon="file_download"
+          :label="$t('buttons.download')"
+          @action="$emit('download')"
+          :counter="selectedCount"
+        />
+        <action
+          v-if="headerButtons.upload"
+          :disabled="isSearchActive && !selectedCount > 0 "
+          icon="file_upload"
+          id="upload-button"
+          :label="$t('buttons.upload')"
+          @action="$emit('upload')"
+        />
+        <action
+          v-if="headerButtons.shell"
+          icon="code"
+          :label="$t('buttons.shell')"
+          @action="toggleShell()"
+        />
+        <action
+          :icon="viewIcon"
+          :label="$t('buttons.switchView')"
+          @action="switchView"
+        />
+        <action
+          v-if="headerButtons.info"
+          icon="info"
+          :disabled="isSearchActive && !selectedCount > 0"
+          :label="$t('buttons.info')"
+          show="info"
+        />
+      </template>
+
+    </header-bar>
+    <div v-if="isMobile()" id="file-selection">
+      <span v-if="selectedCount > 0">{{ $t('files.selected', {amount: selectedCount}) }}</span>
+      <action
+        v-if="headerButtons.locate"
+        icon="location_on"
+        :label="$t('buttons.locate')"
+        @action="locateItem"
+      />
+      <action
+        v-if="headerButtons.restore"
+        icon="restore"
+        :label="$t('buttons.restoreFromTrash')"
+        show="restoreFromTrash"
+      />
+      <action
+        v-if="headerButtons.share "
+        icon="share"
+        :label="$t('buttons.share')"
+        show="share"
+      />
+      <action
+        v-if="headerButtons.modify"
+        icon="mode_edit"
+        :label="$t('buttons.rename')"
+        show="rename"
+      />
+      <action
+        v-if="headerButtons.modify"
+        icon="forward"
+        :label="$t('buttons.moveFile')"
+        show="move"
+      />
+      <action
+        v-if="headerButtons.moveToTrash"
+        icon="delete"
+        :label="$t('buttons.moveToTrash')"
+        show="moveToTrash"
+      />
+      <action
+        v-if="headerButtons.delete"
+        id="delete-button"
+        icon="delete"
+        :label="$t('buttons.delete')"
+        show="delete"
+      />
+    </div>
     <div v-if="loading">
       <h2 class="message delayed">
         <div class="spinner">
@@ -92,7 +237,6 @@
             </div>
           </div>
         </div>
-
         <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
         <div v-if="dirsSize > 0">
           <item
@@ -101,6 +245,8 @@
             :readOnly="readonly"
             :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
             @onOpen="$emit('onOpen', item)"
+            @contextmenu.prevent="showContextMenu($event, item)"
+
           >
           </item>
         </div>
@@ -114,6 +260,7 @@
             :readOnly="readonly"
             :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
             @onOpen="$emit('onOpen', item)"
+            @contextmenu.prevent="showContextMenu($event, item)"
 
           ></item>
 
@@ -136,6 +283,73 @@
         />
 
       </div>
+      <context-menu
+        :show="isContextMenuVisible"
+        :pos="contextMenuPos"
+        @hide="hideContextMenu"
+      >
+        <action icon="info" :label="$t('buttons.info')" show="info" />
+
+        <action
+          v-if="headerButtons.modify"
+          icon="mode_edit"
+          :label="$t('buttons.rename')"
+          show="rename"
+        />
+        <action
+          v-if="headerButtons.moveToTrash"
+          id="moveToTrash-button"
+          icon="delete"
+          :label="$t('buttons.moveToTrash')"
+          show="moveToTrash"
+        />
+        <action
+          v-if="headerButtons.restore"
+          icon="restore"
+          :label="$t('buttons.restoreFromTrash')"
+          show="restoreFromTrash"
+        />
+        <action
+          v-if="headerButtons.delete"
+          id="delete-button"
+          icon="delete"
+          :label="$t('buttons.delete')"
+          show="delete"
+        />
+        <action
+          v-if="headerButtons.modify"
+          id="move-button"
+          icon="forward"
+          :label="$t('buttons.moveFile')"
+          show="move"
+        />
+        <action
+          v-if="headerButtons.locate"
+          icon="location_on"
+          :label="$t('buttons.locate')"
+          @action="locateItem"
+        />
+        <action
+          v-if="headerButtons.download"
+          icon="file_download"
+          :label="$t('buttons.download')"
+          @action="$emit('download')"
+        />
+        <action
+          v-if="headerButtons.share"
+          icon="share"
+          :label="$t('buttons.share')"
+          show="share"
+        />
+        <action
+          v-if="headerButtons.lock"
+          icon="lock"
+          :label="$t('buttons.lockFolder')"
+          show="editFolderPassword"
+        />
+
+      </context-menu>
+
     </template>
 
   </div>
@@ -148,9 +362,15 @@ import throttle from "lodash.throttle"
 
 import Item from "@/components/files/ListingItem.vue"
 import {updateSettings} from "@/api/user.js"
-import {sortItems} from "@/utils/common.js"
+import {isMobile, sortItems} from "@/utils/common.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
+import ContextMenu from "@/components/ContextMenu.vue";
+import Action from "@/components/header/Action.vue";
+import HeaderBar from "@/components/header/HeaderBar.vue";
+import Search from "@/components/Search.vue";
+import {f} from "vue-native-websocket-vue3";
+
 //todo reset selected on navigation
 export default {
    name: "FileListing",
@@ -159,11 +379,16 @@ export default {
       isSearchActive: Boolean,
       locatedItem: {},
       readonly: Boolean,
+      headerButtons: {},
    },
-   emits: ['uploadInput', 'drop', 'onOpen', 'dragEnter', 'dragLeave'],
+   emits: ['uploadInput', 'drop', 'onOpen', 'dragEnter', 'dragLeave', 'upload', 'onSearchClosed', 'onSearchQuery', 'download'],
 
    components: {
+      Search, HeaderBar,
+      Action,
       Item,
+      ContextMenu,
+
    },
    data() {
       return {
@@ -171,7 +396,8 @@ export default {
          dragCounter: 0,
          itemWeight: 0,
          searchItemsFound: null,
-
+         contextMenuPos: {},
+         isContextMenuVisible: false
       }
    },
    watch: {
@@ -238,8 +464,15 @@ export default {
 
    },
    computed: {
-      ...mapState(useMainStore, ["items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
-
+      ...mapState(useMainStore, ["items", "isContextMenuVisible", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
+      viewIcon() {
+         const icons = {
+            list: "view_module",
+            mosaic: "grid_view",
+            "mosaic gallery": "view_list",
+         }
+         return icons[this.settings.viewMode]
+      },
       nameSorted() {
          return this.settings.sortingBy === "name"
       },
@@ -293,13 +526,27 @@ export default {
    },
 
    methods: {
+      isMobile,
 
-      ...mapActions(useMainStore, ["addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
+      ...mapActions(useMainStore, ["toggleShell", "setContextMenuVisibility", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
          this.$emit('uploadInput', event)
       },
+      showContextMenu(event, item) {
+         this.resetSelected()
+         this.addSelected(item)
 
+         this.contextMenuPos = {
+            x: event.clientX + 30,
+            y: event.clientY - 40,
+         }
+
+         this.isContextMenuVisible = true
+      },
+      hideContextMenu() {
+         this.isContextMenuVisible = false
+      },
       keyEvent(event) {
          // If prompts are shown return
          if (this.currentPrompt !== null) {

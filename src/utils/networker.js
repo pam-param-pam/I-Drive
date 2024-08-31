@@ -9,8 +9,8 @@ import {useUploadStore} from "@/stores/uploadStore.js";
 const toast = useToast()
 
 const cancelTokenMap = new Map()
-//todo this messed up with click selection, possible we have to re order the entire list every time lmao
 
+//todo handle backends 429 policy lel
 export const backend_instance = axios.create({
    baseURL: baseURL,
    timeout: 20000,

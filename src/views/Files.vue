@@ -1,163 +1,25 @@
 <template>
   <div>
-    <header-bar>
-
-      <Search
-        @onSearchQuery="onSearchQuery"
-        @exit="onSearchClosed"
-      />
-
-      <title></title>
-      <template #actions>
-        <template v-if="!isMobile()">
-          <action
-            v-if="headerButtons.locate"
-            icon="location_on"
-            :label="$t('buttons.locate')"
-            @action="locateItem"
-          />
-          <action
-            v-if="headerButtons.share"
-            icon="share"
-            :label="$t('buttons.share')"
-            show="share"
-          />
-          <action
-            v-if="headerButtons.modify"
-            icon="mode_edit"
-            :label="$t('buttons.rename')"
-            show="rename"
-          />
-
-          <action
-            v-if="headerButtons.modify"
-            id="move-button"
-            icon="forward"
-            :label="$t('buttons.moveFile')"
-            show="move"
-          />
-          <action
-            v-if="headerButtons.moveToTrash"
-            id="moveToTrash-button"
-            icon="delete"
-            :label="$t('buttons.moveToTrash')"
-            show="moveToTrash"
-          />
-          <action
-            v-if="headerButtons.restore"
-            icon="restore"
-            :label="$t('buttons.restoreFromTrash')"
-            show="restoreFromTrash"
-          />
-
-        </template>
-        <action
-          v-if="headerButtons.lock"
-          icon="lock"
-          :label="$t('buttons.lockFolder')"
-          show="editFolderPassword"
-        />
-        <action
-          v-if="headerButtons.download"
-          icon="file_download"
-          :label="$t('buttons.download')"
-          @action="download"
-          :counter="selectedCount"
-        />
-        <action
-          v-if="headerButtons.upload"
-          :disabled="isSearchActive && !selectedCount > 0 "
-          icon="file_upload"
-          id="upload-button"
-          :label="$t('buttons.upload')"
-          @action="upload"
-        />
-        <action
-          v-if="headerButtons.shell"
-          icon="code"
-          :label="$t('buttons.shell')"
-          @action="toggleShell()"
-        />
-        <action
-          :icon="viewIcon"
-          :label="$t('buttons.switchView')"
-          @action="onSwitchView"
-        />
-        <action
-          v-if="headerButtons.info"
-          icon="info"
-          :disabled="isSearchActive && !selectedCount > 0"
-          :label="$t('buttons.info')"
-          show="info"
-        />
-      </template>
-
-    </header-bar>
-
-    <div v-if="isMobile()" id="file-selection">
-      <span v-if="selectedCount > 0">{{ $t('files.selected', {amount: selectedCount}) }}</span>
-      <action
-        v-if="headerButtons.locate"
-        icon="location_on"
-        :label="$t('buttons.locate')"
-        @action="locateItem"
-      />
-      <action
-        v-if="headerButtons.restore"
-        icon="restore"
-        :label="$t('buttons.restoreFromTrash')"
-        show="restoreFromTrash"
-      />
-      <action
-        v-if="headerButtons.share "
-        icon="share"
-        :label="$t('buttons.share')"
-        show="share"
-      />
-      <action
-        v-if="headerButtons.modify"
-        icon="mode_edit"
-        :label="$t('buttons.rename')"
-        show="rename"
-      />
-
-      <action
-        v-if="headerButtons.modify"
-        icon="forward"
-        :label="$t('buttons.moveFile')"
-        show="move"
-      />
-      <action
-        v-if="headerButtons.moveToTrash"
-        icon="delete"
-        :label="$t('buttons.moveToTrash')"
-        show="moveToTrash"
-      />
-      <action
-        v-if="headerButtons.delete"
-        id="delete-button"
-        icon="delete"
-        :label="$t('buttons.delete')"
-        show="delete"
-      />
-    </div>
     <breadcrumbs v-if="!isSearchActive"
                  base="/files"
                  :folderList="folderList"
     />
     <errors v-if="error" :errorCode="error.response?.status"/>
 
-
     <h4 v-if="!error && isSearchActive && !loading">{{ $t('files.searchItemsFound', {amount: this.items.length}) }}</h4>
     <FileListing
       ref="listing"
       :locatedItem=locatedItem
       :isSearchActive="isSearchActive"
+      :headerButtons="headerButtons"
       @onOpen="onOpen"
       @dragEnter="onDragEnter"
       @dragLeave="onDragLeave"
       @uploadInput="onUploadInput"
-
+      @onSearchClosed="onSearchClosed"
+      @onSearchQuery="onSearchQuery"
+      @upload="upload"
+      @download="download"
     ></FileListing>
   </div>
 </template>
@@ -170,9 +32,6 @@ import FileListing from "@/views/files/FileListing.vue"
 import {getItems} from "@/api/folder.js"
 import {name} from "@/utils/constants.js"
 import {search} from "@/api/search.js"
-import HeaderBar from "@/components/header/HeaderBar.vue"
-import Action from "@/components/header/Action.vue"
-import Search from "@/components/Search.vue"
 import {checkFilesSizes} from "@/utils/upload.js"
 import {createZIP} from "@/api/item.js"
 import {isMobile} from "@/utils/common.js"
@@ -183,9 +42,6 @@ import {useUploadStore} from "@/stores/uploadStore.js"
 export default {
    name: "files",
    components: {
-      Search,
-      Action,
-      HeaderBar,
       Breadcrumbs,
       Errors,
       FileListing,
@@ -214,7 +70,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["error", "user", "loading", "selected", "settings", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
+      ...mapState(useMainStore, ["error", "user", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
 
       headerButtons() {
          return {
@@ -227,17 +83,9 @@ export default {
             share: this.selectedCount === 1 && this.perms.share,
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
             locate: this.selectedCount === 1 && this.isSearchActive,
+            search: true
          }
       },
-      viewIcon() {
-         const icons = {
-            list: "view_module",
-            mosaic: "grid_view",
-            "mosaic gallery": "view_list",
-         }
-         return icons[this.settings.viewMode]
-      },
-
    },
    created() {
       this.setDisabledCreation(false)
@@ -257,7 +105,7 @@ export default {
 
    },
    methods: {
-      ...mapActions(useMainStore, ["updateUser", "addSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "toggleShell"]),
+      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),
       ...mapActions(useUploadStore, ["startUpload"]),
 
       isMobile,
@@ -387,9 +235,6 @@ export default {
             document.title = name
          }
 
-      },
-      onSwitchView() {
-         this.$refs.listing.switchView()
       },
       onOpen(item) {
          if (item.isDir) {

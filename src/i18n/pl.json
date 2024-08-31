@@ -238,6 +238,7 @@
 
   },
   "toasts": {
+    "thumbnailError": "Nie udało sie wygenerować podglądu dla filmu: {name}",
     "aborting": "Przerywanie...",
     "deleting": "Usuwanie {percentage}%...",
     "itemLocated": "Zaleziono miejsce przechowywania pliku",
@@ -269,6 +270,8 @@
 
   },
   "uploadFile": {
+    "generatingThumbnail": "Tworzenie podglądu",
+    "finishing": "Zapisywanie...",
     "noInternet": "Brak internetu",
     "failed": "Wystąpił nieznany bląd",
     "success": "Plik zapisany",

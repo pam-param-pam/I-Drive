@@ -1,6 +1,6 @@
 import {create} from "@/api/folder.js"
 import i18n from "@/i18n/index.js"
-import {createFile, patchFile} from "@/api/files.js"
+import {createFile, createThumbnail, patchFile} from "@/api/files.js"
 
 import {useUploadStore} from "@/stores/uploadStore.js"
 import {useMainStore} from "@/stores/mainStore.js"
@@ -8,6 +8,7 @@ import {useToast} from "vue-toastification"
 import {discord_instance} from "@/utils/networker.js"
 import {chunkSize} from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js";
+import {generateVideoThumbnails} from "@rajesh896/video-thumbnails-generator";
 
 
 const toast = useToast()
@@ -27,6 +28,7 @@ export async function checkFilesSizes(files) {
    }
    return false
 }
+
 export function scanFiles(dt) {
    return new Promise((resolve) => {
       let reading = 0
@@ -90,6 +92,109 @@ function detectExtension(filename) {
    let arry = filename.split(".")
 
    return "." + arry[arry.length - 1]
+
+}
+function isVideoFile(file) {
+   // List of common video MIME types
+   const videoMimeTypes = [
+      'video/mp4',
+      'video/mpeg',
+      'video/ogg',
+      'video/webm',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-ms-wmv',
+      'video/x-flv',
+      'video/3gpp',
+      'video/3gpp2',
+   ];
+
+   return videoMimeTypes.includes(file.type)
+}
+
+function getVideoCover(file, seekTo = 0.0) {
+   console.log("getting video cover for file: ", file);
+   return new Promise((resolve, reject) => {
+      // load the file to a video player
+      const videoPlayer = document.createElement('video');
+      videoPlayer.setAttribute('src', URL.createObjectURL(file));
+      videoPlayer.load();
+      videoPlayer.addEventListener('error', (ex) => {
+         reject("error when loading video file", ex);
+      });
+      // load metadata of the video to get video duration and dimensions
+      videoPlayer.addEventListener('loadedmetadata', () => {
+
+         // seek to user defined timestamp (in seconds) if possible
+         if (videoPlayer.duration < seekTo) {
+            console.warn("video is too short.");
+            seekTo = 0.0
+         }
+         // delay seeking or else 'seeked' event won't fire on Safari
+         setTimeout(() => {
+            videoPlayer.currentTime = seekTo;
+         }, 200);
+         // extract video thumbnail once seeking is complete
+         videoPlayer.addEventListener('seeked', () => {
+            console.log('video is now paused at %ss.', seekTo);
+            // define a canvas to have the same dimension as the video
+            const canvas = document.createElement("canvas");
+            canvas.width = videoPlayer.videoWidth;
+            canvas.height = videoPlayer.videoHeight;
+            // draw the video frame to canvas
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+            // return the canvas image as a blob
+            ctx.canvas.toBlob(
+               blob => {
+                  resolve(blob);
+               },
+               "image/jpeg",
+               0.75 /* quality */
+            );
+         });
+      });
+   });
+}
+async function generateThumbnail(fileObj) {
+   const mainStore = useMainStore()
+   const uploadStore = useUploadStore()
+   uploadStore.setStatus(fileObj.file_id, "generatingThumbnail")
+
+   try {
+      let thumbnail = await getVideoCover(fileObj.unecryptedFile, 2)
+
+      if (fileObj.is_encrypted)
+         thumbnail = await encrypt(fileObj.encryption_key, fileObj.encryption_iv, thumbnail)
+
+
+      let formData = new FormData()
+      formData.append('file', thumbnail, `thumbnail`)
+
+      let webhook = mainStore.settings.webhook
+
+      let response = await discord_instance.post(webhook, formData, {
+         headers: {
+            'Content-Type': 'multipart/form-data'
+         }
+
+      })
+
+      //todo encrypt
+      let file_data = {
+         "file_id": fileObj.file_id,
+         "size": thumbnail.size,
+         "message_id": response.data.id,
+         "attachment_id": response.data.attachments[0].id
+      }
+
+      await createThumbnail(file_data)
+
+   } catch (err) {
+      console.error(err)
+      const toast = useToast()
+      toast.error(i18n.global.t("toasts.thumbnailError", fileObj.name))
+   }
 
 }
 
@@ -219,80 +324,105 @@ export async function handleCreatingFiles(fileList) {
     */
    return createdFiles
 }
+
+
 export async function prepareRequests() {
    const uploadStore = useUploadStore()
 
    let totalSize = 0
-   let fileFormList = new FormData()
-   let attachmentJson = []
    let filesForRequest = []
+   let attachmentJson = []
+   let fileFormList = new FormData()
 
 
-   let i = 0
-   while (totalSize < chunkSize || filesForRequest.length >= 10) {
 
+   let fileObj = null
+   try {
+      // if peekFile.size > 25MB we either return previously created multiAttachment request,
+      // or if it doesn't exist, we create a new chunked requests from that peeked file
+      let i = 0
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
 
-      let fileObj = await uploadStore.getFileFromQueue()
-      if (!fileObj) break
-      try {
+         let peekFile = uploadStore.queue[0]
+         if (!peekFile) break
+         //CASE 1, file is > 25mb
+         if (peekFile.size > chunkSize) {
 
-         let workingFile = fileObj.systemFile
-         if (fileObj.is_encrypted) {
-            workingFile = await encrypt(fileObj.encryption_key, fileObj.encryption_iv, fileObj.systemFile)
+            //CASE 1.1, multiAttachment request already created, we break to exit the loop and handle it below
+            if (filesForRequest.length !== 0) {
+               break
+            }
+
+            //CAS 1.2 multiAttachment request is not created, we create chunked requests from peekFile
+            fileObj = await uploadStore.getFileFromQueue()
+            if (!fileObj) break
+            //generate thumbnail if needed
+            if (isVideoFile(fileObj.systemFile)) {
+               await generateThumbnail(fileObj)
+            }
+
+            let chunks = []
+            for (let j = 0; j < fileObj.systemFile.size; j += chunkSize) {
+               let chunk = fileObj.systemFile.slice(j, j + chunkSize)
+               chunks.push(chunk)
+            }
+
+            let requestList = []
+            for (let j = 0; j < chunks.length; j++) {
+               let request = {"type": "chunked", "fileObj": fileObj, "chunk": chunks[j], "chunkNumber": j + 1, "totalChunks": chunks.length}
+               requestList.push(request)
+            }
+            return requestList
          }
-         let size = workingFile.size
-
-         if (size !== 0) {
-            if (size > chunkSize) {
-
-               let chunks = []
-               for (let j = 0; j < size; j += chunkSize) {
-                  let chunk = workingFile.slice(j, j + chunkSize)
-                  chunks.push(chunk)
-               }
-
-               let requestList = []
-               for (let j = 0; j < chunks.length; j++) {
-                  let request = {"type": "chunked", "fileObj": fileObj, "chunk": chunks[j], "chunkNumber": j + 1, "totalChunks": chunks.length}
-                  requestList.push(request)
-               }
-               return requestList
 
 
-            } else {
-
-               if (totalSize + size > chunkSize || filesForRequest.length >= 10) {
-                  return [{"type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest}]
-
-               }
-               filesForRequest.push(fileObj)
-               fileFormList.append(`files[${i}]`, workingFile, `custom_filename_here${i}`)
-               attachmentJson.push({
-                  "id": i,
-                  "filename": `custom_filename_here${i}`
-               })
-               totalSize = totalSize + size
+         //CASE 2.1 file is <25 mb but total size including peekFile is > 25mb or filesForRequest + peekFile > 10
+         //we need to return the already created multiAttachment request
+         if (totalSize + peekFile.size > chunkSize || filesForRequest.length + 1 >= 10) {
+            if (filesForRequest.length !== 0) {
+               return [{"type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest}]
             }
          }
+
+         //CASE 2.2 file is < 25mb, and we can safely add it to multiAttachment
+         fileObj = await uploadStore.getFileFromQueue()
+         if (!fileObj) break
+         if (isVideoFile(fileObj.systemFile)) {
+            await generateThumbnail(fileObj)
+         }
+
+         filesForRequest.push(fileObj)
+         fileFormList.append(`files[${i}]`, fileObj.systemFile, `custom_filename_here${i}`)
+         attachmentJson.push({
+            "id": i,
+            "filename": `custom_filename_here${i}`
+         })
+         totalSize = totalSize + fileObj.size
          i++
+
       }
-      catch (e) {
-         console.error(e)
+      if (filesForRequest.length !== 0) {
+         return [{"type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest}]
+      }
+
+
+   } catch (e) {
+      console.error(e)
+      if (fileObj) {
          uploadStore.setStatus(fileObj.file_id, "failed")
       }
    }
-   if (attachmentJson.length > 0) {
-      return [{"type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest}]
-   }
-
 
 }
+
 export async function uploadOneRequest(request, requestId) {
    const uploadStore = useUploadStore()
 
    try {
       if (request.type === "chunked") {
          await uploadChunk(request.chunk, request.chunkNumber, request.totalChunks, request.fileObj, requestId)
+
       }
 
       if (request.type === "multiAttachment") {
@@ -302,8 +432,7 @@ export async function uploadOneRequest(request, requestId) {
       uploadStore.uploadSpeedMap.delete(requestId)
       uploadStore.processUploads()
 
-   }
-   catch (e) {
+   } catch (e) {
       console.error(e)
 
       if (request.type === "chunked") {
@@ -316,7 +445,6 @@ export async function uploadOneRequest(request, requestId) {
          }
       }
    }
-
 
 
 }
@@ -455,5 +583,5 @@ export async function encrypt(base64Key, base64IV, file) {
    )
    console.log(444)
 
-   return new Blob([new Uint8Array(encryptedArrayBuffer)])
+   return new Blob([new Uint8Array(encryptedArrayBuffer)], { type: file.type })
 }

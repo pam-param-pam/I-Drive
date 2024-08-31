@@ -75,7 +75,7 @@ export default {
 
    },
    methods: {
-      ...mapActions(useMainStore, ["showHover"]),
+      ...mapActions(useMainStore, ["showHover", "closeHover"]),
       openSidebar() {
          this.showHover("sidebar")
       },

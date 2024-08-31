@@ -1,6 +1,6 @@
 import {defineStore} from "pinia"
 import buttons from "@/utils/buttons.js"
-import {createNeededFolders, handleCreatingFiles, prepareRequests, uploadOneRequest} from "@/utils/upload.js"
+import {createNeededFolders, encrypt, handleCreatingFiles, prepareRequests, uploadOneRequest} from "@/utils/upload.js"
 import {useMainStore} from "@/stores/mainStore.js";
 
 // Add all files in raw format to queue []
@@ -91,17 +91,42 @@ export const useUploadStore = defineStore('upload', {
    },
 
    actions: {
-      getFileFromQueue() {
+      getFileFromFilesUploading(file_id) {
+         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
+         if (!file_obj) {
+            console.warn(`No queueItem found for file_id: ${file_id}`)
+            return
+         }
+         return file_obj
+      },
+
+      async getFileFromQueue() {
+         console.warn("GETING FILE FROM QUEUE: ")
+
          if (this.queue.length === 0) {
             console.warn("getFileFromQueue is empty, yet it was called idk why")
             return
          }
+         while (this.queue.length > 0) {
+            let file = this.queue[0];
+            console.log(file.name)
+            // Check if the file size is greater than 0
+            if (file.size > 0) {
+               this.queue.shift(); // Remove the file from the queue
+               this.filesUploading.push(file); // Add the file to the filesUploading array
 
-         let file = this.queue[0]
-         this.queue.shift()
-         this.filesUploading.push(file)
+               if (file.is_encrypted) {
+                  file.unecryptedFile = file.systemFile
+                  file.systemFile = await encrypt(file.encryption_key, file.encryption_iv, file.systemFile)
+               }
+               // Process the file as needed
+               return file;
+            } else {
+               // If the file size is 0, remove it from the queue and continue the loop
+               this.queue.shift()
+            }
+         }
 
-         return file
       },
       getRequestFromRequestQueue() {
          if (this.requestQueue.length === 0) {
@@ -117,7 +142,6 @@ export const useUploadStore = defineStore('upload', {
          }
          if (request.type === "multiAttachment") {
             //set source id policy to abort requests
-
          }
 
          return request
@@ -135,7 +159,7 @@ export const useUploadStore = defineStore('upload', {
             encryption_iv: item.encryption_iv,
             is_encrypted: item.is_encrypted,
             status: "waiting",
-            progress: 1
+            progress: 0
          }
 
          this.queue.push(file)
@@ -174,7 +198,6 @@ export const useUploadStore = defineStore('upload', {
 
          const mainStore = useMainStore()
 
-
          while (this.currentRequests < mainStore.settings.concurrentUploadRequests) {
             buttons.loading("upload")
             let request = await this.getRequestFromRequestQueue()
@@ -190,16 +213,11 @@ export const useUploadStore = defineStore('upload', {
          }
 
 
-
-
-
       },
       finishUpload(file_id) {
-         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
-         if (!file_obj) {
-            console.warn(`No queueItem found for file_id: ${file_id}`)
-            return
-         }
+         let file_obj = this.getFileFromFilesUploading(file_id)
+         if (!file_obj) return
+
          file_obj.status = "success"
          setTimeout(() => {
             this.removeFileFromUpload(file_id)
@@ -208,21 +226,15 @@ export const useUploadStore = defineStore('upload', {
 
       },
       setStatus(file_id, status) {
-         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
-         if (!file_obj) {
-            console.warn(`No queueItem found for file_id: ${file_id}`)
-            return
-         }
+         let file_obj = this.getFileFromFilesUploading(file_id)
+         if (!file_obj) return
+
          file_obj.status = status
 
       },
       setProgress(file_id, loadedBytes) {
-         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
-
-         if (!file_obj) {
-            console.warn(`No queueItem found for file_id: ${file_id}`)
-            return
-         }
+         let file_obj = this.getFileFromFilesUploading(file_id)
+         if (!file_obj) return
 
          // Check if the key "file_id" exists
          if (this.progressMap.has(file_id)) {
@@ -246,19 +258,15 @@ export const useUploadStore = defineStore('upload', {
 
       },
 
-
       setMultiAttachmentProgress(file_ids, progress) {
          let percentage = Math.round(progress * 100)
 
          for (let file_id of file_ids) {
-            let queueItem = this.filesUploading.find(item => item.file_id === file_id)
+            let file_obj = this.getFileFromFilesUploading(file_id)
+            if (!file_obj) continue
 
-            if (!queueItem) {
-               console.warn(`No queueItem found for file_id: ${file_id}`)
-               return
-            }
-            queueItem.status = "uploading"
-            queueItem.progress = percentage
+            file_obj.status = "uploading"
+            file_obj.progress = percentage
 
          }
       },
@@ -276,15 +284,15 @@ export const useUploadStore = defineStore('upload', {
 
       },
       setUploadSpeedBytes(requestId, value) {
-
-
          if (value === undefined) return
          this.uploadSpeedMap.set(requestId, value)
+
       },
       setETA(requestId, value) {
          console.log("set eta ")
          if (value === undefined) return
          this.etaMap.set(requestId, value)
+
       },
       resetUpload() {
 

@@ -13,9 +13,9 @@
     :data-dir="item.isDir"
     :data-type="type"
     :aria-label="item.name"
-
     :aria-selected="isSelected"
   >
+
     <div>
       <img
         v-if="item.preview_url && type === 'image' && item.size > 0"
@@ -55,14 +55,13 @@ import {move} from "@/api/item.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
 
-
 export default {
 
    name: "item",
 
    emits: ['onOpen'],
-
    props: ["readOnly", "item"],
+
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount"]),
       type() {
@@ -97,6 +96,7 @@ export default {
          wrapper.scrollIntoView()
          this.addSelected(this.item)
       },
+
       humanSize: function () {
          return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size)
       },
@@ -152,7 +152,7 @@ export default {
          // Deselect items if no shift or ctrl key is pressed and there are selected items
          // then add current item to selected if it wasn't previously selected
          if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {
-            let shouldAdd = !this.isSelected || this.selected.length >= this.items.length
+            let shouldAdd = (!this.isSelected || this.selected.length >= this.items.length) && this.items.length > 1
             this.resetSelected()
             if (shouldAdd) {
                this.addSelected(this.item)

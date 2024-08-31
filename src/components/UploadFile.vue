@@ -28,7 +28,7 @@
     </div>
 
     <!-- Lower -->
-    <div v-if="file.progress && isInternet">
+    <div v-if="file.status && isInternet">
       <span v-if="file.status === 'creating'">
         <b class="creating">{{ $t('uploadFile.creating') }}</b>
       </span>
@@ -41,6 +41,9 @@
       <span v-if="file.status === 'waiting'">
         <b class="creating">{{ $t('uploadFile.waiting') }}</b>
       </span>
+      <span v-if="file.status === 'generatingThumbnail'">
+        <b class="creating">{{ $t('uploadFile.generatingThumbnail') }}</b>
+      </span>
       <span v-if="file.status === 'success'">
         <b class="success">{{ $t('uploadFile.success') }}</b>
       </span>
@@ -50,7 +53,7 @@
       <span v-if="file.status === 'pausing'">
         <b class="pausing">{{ $t('uploadFile.pausing') }}</b>
       </span>
-      <div class="fileitem-progress" v-if="file.status === 'uploading' && isInternet">
+      <div class="fileitem-progress" v-if="file.status === 'uploading' && isInternet && file.progress">
         <ProgressBar
           :progress="file.progress"
         />

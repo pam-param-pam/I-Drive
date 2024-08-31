@@ -8,10 +8,6 @@
       content="width=device-width, initial-scale=1, user-scalable=no"
     />
 
-    [{[ if .ReCaptcha -]}]
-    <script src="[{[ .ReCaptchaHost ]}]/recaptcha/api.js?render=explicit"></script>
-    [{[ end ]}]
-
     <title>
       [{[ if .Name -]}][{[ .Name ]}][{[ else ]}]File Browser[{[ end ]}]
     </title>
@@ -65,8 +61,6 @@
       window.FileBrowser = [{[ .Json ]}];
       // Global function to prepend static url
       window.__prependStaticUrl = (url) => {
-        // //todo
-        // return url
         return `${window.FileBrowser.StaticURL}/${url.replace(/^\/+/, "")}`;
       };
       var dynamicManifest = {
