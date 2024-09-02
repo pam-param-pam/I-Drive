@@ -14,16 +14,16 @@
         <button
           class="action"
           @click="abort()"
-          aria-label="Abort upload"
-          title="Abort upload"
+          :aria-label="$t('uploadFile.abortAll')"
+          :title="$t('uploadFile.abortAll')"
         >
           <i class="material-icons">{{ "cancel" }}</i>
         </button>
         <button
           class="action"
           @click="toggle()"
-          aria-label="Toggle file upload list"
-          title="Toggle file upload list"
+          :aria-label="$t('uploadFile.toggleUploadList')"
+          :title="$t('uploadFile.toggleUploadList')"
         >
           <i class="material-icons">{{
               open ? "keyboard_arrow_down" : "keyboard_arrow_up"

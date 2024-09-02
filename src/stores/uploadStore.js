@@ -85,7 +85,7 @@ export const useUploadStore = defineStore('upload', {
          return files.sort((a, b) => a.progress - b.progress)
       },
       progress() {
-         return 50
+         return 0
       },
 
    },
@@ -170,7 +170,7 @@ export const useUploadStore = defineStore('upload', {
          window.addEventListener("beforeunload", beforeUnload)
 
          console.log("filesList1:" + JSON.stringify(filesList))
-         //context.state.dummyLength = filesList.length
+
          filesList = await createNeededFolders(filesList, parent_folder)
          console.log("filesList2:" + JSON.stringify(filesList))
 

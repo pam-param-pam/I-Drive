@@ -274,6 +274,8 @@
 
   },
   "uploadFile": {
+    "abortAll": "Abort all",
+    "toggleUploadList": "Toggle file upload list",
     "generatingThumbnail": "Generating thumbnails",
     "finishing": "Saving file...",
     "noInternet": "Internet connection lost",

@@ -8,7 +8,6 @@ import {useToast} from "vue-toastification"
 import {discord_instance} from "@/utils/networker.js"
 import {chunkSize} from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js";
-import {generateVideoThumbnails} from "@rajesh896/video-thumbnails-generator";
 
 
 const toast = useToast()
@@ -150,7 +149,7 @@ function getVideoCover(file, seekTo = 0.0) {
                   resolve(blob);
                },
                "image/jpeg",
-               0.75 /* quality */
+               0.75
             );
          });
       });
@@ -169,7 +168,7 @@ async function generateThumbnail(fileObj) {
 
 
       let formData = new FormData()
-      formData.append('file', thumbnail, `thumbnail`)
+      formData.append('file', thumbnail, `Kocham Alternatywki`)
 
       let webhook = mainStore.settings.webhook
 
@@ -393,10 +392,10 @@ export async function prepareRequests() {
          }
 
          filesForRequest.push(fileObj)
-         fileFormList.append(`files[${i}]`, fileObj.systemFile, `custom_filename_here${i}`)
+         fileFormList.append(`files[${i}]`, fileObj.systemFile, `Kocham Alternatywki`)
          attachmentJson.push({
             "id": i,
-            "filename": `custom_filename_here${i}`
+            "filename": `Kocham Alternatywki`
          })
          totalSize = totalSize + fileObj.size
          i++

@@ -43,7 +43,7 @@
 
 .upload-files.closed .card-content {
   display: none;
-  padding: 0em 1em 1em 1em;
+  padding: 0 1em 1em 1em;
 }
 
 .upload-files .card .card-title {
@@ -51,7 +51,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.8em;
-  padding: 1em 1em 0em;
+  padding: 1em 1em 0;
   position: sticky;
   top: 0;
   z-index: 1;

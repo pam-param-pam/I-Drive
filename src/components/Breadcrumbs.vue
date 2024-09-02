@@ -35,12 +35,10 @@
 </template>
 
 
-
-
 <script>
-import { isMobile } from "@/utils/common.js"
-import { useMainStore } from "@/stores/mainStore.js"
-import { mapState } from "pinia"
+import {isMobile} from "@/utils/common.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {mapState} from "pinia"
 import {move} from "@/api/item.js"
 
 export default {
@@ -92,14 +90,13 @@ export default {
       canDrop(folder_id) {
          return (this.selected[0].parent_id !== folder_id) && this.$route.name === "Files"
       },
+
       async drop(folder_id) {
-
-
          if (!this.canDrop(folder_id)) return
          if (this.selectedCount === 0) return
 
          let listOfIds = this.selected.map(obj => obj.id)
-         await move({ ids: listOfIds, "new_parent_id": folder_id })
+         await move({ids: listOfIds, "new_parent_id": folder_id})
 
          let message = this.$t('toasts.movedItems')
          this.$toast.success(message)
@@ -120,10 +117,12 @@ export default {
  font-weight: bold;
  opacity: 1;
 }
+
 .breadcrumb-hovered i.material-icons {
  font-size: 32px;
  text-shadow: 0 0 2px black;
 }
+
 .breadcrumb-faded {
  opacity: 0.5;
 }
