@@ -1,3 +1,4 @@
+import base64
 import os
 import re
 import time
@@ -5,6 +6,8 @@ from datetime import datetime
 from urllib.parse import quote
 
 import requests
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.http import StreamingHttpResponse, HttpResponse
 from django.utils.encoding import smart_str
 from rest_framework.decorators import api_view, throttle_classes
@@ -25,18 +28,33 @@ def thumbnail_file(request, signed_file_id):
     res = requests.get(f"http://127.0.0.1:8000/api/file/thumbnail/{signed_file_id}")
     if not res.ok:
         return HttpResponse(status=res.status_code)
-
+    res_json = res.json()
+    
     def file_iterator(url, chunk_size=8192):
+        if res_json["is_encrypted"]:
+            # luckily or not - we store both key and iv in the database
+            key = base64.b64decode(res_json['key'])
+            iv = base64.b64decode(res_json['iv'])
+
+            cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+        
         discord_response = requests.get(url, stream=True)
         if discord_response.ok:
-            for chunk in discord_response.iter_content(chunk_size):
-                yield chunk
-
-    response = StreamingHttpResponse(file_iterator(res.json()["url"]), content_type="image/jpeg")
+            for raw_data in discord_response.iter_content(chunk_size):
+                if res_json["is_encrypted"]:
+                    decrypted_data = decryptor.update(raw_data)
+                    yield decrypted_data
+                else:
+                    yield raw_data
+            yield decryptor.finalize()
+            
+    response = StreamingHttpResponse(file_iterator(res_json["url"]), content_type="image/jpeg")
     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
     return response
 
 
+# todo  handle >416 Requested Range Not Satisfiable<
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def stream_file(request, signed_file_id):
@@ -47,6 +65,7 @@ def stream_file(request, signed_file_id):
     res = res.json()
     file = res["file"]
     fragments = res["fragments"]
+    print(f"========={file['name']}=========")
 
     filename_ascii = quote(smart_str(file["name"]))
     # Encode the filename using RFC 5987
@@ -60,7 +79,24 @@ def stream_file(request, signed_file_id):
             response['Content-Disposition'] = content_disposition
         return response
 
-    def file_iterator(index, start_byte, end_byte, chunk_size=8192):
+    def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192):
+        # file["is_encrypted"] = False
+        if file["is_encrypted"]:
+            # luckily or not - we store both key and iv in the database
+            key = base64.b64decode(file['key'])
+            iv = base64.b64decode(file['iv'])
+
+            cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+            
+            initial_bytes_to_simulate = real_start_byte
+            simulated_bytes = bytearray(initial_bytes_to_simulate)
+            start_time = time.perf_counter()
+
+            decryptor.update(simulated_bytes)
+            end_time = time.perf_counter()
+            print(f"Time taken for fake decryption (seconds): {end_time - start_time:.6f}")
+
         while index <= len(fragments):
             fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}/{index}")
             if not fragment_response.ok:
@@ -72,14 +108,20 @@ def stream_file(request, signed_file_id):
 
             discord_response = requests.get(url, headers=headers, stream=True)
             if discord_response.ok:
-                for chunk in discord_response.iter_content(chunk_size):
-                    yield chunk
+                for raw_data in discord_response.iter_content(chunk_size):
+                    if file["is_encrypted"]:
+                        decrypted_data = decryptor.update(raw_data)
+                        yield decrypted_data
+                    else:
+                        yield raw_data
             else:
                 print("============DISCORD ERROR============")
                 print(discord_response.status_code)
                 print(discord_response.text)
                 return
             index += 1
+        if file["is_encrypted"]:
+            yield decryptor.finalize()
 
     # parse range header to get start byte and end byte
     range_header = request.headers.get('Range')
@@ -99,22 +141,21 @@ def stream_file(request, signed_file_id):
     real_start_byte = start_byte
     selected_fragment_index = 1
     for fragment in fragments:
-        print("another fragment")
         if start_byte < fragment["size"]:
             selected_fragment_index = int(fragment["sequence"])
             break
         else:
             start_byte -= fragment["size"]
     # if range header was given then to allow seeking in the browser we need to return 206 - partial response. 
-    # Otherwise the response was probably called by download browser function, and we need to return 200
+    # Otherwise, the response was probably called by download browser function, and we need to return 200
     if range_header:
         status = 206
     else:
         status = 200
-    response = StreamingHttpResponse(file_iterator(selected_fragment_index, start_byte, end_byte), content_type=file["mimetype"], status=status)
+
+    response = StreamingHttpResponse(file_iterator(selected_fragment_index, start_byte, end_byte, real_start_byte), content_type=file["mimetype"], status=status)
 
     file_size = file["size"]
-    print(file)
     real_end_byte = 0
     for i in range(selected_fragment_index):
         real_end_byte += fragments[i]["size"]
@@ -129,10 +170,10 @@ def stream_file(request, signed_file_id):
     response['Content-Length'] = file_size
     response['Content-Disposition'] = content_disposition
 
-    if file["type"] == "text":
-        response['Cache-Control'] = "no-cache"
-    else:
-        response['Cache-Control'] = f"max-age={2628000}"  # 1 month
+    # if file["type"] == "text":
+    #     response['Cache-Control'] = "no-cache"
+    # else:
+    #     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
 
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important

@@ -10,12 +10,14 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 DISCORD_API_URL = "https://discord.com/api/v9"
 DISCORD_TOKEN = 'ODk0NTc4MDM5NzI2NDQwNTUy.GAqXhm.8M61gjcKM5d6krNf6oWBOt1ZSVmpO5PwPoGVa4'
 CHANNEL_ID = "870781149583130644"
-MESSAGE_ID = "1276526448563458143"
-KEY = "nBJsBFfUzlIw/2ip6zU2hcigIyorhp4cLrL7h7SYhN0="
+MESSAGE_ID = "1276552338630381712"
+KEY = "tF1KV+ipqSmIdfHeS5iVyKqB6M7f3NS2bU1isrzBxjo="
+IV = "wzotFW+LKD2iNfpDeR+wKg=="
 
 
-async def fetch_and_decrypt(url, key):
-    key = base64.b64decode(key)
+async def fetch_and_decrypt(url):
+    key = base64.b64decode(KEY)
+    iv = base64.b64decode(IV)
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
@@ -23,7 +25,7 @@ async def fetch_and_decrypt(url, key):
             content = await response.read()
 
             # Extract IV from the content
-            iv = content[:16]
+            
             encrypted_data = content[16:]
 
             cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
@@ -55,10 +57,10 @@ def get_file_info_from_message(channel_id, message_id):
 class DecryptFileView2(View):
     async def get(self, request, *args, **kwargs):
         file_url, filename = get_file_info_from_message(CHANNEL_ID, MESSAGE_ID)
-        decrypted_data = await fetch_and_decrypt(file_url, KEY)
+        decrypted_data = await fetch_and_decrypt(file_url)
 
         response = HttpResponse(decrypted_data, content_type='application/octet-stream')
-        response['Content-Disposition'] = 'attachment; filename="a.txt"'
+        response['Content-Disposition'] = 'attachment; filename="1.mp4"'
         return response
     
 ## this is the working version btw
