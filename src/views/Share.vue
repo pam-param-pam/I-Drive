@@ -1,12 +1,12 @@
 <template>
   <div>
-    <h4 v-if="!isShareValid" class="listing-notice">{{ $t('share.shareNotFound') }}</h4>
+    <h4 v-if="shareState === 'error'" class="listing-notice">{{ $t('share.shareNotFound') }}</h4>
 
-    <h4 v-if="isShareValid && !this.loading" class="listing-notice">
+    <h4 v-if="shareState === 'success'" class="listing-notice">
       {{ $t('share.info', {expiry: humanExpiry(expiry)}) }}</h4>
 
     <breadcrumbs
-      v-if="isShareValid && !this.loading"
+      v-if="shareState === 'success'"
       :base="'/share/' + token"
       :folderList="folderList"
     />
@@ -19,6 +19,7 @@
       @onOpen="onOpen"
 
     ></FileListing>
+    <errors v-if="shareState === 'passwordRequired'" :errorCode="error.response?.status"/>
 
 
   </div>
@@ -27,18 +28,18 @@
 <script>
 
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
-import HeaderBar from "@/components/header/HeaderBar.vue"
 import {getShare} from "@/api/share.js"
-import Action from "@/components/header/Action.vue"
 import {createZIP} from "@/api/item.js"
 import moment from "moment/min/moment-with-locales.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
 import FileListing from "@/views/files/FileListing.vue"
+import Errors from "@/views/Errors.vue";
 
 export default {
    name: "files",
    components: {
+      Errors,
       FileListing,
       Breadcrumbs,
    },
@@ -59,25 +60,23 @@ export default {
          folderList: [],
          expiry: null,
          shareObj: {},
-         shareErrored: false
+         shareState: "fetching"
 
       }
    },
    computed: {
       ...mapState(useMainStore, ["selected", "loading", "error", "disabledCreation", "settings", "selectedCount", "isLogged"]),
 
-      isShareValid() {
-         return !this.shareErrored
-      },
       headerButtons() {
          return {
             download: this.selectedCount > 0,
-            info:  this.selectedCount > 0
+            info: this.selectedCount > 0
          }
       }
 
    },
    created() {
+      document.title = "share"
 
       //if anonymous user, we need to set state like locale or viewMode etc
       if (!this.isLogged) {
@@ -135,31 +134,26 @@ export default {
             }
          }
 
-
       },
 
       async fetchShare() {
 
-         this.setLoading(true)
-         this.setError(null)
+      try {
+         let res = await getShare(this.token, this.folderId)
 
-         try {
-            let res = await getShare(this.token, this.folderId)
-            this.shareObj = res
-            this.items = res.share
-            this.folderList = res.breadcrumbs
-            this.expiry = res.expiry
-            this.setItems(this.items)
+         this.shareObj = res
+         this.items = res.share
+         this.folderList = res.breadcrumbs
+         this.expiry = res.expiry
+         this.setItems(this.items)
+         this.shareState = 'success'
+      }
+         finally {
+         this.shareState = 'error'
 
-         } catch {
-            this.shareErrored = true
-            //todo networked bullshit with seterror and setloaidng uh
-         } finally {
-            this.setLoading(false)
-            document.title = "share"
-            //todo share i18n name
+      }
 
-         }
+
       },
 
       humanExpiry(date) {

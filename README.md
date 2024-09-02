@@ -5,41 +5,42 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 
 # Features
 
-| Feature                                                   | Support                |
-|-----------------------------------------------------------|------------------------|
-| Login system                                              | ✅                      |
-| Full File encryption                                      | ✅                      |
-| Permission system                                         | ✅                      |
-| Stream audio/video/images online without downloading      | ✅                      |
-| Upload files & folders                                    | ✅                      |
-| Websockets to show changes live    🎥                     | ✅                      |
-| Drag and drop upload                                      | ⚠️ Coming soon         |
-| Create folders                                            | ✅                      |
-| UI error handling                                         | ✅                      |
-| Lock folders with password                                | ✅                      |
-| Download files & folders                                  | ✅                      |
-| Bulk zip download                                         | ✅                      |
-| Share files & folders                                     | ✅                      |
-| Lock shares with password                                 | ❌ Coming one day       |
-| Delete files & folders                                    | ✅                      |
-| Rename                                                    | ✅                      |
-| Show folder                                               | ✅                      |
-| Search                                                    | ✅                      |
-| Wastebasket                                               | ✅                      |
-| Supports Polish & English                                 | ✅                      |
-| Video thumbnails                                          | ✅                      |
-| Caching support                                           | ✅                      |
-| Move                                                      | ✅                      |
-| Drag and drop move                                        | ✅                      |
-| Code editor with highlighting                             | ✅                      |
-| Raw image previewer                                       | ✅                      |
-| Right-click context menu                                  | ✅                      |
-| Mobile support                                            | ✅                      |
-| Supports uploading < 10 files in a single discord request | ✅                      |
-| Backend rate limiting                                     | ✅                      |
-| Error handling in upload process                          | ️ ⚠️ Only partial      |
-| Proper handling of 429                                    | ❌   Coming one day                    |
-| Custom ZIP64 Library to zip & stream files on the fly     | ❌   Coming one day                    |
+| Feature                                                   | Support            |
+|-----------------------------------------------------------|--------------------|
+| Login system                                              | ✅                  |
+| Full File encryption                                      | ✅                  |
+| Permission system                                         | ✅                  |
+| Stream audio/video/images online without downloading      | ✅                  |
+| Upload files & folders                                    | ✅                  |
+| Websockets to show changes live    🎥                     | ✅                  |
+| Drag and drop upload                                      | ⚠️ Coming soon     |
+| Create folders                                            | ✅                  |
+| UI error handling                                         | ✅                  |
+| Lock folders with password                                | ✅                  |
+| Download files & folders                                  | ✅                  |
+| Bulk zip download                                         | ✅                  |
+| Share files & folders                                     | ✅                  |
+| Lock shares with password                                 | ❌ Coming one day   |
+| Delete files & folders                                    | ✅                  |
+| Rename                                                    | ✅                  |
+| Show folder                                               | ✅                  |
+| Search                                                    | ✅                  |
+| Wastebasket                                               | ✅                  |
+| Supports Polish & English                                 | ✅                  |
+| Video thumbnails                                          | ✅                  |
+| Caching support                                           | ✅                  |
+| Move                                                      | ✅                  |
+| Drag and drop move                                        | ✅                  |
+| Code editor with highlighting                             | ✅                  |
+| Raw image previewer                                       | ✅                  |
+| Right-click context menu                                  | ✅                  |
+| Mobile support                                            | ✅                  |
+| Supports uploading < 10 files in a single discord request | ✅                  |
+| Backend rate limiting                                     | ✅                  |
+| Error handling in upload process                          | ️ ⚠️ Only partial  |
+| Proper handling of 429                                    | ❌   Coming one day |
+| Custom ZIP64 Library to zip & stream files on the fly     | ❌   Coming one day |
+| Proper frontend networking & handling of errors           | ❌   Coming never   |
 
 
 

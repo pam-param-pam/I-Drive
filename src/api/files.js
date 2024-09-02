@@ -8,7 +8,7 @@ export async function getFile(file_id, lockFrom) {
    let password = store.getFolderPassword(lockFrom)
    let response = await backend_instance.get(url, {
       headers: {
-         "x-folder-password": password
+         "x-resource-password": password
       }
    })
    return response.data

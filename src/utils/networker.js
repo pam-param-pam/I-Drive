@@ -159,7 +159,7 @@ backend_instance.interceptors.response.use(
                if (config.method === 'get') {
                   config.headers = {
                      ...config.headers,
-                     'X-folder-password': passwordExists[0]?.password || '', // Add the folder password to the headers
+                     'X-resource-password': passwordExists[0]?.password || '', // Add the folder password to the headers
                   }
                } else {
                   config.data.resourcePasswords = {}

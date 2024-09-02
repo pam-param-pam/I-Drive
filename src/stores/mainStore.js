@@ -123,6 +123,8 @@ export const useMainStore = defineStore('main', {
          }
       },
       setLoading(value) {
+         console.log("setting loading")
+         console.log(value)
          this.loading = value
       },
       setReload(value) {

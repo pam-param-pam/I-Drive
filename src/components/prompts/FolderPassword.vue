@@ -47,10 +47,10 @@
 </template>
 
 <script>
-import {isPasswordCorrect} from "@/api/item.js"
 import throttle from "lodash.throttle"
 import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
+import {isPasswordCorrect} from "@/api/resource.js";
 
 
 export default {

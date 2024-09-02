@@ -1,4 +1,5 @@
 import {backend_instance} from "@/utils/networker.js"
+import {useMainStore} from "@/stores/mainStore.js";
 
 export async function getAllShares() {
    let url = "/api/shares"
@@ -9,6 +10,8 @@ export async function getAllShares() {
 export async function getShare(token, folderId = "") {
    let url = `/api/share/${token}`
    if (folderId) url = url + `/${folderId}`
+
+
    let response = await backend_instance.get(url, {
       headers: {
          "Authorization": false,

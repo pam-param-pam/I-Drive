@@ -464,7 +464,7 @@ export default {
 
    },
    computed: {
-      ...mapState(useMainStore, ["items", "isContextMenuVisible", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
+      ...mapState(useMainStore, ["items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
       viewIcon() {
          const icons = {
             list: "view_module",

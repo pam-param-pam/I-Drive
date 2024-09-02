@@ -11,7 +11,7 @@ export async function getItems(folder_id, lockFrom) {
    return backend_instance.get(url, {
       __cancelSignature: 'getItems',
       headers: {
-         "x-folder-password": password
+         "x-resource-password": password
       }
    })
       .then(response => {
@@ -41,7 +41,7 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
    if (oldPassword === "") {
       oldPassword = null
    } else {
-      headers["X-Folder-Password"] = encodeURIComponent(oldPassword)
+      headers["X-resource-Password"] = encodeURIComponent(oldPassword)
 
    }
    if (password === "") {
@@ -70,7 +70,7 @@ export async function getUsage(folderId, lockFrom) {
    let url = `/api/folder/usage/${folderId}`
    let response = await backend_instance.get(url, {
       headers: {
-         "x-folder-password": password
+         "x-resource-password": password
       }
    })
    return response.data
