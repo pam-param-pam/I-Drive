@@ -80,7 +80,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["loading", "items", "perms", "settings", "error", "user"]),
+      ...mapState(useMainStore, ["loading", "items", "settings", "error", "user"]),
 
       isInShareContext() {
          return this.token !== undefined

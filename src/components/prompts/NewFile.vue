@@ -49,7 +49,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["isFiles", "isListing"]),
+      ...mapState(useMainStore, ["currentFolder"]),
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),

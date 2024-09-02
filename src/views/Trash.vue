@@ -39,7 +39,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["error", "items", "selected", "settings", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount"]),
+      ...mapState(useMainStore, ["error", "items", "selected", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount"]),
       headerButtons() {
          return {
             shell: this.perms.execute,
@@ -65,7 +65,6 @@ export default {
    },
 
    methods: {
-      isMobile,
       ...mapActions(useMainStore, ["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
 
       async fetchFolder() {

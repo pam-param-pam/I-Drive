@@ -53,7 +53,7 @@ import {mapActions, mapState} from "pinia"
 export default {
    name: "shell",
    computed: {
-      ...mapState(useMainStore, ["user", "showShell", "isFiles", "isLogged"]),
+      ...mapState(useMainStore, ["user", "showShell", "isFiles"]),
       path: function () {
          if (this.isFiles) {
             return this.$route.path

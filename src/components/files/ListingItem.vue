@@ -83,6 +83,9 @@ export default {
             if (item === this.item) {
                return false
             }
+            if (item.id === this.item.id) {
+               return false
+            }
          }
          return true
       },

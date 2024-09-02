@@ -74,7 +74,7 @@ export default {
       }
    },
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "setLoading", "setError", "showHover"]),
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "setError", "showHover"]),
 
 
       submit: throttle(async function (event) {

@@ -64,7 +64,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["selected", "loading", "error", "disabledCreation", "settings", "selectedCount", "currentPrompt", "isLogged"]),
+      ...mapState(useMainStore, ["selected", "loading", "error", "disabledCreation", "settings", "selectedCount", "isLogged"]),
 
       isShareValid() {
          return !this.shareErrored

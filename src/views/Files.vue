@@ -66,7 +66,7 @@ export default {
          isSearchActive: false,
          folderList: [],
          source: null,
-
+         dragCounter: 0
       }
    },
    computed: {
@@ -108,7 +108,6 @@ export default {
       ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),
       ...mapActions(useUploadStore, ["startUpload"]),
 
-      isMobile,
       onDragEnter() {
          this.dragCounter++
 

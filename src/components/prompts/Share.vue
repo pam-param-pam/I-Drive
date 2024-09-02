@@ -129,7 +129,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["selected", "selected"]),
+      ...mapState(useMainStore, ["selected"]),
    },
 
    async created() {

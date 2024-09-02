@@ -20,6 +20,7 @@ import Shell from "@/components/Shell.vue"
 import UploadFiles from "../components/prompts/UploadFiles.vue"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapState} from "pinia"
+import {useUploadStore} from "@/stores/uploadStore.js";
 
 export default {
    name: "layout",
@@ -34,17 +35,12 @@ export default {
       console.log(`Render triggered on component 'Layout'`, {key, target, type})
    },
    computed: {
-      ...mapState(useMainStore, ["perms", "progress"]),
+      ...mapState(useMainStore, ["perms"]),
+      ...mapState(useUploadStore, ["progress"]),
 
       isExecEnabled() {
          return this.perms?.execute
       }
    },
-   // watch: {
-   //   $route() {
-   //     this.$store.commit("resetSelected")
-   //
-   //   },
-   // },
 }
 </script>

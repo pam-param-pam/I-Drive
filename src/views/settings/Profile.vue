@@ -169,7 +169,7 @@ export default {
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
    },
    methods: {
-      ...mapActions(useMainStore, ["updateUser", "setLoading", "setToken", "updateSettings"]),
+      ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings"]),
 
       savePassword: throttle(async function (event) {
          if (this.password !== this.passwordConf || this.password === "") {

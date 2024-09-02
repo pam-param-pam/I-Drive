@@ -528,7 +528,7 @@ export default {
    methods: {
       isMobile,
 
-      ...mapActions(useMainStore, ["toggleShell", "setContextMenuVisibility", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
+      ...mapActions(useMainStore, ["toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
          this.$emit('uploadInput', event)
