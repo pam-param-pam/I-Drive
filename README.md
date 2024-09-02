@@ -5,40 +5,41 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 
 # Features
 
-| Feature                                                | Support                |
-|--------------------------------------------------------|------------------------|
-| Login system                                           | ✅                      |
-| Full File encryption                                   | ✅                      |
-| Permission system                                      | ✅                      |
-| Stream audio/video/images online without downloading   | ✅                      |
-| Upload files & folders                                 | ✅                      |
-| Websockets to show changes live    🎥                  | ✅                      |
-| Drag and drop upload                                   | ⚠️ Coming soon         |
-| Create folders                                         | ✅                      |
-| Lock folders with password                             | ✅                      |
-| Download files & folders                               | ✅                      |
-| Bulk zip download                                      | ✅                      |
-| Share files & folders                                  | ✅                      |
-| Lock shares with password                              | ❌ Coming one day       |
-| Delete files & folders                                 | ✅                      |
-| Rename                                                 | ✅                      |
-| Show folder                                            | ✅                      |
-| Search                                                 | ✅                      |
-| Wastebasket                                            | ✅                      |
-| Supports Polish & English                              | ✅                      |
-| Video thumbnails                                       | ✅                      |
-| Caching support                                        | ✅                      |
-| Move                                                   | ✅                      |
-| Drag and drop move                                     | ✅                      |
-| Code editor with highlighting                          | ✅                      |
-| Raw image previewer                                    | ✅                      |
-| Right-click context menu                               | ✅                      |
-| Mobile support                                         | ✅                      |
+| Feature                                                   | Support                |
+|-----------------------------------------------------------|------------------------|
+| Login system                                              | ✅                      |
+| Full File encryption                                      | ✅                      |
+| Permission system                                         | ✅                      |
+| Stream audio/video/images online without downloading      | ✅                      |
+| Upload files & folders                                    | ✅                      |
+| Websockets to show changes live    🎥                     | ✅                      |
+| Drag and drop upload                                      | ⚠️ Coming soon         |
+| Create folders                                            | ✅                      |
+| UI error handling                                         | ✅                      |
+| Lock folders with password                                | ✅                      |
+| Download files & folders                                  | ✅                      |
+| Bulk zip download                                         | ✅                      |
+| Share files & folders                                     | ✅                      |
+| Lock shares with password                                 | ❌ Coming one day       |
+| Delete files & folders                                    | ✅                      |
+| Rename                                                    | ✅                      |
+| Show folder                                               | ✅                      |
+| Search                                                    | ✅                      |
+| Wastebasket                                               | ✅                      |
+| Supports Polish & English                                 | ✅                      |
+| Video thumbnails                                          | ✅                      |
+| Caching support                                           | ✅                      |
+| Move                                                      | ✅                      |
+| Drag and drop move                                        | ✅                      |
+| Code editor with highlighting                             | ✅                      |
+| Raw image previewer                                       | ✅                      |
+| Right-click context menu                                  | ✅                      |
+| Mobile support                                            | ✅                      |
 | Supports uploading < 10 files in a single discord request | ✅                      |
-| Backend rate limiting                                  | ✅                      |
-| Error handling in upload process                       | ️ ⚠️ Only partial      |
-| Proper handling of 429                                 | ❌   Coming one day                    |
-| Custom ZIP64 Library to zip & stream files on the fly  | ❌   Coming one day                    |
+| Backend rate limiting                                     | ✅                      |
+| Error handling in upload process                          | ️ ⚠️ Only partial      |
+| Proper handling of 429                                    | ❌   Coming one day                    |
+| Custom ZIP64 Library to zip & stream files on the fly     | ❌   Coming one day                    |
 
 
 
@@ -89,6 +90,12 @@ This is mostly for simplicity reasons and low demand.
 Sadly, this introduces challenges like streamer backend having no access to it. 
 This is solved by main backend having special endpoints for serving metadata & download info about files.
 
+### Redis
+Fast in memory databases for caching.
+
+### Celery
+Asynchronous task queue for delegating long taks like file deletion outside HTTP call lifecycle.
+
 # Other
 
 ### Why are Streamer Backend and Main Backend split?
@@ -110,7 +117,7 @@ There are 2 main ways to do this.
 **I Drive** uses webhooks.
 
 
-#### CORS
+### CORS
 
 As with any secure site, discord doesn't allow other websites to fetch and download data from the API. 
 This is a big issue, because it blocks the ability to download your files from the web client directly.

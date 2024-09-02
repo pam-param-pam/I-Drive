@@ -1,8 +1,7 @@
 <template>
   <div>
     <p>
-      {{ $t("prompts.currentFolder") }} <code>{{ nav?.name }}</code>
-      .
+      {{ $t("prompts.moveTo") }} <code>{{ nav?.folder_path }}</code>
     </p>
     <ul class="file-list">
       <li
@@ -17,11 +16,6 @@
         {{ item.name }}
       </li>
     </ul>
-
-    <p>
-      {{ $t("prompts.moveTo") }} <code>{{ nav?.folder_path }}</code>
-      .
-    </p>
   </div>
 </template>
 

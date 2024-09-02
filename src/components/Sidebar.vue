@@ -107,7 +107,7 @@
           rel="noopener noreferrer"
           target="_blank"
           href="https://github.com/pam-param-pam/I-Drive-Frontend"
-        >{{ name }} By {{ author }} v{{ version }}</a
+        >{{ name }} By {{ author }} v.{{ version }}</a
         >
       </span>
       <span>
