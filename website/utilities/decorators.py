@@ -40,7 +40,7 @@ def check_file_and_permissions(view_func):
                     error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),
                     status=404)
             if file_obj.is_locked:
-                password = request.headers.get("X-Folder-Password")
+                password = request.headers.get("X-resource-Password")
                 if file_obj.password and file_obj.password != password:
                     raise MissingOrIncorrectResourcePasswordError([file_obj.lockFrom])
 
@@ -87,7 +87,7 @@ def check_folder_and_permissions(view_func):
                     status=403)
 
             if folder_obj.is_locked:
-                password = request.headers.get("X-Folder-Password")
+                password = request.headers.get("X-resource-Password")
                 if folder_obj.password and folder_obj.password != password:
                     raise MissingOrIncorrectResourcePasswordError([folder_obj.lockFrom])
 

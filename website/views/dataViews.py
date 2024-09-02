@@ -10,14 +10,14 @@ from ipware import get_client_ip
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Folder, Fragment, UserZIP
+from website.models import File, Folder, Fragment, UserZIP, ShareableLink
 from website.tasks import prefetch_discord_message
 from website.utilities.Discord import discord
 from website.utilities.Permissions import ReadPerms
 from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
-from website.utilities.errors import BadRequestError
+from website.utilities.errors import BadRequestError, ResourceNotFoundError
 from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, get_flattened_children, \
     create_zip_file_dict, check_resource_perms, error_res, calculate_size, calculate_file_and_folder_count
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
@@ -84,7 +84,7 @@ def get_file(request, file_obj):
 
 
 @cache_page(60 * 1)
-@vary_on_headers("x-folder-password")
+@vary_on_headers("x-resource-password")
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -149,7 +149,7 @@ def search(request):
     resultLimit = int(request.GET.get('resultLimit', 20))
 
     lockFrom = request.GET.get('lockFrom', None)
-    password = request.headers.get("X-Folder-Password")
+    password = request.headers.get("X-resource-Password")
     if resultLimit > 500:
         raise BadRequestError("'showLimit' cannot be > 500")
 
@@ -229,12 +229,16 @@ def get_trash(request):
 @throttle_classes([FolderPasswordRateThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
-def check_password(request, item_id):
-    item = get_resource(item_id)
-    check_resource_perms(request, item, checkRoot=False, checkFolderLock=False)
+def check_password(request, resource_id):
+    try:
+        item = get_resource(resource_id)
+        check_resource_perms(request, item, checkRoot=False, checkFolderLock=False)
+    except ResourceNotFoundError:
+        item = ShareableLink.objects.get(id=resource_id)
 
-    password = request.headers.get("X-Folder-Password")
-
+    password = request.headers.get("X-Resource-Password")
+    print(password)
+    print(item.password)
     if item.password == password:
         return HttpResponse(status=204)
 

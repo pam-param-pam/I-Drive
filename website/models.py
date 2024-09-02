@@ -348,7 +348,8 @@ class ShareableLink(models.Model):
     def is_expired(self):
         return timezone.now() >= self.expiration_time
 
-
+    def is_locked(self):
+        return self.password
 class Thumbnail(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)

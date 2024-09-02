@@ -1,6 +1,6 @@
 import base64
 from datetime import timedelta, datetime
-from typing import Union, List
+from typing import Union, List, Dict
 
 from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
@@ -205,6 +205,38 @@ def create_share_dict(share: ShareableLink) -> ShareDict:
     }
     return item
 
+def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDict, FolderDict]) -> Dict:
+    # hide lockFrom info
+    del resource_dict['isLocked']
+    try:
+        del resource_dict['lockFrom']
+    except KeyError:
+        pass
+    if share.is_locked():
+        resource_dict['isLocked'] = True
+        resource_dict['lockFrom'] = share.id
+    return resource_dict
+
+def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource) -> Dict:
+    if isinstance(resource_in_share, Folder):
+        resource_dict = create_folder_dict(resource_in_share)
+    else:
+        resource_dict = create_file_dict(resource_in_share)
+
+    return hide_info_in_share_context(share, resource_dict)
+
+
+def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
+    folder_dict = build_folder_content(folder_obj, include_folders, include_files)
+
+    if share.is_locked():
+        censored_children = []
+        for resource_dict in folder_dict['children']:
+            censored_child = hide_info_in_share_context(share, resource_dict)
+            censored_children.append(censored_child)
+        folder_dict['children'] = censored_children
+
+    return folder_dict
 
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
     file_children = []
@@ -270,7 +302,7 @@ def check_resource_perms(request, resource: Resource, checkOwnership=True, check
 
 
 def check_folder_password(request, resource: Resource) -> None:
-    password = request.headers.get("X-Folder-Password")
+    password = request.headers.get("X-Resource-Password")
     passwords = request.data.get('resourcePasswords')
     if resource.is_locked:
         if password:

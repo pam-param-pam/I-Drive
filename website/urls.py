@@ -56,7 +56,6 @@ urlpatterns = [
                   path("api/folder/moreinfo/<folder_id>", fetch_additional_info, name="fetch more info about a folder"),
 
                   path("api/item/move", move, name="move file/folder"),
-                  path("api/item/password/<item_id>", check_password, name="check password"),
                   path("api/item/delete", delete, name="delete file/folder"),
                   path("api/item/moveToTrash", move_to_trash, name="move file/folder to trash"),
                   path("api/item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
@@ -64,6 +63,8 @@ urlpatterns = [
 
                   path('api/fragments/<file_id>/<int:sequence>', get_fragment, name="get fragments"),
                   path('api/fragments/<file_id>', get_fragments_info, name="get fragments"),
+
+                  path("api/resource/password/<resource_id>", check_password, name="check password"),
 
                   path('admin', admin.site.urls),
                   path("", index, name="index"),

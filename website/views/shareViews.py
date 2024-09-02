@@ -1,4 +1,6 @@
+import time
 from datetime import timedelta
+from typing import Dict
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
@@ -8,10 +10,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from website.models import File, Folder, UserSettings, ShareableLink
 from website.utilities.Permissions import SharePerms
+from website.utilities.TypeHinting import Resource
 from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
+from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, MissingOrIncorrectResourcePasswordError
 from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
-    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms
+    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, build_share_folder_content
 from website.utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -32,26 +35,33 @@ def get_shares(request):
     return JsonResponse(items, status=200, safe=False)
 
 
+
+
 @api_view(['GET'])
 @throttle_classes([MyAnonRateThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
 def view_share(request, token, folder_id=None):
+    password = request.headers.get("X-Resource-Password")
     share = ShareableLink.objects.get(token=token)
 
     if share.is_expired():
         return HttpResponse("Share is expired", status=404)
 
+    if share.password and share.password != password:
+        return JsonResponse({"code": 469, "details": "Resource password is missing", "error": "Password is missing",
+                             "requiredFolderPasswords": [{"id": share.id, "name": f"share"}]}, status=469)
+
     if share.content_type.name == "folder":
         obj_in_share = Folder.objects.get(id=share.object_id)
         settings = UserSettings.objects.get(user=obj_in_share.owner)
-        response_dict = create_folder_dict(obj_in_share)
+        response_dict = create_share_resource_dict(share, obj_in_share)
         breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
 
     else:
         obj_in_share = File.objects.get(id=share.object_id)
         settings = UserSettings.objects.get(user=obj_in_share.owner)
-        response_dict = create_file_dict(obj_in_share)
+        response_dict = create_share_resource_dict(share, obj_in_share)
         breadcrumbs = []
 
     # hide parent_id since upper parent is not shared
@@ -75,7 +85,7 @@ def view_share(request, token, folder_id=None):
         folder = requested_folder
         while folder:
             if folder == obj_in_share:
-                folder_content = build_folder_content(requested_folder, include_folders=settings.subfolders_in_shares)["children"]
+                folder_content = build_share_folder_content(share, requested_folder, include_folders=settings.subfolders_in_shares)["children"]
 
                 return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
             folder = folder.parent
