@@ -1,4 +1,4 @@
-from typing import Union, TypedDict, Optional, List, Required
+from typing import Union, TypedDict, Optional, List, Any
 
 from django.db.models import PositiveBigIntegerField
 from datetime import datetime
@@ -21,11 +21,11 @@ class FileDict(TypedDict):
     parent_id: Union[ShortUUIDField, None]
     extension: str
     size: PositiveBigIntegerField
-    encrypted_size: PositiveBigIntegerField
     type: str
     created: str
     last_modified: str
     isLocked: bool
+    is_encrypted: bool
     lockFrom: Optional[ShortUUIDField]
     in_trash_since: Optional[str]
     iso: Optional[str]
@@ -42,7 +42,7 @@ class FolderDict(TypedDict):
     isDir: bool
     id: ShortUUIDField
     name: str
-    parent_id: Union[ShortUUIDField, None]
+    parent_id: Union[ShortUUIDField, None, Any]
     numFiles: int
     numFolders: int
     created: str
@@ -65,7 +65,7 @@ class ZipFileDict(TypedDict):
     mimetype: str
     type: str
     modified_at: datetime
-    key: Required[str]
+    key: str
     fragments: List[PartialFragmentDict]
 
 class ShareDict(TypedDict):

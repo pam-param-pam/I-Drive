@@ -1,4 +1,5 @@
 import base64
+import time
 
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -20,7 +21,6 @@ from website.utilities.throttle import MyUserRateThrottle
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_file(request):
-
     if request.method == "POST":
         files = request.data['files']
         if not isinstance(files, list):
@@ -41,6 +41,8 @@ def create_file(request):
             mimetype = file['mimetype']
             file_size = file['size']
             file_index = file['index']
+            is_encrypted = file['is_encrypted']
+
             if mimetype == "":
                 mimetype = "text/plain"
 
@@ -60,6 +62,7 @@ def create_file(request):
                 type=file_type,
                 owner_id=request.user.id,
                 parent=parent,
+                is_encrypted=is_encrypted,
             )
             #  apply lock if needed
             if parent.is_locked:
@@ -68,43 +71,62 @@ def create_file(request):
             if file_size == 0:
                 file_obj.ready = True
             file_obj.save()
+            key = file_obj.get_base64_key()
+            iv = file_obj.get_base64_iv()
+            file_response_dict = {"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
+                                  "type": file_type, "is_encrypted": file_obj.is_encrypted}
 
-            response_json.append(
-                {"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
-                 "type": file_type, "key": base64.b64encode(file_obj.key).decode('utf-8')})
+            if file_obj.is_encrypted:
+                file_response_dict['key'] = key
+                file_response_dict['iv'] = iv
+
+            response_json.append(file_response_dict)
 
         return JsonResponse(response_json, safe=False)
 
     if request.method == "PATCH":
-        file_id = request.data['file_id']
-        fragment_sequence = request.data['fragment_sequence']
-        total_fragments = request.data['total_fragments']
-        message_id = request.data['message_id']
-        attachment_id = request.data['attachment_id']
-        fragment_size = request.data['fragment_size']
-        # return fragment ID
+        files = request.data['files']
+        if not isinstance(files, list):
+            raise BadRequestError("'ids' must be a list.")
 
-        file_obj = get_resource(file_id)
-        check_resource_perms(request, file_obj)
+        if len(files) > 100:
+            raise BadRequestError("'ids' cannot be larger than 100")
 
-        if file_obj.ready:
-            raise BadRequestError("You cannot further modify a 'ready' file!")
+        if len(files) == 0:
+            raise BadRequestError("'ids' length cannot be 0.")
+        for file in files:
 
-        fragment_obj = Fragment(
-            sequence=fragment_sequence,
-            file=file_obj,
-            size=fragment_size,
-            attachment_id=attachment_id,
-            encrypted_size=fragment_size,
-            message_id=message_id,
-        )
-        fragment_obj.save()
-        if fragment_sequence == total_fragments:
-            file_obj.ready = True
-            file_obj.save()
+            file_id = file['file_id']
+            fragment_sequence = file['fragment_sequence']
+            total_fragments = file['total_fragments']
+            message_id = file['message_id']
+            attachment_id = file['attachment_id']
+            fragment_size = file['fragment_size']
 
-            send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
-            return HttpResponse(status=204)
+            file_obj = get_resource(file_id)
+            check_resource_perms(request, file_obj)
+
+            if file_obj.ready:
+                raise BadRequestError("You cannot further modify a 'ready' file!")
+
+            fragment_obj = Fragment(
+                sequence=fragment_sequence,
+                file=file_obj,
+                size=fragment_size,
+                attachment_id=attachment_id,
+                message_id=message_id,
+            )
+            fragment_obj.save()
+            if len(file_obj.fragments.all()) == total_fragments:
+                file_obj.ready = True
+                file_obj.created_at = timezone.now()
+                file_obj.save()
+
+                send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
+
+                # return only in chunked file upload
+                if len(files) == 0:
+                    return HttpResponse("File is ready now", status=200)
 
         return HttpResponse(status=204)
 
@@ -159,7 +181,6 @@ def create_file(request):
             file=file_obj,
             size=fragment_size,
             attachment_id=attachment_id,
-            encrypted_size=fragment_size,
             message_id=message_id,
         )
         fragment_obj.save()
@@ -174,29 +195,28 @@ def create_file(request):
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-@handle_common_errors
-def create_preview(request):
+# @handle_common_errors
+def create_thumbnail(request):
+    print(request.data)
     file_id = request.data['file_id']
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     size = request.data['size']
-    encrypted_size = request.data['encrypted_size']
-    key = request.data['key']
 
     file_obj = get_resource(file_id)
     check_resource_perms(request, file_obj)
 
-    if file_obj.thumbnail:
-        raise ThumbnailAlreadyExistsError()
+    try:
+        if file_obj.thumbnail:
+            raise ThumbnailAlreadyExistsError("A thumbnail already exists for this file.")
+    except File.thumbnail.RelatedObjectDoesNotExist:
+        pass
 
     thumbnail_obj = Thumbnail(
         file=file_obj,
         message_id=message_id,
         attachment_id=attachment_id,
         size=size,
-        encrypted_size=encrypted_size,
-        key=key,
-
     )
     thumbnail_obj.save()
     return HttpResponse(status=204)

@@ -5,13 +5,13 @@ from django.urls import path
 from djoser.views import TokenCreateView
 
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info, get_dirs, fetch_additional_info
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info, get_dirs, fetch_additional_info, get_secrets
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, create_zip_model, reset_folder_password
 from website.views.otherViews import index, generate_keys, test
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import get_preview
-from website.views.uploadViews import create_file, create_preview
+from website.views.uploadViews import create_file, create_thumbnail
 from website.views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
 
 urlpatterns = [
@@ -29,8 +29,9 @@ urlpatterns = [
                   path("api/file/create", create_file, name="create file"),
                   path("api/file/<file_id>", get_file, name="get file by file id"),
                   path("api/file/preview/<file_id>", get_preview, name="get preview by file id"),
-                  path("api/file/thumbnail/create", create_preview, name="create preview"),
+                  path("api/file/thumbnail/create", create_thumbnail, name="create preview"),
                   path("api/file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
+                  path("api/file/secrets/<file_id>", get_secrets, name="gets encryption key and iv"),
 
                   path("auth/token/login", TokenCreateView.as_view(), name="login"),
                   path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),

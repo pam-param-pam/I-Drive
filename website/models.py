@@ -1,3 +1,4 @@
+import base64
 import secrets
 
 import shortuuid
@@ -146,9 +147,8 @@ class File(models.Model):
     size = models.PositiveBigIntegerField()
     mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
     type = models.CharField(max_length=15, null=False, blank=False, default="text")
-    key = models.BinaryField(default=secrets.token_bytes(32))
+    key = models.BinaryField()
     inTrash = models.BooleanField(default=False)
-    encrypted_size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files')
@@ -158,6 +158,8 @@ class File(models.Model):
     autoLock = models.BooleanField(default=False)
     password = models.CharField(max_length=255, null=True, blank=True)
     lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    encryption_iv = models.BinaryField()
+    is_encrypted = models.BooleanField(default=True)
 
     def _is_locked(self):
         if self.password:
@@ -205,12 +207,20 @@ class File(models.Model):
         except File.DoesNotExist:
             pass
 
-        if self.encrypted_size is None:
-            self.encrypted_size = self.size
-
         self.last_modified_at = timezone.now()
+        if not self.key:
+            self.key = secrets.token_bytes(32)
+
+        if not self.encryption_iv:
+            self.encryption_iv = secrets.token_bytes(16)
 
         super(File, self).save(*args, **kwargs)
+
+    def get_base64_key(self):
+        return base64.b64encode(self.key).decode('utf-8')
+
+    def get_base64_iv(self):
+        return base64.b64encode(self.encryption_iv).decode('utf-8')
 
     def delete(self, *args, **kwargs):
         # invalidate any cache
@@ -252,9 +262,10 @@ class UserSettings(models.Model):
     view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
+    encrypt_files = models.BooleanField(default=True)
+    concurrent_upload_requests = models.SmallIntegerField(default=4)
     subfolders_in_shares = models.BooleanField(default=False)
     discord_webhook = models.TextField(null=True)
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.user.username + "'s settings"
@@ -301,7 +312,6 @@ class Fragment(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
     message_id = models.CharField(max_length=255)
     size = models.PositiveBigIntegerField()
-    encrypted_size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     attachment_id = models.CharField(max_length=255, null=True)
 
@@ -343,11 +353,9 @@ class Thumbnail(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
-    encrypted_size = models.PositiveBigIntegerField()
     attachment_id = models.CharField(max_length=255)
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
-    key = models.BinaryField()
 
     def __str__(self):
         return self.file.name

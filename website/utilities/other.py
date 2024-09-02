@@ -1,17 +1,16 @@
+import base64
 from datetime import timedelta, datetime
 from typing import Union, List
 
 from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-from django.db.models import DateTimeField
 from django.utils import timezone
 
 from website.models import File, Folder, UserSettings, Preview, ShareableLink, Thumbnail
 from website.tasks import queue_ws_event
-from website.utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ErrorDict, ZipFileDict, PartialFragmentDict
+from website.utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ErrorDict, ZipFileDict
 from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, message_codes, EventCode
-from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingResourcePasswordError, \
-    MissingOrIncorrectResourcePasswordError
+from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError
 
 signer = TimestampSigner()
 
@@ -108,13 +107,10 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         'extension': file_obj.extension,
         'size': file_obj.size,
         'type': file_obj.type,
-        'encrypted_size': file_obj.encrypted_size,
         'created': formatDate(file_obj.created_at),
         'last_modified': formatDate(file_obj.last_modified_at),
-        'isLocked': file_obj.is_locked
-        # 'ready': file_obj.ready,
-        # 'owner': file_obj.owner.username,
-        # "maintainers": [],
+        'isLocked': file_obj.is_locked,
+        'is_encrypted': file_obj.is_encrypted
     }
     if file_obj.is_locked:
         file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else file_obj.id
@@ -168,7 +164,7 @@ def create_folder_dict(folder_obj: Folder) -> FolderDict:
         'isDir': True,
         'id': folder_obj.id,
         'name': folder_obj.name,
-        'parent_id': folder_obj.parent.id,
+        'parent_id': folder_obj.parent_id,
         "numFiles": len(file_children),
         "numFolders": len(folder_children),
         'created': formatDate(folder_obj.created_at),
@@ -208,26 +204,6 @@ def create_share_dict(share: ShareableLink) -> ShareDict:
         # "download_url": f"{GET_BASE_URL}/"
     }
     return item
-
-
-@DeprecationWarning
-def get_shared_folder(folder_obj: Folder, includeSubfolders: bool) -> FolderDict:
-    def recursive_build(folder):
-        file_children = folder_obj.files.filter(ready=True)
-        folder_children = folder_obj.subfolders.all()
-
-        file_dicts = [create_file_dict(file) for file in file_children]
-
-        folder_dicts = []
-        if includeSubfolders:
-            folder_dicts = [recursive_build(subfolder) for subfolder in folder_children]
-
-        folder_dict = create_folder_dict(folder)
-        folder_dict["children"] = file_dicts + folder_dicts
-
-        return folder_dict
-
-    return recursive_build(folder_obj)
 
 
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
@@ -324,8 +300,7 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
                  }
     fragments_list = []
     for fragment in file_obj.fragments.all():
-        frag_dict: PartialFragmentDict = {"sequence": fragment.sequence, "size": fragment.size}
-        fragments_list.append(frag_dict)
+        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
     file_dict["fragments"] = fragments_list
     return file_dict
 

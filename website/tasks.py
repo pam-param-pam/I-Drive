@@ -12,7 +12,7 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from website.celery import app
-from website.models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP
+from website.models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
 from website.utilities.Discord import discord
 from website.utilities.constants import EventCode
 from website.utilities.errors import DiscordError
@@ -33,7 +33,7 @@ def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this se
     print("444444")
 
 
-def send_message(message, finished, user_id, request_id, isError=False):
+def send_message(message, args, finished, user_id, request_id, isError=False):
     queue_ws_event.delay(
         'user',
         {
@@ -41,6 +41,7 @@ def send_message(message, finished, user_id, request_id, isError=False):
             'op_code': EventCode.MESSAGE_SENT.value,
             'user_id': user_id,
             'message': message,
+            'args': args,
             'finished': finished,
             'error': isError,
             'request_id': request_id
@@ -76,7 +77,7 @@ def save_preview(file_id, celery_file):
 
 @app.task
 def smart_delete(user_id, request_id, ids):
-    send_message("Deleting 0%...", False, user_id, request_id)
+    send_message("toasts.deleting", {"percentage": 0}, False, user_id, request_id)
 
     try:
         items = []
@@ -121,6 +122,14 @@ def smart_delete(user_id, request_id, ids):
             except Preview.DoesNotExist:
                 pass
 
+            # deleting file thumbnail if it exists
+            try:
+                preview = Thumbnail.objects.get(file=file)
+                # no need to check if it exists cuz previews are always stored as separate messages
+                message_structure[preview.message_id] = [preview.attachment_id]
+            except Thumbnail.DoesNotExist:
+                pass
+
         settings = UserSettings.objects.get(user_id=user_id)
         webhook = settings.discord_webhook
         length = len(message_structure)
@@ -147,16 +156,22 @@ def smart_delete(user_id, request_id, ids):
                         discord.remove_message(key)
             except DiscordError as e:
                 print(f"===========DISCORD ERROR===========\n{e}")
-                send_message(str(e), False, user_id, request_id, True)
+                send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
+            except Exception as e:
+                print("UNKNOWN ERROR")
+                traceback.print_exc()
+                send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
+                return
+
             # time.sleep(0.1)
             percentage = round((index + 1) / length * 100)
-            send_message(f"Deleting {percentage}%...", False, user_id, request_id)
+            send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
 
             print("sleeping")
         for item in items:
             item.delete()
 
-        send_message("toasts.itemsDeleted", True, user_id, request_id)
+        send_message(message="toasts.itemsDeleted", args=None, finished=True, user_id=user_id, request_id=request_id)
 
     except Exception as e:
         send_message(str(e), True, user_id, request_id, True)
@@ -171,26 +186,26 @@ def prefetch_discord_message(message_id, attachment_id):
 def move_to_trash_task(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
     folder.moveToTrash()
-    send_message("toasts.itemsMovedToTrash", True, user_id, request_id)
+    send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
 
 @app.task
 def restore_from_trash_task(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
     folder.restoreFromTrash()
-    send_message("toasts.itemsRestoredFromTrash", True, user_id, request_id)
+    send_message("toasts.itemsRestoredFromTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
 
 @app.task
 def lock_folder(user_id, request_id, folder_id, password):
     folder = Folder.objects.get(id=folder_id)
     folder.applyLock(folder, password)
-    send_message("toasts.passwordUpdated", True, user_id, request_id)
+    send_message("toasts.passwordUpdated",  args=None, finished=True, user_id=user_id, request_id=request_id)
 
 
 @app.task
 def unlock_folder(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
     folder.removeLock(folder.password)
-    send_message("toasts.passwordUpdated", True, user_id, request_id)
+    send_message("toasts.passwordUpdated",  args=None, finished=True, user_id=user_id, request_id=request_id)
 
 @app.task
 def delete_unready_files():

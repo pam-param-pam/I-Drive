@@ -58,7 +58,7 @@ def check_file(view_func):
     @wraps(view_func)
     def wrapper(request, file_id, *args, **kwargs):
         try:
-            file_obj = File.objects.get(id=file_id)
+            file_obj: File = File.objects.get(id=file_id)
             if not file_obj.ready:
                 return JsonResponse(
                     error_res(user=request.user, code=404, error_code=7, details="File is not ready, perhaps it's still uploading, or being deleted."),

@@ -4,11 +4,11 @@ from enum import Enum
 from django.core.cache import caches
 
 
-GET_BASE_URL = "https://get.pamparampam.dev"
-API_BASE_URL = "https://api.pamparampam.dev"
+# GET_BASE_URL = "https://get.pamparampam.dev"
+# API_BASE_URL = "https://api.pamparampam.dev"
 # #
-# GET_BASE_URL = "http://localhost:8050"
-# API_BASE_URL = "http://localhost:8000"
+GET_BASE_URL = "http://localhost:8050"
+API_BASE_URL = "http://localhost:8000"
 
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb
 MAX_DISCORD_MESSAGE_SIZE = 25 * 1024 * 1023

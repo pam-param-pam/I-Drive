@@ -11,7 +11,7 @@ from django.views.decorators.cache import cache_page
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
 
-from website.models import Fragment, Preview
+from website.models import Fragment, Preview, File
 from website.utilities.Discord import discord
 from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode
 from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
@@ -19,6 +19,8 @@ from website.utilities.errors import ResourceNotPreviewableError, DiscordError
 from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
 
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
@@ -26,7 +28,7 @@ from website.utilities.throttle import MediaRateThrottle
 @check_signed_url
 @check_file
 @handle_common_errors
-def get_preview(request, file_obj):
+def get_preview(request, file_obj: File):
 
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -58,6 +60,11 @@ def get_preview(request, file_obj):
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
         raise ResourceNotPreviewableError("File too big: size > 100mb")
 
+    key = file_obj.key
+    iv = file_obj.encryption_iv
+    cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+
     file_content = b''
     for fragment in fragments:
         url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
@@ -65,7 +72,10 @@ def get_preview(request, file_obj):
         if not response.ok:
             return HttpResponse(status=500,
                                 content=f"Unexpected response from discord:\n{response.text}, status_code={response.status_code}")
-        file_content += response.content
+        decrypted_data = decryptor.update(response.content)
+        file_content += decrypted_data
+
+    file_content += decryptor.finalize()
     file_like_object = io.BytesIO(file_content)
 
     try:
@@ -97,7 +107,7 @@ def get_preview(request, file_obj):
     fernet = Fernet(key)
     encrypted_data = fernet.encrypt(data.getvalue())
 
-    files = {'file': ('1', encrypted_data)}
+    files = {'file': ('Kocham Alternatywki', encrypted_data)}
 
     response = discord.send_file(files)
 

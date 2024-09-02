@@ -62,7 +62,7 @@ def view_share(request, token, folder_id=None):
 
     if folder_id:
         requested_folder = get_resource(folder_id)
-        check_resource_perms(request, requested_folder, checkRoot=False, checkFolderLock=False)
+        check_resource_perms(request, requested_folder, checkOwnership=False, checkRoot=False, checkFolderLock=False)
 
         if requested_folder.inTrash:
             raise ResourceNotFoundError()

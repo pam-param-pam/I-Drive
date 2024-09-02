@@ -1,3 +1,4 @@
+import time
 from itertools import chain
 
 from django.http import JsonResponse, HttpResponse
@@ -114,6 +115,15 @@ def fetch_additional_info(request, folder_obj):
     folder_count, file_count = calculate_file_and_folder_count(folder_obj)
 
     return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
+
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+@check_file_and_permissions
+def get_secrets(request, file_obj: File):
+    return JsonResponse({"key": file_obj.get_base64_key(), "iv": file_obj.get_base64_iv()}, status=200)
 
 
 @api_view(['GET'])
@@ -239,7 +249,7 @@ def check_password(request, item_id):
 @check_file
 def get_thumbnail_info(request, file_obj: File):
     """
-    This view is used by STREAMER SERVER to fetch information about file's thumbnail. //todo this is not currently used anywhere
+    This view is used by STREAMER SERVER to fetch information about file's thumbnail. 
     This is called in anonymous context, signed File ID is used to authorize the request.
     """
     thumbnail = file_obj.thumbnail
@@ -248,10 +258,12 @@ def get_thumbnail_info(request, file_obj: File):
 
     thumbnail_dict = {
         "size": thumbnail.size,
-        "encrypted_siz": thumbnail.encrypted_size,
         "url": url,
-        "key": str(thumbnail.key),
+        "is_encrypted": file_obj.is_encrypted
     }
+    if file_obj.is_encrypted:
+        thumbnail_dict['key'] = file_obj.get_base64_key()
+        thumbnail_dict['iv'] = file_obj.get_base64_iv()
     return JsonResponse(thumbnail_dict, safe=False)
 
 @cache_page(60 * 60 * 12)  # 12 hours
@@ -299,6 +311,7 @@ def get_fragments_info(request, file_obj: File):
     fragments_list = []
     for fragment in fragments:
         fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
+
     file_dict = {
         "size": file_obj.size,
         "mimetype": file_obj.mimetype,
@@ -307,8 +320,12 @@ def get_fragments_info(request, file_obj: File):
         "modified_at": timezone.localtime(file_obj.last_modified_at),
         "created_at": timezone.localtime(file_obj.created_at),
         "name": file_obj.name,
-        "key": str(file_obj.key),
+        "is_encrypted": file_obj.is_encrypted
     }
+
+    if file_obj.is_encrypted:
+        file_dict['key'] = file_obj.get_base64_key()
+        file_dict['iv'] = file_obj.get_base64_iv()
     return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
 
 

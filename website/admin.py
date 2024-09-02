@@ -1,3 +1,4 @@
+import base64
 from typing import Union, List
 
 from django.contrib import admin
@@ -12,13 +13,13 @@ from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, GET_BASE_URL, API_BASE_URL
 from .utilities.other import sign_file_id_with_expiry
 
-
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms)
 
+
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
-    #readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
+    # readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
@@ -75,7 +76,6 @@ class FolderAdmin(admin.ModelAdmin):
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
         for real_obj in queryset:
-
             real_obj.force_delete()
 
     def move_to_trash(self, request, queryset: QuerySet[Folder]):
@@ -97,14 +97,14 @@ class FolderAdmin(admin.ModelAdmin):
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    #readonly_fields = ('id', 'key', 'streamable', 'ready', "created_at", "size", "encrypted_size", "image_tag")
+    readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'streamable', 'ready', "created_at", "size", "media_tag")
     ordering = ["-created_at"]
-    list_display = ["name", "parent", "readable_size", "readable_encrypted_size", "owner", "ready", "created_at",
+    list_display = ["name", "parent", "readable_size", "owner", "ready",  "created_at",
                     "inTrash", "_is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
     search_fields = ["name"]
 
-    def image_tag(self, obj: File):
+    def media_tag(self, obj: File):
         signed_file_id = sign_file_id_with_expiry(obj.id)
 
         if obj.extension in RAW_IMAGE_EXTENSIONS:
@@ -127,7 +127,16 @@ class FileAdmin(admin.ModelAdmin):
             url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html(f'<a href="{url}" target="_blank">{url}</a>')
 
-    image_tag.short_description = 'PREVIEW MEDIA FILE'
+    def formatted_key(self, obj: File):
+        return obj.get_base64_key()
+
+    def formatted_iv(self, obj: File):
+        return obj.get_base64_iv()
+
+    formatted_key.short_description = "Encryption key (base64)"
+    formatted_iv.short_description = "Encryption iv (base64)"
+
+    media_tag.short_description = 'PREVIEW MEDIA FILE'
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
         ids = []
@@ -169,11 +178,7 @@ class FileAdmin(admin.ModelAdmin):
     def readable_size(self, obj: File):
         return filesizeformat(obj.size)
 
-    def readable_encrypted_size(self, obj: File):
-        return filesizeformat(obj.encrypted_size)
-
     readable_size.short_description = 'SIZE'
-    readable_encrypted_size.short_description = 'ENCRYPTED SIZE'
 
     def save_model(self, request, obj: File, form: ModelForm, change: bool):
         print(change)
@@ -201,7 +206,7 @@ class PreviewAdmin(admin.ModelAdmin):
 @admin.register(Thumbnail)
 class ThumbnailAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
-    list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
+    list_display = ["file_name", "owner", "readable_size", "created_at"]
 
     def file_name(self, obj: Thumbnail):
         return obj.file.name
@@ -211,9 +216,6 @@ class ThumbnailAdmin(admin.ModelAdmin):
 
     def readable_size(self, obj: Thumbnail):
         return filesizeformat(obj.size)
-
-    def readable_encrypted_size(self, obj: Thumbnail):
-        return filesizeformat(obj.encrypted_size)
 
 
 @admin.register(ShareableLink)
