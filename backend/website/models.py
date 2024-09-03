@@ -10,7 +10,6 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
-from simple_history.models import HistoricalRecords
 
 from website.utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH
 

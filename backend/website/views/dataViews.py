@@ -1,4 +1,3 @@
-import time
 from itertools import chain
 
 from django.http import JsonResponse, HttpResponse
@@ -6,7 +5,6 @@ from django.utils import timezone
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import last_modified, etag
 from django.views.decorators.vary import vary_on_headers
-from ipware import get_client_ip
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
@@ -40,9 +38,6 @@ def last_modified_func(request, file_obj, sequence=None):
 @check_folder_and_permissions
 @etag(etag_func)
 def get_folder(request, folder_obj):
-    client_ip, is_routable = get_client_ip(request)
-
-    print(client_ip)
 
     folder_content = cache.get(folder_obj.id)
     if not folder_content:

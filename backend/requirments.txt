@@ -12,8 +12,7 @@ Djoser==2.2.2
 exifread==3.0.0
 gevent==23.9.1
 httpx==0.25.2
-rawpy==0.19.1
+rawpy==0.22.0
 Redis==5.0.1
 requests>=2.32.3
-
-django-simple-history=3.7.0
+imageio==2.35.1

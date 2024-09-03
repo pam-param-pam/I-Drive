@@ -1,6 +1,6 @@
 Django==4.2.7
-django-cors-headers== 4.3.1
-Redis== 5.0.1
-requests> 2.32.3
+django-cors-headers==4.3.1
+Redis==5.0.1
+requests>=2.32.3
 
 stream-zip
