@@ -1,0 +1,102 @@
+.shell {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  max-height: calc(100% - 4em);
+  background: rgb(40, 40, 40);
+  color: #4AF626;
+  z-index: 9997;
+  width: 100%;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  transition: .2s ease transform;
+}
+/* Customizing scrollbar */
+.shell__content::-webkit-scrollbar {
+  width: 10px; /* Width of the scrollbar */
+}
+
+.shell__content::-webkit-scrollbar-thumb {
+  background: #666; /* Color of the scrollbar thumb */
+}
+
+.shell__content::-webkit-scrollbar-thumb:hover {
+  background: #888; /* Color of the scrollbar thumb on hover */
+}
+
+.shell__content::-webkit-scrollbar-track {
+  background: #333; /* Color of the scrollbar track */
+}
+.shell__divider {
+  position: relative;
+  height: 8px;
+  z-index: 9999;
+  background: rgba(127, 127, 127, 0.1);
+  transition: 0.2s ease background;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.shell__divider:hover {
+  background: rgba(127, 127, 127, 0.4);
+}
+
+.shell__content {
+  height: 100%;
+  font-family: monospace;
+  overflow: auto;
+  font-size: 1rem;
+  cursor: text;
+  padding-bottom: 20px; /* Ensure content is at least 10px from the bottom */
+
+}
+
+.shell__overlay {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 9998;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.rtl .shell-content {
+  direction: ltr;
+}
+
+.shell__result {
+  display: flex;
+  padding: 0.5em;
+  align-items: flex-start;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.shell--hidden {
+  transform: translateY(105%);
+}
+
+.shell__result--hidden {
+  opacity: 0;
+}
+
+.shell__text,
+.shell__prompt,
+.shell__prompt i {
+  font-size: inherit;
+}
+
+.shell__prompt {
+  width: 1.2rem;
+}
+
+.shell__prompt i {
+  color: #4AF626;
+}
+
+.shell__text {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+  width: 100%;
+}
