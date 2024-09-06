@@ -326,9 +326,11 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
                  "mimetype": file_obj.mimetype,
                  "type": file_obj.type,
                  "modified_at": timezone.localtime(file_obj.last_modified_at),
-                 "key": str(file_obj.key),
                  "created_at": timezone.localtime(file_obj.created_at),
                  "fragments": [],
+                 "is_encrypted": file_obj.is_encrypted,
+                 "key": file_obj.get_base64_key(),
+                 "iv": file_obj.get_base64_iv()
                  }
     fragments_list = []
     for fragment in file_obj.fragments.all():
@@ -373,7 +375,7 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     return folder_count, file_count
 
 
-def get_flattened_children(folder: Folder, full_path="") -> List:
+def get_flattened_children(folder: Folder, full_path="", single_root=False) -> List:
     """
     Recursively collects all children (folders and files) of the given folder
     into a flattened list with file IDs and names including folders.
@@ -386,11 +388,16 @@ def get_flattened_children(folder: Folder, full_path="") -> List:
     if files:
         for file in files:
             file_full_path = f"{full_path}{folder.name}/{file.name}"
+
+            if single_root:
+                file_full_path = f"{full_path}{file.name}"
+
             file_dict = create_zip_file_dict(file, file_full_path)
             children.append(file_dict)
     else:
         pass
         # todo remove pass?
+        # include handling of empty directory?
         folder_full_path = f"{full_path}{folder.name}/"
 
         children.append({'id': folder.id, 'name': folder_full_path, "isDir": True})

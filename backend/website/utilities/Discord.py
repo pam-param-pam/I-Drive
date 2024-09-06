@@ -62,20 +62,20 @@ def webhook_retry(func):
 class Discord:
     def __del__(self):
         self.client.close()
-
+    # todo fix this
     def __init__(self):
         self.client = httpx.Client(timeout=10.0)
-        self.bot_tokens = ["ODk0NTc4MDM5NzI2NDQwNTUy.GAqXhm.8M61gjcKM5d6krNf6oWBOt1ZSVmpO5PwPoGVa4",
-                           "MTE4NjczNTE5NTg3ODA2ODI4Ng.GeXLwx.KbonHuxNcUfnl0U-rqix7t9CzUoa4MLZgvbX3E",
-                           "MTE4Njc0ODE4ODA1NzY4MjA2MA.GEMHFW.eg9hT5IJKzSMpJ0nbFv4D_MqLCw72qlFR9VTTU",
-                           "MTE4ODk1MTQyODYxNDU4NjQ4OA.G4CVRG.dMvoxd0Z7nQF5reiLIoFQNkstfalQmcTaGcXOY",
-                           "MTIwMDExODYzNTkyMjk4OTE2Nw.GUkoOq.n6e-5qYwwiRacyKqZIsNClM5gD8G0x7e23rtxM",
-                           "MTIwMDExODkyMTQ0MTg0NTI5MA.Gq4BiA.7ChveurWbuTHPBqYpFOch-P6BvPfAX5A9yVRsI",
-                           "MTI0NzkxNzIzMTQwNTI2OTAwMg.GLdikW.q3k7Yr-PPCB8_ghodWw2ZwLDgoSXQPA88PzgXM",
-                           "MTI0NzkxNzg0Nzk4MDUzOTk4Ng.G8k7yv.AZu04IEHxjgAD9OIkBJSis4xICyWVt31NW3NGE",
-                           "MTI0NzkxODExODg3Mzk4OTE4MA.GB2H-r.LqKQaQQjyOHYZicvDBdaN0G6M6CXBVbHFUm8wA",
-                           "MTI0NzkxODMwODc3MDk3NTc3NQ.GGDekW.D5_lDEGgdEeR3OeM-vbErMtvywANbe9MBBbYdA",
-                           "MTI0NzkxODQ4NDI1MjI2NjUwNg.Gm6JJU.-PfEMzcYuaD-82XB8PGOR3BV526B6MOaea3rP0"
+        self.bot_tokens = ["MTI4MDU4NDY0NzkwMTk3MDQ2Mg.GiQeHp.3PKiq1zV4U0R530QrK_wxliaIY8VZYM0jBvh74",
+                           "MTI0NzkxNzIzMTQwNTI2OTAwMg.GaLIWS.Ffll0awqyOtW9sKZ3pwcrpKEtcM6eWfNXyclso",
+                           "MTI0NzkxNzg0Nzk4MDUzOTk4Ng.GKha5a._qWWVWUg1s5brf643o5JoDZ_xJhYxaLkIKXqzg",
+                           "MTI0NzkxODExODg3Mzk4OTE4MA.GsDLcM.6DzcA1NpOkjCoAKnCiL9_e2qZdVoSppWGZaWLg",
+                           "MTI0NzkxODMwODc3MDk3NTc3NQ.GiCrXe.XClfYy2DHs9ssTzIP8kQhegUyk0TZVxbpPDkXs",
+                           "MTI0NzkxODQ4NDI1MjI2NjUwNg.G-J14m.1YyUsVjXRiqF-2e7hz6drp1FEPV5HaPvcGNqsE",
+                           "MTI4MDU4NjYzOTEyNjU2MDgzMQ.GwuKkB.LKdWt5lt080lmvxLdZlzOWxIbZScgq2CYj_qRI",
+                           "MTI4MDU4NjczMTI3OTc0NTEyNg.GffY89.lsBBHyl8vQfOMZ_yEpl1tKTKveNvyJZHz5Ic34",
+                           "MTI4MDU4NjgxNjg1NjI2NDgyNg.G9Ncl-.UZKuxf7_9iG3Wy9T1FAKeSC7xVIl6vD540yk60",
+                           "MTI4MDU4Njg4NjY5OTY4MzkxNA.GzPx6n.97B70aCI6BBOLij933z20blpYLEAljYkyFXCL8"
+
         ]
         # self.semaphore = asyncio.Semaphore(len(self.bot_tokens))
         self.semaphore = asyncio.Semaphore(1)

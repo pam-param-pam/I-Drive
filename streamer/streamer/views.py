@@ -1,5 +1,4 @@
 import base64
-import os
 import re
 import time
 from datetime import datetime
@@ -13,7 +12,7 @@ from django.utils.encoding import smart_str
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
-from streamer.zipstream import ZipStream
+from zipFly import GenFile, ZipFly
 
 
 @api_view(['GET'])
@@ -189,10 +188,23 @@ def stream_file(request, signed_file_id):
 def stream_zip_files(request, token):
     files = []
 
-    def stream_zip_file(file_id, fragments, chunk_size=8192):
+    def stream_zip_file(file, chunk_size=8192):
+        signed_id = file['signed_id']
+        fragments = file['fragments']
+        is_encrypted = file['is_encrypted']
+        key = file['key']
+        iv = file['iv']
+        if is_encrypted:
+            # luckily or not - we store both key and iv in the database
+            key = base64.b64decode(key)
+            iv = base64.b64decode(iv)
+
+            cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+
         for fragment in fragments:
-            fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}")
-            print(f"http://127.0.0.1:8000/api/fragments/{file_id}/{fragment['sequence']}")
+            fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_id}/{fragment['sequence']}")
+            print(f"http://127.0.0.1:8000/api/fragments/{signed_id}/{fragment['sequence']}")
             if not fragment_response.ok:
                 print("============ERROR============")
                 print(fragment_response.status_code)
@@ -202,8 +214,12 @@ def stream_zip_files(request, token):
             url = fragment_response.json()["url"]
 
             discord_response = requests.get(url, stream=True)
-            for chunk in discord_response.iter_content(chunk_size):
-                yield chunk
+            for raw_data in discord_response.iter_content(chunk_size):
+                if is_encrypted:
+                    decrypted_data = decryptor.update(raw_data)
+                    yield decrypted_data
+                else:
+                    yield raw_data
 
     res = requests.get(f"http://127.0.0.1:8000/api/zip/{token}")
     print(f"http://127.0.0.1:8000/api/zip/{token}")
@@ -214,43 +230,22 @@ def stream_zip_files(request, token):
 
         if not file["isDir"]:
             fragments = file["fragments"]
+            print(file)
+            file = GenFile(name=file['name'], generator=stream_zip_file(file), size=file["size"])
+            files.append(file)
 
-            modification_time = datetime.fromisoformat(file["modified_at"])
-            modification_time_struct = time.localtime(modification_time.timestamp())
-            file_dict = {'name': file['name'],
-                         'stream': stream_zip_file(file['signed_id'], fragments),
-                         "modification_time": modification_time_struct,
-                         "size": file["size"],
-                         "cmethod": None
-                         }
+    zipFly = ZipFly(files)
 
-            files.append(file_dict)
-
-    zip_stream = ZipStream(files)
     # streamed response
     response = StreamingHttpResponse(
-        zip_stream.stream(),
+        zipFly.stream(),
         content_type="application/zip")
+
+    response['Content-Length'] = zipFly.calculate_archive_size()
+
     response['Content-Disposition'] = f'attachment; filename="{res_json["name"]}.zip"'
     # response['Content-Length'] = content_length
 
     return response
 
 
-@api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-def stream_nonzip_files(request):
-    def file_iterator(file_path, chunk_size=8192):
-        with open(file_path, 'rb') as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if chunk:
-                    yield chunk
-                else:
-                    break
-
-    file_name = os.path.basename("The_Little_Mermaid.mp4")
-    response = StreamingHttpResponse(file_iterator("streamer/The_Little_Mermaid.mp4"))
-    response['Content-Type'] = 'application/octet-stream'
-    response['Content-Disposition'] = 'attachment; filename="%s"' % file_name
-    return response

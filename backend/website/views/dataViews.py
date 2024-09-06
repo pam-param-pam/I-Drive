@@ -336,22 +336,35 @@ def get_zip_info(request, token):
     This view is used by STREAMER SERVER to fetch information about ZIP object.
     This is called in anonymous context, token is used to authorize the request.
     """
-    #todo if only 1 folder is downloaded we dont want it to be for example test1.zip <--test1 <-- content
+    #todo
+
+    # catch if there are multiple names in 1 dir, change name then
     user_zip = UserZIP.objects.get(token=token)
+    files = user_zip.files.all()
+    folders = user_zip.folders.all()
+    dict_files = []
 
-    files = []
+    # if only 1 folder is downloaded we don't want it to be for example test1.zip <--test1 <-- content
+    # instead we want it to be test1.zip <-- content
 
-    for file in user_zip.files.all():
-        file_dict = create_zip_file_dict(file, file.name)
-        files.append(file_dict)
+    single_root = False
+    if len(files) == 0 and len(folders) == 1:
+        single_root = True
+        dict_files += get_flattened_children(folders[0], single_root=single_root)
 
-    for folder in user_zip.folders.all():
-        folder_tree = get_flattened_children(folder)
-        files += folder_tree
-    zip_id = user_zip.id
+    else:
+        for file in files:
+            file_dict = create_zip_file_dict(file, file.name)
+            dict_files.append(file_dict)
+
+        for folder in folders:
+            folder_tree = get_flattened_children(folder)
+            dict_files += folder_tree
+
     # todo remove comment from delete
     #user_zip.delete()
-    return JsonResponse({"length": len(files), "id": zip_id, "name": user_zip.name, "files": files}, safe=False)
+    zip_name = user_zip.name if not single_root else folders[0].name
+    return JsonResponse({"length": len(files), "id": user_zip.id, "name": zip_name, "files": dict_files}, safe=False)
 
 
 

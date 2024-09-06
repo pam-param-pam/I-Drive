@@ -192,7 +192,7 @@ async function generateThumbnail(fileObj) {
    } catch (err) {
       console.error(err)
       const toast = useToast()
-      toast.error(i18n.global.t("toasts.thumbnailError", fileObj.name))
+      toast.error(i18n.global.t("toasts.thumbnailError", {name: fileObj.name}))
    }
 
 }

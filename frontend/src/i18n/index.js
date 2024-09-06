@@ -1,7 +1,7 @@
 import {createI18n} from 'vue-i18n'
-import en from './en.json'
-import pl from './pl.json'
-import uwu from './uwu.json'
+import en from './locals/en.json'
+import pl from './locals/pl.json'
+import uwu from './locals/uwu.json'
 
 // Detect the locale based on the browser settings
 export function detectLocale() {

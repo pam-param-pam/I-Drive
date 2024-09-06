@@ -3,7 +3,7 @@
     <header-bar>
       <Search
         v-if="headerButtons.search"
-        @onSearchQuery="$emit('onSearchQuery')"
+        @onSearchQuery="(query) => $emit('onSearchQuery', query)"
         @exit="$emit('onSearchClosed')"
       />
 

@@ -190,7 +190,6 @@ export default {
       async onSearchQuery(query) {
          this.setLoading(true)
 
-
          let realLockFrom = this.lockFrom || this.folderId
          let password = this.getFolderPassword(realLockFrom)
 
