@@ -6,7 +6,7 @@ class ZipFly(ZipBase):
         LOCAL_FILE_HEADER_SIZE = 30
         DATA_DESCRIPTOR_SIZE = 16
         CENTRAL_DIR_HEADER_SIZE = 46
-        ZIP64_EXTRA_FIELD_SIZE = 28
+        ZIP64_EXTRA_FIELD_SIZE = 32
         ZIP64_END_OF_CENTRAL_DIR_RECORD_SIZE = 56
         ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIZE = 20
         EOCD_RECORD_SIZE = 22
@@ -25,8 +25,8 @@ class ZipFly(ZipBase):
 
             central_directory_size += central_directory_header_size
 
-            # todo somewhere im adding 12 bytes too little per file.
-            total_size += 12
+            # todo somewhere im adding 8 bytes too little per file.
+            total_size += 8
 
         total_size += central_directory_size
 
@@ -36,13 +36,3 @@ class ZipFly(ZipBase):
 
         return total_size
 
-    def stream(self):
-        for file in self.files:
-            file.offset = self.get_offset()
-            for chunk in self._stream_single_file(file):
-                self.add_offset(len(chunk))
-                yield chunk
-
-        # stream zip structures
-        for chunk in self._make_end_structures():
-            yield chunk

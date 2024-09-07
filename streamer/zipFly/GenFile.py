@@ -28,3 +28,6 @@ class GenFile(BaseFile):
     @property
     def modification_time(self) -> float:
         return self._modification_time
+
+    def set_file_name(self, new_name: str) -> None:
+        self._name = new_name

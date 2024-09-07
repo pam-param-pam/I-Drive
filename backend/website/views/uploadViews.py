@@ -195,9 +195,8 @@ def create_file(request):
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-# @handle_common_errors
+@handle_common_errors
 def create_thumbnail(request):
-    print(request.data)
     file_id = request.data['file_id']
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']

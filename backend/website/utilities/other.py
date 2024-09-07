@@ -289,7 +289,7 @@ def get_resource(obj_id: str) -> Resource:
     return item
 
 
-def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True) -> None:
+def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True, checkTrash=False) -> None:
     if checkOwnership:
         if resource.owner != request.user:
             raise ResourcePermissionError()
@@ -299,6 +299,10 @@ def check_resource_perms(request, resource: Resource, checkOwnership=True, check
             raise RootPermissionError("Cannot access 'root' folder!")
     if checkFolderLock:
         check_folder_password(request, resource)
+
+    if checkTrash:
+        if resource.inTrash:
+            raise ResourcePermissionError("Cannot access file in trash")
 
 
 def check_folder_password(request, resource: Resource) -> None:
@@ -316,6 +320,10 @@ def check_folder_password(request, resource: Resource) -> None:
 
 
 def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
+
+    check_resource_perms("dummy request", file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+
+
     signed_id = sign_file_id_with_expiry(file_obj.id)
 
     file_dict = {"id": file_obj.id,
@@ -382,6 +390,7 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
     """
 
     children = []
+    check_resource_perms("dummy request", folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     # Collect all files in the current folder
     files = folder.files.all()

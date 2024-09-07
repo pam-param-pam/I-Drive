@@ -18,8 +18,6 @@ def index(request):
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
 def test(request):
-    perms = UserSettings.objects.get(user_id=1)
-    print(perms.history.all())
     return HttpResponse(f"hello {request.user}")
 
 def generate_keys(request):

@@ -3,10 +3,10 @@ from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Folder, UserZIP
+from website.models import File, Folder
 from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder
-from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, DownloadPerms
-from website.utilities.constants import cache, GET_BASE_URL, EventCode, MAX_RESOURCE_NAME_LENGTH
+from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
+from website.utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
 from website.utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms
@@ -330,7 +330,7 @@ def folder_password(request, folder_obj):
 @throttle_classes([FolderPasswordRateThrottle])
 @permission_classes([IsAuthenticated & LockPerms])
 @handle_common_errors
-#@check_folder_and_permissions
+@check_folder_and_permissions
 def reset_folder_password(request, folder_id):
     account_password = request.data['accountPassword']
     new_folder_password = request.data['folderPassword']
@@ -353,64 +353,3 @@ def reset_folder_password(request, folder_id):
     if isLocked:
         return JsonResponse(build_response(request.request_id, "Folder password is being changed..."))
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
-
-
-@api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
-@permission_classes([IsAuthenticated & DownloadPerms])
-@handle_common_errors
-def create_zip_model(request):
-    #todo fucking what
-    ids = request.data['ids']
-
-    if not isinstance(ids, list):
-        raise BadRequestError("'ids' must be a list.")
-    if len(ids) == 0:
-        raise BadRequestError("'ids' length cannot be 0.")
-    user_zip = UserZIP.objects.create(owner=request.user)
-
-    required_folder_passwords = []
-    for item_id in ids:
-
-        item = get_resource(item_id)
-
-        # handle multiple folder passwords
-        try:
-            check_resource_perms(request, item)
-        except MissingOrIncorrectResourcePasswordError:
-            # check if folder id is in list of tuples
-            if item.lockFrom and item.lockFrom not in required_folder_passwords:
-                required_folder_passwords.append(item.lockFrom)
-
-        if isinstance(item, Folder):
-            # Checking if the folder is already present in the zip model
-            if user_zip.folders.filter(id=item.id).exists():
-                raise BadRequestError(f"Folder({item.name}) is already in the ZIP")
-
-            # goofy checking if folder isn't a subfolder of a folder already in zip
-            re_item = item
-            while re_item:
-                if user_zip.folders.filter(id=re_item.id).exists():
-                    raise BadRequestError(f"Folder({re_item.name}) is already a subfolder in the ZIP(1)")
-                re_item = re_item.parent
-
-            for re_folder in user_zip.folders.all():
-                while re_folder:
-                    if re_folder == item:
-                        raise BadRequestError(f"Folder({re_folder.name}) is already a subfolder in the ZIP(2)")
-                    re_folder = re_folder.parent
-
-            user_zip.folders.add(item)
-
-        else:
-            # Checking if the folder is already present in the zip model
-            if user_zip.files.filter(id=item.id).exists():
-                raise BadRequestError(f"File({item.name}) is already in the ZIP")
-
-            user_zip.files.add(item)
-    if len(required_folder_passwords) > 0:
-        raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
-    user_zip.save()
-    return JsonResponse({"download_url": f"{GET_BASE_URL}/zip/{user_zip.token}"}, status=200)
-
-

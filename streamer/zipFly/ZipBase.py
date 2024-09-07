@@ -4,11 +4,65 @@ from typing import List
 from zipFly import consts
 from zipFly.BaseFile import BaseFile
 
+"""
+Since the Official ZIP docs are terrible, here's a detailed structure of the zip this library builds. (pretty sure mine's just as bad lol)
+
+  [local file header 1]            |
+  [file data 1]                    |
+  [data descriptor 1]              |
+  .                                |
+  .                                } - This part of the of zip holds the file data. Local file headers are lowkey useless(nevertheless needed for zip to work).
+  .                                |        Data descriptors allow to stream the file(and create file headers) without knowing the size of file data. Instead of putting
+  [local file header n]            |        things like: CRC, uncompressed_size, compressed_size etc in file headers, you only put placeholder values there (0xFFFFFFFF),                                    
+  [file data n]                    |        and fill them later in data descriptor.
+  [data descriptor n]              |
+  
+  
+  =================This part is called Central Directory Structure==============                               <------------ TO HERE -------------------------------------------<
+                                                                                                                                                                                |
+  [central directory header 1]     |                                                                                                                                            |
+  [extra field 1]                  |                                                                                                                                            |
+  .                                } - I have no idea why it's called 'central directory header'. It should be called central directory file headers.                           |
+  .                                |        From now on, i will call central directory as just 'cdir'. Cdir headers are structures that again hold the file information         |   
+  .                                |        Cdir headers are retarded, and their compressed_size, uncompressed_size, offset values are in 4 bytes, meaning you can't put        |
+  [central directory header n]     |        values > 4GB. Hence the ZIP64 uses a special structure called 'extra field'. Just like before, in cdir headers we put               |
+  [extra field n]                  |        placeholder values, and fill them later in extra field.                                                                             |
+                                                                                                                                                                                |
+                                            An important thing to pay attention in cdir header, is **offset**. This offset is the amount of bytes from the                      |
+                                            beginning of the file, to the start of local file header. So for 1st file the offset is 0, for the 2nd it's length of               |
+                                            '[local file header 1]' + '[file data 1]' + '[data descriptor 1]'.                                                                  |
+                                                                                                                                                                                |
+  =================This part I call End of Central Directory Structure (It's still a part of cdir structure(I think))===============            <----- TO HERE -----------------|-----------<
+                                                                                                                                                                                |           |
+  [zip64 end of central directory record]    |                                                                                                                                  |           |
+  [zip64 end of central directory locator]   } - This is the actual end of the file. End of cdir directory record is a legacy(and kinda useless, nevertheless required).        |           |
+  [end of central directory record]          |      Size we work with files >4GB, the end of cdir directory record, again can't hold values like: compressed_size,              |           |
+                                                    uncompressed_size, offset. We again use placeholder values, and put the actual ones in                                      |           |
+                                                    'zip64 end of central directory record'. 'zip64 end of cdir locator' is used to locate the 'zip64 end of cdir record'.      |           |
+                                                                                                                                                                                |           |
+                                                    An important thing to pay attention to are **offsets*. There are two district ones here.                                    |           |
+                                                    1st offset is in 'zip64 end of cdir record'. It's the amount of bytes from the start of the file to start of   ------------->           |
+                                                    *Central Directory Structure*.                                                                                                          |
+                                                    2nd offset is in 'zip64 end of cdir locator'. It's the amount of bytes from the start of the file to start of -------------------------->
+                                                    'zip64 end of cdir record'.
+                                                    
+                                                    
+    Other goofy things are:
+        'extra_field_len' in 'central directory header' is 32, even tho in the 'extra field' it self, the 'extra_field_size' is 28. That's because the first
+        is the full length of the 'extra field' structure, while the second doesn't not include 'extra_field_size' and
+        'signature' which are each 2 bytes, so together they are the 'missing' 4 bytes.
+        
+        'size_of_zip64_end_of_cdir_record' in zip64 end of cdir record is 44 bytes. Cuz: 'signature' - 4 bytes, 'size_of_zip64_end_of_central_dir_record' - 8 bytes,
+        'version_made_by' - 2 bytes, 'version_to_extract' - 2 bytes, 'number_of_this_disk' - 4 bytes, 'cd_start' - 4 bytes, 'cd_entries_this_disk' - 8 bytes, 
+        'cd_entries_total' - 8 bytes, 'cd_size' - 8 bytes, 'cd_offset' - 8 bytes.
+        So, 4 + 8 + 2 + 2 + 4 + 4 + 8 + 8 + 8 + 8 = 56, but we again don't include signature, and 'size_of_zip64_end_of_central_dir_record' so 56 - 4 - 8 = 44
+        
+I hope, that i made it a bit more clear to anyone reading, including future me.        
+"""
+
 
 def process_file_names(files):
-    # Dictionary to keep track of the count of names
     name_counts = defaultdict(int)
-
     for file in files:
         # Split the name into base and extension
         base, ext = file.name.rsplit('.', 1) if '.' in file.name else (file.name, '')
@@ -23,14 +77,15 @@ def process_file_names(files):
             new_base = base
 
         # Reassemble the filename
-        file._name = f"{new_base}.{ext}" if ext else new_base
+        file.set_file_name(f"{new_base}.{ext}" if ext else new_base)
 
     return files
+
 
 class ZipBase:
 
     def __init__(self, files: List[BaseFile]):
-        self.__version = 45
+        self.__version_to_extract = 45
 
         # process file names to make sure there are no duplicates
         processed_files = process_file_names(files)
@@ -38,8 +93,8 @@ class ZipBase:
 
         self.__offset = 0  # Tracks the current offset within the ZIP archive
         self.__cdir_size = 0
-        self.__zip64_end_cdir_offset = 0
-        self.__OS_version = 0x03  # UNIX
+        self.__offset_to_start_of_central_dir = 0
+        self.__version_made_by = 0x0345  # UNIX and ZIP version 45
 
     def _make_local_file_header(self, file: BaseFile) -> bytes:
         """
@@ -48,16 +103,16 @@ class ZipBase:
 
         fields = {
             "signature": consts.LOCAL_FILE_HEADER_SIGNATURE,
-            "version": self.__version,
+            "version_to_extract": self.__version_to_extract,
             "flags": file.flags,
             "compression": file.compression_method,
             "mod_time": file.get_mod_time(),
             "mod_date": file.get_mod_date(),
             "crc": 0xFFFFFFFF,  # Placeholder (will be updated in data descriptor)
-            "uncomp_size": 0xFFFFFFFF,  # Placeholder (will be updated in data descriptor)
-            "comp_size": 0xFFFFFFFF,  # Placeholder (will be updated in data descriptor)
-            "fname_len": len(file.file_path_bytes),
-            "extra_len": 0  # 0 cuz no extra field is used with local file header
+            "uncompressed_size": 0xFFFFFFFF,  # Placeholder (will be updated in data descriptor)
+            "compressed_size": 0xFFFFFFFF,  # Placeholder (will be updated in data descriptor)
+            "file_name_len": len(file.file_path_bytes),
+            "extra_field_len": 0  # 0 cuz no extra field is used with local file header
         }
 
         # Pack the local file header structure
@@ -75,8 +130,8 @@ class ZipBase:
         fields = {
             "signature": consts.ZIP64_DATA_DESCRIPTOR_SIGNATURE,
             "crc": file.crc & 0xffffffff,  # hack for making CRC unsigned long
-            "uncomp_size": file.original_size,
-            "comp_size": file.compressed_size,
+            "uncompressed_size": file.original_size,
+            "compressed_size": file.compressed_size,
         }
 
         descriptor = consts.ZIP64_DATA_DESCRIPTOR_TUPLE(**fields)
@@ -90,22 +145,21 @@ class ZipBase:
         """
         fields = {
             "signature": consts.CENTRAL_DIR_FILE_HEADER_SIGNATURE,
-            "system": self.__OS_version,  # 0x03 - Unix
-            "version": self.__version,
-            "version_ndd": self.__version,
+            "version_made_by": self.__version_made_by,
+            "version_to_extract": self.__version_to_extract,
             "flags": file.flags,
             "compression": file.compression_method,
             "mod_time": file.get_mod_time(),
             "mod_date": file.get_mod_date(),
             "crc": file.crc,
-            "comp_size": 0xFFFFFFFF,  # Placeholder (will be updated in zip64 extra field)
-            "uncomp_size": 0xFFFFFFFF,  # Placeholder (will be updated in zip64 extra field)
-            "fname_len": len(file.file_path_bytes),
-            "extra_len": 32,
-            "fcomm_len": 0,
+            "compressed_size": 0xFFFFFFFF,  # Placeholder (will be updated in zip64 extra field)
+            "uncompressed_size": 0xFFFFFFFF,  # Placeholder (will be updated in zip64 extra field)
+            "file_name_len": len(file.file_path_bytes),
+            "extra_field_len": 32,
+            "file_comment_len": 0,
             "disk_start": 0,
-            "attrs_int": 0,
-            "attrs_ext": 0,
+            "internal_file_attr": 0,
+            "external_file_attr": 0,
             "offset": 0xFFFFFFFF  # Placeholder (will be updated in zip64 extra field)
         }
 
@@ -125,7 +179,7 @@ class ZipBase:
             "size": file.original_size,
             "compressed_size": file.compressed_size,
             "offset": file.offset,
-            "disk_Start_number": 0
+            "disk_start": 0
         }
 
         extra = consts.ZIP64_EXTRA_FIELD_TUPLE(**fields)
@@ -139,9 +193,9 @@ class ZipBase:
         """
         fields = {
             "signature": consts.ZIP64_END_OF_CENTRAL_DIR_RECORD_SIGNATURE,
-            "size_of_zip64_end_of_central_dir_record": 44,  # 44 bytes for the ZIP64 end of central directory record itself
-            "version_made_by": self.__OS_version,  # I have no clue why in the docs it's called 'version made by'. It's actually OS, check(4.4.2)
-            "version_needed_to_extract": self.__version,
+            "size_of_zip64_end_of_cdir_record": 44,  # 44 bytes for the ZIP64 end of central directory record itself
+            "version_made_by": self.__version_made_by,
+            "version_to_extract": self.__version_to_extract,
             "number_of_this_disk": 0,
             "cd_start": 0,
             "cd_entries_this_disk": len(self.files),
@@ -192,10 +246,7 @@ class ZipBase:
 
         return eocd
 
-    def get_offset(self) -> int:
-        return self.__offset
-
-    def add_offset(self, value: int) -> None:
+    def _add_offset(self, value: int) -> None:
         self.__offset += value
 
     def _stream_single_file(self, file: BaseFile) -> bytes:
@@ -212,7 +263,7 @@ class ZipBase:
         """
         Make zip64 end structures, which include:
             central directory file header for every file,
-            zip64 extra fields for every file,
+            zip64 extra field for every file,
             zip64 end of central dir record,
             zip64 end of central dir locator
             end of central dir record
@@ -225,7 +276,8 @@ class ZipBase:
             chunk = self._make_cdir_file_header(file)
             chunk += self._make_zip64_extra_field(file)
             self.__cdir_size += len(chunk)
-            self.__offset += len(chunk)
+            self._add_offset(len(chunk))
+
             yield chunk
 
         yield self._make_zip64_end_of_cdir_record()
@@ -234,3 +286,13 @@ class ZipBase:
 
         yield self._make_end_of_cdir_record()
 
+    def stream(self):
+        for file in self.files:
+            file.offset = self.__offset
+            for chunk in self._stream_single_file(file):
+                self._add_offset(len(chunk))
+                yield chunk
+
+        # stream zip structures
+        for chunk in self._make_end_structures():
+            yield chunk

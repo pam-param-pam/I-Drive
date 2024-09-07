@@ -4,10 +4,11 @@ from django.contrib import admin
 from django.urls import path
 from djoser.views import TokenCreateView
 
+from website.views.ZipViews import create_zip_model, get_zip_info
 from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_zip_info, get_dirs, fetch_additional_info, get_secrets
+    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_dirs, fetch_additional_info, get_secrets
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder, create_zip_model, reset_folder_password
+    delete, folder_password, restore_from_trash, create_folder, reset_folder_password
 from website.views.otherViews import index, generate_keys, test
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import get_preview
@@ -16,7 +17,6 @@ from website.views.userViews import change_password, users_me, update_settings, 
 
 urlpatterns = [
                   #path("test", test, name="test"),
-                  # path("help", help1, name="help"),
                   path("test", test, name="test"),
 
                   path('generate-keys', generate_keys, name='generate-keys'),

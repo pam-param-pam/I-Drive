@@ -95,7 +95,6 @@ def get_preview(request, file_obj: File):
         raise ResourceNotPreviewableError("Raw file cannot be read properly to extract preview image.")
 
     tags = exifread.process_file(file_like_object)
-    # print(tags)
     model_name = str(tags.get("Image Model"))
     focal_length = str(tags.get("EXIF FocalLength"))
     aperture = str(tags.get("EXIF ApertureValue"))

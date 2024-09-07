@@ -1,3 +1,4 @@
+import os
 import time
 
 import asyncio
@@ -62,19 +63,19 @@ def webhook_retry(func):
 class Discord:
     def __del__(self):
         self.client.close()
-    # todo fix this
+    # todo fix this (retry after and retry and semapphore the tokens
     def __init__(self):
         self.client = httpx.Client(timeout=10.0)
-        self.bot_tokens = ["MTI4MDU4NDY0NzkwMTk3MDQ2Mg.GiQeHp.3PKiq1zV4U0R530QrK_wxliaIY8VZYM0jBvh74",
-                           "MTI0NzkxNzIzMTQwNTI2OTAwMg.GaLIWS.Ffll0awqyOtW9sKZ3pwcrpKEtcM6eWfNXyclso",
-                           "MTI0NzkxNzg0Nzk4MDUzOTk4Ng.GKha5a._qWWVWUg1s5brf643o5JoDZ_xJhYxaLkIKXqzg",
-                           "MTI0NzkxODExODg3Mzk4OTE4MA.GsDLcM.6DzcA1NpOkjCoAKnCiL9_e2qZdVoSppWGZaWLg",
-                           "MTI0NzkxODMwODc3MDk3NTc3NQ.GiCrXe.XClfYy2DHs9ssTzIP8kQhegUyk0TZVxbpPDkXs",
-                           "MTI0NzkxODQ4NDI1MjI2NjUwNg.G-J14m.1YyUsVjXRiqF-2e7hz6drp1FEPV5HaPvcGNqsE",
-                           "MTI4MDU4NjYzOTEyNjU2MDgzMQ.GwuKkB.LKdWt5lt080lmvxLdZlzOWxIbZScgq2CYj_qRI",
-                           "MTI4MDU4NjczMTI3OTc0NTEyNg.GffY89.lsBBHyl8vQfOMZ_yEpl1tKTKveNvyJZHz5Ic34",
-                           "MTI4MDU4NjgxNjg1NjI2NDgyNg.G9Ncl-.UZKuxf7_9iG3Wy9T1FAKeSC7xVIl6vD540yk60",
-                           "MTI4MDU4Njg4NjY5OTY4MzkxNA.GzPx6n.97B70aCI6BBOLij933z20blpYLEAljYkyFXCL8"
+        self.bot_tokens = [os.environ['DISCORD_TOKEN1'],
+                           os.environ['DISCORD_TOKEN2'],
+                           os.environ['DISCORD_TOKEN3'],
+                           os.environ['DISCORD_TOKEN4'],
+                           os.environ['DISCORD_TOKEN5'],
+                           os.environ['DISCORD_TOKEN6'],
+                           os.environ['DISCORD_TOKEN7'],
+                           os.environ['DISCORD_TOKEN8'],
+                           os.environ['DISCORD_TOKEN9'],
+                           os.environ['DISCORD_TOKEN10']
 
         ]
         # self.semaphore = asyncio.Semaphore(len(self.bot_tokens))

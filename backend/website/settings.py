@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
-from simple_history.middleware import HistoryRequestMiddleware
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,9 +12,11 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o5m-fk59yjgizf7k6d9mk#*23&_gcc^1nptept@qykzch7zho-'
-os.environ[
-    "DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it work? Well until it breaks something, YES IT DOES!
+SECRET_KEY = os.environ['SECRET_KEY']
+
+# os.environ[
+#     "DJANGO_ALLOW_ASYNC_UNSAFE"] = "True"  # is it dumb? Yes, does it work? Well until it breaks something, YES IT DOES!
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 #TODO
@@ -39,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'simple_history',
 
 ]
 

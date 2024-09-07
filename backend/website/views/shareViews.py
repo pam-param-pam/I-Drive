@@ -122,7 +122,7 @@ def create_share(request):
     password = request.data.get('password')
 
     item = get_resource(item_id)
-    check_resource_perms(request, item, checkRoot=False)
+    check_resource_perms(request, item, checkRoot=False, checkTrash=True)
 
     current_time = timezone.now()
 

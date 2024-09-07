@@ -13,7 +13,6 @@ from website.utilities.errors import IDriveException
 # maybe create a base class for websocket consumer thats also includes logout method
 class TallyConsumer(WebsocketConsumer):
     def connect(self):
-        print(self.scope['headers'])
         # if dict(self.scope['headers']).get(b'sec-websocket-protocol') == "TALLY_KOCHAM_ALTERNATYWKI":
         self.accept()
         async_to_sync(self.channel_layer.group_add)("tally", self.channel_name)

@@ -1,13 +1,12 @@
 import base64
 import re
 import time
-from datetime import datetime
 from urllib.parse import quote
 
 import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from django.http import StreamingHttpResponse, HttpResponse
+from django.http import StreamingHttpResponse, HttpResponse, HttpResponseServerError, JsonResponse
 from django.utils.encoding import smart_str
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
@@ -23,10 +22,33 @@ def index(request):
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
+def test(request):
+    # Generator function for streaming data
+    def my_data_generator():
+        try:
+            for i in range(10):  # Example streaming loop
+                if i == 5:  # Simulate an error condition at i == 5
+                    raise ValueError("Simulated error")
+                yield f"Chunk {i}\n"
+        except ValueError as e:
+            # Handle the error by stopping the generator and raising an exception
+            raise e  # This will stop the stream and go to error handling
+
+    try:
+        # Use StreamingHttpResponse with the generator
+        response = StreamingHttpResponse(my_data_generator(), content_type='text/plain')
+        return response
+    except ValueError as e:
+        # Return an HTTP 500 error when the exception is raised
+        return HttpResponseServerError(f"An error occurred: {str(e)}")
+
+
+@api_view(['GET'])
+@throttle_classes([UserRateThrottle])
 def thumbnail_file(request, signed_file_id):
     res = requests.get(f"http://127.0.0.1:8000/api/file/thumbnail/{signed_file_id}")
     if not res.ok:
-        return HttpResponse(status=res.status_code)
+        return JsonResponse(status=res.status_code, data=res.json())
     res_json = res.json()
     
     def file_iterator(url, chunk_size=8192):
@@ -47,7 +69,12 @@ def thumbnail_file(request, signed_file_id):
                 else:
                     yield raw_data
             yield decryptor.finalize()
-            
+        else:
+            print("============DISCORD ERROR============")
+            print(discord_response.status_code)
+            print(discord_response.text)
+            return
+
     response = StreamingHttpResponse(file_iterator(res_json["url"]), content_type="image/jpeg")
     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
     return response
@@ -60,7 +87,7 @@ def stream_file(request, signed_file_id):
     isInline = request.GET.get('inline', False)
     res = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}")
     if not res.ok:
-        return HttpResponse(status=res.status_code)
+        return JsonResponse(status=res.status_code, data=res.json())
     res = res.json()
     file = res["file"]
     fragments = res["fragments"]
@@ -169,10 +196,10 @@ def stream_file(request, signed_file_id):
     response['Content-Length'] = file_size
     response['Content-Disposition'] = content_disposition
 
-    # if file["type"] == "text":
-    #     response['Cache-Control'] = "no-cache"
-    # else:
-    #     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
+    if file["type"] == "text":
+        response['Cache-Control'] = "no-cache"
+    else:
+        response['Cache-Control'] = f"max-age={2628000}"  # 1 month
 
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
@@ -210,7 +237,6 @@ def stream_zip_files(request, token):
                 print(fragment_response.status_code)
                 print(fragment_response.text)
                 return
-
             url = fragment_response.json()["url"]
 
             discord_response = requests.get(url, stream=True)
@@ -224,7 +250,7 @@ def stream_zip_files(request, token):
     res = requests.get(f"http://127.0.0.1:8000/api/zip/{token}")
     print(f"http://127.0.0.1:8000/api/zip/{token}")
     if not res.ok:
-        return HttpResponse(status=res.status_code)
+        return JsonResponse(status=res.status_code, data=res.json())
     res_json = res.json()
     for file in res_json["files"]:
 
@@ -244,7 +270,6 @@ def stream_zip_files(request, token):
     response['Content-Length'] = zipFly.calculate_archive_size()
 
     response['Content-Disposition'] = f'attachment; filename="{res_json["name"]}.zip"'
-    # response['Content-Length'] = content_length
 
     return response
 

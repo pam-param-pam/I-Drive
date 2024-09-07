@@ -8,7 +8,7 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Folder, Fragment, UserZIP, ShareableLink
+from website.models import File, Folder, Fragment, ShareableLink
 from website.tasks import prefetch_discord_message
 from website.utilities.Discord import discord
 from website.utilities.Permissions import ReadPerms
@@ -16,8 +16,8 @@ from website.utilities.constants import cache
 from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
 from website.utilities.errors import BadRequestError, ResourceNotFoundError
-from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, get_flattened_children, \
-    create_zip_file_dict, check_resource_perms, error_res, calculate_size, calculate_file_and_folder_count
+from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, error_res, \
+    calculate_size, calculate_file_and_folder_count
 from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -232,8 +232,6 @@ def check_password(request, resource_id):
         item = ShareableLink.objects.get(id=resource_id)
 
     password = request.headers.get("X-Resource-Password")
-    print(password)
-    print(item.password)
     if item.password == password:
         return HttpResponse(status=204)
 
@@ -251,6 +249,9 @@ def get_thumbnail_info(request, file_obj: File):
     This view is used by STREAMER SERVER to fetch information about file's thumbnail. 
     This is called in anonymous context, signed File ID is used to authorize the request.
     """
+
+    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+
     thumbnail = file_obj.thumbnail
 
     url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
@@ -277,6 +278,9 @@ def get_fragment(request, file_obj, sequence=1):
     is determined by file_obj and sequence. Sequence starts at 1.
     This is called in anonymous context, signed File ID is used to authorize the request.
     """
+
+    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+
     sequence -= 1
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     fragment = fragments[sequence]
@@ -289,6 +293,7 @@ def get_fragment(request, file_obj, sequence=1):
     }
     try:
         prefetch_discord_message.delay(fragments[sequence+1].message_id, fragments[sequence+1].attachment_id)
+        prefetch_discord_message.delay(fragments[sequence+2].message_id, fragments[sequence+2].attachment_id)
     except IndexError:
         pass
 
@@ -306,6 +311,9 @@ def get_fragments_info(request, file_obj: File):
     This view is used by STREAMER SERVER to fetch information about file's fragments.
     This is called in anonymous context, signed File ID is used to authorize the request.
     """
+
+    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     fragments_list = []
     for fragment in fragments:
@@ -328,103 +336,4 @@ def get_fragments_info(request, file_obj: File):
     return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
 
 
-@api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
-@handle_common_errors
-def get_zip_info(request, token):
-    """
-    This view is used by STREAMER SERVER to fetch information about ZIP object.
-    This is called in anonymous context, token is used to authorize the request.
-    """
-    #todo
 
-    # catch if there are multiple names in 1 dir, change name then
-    user_zip = UserZIP.objects.get(token=token)
-    files = user_zip.files.all()
-    folders = user_zip.folders.all()
-    dict_files = []
-
-    # if only 1 folder is downloaded we don't want it to be for example test1.zip <--test1 <-- content
-    # instead we want it to be test1.zip <-- content
-
-    single_root = False
-    if len(files) == 0 and len(folders) == 1:
-        single_root = True
-        dict_files += get_flattened_children(folders[0], single_root=single_root)
-
-    else:
-        for file in files:
-            file_dict = create_zip_file_dict(file, file.name)
-            dict_files.append(file_dict)
-
-        for folder in folders:
-            folder_tree = get_flattened_children(folder)
-            dict_files += folder_tree
-
-    # todo remove comment from delete
-    #user_zip.delete()
-    zip_name = user_zip.name if not single_root else folders[0].name
-    return JsonResponse({"length": len(files), "id": user_zip.id, "name": zip_name, "files": dict_files}, safe=False)
-
-
-
-
-"""
-
-@api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
-@last_modified(last_modified_func)
-def get_fragments_info(request, file_obj):
-    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-
-    file_obj = {
-        "fragments_length": len(fragments),
-        "size": file_obj.size,
-        "mimetype": file_obj.mimetype,
-        "type": file_obj.type,
-        "name": file_obj.name,
-        "key": str(file_obj.key),
-    }
-    return JsonResponse(file_obj, safe=False)
-
-@api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
-@permission_classes([IsAuthenticated])
-@handle_common_errors
-def get_root(request):
-    return HttpResponse(500)
-
-    try:
-        folder_obj = Folder.objects.get(parent=None, owner=request.user)
-        folder_content = build_folder_content(folder_obj)
-
-        return JsonResponse(folder_content, safe=False)
-    except (Folder.DoesNotExist, ValidationError):
-        return JsonResponse(error_res(user=request.user, code=404, error_code=8,
-                                      details="Folder with id of 'folder_id' doesn't exist."), status=404)
-
-
-@api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
-@permission_classes([IsAuthenticated])
-@handle_common_errors
-def get_folder_tree(request):
-    return HttpResponse(500)
-    try:
-
-        user_folders = Folder.objects.filter(owner=request.user)  # todo
-        folder_structure = build_folder_tree(user_folders)
-        return JsonResponse(folder_structure[0])
-
-    except Folder.MultipleObjectsReturned:
-        return JsonResponse(
-            error_res(user=request.user, code=500, error_code=3, details="Database is malformed WHOOPS"), status=500)
-
-    except KeyError:
-        return JsonResponse(
-            error_res(user=request.user, code=404, error_code=1, details="Missing some required parameters"),
-            status=404)
-"""

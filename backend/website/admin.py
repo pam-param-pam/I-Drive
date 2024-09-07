@@ -181,7 +181,6 @@ class FileAdmin(admin.ModelAdmin):
     readable_size.short_description = 'SIZE'
 
     def save_model(self, request, obj: File, form: ModelForm, change: bool):
-        print(change)
         super().save_model(request, obj, form, change)
 
 

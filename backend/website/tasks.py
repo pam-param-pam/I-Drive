@@ -23,14 +23,11 @@ logger = get_task_logger(__name__)
 # thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
 @shared_task(bind=True, name='queue_ws_event', ignore_result=True, queue='wsQ')
 def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this self arg is needed - no, don't ask me why
-    print("33333")
-
     channel_layer = get_channel_layer()
     if group:
         async_to_sync(channel_layer.group_send)(ws_channel, ws_event)
     else:
         async_to_sync(channel_layer.send)(ws_channel, ws_event)
-    print("444444")
 
 
 def send_message(message, args, finished, user_id, request_id, isError=False):
@@ -54,7 +51,7 @@ def save_preview(file_id, celery_file):
     try:
         file_data = binascii.a2b_base64(celery_file)
         preview_file = io.BytesIO(file_data)
-        files = {'file': ('1', preview_file)}
+        files = {'file': ('Kocham Alternatywki', preview_file)}
         # tags = exifread.process_file(file_like_object)
         response = discord.send_file(files)
         message = response.json()
