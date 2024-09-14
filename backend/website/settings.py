@@ -62,7 +62,6 @@ MIDDLEWARE = [
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     #'silk.middleware.SilkyMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
 
     #"django.middleware.cache.UpdateCacheMiddleware",
     #"django.middleware.common.CommonMiddleware",

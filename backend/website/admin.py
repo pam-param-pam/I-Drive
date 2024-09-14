@@ -6,14 +6,13 @@ from django.db.models import QuerySet
 from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html
-from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, GET_BASE_URL, API_BASE_URL
 from .utilities.other import sign_file_id_with_expiry
 
-admin.site.register(UserSettings, SimpleHistoryAdmin)
+admin.site.register(UserSettings)
 admin.site.register(UserPerms)
 
 
