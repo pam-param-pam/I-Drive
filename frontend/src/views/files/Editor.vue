@@ -308,7 +308,6 @@ export default {
             // catch every error so user can always close...
          catch (e) {
             console.error(e)
-            alert("Error closing properly... report this")
             this.$router.push({name: `Files`, params: {folderId: this.user.root}})
 
          }

@@ -26,7 +26,7 @@ def change_password(request):
     user = request.user
 
     if not user.check_password(current_password):
-        raise ResourcePermissionError("Password is incorrect")
+        raise ResourcePermissionError("Password is incorrect!")
 
     user.set_password(new_password)
     user.save()

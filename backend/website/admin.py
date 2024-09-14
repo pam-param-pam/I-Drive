@@ -1,4 +1,3 @@
-import base64
 from typing import Union, List
 
 from django.contrib import admin

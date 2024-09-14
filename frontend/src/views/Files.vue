@@ -70,7 +70,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["error", "user", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
+      ...mapState(useMainStore, ["error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
 
       headerButtons() {
          return {
@@ -202,6 +202,13 @@ export default {
 
       },
       upload() {
+        console.log(this.settings)
+        if (!this.settings.webhook) {
+          let message = this.$t("toasts.webhookMissing")
+          this.$toast.error(message)
+          return
+        }
+
          if (
             typeof window.DataTransferItem !== "undefined" &&
             typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"

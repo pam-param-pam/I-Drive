@@ -161,7 +161,7 @@ async function generateThumbnail(fileObj) {
    uploadStore.setStatus(fileObj.file_id, "generatingThumbnail")
 
    try {
-      let thumbnail = await getVideoCover(fileObj.unecryptedFile, 2)
+      let thumbnail = await getVideoCover(fileObj.unecryptedFile)
 
       if (fileObj.is_encrypted)
          thumbnail = await encrypt(fileObj.encryption_key, fileObj.encryption_iv, thumbnail)
@@ -179,7 +179,6 @@ async function generateThumbnail(fileObj) {
 
       })
 
-      //todo encrypt
       let file_data = {
          "file_id": fileObj.file_id,
          "size": thumbnail.size,
@@ -334,7 +333,7 @@ export async function prepareRequests() {
    let fileFormList = new FormData()
 
 
-
+   let peekFile = null
    let fileObj = null
    try {
       // if peekFile.size > 25MB we either return previously created multiAttachment request,
@@ -343,7 +342,7 @@ export async function prepareRequests() {
       // eslint-disable-next-line no-constant-condition
       while (true) {
 
-         let peekFile = uploadStore.queue[0]
+         peekFile = uploadStore.queue[0]
          if (!peekFile) break
          //CASE 1, file is > 25mb
          if (peekFile.size > chunkSize) {
@@ -356,6 +355,7 @@ export async function prepareRequests() {
             //CAS 1.2 multiAttachment request is not created, we create chunked requests from peekFile
             fileObj = await uploadStore.getFileFromQueue()
             if (!fileObj) break
+
             //generate thumbnail if needed
             if (isVideoFile(fileObj.systemFile)) {
                await generateThumbnail(fileObj)
@@ -410,6 +410,10 @@ export async function prepareRequests() {
       console.error(e)
       if (fileObj) {
          uploadStore.setStatus(fileObj.file_id, "failed")
+      }
+      else if (peekFile) {
+         uploadStore.setStatus(peekFile.file_id, "failed")
+
       }
    }
 
@@ -512,7 +516,7 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, fileObj, requ
    let formData = new FormData()
 
 
-   formData.append('file', chunk, `chunk_${chunkNumber}`)
+   formData.append('file', chunk, `Kocham Alternatywki`)
 
    let response = await discord_instance.post(webhook, formData, {
       headers: {

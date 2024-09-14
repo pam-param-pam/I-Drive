@@ -17,7 +17,7 @@
           <tr v-for="(link, index) in links" :key="link.id">
             <td>{{ index + 1 }}</td>
             <td>
-              <template>{{ humanTime(link.expire) }}</template>
+              {{ humanTime(link.expire) }}
             </td>
             <td class="small">
               <button
@@ -115,6 +115,7 @@ import Clipboard from "clipboard"
 import {createShare, getAllShares, removeShare} from "@/api/share.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
+import throttle from "lodash.throttle";
 
 export default {
    name: "share",
@@ -157,7 +158,7 @@ export default {
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
-      async submit() {
+     submit: throttle(async function (event) {
          let res = await createShare({
             "resource_id": this.selected[0].id,
             "password": this.password,
@@ -174,13 +175,18 @@ export default {
 
          this.listing = true
          this.$toast.success(this.$t("settings.shareCreated"))
-      },
+      }, 1000),
+
       async deleteLink(event, share) {
          event.preventDefault()
 
          await removeShare({"token": share.token})
          this.links = this.links.filter((item) => item.id !== share.id)
          this.$toast.success(this.$t("settings.shareDeleted"))
+         if (this.links.length === 0) {
+           this.listing = !this.listing
+         }
+
 
       },
       humanTime(time) {

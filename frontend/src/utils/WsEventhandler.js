@@ -75,7 +75,7 @@ export default function onEvent(message) {
          if (item.parent_id !== currentFolder?.id) return
          console.log(3333)
 
-         store.changeLockStatusAndPasswordCache({folderId: item.id, newLockStatus: item.isLocked})
+         store.changeLockStatusAndPasswordCache({folderId: item.id, newLockStatus: item.isLocked, lockFrom: item.lockFrom})
          console.log(4444)
 
       }

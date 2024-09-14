@@ -5,7 +5,7 @@ from django.urls import path
 from djoser.views import TokenCreateView
 
 from website.views.ZipViews import create_zip_model, get_zip_info
-from website.views.dataViews import get_folder, get_file, get_breadcrumbs, get_usage, search, \
+from website.views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_dirs, fetch_additional_info, get_secrets
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password
@@ -27,7 +27,7 @@ urlpatterns = [
                   path("api/search", search, name="search"),
 
                   path("api/file/create", create_file, name="create file"),
-                  path("api/file/<file_id>", get_file, name="get file by file id"),
+                  path("api/file/<file_id>", get_file_info, name="get file by file id"),
                   path("api/file/preview/<file_id>", get_preview, name="get preview by file id"),
                   path("api/file/thumbnail/create", create_thumbnail, name="create preview"),
                   path("api/file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
@@ -47,7 +47,7 @@ urlpatterns = [
                   path("api/share/<token>/<folder_id>", view_share, name="get folder from share"),
 
                   path("api/folder/create", create_folder, name="create folder"),
-                  path('api/folder/<folder_id>', get_folder, name="get files and folders from a folder id"),
+                  path('api/folder/<folder_id>', get_folder_info, name="get files and folders from a folder id"),
                   path('api/folder/dirs/<folder_id>', get_dirs, name="get folders from a folder id"),
                   path('api/folder/usage/<folder_id>', get_usage, name="get size of all files in that folder to all user's files"),
                   path("api/folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),

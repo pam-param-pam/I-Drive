@@ -43,13 +43,23 @@
     "upload": "Upload"
   },
   "errors": {
-    "badRequest": "Bad request",
+    "Unauthenticated": "Unauthenticated",
+    "badRequest": "Bad Request",
     "connection": "The server can't be reached.",
+    "databaseError": "Database Error",
+    "discordBlocked": "Discord is temporarily is blocked",
     "folderPasswordRequired": "Password is required to access this folder.",
     "forbidden": "You do not have enough permissions to access this resource",
     "internal": "Internal server error",
+    "missingOrIncorrectResourcePassword": "Incorrect resource password",
     "notFound": "This location can't be reached.",
-    "rateLimit": "Enhance your calm, try again in a few seconds"
+    "notImplemented": "Not implemented yet",
+    "rateLimit": "Enhance your calm, try again in a few seconds",
+    "resourceAccessForbidden": "Access to resource forbidden",
+    "resourceNotFound": "Resource doesn't exist",
+    "resourceNotReady": "Resource is not ready yet",
+    "rootFolderNoAccess": "Access denied to 'root' folder",
+    "unexpectedDiscordResponse": "Unexpected discord response"
   },
   "files": {
     "clear": "Clear",
@@ -274,6 +284,7 @@
     "shareDeleted": "Share deleted!",
     "thumbnailError": "Couldn't generate thumbnail for video: {name}",
     "unauthorized": "Unauthorized",
+    "webhookMissing": "Missing webhook URL",
     "websocketError": "Couldn't connect to websocket, site will not function properly."
   },
   "trash": {
@@ -284,7 +295,7 @@
     "creating": "Creating...",
     "failed": "Failed, unknown error",
     "finishing": "Saving file...",
-    "generatingThumbnail": "Generating thumbnails",
+    "generatingThumbnail": "Generating thumbnail",
     "noInternet": "Internet connection lost",
     "paused": "Paused",
     "pausing": "Pausing...",
