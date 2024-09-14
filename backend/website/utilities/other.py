@@ -1,15 +1,13 @@
-import base64
 from datetime import timedelta, datetime
 from typing import Union, List, Dict
 
-from django.contrib.auth.models import User
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from website.models import File, Folder, UserSettings, Preview, ShareableLink, Thumbnail
+from website.models import File, Folder, Preview, ShareableLink, Thumbnail
 from website.tasks import queue_ws_event
 from website.utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ErrorDict, ZipFileDict
-from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, message_codes, EventCode
+from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, EventCode
 from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError
 
 signer = TimestampSigner()
@@ -74,7 +72,7 @@ def create_breadcrumbs(folder_obj: Folder) -> List[Breadcrumbs]:
     while folder_obj.parent:
         data = {"name": folder_obj.name, "id": folder_obj.id}
         folder_path.append(data)
-        folder_obj = Folder.objects.get(id=folder_obj.parent.id)
+        folder_obj = get_folder(folder_obj.parent.id)
     folder_path.reverse()
     return folder_path
 
@@ -92,7 +90,8 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolde
             break
         if not folder_obj.parent:
             break
-        folder_obj = Folder.objects.get(id=folder_obj.parent.id)
+
+        folder_obj = get_folder(folder_obj.parent.id)
 
     folder_path.reverse()
     return folder_path
@@ -129,12 +128,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
     except Preview.DoesNotExist:
         pass
 
-    # base_url = "http://127.0.0.1:8000"
-    # stream_url = "http://192.168.1.14:8050"
-
-    # base_url = "http://127.0.0.1:8050/stream"
-    # hide media from files in trash for example
-    if not hide or not file_obj.is_locked:
+    if not hide:
         signed_file_id = sign_file_id_with_expiry(file_obj.id)
 
         if file_obj.extension in (
@@ -183,17 +177,15 @@ def create_folder_dict(folder_obj: Folder) -> FolderDict:
 
 
 def create_share_dict(share: ShareableLink) -> ShareDict:
-    isDir = False
     try:
-        obj = File.objects.get(id=share.object_id)
-    except File.DoesNotExist:
-        try:
-            obj = Folder.objects.get(id=share.object_id)
-            isDir = True
-        except Folder.DoesNotExist:
-            # looks like folder/file no longer exist, deleting time!
-            share.delete()
-            raise ResourceNotFoundError(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
+        obj = get_resource(share.object_id)
+    except ResourceNotFoundError:
+        # looks like folder/file no longer exist, deleting time!
+        share.delete()
+        raise ResourceNotFoundError(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
+
+    isDir = True if isinstance(obj, Folder) else False
+
     item = {
         "expire": formatDate(share.expiration_time),
         "name": obj.name,
@@ -201,7 +193,6 @@ def create_share_dict(share: ShareableLink) -> ShareDict:
         "token": share.token,
         "resource_id": share.object_id,
         "id": share.id,
-        # "download_url": f"{GET_BASE_URL}/"
     }
     return item
 
@@ -268,41 +259,53 @@ def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}
 
 
-def error_res(user: User, code: int, error_code: int, details: str) -> ErrorDict:  #todo  maybe change to build_http_error_response?
-    locale = "en"
+def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:  #todo  maybe change to build_http_error_response?
+    return {"code": code, "error": error, "details": details}
 
-    if not user.is_anonymous:
-        settings = UserSettings.objects.get(user=user)
-        locale = settings.locale
+def get_file(file_id: str) -> File:
+    try:
+        file = File.objects.get(id=file_id)
+    except File.DoesNotExist:
+        raise ResourceNotFoundError(f"File with id of '{file_id}' doesn't exist.")
+    return file
 
-    return {"code": code, "error": message_codes[error_code][locale], "details": details}
-
+def get_folder(folder_id: str) -> Folder:
+    try:
+        folder = Folder.objects.get(id=folder_id)
+    except Folder.DoesNotExist:
+        raise ResourceNotFoundError(f"Folder with id of '{folder_id}' doesn't exist.")
+    return folder
 
 def get_resource(obj_id: str) -> Resource:
     try:
-        item = Folder.objects.get(id=obj_id)
-    except Folder.DoesNotExist:
+        item = get_folder(obj_id)
+    except ResourceNotFoundError:
         try:
-            item = File.objects.get(id=obj_id)
-        except File.DoesNotExist:
+            item = get_file(obj_id)
+        except ResourceNotFoundError:
             raise ResourceNotFoundError(f"Resource with id of '{obj_id}' doesn't exist.")
     return item
 
 
-def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True, checkTrash=False) -> None:
+def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True, checkTrash=False, checkReady=True) -> None:
     if checkOwnership:
         if resource.owner != request.user:
-            raise ResourcePermissionError()
+            raise ResourcePermissionError("You have no access to this resource!")
 
-    if checkRoot:
-        if isinstance(resource, Folder) and not resource.parent:
-            raise RootPermissionError("Cannot access 'root' folder!")
     if checkFolderLock:
         check_folder_password(request, resource)
 
+    if checkRoot:
+        if isinstance(resource, Folder) and not resource.parent:
+            raise RootPermissionError()
+
     if checkTrash:
         if resource.inTrash:
-            raise ResourcePermissionError("Cannot access file in trash")
+            raise ResourcePermissionError("Cannot access resource in trash!")
+
+    if checkReady:
+        if not resource.ready:
+            raise ResourceNotFoundError("Resource is not ready")
 
 
 def check_folder_password(request, resource: Resource) -> None:

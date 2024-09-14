@@ -1,4 +1,5 @@
 import base64
+import os
 import re
 import time
 from urllib.parse import quote
@@ -13,6 +14,7 @@ from rest_framework.throttling import UserRateThrottle
 
 from zipFly import GenFile, ZipFly
 
+iDriveBackend = os.environ["I_DRIVE_BACKEND"]
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
@@ -46,7 +48,7 @@ def test(request):
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def thumbnail_file(request, signed_file_id):
-    res = requests.get(f"http://127.0.0.1:8000/api/file/thumbnail/{signed_file_id}")
+    res = requests.get(f"{iDriveBackend}/api/file/thumbnail/{signed_file_id}")
     if not res.ok:
         return JsonResponse(status=res.status_code, data=res.json())
     res_json = res.json()
@@ -85,7 +87,7 @@ def thumbnail_file(request, signed_file_id):
 @throttle_classes([UserRateThrottle])
 def stream_file(request, signed_file_id):
     isInline = request.GET.get('inline', False)
-    res = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}")
+    res = requests.get(f"{iDriveBackend}/api/fragments/{signed_file_id}")
     if not res.ok:
         return JsonResponse(status=res.status_code, data=res.json())
     res = res.json()
@@ -124,7 +126,7 @@ def stream_file(request, signed_file_id):
             print(f"Time taken for fake decryption (seconds): {end_time - start_time:.6f}")
 
         while index <= len(fragments):
-            fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_file_id}/{index}")
+            fragment_response = requests.get(f"{iDriveBackend}/api/fragments/{signed_file_id}/{index}")
             if not fragment_response.ok:
                 return HttpResponse(status=fragment_response.status_code)
 
@@ -230,8 +232,8 @@ def stream_zip_files(request, token):
             decryptor = cipher.decryptor()
 
         for fragment in fragments:
-            fragment_response = requests.get(f"http://127.0.0.1:8000/api/fragments/{signed_id}/{fragment['sequence']}")
-            print(f"http://127.0.0.1:8000/api/fragments/{signed_id}/{fragment['sequence']}")
+            fragment_response = requests.get(f"{iDriveBackend}/api/fragments/{signed_id}/{fragment['sequence']}")
+            print(f"{iDriveBackend}/api/fragments/{signed_id}/{fragment['sequence']}")
             if not fragment_response.ok:
                 print("============ERROR============")
                 print(fragment_response.status_code)
@@ -247,7 +249,7 @@ def stream_zip_files(request, token):
                 else:
                     yield raw_data
 
-    res = requests.get(f"http://127.0.0.1:8000/api/zip/{token}")
+    res = requests.get(f"{iDriveBackend}/api/zip/{token}")
     print(f"http://127.0.0.1:8000/api/zip/{token}")
     if not res.ok:
         return JsonResponse(status=res.status_code, data=res.json())

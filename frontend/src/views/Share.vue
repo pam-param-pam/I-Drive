@@ -149,7 +149,6 @@ export default {
          this.shareState = 'success'
       }
          finally {
-         this.shareState = 'error'
 
       }
 

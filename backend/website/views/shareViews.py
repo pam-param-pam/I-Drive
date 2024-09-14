@@ -14,7 +14,8 @@ from website.utilities.TypeHinting import Resource
 from website.utilities.decorators import handle_common_errors
 from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, MissingOrIncorrectResourcePasswordError
 from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
-    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, build_share_folder_content
+    build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, build_share_folder_content, get_folder, \
+    get_file
 from website.utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -53,13 +54,13 @@ def view_share(request, token, folder_id=None):
                              "requiredFolderPasswords": [{"id": share.id, "name": f"share"}]}, status=469)
 
     if share.content_type.name == "folder":
-        obj_in_share = Folder.objects.get(id=share.object_id)
+        obj_in_share = get_folder(share.object_id)
         settings = UserSettings.objects.get(user=obj_in_share.owner)
         response_dict = create_share_resource_dict(share, obj_in_share)
         breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
 
     else:
-        obj_in_share = File.objects.get(id=share.object_id)
+        obj_in_share = get_file(share.object_id)
         settings = UserSettings.objects.get(user=obj_in_share.owner)
         response_dict = create_share_resource_dict(share, obj_in_share)
         breadcrumbs = []
@@ -105,7 +106,7 @@ def delete_share(request):
     share = ShareableLink.objects.get(token=token)
 
     if share.owner != request.user:
-        raise ResourcePermissionError()
+        raise ResourcePermissionError("You have no access to this resource!")
     share.delete()
     return HttpResponse("Share deleted!", status=204)
 
@@ -137,7 +138,7 @@ def create_share(request):
 
     share = ShareableLink.objects.create(
         expiration_time=expiration_time,
-        owner_id=1,
+        owner=request.user,
         content_type=ContentType.objects.get_for_model(item),
         object_id=item.id
     )

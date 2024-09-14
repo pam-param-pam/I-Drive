@@ -25,6 +25,7 @@ class Folder(models.Model):
     inTrashSince = models.DateTimeField(null=True, blank=True)
     password = models.CharField(max_length=255, null=True, blank=True)
     autoLock = models.BooleanField(default=False)
+    ready = models.BooleanField(default=True)
     lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 
     def __str__(self):
@@ -202,7 +203,6 @@ class File(models.Model):
         try:
             old_object = File.objects.get(id=self.id)
             cache.delete(old_object.parent.id)
-
         except File.DoesNotExist:
             pass
 
@@ -291,6 +291,7 @@ class UserPerms(models.Model):
     read = models.BooleanField(default=True)
     settings_modify = models.BooleanField(default=True)
     change_password = models.BooleanField(default=True)
+    reset_lock = models.BooleanField(default=True)
 
     def __str__(self):
         return self.user.username + "'s perms"
@@ -349,6 +350,8 @@ class ShareableLink(models.Model):
 
     def is_locked(self):
         return self.password
+
+
 class Thumbnail(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)

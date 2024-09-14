@@ -15,7 +15,7 @@ from website.models import Fragment, Preview, File
 from website.utilities.Discord import discord
 from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode
 from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
-from website.utilities.errors import ResourceNotPreviewableError, DiscordError
+from website.utilities.errors import DiscordError, BadRequestError
 from website.utilities.other import send_event
 from website.utilities.throttle import MediaRateThrottle
 
@@ -55,10 +55,10 @@ def get_preview(request, file_obj: File):
 
     # RAW IMAGE FILE
     if file_obj.extension not in RAW_IMAGE_EXTENSIONS:
-        raise ResourceNotPreviewableError(f"Resource of type {file_obj.type} is not previewable")
+        raise BadRequestError(f"Resource of type {file_obj.type} is not previewable")
 
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
-        raise ResourceNotPreviewableError("File too big: size > 100mb")
+        raise BadRequestError("File too big: size > 100mb")
 
     key = file_obj.key
     iv = file_obj.encryption_iv
@@ -92,7 +92,7 @@ def get_preview(request, file_obj: File):
             imageio.imwrite(data, thumb.data)
 
     except (LibRawFileUnsupportedError, LibRawUnsupportedThumbnailError):
-        raise ResourceNotPreviewableError("Raw file cannot be read properly to extract preview image.")
+        raise BadRequestError("Raw file cannot be read properly to extract preview image.")
 
     tags = exifread.process_file(file_like_object)
     model_name = str(tags.get("Image Model"))

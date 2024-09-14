@@ -5,11 +5,11 @@ from rest_framework.permissions import IsAuthenticated
 
 from website.models import File, Folder
 from website.tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder
-from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms
+from website.utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from website.utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from website.utilities.decorators import handle_common_errors, check_folder_and_permissions
 from website.utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms
+from website.utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder
 from website.utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -22,7 +22,7 @@ def create_folder(request):
     parent_id = request.data['parent_id']
 
     parent = get_resource(parent_id)
-    check_resource_perms(request, parent, checkRoot=False, checkFolderLock=False)
+    check_resource_perms(request, parent, checkRoot=False)
 
     folder_obj = Folder(
         name=name,
@@ -88,7 +88,7 @@ def move(request):
             x += 1
             if new_parent.parent == item.parent and x > 1:
                 raise BadRequestError("Invalid move destination.")
-            new_parent = Folder.objects.get(id=new_parent.parent.id)
+            new_parent = get_folder(new_parent.parent.id)
 
         items.append(item)
 
@@ -98,7 +98,7 @@ def move(request):
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
 
-    new_parent = Folder.objects.get(id=new_parent_id)  # goofy ah redeclaration
+    new_parent = get_folder(new_parent_id)    # goofy ah redeclaration
 
     # invalidate any cache
     cache.delete(new_parent.id)
@@ -122,7 +122,7 @@ def move(request):
                 if isinstance(item, File):
                     item.removeLock()
                 else:
-                    item.applyLock(item, item.password)
+                    item.applyLock(item.lockFrom, item.password)
 
         item.save()
 
@@ -159,7 +159,7 @@ def move_to_trash(request):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
 
         if isinstance(item, Folder) and not item.parent:
-            raise RootPermissionError("Cannot move 'root' folder to trash!")
+            raise RootPermissionError()
 
         items.append(item)
 
@@ -218,7 +218,7 @@ def restore_from_trash(request):
             raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
 
         if isinstance(item, Folder) and not item.parent:
-            raise RootPermissionError("Cannot restore 'root' folder from trash!")
+            raise RootPermissionError()
 
         items.append(item)
 
@@ -295,7 +295,7 @@ def rename(request):
     check_resource_perms(request, item)
 
     if len(new_name) > MAX_RESOURCE_NAME_LENGTH:
-        raise BadRequestError(f"Name cannot be larger than '{MAX_RESOURCE_NAME_LENGTH}'")
+        raise BadRequestError(f"Name cannot be longer than '{MAX_RESOURCE_NAME_LENGTH}' characters")
 
     item.name = new_name
     item.save()
@@ -318,9 +318,10 @@ def folder_password(request, folder_obj):
         unlock_folder.delay(request.user.id, request.request_id, folder_obj.id)
 
     isLocked = True if newPassword else False
+    lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
     send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
-               [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked}])
+               [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
     if isLocked:
         return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
@@ -328,7 +329,7 @@ def folder_password(request, folder_obj):
 
 @api_view(['POST'])
 @throttle_classes([FolderPasswordRateThrottle])
-@permission_classes([IsAuthenticated & LockPerms])
+@permission_classes([IsAuthenticated & ResetLockPerms])
 @handle_common_errors
 @check_folder_and_permissions
 def reset_folder_password(request, folder_id):
@@ -348,8 +349,10 @@ def reset_folder_password(request, folder_id):
 
     isLocked = True if new_folder_password else False
 
+    lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
     send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
-               [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked}])
+               [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
+
     if isLocked:
         return JsonResponse(build_response(request.request_id, "Folder password is being changed..."))
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))

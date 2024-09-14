@@ -43,13 +43,23 @@
     "upload": "Prześlij"
   },
   "errors": {
+    "Unauthenticated": "Użytkownik nieuwierzytelniony",
     "badRequest": "Niepoprawne żądanie.",
     "connection": "Serwer nie odpowiada.",
+    "databaseError": "Błąd bazy danych.",
+    "discordBlocked": "Discord jest chwilowo zablokowany.",
     "folderPasswordRequired": "Hasło jest wymagane by odblokować folder.",
     "forbidden": "Nie posiadasz uprawnień potrzebnych, by uzyskać do tego dostęp.",
     "internal": "Pojawił się poważny problem.",
+    "missingOrIncorrectResourcePassword": "Niepoprawne hasło do zasobu",
     "notFound": "Ten adres nie jest poprawny.",
-    "rateLimit": "Za szybko wysyłasz zapytania!"
+    "notImplemented": "Funkcja jeszcze nie dostępna.",
+    "rateLimit": "Za szybko wysyłasz zapytania!",
+    "resourceAccessForbidden": "Nie posiadasz uprawnień potrzebnych, by uzyskać do tego dostęp.",
+    "resourceDoesntExist": "Zasób nie istnieje",
+    "resourceNotReady": "Zasób jeszcze nie jest gotowy",
+    "rootFolderNoAccess": "Brak uprawnień do 'root' foldera",
+    "unexpectedDiscordResponse": "Discord wysłał błędną odpowiedż"
   },
   "files": {
     "clear": "Wyczyść",
@@ -274,6 +284,7 @@
     "shareDeleted": "Usunięto share",
     "thumbnailError": "Nie udało sie wygenerować podglądu dla filmu: {name}",
     "unauthorized": "Brak uwierzytelnienia",
+    "webhookMissing": "Brak webhook URL",
     "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie."
   },
   "trash": {

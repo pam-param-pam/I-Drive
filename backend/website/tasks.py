@@ -84,8 +84,11 @@ def smart_delete(user_id, request_id, ids):
             except Folder.DoesNotExist:
                 item = File.objects.get(id=item_id)
 
-            items.append(item)
+            item.ready = False
+            item.save()
 
+            items.append(item)
+        return
         message_structure = {}
         all_files = []
         for item in items:
@@ -217,6 +220,9 @@ def delete_unready_files():
         if elapsed_time >= timedelta(days=1):
 
             smart_delete.delay(file.owner.id, request_id, [file.id])
+
+
+    #todo delete unready folders and their content
 
 @app.task
 def delete_files_from_trash():

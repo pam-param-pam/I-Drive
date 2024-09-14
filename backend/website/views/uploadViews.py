@@ -1,18 +1,15 @@
-import base64
-import time
-
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import Folder, File, Fragment, UserSettings, Thumbnail
+from website.models import File, Fragment, UserSettings, Thumbnail
 from website.utilities.Discord import discord
 from website.utilities.Permissions import CreatePerms
 from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
 from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import BadRequestError, ResourcePermissionError, ThumbnailAlreadyExistsError
-from website.utilities.other import send_event, create_file_dict, get_resource, check_resource_perms
+from website.utilities.errors import BadRequestError
+from website.utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file
 from website.utilities.throttle import MyUserRateThrottle
 
 
@@ -48,10 +45,10 @@ def create_file(request):
 
             if file_name == "" or not file_name:
                 raise BadRequestError("'name' cannot be empty")
-            parent = Folder.objects.get(id=parent_id)
 
-            if parent.owner != request.user:
-                raise ResourcePermissionError()
+            parent = get_folder(parent_id)
+
+            check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
 
             file_type = mimetype.split("/")[0]
             file_obj = File(
@@ -66,10 +63,11 @@ def create_file(request):
             )
             #  apply lock if needed
             if parent.is_locked:
-                file_obj.applyLock(parent, parent.password)
+                file_obj.applyLock(parent.lockFrom, parent.password)
 
             if file_size == 0:
                 file_obj.ready = True
+
             file_obj.save()
             key = file_obj.get_base64_key()
             iv = file_obj.get_base64_iv()
@@ -94,6 +92,7 @@ def create_file(request):
 
         if len(files) == 0:
             raise BadRequestError("'ids' length cannot be 0.")
+
         for file in files:
 
             file_id = file['file_id']
@@ -103,11 +102,8 @@ def create_file(request):
             attachment_id = file['attachment_id']
             fragment_size = file['fragment_size']
 
-            file_obj = get_resource(file_id)
-            check_resource_perms(request, file_obj)
-
-            if file_obj.ready:
-                raise BadRequestError("You cannot further modify a 'ready' file!")
+            file_obj = get_file(file_id)
+            check_resource_perms(request, file_obj, checkReady=False)
 
             fragment_obj = Fragment(
                 sequence=fragment_sequence,
@@ -117,6 +113,7 @@ def create_file(request):
                 message_id=message_id,
             )
             fragment_obj.save()
+
             if len(file_obj.fragments.all()) == total_fragments:
                 file_obj.ready = True
                 file_obj.created_at = timezone.now()
@@ -125,7 +122,7 @@ def create_file(request):
                 send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
 
                 # return only in chunked file upload
-                if len(files) == 0:
+                if len(files) == 1:
                     return HttpResponse("File is ready now", status=200)
 
         return HttpResponse(status=204)
@@ -133,8 +130,8 @@ def create_file(request):
     if request.method == "PUT":
         file_id = request.data['file_id']
 
-        file_obj = get_resource(file_id)
-        check_resource_perms(request, file_obj)
+        file_obj = get_file(file_id)
+        check_resource_perms(request, file_obj, checkReady=False)
 
         if not file_obj.ready:
             raise BadRequestError("You cannot edit a 'not ready' file!")
@@ -202,12 +199,12 @@ def create_thumbnail(request):
     attachment_id = request.data['attachment_id']
     size = request.data['size']
 
-    file_obj = get_resource(file_id)
-    check_resource_perms(request, file_obj)
+    file_obj = get_file(file_id)
+    check_resource_perms(request, file_obj, checkReady=False)
 
     try:
         if file_obj.thumbnail:
-            raise ThumbnailAlreadyExistsError("A thumbnail already exists for this file.")
+            raise BadRequestError("A thumbnail already exists for this file.")
     except File.thumbnail.RelatedObjectDoesNotExist:
         pass
 

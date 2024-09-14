@@ -100,52 +100,6 @@
       </template>
 
     </header-bar>
-    <div v-if="isMobile()" id="file-selection">
-      <span v-if="selectedCount > 0">{{ $t('files.selected', {amount: selectedCount}) }}</span>
-      <action
-        v-if="headerButtons.locate"
-        icon="location_on"
-        :label="$t('buttons.locate')"
-        @action="locateItem"
-      />
-      <action
-        v-if="headerButtons.restore"
-        icon="restore"
-        :label="$t('buttons.restoreFromTrash')"
-        show="restoreFromTrash"
-      />
-      <action
-        v-if="headerButtons.share "
-        icon="share"
-        :label="$t('buttons.share')"
-        show="share"
-      />
-      <action
-        v-if="headerButtons.modify"
-        icon="mode_edit"
-        :label="$t('buttons.rename')"
-        show="rename"
-      />
-      <action
-        v-if="headerButtons.modify"
-        icon="forward"
-        :label="$t('buttons.moveFile')"
-        show="move"
-      />
-      <action
-        v-if="headerButtons.moveToTrash"
-        icon="delete"
-        :label="$t('buttons.moveToTrash')"
-        show="moveToTrash"
-      />
-      <action
-        v-if="headerButtons.delete"
-        id="delete-button"
-        icon="delete"
-        :label="$t('buttons.delete')"
-        show="delete"
-      />
-    </div>
     <div v-if="loading">
       <h2 class="message delayed">
         <div class="spinner">
@@ -537,10 +491,30 @@ export default {
          this.resetSelected()
          this.addSelected(item)
 
-         this.contextMenuPos = {
-            x: event.clientX + 30,
-            y: event.clientY - 40,
-         }
+        let max_x_size = 200
+        let max_y_size = 375
+
+        let posX = event.clientX + 30
+        let posY = event.clientY - 40
+
+        // Get the viewport dimensions
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+
+        // Check if the coordinates + 200px are outside the visible area
+        if ((posX + max_x_size) > viewportWidth) {
+          posX = viewportWidth - max_x_size
+        }
+
+        if ((posY + max_y_size) > viewportHeight) {
+          posY = viewportHeight - max_y_size
+        }
+
+
+        this.contextMenuPos = {
+          x: posX,
+          y: posY,
+        }
 
          this.isContextMenuVisible = true
       },
