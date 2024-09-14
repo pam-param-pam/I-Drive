@@ -1,1 +1,1 @@
-docker buildx build -t pamparpam/i-drive-backend:latest .
+docker buildx build -t pamparampam/i-drive-backend:latest .
