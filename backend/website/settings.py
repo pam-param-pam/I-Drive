@@ -62,7 +62,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     #'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
-    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
+    'website.utilities.middlewares.ApplyRateLimitHeadesimplersMiddleware',
     #'silk.middleware.SilkyMiddleware',
 
     #"django.middleware.cache.UpdateCacheMiddleware",
@@ -124,11 +124,10 @@ WSGI_APPLICATION = 'website.wsgi.application'
 ASGI_APPLICATION = 'website.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.path.join( os.environ["I_DRIVE_BACKEND_STORAGE_DIR"], 'db.sqlite3'),
         'CONN_MAX_AGE':  None
 
     }
@@ -163,14 +162,13 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Channels settings
-redis_addr = os.environ["I_DRIVE_REDIS"].split(':')[0]
-redis_port = os.environ["I_DRIVE_REDIS"].split(':')[1]
+
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(redis_addr, redis_port)],  # set redis address
+            "hosts": [(os.environ["I_DRIVE_REDIS"], os.environ["I_DRIVE_REDIS_PORT"])],  # set redis address
 
         },
     },

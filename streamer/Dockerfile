@@ -15,5 +15,5 @@ COPY . .
 
 # RUN chmod +x entrypoint.sh
 
-# Command to run the Daphne server
-ENTRYPOINT ["sleep", "3600"]   
+# Command to run the Gunicorn server
+CMD ["gunicorn", "-w", "4", "streamer.wsgi", "--bind", "0.0.0.0:8050"]  

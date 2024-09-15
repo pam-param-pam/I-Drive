@@ -42,13 +42,6 @@ services:
         condition: service_healthy
     environment:
       - I_DRIVE_BACKEND_SECRET_KEY=${I_DRIVE_BACKEND_SECRET_KEY}
-      - IS_DEV_ENV=${IS_DEV_ENV}
-      - I_DRIVE_REDIS=${I_DRIVE_REDIS}
-      - I_DRIVE_REDIS_PORT=${I_DRIVE_REDIS_PORT}
-      - I_DRIVE_BACKEND=${I_DRIVE_BACKEND}
-      - I_DRIVE_BACKEND_PORT=${I_DRIVE_BACKEND_PORT}
-      - I_DRIVE_STREAMER=${I_DRIVE_STREAMER}
-      - I_DRIVE_FRONTEND=${I_DRIVE_FRONTEND}
       - DISCORD_TOKEN1=${DISCORD_TOKEN1}
       - DISCORD_TOKEN2=${DISCORD_TOKEN2}
       - DISCORD_TOKEN3=${DISCORD_TOKEN3}
@@ -59,15 +52,24 @@ services:
       - DISCORD_TOKEN8=${DISCORD_TOKEN8}
       - DISCORD_TOKEN9=${DISCORD_TOKEN9}
       - DISCORD_TOKEN10=${DISCORD_TOKEN10}
-    
+
+      - IS_DEV_ENV=${IS_DEV_ENV}
+      - I_DRIVE_REDIS=${I_DRIVE_REDIS}
+      - I_DRIVE_REDIS_PORT=${I_DRIVE_REDIS_PORT}
+      - I_DRIVE_BACKEND=${I_DRIVE_BACKEND}
+      - I_DRIVE_BACKEND_PORT=${I_DRIVE_BACKEND_PORT}
+      - I_DRIVE_STREAMER=${I_DRIVE_STREAMER}
+      - I_DRIVE_FRONTEND=${I_DRIVE_FRONTEND} 
+      - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR}
+      - I_DRIVE_STREAMER_STORAGE_DIR=${I_DRIVE_STREAMER_STORAGE_DIR}
     volumes:
-      - i-drive-backend-db:${I_DRIVE_STORAGE_DIR}/db.sqllite3
+      - i-drive-backend-db:${I_DRIVE_BACKEND_STORAGE_DIR}/db.sqllite3
     networks:
       - i-drive-network
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 128M
 
 
 ### Streamer backend
@@ -83,7 +85,7 @@ services:
     depends_on:
       - redis
     volumes:
-      - i-drive-backend-db:${I_DRIVE_STORAGE_DIR}/db.sqllite3
+      - i-drive-backend-db:${I_DRIVE_FRONTEND_STORAGE_DIR}/db.sqllite3
     environment:
       - I_DRIVE_FRONTEND_SECRET_KEY=${I_DRIVE_FRONTEND_SECRET_KEY}
       - IS_DEV_ENV=${IS_DEV_ENV}
@@ -93,6 +95,8 @@ services:
       - I_DRIVE_BACKEND_PORT=${I_DRIVE_BACKEND_PORT}
       - I_DRIVE_STREAMER=${I_DRIVE_STREAMER}
       - I_DRIVE_FRONTEND=${I_DRIVE_FRONTEND}
+      - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR}
+      - I_DRIVE_STREAMER_STORAGE_DIR=${I_DRIVE_STREAMER_STORAGE_DIR}
     healthcheck:  # DO POPRAWY
       test: [ "CMD-SHELL", "ls" ]
       interval: 10s
@@ -102,7 +106,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 128M
 
 
  ### nginx
@@ -119,7 +123,7 @@ services:
       streamer:
         condition: service_healthy
     healthcheck: ### KWESTIA PORTU DO SPRAWDZENIA
-      test: [ "CMD-SHELL", "curl -f http://localhost:80 || exit 1" ]
+      test: [ "CMD-SHELL", "curl http://localhost:80/healthcheck || exit 1" ]
       interval: 10s
       retries: 10
     volumes:
