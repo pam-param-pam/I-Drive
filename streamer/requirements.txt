@@ -4,3 +4,4 @@ Redis==5.0.1
 requests>=2.32.3
 
 stream-zip
+gunicorn # WERSJA!!!!!!!!!!!

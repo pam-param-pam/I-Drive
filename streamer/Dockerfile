@@ -2,7 +2,7 @@
 FROM python:3.9-slim
 
 # Set the working directory in the container
-WORKDIR /app/backend
+WORKDIR /app/streamer
 
 # Copy the requirements file into the container
 COPY requirements.txt .
@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code into the container
 COPY . .
 
-RUN chmod +x entrypoint.sh
+# RUN chmod +x entrypoint.sh
 
 # Command to run the Daphne server
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["sleep", "3600"]   
