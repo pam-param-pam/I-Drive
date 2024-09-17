@@ -1,8 +1,7 @@
 name: i-drive-dc
-networks: 
-  i-drive-network:
 volumes:
-  i-drive-backend-db:
+  backend-db:
+  streamer-db:
 
 services:
 
@@ -16,9 +15,6 @@ services:
     #  test: [ "CMD-SHELL", "ls" ]
     #  interval: 10s
     #  retries: 10
-    networks:
-      - i-drive-network
-
 
 
   
@@ -63,9 +59,7 @@ services:
       - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR}
       - I_DRIVE_STREAMER_STORAGE_DIR=${I_DRIVE_STREAMER_STORAGE_DIR}
     volumes:
-      - i-drive-backend-db:${I_DRIVE_BACKEND_STORAGE_DIR}/db.sqllite3
-    networks:
-      - i-drive-network
+      - backend-db:${I_DRIVE_BACKEND_STORAGE_DIR}/db.sqllite3
     deploy:
       resources:
         limits:
@@ -85,7 +79,7 @@ services:
     depends_on:
       - redis
     volumes:
-      - i-drive-backend-db:${I_DRIVE_FRONTEND_STORAGE_DIR}/db.sqllite3
+      - streamer-db:${I_DRIVE_FRONTEND_STORAGE_DIR}/db.sqllite3
     environment:
       - I_DRIVE_FRONTEND_SECRET_KEY=${I_DRIVE_FRONTEND_SECRET_KEY}
       - IS_DEV_ENV=${IS_DEV_ENV}
@@ -101,8 +95,6 @@ services:
       test: [ "CMD-SHELL", "ls" ]
       interval: 10s
       retries: 10
-    networks:
-      - i-drive-network
     deploy:
       resources:
         limits:
@@ -128,8 +120,6 @@ services:
       retries: 10
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-    networks:
-      - i-drive-network
     deploy:
       resources:
         limits:
