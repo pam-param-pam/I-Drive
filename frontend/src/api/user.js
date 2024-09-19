@@ -15,7 +15,7 @@ export async function getUser(token) {
 }
 
 export async function changePassword(data) {
-   let url = `/api/user/changepassword`
+   let url = `/user/changepassword`
    let response = await backend_instance.post(url, data)
    return response.data
 
@@ -23,7 +23,7 @@ export async function changePassword(data) {
 }
 
 export async function updateSettings(data) {
-   let url = `/api/user/updatesettings`
+   let url = `/user/updatesettings`
    await backend_instance.post(url, data)
 
 }
@@ -31,7 +31,7 @@ export async function updateSettings(data) {
 export async function getTrash() {
    const store = useMainStore()
 
-   let url = `/api/trash`
+   let url = `/trash`
    store.setLoading(true)
    return backend_instance.get(url, {
       __cancelSignature: 'getItems',

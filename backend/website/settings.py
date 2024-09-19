@@ -15,7 +15,7 @@ STATIC_URL = 'static/'
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ['I_DRIVE_BACKEND_SECRET_KEY']
 
-is_env = os.environ["IS_DEV_ENV"]
+is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_env

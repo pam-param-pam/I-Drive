@@ -6,3 +6,4 @@ backend/templates/
 backend/website/__pycache__/
 backend/website/utilities/
 backend/website/views/__pycache__/
+frontend/dist/

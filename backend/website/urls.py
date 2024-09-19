@@ -9,17 +9,13 @@ from website.views.dataViews import get_folder_info, get_file_info, get_breadcru
     get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_dirs, fetch_additional_info, get_secrets
 from website.views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password
-from website.views.otherViews import index, generate_keys, test
 from website.views.shareViews import get_shares, delete_share, create_share, view_share
 from website.views.streamViews import get_preview
 from website.views.uploadViews import create_file, create_thumbnail
 from website.views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
 
 urlpatterns = [
-                  #path("test", test, name="test"),
-                  path("test", test, name="test"),
 
-                  path('generate-keys', generate_keys, name='generate-keys'),
                   path("api/zip/<token>", get_zip_info, name="get zip model info"),
                   path("api/zip", create_zip_model, name="create zip model"),
 
@@ -33,9 +29,9 @@ urlpatterns = [
                   path("api/file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
                   path("api/file/secrets/<file_id>", get_secrets, name="gets encryption key and iv"),
 
-                  path("auth/token/login", TokenCreateView.as_view(), name="login"),
-                  path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
-                  path('auth/user/me', users_me, name="get current user"),
+                  path("api/auth/token/login", TokenCreateView.as_view(), name="login"),
+                  path("api/auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
+                  path('api/auth/user/me', users_me, name="get current user"),
 
                   path("api/user/changepassword", change_password, name="change password"),
                   path("api/user/updatesettings", update_settings, name="update settings"),
@@ -66,9 +62,7 @@ urlpatterns = [
 
                   path("api/resource/password/<resource_id>", check_password, name="check password"),
 
-                  path('admin', admin.site.urls),
-                  path("", index, name="index"),
-
+                  path('api/admin', admin.site.urls)
 
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

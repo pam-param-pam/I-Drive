@@ -14,35 +14,12 @@ from rest_framework.throttling import UserRateThrottle
 
 from zipFly import GenFile, ZipFly
 
-iDriveBackend = os.environ["I_DRIVE_BACKEND"]
+iDriveBackend = f'{os.environ["I_DRIVE_BACKEND"]}:{os.environ["I_DRIVE_BACKEND_PORT"]}'
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def index(request):
     return HttpResponse(status=404)
-
-
-@api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-def test(request):
-    # Generator function for streaming data
-    def my_data_generator():
-        try:
-            for i in range(10):  # Example streaming loop
-                if i == 5:  # Simulate an error condition at i == 5
-                    raise ValueError("Simulated error")
-                yield f"Chunk {i}\n"
-        except ValueError as e:
-            # Handle the error by stopping the generator and raising an exception
-            raise e  # This will stop the stream and go to error handling
-
-    try:
-        # Use StreamingHttpResponse with the generator
-        response = StreamingHttpResponse(my_data_generator(), content_type='text/plain')
-        return response
-    except ValueError as e:
-        # Return an HTTP 500 error when the exception is raised
-        return HttpResponseServerError(f"An error occurred: {str(e)}")
 
 
 @api_view(['GET'])

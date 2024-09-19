@@ -4,7 +4,7 @@ import {backend_instance} from "@/utils/networker.js"
 export async function getItems(folder_id, lockFrom) {
    const store = useMainStore()
 
-   let url = "/api/folder/" + folder_id
+   let url = "/folder/" + folder_id
    let password = store.getFolderPassword(lockFrom)
    store.setLoading(true)
 
@@ -26,7 +26,7 @@ export async function getItems(folder_id, lockFrom) {
 }
 
 export async function getDirs(folder_id) {
-   let url = "/api/folder/dirs/" + folder_id
+   let url = "/folder/dirs/" + folder_id
 
    let response = await backend_instance.get(url)
    return response.data
@@ -35,7 +35,7 @@ export async function getDirs(folder_id) {
 
 
 export async function lockWithPassword(folder_id, password, oldPassword) {
-   let url = `/api/folder/password/${folder_id}`
+   let url = `/folder/password/${folder_id}`
    let headers = {}
 
    if (oldPassword === "") {
@@ -56,7 +56,7 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
 }
 
 export async function create(data) {
-   let url = "/api/folder/create"
+   let url = "/folder/create"
    let response = await backend_instance.post(url, data)
    return response.data
 
@@ -67,7 +67,7 @@ export async function getUsage(folderId, lockFrom) {
 
    let password = store.getFolderPassword(lockFrom)
 
-   let url = `/api/folder/usage/${folderId}`
+   let url = `/folder/usage/${folderId}`
    let response = await backend_instance.get(url, {
       headers: {
          "x-resource-password": password
@@ -78,7 +78,7 @@ export async function getUsage(folderId, lockFrom) {
 }
 
 export async function resetPassword(folderId, accountPassword, newPassword) {
-   let url = `/api/folder/password/reset/${folderId}`
+   let url = `/older/password/reset/${folderId}`
 
 
    let data = {"accountPassword": accountPassword, "folderPassword": newPassword}
@@ -89,7 +89,7 @@ export async function resetPassword(folderId, accountPassword, newPassword) {
 
 export async function fetchAdditionalInfo(folderId) {
 
-   let url = `/api/folder/moreinfo/${folderId}`
+   let url = `/folder/moreinfo/${folderId}`
    let response = await backend_instance.get(url)
    return response.data
 

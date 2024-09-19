@@ -120,6 +120,7 @@ services:
       retries: 10
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend/dist/:/var/www/idrive/frontend
     deploy:
       resources:
         limits:
