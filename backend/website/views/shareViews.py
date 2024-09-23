@@ -1,6 +1,4 @@
-import time
 from datetime import timedelta
-from typing import Dict
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
@@ -8,15 +6,14 @@ from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from website.models import File, Folder, UserSettings, ShareableLink
-from website.utilities.Permissions import SharePerms
-from website.utilities.TypeHinting import Resource
-from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, MissingOrIncorrectResourcePasswordError
-from website.utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
+from ..models import File, Folder, UserSettings, ShareableLink
+from ..utilities.Permissions import SharePerms
+from ..utilities.decorators import handle_common_errors
+from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, MissingOrIncorrectResourcePasswordError
+from ..utilities.other import create_file_dict, create_share_dict, create_folder_dict, \
     build_folder_content, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, build_share_folder_content, get_folder, \
     get_file
-from website.utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
 @api_view(['GET'])

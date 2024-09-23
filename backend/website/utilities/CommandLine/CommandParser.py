@@ -1,8 +1,6 @@
 import json
 
-from colorama import Fore, Style
-
-from website.utilities.CommandLine.Commands import HelpCommand, LsCommand, CdCommand
+from .Commands import HelpCommand, LsCommand, CdCommand
 
 
 class CommandParser:

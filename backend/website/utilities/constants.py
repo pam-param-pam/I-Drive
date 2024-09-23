@@ -1,12 +1,11 @@
-# Max name length both for files and folders
 import os
 from enum import Enum
 
 from django.core.cache import caches
 
 
-GET_BASE_URL = os.environ["I_DRIVE_STREAMER"]
-API_BASE_URL = os.environ["I_DRIVE_BACKEND"]
+GET_BASE_URL = os.environ["I_DRIVE_STREAMER_ADDRESS"]
+API_BASE_URL = os.environ["I_DRIVE_BACKEND_ADDRESS"]
 
 
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb

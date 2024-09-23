@@ -4,11 +4,11 @@ from typing import Union, List, Dict
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from website.models import File, Folder, Preview, ShareableLink, Thumbnail
-from website.tasks import queue_ws_event
-from website.utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ErrorDict, ZipFileDict
-from website.utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, EventCode
-from website.utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError
+from ..models import File, Folder, Preview, ShareableLink, Thumbnail
+from ..tasks import queue_ws_event
+from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ErrorDict, ZipFileDict
+from ..utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, EventCode
+from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError
 
 signer = TimestampSigner()
 

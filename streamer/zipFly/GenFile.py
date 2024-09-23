@@ -1,6 +1,6 @@
 import time
 from typing import Generator
-from zipFly.BaseFile import BaseFile
+from .BaseFile import BaseFile
 
 
 class GenFile(BaseFile):

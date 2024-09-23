@@ -11,7 +11,7 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from website.utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH
 
 
 class Folder(models.Model):

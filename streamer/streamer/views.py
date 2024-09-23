@@ -7,12 +7,13 @@ from urllib.parse import quote
 import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from django.http import StreamingHttpResponse, HttpResponse, HttpResponseServerError, JsonResponse
+from django.http import StreamingHttpResponse, HttpResponse, JsonResponse
 from django.utils.encoding import smart_str
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
-from zipFly import GenFile, ZipFly
+from ..zipFly.GenFile import GenFile
+from ..zipFly.ZipFly import ZipFly
 
 iDriveBackend = f'{os.environ["I_DRIVE_BACKEND"]}:{os.environ["I_DRIVE_BACKEND_PORT"]}'
 
@@ -227,14 +228,13 @@ def stream_zip_files(request, token):
                     yield raw_data
 
     res = requests.get(f"{iDriveBackend}/api/zip/{token}")
-    print(f"http://127.0.0.1:8000/api/zip/{token}")
+    print(f"{iDriveBackend}/api/zip/{token}")
     if not res.ok:
         return JsonResponse(status=res.status_code, data=res.json())
     res_json = res.json()
     for file in res_json["files"]:
 
         if not file["isDir"]:
-            fragments = file["fragments"]
             print(file)
             file = GenFile(name=file['name'], generator=stream_zip_file(file), size=file["size"])
             files.append(file)

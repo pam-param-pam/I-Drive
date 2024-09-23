@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Generator
 
-from zipFly import consts
-from zipFly.Compressor import Compressor
+import consts
+from .Compressor import Compressor
 
 
 class BaseFile(ABC):

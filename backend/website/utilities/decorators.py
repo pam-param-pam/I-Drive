@@ -6,10 +6,10 @@ from httpx import ConnectError
 from requests.exceptions import SSLError
 from rest_framework.exceptions import Throttled
 
-from website.models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
-from website.utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
+from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
+from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError
-from website.utilities.other import build_http_error_response, verify_signed_file_id, check_resource_perms, get_file, get_folder
+from ..utilities.other import build_http_error_response, verify_signed_file_id, check_resource_perms, get_file, get_folder
 
 
 def check_signed_url(view_func):

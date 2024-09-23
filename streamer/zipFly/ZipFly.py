@@ -1,4 +1,4 @@
-from zipFly.ZipBase import ZipBase
+import ZipBase
 
 class ZipFly(ZipBase):
 

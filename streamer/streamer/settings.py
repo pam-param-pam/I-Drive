@@ -1,19 +1,23 @@
 import os
 from pathlib import Path
 
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ['I_DRIVE_FRONTEND_SECRET_KEY']
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ['I_DRIVE_FRONTEND_SECRET_KEY']
+# jebanie sie z static plikami
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = 'static/'
 
 is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_env
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', os.environ['DEPLOYMENT_HOST']]
 
 
 # Application definition
@@ -97,20 +101,29 @@ CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
 
 prefix = 'http://' if is_env else 'https://'
+
 CORS_ALLOWED_ORIGINS = [
-    f'{prefix}{os.environ["I_DRIVE_FRONTEND"]}',
-    f'{prefix}{os.environ["I_DRIVE_BACKEND"]}',
+    f'{prefix}{os.environ["I_DRIVE_FRONTEND_ADDRESS"]}',
+    f'{prefix}{os.environ["I_DRIVE_BACKEND_ADDRESS"]}',
 
     'http://localhost:8080',
     'http://localhost:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
 ]
 
+CORS_EXPOSE_HEADERS = (
+    "retry-after",
+)
+
 CSRF_TRUSTED_ORIGINS = [
-    f'{prefix}{os.environ["I_DRIVE_FRONTEND"]}',
-    f'{prefix}{os.environ["I_DRIVE_BACKEND"]}',
+    f'{prefix}{os.environ["I_DRIVE_FRONTEND_ADDRESS"]}',
+    f'{prefix}{os.environ["I_DRIVE_BACKEND_ADDRESS"]}',
 
     'http://localhost:8080',
     'http://localhost:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
 ]
 
 # Internationalization

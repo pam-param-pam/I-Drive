@@ -1,4 +1,4 @@
-from website.utilities.CommandLine.ArgumentException import IncorrectArgumentError
+from .ArgumentException import IncorrectArgumentError
 
 
 def requireExactly(param, args):

@@ -1,6 +1,6 @@
 import os
 from typing import Generator
-from zipFly.BaseFile import BaseFile
+from .BaseFile import BaseFile
 
 
 class LocalFile(BaseFile):

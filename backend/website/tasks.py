@@ -11,11 +11,11 @@ from channels.layers import get_channel_layer
 from django.db.utils import IntegrityError
 from django.utils import timezone
 
-from website.celery import app
-from website.models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
-from website.utilities.Discord import discord
-from website.utilities.constants import EventCode
-from website.utilities.errors import DiscordError
+from .celery import app
+from .models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
+from .utilities.Discord import discord
+from .utilities.constants import EventCode
+from .utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
 

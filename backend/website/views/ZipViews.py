@@ -2,13 +2,13 @@ from django.http import JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import Folder, UserZIP
-from website.utilities.Permissions import DownloadPerms
-from website.utilities.constants import GET_BASE_URL
-from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import BadRequestError, MissingOrIncorrectResourcePasswordError
-from website.utilities.other import check_resource_perms, get_resource, get_flattened_children, create_zip_file_dict
-from website.utilities.throttle import MyUserRateThrottle
+from ..models import Folder, UserZIP
+from ..utilities.Permissions import DownloadPerms
+from ..utilities.constants import GET_BASE_URL
+from ..utilities.decorators import handle_common_errors
+from ..utilities.errors import BadRequestError, MissingOrIncorrectResourcePasswordError
+from ..utilities.other import check_resource_perms, get_resource, get_flattened_children, create_zip_file_dict
+from ..utilities.throttle import MyUserRateThrottle
 
 
 @api_view(['GET'])

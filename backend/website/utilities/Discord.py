@@ -7,8 +7,8 @@ from urllib.parse import urlparse, parse_qs
 
 import httpx
 
-from website.utilities.constants import cache
-from website.utilities.errors import DiscordError, DiscordBlockError
+from ..utilities.constants import cache
+from ..utilities.errors import DiscordError, DiscordBlockError
 
 
 def retry(func):

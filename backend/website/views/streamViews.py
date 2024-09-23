@@ -11,13 +11,13 @@ from django.views.decorators.cache import cache_page
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
 
-from website.models import Fragment, Preview, File
-from website.utilities.Discord import discord
-from website.utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode
-from website.utilities.decorators import handle_common_errors, check_signed_url, check_file
-from website.utilities.errors import DiscordError, BadRequestError
-from website.utilities.other import send_event
-from website.utilities.throttle import MediaRateThrottle
+from ..models import Fragment, Preview, File
+from ..utilities.Discord import discord
+from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode
+from ..utilities.decorators import handle_common_errors, check_signed_url, check_file
+from ..utilities.errors import DiscordError, BadRequestError
+from ..utilities.other import send_event
+from ..utilities.throttle import MediaRateThrottle
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes

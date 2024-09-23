@@ -8,17 +8,17 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Folder, Fragment, ShareableLink
-from website.tasks import prefetch_discord_message
-from website.utilities.Discord import discord
-from website.utilities.Permissions import ReadPerms
-from website.utilities.constants import cache
-from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
+from ..models import File, Folder, Fragment, ShareableLink
+from ..tasks import prefetch_discord_message
+from ..utilities.Discord import discord
+from ..utilities.Permissions import ReadPerms
+from ..utilities.constants import cache
+from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
-from website.utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
-from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, build_http_error_response, \
+from ..utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, build_http_error_response, \
     calculate_size, calculate_file_and_folder_count
-from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
 def etag_func(request, folder_obj):

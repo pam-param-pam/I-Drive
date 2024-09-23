@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from website.models import UserPerms
+from ..models import UserPerms
 
 
 class AdminPerms(BasePermission):

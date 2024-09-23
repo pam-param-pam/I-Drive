@@ -1,8 +1,8 @@
 from collections import defaultdict
 from typing import List
 
-from zipFly import consts
-from zipFly.BaseFile import BaseFile
+import consts
+import BaseFile
 
 """
 Since the Official ZIP docs are terrible, here's a detailed structure of the zip this library builds. (pretty sure mine's just as bad lol)

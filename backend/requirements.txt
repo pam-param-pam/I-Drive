@@ -1,4 +1,4 @@
-celery==5.3.6
+celery==5.3.5
 channels==4.0.0
 channels-redis==4.2.0
 colorama==0.4.4

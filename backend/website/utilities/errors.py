@@ -1,6 +1,3 @@
-import json
-from json import JSONDecodeError
-
 
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""

@@ -3,14 +3,14 @@ from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Fragment, UserSettings, Thumbnail
-from website.utilities.Discord import discord
-from website.utilities.Permissions import CreatePerms
-from website.utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
-from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import BadRequestError
-from website.utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file
-from website.utilities.throttle import MyUserRateThrottle
+from ..models import File, Fragment, UserSettings, Thumbnail
+from ..utilities.Discord import discord
+from ..utilities.Permissions import CreatePerms
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
+from ..utilities.decorators import handle_common_errors
+from ..utilities.errors import BadRequestError
+from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file
+from ..utilities.throttle import MyUserRateThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])

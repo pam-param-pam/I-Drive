@@ -1,0 +1,21 @@
+name: Deploy I DRIVE
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to Virtual Machine
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+        port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+        username: ${{ secrets.CI_RPI_USERNAME }}
+        key: ${{ secrets.CI_RPI_SSH_KEY }}
+        script: |
+          skrypt tutaj nwm co

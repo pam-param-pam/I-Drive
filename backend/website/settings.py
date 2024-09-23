@@ -6,7 +6,10 @@ load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# jebanie sie z static plikami
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = 'static/'
 
 # Quick-start development settings - unsuitable for production
@@ -21,12 +24,9 @@ is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 DEBUG = is_env
 SILKY_PYTHON_PROFILER = is_env
 
-#TODO
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', os.environ['DEPLOYMENT_HOST']]
 
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),
-]
+
 
 # Application definition
 
@@ -60,14 +60,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    #'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
-    #'silk.middleware.SilkyMiddleware',
 
-    #"django.middleware.cache.UpdateCacheMiddleware",
-    #"django.middleware.common.CommonMiddleware",
-    #"django.middleware.cache.FetchFromCacheMiddleware",
 
 ]
 CORS_ALLOW_HEADERS = "*"
@@ -75,24 +70,32 @@ CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
 
 prefix = 'http://' if is_env else 'https://'
+
 CORS_ALLOWED_ORIGINS = [
-    f'{prefix}{os.environ["I_DRIVE_FRONTEND"]}',
-    f'{prefix}{os.environ["I_DRIVE_BACKEND"]}',
+    f'{prefix}{os.environ["I_DRIVE_FRONTEND_ADDRESS"]}',
+    f'{prefix}{os.environ["I_DRIVE_BACKEND_ADDRESS"]}',
 
     'http://localhost:8080',
     'http://localhost:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
 ]
 
 CORS_EXPOSE_HEADERS = (
     "retry-after",
+    "X-RateLimit-Remaining",
+    "X-RateLimit-Reset-After",
+    "X-RateLimit-Bucket"
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    f'{prefix}{os.environ["I_DRIVE_FRONTEND"]}',
-    f'{prefix}{os.environ["I_DRIVE_BACKEND"]}',
+    f'{prefix}{os.environ["I_DRIVE_FRONTEND_ADDRESS"]}',
+    f'{prefix}{os.environ["I_DRIVE_BACKEND_ADDRESS"]}',
 
     'http://localhost:8080',
     'http://localhost:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:5173',
 ]
 
 ROOT_URLCONF = 'website.urls'
@@ -116,7 +119,7 @@ TEMPLATES = [
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"redis://{os.environ['I_DRIVE_REDIS']}",
+        "LOCATION": f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}",
     }
 }
 WSGI_APPLICATION = 'website.wsgi.application'
@@ -127,7 +130,7 @@ ASGI_APPLICATION = 'website.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join( os.environ["I_DRIVE_BACKEND_STORAGE_DIR"], 'db.sqlite3'),
+        'NAME': os.path.join(os.environ["I_DRIVE_BACKEND_STORAGE_DIR"], 'db.sqlite3'),
         'CONN_MAX_AGE':  None
 
     }
@@ -168,7 +171,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(os.environ["I_DRIVE_REDIS"], os.environ["I_DRIVE_REDIS_PORT"])],  # set redis address
+            "hosts": [(os.environ["I_DRIVE_REDIS_ADDRESS"], 6379)],
 
         },
     },
@@ -198,8 +201,8 @@ REST_FRAMEWORK = {
 }
 
 # Celery settings
-CELERY_BROKER_URL = f"redis://{os.environ['I_DRIVE_REDIS']}"
-CELERY_RESULT_BACKEND = f"redis://{os.environ['I_DRIVE_REDIS']}"
+CELERY_BROKER_URL = f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}"
+CELERY_RESULT_BACKEND = f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}"
 # use json format for everything
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
