@@ -35,7 +35,8 @@
     "connection": "T-The sewvew can't be weached",
     "forbidden": "*waises paw* You do not have enough permissions to access this resource (▰˘v˘▰)",
     "internal": "OOPSIE WOOPSIE!! Uwu We made a fucky wucky!! A wittle fucko boingo! The code monkeys at our headquarters are working VEWY HAWD to fix this!",
-    "notFound": "This wocation can't be weached ɾ⚈▿⚈ɹ"
+    "notFound": "This wocation can't be weached ɾ⚈▿⚈ɹ",
+    "serviceUnavailable": ""
   },
   "files": {
     "closePreview": "Cwose p-pweview",

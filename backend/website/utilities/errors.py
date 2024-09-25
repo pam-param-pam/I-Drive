@@ -22,6 +22,8 @@ class RootPermissionError(IDriveException):
 class DiscordBlockError(IDriveException):
     """Raised when discord blocks us for whatever reason"""
 
+class CannotProcessDiscordRequestError(IDriveException):
+    """Raised when we are unable to make requests to discord due to being overloaded"""
 
 class DiscordError(IDriveException):
     def __init__(self, message="Unexpected Discord Error.", status=0):

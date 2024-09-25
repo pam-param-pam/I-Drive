@@ -12,6 +12,7 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password
 from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import get_preview
+from .views.testViews import get_file_url_view
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
 
@@ -64,7 +65,10 @@ urlpatterns = [
                   path("resource/password/<resource_id>", check_password, name="check password"),
 
                   path('admin', admin.site.urls),
-                  re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+
+                  path('test', get_file_url_view),
+
+    re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 
               ]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

@@ -7,31 +7,34 @@ from urllib.parse import quote
 import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from django.core.cache import caches
 from django.http import StreamingHttpResponse, HttpResponse, JsonResponse
 from django.utils.encoding import smart_str
+from django.views.decorators.cache import cache_page
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
-from ..zipFly.GenFile import GenFile
-from ..zipFly.ZipFly import ZipFly
+from .zipFly import ZipFly
 
-iDriveBackend = f'{os.environ["I_DRIVE_BACKEND"]}:{os.environ["I_DRIVE_BACKEND_PORT"]}'
+iDriveBackend = os.environ['BACKEND_BASE_URL']
+cache = caches["default"]
 
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def index(request):
     return HttpResponse(status=404)
 
-
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def thumbnail_file(request, signed_file_id):
-    res = requests.get(f"{iDriveBackend}/api/file/thumbnail/{signed_file_id}")
-    if not res.ok:
-        return JsonResponse(status=res.status_code, data=res.json())
-    res_json = res.json()
-    
-    def file_iterator(url, chunk_size=8192):
+    thumbnail = cache.get(signed_file_id) # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
+    if not thumbnail:
+        res = requests.get(f"{iDriveBackend}/file/thumbnail/{signed_file_id}")
+        if not res.ok:
+            return JsonResponse(status=res.status_code, data=res.json())
+        res_json = res.json()
+
+
         if res_json["is_encrypted"]:
             # luckily or not - we store both key and iv in the database
             key = base64.b64decode(res_json['key'])
@@ -39,23 +42,23 @@ def thumbnail_file(request, signed_file_id):
 
             cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
             decryptor = cipher.decryptor()
-        
-        discord_response = requests.get(url, stream=True)
+        #todo potential security risk, without stream its possible to overload the server
+        discord_response = requests.get(res_json["url"])
         if discord_response.ok:
-            for raw_data in discord_response.iter_content(chunk_size):
-                if res_json["is_encrypted"]:
-                    decrypted_data = decryptor.update(raw_data)
-                    yield decrypted_data
-                else:
-                    yield raw_data
-            yield decryptor.finalize()
-        else:
-            print("============DISCORD ERROR============")
-            print(discord_response.status_code)
-            print(discord_response.text)
-            return
+            thumbnail = discord_response.content
+            if res_json["is_encrypted"]:
+                thumbnail = decryptor.update(thumbnail)
+                decryptor.finalize()
 
-    response = StreamingHttpResponse(file_iterator(res_json["url"]), content_type="image/jpeg")
+        else:
+                print("============DISCORD ERROR============")
+                print(discord_response.status_code)
+                print(discord_response.text)
+                return JsonResponse(status=res.status_code, data=res.json())
+
+    cache.set(signed_file_id, thumbnail, timeout=2628000)  # 1 month
+
+    response = HttpResponse(thumbnail, content_type="image/jpeg")
     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
     return response
 
@@ -65,7 +68,7 @@ def thumbnail_file(request, signed_file_id):
 @throttle_classes([UserRateThrottle])
 def stream_file(request, signed_file_id):
     isInline = request.GET.get('inline', False)
-    res = requests.get(f"{iDriveBackend}/api/fragments/{signed_file_id}")
+    res = requests.get(f"{iDriveBackend}/fragments/{signed_file_id}")
     if not res.ok:
         return JsonResponse(status=res.status_code, data=res.json())
     res = res.json()
@@ -104,7 +107,7 @@ def stream_file(request, signed_file_id):
             print(f"Time taken for fake decryption (seconds): {end_time - start_time:.6f}")
 
         while index <= len(fragments):
-            fragment_response = requests.get(f"{iDriveBackend}/api/fragments/{signed_file_id}/{index}")
+            fragment_response = requests.get(f"{iDriveBackend}/fragments/{signed_file_id}/{index}")
             if not fragment_response.ok:
                 return HttpResponse(status=fragment_response.status_code)
 
@@ -210,8 +213,8 @@ def stream_zip_files(request, token):
             decryptor = cipher.decryptor()
 
         for fragment in fragments:
-            fragment_response = requests.get(f"{iDriveBackend}/api/fragments/{signed_id}/{fragment['sequence']}")
-            print(f"{iDriveBackend}/api/fragments/{signed_id}/{fragment['sequence']}")
+            fragment_response = requests.get(f"{iDriveBackend}/fragments/{signed_id}/{fragment['sequence']}")
+            print(f"{iDriveBackend}/fragments/{signed_id}/{fragment['sequence']}")
             if not fragment_response.ok:
                 print("============ERROR============")
                 print(fragment_response.status_code)
@@ -227,8 +230,8 @@ def stream_zip_files(request, token):
                 else:
                     yield raw_data
 
-    res = requests.get(f"{iDriveBackend}/api/zip/{token}")
-    print(f"{iDriveBackend}/api/zip/{token}")
+    res = requests.get(f"{iDriveBackend}/zip/{token}")
+    print(f"{iDriveBackend}/zip/{token}")
     if not res.ok:
         return JsonResponse(status=res.status_code, data=res.json())
     res_json = res.json()

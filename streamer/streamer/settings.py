@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
 
+load_dotenv(find_dotenv())
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ['I_DRIVE_FRONTEND_SECRET_KEY']
+SECRET_KEY = os.environ['I_DRIVE_STREAMER_SECRET_KEY']
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,8 +19,7 @@ is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_env
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', os.environ['DEPLOYMENT_HOST']]
-
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', os.environ['DEPLOYMENT_HOST'], 'api.pamparampam.dev'] #todo remove api.pamparampam.dev
 
 # Application definition
 
@@ -65,7 +66,7 @@ WSGI_APPLICATION = 'streamer.wsgi.application'
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": f"redis://{os.environ['I_DRIVE_REDIS']}",
+        "LOCATION": f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}",
     }
 }
 
@@ -103,28 +104,18 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 prefix = 'http://' if is_env else 'https://'
 
 CORS_ALLOWED_ORIGINS = [
-    f'{prefix}{os.environ["I_DRIVE_FRONTEND_ADDRESS"]}',
-    f'{prefix}{os.environ["I_DRIVE_BACKEND_ADDRESS"]}',
-
-    'http://localhost:8080',
-    'http://localhost:5173',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:5173',
+    f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
+    'http://127.0.0.1:5173', # frontend
 ]
-
-CORS_EXPOSE_HEADERS = (
-    "retry-after",
-)
 
 CSRF_TRUSTED_ORIGINS = [
-    f'{prefix}{os.environ["I_DRIVE_FRONTEND_ADDRESS"]}',
-    f'{prefix}{os.environ["I_DRIVE_BACKEND_ADDRESS"]}',
-
-    'http://localhost:8080',
-    'http://localhost:5173',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:5173',
+    f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
+    'http://127.0.0.1:5173',  # frontend
 ]
+
+# CORS_EXPOSE_HEADERS = (
+#     "retry-after",
+# )
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

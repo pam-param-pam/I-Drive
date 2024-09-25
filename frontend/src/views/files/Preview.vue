@@ -67,13 +67,12 @@
 
         <video
           v-if="file?.type === 'video' && file?.size > 0"
-          :poster="file.thumbnail_url"
           ref="video"
+          id="video"
           controls
           :src="fileSrcUrl"
           :autoplay="autoPlay"
           @play="autoPlay = true"
-          @loadeddata="onVideoLoad"
 
         >
         </video>
@@ -278,9 +277,24 @@ export default {
     this.fetchData()
 
   },
+  updated() {
+    // Check if the component contains a video element
+    let videoElement = this.$refs.video
+
+    if (videoElement) {
+      // // Perform your logic for adding the poster here
+      // const posterSrc = videoElement.src.replace('.mp4', '.jpg');
+      console.log(videoElement)
+      videoElement.poster = this.file.thumbnail_url
+    }
+
+  },
   async mounted() {
 
     window.addEventListener("keydown", this.key)
+
+
+
 
   },
   beforeUnmount() {

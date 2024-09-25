@@ -1,4 +1,4 @@
-name: Build
+name: Build and Deploy
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
       run: cd frontend
 
     # 6. Create .env file from GitHub secrets
-    - name: Create .env from GitHub secrets
+    - name: Create .env for frontend
       run: |
         echo "VITE_BACKEND_BASE_URL=${{ secrets.VITE_BACKEND_BASE_URL }}" >> .env
         echo "VITE_BACKEND_BASE_WS=${{ secrets.VITE_BACKEND_BASE_WS }}" >> .env
@@ -53,3 +53,47 @@ jobs:
       with:
         name: frontend-dist
         path: ./frontend/dist
+
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      # najpierw musimy byc w odpowiednim dir
+      - name: Create .env for backend and streamer
+        run: |
+          echo "IS_DEV_ENV=False" >> .env 
+          echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+          echo "I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.I_DRIVE_BACKEND_SECRET_KEY }}" >> .env
+          echo "I_DRIVE_STREAMER_SECRET_KEY=${{ secrets.I_DRIVE_STREAMER_SECRET_KEY }}" >> .env
+          
+          echo "I_DRIVE_BACKEND_STORAGE_DIR=${{ secrets.I_DRIVE_BACKEND_STORAGE_DIR }}" >> .env
+          
+          echo "I_DRIVE_STREAMER_STORAGE_DIR=${{ secrets.I_DRIVE_STREAMER_STORAGE_DIR }}" >> .env
+          
+          echo "DISCORD_TOKEN1=${{ secrets.DISCORD_TOKEN1 }}" >> .env
+          echo "DISCORD_TOKEN2=${{ secrets.DISCORD_TOKEN2 }}" >> .env
+          echo "DISCORD_TOKEN3=${{ secrets.DISCORD_TOKEN3 }}" >> .env
+          echo "DISCORD_TOKEN4=${{ secrets.DISCORD_TOKEN4 }}" >> .env
+          echo "DISCORD_TOKEN5=${{ secrets.DISCORD_TOKEN5 }}" >> .env
+          echo "DISCORD_TOKEN6=${{ secrets.DISCORD_TOKEN6 }}" >> .env
+          echo "DISCORD_TOKEN7=${{ secrets.DISCORD_TOKEN7 }}" >> .env
+          echo "DISCORD_TOKEN8=${{ secrets.DISCORD_TOKEN8 }}" >> .env
+          echo "DISCORD_TOKEN9=${{ secrets.DISCORD_TOKEN9 }}" >> .env
+          echo "DISCORD_TOKEN10=${{ secrets.DISCORD_TOKEN10 }}" >> .env
+          
+          echo "I_DRIVE_FRONTEND_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+          echo "I_DRIVE_STREAMER_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+          echo "I_DRIVE_BACKEND_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+          echo "I_DRIVE_REDIS_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+
+      - name: Deploy to Virtual Machine
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+          username: ${{ secrets.CI_RPI_USERNAME }}
+          key: ${{ secrets.CI_RPI_SSH_KEY }}
+          script: |
+            skrypt tutaj nwm co

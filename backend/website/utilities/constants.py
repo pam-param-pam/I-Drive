@@ -3,9 +3,8 @@ from enum import Enum
 
 from django.core.cache import caches
 
-
-GET_BASE_URL = os.environ["I_DRIVE_STREAMER_ADDRESS"]
-API_BASE_URL = os.environ["I_DRIVE_BACKEND_ADDRESS"]
+GET_BASE_URL = os.environ["STREAMER_BASE_URL"]
+API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb

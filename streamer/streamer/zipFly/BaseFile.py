@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Generator
 
-import consts
+from . import consts
 from .Compressor import Compressor
 
 

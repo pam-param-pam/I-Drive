@@ -269,9 +269,9 @@ def get_thumbnail_info(request, file_obj: File):
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
+@handle_common_errors
 @check_signed_url
 @check_file
-@handle_common_errors
 def get_fragment(request, file_obj, sequence=1):
     """
     This view is used by STREAMER SERVER to fetch information about file's fragment which

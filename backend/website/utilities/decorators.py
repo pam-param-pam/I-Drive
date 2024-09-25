@@ -8,7 +8,7 @@ from rest_framework.exceptions import Throttled
 
 from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError
+    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError
 from ..utilities.other import build_http_error_response, verify_signed_file_id, check_resource_perms, get_file, get_folder
 
 
@@ -134,5 +134,9 @@ def handle_common_errors(view_func):
         # 500 SERVER ERROR
         except (ConnectError, SSLError) as e:
             return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(e)), status=500)
+
+        # 503 Service Unavailable
+        except CannotProcessDiscordRequestError as e:
+            return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(e)), status=503)
 
     return wrapper

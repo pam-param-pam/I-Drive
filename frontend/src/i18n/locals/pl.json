@@ -59,6 +59,7 @@
     "resourceDoesntExist": "Zasób nie istnieje",
     "resourceNotReady": "Zasób jeszcze nie jest gotowy",
     "rootFolderNoAccess": "Brak uprawnień do 'root' foldera",
+    "serviceUnavailable": "Serwis niedostępny",
     "unexpectedDiscordResponse": "Discord wysłał błędną odpowiedż"
   },
   "files": {

@@ -59,6 +59,7 @@
     "resourceNotFound": "Resource doesn't exist",
     "resourceNotReady": "Resource is not ready yet",
     "rootFolderNoAccess": "Access denied to 'root' folder",
+    "serviceUnavailable": "Service Unavailable",
     "unexpectedDiscordResponse": "Unexpected discord response"
   },
   "files": {
