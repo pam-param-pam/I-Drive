@@ -63,7 +63,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
 
 
 ### Streamer backend
@@ -98,7 +98,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
 
 
  ### nginx

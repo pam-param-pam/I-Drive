@@ -70,6 +70,7 @@
           ref="video"
           id="video"
           controls
+          :poster="file?.thumbnail_url"
           :src="fileSrcUrl"
           :autoplay="autoPlay"
           @play="autoPlay = true"
@@ -277,18 +278,7 @@ export default {
     this.fetchData()
 
   },
-  updated() {
-    // Check if the component contains a video element
-    let videoElement = this.$refs.video
 
-    if (videoElement) {
-      // // Perform your logic for adding the poster here
-      // const posterSrc = videoElement.src.replace('.mp4', '.jpg');
-      console.log(videoElement)
-      videoElement.poster = this.file.thumbnail_url
-    }
-
-  },
   async mounted() {
 
     window.addEventListener("keydown", this.key)

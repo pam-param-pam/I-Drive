@@ -17,7 +17,7 @@ from ..utilities.throttle import MyUserRateThrottle
 def get_zip_info(request, token):
     """
     This view is used by STREAMER SERVER to fetch information about ZIP object.
-    This is called in anonymous context, token is used to authorize the request.
+    This is called in ANONYMOUS context, token is used to authorize the request.
     """
 
     user_zip = UserZIP.objects.get(token=token)

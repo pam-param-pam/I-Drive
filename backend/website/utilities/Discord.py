@@ -65,7 +65,8 @@ class Discord:
     # todo fix this (retry after and switching tokens)
     def __init__(self):
         self.client = httpx.Client(timeout=10.0)
-        self.bot_tokens = [os.environ['DISCORD_TOKEN1'],
+        self.bot_tokens = [
+                           os.environ['DISCORD_TOKEN1'],
                            os.environ['DISCORD_TOKEN2'],
                            os.environ['DISCORD_TOKEN3'],
                            os.environ['DISCORD_TOKEN4'],
@@ -102,7 +103,7 @@ class Discord:
 
             for token, data in self.token_dict.items():
 
-                if data['requests_remaining'] > 0:
+                if data['requests_remaining'] > 3:  # I have no clue why but when its 0, we still hi 429? probably race conditions or some other shit, cannot care less
                     # self.token_dict[token]['locked'] = True
                     self.token_dict[token]['requests_remaining'] -= 1
                     return token
@@ -145,7 +146,7 @@ class Discord:
         if not headers:
             headers = {}
         headers['Authorization'] = f'Bot {token}'
-
+        print(f"Making request with token: {token}")
         response = self.client.request(method, url, headers=headers, json=json, files=files, timeout=timeout)
         self.update_token(token, response.headers)
 
@@ -156,7 +157,7 @@ class Discord:
             if not retry_after: # retry_after is missing if discord blocked us
                 raise DiscordBlockError("Discord is stupid :(")
 
-            self.make_request(method, url, headers, json, files, timeout)
+            return self.make_request(method, url, headers, json, files, timeout)
         elif not response.is_success:
             raise DiscordError(response.text, response.status_code)
 

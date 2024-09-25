@@ -14,9 +14,9 @@ from ..utilities.other import build_http_error_response, verify_signed_file_id, 
 
 def check_signed_url(view_func):
     @wraps(view_func)
-    def wrapper(request, file_id, *args, **kwargs):
+    def wrapper(request, signed_file_id, *args, **kwargs):
 
-        file_id = verify_signed_file_id(file_id)
+        file_id = verify_signed_file_id(signed_file_id)
 
         return view_func(request, file_id, *args, **kwargs)
 

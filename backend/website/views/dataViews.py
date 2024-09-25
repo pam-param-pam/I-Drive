@@ -246,37 +246,11 @@ def check_password(request, resource_id):
 @handle_common_errors
 @check_signed_url
 @check_file
-def get_thumbnail_info(request, file_obj: File):
-    """
-    This view is used by STREAMER SERVER to fetch information about file's thumbnail. 
-    This is called in anonymous context, signed File ID is used to authorize the request.
-    """
-
-    thumbnail = file_obj.thumbnail
-
-    url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
-
-    thumbnail_dict = {
-        "size": thumbnail.size,
-        "url": url,
-        "is_encrypted": file_obj.is_encrypted
-    }
-    if file_obj.is_encrypted:
-        thumbnail_dict['key'] = file_obj.get_base64_key()
-        thumbnail_dict['iv'] = file_obj.get_base64_iv()
-    return JsonResponse(thumbnail_dict, safe=False)
-
-@cache_page(60 * 60 * 12)  # 12 hours
-@api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
-def get_fragment(request, file_obj, sequence=1):
+def get_fragment(request, file_obj, sequence):
     """
     This view is used by STREAMER SERVER to fetch information about file's fragment which
     is determined by file_obj and sequence. Sequence starts at 1.
-    This is called in anonymous context, signed File ID is used to authorize the request.
+    This is called in ANONYMOUS context, signed File ID is used to authorize the request.
     """
 
     sequence -= 1
@@ -307,7 +281,7 @@ def get_fragment(request, file_obj, sequence=1):
 def get_fragments_info(request, file_obj: File):
     """
     This view is used by STREAMER SERVER to fetch information about file's fragments.
-    This is called in anonymous context, signed File ID is used to authorize the request.
+    This is called in ANONYMOUS context, signed File ID is used to authorize the request.
     """
 
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')

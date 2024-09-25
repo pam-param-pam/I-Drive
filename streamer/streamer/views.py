@@ -10,11 +10,11 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.core.cache import caches
 from django.http import StreamingHttpResponse, HttpResponse, JsonResponse
 from django.utils.encoding import smart_str
-from django.views.decorators.cache import cache_page
 from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.throttling import UserRateThrottle
 
 from .zipFly import ZipFly
+from .zipFly.GenFile import GenFile
 
 iDriveBackend = os.environ['BACKEND_BASE_URL']
 cache = caches["default"]
@@ -23,44 +23,6 @@ cache = caches["default"]
 @throttle_classes([UserRateThrottle])
 def index(request):
     return HttpResponse(status=404)
-
-@api_view(['GET'])
-@throttle_classes([UserRateThrottle])
-def thumbnail_file(request, signed_file_id):
-    thumbnail = cache.get(signed_file_id) # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
-    if not thumbnail:
-        res = requests.get(f"{iDriveBackend}/file/thumbnail/{signed_file_id}")
-        if not res.ok:
-            return JsonResponse(status=res.status_code, data=res.json())
-        res_json = res.json()
-
-
-        if res_json["is_encrypted"]:
-            # luckily or not - we store both key and iv in the database
-            key = base64.b64decode(res_json['key'])
-            iv = base64.b64decode(res_json['iv'])
-
-            cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
-            decryptor = cipher.decryptor()
-        #todo potential security risk, without stream its possible to overload the server
-        discord_response = requests.get(res_json["url"])
-        if discord_response.ok:
-            thumbnail = discord_response.content
-            if res_json["is_encrypted"]:
-                thumbnail = decryptor.update(thumbnail)
-                decryptor.finalize()
-
-        else:
-                print("============DISCORD ERROR============")
-                print(discord_response.status_code)
-                print(discord_response.text)
-                return JsonResponse(status=res.status_code, data=res.json())
-
-    cache.set(signed_file_id, thumbnail, timeout=2628000)  # 1 month
-
-    response = HttpResponse(thumbnail, content_type="image/jpeg")
-    response['Cache-Control'] = f"max-age={2628000}"  # 1 month
-    return response
 
 
 # todo  handle >416 Requested Range Not Satisfiable<
@@ -94,7 +56,8 @@ def stream_file(request, signed_file_id):
             # luckily or not - we store both key and iv in the database
             key = base64.b64decode(file['key'])
             iv = base64.b64decode(file['iv'])
-
+            print(type(key))
+            print(type(iv))
             cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             

@@ -6,14 +6,14 @@ import rawpy
 import requests
 from cryptography.fernet import Fernet
 from django.db.utils import IntegrityError
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.cache import cache_page
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
 
 from ..models import Fragment, Preview, File
 from ..utilities.Discord import discord
-from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode
+from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_signed_url, check_file
 from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import send_event
@@ -140,3 +140,34 @@ def get_preview(request, file_obj: File):
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
 
+@api_view(['GET'])
+@throttle_classes([MediaRateThrottle])
+@check_signed_url
+@check_file
+def get_thumbnail(request, file_obj: File):
+    thumbnail_content = cache.get(f"thumbnail:{file_obj.id}") # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
+    if not thumbnail_content:
+
+        if file_obj.is_encrypted:
+
+            cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(file_obj.encryption_iv), backend=default_backend())
+
+            decryptor = cipher.decryptor()
+
+        #todo potential security risk, without stream its possible to overload the server
+        url = discord.get_file_url(file_obj.thumbnail.message_id, file_obj.thumbnail.attachment_id)
+        discord_response = requests.get(url)
+        if discord_response.ok:
+            thumbnail_content = discord_response.content
+            if file_obj.is_encrypted:
+                thumbnail_content = decryptor.update(thumbnail_content)
+                decryptor.finalize()
+
+        else:
+            return JsonResponse(status=discord_response.status_code, data=discord_response.json())
+
+        cache.set(f"thumbnail:{file_obj.id}", thumbnail_content, timeout=2628000)  # 1 month
+
+    response = HttpResponse(thumbnail_content, content_type="image/jpeg")
+    response['Cache-Control'] = f"max-age={2628000}"  # 1 month
+    return response

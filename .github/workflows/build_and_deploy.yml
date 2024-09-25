@@ -38,8 +38,8 @@ jobs:
     # 6. Create .env file from GitHub secrets
     - name: Create .env for frontend
       run: |
-        echo "VITE_BACKEND_BASE_URL=${{ secrets.VITE_BACKEND_BASE_URL }}" >> .env
-        echo "VITE_BACKEND_BASE_WS=${{ secrets.VITE_BACKEND_BASE_WS }}" >> .env
+        echo "VITE_BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
+        echo "VITE_BACKEND_BASE_WS=wss://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
 
     # 7. Install dependencies and run build
     - name: Install dependencies and build frontend
@@ -65,12 +65,10 @@ jobs:
         run: |
           echo "IS_DEV_ENV=False" >> .env 
           echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
-          echo "I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.I_DRIVE_BACKEND_SECRET_KEY }}" >> .env
-          echo "I_DRIVE_STREAMER_SECRET_KEY=${{ secrets.I_DRIVE_STREAMER_SECRET_KEY }}" >> .env
           
-          echo "I_DRIVE_BACKEND_STORAGE_DIR=${{ secrets.I_DRIVE_BACKEND_STORAGE_DIR }}" >> .env
+          echo "I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}" >> .env
+          echo "I_DRIVE_STREAMER_SECRET_KEY=${{ secrets.DJANGO_STREAMER_SECRET_KEY }}" >> .env
           
-          echo "I_DRIVE_STREAMER_STORAGE_DIR=${{ secrets.I_DRIVE_STREAMER_STORAGE_DIR }}" >> .env
           
           echo "DISCORD_TOKEN1=${{ secrets.DISCORD_TOKEN1 }}" >> .env
           echo "DISCORD_TOKEN2=${{ secrets.DISCORD_TOKEN2 }}" >> .env
@@ -83,10 +81,17 @@ jobs:
           echo "DISCORD_TOKEN9=${{ secrets.DISCORD_TOKEN9 }}" >> .env
           echo "DISCORD_TOKEN10=${{ secrets.DISCORD_TOKEN10 }}" >> .env
           
-          echo "I_DRIVE_FRONTEND_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
-          echo "I_DRIVE_STREAMER_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
-          echo "I_DRIVE_BACKEND_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
-          echo "I_DRIVE_REDIS_ADDRESS=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+          echo "CORS_FRONTEND=frontend" >> .env
+          echo "CORS_FRONTEND_PORT=5173" >> .env
+          
+          echo "I_DRIVE_REDIS_ADDRESS=redis" >> .env
+          echo "I_DRIVE_REDIS_PORT=6379" >> .env
+          
+          echo "STREAMER_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/get" >> .env
+          echo "BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
+          
+          echo "I_DRIVE_BACKEND_STORAGE_DIR=#todo" >> .env
+          echo "I_DRIVE_STREAMER_STORAGE_DIR=#todo" >> .env
 
       - name: Deploy to Virtual Machine
         uses: appleboy/ssh-action@master

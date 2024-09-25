@@ -133,7 +133,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
 
         if file_obj.extension in (
                 '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-            file_dict['preview_url'] = f"{API_BASE_URL}/api/file/preview/{signed_file_id}"
+            file_dict['preview_url'] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
 
         download_url = f"{GET_BASE_URL}/stream/{signed_file_id}"
 
@@ -142,7 +142,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         thumbnail = Thumbnail.objects.filter(file=file_obj)
 
         if thumbnail.exists():
-            file_dict['thumbnail_url'] = f"{GET_BASE_URL}/thumbnail/{signed_file_id}"
+            file_dict['thumbnail_url'] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
 
     return file_dict
 

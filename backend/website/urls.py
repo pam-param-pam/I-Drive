@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, re_path
 from django.views.static import serve
@@ -7,12 +6,12 @@ from djoser.views import TokenCreateView
 
 from .views.ZipViews import create_zip_model, get_zip_info
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, get_thumbnail_info, check_password, get_dirs, fetch_additional_info, get_secrets
+    get_trash, get_fragment, get_fragments_info, check_password, get_dirs, fetch_additional_info, get_secrets
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password
 from .views.shareViews import get_shares, delete_share, create_share, view_share
-from .views.streamViews import get_preview
-from .views.testViews import get_file_url_view
+from .views.streamViews import get_preview, get_thumbnail
+from .views.testViews import get_file_url_view, stream_file
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
 
@@ -26,9 +25,10 @@ urlpatterns = [
 
                   path("file/create", create_file, name="create file"),
                   path("file/<file_id>", get_file_info, name="get file by file id"),
-                  path("file/preview/<file_id>", get_preview, name="get preview by file id"),
-                  path("file/thumbnail/create", create_thumbnail, name="create preview"),
-                  path("file/thumbnail/<file_id>", get_thumbnail_info, name="create preview"),
+                  path("file/preview/<signed_file_id>", get_preview, name="get preview by file id"),
+                  path("file/thumbnail/<signed_file_id>", get_thumbnail, name="get thumbnail by file id"),
+
+                  path("file/thumbnail/create", create_thumbnail, name="create thumbnail"),
                   path("file/secrets/<file_id>", get_secrets, name="gets encryption key and iv"),
 
                   path("auth/token/login", TokenCreateView.as_view(), name="login"),
@@ -59,14 +59,15 @@ urlpatterns = [
                   path("item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
                   path("item/rename", rename, name="rename file/folder"),
 
-                  path('fragments/<file_id>/<int:sequence>', get_fragment, name="get fragments"),
-                  path('fragments/<file_id>', get_fragments_info, name="get fragments"),
+                  path('fragments/<signed_file_id>/<int:sequence>', get_fragment, name="get fragments"),
+                  path('fragments/<signed_file_id>', get_fragments_info, name="get fragments"),
 
                   path("resource/password/<resource_id>", check_password, name="check password"),
 
                   path('admin', admin.site.urls),
 
                   path('test', get_file_url_view),
+                  path('test1/<file_id>', stream_file),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 
