@@ -19,7 +19,7 @@ is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_env
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', os.environ['DEPLOYMENT_HOST'], 'api.pamparampam.dev'] #todo remove api.pamparampam.dev
+ALLOWED_HOSTS = ['*'] #todo
 
 # Application definition
 
@@ -106,11 +106,15 @@ prefix = 'http://' if is_env else 'https://'
 CORS_ALLOWED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
     'http://127.0.0.1:5173', # frontend
+    'http://127.0.0.1:8080',  # frontend on nginx
+    'http://localhost:8080',  # frontend on nginx
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
     'http://127.0.0.1:5173',  # frontend
+    'http://127.0.0.1:8080',  # frontend on nginx
+    'http://localhost:8080',  # frontend on nginx
 ]
 
 # CORS_EXPOSE_HEADERS = (

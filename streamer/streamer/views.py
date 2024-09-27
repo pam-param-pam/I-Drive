@@ -16,7 +16,7 @@ from rest_framework.throttling import UserRateThrottle
 from .zipFly import ZipFly
 from .zipFly.GenFile import GenFile
 
-iDriveBackend = os.environ['BACKEND_BASE_URL']
+iDriveBackend = os.environ['BACKEND_BASE_URL_FOR_STREAMER']
 cache = caches["default"]
 
 @api_view(['GET'])
