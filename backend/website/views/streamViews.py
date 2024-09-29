@@ -25,9 +25,9 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
+@handle_common_errors
 @check_signed_url
 @check_file
-@handle_common_errors
 def get_preview(request, file_obj: File):
 
     try:
@@ -142,6 +142,7 @@ def get_preview(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
+@handle_common_errors
 @check_signed_url
 @check_file
 def get_thumbnail(request, file_obj: File):

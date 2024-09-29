@@ -315,15 +315,14 @@ import css from "@/utils/css"
 import throttle from "lodash.throttle"
 
 import Item from "@/components/files/ListingItem.vue"
-import {updateSettings} from "@/api/user.js"
-import {isMobile, sortItems} from "@/utils/common.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
-import ContextMenu from "@/components/ContextMenu.vue";
-import Action from "@/components/header/Action.vue";
-import HeaderBar from "@/components/header/HeaderBar.vue";
-import Search from "@/components/Search.vue";
-import {f} from "vue-native-websocket-vue3";
+import { updateSettings } from "@/api/user.js"
+import { isMobile, sortItems } from "@/utils/common.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import ContextMenu from "@/components/ContextMenu.vue"
+import Action from "@/components/header/Action.vue"
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import Search from "@/components/Search.vue"
 
 //todo reset selected on navigation
 export default {
@@ -333,15 +332,15 @@ export default {
       isSearchActive: Boolean,
       locatedItem: {},
       readonly: Boolean,
-      headerButtons: {},
+      headerButtons: {}
    },
-   emits: ['uploadInput', 'drop', 'onOpen', 'dragEnter', 'dragLeave', 'upload', 'onSearchClosed', 'onSearchQuery', 'download'],
+   emits: ["uploadInput", "dropUpload","upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download"],
 
    components: {
       Search, HeaderBar,
       Action,
       Item,
-      ContextMenu,
+      ContextMenu
 
    },
    data() {
@@ -369,7 +368,7 @@ export default {
             // selectedItem.myScroll()
 
          })
-      },
+      }
 
    },
    beforeUpdate() {
@@ -423,7 +422,7 @@ export default {
          const icons = {
             list: "view_module",
             mosaic: "grid_view",
-            "mosaic gallery": "view_list",
+            "mosaic gallery": "view_list"
          }
          return icons[this.settings.viewMode]
       },
@@ -475,7 +474,7 @@ export default {
          }
 
          return "arrow_upward"
-      },
+      }
 
    },
 
@@ -485,36 +484,36 @@ export default {
       ...mapActions(useMainStore, ["toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
-         this.$emit('uploadInput', event)
+         this.$emit("uploadInput", event)
       },
       showContextMenu(event, item) {
          this.resetSelected()
          this.addSelected(item)
 
-        let max_x_size = 200
-        let max_y_size = 375
+         let max_x_size = 200
+         let max_y_size = 375
 
-        let posX = event.clientX + 30
-        let posY = event.clientY - 40
+         let posX = event.clientX + 30
+         let posY = event.clientY - 40
 
-        // Get the viewport dimensions
-        const viewportWidth = window.innerWidth
-        const viewportHeight = window.innerHeight
+         // Get the viewport dimensions
+         const viewportWidth = window.innerWidth
+         const viewportHeight = window.innerHeight
 
-        // Check if the coordinates + 200px are outside the visible area
-        if ((posX + max_x_size) > viewportWidth) {
-          posX = viewportWidth - max_x_size
-        }
+         // Check if the coordinates + 200px are outside the visible area
+         if ((posX + max_x_size) > viewportWidth) {
+            posX = viewportWidth - max_x_size
+         }
 
-        if ((posY + max_y_size) > viewportHeight) {
-          posY = viewportHeight - max_y_size
-        }
+         if ((posY + max_y_size) > viewportHeight) {
+            posY = viewportHeight - max_y_size
+         }
 
 
-        this.contextMenuPos = {
-          x: posX,
-          y: posY,
-        }
+         this.contextMenuPos = {
+            x: posX,
+            y: posY
+         }
 
          this.isContextMenuVisible = true
       },
@@ -582,7 +581,7 @@ export default {
          items.style.width = `calc(${100 / columns}% - 1em)`
       },
 
-      scrollEvent: throttle(function () {
+      scrollEvent: throttle(function() {
          const totalItems = this.filesSize + this.dirsSize
 
          // All items are displayed
@@ -606,26 +605,10 @@ export default {
 
 
       dragEnter() {
-         this.$emit('dragEnter')
-
-         // this.dragCounter++
-         //
-         // // When the user starts dragging an item, put every
-         // // file on the listing with 50% opacity.
-         // let items = document.getElementsByClassName("item")
-         //
-         // Array.from(items).forEach((file) => {
-         //   file.style.opacity = 0.5
-         // })
+         this.$emit("dragEnter")
       },
       dragLeave() {
-         this.$emit('dragLeave')
-
-         // this.dragCounter--
-         //
-         // if (this.dragCounter === 0) {
-         //   this.resetOpacity()
-         // }
+         this.$emit("dragLeave")
       },
       preventDefault(event) {
          // Wrapper around prevent default.
@@ -633,45 +616,16 @@ export default {
       },
 
       async drop(event) {
-         //event.preventDefault()
-         this.dragCounter = 0
-         this.resetOpacity()
-         //todo emit drop
-
-         let dt = event.dataTransfer
-         console.log(dt.files)
-         let el = event.target
-
-         if (dt.files.length <= 0) return
-
-         for (let i = 0; i < 5; i++) {
-            if (el !== null && !el.classList.contains("item")) {
-               el = el.parentElement
-            }
+         if (!this.currentFolder) {
+            this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
+            return
          }
-         console.log(el)
-         this.dropHandler(event)
-         console.log(dt)
-         let files = await upload.scanFiles(dt)
-         console.log(files)
-         let parent_id = this.currentFolder.id
-         if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
-            parent_id = el.__vue__.item.id
 
-         }
-         console.log(parent_id)
-         this.$emit('drop', files)
+         this.$emit("dropUpload", event)
 
-         //upload.handleFiles(files, path)
       },
 
-      resetOpacity() {
-         let items = document.getElementsByClassName("item")
 
-         Array.from(items).forEach((file) => {
-            file.style.opacity = 1
-         })
-      },
 
       async sort(by) {
          let asc = false
@@ -696,11 +650,11 @@ export default {
          let items = sortItems(this.items)
          this.setItems(items)
 
-         await updateSettings({"sortingBy": by, "sortByAsc": asc})
+         await updateSettings({ "sortingBy": by, "sortByAsc": asc })
 
       },
 
-      windowsResize: throttle(function () {
+      windowsResize: throttle(function() {
          this.columnsResize()
 
          // Listing element is not displayed
@@ -751,10 +705,10 @@ export default {
          const modes = {
             list: "mosaic",
             mosaic: "mosaic gallery",
-            "mosaic gallery": "list",
+            "mosaic gallery": "list"
          }
          const data = {
-            viewMode: modes[this.settings.viewMode] || "list",
+            viewMode: modes[this.settings.viewMode] || "list"
          }
 
          // Await ensures correct value for setItemWeight()
@@ -768,9 +722,9 @@ export default {
             await updateSettings(data)
          }
 
-      },
+      }
 
-   },
+   }
 
 
 }

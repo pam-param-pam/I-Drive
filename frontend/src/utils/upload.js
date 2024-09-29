@@ -1,13 +1,13 @@
-import {create} from "@/api/folder.js"
+import { create } from "@/api/folder.js"
 import i18n from "@/i18n/index.js"
-import {createFile, createThumbnail, patchFile} from "@/api/files.js"
+import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
-import {useUploadStore} from "@/stores/uploadStore.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {useToast} from "vue-toastification"
-import {discord_instance} from "@/utils/networker.js"
-import {chunkSize} from "@/utils/constants.js"
-import buttons from "@/utils/buttons.js";
+import { useUploadStore } from "@/stores/uploadStore.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { useToast } from "vue-toastification"
+import { discord_instance } from "@/utils/networker.js"
+import { chunkSize } from "@/utils/constants.js"
+import buttons from "@/utils/buttons.js"
 
 
 const toast = useToast()
@@ -28,133 +28,142 @@ export async function checkFilesSizes(files) {
    return false
 }
 
-export function scanFiles(dt) {
-   return new Promise((resolve) => {
-      let reading = 0
-      const contents = []
+export async function scanFiles(dataTransfer) {
+   let files = [];
+   let items = dataTransfer.items;
 
-      if (dt.items !== undefined) {
-         for (let item of dt.items) {
-            if (
-               item.kind === "file" &&
-               typeof item.webkitGetAsEntry === "function"
-            ) {
-               const entry = item.webkitGetAsEntry()
-               readEntry(entry)
-            }
-         }
-      } else {
-         resolve(dt.files)
-      }
+   for (let i = 0; i < items.length; i++) {
+      const item = items[i].webkitGetAsEntry(); // Get the entry (file or folder)
 
-      function readEntry(entry, directory = "") {
-         if (entry.isFile) {
-            reading++
-            entry.file((file) => {
-               reading--
-
-               file.webkitRelativePath = `${directory}${file.name}`
-               contents.push(file)
-
-               if (reading === 0) {
-                  resolve(contents)
-               }
-            })
-         } else if (entry.isDirectory) {
-
-            readReaderContent(entry.createReader(), `${directory}${entry.name}`)
+      if (item) {
+         if (item.isFile) {
+            // Process and add the file with its path
+            files.push(await processFile(item, ""));
+         } else if (item.isDirectory) {
+            // Process directory and add files recursively with paths
+            files = files.concat(await processDirectory(item, ""));
          }
       }
+   }
 
-      function readReaderContent(reader, directory) {
-         reading++
-
-         reader.readEntries(function (entries) {
-            reading--
-            if (entries.length > 0) {
-               for (const entry of entries) {
-                  readEntry(entry, `${directory}/`)
-               }
-
-               readReaderContent(reader, `${directory}/`)
-            }
-
-            if (reading === 0) {
-               resolve(contents)
-            }
-         })
-      }
-   })
+   console.log("Scanned Files:");
+   console.log(files);
 }
+
+// Process individual file (returns a Promise to read the file and add path)
+function processFile(fileEntry, path) {
+   return new Promise((resolve, reject) => {
+      fileEntry.file(function(file) {
+         // Return both the file and its relative path
+         const filePath = path ? `${path}/${fileEntry.name}` : fileEntry.name; // No leading slash for root level
+         resolve({ file, path: filePath });
+      }, reject);
+   });
+}
+
+// Process directory (recursively read contents and return all files with paths)
+function processDirectory(directoryEntry, parentPath) {
+   return new Promise((resolve, reject) => {
+      let reader = directoryEntry.createReader();
+      let files = [];
+      let currentPath = parentPath ? `${parentPath}/${directoryEntry.name}` : directoryEntry.name; // No leading slash for root level
+
+      // Keep reading until all entries are processed
+      function readEntries() {
+         reader.readEntries(async function(entries) {
+            if (entries.length === 0) {
+               resolve(files); // Resolve when no more entries
+               return;
+            }
+
+            for (let entry of entries) {
+               if (entry.isFile) {
+                  files.push(await processFile(entry, currentPath)); // Process file with path
+               } else if (entry.isDirectory) {
+                  files = files.concat(await processDirectory(entry, currentPath)); // Recursively process folder
+               }
+            }
+
+            readEntries(); // Continue reading until done
+         }, reject);
+      }
+
+      readEntries();
+   });
+}
+
 
 function detectExtension(filename) {
    let arry = filename.split(".")
 
+   if (arry.length === 1) return ".txt" //missing extension defaults to .txt
    return "." + arry[arry.length - 1]
 
 }
+
 function isVideoFile(file) {
    // List of common video MIME types
    const videoMimeTypes = [
-      'video/mp4',
-      'video/mpeg',
-      'video/ogg',
-      'video/webm',
-      'video/quicktime',
-      'video/x-msvideo',
-      'video/x-ms-wmv',
-      'video/x-flv',
-      'video/3gpp',
-      'video/3gpp2',
-   ];
+      "video/mp4",
+      "video/mpeg",
+      "video/ogg",
+      "video/webm",
+      "video/quicktime",
+      "video/x-msvideo",
+      "video/x-ms-wmv",
+      "video/x-flv",
+      "video/3gpp",
+      "video/3gpp2"
+   ]
 
    return videoMimeTypes.includes(file.type)
 }
 
 function getVideoCover(file, seekTo = 0.0) {
-   console.log("getting video cover for file: ", file);
+   console.log("getting video cover for file: ", file)
    return new Promise((resolve, reject) => {
       // load the file to a video player
-      const videoPlayer = document.createElement('video');
-      videoPlayer.setAttribute('src', URL.createObjectURL(file));
-      videoPlayer.load();
-      videoPlayer.addEventListener('error', (ex) => {
-         reject("error when loading video file", ex);
-      });
+      const videoPlayer = document.createElement("video")
+      videoPlayer.setAttribute("src", URL.createObjectURL(file))
+      videoPlayer.load()
+      videoPlayer.addEventListener("error", (ex) => {
+         reject("error when loading video file", ex)
+      })
       // load metadata of the video to get video duration and dimensions
-      videoPlayer.addEventListener('loadedmetadata', () => {
+      videoPlayer.addEventListener("loadedmetadata", () => {
 
          // seek to user defined timestamp (in seconds) if possible
          if (videoPlayer.duration < seekTo) {
-            console.warn("video is too short.");
+            console.warn("video is too short.")
             seekTo = 0.0
          }
          // delay seeking or else 'seeked' event won't fire on Safari
          setTimeout(() => {
-            videoPlayer.currentTime = seekTo;
-         }, 200);
+            videoPlayer.currentTime = seekTo
+         }, 200)
          // extract video thumbnail once seeking is complete
-         videoPlayer.addEventListener('seeked', () => {
-            console.log('video is now paused at %ss.', seekTo);
+         videoPlayer.addEventListener("seeked", () => {
+            console.log("video is now paused at %ss.", seekTo)
             // define a canvas to have the same dimension as the video
-            const canvas = document.createElement("canvas");
-            canvas.width = videoPlayer.videoWidth;
-            canvas.height = videoPlayer.videoHeight;
+            const canvas = document.createElement("canvas")
+            canvas.width = videoPlayer.videoWidth
+            canvas.height = videoPlayer.videoHeight
             // draw the video frame to canvas
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+            const ctx = canvas.getContext("2d")
+            ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
             // return the canvas image as a blob
             ctx.canvas.toBlob(
                blob => {
-                  resolve(blob);
+                  resolve(blob)
                },
                "image/jpeg",
                0.75
-            );
-         });
-      });
-   });
+            )
+         })
+      })
+   })
 }
+
 async function generateThumbnail(fileObj) {
    const mainStore = useMainStore()
    const uploadStore = useUploadStore()
@@ -168,13 +177,13 @@ async function generateThumbnail(fileObj) {
 
 
       let formData = new FormData()
-      formData.append('file', thumbnail, `Kocham Alternatywki`)
+      formData.append("file", thumbnail, `Kocham Alternatywki`)
 
       let webhook = mainStore.settings.webhook
 
       let response = await discord_instance.post(webhook, formData, {
          headers: {
-            'Content-Type': 'multipart/form-data'
+            "Content-Type": "multipart/form-data"
          }
 
       })
@@ -191,7 +200,7 @@ async function generateThumbnail(fileObj) {
    } catch (err) {
       console.error(err)
       const toast = useToast()
-      toast.error(i18n.global.t("toasts.thumbnailError", {name: fileObj.name}))
+      toast.error(i18n.global.t("toasts.thumbnailError", { name: fileObj.name }))
    }
 
 }
@@ -224,8 +233,7 @@ export async function createNeededFolders(files, parent_folder) {
          // file.webkitRelativePath np: "nowyFolder/kolejnyFolder/plik.ext"
          let folder_list = file.webkitRelativePath.split("/").slice(0, -1)  // Get list of folders by removing the file name
          // folder_list np: ['nowyFolder', 'kolejnyFolder']
-         let folder_list_str = folder_list.join("/") // convert that list to str "example:
-         // folder_list_str np: "nowyFolder/kolejnyFolder"
+
 
          for (let i = 1; i <= folder_list.length; i++) {
             // idziemy od tyłu po liscie czyli jesli lista to np [a1, b2, c3, d4, e5, f6]
@@ -245,23 +253,23 @@ export async function createNeededFolders(files, parent_folder) {
                   parent_list_id = parent_list["id"]
                } else {
                   parent_list_id = parent_folder.id
-                  let message = i18n.global.t('toasts.folderCreated', {name: chatgpt_folder_name}).toString()
+                  let message = i18n.global.t("toasts.folderCreated", { name: chatgpt_folder_name }).toString()
 
                   toast.success(message)
                }
 
-               folder = await create({"parent_id": parent_list_id, "name": chatgpt_folder_name})
-               folder_structure[folder_list_key] = {"id": folder.id, "parent_id": parent_list_id}
+               folder = await create({ "parent_id": parent_list_id, "name": chatgpt_folder_name })
+               folder_structure[folder_list_key] = { "id": folder.id, "parent_id": parent_list_id }
 
             }
          }
-         fileList.push({"parent_id": folder.id, "file": file})
+         fileList.push({ "parent_id": folder.id, "file": file })
 
       }
    } else {
       // jeżeli uploadujemy pliki a nie foldery to nie musimy sie bawić w to całe gówno jak na górze XD
       for (let file of files) {
-         fileList.push({"parent_id": parent_folder.id, "file": file})
+         fileList.push({ "parent_id": parent_folder.id, "file": file })
       }
    }
    return fileList
@@ -270,7 +278,7 @@ export async function createNeededFolders(files, parent_folder) {
 async function createFiles(fileList, filesInRequest) {
    let createdFiles = []
 
-   let file_res = await createFile({"files": filesInRequest})
+   let file_res = await createFile({ "files": filesInRequest })
 
 
    for (let created_file of file_res) {
@@ -315,7 +323,9 @@ export async function handleCreatingFiles(fileList) {
          filesInRequest = []
       }
    }
-   createdFiles.push(...await createFiles(fileList, filesInRequest))
+   if (filesInRequest.length > 0) {
+      createdFiles.push(...await createFiles(fileList, filesInRequest))
+   }
    /**
     createdFiles looks like this:
     "file_id": created_file.file_id, "encryption_key": created_file.key, "file": file, "parent_id": created_file.parent_id, "name": created_file.name}
@@ -369,7 +379,7 @@ export async function prepareRequests() {
 
             let requestList = []
             for (let j = 0; j < chunks.length; j++) {
-               let request = {"type": "chunked", "fileObj": fileObj, "chunk": chunks[j], "chunkNumber": j + 1, "totalChunks": chunks.length}
+               let request = { "type": "chunked", "fileObj": fileObj, "chunk": chunks[j], "chunkNumber": j + 1, "totalChunks": chunks.length }
                requestList.push(request)
             }
             return requestList
@@ -380,7 +390,7 @@ export async function prepareRequests() {
          //we need to return the already created multiAttachment request
          if (totalSize + peekFile.size > chunkSize || filesForRequest.length + 1 >= 10) {
             if (filesForRequest.length !== 0) {
-               return [{"type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest}]
+               return [{ "type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest }]
             }
          }
 
@@ -402,7 +412,7 @@ export async function prepareRequests() {
 
       }
       if (filesForRequest.length !== 0) {
-         return [{"type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest}]
+         return [{ "type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest }]
       }
 
 
@@ -410,8 +420,7 @@ export async function prepareRequests() {
       console.error(e)
       if (fileObj) {
          uploadStore.setStatus(fileObj.file_id, "failed")
-      }
-      else if (peekFile) {
+      } else if (peekFile) {
          uploadStore.setStatus(peekFile.file_id, "failed")
 
       }
@@ -459,14 +468,14 @@ export async function uploadMultiAttachments(fileFormList, attachmentJson, files
 
    let webhook = mainStore.settings.webhook
 
-   fileFormList.append('json_payload', JSON.stringify({"attachments": attachmentJson}))
+   fileFormList.append("json_payload", JSON.stringify({ "attachments": attachmentJson }))
    let file_ids = filesForRequest.map(obj => obj.file_id)
 
    let response = await discord_instance.post(webhook, fileFormList, {
       headers: {
-         'Content-Type': 'multipart/form-data'
+         "Content-Type": "multipart/form-data"
       },
-      onUploadProgress: function (progressEvent) {
+      onUploadProgress: function(progressEvent) {
          uploadStore.setUploadSpeedBytes(requestId, progressEvent.rate)
          uploadStore.setETA(requestId, progressEvent.estimated)
          // Pass the progress details to Vuex
@@ -488,14 +497,14 @@ export async function uploadMultiAttachments(fileFormList, attachmentJson, files
          "total_fragments": 1,
          "fragment_size": filesForRequest[i].systemFile.size,
          "message_id": response.data.id,
-         "attachment_id": attachment.id,
+         "attachment_id": attachment.id
 
       }
       response_list.push(file_data)
 
    }
 
-   await patchFile({"files": response_list})
+   await patchFile({ "files": response_list })
    for (let file_id of file_ids) {
       uploadStore.finishUpload(file_id)
    }
@@ -516,13 +525,13 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, fileObj, requ
    let formData = new FormData()
 
 
-   formData.append('file', chunk, `Kocham Alternatywki`)
+   formData.append("file", chunk, `Kocham Alternatywki`)
 
    let response = await discord_instance.post(webhook, formData, {
       headers: {
-         'Content-Type': 'multipart/form-data'
+         "Content-Type": "multipart/form-data"
       },
-      onUploadProgress: function (progressEvent) {
+      onUploadProgress: function(progressEvent) {
 
          uploadStore.setUploadSpeedBytes(requestId, progressEvent.rate)
          uploadStore.setETA(requestId, progressEvent.estimated)
@@ -537,7 +546,7 @@ export async function uploadChunk(chunk, chunkNumber, totalChunks, fileObj, requ
       "file_id": fileObj.file_id, "fragment_sequence": chunkNumber, "total_fragments": totalChunks,
       "fragment_size": chunk.size, "message_id": response.data.id, "attachment_id": response.data.attachments[0].id
    }
-   let res = await patchFile({"files": [file_data]})
+   let res = await patchFile({ "files": [file_data] })
 
    //status 200 means the file is ready
    if (res.status === 200) {
@@ -568,19 +577,19 @@ export async function encrypt(base64Key, base64IV, file) {
    let iv = base64ToUint8Array(base64IV) // Decode the base64 key to binary
    console.log(222)
 
-   let algorithm = {name: 'AES-CTR', counter: iv, length: 64}
+   let algorithm = { name: "AES-CTR", counter: iv, length: 64 }
    let cryptoKey = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       key,
       algorithm,
       false,
-      ['encrypt']
+      ["encrypt"]
    )
    console.log(3333)
 
    let arrayBuffer = await file.arrayBuffer()
    let encryptedArrayBuffer = await crypto.subtle.encrypt(
-      {name: 'AES-CTR', counter: iv, length: 64},
+      { name: "AES-CTR", counter: iv, length: 64 },
       cryptoKey,
       arrayBuffer
    )

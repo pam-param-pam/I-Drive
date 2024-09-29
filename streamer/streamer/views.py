@@ -29,6 +29,8 @@ def index(request):
 @api_view(['GET'])
 @throttle_classes([UserRateThrottle])
 def stream_file(request, signed_file_id):
+    t1_start = time.perf_counter()
+
     isInline = request.GET.get('inline', False)
     res = requests.get(f"{iDriveBackend}/fragments/{signed_file_id}")
     if not res.ok:
@@ -56,8 +58,7 @@ def stream_file(request, signed_file_id):
             # luckily or not - we store both key and iv in the database
             key = base64.b64decode(file['key'])
             iv = base64.b64decode(file['iv'])
-            print(type(key))
-            print(type(iv))
+
             cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             
@@ -74,6 +75,9 @@ def stream_file(request, signed_file_id):
             if not fragment_response.ok:
                 return HttpResponse(status=fragment_response.status_code)
 
+            t1_stop = time.perf_counter()
+            print("Elapsed time during the whole program in seconds:",
+                  t1_stop - t1_start)
             url = fragment_response.json()["url"]
             headers = {
                 'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}

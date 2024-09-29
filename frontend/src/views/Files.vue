@@ -4,9 +4,9 @@
                  base="/files"
                  :folderList="folderList"
     />
-    <errors v-if="error" :errorCode="error.response?.status"/>
+    <errors v-if="error" :errorCode="error.response?.status" />
 
-    <h4 v-if="!error && isSearchActive && !loading">{{ $t('files.searchItemsFound', {amount: this.items.length}) }}</h4>
+    <h4 v-if="!error && isSearchActive && !loading">{{ $t("files.searchItemsFound", { amount: this.items.length }) }}</h4>
     <FileListing
       ref="listing"
       :locatedItem=locatedItem
@@ -20,6 +20,7 @@
       @onSearchQuery="onSearchQuery"
       @upload="upload"
       @download="download"
+      @dropUpload="onDropUpload"
     ></FileListing>
   </div>
 </template>
@@ -29,35 +30,35 @@
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import FileListing from "@/views/files/FileListing.vue"
-import {getItems} from "@/api/folder.js"
-import {name} from "@/utils/constants.js"
-import {search} from "@/api/search.js"
-import {checkFilesSizes} from "@/utils/upload.js"
-import {createZIP} from "@/api/item.js"
-import {isMobile} from "@/utils/common.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
-import {useUploadStore} from "@/stores/uploadStore.js"
+import { getItems } from "@/api/folder.js"
+import { name } from "@/utils/constants.js"
+import { search } from "@/api/search.js"
+import { checkFilesSizes } from "@/utils/upload.js"
+import { createZIP } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import { useUploadStore } from "@/stores/uploadStore.js"
+import * as upload from "@/utils/upload.js"
 
 export default {
    name: "files",
    components: {
       Breadcrumbs,
       Errors,
-      FileListing,
+      FileListing
    },
 
    props: {
       folderId: {
          type: String,
-         required: true,
+         required: true
       },
       lockFrom: {
-         type: String,
+         type: String
       },
       locatedItem: {
-         type: Object,
-      },
+         type: Object
+      }
 
    },
    data() {
@@ -85,7 +86,7 @@ export default {
             locate: this.selectedCount === 1 && this.isSearchActive,
             search: true
          }
-      },
+      }
    },
    created() {
       this.setDisabledCreation(false)
@@ -93,11 +94,11 @@ export default {
       this.fetchFolder()
 
    },
-   renderTriggered({key, target, type}) {
-      console.log(`Render triggered on component 'Files'`, {key, target, type})
+   renderTriggered({ key, target, type }) {
+      console.log(`Render triggered on component 'Files'`, { key, target, type })
    },
    watch: {
-      $route: "fetchFolder",
+      $route: "fetchFolder"
    },
    unmounted() {
       this.setItems(null)
@@ -129,7 +130,7 @@ export default {
       },
       async onSearchClosed() {
          if (this.source) {
-            this.source.cancel('Cancelled previous request')
+            this.source.cancel("Cancelled previous request")
          }
 
          await this.fetchFolder()
@@ -139,18 +140,76 @@ export default {
       async download() {
          console.log(this.selectedCount)
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            window.open(this.selected[0].download_url, '_blank')
-            let message = this.$t("toasts.downloadingSingle", {name: this.selected[0].name})
+            window.open(this.selected[0].download_url, "_blank")
+            let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
             this.$toast.success(message)
 
          } else {
             const ids = this.selected.map(obj => obj.id)
-            let res = await createZIP({"ids": ids})
-            window.open(res.download_url, '_blank')
+            let res = await createZIP({ "ids": ids })
+            window.open(res.download_url, "_blank")
 
             let message = this.$t("toasts.downloadingZIP")
             this.$toast.success(message)
 
+
+         }
+      },
+      resetOpacity() {
+         let items = document.getElementsByClassName("item")
+
+         Array.from(items).forEach((file) => {
+            file.style.opacity = 1
+         })
+      },
+      async onDropUpload(event) {
+         event.preventDefault()
+
+         this.dragCounter = 0
+         this.resetOpacity()
+
+
+         let dt = event.dataTransfer
+         console.log(dt.files)
+         let el = event.target
+
+         if (dt.files.length <= 0) return
+         
+
+         let parent_id = this.currentFolder.id
+
+         //obtaining parent folder id
+         for (let i = 0; i < 5; i++) {
+            if (el !== null && !el.classList.contains("item")) {
+               el = el.parentElement
+            }
+         }
+         if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
+            parent_id = el.__vue__.item.id
+
+         }
+         console.log(parent_id)
+
+
+         let files = await upload.scanFiles(dt)
+         console.log("parent_id")
+         console.log(parent_id)
+         console.log("files")
+         console.log(files)
+
+
+      },
+      async beginUpload(folder, files) {
+         if (await checkFilesSizes(files)) {
+            this.showHover({
+               prompt: "NotOptimizedForSmallFiles",
+               confirm: () => {
+                  this.startUpload(files, folder)
+
+               }
+            })
+         } else {
+            this.startUpload(files, folder)
 
          }
       },
@@ -159,28 +218,19 @@ export default {
 
          let files = event.currentTarget.files
          let folder = this.currentFolder
+         console.log(files)
+         await this.beginUpload(folder, files)
 
-         if (await checkFilesSizes(files)) {
-            this.showHover({
-               prompt: "NotOptimizedForSmallFiles",
-               confirm: () => {
-                  this.startUpload(files, folder)
 
-               },
-            })
-         } else {
-            this.startUpload(files, folder)
-
-         }
 
       },
       locateItem() {
-         this.$emit('onSearchClosed')
+         this.$emit("onSearchClosed")
          let item = this.selected[0]
          let parent_id = item.parent_id
 
-         this.$router.push({name: "Files", params: {"folderId": "stupidAhHack"}})
-         this.$router.push({name: "Files", params: {"folderId": parent_id, "locatedItem": item}})
+         this.$router.push({ name: "Files", params: { "folderId": "stupidAhHack" } })
+         this.$router.push({ name: "Files", params: { "folderId": parent_id, "locatedItem": item } })
 
          let message = this.$t("toasts.itemLocated")
          this.$toast.info(message)
@@ -202,12 +252,12 @@ export default {
 
       },
       upload() {
-        console.log(this.settings)
-        if (!this.settings.webhook) {
-          let message = this.$t("toasts.webhookMissing")
-          this.$toast.error(message)
-          return
-        }
+         console.log(this.settings)
+         if (!this.settings.webhook) {
+            let message = this.$t("toasts.webhookMissing")
+            this.$toast.error(message)
+            return
+         }
 
          if (
             typeof window.DataTransferItem !== "undefined" &&
@@ -249,28 +299,28 @@ export default {
                   this.showHover({
                      prompt: "FolderPassword",
                      //todo name should be lockfrom_name not just item _name
-                     props: {requiredFolderPasswords: [{'id': item.lockFrom, "name": item.name}]},
+                     props: { requiredFolderPasswords: [{ "id": item.lockFrom, "name": item.name }] },
                      confirm: () => {
-                        this.$router.push({name: "Files", params: {"folderId": item.id, "lockFrom": item.lockFrom}})
-                     },
+                        this.$router.push({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } })
+                     }
                   })
                   return
                }
             }
-            this.$router.push({name: "Files", params: {"folderId": item.id, "lockFrom": item.lockFrom}})
+            this.$router.push({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } })
 
          } else {
 
             if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
-               this.$router.push({name: "Preview", params: {"fileId": item.id, "lockFrom": item.lockFrom}})
+               this.$router.push({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } })
 
             } else {
-               this.$router.push({name: "Editor", params: {"fileId": item.id}})
+               this.$router.push({ name: "Editor", params: { "fileId": item.id } })
 
             }
 
          }
       }
-   },
+   }
 }
 </script>

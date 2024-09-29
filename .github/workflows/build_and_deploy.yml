@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - backend-image
 
 jobs:
   build:

@@ -229,9 +229,9 @@ export default {
     },
 
     fileSrcUrl() {
-      if (this.file.preview_url)
-        return this.file.preview_url + "?inline=True"
-      return this.file.download_url + "?inline=True"
+      if (this.file?.preview_url)
+        return this.file?.preview_url + "?inline=True"
+      return this.file?.download_url + "?inline=True"
     },
 
     currentIndex() {
