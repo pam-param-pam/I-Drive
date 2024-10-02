@@ -6,7 +6,7 @@ volumes:
 services:
 
   ### redis
-  ### force docker to delete cache on restart cuz yes
+  ### todo force docker to delete cache on restart cuz yes
   redis:
     container_name: i-drive-redis
     image: redis:latest

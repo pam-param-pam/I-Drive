@@ -135,7 +135,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
                 '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
             file_dict['preview_url'] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
 
-        download_url = f"{API_BASE_URL}/test1/{signed_file_id}"
+        download_url = f"{API_BASE_URL}/stream/{signed_file_id}"
 
         file_dict['download_url'] = download_url
 
@@ -420,3 +420,6 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
         children.extend(get_flattened_children(subfolder, subfolder_full_path))
 
     return children
+
+
+

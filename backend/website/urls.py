@@ -10,16 +10,17 @@ from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, ge
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password
 from .views.shareViews import get_shares, delete_share, create_share, view_share
-from .views.streamViews import get_preview, get_thumbnail
-from .views.testViews import get_file_url_view, stream_file
+from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
+from .views.testViews import get_file_url_view
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
 
 urlpatterns = [
 
-                  path("zip/<token>", get_zip_info, name="get zip model info"),
+                  # path("zip/<token>", get_zip_info, name="get zip model info"),
                   path("zip", create_zip_model, name="create zip model"),
-
+                  path('stream/<signed_file_id>', stream_file),
+                  path('zip/<token>', stream_zip_files),
                   path("trash", get_trash, name="trash"),
                   path("search", search, name="search"),
 
@@ -60,15 +61,15 @@ urlpatterns = [
                   path("item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
                   path("item/rename", rename, name="rename file/folder"),
 
-                  path('fragments/<signed_file_id>/<int:sequence>', get_fragment, name="get fragments"),
-                  path('fragments/<signed_file_id>', get_fragments_info, name="get fragments"),
+                  # path('fragments/<signed_file_id>/<int:sequence>', get_fragment, name="get fragments"),
+                  # path('fragments/<signed_file_id>', get_fragments_info, name="get fragments"),
 
                   path("resource/password/<resource_id>", check_password, name="check password"),
 
                   path('admin', admin.site.urls),
 
                   path('test', get_file_url_view),
-                  path('test1/<signed_file_id>', stream_file),
+
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

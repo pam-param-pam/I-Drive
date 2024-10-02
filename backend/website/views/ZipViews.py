@@ -98,4 +98,4 @@ def create_zip_model(request):
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
     user_zip.save()
-    return JsonResponse({"download_url": f"{API_BASE_URL}/test2/{user_zip.token}"}, status=200)
+    return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
