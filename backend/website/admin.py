@@ -8,7 +8,7 @@ from django.utils.html import format_html
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP
 from .tasks import smart_delete
-from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, GET_BASE_URL, API_BASE_URL
+from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
 from .utilities.other import sign_file_id_with_expiry
 
 admin.site.register(UserSettings)
@@ -110,11 +110,11 @@ class FileAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "image":
-            url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
+            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "video":
-            url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
+            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html(
                 '<video controls style="width: 350px; height: auto;">'
                 '<source src="{}" type="video/mp4">'
@@ -122,7 +122,7 @@ class FileAdmin(admin.ModelAdmin):
                 url
             )
         else:
-            url = f"{GET_BASE_URL}/stream/{signed_file_id}?inline=True"
+            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html(f'<a href="{url}" target="_blank">{url}</a>')
 
     def formatted_key(self, obj: File):

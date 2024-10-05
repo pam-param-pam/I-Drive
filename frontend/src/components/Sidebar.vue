@@ -154,7 +154,6 @@ export default {
                   total: filesize(usage.total),
                   usedPercentage: Math.round((usage.used / usage.total) * 100),
                }
-
                return usageStats
             }
             return this.usage

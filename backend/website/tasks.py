@@ -88,7 +88,7 @@ def smart_delete(user_id, request_id, ids):
             item.save()
 
             items.append(item)
-        return
+
         message_structure = {}
         all_files = []
         for item in items:

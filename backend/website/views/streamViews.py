@@ -26,7 +26,7 @@ from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
 from ..utilities.errors import DiscordError, BadRequestError
-from ..utilities.other import get_flattened_children, create_zip_file_dict, get_file
+from ..utilities.other import get_flattened_children, create_zip_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
 
@@ -233,6 +233,13 @@ def stream_file(request, file_obj: File):
                 async with session.get(url, headers=headers) as response:
                     if not response.ok:
                         print("===discord response error===")
+                        print(response.status)
+                        print(response.text())
+
+                        print('bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte))
+                        print(fragments[index].sequence)
+                        print(fragments[index].size)
+
                         return
                     # Asynchronously iterate over the content in chunks
                     async for raw_data in response.content.iter_chunked(chunk_size):
@@ -368,15 +375,12 @@ def stream_zip_files(request, token):
     for file in dict_files:
 
         if not file["isDir"]:
-            print(file)
-            file_obj = get_file(str(file['id']))
-            fragments = file_obj.fragments.all()
+            fragments = file["fileObj"].fragments.all()
 
-            file = GenFile(name=file['name'], generator=stream_zip_file(file_obj, fragments), size=file["size"])
+            file = GenFile(name=file['name'], generator=stream_zip_file(file["fileObj"], fragments), size=file["fileObj"].size)
             files.append(file)
 
     zipFly = ZipFly(files)
-
 
     # streamed response
     response = StreamingHttpResponse(

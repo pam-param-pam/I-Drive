@@ -1,7 +1,6 @@
 name: i-drive-dc
 volumes:
   backend-db:
-  streamer-db:
 
 services:
 
@@ -36,9 +35,6 @@ services:
       test: [ "CMD-SHELL", "ls" ]
       interval: 10s
       retries: 10
-    depends_on:
-      streamer:
-        condition: service_healthy
     environment:
 
       # GENERAL
@@ -47,7 +43,6 @@ services:
 
       # DJANGO SECRET KEYS
       - I_DRIVE_BACKEND_SECRET_KEY=${I_DRIVE_BACKEND_SECRET_KEY}
-      - I_DRIVE_STREAMER_SECRET_KEY=${I_DRIVE_STREAMER_SECRET_KEY}
 
       # DISCORD TOKENS
       - DISCORD_TOKEN1=${DISCORD_TOKEN1}
@@ -62,7 +57,6 @@ services:
       - DISCORD_TOKEN10=${DISCORD_TOKEN10}
 
         # OTHER
-      - BACKEND_BASE_URL_FOR_STREAMER=${BACKEND_BASE_URL_FOR_STREAMER}
 
       - CORS_FRONTEND=${CORS_FRONTEND}
       - CORS_FRONTEND_PORT=${CORS_FRONTEND_PORT}
@@ -70,99 +64,40 @@ services:
       - I_DRIVE_REDIS_ADDRESS=${I_DRIVE_REDIS_ADDRESS}
       - I_DRIVE_REDIS_PORT=${I_DRIVE_REDIS_PORT}
 
-      - STREAMER_BASE_URL=${STREAMER_BASE_URL}
       - BACKEND_BASE_URL=${BACKEND_BASE_URL}
 
       - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR}
-      - I_DRIVE_STREAMER_STORAGE_DIR=${I_DRIVE_STREAMER_STORAGE_DIR}
 
     volumes:
       - backend-db:${I_DRIVE_BACKEND_STORAGE_DIR}
     deploy:
       resources:
         limits:
-          memory: 256M
-
-
-### Streamer backend
-  
-  streamer:
-    container_name: i-drive-streamer
-    image: pamparampam/i-drive-streamer:latest
-    build:
-      context: ./streamer
-    restart: unless-stopped
-    ports:
-      - 8050:8050
-    depends_on:
-      - redis
-    volumes:
-      - streamer-db:${I_DRIVE_STREAMER_STORAGE_DIR}
-    environment:
-      # GENERAL
-      - IS_DEV_ENV=${IS_DEV_ENV}
-      - DEPLOYMENT_HOST=${DEPLOYMENT_HOST}
-
-      # DJANGO SECRET KEYS
-      - I_DRIVE_BACKEND_SECRET_KEY=${I_DRIVE_BACKEND_SECRET_KEY}
-      - I_DRIVE_STREAMER_SECRET_KEY=${I_DRIVE_STREAMER_SECRET_KEY}
-
-      # DISCORD TOKENS
-      - DISCORD_TOKEN1=${DISCORD_TOKEN1}
-      - DISCORD_TOKEN2=${DISCORD_TOKEN2}
-      - DISCORD_TOKEN3=${DISCORD_TOKEN3}
-      - DISCORD_TOKEN4=${DISCORD_TOKEN4}
-      - DISCORD_TOKEN5=${DISCORD_TOKEN5}
-      - DISCORD_TOKEN6=${DISCORD_TOKEN6}
-      - DISCORD_TOKEN7=${DISCORD_TOKEN7}
-      - DISCORD_TOKEN8=${DISCORD_TOKEN8}
-      - DISCORD_TOKEN9=${DISCORD_TOKEN9}
-      - DISCORD_TOKEN10=${DISCORD_TOKEN10}
-
-      # OTHER
-      - BACKEND_BASE_URL_FOR_STREAMER=${BACKEND_BASE_URL_FOR_STREAMER}
-
-      - CORS_FRONTEND=${CORS_FRONTEND}
-      - CORS_FRONTEND_PORT=${CORS_FRONTEND_PORT}
-
-      - I_DRIVE_REDIS_ADDRESS=${I_DRIVE_REDIS_ADDRESS}
-      - I_DRIVE_REDIS_PORT=${I_DRIVE_REDIS_PORT}
-
-      - STREAMER_BASE_URL=${STREAMER_BASE_URL}
-      - BACKEND_BASE_URL=${BACKEND_BASE_URL}
-
-      - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR}
-      - I_DRIVE_STREAMER_STORAGE_DIR=${I_DRIVE_STREAMER_STORAGE_DIR}
-    healthcheck:  # DO POPRAWY
-      test: [ "CMD-SHELL", "ls" ]
-      interval: 10s
-      retries: 10
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+          memory: 1G
 
 
  ### nginx
 
   nginx:
-    image: nginx:1.26.0-alpine
+    image: pamparampam/i-drive-nginx:latest
     container_name: i-drive-nginx
+    build:
+      context: ./frontend
     restart: unless-stopped
     ports:
       - 8080:80
     depends_on:
       backend:
         condition: service_healthy
-      streamer:
-        condition: service_healthy
     healthcheck: ### KWESTIA PORTU DO SPRAWDZENIA
       test: [ "CMD-SHELL", "curl http://localhost:80/healthcheck || exit 1" ]
       interval: 10s
       retries: 10
+
+    environment:
+       -
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./frontend/dist/:/var/www/idrive/frontend
     deploy:
       resources:
         limits:

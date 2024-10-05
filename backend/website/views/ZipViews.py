@@ -4,14 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..models import Folder, UserZIP
 from ..utilities.Permissions import DownloadPerms
-from ..utilities.constants import GET_BASE_URL, API_BASE_URL
+from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import check_resource_perms, get_resource, get_flattened_children, create_zip_file_dict
 from ..utilities.throttle import MyUserRateThrottle
 
 
-
+# deprecated
 def get_zip_info(request, token):
     """
     This view is used by STREAMER SERVER to fetch information about ZIP object.

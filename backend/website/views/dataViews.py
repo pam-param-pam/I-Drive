@@ -71,7 +71,7 @@ def get_dirs(request, folder_obj):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
-@last_modified(last_modified_func)
+# @last_modified(last_modified_func)
 def get_file_info(request, file_obj):
     file_content = create_file_dict(file_obj)
 
@@ -239,7 +239,7 @@ def check_password(request, resource_id):
 
     raise ResourcePermissionError("Folder password is incorrect")
 
-
+# deprecated
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
@@ -271,7 +271,7 @@ def get_fragment(request, file_obj, sequence):
 
     return JsonResponse(fragment_dict)
 
-
+# deprecated
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
 @handle_common_errors

@@ -7,7 +7,7 @@ from django.utils import timezone
 from ..models import File, Folder, Preview, ShareableLink, Thumbnail
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, GET_BASE_URL, API_BASE_URL, EventCode
+from ..utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError
 
 signer = TimestampSigner()
@@ -326,28 +326,7 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
 
     check_resource_perms("dummy request", file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
-
-    signed_id = sign_file_id_with_expiry(file_obj.id)
-
-    file_dict = {"id": file_obj.id,
-                 "name": file_name,
-                 "signed_id": signed_id,
-                 "isDir": False,
-                 "size": file_obj.size,
-                 "mimetype": file_obj.mimetype,
-                 "type": file_obj.type,
-                 "modified_at": timezone.localtime(file_obj.last_modified_at),
-                 "created_at": timezone.localtime(file_obj.created_at),
-                 "fragments": [],
-                 "is_encrypted": file_obj.is_encrypted,
-                 "key": file_obj.get_base64_key(),
-                 "iv": file_obj.get_base64_iv()
-                 }
-    fragments_list = []
-    for fragment in file_obj.fragments.all():
-        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
-    file_dict["fragments"] = fragments_list
-    return file_dict
+    return {"name": file_name, "isDir": False, "fileObj": file_obj}
 
 
 def calculate_size(folder: Folder) -> int:
@@ -386,7 +365,7 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     return folder_count, file_count
 
 
-def get_flattened_children(folder: Folder, full_path="", single_root=False) -> List:
+def get_flattened_children(folder: Folder, full_path="", single_root=False) -> List[ZipFileDict]:
     """
     Recursively collects all children (folders and files) of the given folder
     into a flattened list with file IDs and names including folders.
@@ -408,11 +387,7 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
             children.append(file_dict)
     else:
         pass
-        # todo remove pass?
-        # include handling of empty directory?
-        folder_full_path = f"{full_path}{folder.name}/"
-
-        children.append({'id': folder.id, 'name': folder_full_path, "isDir": True})
+        #todo handle empty dirs
 
     # Recursively collect all subfolders and their children
     for subfolder in folder.subfolders.all():

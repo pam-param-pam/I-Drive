@@ -9,3 +9,5 @@ backend/website/views/__pycache__/
 frontend/dist/
 /venv/
 /backend/staticfiles/
+/z-env/local.env
+/z-env/docker.env
