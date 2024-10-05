@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # SSH into the server and execute commands
     - name: Deploy to Virtual Machine
       uses: appleboy/ssh-action@master
       with:
@@ -16,10 +17,6 @@ jobs:
         username: ${{ secrets.CI_RPI_USERNAME }}
         key: ${{ secrets.CI_RPI_SSH_KEY }}
         script: |
-            
-          
-          
-          
           echo "Pulling the latest Docker image..."
           docker pull ${{ secrets.DOCKER_IMAGE }}
 

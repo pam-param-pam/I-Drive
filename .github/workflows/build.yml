@@ -36,7 +36,7 @@ jobs:
       # 4. Set env file for Backend
     - name: Set env file for Backend
       run: |
-        cd ..
+        cd .
         ls -a
         echo "IS_DEV_ENV=False" >> .env 
         echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
