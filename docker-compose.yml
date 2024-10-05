@@ -24,7 +24,7 @@ services:
   
   backend:
     container_name: i-drive-backend
-    image: pamparampam1/i-drive-backend:${BACKENDTAG-latest}
+    image: pamparampam1/idrive:backend:${BACKENDTAG-latest}
     pull_policy: missing
     build:
       context: ./backend
@@ -47,7 +47,7 @@ services:
  ### nginx
 
   nginx:
-    image: pamparampam1/i-drive-nginx:latest
+    image: pamparampam1/i-drive:nginx:${NGINXTAG-latest}
     container_name: i-drive-nginx
     build:
       context: ./frontend
