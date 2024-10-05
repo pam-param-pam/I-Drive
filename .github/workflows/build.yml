@@ -26,17 +26,13 @@ jobs:
     # 4. Set env file for Frontend
     - name: Set env file for Frontend
       run : |
-        ls
         cd frontend
         echo "VITE_BACKEND_BASE_WS=wss://${{ secrets.DEPLOYMENT_HOST }}/api" > .env
         echo "VITE_BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
-        echo "aaaa"
-        ls -a
 
       # 4. Set env file for Backend
     - name: Set env file for Backend
       run: |
-        ls -a
         cd backend
         echo "IS_DEV_ENV=False" >> .env 
         echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
@@ -67,6 +63,6 @@ jobs:
       # 5. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
-        ls -a
+        env
         docker compose build
         docker compose push
