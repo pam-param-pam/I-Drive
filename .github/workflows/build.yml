@@ -30,10 +30,12 @@ jobs:
         cd frontend
         echo "VITE_BACKEND_BASE_WS=wss://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
         echo "VITE_BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
+        echo "aaaa"
+        ls
 
       # 5. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
         ls -a
-        docker-compose build
-        docker-compose push
+        docker compose build
+        docker compose push
