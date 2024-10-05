@@ -35,6 +35,8 @@ services:
       test: [ "CMD-SHELL", "ls" ]
       interval: 10s
       retries: 10
+    environment:
+      - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR}
 
     volumes:
       - backend-db:${I_DRIVE_BACKEND_STORAGE_DIR}
