@@ -35,7 +35,8 @@
     "connection": "T-The sewvew can't be weached",
     "forbidden": "*waises paw* You do not have enough permissions to access this resource (▰˘v˘▰)",
     "internal": "OOPSIE WOOPSIE!! Uwu We made a fucky wucky!! A wittle fucko boingo! The code monkeys at our headquarters are working VEWY HAWD to fix this!",
-    "notFound": "This wocation can't be weached ɾ⚈▿⚈ɹ"
+    "notFound": "This wocation can't be weached ɾ⚈▿⚈ɹ",
+    "serviceUnavailable": ""
   },
   "files": {
     "closePreview": "Cwose p-pweview",
@@ -130,7 +131,6 @@
     "login": "Wogin",
     "logout": "wogout",
     "myFiles": "M-My Fiwes",
-    "newFile": "Nyew Fiwe",
     "newFolder": "nyew fowdew (ﾉ´ з `)ノ",
     "register": "Wegistew",
     "settings": "S-Swettings OwO",
@@ -153,7 +153,8 @@
     "itemMoved": "Mowed {amount} itwems (ᗒᗨᗕ)",
     "itemMovedToTrash": "Mowed {amount} itwems to twash hehe",
     "itemRenamed": "Nyame changed",
-    "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!"
+    "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
+    "webhookMissing": ""
   },
   "uploadFile": {
     "paused": "Paused",

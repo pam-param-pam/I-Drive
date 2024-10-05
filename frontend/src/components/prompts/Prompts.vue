@@ -18,7 +18,6 @@ import Info from "./Info.vue"
 import Delete from "./Delete.vue"
 import Rename from "./Rename.vue"
 import Move from "./Move.vue"
-import NewFile from "./NewFile.vue"
 import NewDir from "./NewDir.vue"
 import DiscardEditorChanges from "./DiscardEditorChanges.vue"
 import Share from "./Share.vue"
@@ -45,7 +44,6 @@ export default {
       Rename,
       Move,
       Share,
-      NewFile,
       NewDir,
       Help,
       Upload,

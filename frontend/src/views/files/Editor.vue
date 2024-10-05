@@ -45,6 +45,7 @@ import CodeEditor from "@/components/SimpleCodeEditor/CodeEditor.vue"
 import {discord_instance} from "@/utils/networker.js";
 import {encrypt} from "@/utils/upload.js";
 import {isMobile} from "@/utils/common.js";
+import throttle from "lodash.throttle"
 
 
 export default {
@@ -226,7 +227,8 @@ export default {
          event.preventDefault()
          this.onSave()
       },
-      async onSave() {
+
+       onSave: throttle(async function (event) {
          document.querySelector('#save-button').classList.add('loading'); // Set to loading
 
          if (this.raw !== this.copyRaw) {
@@ -274,17 +276,8 @@ export default {
          let message = this.$t('toasts.fileSaved')
          this.$toast.success(message)
 
-      },
+       }, 1000),
 
-      moveToTrash() {
-         this.showHover({
-            prompt: "moveToTrash",
-            confirm: () => {
-               this.close()
-            },
-         })
-
-      },
       onClose() {
          try {
             if (this.isInShareContext) {
@@ -308,7 +301,6 @@ export default {
             // catch every error so user can always close...
          catch (e) {
             console.error(e)
-            alert("Error closing properly... report this")
             this.$router.push({name: `Files`, params: {folderId: this.user.root}})
 
          }

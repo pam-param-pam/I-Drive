@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from website.models import UserPerms
+from ..models import UserPerms
 
 
 class AdminPerms(BasePermission):
@@ -57,3 +57,8 @@ class ChangePassword(BasePermission):
     def has_permission(self, request, view):
         perms = UserPerms.objects.get(user=request.user)
         return (perms.change_password or perms.admin) and not perms.globalLock
+
+class ResetLockPerms(BasePermission):
+    def has_permission(self, request, view):
+        perms = UserPerms.objects.get(user=request.user)
+        return (perms.reset_lock or perms.admin) and not perms.globalLock

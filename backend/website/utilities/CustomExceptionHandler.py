@@ -20,4 +20,6 @@ def custom_exception_handler(exc, context):
             'details': 'You are not allowed to perform this action',
         }
         response.data = custom_response_data
+
+    print(exc)
     return response

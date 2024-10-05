@@ -4,10 +4,10 @@ import traceback
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
-from website.models import Folder, UserPerms
-from website.utilities.CommandLine.ArgumentException import IncorrectArgumentError
-from website.utilities.CommandLine.CommandParser import CommandParser
-from website.utilities.errors import IDriveException
+from .models import Folder, UserPerms
+from .utilities.CommandLine.ArgumentException import IncorrectArgumentError
+from .utilities.CommandLine.CommandParser import CommandParser
+from .utilities.errors import IDriveException
 
 # todo i think we should check if token is still valid every now and then just in case
 # maybe create a base class for websocket consumer thats also includes logout method

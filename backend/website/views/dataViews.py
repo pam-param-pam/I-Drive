@@ -8,17 +8,17 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import File, Folder, Fragment, ShareableLink
-from website.tasks import prefetch_discord_message
-from website.utilities.Discord import discord
-from website.utilities.Permissions import ReadPerms
-from website.utilities.constants import cache
-from website.utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
+from ..models import File, Folder, Fragment, ShareableLink
+from ..tasks import prefetch_discord_message
+from ..utilities.Discord import discord
+from ..utilities.Permissions import ReadPerms
+from ..utilities.constants import cache
+from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
     check_file, check_signed_url
-from website.utilities.errors import BadRequestError, ResourceNotFoundError
-from website.utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, error_res, \
+from ..utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, build_http_error_response, \
     calculate_size, calculate_file_and_folder_count
-from website.utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
 def etag_func(request, folder_obj):
@@ -27,7 +27,7 @@ def etag_func(request, folder_obj):
         return str(hash(str(folder_content)))
 
 def last_modified_func(request, file_obj, sequence=None):
-    last_modified_str = file_obj.last_modified_at  # .strftime('%a, %d %b %Y %H:%M:%S GMT')
+    last_modified_str = file_obj.last_modified_at
     return last_modified_str
 
 
@@ -37,7 +37,7 @@ def last_modified_func(request, file_obj, sequence=None):
 @handle_common_errors
 @check_folder_and_permissions
 @etag(etag_func)
-def get_folder(request, folder_obj):
+def get_folder_info(request, folder_obj):
 
     folder_content = cache.get(folder_obj.id)
     if not folder_content:
@@ -71,8 +71,8 @@ def get_dirs(request, folder_obj):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
-@last_modified(last_modified_func)
-def get_file(request, file_obj):
+# @last_modified(last_modified_func)
+def get_file_info(request, file_obj):
     file_content = create_file_dict(file_obj)
 
     return JsonResponse(file_content)
@@ -205,8 +205,8 @@ def search(request):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def get_trash(request):
-    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False)
-    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False)
+    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True)
+    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True)
 
     trash_items = []
     for file in files:
@@ -229,57 +229,29 @@ def check_password(request, resource_id):
         item = get_resource(resource_id)
         check_resource_perms(request, item, checkRoot=False, checkFolderLock=False)
     except ResourceNotFoundError:
-        item = ShareableLink.objects.get(id=resource_id)
-
+        try:
+            item = ShareableLink.objects.get(id=resource_id)
+        except ShareableLink.DoesNotExist:
+            raise ResourceNotFoundError(f"Couldn't find resource or share with id {resource_id}")
     password = request.headers.get("X-Resource-Password")
     if item.password == password:
         return HttpResponse(status=204)
 
-    return JsonResponse(error_res(user=request.user, code=469, error_code=16, details="Folder password is incorrect"), status=469)
+    raise ResourcePermissionError("Folder password is incorrect")
 
-
+# deprecated
 @cache_page(60 * 60 * 12)  # 12 hours
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
 @handle_common_errors
 @check_signed_url
 @check_file
-def get_thumbnail_info(request, file_obj: File):
-    """
-    This view is used by STREAMER SERVER to fetch information about file's thumbnail. 
-    This is called in anonymous context, signed File ID is used to authorize the request.
-    """
-
-    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
-
-    thumbnail = file_obj.thumbnail
-
-    url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
-
-    thumbnail_dict = {
-        "size": thumbnail.size,
-        "url": url,
-        "is_encrypted": file_obj.is_encrypted
-    }
-    if file_obj.is_encrypted:
-        thumbnail_dict['key'] = file_obj.get_base64_key()
-        thumbnail_dict['iv'] = file_obj.get_base64_iv()
-    return JsonResponse(thumbnail_dict, safe=False)
-
-@cache_page(60 * 60 * 12)  # 12 hours
-@api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
-@check_signed_url
-@check_file
-@handle_common_errors
-def get_fragment(request, file_obj, sequence=1):
+def get_fragment(request, file_obj, sequence):
     """
     This view is used by STREAMER SERVER to fetch information about file's fragment which
     is determined by file_obj and sequence. Sequence starts at 1.
-    This is called in anonymous context, signed File ID is used to authorize the request.
+    This is called in ANONYMOUS context, signed File ID is used to authorize the request.
     """
-
-    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     sequence -= 1
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
@@ -299,7 +271,7 @@ def get_fragment(request, file_obj, sequence=1):
 
     return JsonResponse(fragment_dict)
 
-
+# deprecated
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
 @handle_common_errors
@@ -309,10 +281,8 @@ def get_fragment(request, file_obj, sequence=1):
 def get_fragments_info(request, file_obj: File):
     """
     This view is used by STREAMER SERVER to fetch information about file's fragments.
-    This is called in anonymous context, signed File ID is used to authorize the request.
+    This is called in ANONYMOUS context, signed File ID is used to authorize the request.
     """
-
-    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
     fragments_list = []

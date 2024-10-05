@@ -7,12 +7,12 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import UserSettings, Folder, UserPerms
-from website.utilities.Permissions import ChangePassword, SettingsModifyPerms
-from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import ResourcePermissionError, BadRequestError
-from website.utilities.other import logout_and_close_websockets
-from website.utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle
+from ..models import UserSettings, Folder, UserPerms
+from ..utilities.Permissions import ChangePassword, SettingsModifyPerms
+from ..utilities.decorators import handle_common_errors
+from ..utilities.errors import ResourcePermissionError, BadRequestError
+from ..utilities.other import logout_and_close_websockets
+from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle
 
 
 @api_view(['POST'])
@@ -26,7 +26,7 @@ def change_password(request):
     user = request.user
 
     if not user.check_password(current_password):
-        raise ResourcePermissionError("Password is incorrect")
+        raise ResourcePermissionError("Password is incorrect!")
 
     user.set_password(new_password)
     user.save()

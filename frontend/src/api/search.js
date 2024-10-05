@@ -8,7 +8,7 @@ export async function search(argumentDict, lockFrom = null, password = null) {
    }
    let queryParams = new URLSearchParams(argumentDict)
 
-   let url = `/api/search?${queryParams.toString()}`
+   let url = `/search?${queryParams.toString()}`
 
 
    let response = await backend_instance.get(url, {

@@ -23,16 +23,6 @@
           <span>{{ $t("sidebar.newFolder") }}</span>
         </button>
 
-        <button
-          :disabled="disabledCreation"
-          @click="showHover('newFile')"
-          class="action"
-          :aria-label="$t('sidebar.newFile')"
-          :title="$t('sidebar.newFile')"
-        >
-          <i class="material-icons">note_add</i>
-          <span>{{ $t("sidebar.newFile") }}</span>
-        </button>
       </div>
 
       <button
@@ -164,7 +154,6 @@ export default {
                   total: filesize(usage.total),
                   usedPercentage: Math.round((usage.used / usage.total) * 100),
                }
-
                return usageStats
             }
             return this.usage

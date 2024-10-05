@@ -218,7 +218,7 @@ backend_instance.interceptors.response.use(
          errorMessage = i18n.global.t("toasts.unauthorized")
          errorDetails = i18n.global.t("toasts.sessionExpired")
       }
-      toast.error(`${errorMessage}\n${errorDetails}`, {
+      toast.error(`${i18n.global.t(errorMessage)}\n${errorDetails}`, {
          timeout: 5000,
          position: "bottom-right",
       })

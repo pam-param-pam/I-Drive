@@ -1,10 +1,10 @@
 import time
 
-from website.models import Folder
-from website.utilities.CommandLine.ArgsChecker import requireExactly
-from website.utilities.CommandLine.ArgumentException import IncorrectArgumentError
-from website.utilities.CommandLine.Command import Command
-from website.utilities.other import build_folder_content
+from ...models import Folder
+from  .ArgsChecker import requireExactly
+from .ArgumentException import IncorrectArgumentError
+from .Command import Command
+from ...utilities.other import build_folder_content
 
 
 class HelpCommand(Command):

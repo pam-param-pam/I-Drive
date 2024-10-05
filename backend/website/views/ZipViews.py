@@ -2,22 +2,20 @@ from django.http import JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.models import Folder, UserZIP
-from website.utilities.Permissions import DownloadPerms
-from website.utilities.constants import GET_BASE_URL
-from website.utilities.decorators import handle_common_errors
-from website.utilities.errors import BadRequestError, MissingOrIncorrectResourcePasswordError
-from website.utilities.other import check_resource_perms, get_resource, get_flattened_children, create_zip_file_dict
-from website.utilities.throttle import MyUserRateThrottle
+from ..models import Folder, UserZIP
+from ..utilities.Permissions import DownloadPerms
+from ..utilities.constants import API_BASE_URL
+from ..utilities.decorators import handle_common_errors
+from ..utilities.errors import BadRequestError, MissingOrIncorrectResourcePasswordError
+from ..utilities.other import check_resource_perms, get_resource, get_flattened_children, create_zip_file_dict
+from ..utilities.throttle import MyUserRateThrottle
 
 
-@api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
-@handle_common_errors
+# deprecated
 def get_zip_info(request, token):
     """
     This view is used by STREAMER SERVER to fetch information about ZIP object.
-    This is called in anonymous context, token is used to authorize the request.
+    This is called in ANONYMOUS context, token is used to authorize the request.
     """
 
     user_zip = UserZIP.objects.get(token=token)
@@ -100,4 +98,4 @@ def create_zip_model(request):
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
     user_zip.save()
-    return JsonResponse({"download_url": f"{GET_BASE_URL}/zip/{user_zip.token}"}, status=200)
+    return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)

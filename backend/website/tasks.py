@@ -11,11 +11,11 @@ from channels.layers import get_channel_layer
 from django.db.utils import IntegrityError
 from django.utils import timezone
 
-from website.celery import app
-from website.models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
-from website.utilities.Discord import discord
-from website.utilities.constants import EventCode
-from website.utilities.errors import DiscordError
+from .celery import app
+from .models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
+from .utilities.Discord import discord
+from .utilities.constants import EventCode
+from .utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
 
@@ -83,6 +83,9 @@ def smart_delete(user_id, request_id, ids):
                 item = Folder.objects.get(id=item_id)
             except Folder.DoesNotExist:
                 item = File.objects.get(id=item_id)
+
+            item.ready = False
+            item.save()
 
             items.append(item)
 
@@ -217,6 +220,9 @@ def delete_unready_files():
         if elapsed_time >= timedelta(days=1):
 
             smart_delete.delay(file.owner.id, request_id, [file.id])
+
+
+    #todo delete unready folders and their content
 
 @app.task
 def delete_files_from_trash():

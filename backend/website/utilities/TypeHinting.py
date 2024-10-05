@@ -4,7 +4,7 @@ from django.db.models import PositiveBigIntegerField
 from datetime import datetime
 from shortuuidfield import ShortUUIDField
 
-from website.models import Folder, File
+from ..models import Folder, File
 from typing_extensions import NotRequired
 
 Resource = Union[Folder, File]
@@ -52,21 +52,17 @@ class FolderDict(TypedDict):
     in_trash_since: str
     children: NotRequired[List[Union['FolderDict', FileDict]]]
 
+
 class PartialFragmentDict(TypedDict):
     sequence: int
     size: int
 
+
 class ZipFileDict(TypedDict):
-    id: ShortUUIDField
     name: str
-    signed_id: str
     isDir: bool
-    size: int
-    mimetype: str
-    type: str
-    modified_at: datetime
-    key: str
-    fragments: List[PartialFragmentDict]
+    fileObj: File
+
 
 class ShareDict(TypedDict):
     expire: str

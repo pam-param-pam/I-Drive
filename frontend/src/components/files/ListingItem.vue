@@ -65,9 +65,10 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount"]),
       type() {
+        console.log(this.item.extension)
          if (this.item.isDir) return "folder"
          if (this.item.type === "application") return "pdf"
-         if (this.item.extension === ".epub" || this.item.extension === ".mobi") return "ebook"
+         if (this.item.extension === ".epub") return "ebook"
          return this.item.type
       },
       isSelected() {
@@ -149,6 +150,8 @@ export default {
 
          let message = this.$t('toasts.movedItems')
          this.$toast.success(message)
+
+        this.resetSelected()
       },
 
       click(event) {

@@ -1,4 +1,4 @@
-from website.utilities.errors import IDriveException
+from ...utilities.errors import IDriveException
 
 
 class IncorrectArgumentError(IDriveException):

@@ -60,7 +60,7 @@ export async function login(username, password) {
 export async function signup(username, password) {
    const data = {username, password}
 
-   const res = await fetch(`${baseURL}/api/signup`, {
+   const res = await fetch(`${baseURL}/signup`, {
       method: "POST",
       headers: {
          "Content-Type": "application/json",
