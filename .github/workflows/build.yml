@@ -76,11 +76,11 @@ jobs:
     - name: Tag and push Backend to GitHub Container Registry
       run: |
         docker images -a
-        docker tag ${{ github.repository_owner }}/backend:latest ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
+        docker tag ${{ github.repository_owner }}/idrive-backend:latest ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
         docker push ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
 
     # 8. Tag and push Nginx to GitHub Container Registry
     - name: Tag and push Nginx to GitHub Container Registry
       run: |
-        docker tag ${{ github.repository_owner }}/nginx:latest ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
+        docker tag ${{ github.repository_owner }}/idrive-nginx:latest ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
         docker push ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
