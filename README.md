@@ -36,7 +36,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Supports uploading < 10 files in a single discord request | ✅                  |
 | Backend rate limiting                                     | ✅                  |
 | Custom ZIP64 Library to zip & stream files on the fly     | ✅                  |
-| Docker support                                            | ️ Coming soon      |
+| Docker support                                            | ️ ⚠️ Coming soon   |
 | Lock shares with password                                 | ⚠️ Only partial    |
 | Drag and drop upload                                      | ⚠️ Coming soon     |
 | Error handling in upload process                          | ️ ⚠️ Only partial  |
