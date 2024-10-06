@@ -17,6 +17,11 @@ jobs:
         username: ${{ secrets.CI_RPI_USERNAME }}
         key: ${{ secrets.CI_RPI_SSH_KEY }}
         script: |
+          
+          echo "navigating to idrive"
+
+          mkdir -p idrive
+          cd idrive
           echo "Pulling docker-compose.yml..."
 
           curl -o ~/docker-compose.yml https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml
