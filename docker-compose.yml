@@ -7,7 +7,7 @@ services:
   ### redis
   ### todo force docker to delete cache on restart cuz yes
   redis:
-    container_name: i-drive-redis
+    container_name: idrive-redis
     image: redis:latest
     restart: unless-stopped
     #healthcheck:
@@ -23,8 +23,8 @@ services:
   ### Main backend
   
   backend:
-    container_name: i-drive-backend
-    image: pamparampam1/idrive:backend:${BACKENDTAG-latest}
+    container_name: idrive-backend
+    image: pamparampam/idrive-backend:${BACKENDTAG-latest}
     pull_policy: missing
     build:
       context: ./backend
@@ -47,8 +47,8 @@ services:
  ### nginx
 
   nginx:
-    image: pamparampam1/i-drive:nginx:${NGINXTAG-latest}
-    container_name: i-drive-nginx
+    image: pamparampam/idrive-nginx:${NGINXTAG-latest}
+    container_name: idrive-nginx
     build:
       context: ./frontend
     restart: unless-stopped

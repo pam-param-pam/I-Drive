@@ -59,9 +59,28 @@ jobs:
         
         echo "I_DRIVE_BACKEND_STORAGE_DIR=/app/data" >> .env
 
-      # 5. Build and push the Docker images using docker-compose
+    # 5. Logs to GitHub Container Registry
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }} # GitHub Token for authentication
+
+      # 6. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
         env
         docker compose build
-        docker compose push
+        
+      # 7. Tag and push Backend to GitHub Container Registry
+    - name: Tag and push Backend to GitHub Container Registry
+      run: |
+        docker tag backend:local ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
+        docker push ghcr.io/${{ github.repository_owner }}/my-app1:latest
+
+    # 8. Tag and push Nginx to GitHub Container Registry
+    - name: Tag and push Nginx to GitHub Container Registry
+      run: |
+        docker tag nginx:local ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
+        docker push ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
