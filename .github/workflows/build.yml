@@ -73,6 +73,7 @@ jobs:
       # 6. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
+        apt-get update && apt-get install -y --no-install-recommends build-essential
         docker compose build 
 
       # 7. Tag and push Backend to GitHub Container Registry
