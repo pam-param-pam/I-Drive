@@ -37,7 +37,7 @@ services:
       retries: 10
 
     volumes:
-      - backend-db:${I_DRIVE_BACKEND_STORAGE_DIR}
+      - backend-db:/app/data
     deploy:
       resources:
         limits:
