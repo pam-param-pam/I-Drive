@@ -23,7 +23,7 @@ jobs:
           mkdir -p idrive
           cd idrive
           echo "Pulling docker-compose.yml..."
-          curl -O https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml
+          curl -O https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml?token=GHSAT0AAAAAACYQHJIESLJUDXKOIMXYLSVGZYCUKMA
 
           
           ls -a
