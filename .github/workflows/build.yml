@@ -68,12 +68,12 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
-        password: ${{ secrets.MY_GITHUB_TOKEN }} # GitHub Token for authentication
+        password: ${{ secrets.GITHUB_TOKEN }} # GitHub Token for authentication
 
       # 6. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
-        docker compose build
+        docker compose build --platform linux/arm64
         
       # 7. Tag and push Backend to GitHub Container Registry
     - name: Tag and push Backend to GitHub Container Registry
