@@ -73,8 +73,8 @@ jobs:
       # 6. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
-        docker compose build --platform linux/arm64
-        
+        docker compose build 
+
       # 7. Tag and push Backend to GitHub Container Registry
     - name: Tag and push Backend to GitHub Container Registry
       run: |
