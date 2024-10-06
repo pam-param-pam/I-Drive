@@ -17,14 +17,12 @@ jobs:
         username: ${{ secrets.CI_RPI_USERNAME }}
         key: ${{ secrets.CI_RPI_SSH_KEY }}
         script: |
-          echo "Pulling the latest Docker image..."
-          docker pull ${{ secrets.DOCKER_IMAGE }}
+          echo "Pulling docker-compose.yml..."
 
-          echo "Stopping and removing existing containers (if any)..."
-          docker stop myapp || true
-          docker rm myapp || true
+          curl -o ~/docker-compose.yml https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml
+          
+          ls -a
+          docker compose pull
+          docker compose up
 
-          echo "Starting new container..."
-          docker run -d --name myapp -p 80:80 ${{ secrets.DOCKER_IMAGE }}
-
-          echo "Deployment completed!"
+         
