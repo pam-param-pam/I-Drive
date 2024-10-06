@@ -18,6 +18,10 @@ jobs:
         key: ${{ secrets.CI_RPI_SSH_KEY }}
         script: |
           
+          echo "Logging in to GitHub Container Registry..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          
           echo "navigating to idrive"
 
           mkdir -p idrive

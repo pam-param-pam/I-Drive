@@ -24,7 +24,7 @@ services:
   
   backend:
     container_name: idrive-backend
-    image: pam-param-pam/idrive-backend:${BACKENDTAG-latest}
+    image: ghcr.io/pam-param-pam/idrive-backend:${BACKENDTAG-latest}
     pull_policy: missing
     build:
       context: ./backend
@@ -47,7 +47,7 @@ services:
  ### nginx
 
   nginx:
-    image: pam-param-pam/idrive-nginx:${NGINXTAG-latest}
+    image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG-latest}
     container_name: idrive-nginx
     build:
       context: ./frontend
