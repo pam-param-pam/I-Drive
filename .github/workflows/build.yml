@@ -70,14 +70,14 @@ jobs:
       # 6. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
-        env
         docker compose build
         
       # 7. Tag and push Backend to GitHub Container Registry
     - name: Tag and push Backend to GitHub Container Registry
       run: |
-        docker tag backend:latest ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
-        docker push ghcr.io/${{ github.repository_owner }}/my-app1:latest
+        docker images -a
+#        docker tag backend:latest ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
+        docker push ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
 
     # 8. Tag and push Nginx to GitHub Container Registry
     - name: Tag and push Nginx to GitHub Container Registry
