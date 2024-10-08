@@ -49,7 +49,7 @@ class FragmentAdmin(admin.ModelAdmin):
 class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
-    list_display = ["name", "owner", "created_at", "inTrash", "_is_locked"]
+    list_display = ["name", "owner", "ready", "created_at", "inTrash", "_is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model']
     search_fields = ["id"]
 

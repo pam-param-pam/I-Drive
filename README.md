@@ -37,8 +37,8 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Backend rate limiting                                     | ✅                  |
 | Custom ZIP64 Library to zip & stream files on the fly     | ✅                  |
 | Docker support                                            | ⚠️  Coming soon    |
-| Lock shares with password                                 | ⚠️  Only partial   |
 | Drag and drop upload                                      | ⚠️  Coming soon    |
+| Lock shares with password                                 | ⚠️  Only partial   |
 | Error handling in upload process                          | ⚠️  Only partial   |
 | Proper handling of 429                                    | ❌  Coming one day  |
 | Proper encryption of big files > 2GB                      | ❌  Coming one day  |

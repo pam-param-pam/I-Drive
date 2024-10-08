@@ -24,8 +24,8 @@ services:
   
   backend:
     container_name: idrive-backend
-    platform: linux/arm64
     image: ghcr.io/pam-param-pam/idrive-backend:${BACKENDTAG-latest}
+    platform: linux/arm64
     pull_policy: missing
     build:
       context: ./backend
@@ -49,8 +49,8 @@ services:
 
   nginx:
     image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG-latest}
-    platform: linux/arm64
     container_name: idrive-nginx
+    platform: linux/arm64
     build:
       context: ./frontend
     restart: unless-stopped
