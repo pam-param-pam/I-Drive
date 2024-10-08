@@ -25,13 +25,41 @@ jobs:
           echo "${{ secrets.MY_GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
           
           
+        
           echo "navigating to idrive"
 
           mkdir -p idrive
           cd idrive
+          
+          echo "IS_DEV_ENV=False" >> .env 
+          echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
+          
+          echo "I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}" >> .env
+          
+          echo "DISCORD_TOKEN1=${{ secrets.DISCORD_TOKEN1 }}" >> .env
+          echo "DISCORD_TOKEN2=${{ secrets.DISCORD_TOKEN2 }}" >> .env
+          echo "DISCORD_TOKEN3=${{ secrets.DISCORD_TOKEN3 }}" >> .env
+          echo "DISCORD_TOKEN4=${{ secrets.DISCORD_TOKEN4 }}" >> .env
+          echo "DISCORD_TOKEN5=${{ secrets.DISCORD_TOKEN5 }}" >> .env
+          echo "DISCORD_TOKEN6=${{ secrets.DISCORD_TOKEN6 }}" >> .env
+          echo "DISCORD_TOKEN7=${{ secrets.DISCORD_TOKEN7 }}" >> .env
+          echo "DISCORD_TOKEN8=${{ secrets.DISCORD_TOKEN8 }}" >> .env
+          echo "DISCORD_TOKEN9=${{ secrets.DISCORD_TOKEN9 }}" >> .env
+          echo "DISCORD_TOKEN10=${{ secrets.DISCORD_TOKEN10 }}" >> .env
+          
+          echo "CORS_FRONTEND=frontend" >> .env
+          echo "CORS_FRONTEND_PORT=5173" >> .env
+          
+          echo "I_DRIVE_REDIS_ADDRESS=redis" >> .env
+          echo "I_DRIVE_REDIS_PORT=6379" >> .env
+          
+          echo "BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
+          
+          echo "I_DRIVE_BACKEND_STORAGE_DIR=/app/data" >> .env
+          
           echo "Pulling docker-compose.yml..."
-          curl -O  https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml?token=GHSAT0AAAAAACYQHJIFR6EPXAGKUOOUGVQ4ZYFCK3A
-          mv 'docker-compose.yml?token=GHSAT0AAAAAACYQHJIFR6EPXAGKUOOUGVQ4ZYFCK3A' docker-compose.yml
+          curl -O  https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml?token=GHSAT0AAAAAACYQHJIEVYPWGNGDY3IP6WHIZYFNRTQ
+          mv 'docker-compose.yml?token=GHSAT0AAAAAACYQHJIEVYPWGNGDY3IP6WHIZYFNRTQ' docker-compose.yml
 
           ls -a
           docker compose pull
