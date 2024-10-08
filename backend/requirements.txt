@@ -17,3 +17,4 @@ imageio==2.35.1
 python-dotenv==1.0.1
 rawpy==0.22.0
 eventlet==0.37.0
+zipFly64==1.0.0
