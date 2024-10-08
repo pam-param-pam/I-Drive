@@ -61,7 +61,7 @@ It also includes challenges in implementing a project like this, for people who'
 
 ## Infrastructure
 
-**I Drive** is made up of 3 main components.
+**I Drive** is made up of 5 main components.
 
 ### Frontend
 
@@ -85,24 +85,21 @@ Thanks to a [custom zipFly](https://github.com/pam-param-pam/ZipFly) library it 
 
 
 ### Database
-Database is currently just sqlite3 next to Main Backend. 
+Database is currently just sqlite3 file next to Backend. 
 This is mostly for simplicity reasons and low demand.
 
-Sadly, this introduces challenges like streamer backend having no access to it. 
-This is solved by main backend having special endpoints for serving metadata & download info about files.
-
 ### Redis
-Fast in memory databases for caching.
+Fast in memory databases for caching and message broker for celery.
 
 ### Celery
-Asynchronous task queue for delegating long taks like file deletion outside HTTP call lifecycle.
+Asynchronous task queue for delegating long tasks like file deletion outside of HTTP call lifecycle.
 
 # Other
 
 ### Webhooks
 
 **I Drive**, when uploading files, uploads them directly to Discord itself. The files never go tru **I Drive** backends. 
-Instead, only metadata is passed to Main Backend. 
+Instead, only metadata is passed to Backend. 
 This introduces another challenge: How to securely upload files client side?
 There are 2 main ways to do this.
 - Using bots: More permissions, less secure, more cumbersome.

@@ -95,8 +95,6 @@ services:
       interval: 10s
       retries: 10
 
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
     deploy:
       resources:
         limits:
