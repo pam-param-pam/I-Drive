@@ -60,7 +60,11 @@ jobs:
           echo "Pulling docker-compose.yml..."
           curl -O  https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml?token=GHSAT0AAAAAACYQHJIEVYPWGNGDY3IP6WHIZYFNRTQ
           mv 'docker-compose.yml?token=GHSAT0AAAAAACYQHJIEVYPWGNGDY3IP6WHIZYFNRTQ' docker-compose.yml
+          
+          curl -O  https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/nginx.conf?token=GHSAT0AAAAAACYQHJIFRES225KXBMFZY2SMZYFO3OA
+          mv 'nginx.conf?token=GHSAT0AAAAAACYQHJIFRES225KXBMFZY2SMZYFO3OA' nginx.conf
 
+          
           ls -a
           docker compose pull
           docker compose up

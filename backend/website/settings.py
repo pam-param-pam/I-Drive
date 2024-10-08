@@ -26,10 +26,10 @@ SILKY_PYTHON_PROFILER = is_env
 
 ALLOWED_HOSTS = ['*'] #todo
 
+USE_X_FORWARDED_HOST = True
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'website',

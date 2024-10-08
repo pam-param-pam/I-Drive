@@ -183,6 +183,7 @@ def get_thumbnail(request, file_obj: File):
     return response
 
 
+
 # todo  handle >416 Requested Range Not Satisfiable<
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
@@ -208,21 +209,23 @@ def stream_file(request, file_obj: File):
             response['Content-Disposition'] = content_disposition
         return response
 
+    # Function to increment the IV/counter
+    def increment_iv(iv, bytes_to_skip):
+        blocks_to_skip = bytes_to_skip // 16
+        counter_int = int.from_bytes(iv, byteorder='big')  # Convert IV to integer
+        counter_int += blocks_to_skip  # Increment by the number of blocks to skip
+        new_iv = counter_int.to_bytes(len(iv), byteorder='big')  # Convert back to bytes
+        return new_iv
+
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted:
 
+                # Increment/adjust the IV counter for situations when we start decrypting in the middle of a file
+                adjusted_iv = increment_iv(file_obj.encryption_iv, real_start_byte)
 
-                cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(file_obj.encryption_iv), backend=default_backend())
+                cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(adjusted_iv), backend=default_backend())
                 decryptor = cipher.decryptor()
-
-                initial_bytes_to_simulate = real_start_byte
-                simulated_bytes = bytearray(initial_bytes_to_simulate)
-                start_time = time.perf_counter()
-
-                decryptor.update(simulated_bytes)
-                end_time = time.perf_counter()
-                print(f"Time taken for fake decryption (seconds): {end_time - start_time:.6f}")
 
             while index < len(fragments):
                 url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
@@ -242,14 +245,24 @@ def stream_file(request, file_obj: File):
 
                         return
                     # Asynchronously iterate over the content in chunks
+                    total_decryption_time = 0
+                    total_bytes = 0
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         # If the file is encrypted, decrypt it asynchronously
                         if file_obj.is_encrypted:
+                            start_time = time.perf_counter()
                             decrypted_data = decryptor.update(raw_data)
+                            end_time = time.perf_counter()
+                            total_decryption_time += (end_time - start_time)
+                            total_bytes += len(raw_data)
+
                             yield decrypted_data
                         else:
                             # Yield raw data if not encrypted
                             yield raw_data
+                    print(f"Fragment index: {fragments[index].sequence}")
+                    print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes/1000_000}MB.")
+
 
                 index += 1
             if file_obj.is_encrypted:
@@ -302,7 +315,7 @@ def stream_file(request, file_obj: File):
     response['Content-Length'] = file_size
     response['Content-Disposition'] = content_disposition
 
-    # if file_obj.type == "text":
+    # if file_obj.type == "text": //todo uncomment this
     response['Cache-Control'] = "no-cache"
     # else:
     #     response['Cache-Control'] = f"max-age={2628000}"  # 1 month

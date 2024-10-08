@@ -26,8 +26,8 @@ RUN mkdir -p /var/www/idrive/frontend
 # Copy built app from the 'build' stage
 COPY --from=build /app/dist /var/www/idrive/frontend
 
-# Copy custom nginx.conf from one directory up (../nginx.conf)
-COPY ../nginx.conf /etc/nginx/nginx.conf
+# Copy nginx file
+#COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port 80 (default for HTTP)
 EXPOSE 80
