@@ -11,7 +11,7 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod
 
 
 class Folder(models.Model):
@@ -147,7 +147,6 @@ class File(models.Model):
     size = models.PositiveBigIntegerField()
     mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
     type = models.CharField(max_length=15, null=False, blank=False, default="text")
-    key = models.BinaryField()
     inTrash = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     last_modified_at = models.DateTimeField(default=timezone.now)
@@ -158,8 +157,11 @@ class File(models.Model):
     autoLock = models.BooleanField(default=False)
     password = models.CharField(max_length=255, null=True, blank=True)
     lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
-    encryption_iv = models.BinaryField()
+    key = models.BinaryField()
+    iv = models.BinaryField(null=True)
     is_encrypted = models.BooleanField(default=True)
+    webhook = models.TextField(null=False, blank=False)
+    encryption_method = models.SmallIntegerField()
 
     def _is_locked(self):
         if self.password:
@@ -210,16 +212,25 @@ class File(models.Model):
         if not self.key:
             self.key = secrets.token_bytes(32)
 
-        if not self.encryption_iv:
-            self.encryption_iv = secrets.token_bytes(16)
+        if not self.iv:
+            encryption_method = self.get_encryption_method()
+            if encryption_method == EncryptionMethod.AES_CTR:
+                self.iv = secrets.token_bytes(16)
+            elif encryption_method == EncryptionMethod.CHA_CHA_20:
+                self.iv = secrets.token_bytes(12)
+            else:
+                raise ValueError(f"Encryption Method is invalid: {self.encryption_method}")
 
         super(File, self).save(*args, **kwargs)
+
+    def get_encryption_method(self):
+        return EncryptionMethod(self.encryption_method)
 
     def get_base64_key(self):
         return base64.b64encode(self.key).decode('utf-8')
 
     def get_base64_iv(self):
-        return base64.b64encode(self.encryption_iv).decode('utf-8')
+        return base64.b64encode(self.iv).decode('utf-8')
 
     def delete(self, *args, **kwargs):
         # invalidate any cache
@@ -265,6 +276,7 @@ class UserSettings(models.Model):
     concurrent_upload_requests = models.SmallIntegerField(default=4)
     subfolders_in_shares = models.BooleanField(default=False)
     discord_webhook = models.TextField(null=True)
+    encryption_method = models.SmallIntegerField(default=1)
 
     def __str__(self):
         return self.user.username + "'s settings"

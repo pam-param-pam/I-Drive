@@ -11,6 +11,9 @@ COPY package-lock.json .
 # Install dependencies
 RUN npm install
 
+# Install another dependencie
+RUN npm install sass-embedded-linux-arm64
+
 # Copy the rest of the application code
 COPY . .
 

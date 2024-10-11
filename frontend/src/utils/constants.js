@@ -12,6 +12,8 @@ const theme = window.FileBrowser.Theme
 
 const chunkSize = 25 * 1023 * 1024 // <25MB in bytes
 
+export const encryptionMethods = {1: "AES CTR", 2: "ChaCha20"}
+
 export {
    name,
    baseURL,

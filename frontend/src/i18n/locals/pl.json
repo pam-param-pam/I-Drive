@@ -208,6 +208,7 @@
     "concurrentUploadRequests": "Ilość równoległych requestów z uploadem plików",
     "currentPassword": "Twoje obecne hasło",
     "encryptFiles": "Szyfrowanie plików",
+    "encryptionMethod": "Metoda szyfrowania",
     "hideLockedFolders": "Ukryj zablokowane foldery",
     "language": "Język",
     "newPassword": "Twoje nowe hasło",

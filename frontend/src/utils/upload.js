@@ -8,6 +8,7 @@ import { useToast } from "vue-toastification"
 import { discord_instance } from "@/utils/networker.js"
 import { chunkSize } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
+import JSChaCha20 from "js-chacha20";
 
 
 const toast = useToast()
@@ -280,13 +281,13 @@ async function createFiles(fileList, filesInRequest) {
 
    let file_res = await createFile({ "files": filesInRequest })
 
-
    for (let created_file of file_res) {
       let file = fileList[created_file.index].file
 
       createdFiles.push({
          "file_id": created_file.file_id, "encryption_key": created_file.key, "encryption_iv": created_file.iv, "file": file,
-         "parent_id": created_file.parent_id, "name": created_file.name, "type": created_file.type, "is_encrypted": created_file.is_encrypted
+         "parent_id": created_file.parent_id, "name": created_file.name, "type": created_file.type, "is_encrypted": created_file.is_encrypted,
+         "encryption_method": created_file.encryption_method
       })
    }
    return createdFiles
@@ -314,7 +315,9 @@ export async function handleCreatingFiles(fileList) {
             "extension": detectExtension(fileObj.file.name),
             "size": fileObj.file.size,
             "index": i,
-            "is_encrypted": mainStore.settings.encryptFiles
+            "is_encrypted": mainStore.settings.encryptFiles,
+            "encryption_method": parseInt(mainStore.settings.encryptionMethod)
+
          }
 
       filesInRequest.push(file_obj)
@@ -566,16 +569,10 @@ function base64ToUint8Array(base64) {
    return bytes
 }
 
-export async function encrypt(base64Key, base64IV, file) {
-   console.log("base64Key")
-   console.log(base64Key)
-   console.log("base64IV")
-   console.log(base64IV)
+export async function encryptWithAesCtr(base64Key, base64IV, file) {
 
-   console.log(1111)
-   let key = base64ToUint8Array(base64Key) // Decode the base64 key to binary
-   let iv = base64ToUint8Array(base64IV) // Decode the base64 key to binary
-   console.log(222)
+   let key = base64ToUint8Array(base64Key)
+   let iv = base64ToUint8Array(base64IV)
 
    let algorithm = { name: "AES-CTR", counter: iv, length: 64 }
    let cryptoKey = await crypto.subtle.importKey(
@@ -585,7 +582,6 @@ export async function encrypt(base64Key, base64IV, file) {
       false,
       ["encrypt"]
    )
-   console.log(3333)
 
    let arrayBuffer = await file.arrayBuffer()
    let encryptedArrayBuffer = await crypto.subtle.encrypt(
@@ -593,7 +589,19 @@ export async function encrypt(base64Key, base64IV, file) {
       cryptoKey,
       arrayBuffer
    )
-   console.log(444)
 
    return new Blob([new Uint8Array(encryptedArrayBuffer)], { type: file.type })
+}
+
+export async function encryptWithChaCha20(base64Key, base64IV, file) {
+
+   let key = base64ToUint8Array(base64Key)
+   let iv = base64ToUint8Array(base64IV)
+
+   let arrayBuffer = await file.arrayBuffer()
+
+   let encryptedData = new JSChaCha20(key, iv).encrypt(new Uint8Array(arrayBuffer))
+
+
+   return new Blob([new Uint8Array(encryptedData)], { type: file.type })
 }

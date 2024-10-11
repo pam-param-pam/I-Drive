@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..models import UserSettings, Folder, UserPerms
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets
@@ -47,7 +48,10 @@ def users_me(request):
     perms = UserPerms.objects.get(user=user)
     settings = UserSettings.objects.get(user=user)
     root = Folder.objects.get(owner=request.user, parent=None)
-    response = {"user": {"name": user.username, "root": root.id},
+
+    encryptionMethod = EncryptionMethod(settings.encryption_method)
+
+    response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE},
                 "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
                           "lock": perms.lock,
                           "modify": perms.modify, "delete": perms.delete, "share": perms.share,
@@ -57,7 +61,9 @@ def users_me(request):
                              "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
                              "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
                              "webhook": settings.discord_webhook, "encryptFiles": settings.encrypt_files,
-                             "concurrentUploadRequests": settings.concurrent_upload_requests}}
+                             "concurrentUploadRequests": settings.concurrent_upload_requests,
+                             "encryptionMethod": encryptionMethod.value
+                             }}
 
     return JsonResponse(response, safe=False, status=200)
 
@@ -77,6 +83,7 @@ def update_settings(request):
     sortByAsc = request.data.get('sortByAsc')
     subfoldersInShares = request.data.get('subfoldersInShares')
     webhookURL = request.data.get('webhook')
+    encryptionMethod = request.data.get('encryptionMethod')
 
     settings = UserSettings.objects.get(user=request.user)
     if locale in ["pl", "en", "uwu"]:
@@ -102,6 +109,10 @@ def update_settings(request):
         if obj.hostname != 'discord.com':
             raise BadRequestError("Only webhook urls from 'discord.com' are allowed")
         settings.discord_webhook = webhookURL
+
+    if isinstance(encryptionMethod, int):
+        _ = EncryptionMethod(encryptionMethod)  # validate encryption_method if its wrong it will raise KeyError which will be caught
+        settings.encryption_method = encryptionMethod
 
     settings.save()
     return HttpResponse(status=204)

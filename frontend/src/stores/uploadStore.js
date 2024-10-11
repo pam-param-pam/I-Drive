@@ -1,6 +1,6 @@
 import {defineStore} from "pinia"
 import buttons from "@/utils/buttons.js"
-import {createNeededFolders, encrypt, handleCreatingFiles, prepareRequests, uploadOneRequest} from "@/utils/upload.js"
+import { createNeededFolders, encryptWithAesCtr, encryptWithChaCha20, handleCreatingFiles, prepareRequests, uploadOneRequest } from "@/utils/upload.js"
 import {useMainStore} from "@/stores/mainStore.js";
 
 // Add all files in raw format to queue []
@@ -117,7 +117,7 @@ export const useUploadStore = defineStore('upload', {
 
                if (file.is_encrypted) {
                   file.unecryptedFile = file.systemFile
-                  file.systemFile = await encrypt(file.encryption_key, file.encryption_iv, file.systemFile)
+                  file.systemFile = await encryptWithChaCha20(file.encryption_key, file.encryption_iv, file.systemFile)
                }
                // Process the file as needed
                return file;

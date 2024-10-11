@@ -7,7 +7,7 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb
-MAX_DISCORD_MESSAGE_SIZE = 25 * 1024 * 1023
+MAX_DISCORD_MESSAGE_SIZE = 25 * 1024 * 1024 - 1
 
 # Max size of a file that we allow to be previewable in bytes: 100Mbex
 MAX_SIZE_OF_PREVIEWABLE_FILE = 100 * 1024 * 1024
@@ -37,3 +37,8 @@ class EventCode(Enum):
     FOLDER_LOCK_STATUS_CHANGE = 8
     ITEM_MOVE_TO_TRASH = 9
     ITEM_RESTORE_FROM_TRASH = 10
+
+
+class EncryptionMethod(Enum):
+    AES_CTR = 1
+    CHA_CHA_20 = 2

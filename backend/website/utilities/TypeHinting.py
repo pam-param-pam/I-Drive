@@ -26,6 +26,7 @@ class FileDict(TypedDict):
     last_modified: str
     isLocked: bool
     is_encrypted: bool
+    encryption_method: int
     lockFrom: Optional[ShortUUIDField]
     in_trash_since: Optional[str]
     iso: Optional[str]
@@ -43,8 +44,6 @@ class FolderDict(TypedDict):
     id: ShortUUIDField
     name: str
     parent_id: Union[ShortUUIDField, None, Any]
-    numFiles: int
-    numFolders: int
     created: str
     last_modified: str
     isLocked: bool

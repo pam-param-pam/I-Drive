@@ -4,9 +4,9 @@ from django.urls import path, re_path
 from django.views.static import serve
 from djoser.views import TokenCreateView
 
-from .views.ZipViews import create_zip_model, get_zip_info
+from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, get_fragment, get_fragments_info, check_password, get_dirs, fetch_additional_info, get_secrets
+    get_trash, check_password, get_dirs, fetch_additional_info, get_secrets
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password
 from .views.shareViews import get_shares, delete_share, create_share, view_share
@@ -17,7 +17,6 @@ from .views.userViews import change_password, users_me, update_settings, MyToken
 
 urlpatterns = [
 
-    # path("zip/<token>", get_zip_info, name="get zip model info"), # deprecated
     path("zip", create_zip_model, name="create zip model"),
     path('stream/<signed_file_id>', stream_file),
     path('zip/<token>', stream_zip_files),
@@ -43,8 +42,7 @@ urlpatterns = [
     path("shares", get_shares, name="get user's shares"),
     path("share/delete", delete_share, name="delete share"),
     path("share/create", create_share, name="create share"),
-    path("share/<token>", view_share, name="get share"),
-    path("share/<token>/<folder_id>", view_share, name="get folder from share"),
+    re_path(r'^share/(?P<token>[^/]+)(/(?P<folder_id>[^/]+))?$', view_share, name='view_share'),
 
     path("folder/create", create_folder, name="create folder"),
     path('folder/<folder_id>', get_folder_info, name="get files and folders from a folder id"),
@@ -60,9 +58,6 @@ urlpatterns = [
     path("item/moveToTrash", move_to_trash, name="move file/folder to trash"),
     path("item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
     path("item/rename", rename, name="rename file/folder"),
-
-    path('fragments/<signed_file_id>/<int:sequence>', get_fragment, name="get fragments"),  # deprecated
-    path('fragments/<signed_file_id>', get_fragments_info, name="get fragments"),  # deprecated
 
     path("resource/password/<resource_id>", check_password, name="check password"),
 

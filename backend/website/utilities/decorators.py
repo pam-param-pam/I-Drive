@@ -109,6 +109,9 @@ def handle_common_errors(view_func):
         except KeyError:
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
 
+        except ValueError:
+            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
+
         except OverflowError:
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
 

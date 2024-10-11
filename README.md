@@ -5,42 +5,44 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 
 # Features
 
-| Feature                                                   | Support            |
-|-----------------------------------------------------------|--------------------|
-| Login system                                              | ✅                  |
-| Full File encryption                                      | ✅                  |
-| Permission system                                         | ✅                  |
-| Stream audio/video/images online without downloading      | ✅                  |
-| Upload files & folders                                    | ✅                  |
-| Websockets to show changes live   🎥                      | ✅                  |
-| Create folders                                            | ✅                  |
-| UI error handling                                         | ✅                  |
-| Lock folders with password                                | ✅                  |
-| Download files & folders                                  | ✅                  |
-| Bulk zip download                                         | ✅                  |
-| Share files & folders                                     | ✅                  |
-| Delete files & folders                                    | ✅                  |
-| Rename                                                    | ✅                  |
-| Show folder                                               | ✅                  |
-| Search                                                    | ✅                  |
-| Wastebasket                                               | ✅                  |
-| Supports Polish & English                                 | ✅                  |
-| Video thumbnails                                          | ✅                  |
-| Caching support                                           | ✅                  |
-| Move                                                      | ✅                  |
-| Drag and drop move                                        | ✅                  |
-| Code editor with highlighting                             | ✅                  |
-| Raw image previewer                                       | ✅                  |
-| Right-click context menu                                  | ✅                  |
-| Mobile support                                            | ✅                  |
-| Supports uploading < 10 files in a single discord request | ✅                  |
-| Backend rate limiting                                     | ✅                  |
-| Custom ZIP64 Library to zip & stream files on the fly     | ✅                  |
+| Feature                                                   | Support |
+|-----------------------------------------------------------|---------|
+| Login system                                              | ✅       |
+| Full File encryption                                      | ✅       |
+| Permission system                                         | ✅       |
+| Stream audio/video/images online without downloading      | ✅       |
+| Upload files & folders                                    | ✅       |
+| Websockets to show changes live   🎥                      | ✅       |
+| Create folders                                            | ✅       |
+| UI error handling                                         | ✅       |
+| Lock folders with password                                | ✅       |
+| Download files & folders                                  | ✅       |
+| Bulk zip download                                         | ✅       |
+| Share files & folders                                     | ✅       |
+| Delete files & folders                                    | ✅       |
+| Rename                                                    | ✅       |
+| Show folder                                               | ✅       |
+| Search                                                    | ✅       |
+| Wastebasket                                               | ✅       |
+| Supports Polish & English                                 | ✅       |
+| Video thumbnails                                          | ✅       |
+| Caching support                                           | ✅       |
+| Move                                                      | ✅       |
+| Drag and drop move                                        | ✅       |
+| Code editor with highlighting                             | ✅       |
+| Raw image previewer                                       | ✅       |
+| Right-click context menu                                  | ✅       |
+| Mobile support                                            | ✅       |
+| Supports uploading < 10 files in a single discord request | ✅       |
+| Backend rate limiting                                     | ✅       |
+| Custom ZIP64 Library to zip & stream files on the fly     | ✅       |
+| Docker support                                            | ✅       |
+
 
 | TODO List                                       | Status            |
 |-------------------------------------------------|-------------------|
-| Docker support                                  | ⚠️  Only partial  |
 | Drag and drop upload                            | ⚠️  Only partial  |
+| Docker CI/CD                                    | ⚠️  Only partial  |
 | Lock shares with password                       | ⚠️  Only partial  |
 | Error handling in upload process                | ⚠️  Only partial  |
 | Proper handling of 429                          | ❌  Coming one day |
@@ -48,6 +50,11 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Proper frontend networking & handling of errors | ❌  Coming one day |
 | Proper upload speed and remaining               | ❌  Coming one day |
 | Websocket working just after loging in          | ❌  Coming one day |
+| Cleanup upload functions                        | ❌  Coming one day |
+| Stop, pause, abort uploads                      | ❌  Coming one day |
+| Fix Search bugs                                 | ❌  Coming one day |
+| Fix race conditions                             | ❌  Coming one day |
+| Fix double usage requests                       | ❌  Coming one day |
 
 
 

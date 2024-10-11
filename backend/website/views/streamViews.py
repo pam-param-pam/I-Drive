@@ -25,6 +25,7 @@ from ..models import Fragment, Preview
 from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
+from ..utilities.Decryptor import Decryptor
 from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict
 from ..utilities.other import send_event
@@ -69,10 +70,7 @@ def get_preview(request, file_obj: File):
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
         raise BadRequestError("File too big: size > 100mb")
 
-    key = file_obj.key
-    iv = file_obj.encryption_iv
-    cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
-    decryptor = cipher.decryptor()
+    decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
     file_content = b''
     for fragment in fragments:
@@ -81,7 +79,7 @@ def get_preview(request, file_obj: File):
         if not response.ok:
             return HttpResponse(status=500,
                                 content=f"Unexpected response from discord:\n{response.text}, status_code={response.status_code}")
-        decrypted_data = decryptor.update(response.content)
+        decrypted_data = decryptor.decrypt(response.content)
         file_content += decrypted_data
 
     file_content += decryptor.finalize()
@@ -160,7 +158,7 @@ def get_thumbnail(request, file_obj: File):
 
         if file_obj.is_encrypted:
 
-            cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(file_obj.encryption_iv), backend=default_backend())
+            cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(file_obj.iv), backend=default_backend())
 
             decryptor = cipher.decryptor()
 
@@ -209,23 +207,11 @@ def stream_file(request, file_obj: File):
             response['Content-Disposition'] = content_disposition
         return response
 
-    # Function to increment the IV/counter
-    def increment_iv(iv, bytes_to_skip):
-        blocks_to_skip = bytes_to_skip // 16
-        counter_int = int.from_bytes(iv, byteorder='big')  # Convert IV to integer
-        counter_int += blocks_to_skip  # Increment by the number of blocks to skip
-        new_iv = counter_int.to_bytes(len(iv), byteorder='big')  # Convert back to bytes
-        return new_iv
-
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted:
 
-                # Increment/adjust the IV counter for situations when we start decrypting in the middle of a file
-                adjusted_iv = increment_iv(file_obj.encryption_iv, real_start_byte)
-
-                cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(adjusted_iv), backend=default_backend())
-                decryptor = cipher.decryptor()
+                decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
                 url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
@@ -251,7 +237,7 @@ def stream_file(request, file_obj: File):
                         # If the file is encrypted, decrypt it asynchronously
                         if file_obj.is_encrypted:
                             start_time = time.perf_counter()
-                            decrypted_data = decryptor.update(raw_data)
+                            decrypted_data = decryptor.decrypt(raw_data)
                             end_time = time.perf_counter()
                             total_decryption_time += (end_time - start_time)
                             total_bytes += len(raw_data)
@@ -338,12 +324,7 @@ def stream_zip_files(request, token):
         print(f"========={file_obj.name}=========")
 
         if file_obj.is_encrypted:
-            # luckily or not - we store both key and iv in the database
-            key = file_obj.key
-            iv = file_obj.encryption_iv
-
-            cipher = Cipher(algorithms.AES(key), modes.CTR(iv), backend=default_backend())
-            decryptor = cipher.decryptor()
+            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
         async for fragment in fragments:
 
@@ -358,7 +339,7 @@ def stream_zip_files(request, token):
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         # If the file is encrypted, decrypt it asynchronously
                         if file_obj.is_encrypted:
-                            decrypted_data = decryptor.update(raw_data)
+                            decrypted_data = decryptor.decrypt(raw_data)
                             yield decrypted_data
                         else:
                             # Yield raw data if not encrypted

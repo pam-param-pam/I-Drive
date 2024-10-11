@@ -41,6 +41,7 @@ def retry(func):
 
     return decorator
 
+
 def webhook_retry(func):
     def decorator(*args, **kwargs):
         response = func(*args, **kwargs)
@@ -62,20 +63,21 @@ def webhook_retry(func):
 class Discord:
     def __del__(self):
         self.client.close()
+
     # todo fix this (retry after and switching tokens)
     def __init__(self):
         self.client = httpx.Client(timeout=10.0)
         self.bot_tokens = [
-                           os.environ['DISCORD_TOKEN1'],
-                           os.environ['DISCORD_TOKEN2'],
-                           os.environ['DISCORD_TOKEN3'],
-                           os.environ['DISCORD_TOKEN4'],
-                           os.environ['DISCORD_TOKEN5'],
-                           os.environ['DISCORD_TOKEN6'],
-                           os.environ['DISCORD_TOKEN7'],
-                           os.environ['DISCORD_TOKEN8'],
-                           os.environ['DISCORD_TOKEN9'],
-                           os.environ['DISCORD_TOKEN10']
+            os.environ['DISCORD_TOKEN1'],
+            os.environ['DISCORD_TOKEN2'],
+            os.environ['DISCORD_TOKEN3'],
+            os.environ['DISCORD_TOKEN4'],
+            os.environ['DISCORD_TOKEN5'],
+            os.environ['DISCORD_TOKEN6'],
+            os.environ['DISCORD_TOKEN7'],
+            os.environ['DISCORD_TOKEN8'],
+            os.environ['DISCORD_TOKEN9'],
+            os.environ['DISCORD_TOKEN10']
 
         ]
 
@@ -94,11 +96,10 @@ class Discord:
         self.headers = {"Content-Type": 'application/json'}
         self.file_upload_headers = {}
 
-
     def get_token(self):
         slept = 0
 
-        while slept < 5: # wait max for 5 seconds, then return service unavailable
+        while slept < 5:  # wait max for 5 seconds, then return service unavailable
             current_time = datetime.now(timezone.utc).timestamp()
 
             for token, data in self.token_dict.items():
@@ -110,12 +111,10 @@ class Discord:
 
                 if data['reset_time']:
 
-
                     reset_time = float(data['reset_time'])
 
                     # print(reset_time)
                     # print(current_time)
-
                     if current_time >= reset_time:
                         # # self.token_dict[token]['locked'] = True
                         # print("TOKEN {}")
@@ -123,10 +122,10 @@ class Discord:
 
                         return token
 
-
             time.sleep(1)
             print(f"===sleeping==={slept}")
-            slept +=1
+            slept += 1
+
         raise CannotProcessDiscordRequestError("Unable to process this request at the moment")
 
     def update_token(self, token: str, headers: dict):
@@ -140,21 +139,21 @@ class Discord:
         else:
             print("===Missing ratelimit headers====")
 
-
-    def make_request(self, method: str, url: str, headers: dict=None, json: dict=None, files: dict=None, timeout: Union[int, None]=3):
+    def make_request(self, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         token = self.get_token()
         if not headers:
             headers = {}
         headers['Authorization'] = f'Bot {token}'
         print(f"Making request with token: {token}")
         response = self.client.request(method, url, headers=headers, json=json, files=files, timeout=timeout)
+
         self.update_token(token, response.headers)
 
         if response.status_code == 429:
             print("hit 429!!!!!!!!!!!!!!!")
 
             retry_after = response.json().get("retry_after")
-            if not retry_after: # retry_after is missing if discord blocked us
+            if not retry_after:  # retry_after is missing if discord blocked us
                 raise DiscordBlockError("Discord is stupid :(")
 
             return self.make_request(method, url, headers, json, files, timeout)
@@ -204,7 +203,6 @@ class Discord:
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
         return response
-
 
     @retry
     def remove_message(self, message_id: str) -> httpx.Response:

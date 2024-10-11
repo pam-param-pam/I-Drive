@@ -208,6 +208,7 @@
     "concurrentUploadRequests": "Concurrent upload requests",
     "currentPassword": "Your current password",
     "encryptFiles": "Encrypt files",
+    "encryptionMethod": "Encryption method",
     "hideLockedFolders": "Hide locked folders",
     "language": "Language",
     "newPassword": "Your new password",

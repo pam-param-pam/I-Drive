@@ -36,17 +36,15 @@
 
       </p>
 
-
-      <p v-if="streamable">
-        <strong>{{ $t("prompts.streamable") }}:</strong>
-        <span v-if="streamable" class="checkmark-true"></span> <!-- Green checkmark emoji -->
-        <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
-      </p>
-
       <p v-if="is_encrypted !== null">
         <strong>{{ $t("prompts.isEncrypted") }}:</strong>
         <span v-if="is_encrypted" class="checkmark-true"></span> <!-- Green checkmark emoji -->
         <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
+      </p>
+
+      <p v-if="encryptionMethod">
+        <strong>{{ $t("settings.encryptionMethod") }}:</strong> {{ encryptionMethod }}
+
       </p>
 
       <p v-if="owner">
@@ -128,6 +126,7 @@ import moment from "moment/min/moment-with-locales.js"
 import {fetchAdditionalInfo} from "@/api/folder.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
+import { encryptionMethods } from "@/utils/constants.js"
 
 
 export default {
@@ -149,6 +148,7 @@ export default {
       }
    },
    computed: {
+
       ...mapState(useMainStore, ["selected", "settings", "currentFolder", "selectedCount"]),
       isMoreDataFetched() {
          return this.folderSize !== "Loading..."
@@ -176,6 +176,13 @@ export default {
 
       resolution() {
          //todo
+         return null
+      },
+      encryptionMethod() {
+         if (this.selectedCount === 1) {
+            if (this.selected[0].isDir) return null
+            return encryptionMethods[this.selected[0].encryption_method]
+         }
          return null
       },
       created() {
@@ -214,13 +221,7 @@ export default {
          return null
 
       },
-      streamable() {
-         if (this.selectedCount === 1) {
-            return this.selected[0].streamable
-         }
-         return null
 
-      },
       is_encrypted() {
          if (this.selectedCount === 1) {
             if (this.selected[0].isDir) return null

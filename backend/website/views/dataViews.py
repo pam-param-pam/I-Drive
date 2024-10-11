@@ -239,71 +239,8 @@ def check_password(request, resource_id):
 
     raise ResourcePermissionError("Folder password is incorrect")
 
-# deprecated
-@cache_page(60 * 60 * 12)  # 12 hours
-@api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
-def get_fragment(request, file_obj, sequence):
-    """
-    This view is used by STREAMER SERVER to fetch information about file's fragment which
-    is determined by file_obj and sequence. Sequence starts at 1.
-    This is called in ANONYMOUS context, signed File ID is used to authorize the request.
-    """
 
-    sequence -= 1
-    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-    fragment = fragments[sequence]
-    url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
 
-    fragment_dict = {
-        "url": url,
-        "size": fragment.size,
-        "sequence": fragment.sequence,
-    }
-    try:
-        prefetch_discord_message.delay(fragments[sequence+1].message_id, fragments[sequence+1].attachment_id)
-        prefetch_discord_message.delay(fragments[sequence+2].message_id, fragments[sequence+2].attachment_id)
-    except IndexError:
-        pass
-
-    return JsonResponse(fragment_dict)
-
-# deprecated
-@api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
-@last_modified(last_modified_func)
-def get_fragments_info(request, file_obj: File):
-    """
-    This view is used by STREAMER SERVER to fetch information about file's fragments.
-    This is called in ANONYMOUS context, signed File ID is used to authorize the request.
-    """
-
-    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-    fragments_list = []
-    for fragment in fragments:
-        fragments_list.append({"sequence": fragment.sequence, "size": fragment.size})
-
-    file_dict = {
-        "size": file_obj.size,
-        "mimetype": file_obj.mimetype,
-        "type": file_obj.type,
-        "id": file_obj.id,
-        "modified_at": timezone.localtime(file_obj.last_modified_at),
-        "created_at": timezone.localtime(file_obj.created_at),
-        "name": file_obj.name,
-        "is_encrypted": file_obj.is_encrypted
-    }
-
-    if file_obj.is_encrypted:
-        file_dict['key'] = file_obj.get_base64_key()
-        file_dict['iv'] = file_obj.get_base64_iv()
-    return JsonResponse({"file": file_dict, "fragments": fragments_list}, safe=False)
 
 
 

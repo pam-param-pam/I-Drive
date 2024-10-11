@@ -109,7 +109,9 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         'created': formatDate(file_obj.created_at),
         'last_modified': formatDate(file_obj.last_modified_at),
         'isLocked': file_obj.is_locked,
-        'is_encrypted': file_obj.is_encrypted
+        'is_encrypted': file_obj.is_encrypted,
+        'encryption_method': file_obj.encryption_method
+
     }
     if file_obj.is_locked:
         file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else file_obj.id
@@ -151,19 +153,14 @@ def create_folder_dict(folder_obj: Folder) -> FolderDict:
     """
     Crates partial folder dict, not containing children items
     """
-    file_children = folder_obj.files.filter(ready=True, inTrash=False)
-    folder_children = folder_obj.subfolders.filter(inTrash=False)
 
     folder_dict = {
         'isDir': True,
         'id': folder_obj.id,
         'name': folder_obj.name,
         'parent_id': folder_obj.parent_id,
-        "numFiles": len(file_children),
-        "numFolders": len(folder_children),
         'created': formatDate(folder_obj.created_at),
         'last_modified': formatDate(folder_obj.last_modified_at),
-        # 'owner': folder_obj.owner.username,
         'isLocked': folder_obj.is_locked,
 
     }

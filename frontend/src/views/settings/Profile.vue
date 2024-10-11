@@ -42,6 +42,12 @@
             />
           </div>
 
+          <h3>{{ $t("settings.encryptionMethod") }}</h3>
+          <EncryptionMethod
+            class="input input--block"
+            v-model:encryptionMethod="encryptionMethod"
+          ></EncryptionMethod>
+
           <h3>{{ $t("settings.language") }}</h3>
           <languages
             class="input input--block"
@@ -119,6 +125,7 @@ import router from "@/router/index.js"
 import throttle from "lodash.throttle"
 import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
+import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
 
 
 export default {
@@ -126,6 +133,7 @@ export default {
    components: {
       Themes,
       Languages,
+      EncryptionMethod,
    },
    data() {
       return {
@@ -140,6 +148,7 @@ export default {
          theme: "",
          concurrentUploadRequests: 4,
          encryptFiles: true,
+         encryptionMethod: null
       }
    },
    computed: {
@@ -167,6 +176,8 @@ export default {
       this.webhook = this.settings.webhook
       this.dateFormat = this.settings.dateFormat
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
+      this.encryptionMethod = this.settings.encryptionMethod
+
    },
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings"]),
@@ -197,7 +208,9 @@ export default {
             encryptFiles: this.encryptFiles,
             dateFormat: this.dateFormat,
             webhook: this.webhook,
-            concurrentUploadRequests: this.concurrentUploadRequests
+            concurrentUploadRequests: this.concurrentUploadRequests,
+            encryptionMethod: this.encryptionMethod
+
          }
 
          await updateSettings(data)

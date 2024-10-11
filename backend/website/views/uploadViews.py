@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from ..models import File, Fragment, UserSettings, Thumbnail
 from ..utilities.Discord import discord
 from ..utilities.Permissions import CreatePerms
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
 from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file
@@ -39,6 +39,9 @@ def create_file(request):
             file_size = file['size']
             file_index = file['index']
             is_encrypted = file['is_encrypted']
+            encryption_method = file['encryption_method']
+
+            _ = EncryptionMethod(encryption_method)  # validate encryption_method if its wrong it will raise KeyError which will be caught
 
             if mimetype == "":
                 mimetype = "text/plain"
@@ -60,6 +63,7 @@ def create_file(request):
                 owner_id=request.user.id,
                 parent=parent,
                 is_encrypted=is_encrypted,
+                encryption_method=encryption_method,
             )
             #  apply lock if needed
             if parent.is_locked:
@@ -72,7 +76,7 @@ def create_file(request):
             key = file_obj.get_base64_key()
             iv = file_obj.get_base64_iv()
             file_response_dict = {"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
-                                  "type": file_type, "is_encrypted": file_obj.is_encrypted}
+                                  "type": file_type, "is_encrypted": file_obj.is_encrypted, "encryption_method": file_obj.encryption_method}
 
             if file_obj.is_encrypted:
                 file_response_dict['key'] = key

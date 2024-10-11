@@ -1,0 +1,29 @@
+<template>
+  <select v-on:change="change" :value="encryptionMethod">
+    <option v-for="(method, value) in encryptionMethods" :key="value" :value="value">
+      {{ method }}
+    </option>
+  </select>
+</template>
+
+<script>
+import {encryptionMethods} from "@/utils/constants.js"
+
+export default {
+   name: "encryptionMethod",
+   computed: {
+      encryptionMethods() {
+         return encryptionMethods
+      }
+   },
+   props: ["encryptionMethod"],
+   emits: ["update:encryptionMethod"],
+
+
+   methods: {
+      change(event) {
+         this.$emit("update:encryptionMethod", parseInt(event.target.value))
+      },
+   },
+}
+</script>
