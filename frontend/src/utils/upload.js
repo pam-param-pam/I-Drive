@@ -120,7 +120,7 @@ function isVideoFile(file) {
    return videoMimeTypes.includes(file.type)
 }
 
-function getVideoCover(file, seekTo = 0.0) {
+function getVideoCover(file) {
    console.log("getting video cover for file: ", file)
    return new Promise((resolve, reject) => {
       // load the file to a video player
@@ -133,11 +133,20 @@ function getVideoCover(file, seekTo = 0.0) {
       // load metadata of the video to get video duration and dimensions
       videoPlayer.addEventListener("loadedmetadata", () => {
 
-         // seek to user defined timestamp (in seconds) if possible
-         if (videoPlayer.duration < seekTo) {
-            console.warn("video is too short.")
-            seekTo = 0.0
+         let seekTo
+         // seek to defined timestamp (in seconds) if possible
+         if (videoPlayer.duration >= 30) {
+            seekTo = 30
+         } else if (videoPlayer.duration >= 20) {
+            seekTo = 20
+         } else if (videoPlayer.duration >= 10) {
+            seekTo = 10
+         } else if (videoPlayer.duration >= 5) {
+            seekTo = 5
+         } else {
+            seekTo = 0
          }
+
          // delay seeking or else 'seeked' event won't fire on Safari
          setTimeout(() => {
             videoPlayer.currentTime = seekTo
@@ -371,8 +380,9 @@ export async function prepareRequests() {
 
             //generate thumbnail if needed
             if (isVideoFile(fileObj.systemFile)) {
-               await generateThumbnail(fileObj)
+               await generateThumbnail(fileObj) //todo fix
             }
+
 
             let chunks = []
             for (let j = 0; j < fileObj.systemFile.size; j += chunkSize) {

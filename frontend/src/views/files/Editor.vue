@@ -43,7 +43,7 @@ import {mapActions, mapState} from "pinia"
 
 import CodeEditor from "@/components/SimpleCodeEditor/CodeEditor.vue"
 import {discord_instance} from "@/utils/networker.js";
-import {encrypt} from "@/utils/upload.js";
+import {encryptWithAesCtr, encryptWithChaCha20} from "@/utils/upload.js";
 import {isMobile} from "@/utils/common.js";
 import throttle from "lodash.throttle"
 
@@ -244,7 +244,7 @@ export default {
                if (typeof content === 'string') {
                   content = new Blob([content], {type: 'text/plain'})
                }
-               content = await encrypt(secrets.key, secrets.iv, content)
+               // content = await encrypt(secrets.key, secrets.iv, content) //todo fix encryptiopn
 
             }
             let blob = new Blob([content])

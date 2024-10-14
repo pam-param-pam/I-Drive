@@ -39,22 +39,23 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Docker support                                            | ✅       |
 
 
-| TODO List                                       | Status            |
-|-------------------------------------------------|-------------------|
-| Drag and drop upload                            | ⚠️  Only partial  |
-| Docker CI/CD                                    | ⚠️  Only partial  |
-| Lock shares with password                       | ⚠️  Only partial  |
-| Error handling in upload process                | ⚠️  Only partial  |
-| Proper handling of 429                          | ❌  Coming one day |
-| Proper encryption of big files > 2GB            | ❌  Coming one day |
-| Proper frontend networking & handling of errors | ❌  Coming one day |
-| Proper upload speed and remaining               | ❌  Coming one day |
-| Websocket working just after loging in          | ❌  Coming one day |
-| Cleanup upload functions                        | ❌  Coming one day |
-| Stop, pause, abort uploads                      | ❌  Coming one day |
-| Fix Search bugs                                 | ❌  Coming one day |
-| Fix race conditions                             | ❌  Coming one day |
-| Fix double usage requests                       | ❌  Coming one day |
+| TODO List                                       | Status               |
+|-------------------------------------------------|----------------------|
+| Drag and drop upload                            | ⚠️  Only partial     |
+| Docker CI/CD                                    | ⚠️  Only partial     |
+| Lock shares with password                       | ⚠️  Only partial     |
+| Error handling in upload process                | ⚠️  Only partial     |
+| Proper handling of 429                          | ❌  Coming one day    |
+| Proper encryption of big files > 2GB            | ❌  Coming one day    |
+| Proper frontend networking & handling of errors | ❌  Coming one day    |
+| Proper upload speed and remaining               | ❌  Coming one day    |
+| Websocket working just after loging in          | ❌  Coming one day    |
+| Cleanup upload functions                        | ❌  Coming one day    |
+| Stop, pause, abort uploads                      | ❌  Coming one day    |
+| Fix Search bugs                                 | ❌  Coming one day    |
+| Fix race conditions                             | ❌  Coming one day    |
+| Fix double usage requests                       | ❌  Coming one day    |
+| Editor support for large files                  | ❌  Coming prob never |
 
 
 

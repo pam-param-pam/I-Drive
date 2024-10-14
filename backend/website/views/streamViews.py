@@ -39,7 +39,6 @@ from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
 @check_signed_url
 @check_file
 def get_preview(request, file_obj: File):
-
     try:
         preview = Preview.objects.get(file=file_obj)
         url = discord.get_file_url(preview.message_id, preview.attachment_id)
@@ -77,8 +76,8 @@ def get_preview(request, file_obj: File):
         url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
         response = requests.get(url, timeout=20)
         if not response.ok:
-            return HttpResponse(status=500,
-                                content=f"Unexpected response from discord:\n{response.text}, status_code={response.status_code}")
+            raise DiscordError(response.text, response.status_code)
+
         decrypted_data = decryptor.decrypt(response.content)
         file_content += decrypted_data
 
@@ -153,16 +152,15 @@ def get_preview(request, file_obj: File):
 @check_signed_url
 @check_file
 def get_thumbnail(request, file_obj: File):
-    thumbnail_content = cache.get(f"thumbnail:{file_obj.id}") # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
+    thumbnail_content = cache.get(f"thumbnail:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
     if not thumbnail_content:
 
         if file_obj.is_encrypted:
-
             cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(file_obj.iv), backend=default_backend())
 
             decryptor = cipher.decryptor()
 
-        #todo potential security risk, without stream its possible to overload the server
+        # todo potential security risk, without stream its possible to overload the server
         url = discord.get_file_url(file_obj.thumbnail.message_id, file_obj.thumbnail.attachment_id)
         discord_response = requests.get(url)
         if discord_response.ok:
@@ -179,7 +177,6 @@ def get_thumbnail(request, file_obj: File):
     response = HttpResponse(thumbnail_content, content_type="image/jpeg")
     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
     return response
-
 
 
 # todo  handle >416 Requested Range Not Satisfiable<
@@ -210,7 +207,6 @@ def stream_file(request, file_obj: File):
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted:
-
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
@@ -247,8 +243,7 @@ def stream_file(request, file_obj: File):
                             # Yield raw data if not encrypted
                             yield raw_data
                     print(f"Fragment index: {fragments[index].sequence}")
-                    print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes/1000_000}MB.")
-
+                    print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
                 index += 1
             if file_obj.is_encrypted:
@@ -284,7 +279,7 @@ def stream_file(request, file_obj: File):
     else:
         status = 200
 
-    response = StreamingHttpResponse(file_iterator(selected_fragment_index-1, start_byte, end_byte, real_start_byte), content_type=file_obj.mimetype, status=status)
+    response = StreamingHttpResponse(file_iterator(selected_fragment_index - 1, start_byte, end_byte, real_start_byte), content_type=file_obj.mimetype, status=status)
 
     file_size = file_obj.size
     real_end_byte = 0
@@ -319,7 +314,6 @@ def stream_file(request, file_obj: File):
 @throttle_classes([MyUserRateThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):
-
     async def stream_zip_file(file_obj: File, fragments, chunk_size=8192):
         print(f"========={file_obj.name}=========")
 

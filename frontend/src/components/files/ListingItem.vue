@@ -19,17 +19,17 @@
     <div>
       <img
         v-if="item.preview_url && type === 'image' && item.size > 0"
-        v-lazy="{src: item.preview_url, loading: '/img/imageLoading.gif', error: '/img/imageFailed.png'}"
+        v-lazy="{src: item.preview_url, error: '/img/imageFailed.png'}"
 
       />
       <img
         v-else-if="item.download_url && type === 'image' && item.size > 0"
-        v-lazy="{src: item.download_url, loading: '/img/imageLoading.gif', error: '/img/imageFailed.png'}"
+        v-lazy="{src: item.download_url, error: '/img/imageFailed.png'}"
 
       />
       <img
         v-else-if="item.thumbnail_url && type === 'video'"
-        v-lazy="{src: item.thumbnail_url, loading: '/img/imageLoading.gif', error: '/img/imageFailed.png'}"
+        v-lazy="{src: item.thumbnail_url, error: '/img/imageFailed.png'}"
 
       />
       <i v-else class="material-icons"></i>

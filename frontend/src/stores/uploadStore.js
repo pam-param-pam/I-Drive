@@ -3,13 +3,6 @@ import buttons from "@/utils/buttons.js"
 import { createNeededFolders, encryptWithAesCtr, encryptWithChaCha20, handleCreatingFiles, prepareRequests, uploadOneRequest } from "@/utils/upload.js"
 import {useMainStore} from "@/stores/mainStore.js";
 
-// Add all files in raw format to queue []
-// Add local_id property to each
-// first 5 files will be now displayed with property "creating..."
-// create a better file structure + create folders + create files + get id and parent_id
-// once it's all done
-// start an uploading process, add them to filesUploading grab first 5 files, change their status to "uploading"
-// continue till none left in queue.
 
 export const useUploadStore = defineStore('upload', {
    state: () => ({
@@ -91,80 +84,6 @@ export const useUploadStore = defineStore('upload', {
    },
 
    actions: {
-      getFileFromFilesUploading(file_id) {
-         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
-         if (!file_obj) {
-            console.warn(`No queueItem found for file_id: ${file_id}`)
-            return
-         }
-         return file_obj
-      },
-
-      async getFileFromQueue() {
-         console.warn("GETING FILE FROM QUEUE: ")
-
-         if (this.queue.length === 0) {
-            console.warn("getFileFromQueue is empty, yet it was called idk why")
-            return
-         }
-         while (this.queue.length > 0) {
-            let file = this.queue[0];
-            console.log(file.name)
-            // Check if the file size is greater than 0
-            if (file.size > 0) {
-               this.queue.shift(); // Remove the file from the queue
-               this.filesUploading.push(file); // Add the file to the filesUploading array
-
-               if (file.is_encrypted) {
-                  file.unecryptedFile = file.systemFile
-                  file.systemFile = await encryptWithChaCha20(file.encryption_key, file.encryption_iv, file.systemFile)
-               }
-               // Process the file as needed
-               return file;
-            } else {
-               // If the file size is 0, remove it from the queue and continue the loop
-               this.queue.shift()
-            }
-         }
-
-      },
-      getRequestFromRequestQueue() {
-         if (this.requestQueue.length === 0) {
-            console.warn("getRequestFromRequestQueue is empty, yet it was called idk why")
-            return
-         }
-
-         let request = this.requestQueue[0]
-         request.requestId = Math.random().toString(16).slice(2)
-         this.requestQueue.shift()
-         if (request.type === "chunked") {
-            //set source id policy to abort requests
-         }
-         if (request.type === "multiAttachment") {
-            //set source id policy to abort requests
-         }
-
-         return request
-      },
-      addToQueue(item) {
-         console.log(item)
-         let file = {
-            name: item.name,
-            file_id: item.file_id,
-            systemFile: item.file,
-            size: item.file.size,
-            parent_id: item.parent_id,
-            type: item.type,
-            encryption_key: item.encryption_key,
-            encryption_iv: item.encryption_iv,
-            is_encrypted: item.is_encrypted,
-            status: "waiting",
-            progress: 0
-         }
-
-         this.queue.push(file)
-
-      },
       async startUpload(filesList, parent_folder) {
          buttons.loading("upload")
          window.addEventListener("beforeunload", beforeUnload)
@@ -214,6 +133,79 @@ export const useUploadStore = defineStore('upload', {
 
 
       },
+      getFileFromFilesUploading(file_id) {
+         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
+         if (!file_obj) {
+            console.warn(`No queueItem found for file_id: ${file_id}`)
+            return
+         }
+         return file_obj
+      },
+
+      async getFileFromQueue() {
+         console.warn("GETING FILE FROM QUEUE: ")
+
+         if (this.queue.length === 0) {
+            console.warn("getFileFromQueue is empty, yet it was called idk why")
+            return
+         }
+         while (this.queue.length > 0) {
+            let file = this.queue[0];
+            console.log(file.name)
+            // Check if the file size is greater than 0
+            if (file.size > 0) {
+               this.queue.shift(); // Remove the file from the queue
+               this.filesUploading.push(file); // Add the file to the filesUploading array
+
+
+               // Process the file as needed
+               return file;
+            } else {
+               // If the file size is 0, remove it from the queue and continue the loop
+               this.queue.shift()
+            }
+         }
+
+      },
+      getRequestFromRequestQueue() {
+         if (this.requestQueue.length === 0) {
+            console.warn("getRequestFromRequestQueue is empty, yet it was called idk why")
+            return
+         }
+
+         let request = this.requestQueue[0]
+         request.requestId = Math.random().toString(16).slice(2)
+         this.requestQueue.shift()
+         if (request.type === "chunked") {
+            //set source id policy to abort requests
+         }
+         if (request.type === "multiAttachment") {
+            //set source id policy to abort requests
+         }
+
+         return request
+      },
+      addToQueue(item) {
+         console.log(item)
+         let file = {
+            name: item.name,
+            file_id: item.file_id,
+            systemFile: item.file,
+            size: item.file.size,
+            parent_id: item.parent_id,
+            type: item.type,
+            encryption_key: item.encryption_key,
+            encryption_iv: item.encryption_iv,
+            is_encrypted: item.is_encrypted,
+            status: "waiting",
+            progress: 0
+         }
+
+         this.queue.push(file)
+
+      },
+
+
       finishUpload(file_id) {
          let file_obj = this.getFileFromFilesUploading(file_id)
          if (!file_obj) return

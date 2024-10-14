@@ -4,7 +4,6 @@ from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # jebanie sie z static plikami
@@ -12,10 +11,6 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = 'static/'
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ['I_DRIVE_BACKEND_SECRET_KEY']
 
 is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -24,10 +19,12 @@ is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 DEBUG = is_env
 SILKY_PYTHON_PROFILER = is_env
 
-ALLOWED_HOSTS = ['*'] #todo
+ALLOWED_HOSTS = ['*']  # todo
 
-USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_HOST = True  # todo fix admin
 
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,6 +59,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 
 
 ]

@@ -4,58 +4,10 @@ import traceback
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
-from .models import Folder, UserPerms
+from .models import  UserPerms
 from .utilities.CommandLine.ArgumentException import IncorrectArgumentError
 from .utilities.CommandLine.CommandParser import CommandParser
 from .utilities.errors import IDriveException
-
-# todo i think we should check if token is still valid every now and then just in case
-# maybe create a base class for websocket consumer thats also includes logout method
-class TallyConsumer(WebsocketConsumer):
-    def connect(self):
-        # if dict(self.scope['headers']).get(b'sec-websocket-protocol') == "TALLY_KOCHAM_ALTERNATYWKI":
-        self.accept()
-        async_to_sync(self.channel_layer.group_add)("tally", self.channel_name)
-
-        async_to_sync(self.channel_layer.group_send)("atem", {
-            "type": "send_message",
-            "data": {"op": 4, "t": -1, "d": "NEW TALLY CONNECTED"}
-        })
-
-    def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)("tally", self.channel_name)
-
-    def receive(self, text_data=None, bytes_data=None):
-        async_to_sync(self.channel_layer.group_send)("atem", {
-            "type": "send_message",
-            "data": json.loads(text_data),
-        })
-
-    def send_message(self, event):
-        self.send(event["data"])
-
-
-class AtemConsumer(WebsocketConsumer):
-    def connect(self):
-        try:
-            print(dict(self.scope['headers'])[b'authorization'].decode('utf-8'))
-            if dict(self.scope['headers'])[b'authorization'].decode('utf-8') == "1234":
-                self.accept()
-                async_to_sync(self.channel_layer.group_add)("atem", self.channel_name)
-        except (KeyError, ValueError):
-            self.close()
-
-    def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)("atem", self.channel_name)
-
-    def receive(self, text_data=None, bytes_data=None):
-        async_to_sync(self.channel_layer.group_send)("tally", {
-            "type": "send_message",
-            "data": text_data,
-        })
-
-    def send_message(self, event):
-        self.send(json.dumps(event["data"]))
 
 
 class UserConsumer(WebsocketConsumer):
