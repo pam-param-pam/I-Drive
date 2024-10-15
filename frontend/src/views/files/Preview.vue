@@ -74,7 +74,7 @@
           :src="fileSrcUrl"
           :autoplay="autoPlay"
           @play="autoPlay = true"
-
+          @timeupdate="videoTimeUpdate"
         >
         </video>
 
@@ -167,7 +167,7 @@ import throttle from "lodash.throttle"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
 import ExtendedImage from "@/components/files/ExtendedImage.vue"
-import { getFile } from "@/api/files.js"
+import { getFile, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
 import { VueReader } from "vue-reader"
@@ -213,8 +213,8 @@ export default {
       size: null,
       rendition: null,
       toc: [],
-      fontSize: 100
-
+      fontSize: 100,
+      lastSentVideoPosition: 0
 
     }
   },
@@ -341,6 +341,12 @@ export default {
       this.addSelected(this.file)
 
       this.setLoading(false)
+
+      if (this.file.type === "video") {
+        this.$refs.video.currentTime = this.file.video_position
+
+      }
+
       if (!this.isEpub) return
       this.bookLocation = localStorage.getItem("book-progress-" + this.file.id)
       let fontsize = localStorage.getItem("font-size")
@@ -461,6 +467,22 @@ export default {
       window.open(this.selected[0].download_url, "_blank")
       let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
       this.$toast.success(message)
+    },
+
+    videoTimeUpdate() {
+
+       let position = Math.floor(this.$refs.video.currentTime) // round to seconds
+
+       // To prevent sending too many requests, send only if position has changed significantly
+       if (Math.abs(position - this.lastSentVideoPosition) >= 10) {  // Adjust the interval as needed (e.g., every 1 second)
+
+          updateVideoPosition({'file_id': this.file.id, 'position': position})
+
+          this.lastSentVideoPosition = position
+
+
+       }
+
     },
     getRendition(rendition) {
       // rendition.hooks.content.register((contents) => {

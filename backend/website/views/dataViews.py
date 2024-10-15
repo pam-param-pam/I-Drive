@@ -8,7 +8,7 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, Fragment, ShareableLink
+from ..models import File, Folder, Fragment, ShareableLink, VideoPosition
 from ..tasks import prefetch_discord_message
 from ..utilities.Discord import discord
 from ..utilities.Permissions import ReadPerms

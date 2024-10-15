@@ -46,3 +46,10 @@ export async function editFile(data) {
    return response.data
 
 }
+
+export async function updateVideoPosition(data) {
+   let url = `/file/video/position`
+   let response = await backend_instance.post(url, data)
+   return response.data
+
+}

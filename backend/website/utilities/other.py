@@ -4,7 +4,7 @@ from typing import Union, List, Dict
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from ..models import File, Folder, Preview, ShareableLink, Thumbnail
+from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
@@ -145,6 +145,14 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
 
         if thumbnail.exists():
             file_dict['thumbnail_url'] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+
+        if file_obj.type == "video":
+            position = 0
+            try:
+                position = file_obj.videoposition.timestamp
+            except VideoPosition.DoesNotExist:
+                pass
+            file_dict['video_position'] = position
 
     return file_dict
 

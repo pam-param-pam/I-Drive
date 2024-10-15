@@ -6,13 +6,14 @@ from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
 from .utilities.other import sign_file_id_with_expiry
 
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)
+admin.site.register(VideoPosition)
 
 
 @admin.register(Fragment)

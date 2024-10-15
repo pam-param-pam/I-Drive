@@ -3,13 +3,13 @@ from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder
+from ..models import File, Folder, VideoPosition
 from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder
+from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file
 from ..utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -356,3 +356,26 @@ def reset_folder_password(request, folder_id):
     if isLocked:
         return JsonResponse(build_response(request.request_id, "Folder password is being changed..."))
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
+
+
+@api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@handle_common_errors
+def update_video_position(request):
+    file_id = request.data['file_id']
+    new_position = request.data['position']
+
+    file = get_file(file_id)
+    check_resource_perms(request, file)
+
+    if file.type != "video":
+        raise BadRequestError("Must be a video.")
+
+
+    video_position, created = VideoPosition.objects.get_or_create(file=file)
+
+    video_position.timestamp = new_position
+    video_position.save()
+
+    return HttpResponse(status=204)

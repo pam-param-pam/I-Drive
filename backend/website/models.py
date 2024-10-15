@@ -420,3 +420,9 @@ class UserZIP(models.Model):
 
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(days=7)
+
+
+class VideoPosition(models.Model):
+    file = models.OneToOneField(File, on_delete=models.CASCADE)
+    modified_at = models.DateTimeField(default=timezone.now)
+    timestamp = models.IntegerField(default=0)
