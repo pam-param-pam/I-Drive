@@ -6,23 +6,15 @@ export async function getItems(folder_id, lockFrom) {
 
    let url = "/folder/" + folder_id
    let password = store.getFolderPassword(lockFrom)
-   store.setLoading(true)
 
-   return backend_instance.get(url, {
+   let response = await backend_instance.get(url, {
       __cancelSignature: 'getItems',
       headers: {
          "x-resource-password": password
       }
    })
-      .then(response => {
-         store.setLoading(false)
-         console.log("seting loading false")
-         return response.data
-      })
-      .catch(error => {
-         store.setError(error)
-         throw error
-      })
+   return response.data
+
 }
 
 export async function getDirs(folder_id) {

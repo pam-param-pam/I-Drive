@@ -242,13 +242,19 @@ export default {
 
          let realLockFrom = this.lockFrom || this.folderId
          let password = this.getFolderPassword(realLockFrom)
+         try {
+            this.items = await search(query, realLockFrom, password)
+            this.isSearchActive = true
+            this.setCurrentFolder(null)
+            this.setItems(this.items)
 
-         this.items = await search(query, realLockFrom, password)
-         this.setLoading(false)
-         this.isSearchActive = true
-         this.setItems(this.items)
-         this.setCurrentFolder(null)
+         } catch (error) {
+            if (error.code === "ERR_CANCELED") return
+            this.setError(error)
+         } finally {
+            this.setLoading(false)
 
+         }
 
       },
       upload() {
@@ -275,19 +281,28 @@ export default {
          this.searchItemsFound = null
 
          this.setError(null)
+         this.setLoading(true)
+         try {
+           let res = await getItems(this.folderId, this.lockFrom)
 
-         let res = await getItems(this.folderId, this.lockFrom)
+           this.items = res.folder.children
+           this.folderList = res.breadcrumbs
 
-         this.items = res.folder.children
-         this.folderList = res.breadcrumbs
-         console.log("seting items from files")
-         this.setItems(this.items)
-         this.setCurrentFolder(res.folder)
+           this.setItems(this.items)
+           this.setCurrentFolder(res.folder)
 
-         if (res.parent_id) { //only set title if its not root folder
-            document.title = `${res.name} - ` + name
-         } else {
-            document.title = name
+           if (res.parent_id) { //only set title if its not root folder
+              document.title = `${res.name} - ` + name
+           } else {
+              document.title = name
+           }
+         } catch (error) {
+            console.log(error)
+            if (error.code === "ERR_CANCELED") return
+            this.setError(error)
+         } finally {
+            this.setLoading(false)
+
          }
 
       },

@@ -24,6 +24,12 @@ export const discord_instance = axios.create({
       "Content-Type": "application/json",
    },
 })
+
+
+
+
+
+
 // Add a response interceptor
 discord_instance.interceptors.response.use(
    function (response) {
@@ -125,17 +131,15 @@ backend_instance.interceptors.response.use(
       }
 
       let {config, response} = error
-      // Initialize retry counter if it doesn't exist
-      if (!config.__retryCount) {
-         config.__retryCount = 0
-      }
 
       // Check if the error is 469 INCORRECT OR MISSING FOLDER PASSWORD
       if (response && response.status === 469) {
-         if (config.__retryCount > 3) {
+
+         //Reset cached passwords in case we have outdated cached ones to not end up in an infinite loop
+         if (config.__469Retried) {
             store.resetFolderPassword()
          }
-         config.__retryCount++
+         config.__469Retried = true
 
          let requiredFolderPasswords = response.data.requiredFolderPasswords
 
@@ -159,7 +163,7 @@ backend_instance.interceptors.response.use(
                if (config.method === 'get') {
                   config.headers = {
                      ...config.headers,
-                     'X-resource-password': passwordExists[0]?.password || '', // Add the folder password to the headers
+                     'X-resource-password': passwordExists[0]?.password || '',
                   }
                } else {
                   config.data.resourcePasswords = {}
@@ -222,14 +226,9 @@ backend_instance.interceptors.response.use(
          timeout: 5000,
          position: "bottom-right",
       })
-      // //we want to only catch not found errors
-      // if (response.status === 404) {
-      //   store.commit("setError", error)
-      //   store.commit("setLoading", false)
-      // }
-      //
 
-      // If not a 429 error, no Retry-After header, or max retries reached, just return the error
+
+      // If not a 469 error, just return the error
       return Promise.reject(error)
    }
 )

@@ -126,6 +126,7 @@ export default {
       return {
          name: name,
          author: author,
+         usage: {used: "0 B", total: "0 B", usedPercentage: 0},
       }
    },
    computed: {
@@ -141,26 +142,18 @@ export default {
       console.log(this.$route)
 
    },
-   asyncComputed: {
-      usage: {
-         async get() {
-            if (this.currentFolder && this.$route.name === "Files") {
-               let usageStats = {used: 0, total: 0, usedPercentage: 0}
+   watch: {
+      currentFolder: async function() {
+         if (this.currentFolder) {
 
-               let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
-               console.log(usage)
-               usageStats = {
-                  used: filesize(usage.used),
-                  total: filesize(usage.total),
-                  usedPercentage: Math.round((usage.used / usage.total) * 100),
-               }
-               return usageStats
+            let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
+            console.log(usage)
+            this.usage = {
+               used: filesize(usage.used),
+               total: filesize(usage.total),
+               usedPercentage: Math.round((usage.used / usage.total) * 100),
             }
-            return this.usage
-
-         },
-         default: {used: "0 B", total: "0 B", usedPercentage: 0},
-
+         }
       },
    },
    methods: {

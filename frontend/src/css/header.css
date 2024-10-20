@@ -24,6 +24,7 @@ header title {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 1.2em;
+  white-space: nowrap;
 }
 
 header .overlay {

@@ -182,7 +182,7 @@ export default {
             }
 
          }
-         // if its opened from Files, hence we know the user
+         // if It's opened from Files, hence we know the user
          else {
             if (this.items) {
                for (let i = 0; i < this.items.length; i++) {
@@ -202,7 +202,7 @@ export default {
          this.addSelected(this.file)
 
          console.log("STARTED FETCHING")
-
+         //todo show a progress bar
          let res = await fetch(this.file.download_url, {})
          console.log("STOPPED FETCHING")
          this.setLoading(false)

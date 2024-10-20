@@ -24,7 +24,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Show folder                                               | ✅       |
 | Search                                                    | ✅       |
 | Wastebasket                                               | ✅       |
-| Supports Polish & English                                 | ✅       |
+| Supports Polish & English languages                       | ✅       |
 | Video thumbnails                                          | ✅       |
 | Caching support                                           | ✅       |
 | Move                                                      | ✅       |
@@ -54,6 +54,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Stop, pause, abort uploads                              | ❌  Coming one day    |
 | Fix Search bugs                                         | ❌  Coming one day    |
 | Fix race conditions                                     | ❌  Coming one day    |
+| Fix reuse of IV for encryption                          | ❌  Coming one day    |
 | Fix double usage requests                               | ❌  Coming one day    |
 | Editor support for large files                          | ❌  Coming prob never |
 | Fix file types so they are not so hardcoded on frontend | ❌  Coming prob never |

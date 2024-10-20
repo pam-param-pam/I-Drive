@@ -1,4 +1,3 @@
-import {useMainStore} from "@/stores/mainStore.js"
 import {backend_instance} from "@/utils/networker.js"
 
 export async function getUser(token) {
@@ -29,22 +28,13 @@ export async function updateSettings(data) {
 }
 
 export async function getTrash() {
-   const store = useMainStore()
-
    let url = `/trash`
-   store.setLoading(true)
-   return backend_instance.get(url, {
+   let response = await backend_instance.get(url, {
       __cancelSignature: 'getItems',
 
    })
-      .then(response => {
-         store.setLoading(false)
-         return response.data
-      })
-      .catch(error => {
-         store.setLoading(error)
-         throw error
-      })
+   return response.data
+
 }
 
 

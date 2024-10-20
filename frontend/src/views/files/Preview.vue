@@ -176,408 +176,419 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 
 export default {
-  name: "preview",
-  components: {
-    HeaderBar,
-    VueReader,
-    Action,
-    ExtendedImage
-  },
+   name: "preview",
+   components: {
+      HeaderBar,
+      VueReader,
+      Action,
+      ExtendedImage
+   },
 
-  props: {
-    fileId: {
-      type: String,
-      required: true
-    },
-    token: {
-      type: String
-    },
-    folderId: {
-      type: String
-    }
-  },
+   props: {
+      fileId: {
+         type: String,
+         required: true
+      },
+      token: {
+         type: String
+      },
+      folderId: {
+         type: String
+      }
+   },
 
-  data() {
-    return {
-      fullSize: false,
-      showNav: true,
-      file: null,
-      navTimeout: null,
-      hoverNav: false,
-      autoPlay: true,
+   data() {
+      return {
+         fullSize: false,
+         showNav: true,
+         file: null,
+         navTimeout: null,
+         hoverNav: false,
+         autoPlay: true,
 
-      //epub reader data
-      bookLocation: null,
-      firstRenderDone: false,
-      page: null,
-      size: null,
-      rendition: null,
-      toc: [],
-      fontSize: 100,
-      lastSentVideoPosition: 0
+         //epub reader data
+         bookLocation: null,
+         firstRenderDone: false,
+         page: null,
+         size: null,
+         rendition: null,
+         toc: [],
+         fontSize: 100,
+         lastSentVideoPosition: 0
 
-    }
-  },
-  computed: {
-    ...mapState(useMainStore, ["items", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
-    isEpub() {
-      if (!this.file) return false
-      return this.file.extension === ".epub"
-    },
-    isInShareContext() {
-      return this.token !== undefined
-    },
+      }
+   },
+   computed: {
+      ...mapState(useMainStore, ["items", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
+      isEpub() {
+         if (!this.file) return false
+         return this.file.extension === ".epub"
+      },
+      isInShareContext() {
+         return this.token !== undefined
+      },
 
-    fileSrcUrl() {
-      if (this.file?.preview_url)
-        return this.file?.preview_url + "?inline=True"
-      return this.file?.download_url + "?inline=True"
-    },
+      fileSrcUrl() {
+         if (this.file?.preview_url)
+            return this.file?.preview_url + "?inline=True"
+         return this.file?.download_url + "?inline=True"
+      },
 
-    currentIndex() {
-      if (this.files && this.file) {
-        return this.files.findIndex(item => item.id === this.file.id)
+      currentIndex() {
+         if (this.files && this.file) {
+            return this.files.findIndex(item => item.id === this.file.id)
+         }
+
+      },
+
+      files() {
+         let files = []
+
+         if (this.items != null) {
+            this.items.forEach((item) => {
+               if (!item.isDir && item.type !== "text" && item.type !== "application") {
+                  files.push(item)
+               }
+            })
+         }
+         //return items
+         return sortItems(files)
+      },
+      hasNext() {
+         return this.currentIndex < this.files.length - 1 // list starts at 0 lul
+
+      },
+      hasPrevious() {
+
+         return this.files.length > 1 && this.currentIndex > 0
       }
 
-    },
-
-    files() {
-      let files = []
-
-      if (this.items != null) {
-        this.items.forEach((item) => {
-          if (!item.isDir && item.type !== "text" && item.type !== "application") {
-            files.push(item)
-          }
-        })
+   },
+   watch: {
+      $route: function() {
+         this.fetchData()
+         this.toggleNavigation()
       }
-      //return items
-      return sortItems(files)
-    },
-    hasNext() {
-      return this.currentIndex < this.files.length - 1 // list starts at 0 lul
+   },
+   created() {
+      if (!this.isLogged) {
+         this.setAnonState()
 
-    },
-    hasPrevious() {
-
-      return this.files.length > 1 && this.currentIndex > 0
-    }
-
-  },
-  watch: {
-    $route: function() {
+      }
       this.fetchData()
-      this.toggleNavigation()
-    }
-  },
-  created() {
-    if (!this.isLogged) {
-      this.setAnonState()
 
-    }
-    this.fetchData()
+   },
 
-  },
+   async mounted() {
 
-  async mounted() {
-
-    window.addEventListener("keydown", this.key)
+      window.addEventListener("keydown", this.key)
 
 
+   },
+   beforeUnmount() {
+      window.removeEventListener("keydown", this.key)
+   },
+   methods: {
+      ...mapActions(useMainStore, ["setLoading", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
 
+      async fetchData() {
 
-  },
-  beforeUnmount() {
-    window.removeEventListener("keydown", this.key)
-  },
-  methods: {
-    ...mapActions(useMainStore, ["setLoading", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+         this.setLoading(true)
+         this.setError(null)
 
-    async fetchData() {
+         // Ensure loadingImage state is updated in the DOM
+         this.file = null
+         this.$nextTick(() => {
+            if (this.items) {
+               for (let i = 0; i < this.items.length; i++) {
+                  if (this.items[i].id === this.fileId) {
+                     this.file = this.items[i]
 
-      this.setLoading(true)
+                  }
+               }
+            }
+         })
+         //only if file is null:
+         if (!this.file) {
 
-      // Ensure loadingImage state is updated in the DOM
-      this.file = null
-      this.$nextTick(() => {
-        if (this.items) {
-          for (let i = 0; i < this.items.length; i++) {
-            if (this.items[i].id === this.fileId) {
-              this.file = this.items[i]
+            if (this.isInShareContext) {
+
+               try {
+                  let res = await getShare(this.token, this.folderId)
+                  this.shareObj = res
+
+                  this.setItems(res.share)
+                  this.folderList = res.breadcrumbs
+
+                  for (let i = 0; i < this.items.length; i++) {
+                     if (this.items[i].id === this.fileId) {
+                        this.file = this.items[i]
+                     }
+                  }
+               } catch (error) {
+                  if (error.code === "ERR_CANCELED") return
+                  this.setError(error)
+               } finally {
+                  this.setLoading(false)
+
+               }
+
+            } else {
+               try {
+                 this.file = await getFile(this.fileId, this.lockFrom)
+                 if (!this.currentFolder) {
+                    const res = await getItems(this.file.parent_id, this.file.lockFrom)
+
+                    this.setItems(res.folder.children)
+                    this.setCurrentFolder(res.folder)
+                 }
+               } catch (error) {
+                  if (error.code === "ERR_CANCELED") return
+                  this.setError(error)
+               } finally {
+                  this.setLoading(false)
+
+               }
 
             }
-          }
-        }
-      })
-      //only if file is null:
-      if (!this.file) {
+         }
+         this.addSelected(this.file)
 
-        if (this.isInShareContext) {
 
-          let res = await getShare(this.token, this.folderId)
-          this.shareObj = res
+         if (this.file.type === "video") {
+            this.$refs.video.currentTime = this.file.video_position
+         }
 
-          this.setItems(res.share)
-          this.folderList = res.breadcrumbs
+         if (!this.isEpub) return
+         this.bookLocation = localStorage.getItem("book-progress-" + this.file.id)
+         let fontsize = localStorage.getItem("font-size")
+         this.fontSize = (fontsize < 600) ? fontsize : 100
 
-          for (let i = 0; i < this.items.length; i++) {
-            if (this.items[i].id === this.fileId) {
-              this.file = this.items[i]
+
+      },
+      moveToTrash() {
+         this.showHover({
+            prompt: "moveToTrash",
+            confirm: () => {
+               this.close()
             }
-          }
+         })
 
-        } else {
+      },
+      rename() {
+         this.showHover("rename")
 
-          this.file = await getFile(this.fileId, this.lockFrom)
-          if (!this.currentFolder) {
-            const res = await getItems(this.file.parent_id, this.file.lockFrom)
+      },
+      prev() {
+         this.hoverNav = false
+         if (this.hasPrevious) {
+            let previousFile = this.files[this.currentIndex - 1]
+            if (this.isInShareContext) {
+               this.$router.push({
+                  name: "SharePreview",
+                  params: { "folderId": previousFile.parent_id, "fileId": previousFile.id, "token": this.token }
+               })
 
-            this.setItems(res.folder.children)
-            this.setCurrentFolder(res.folder)
-          }
+            } else {
+               this.$router.push({
+                  name: "Preview",
+                  params: { "fileId": previousFile.id, "lockFrom": previousFile.lockFrom }
+               })
 
-        }
+            }
+         }
+
+      },
+      next() {
+         this.hoverNav = false
+         if (this.hasNext) {
+            let nextFile = this.files[this.currentIndex + 1]
+            if (this.isInShareContext) {
+               this.$router.push({
+                  name: "SharePreview",
+                  params: { "folderId": nextFile.parent_id, "fileId": nextFile.id, "token": this.token }
+               })
+
+            } else {
+               this.$router.push({ name: "Preview", params: { "fileId": nextFile.id, "lockFrom": nextFile.lockFrom } })
+
+            }
+         }
+      },
+      key(event) {
+
+         if (this.currentPrompt !== null) {
+            return
+         }
+
+         if (event.which === 13 || event.which === 39) {
+            // right arrow
+            this.next()
+         } else if (event.which === 37) {
+            // left arrow
+            this.prev()
+         } else if (event.which === 27) {
+            // esc
+            this.close()
+         }
+      },
+
+
+      resetPrompts() {
+         this.closeHover()
+      },
+      toggleNavigation: throttle(function() {
+         this.showNav = true
+
+         if (this.navTimeout) {
+            clearTimeout(this.navTimeout)
+         }
+
+         this.navTimeout = setTimeout(() => {
+            this.showNav = this.hoverNav
+            this.navTimeout = null
+         }, 1500)
+      }, 500),
+      close() {
+
+         try {
+            let parent_id = this.file?.parent_id
+
+            if (this.isInShareContext) {
+               this.$router.push({ name: "Share", params: { "token": this.token, "folderId": this.folderId } })
+               return
+            }
+            if (parent_id) {
+
+               this.$router.push({ name: `Files`, params: { "folderId": parent_id } })
+
+            } else {
+               this.$router.push({ name: `Files`, params: { folderId: this.$store.state.user.root } })
+
+
+            }
+
+            // catch every error so user can always close...
+         } catch (e) {
+            console.error(e)
+            this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
+
+         }
+      },
+      download() {
+         window.open(this.selected[0].download_url, "_blank")
+         let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
+         this.$toast.success(message)
+      },
+      videoTimeUpdate() {
+
+         let position = Math.floor(this.$refs.video.currentTime) // round to seconds
+
+         // To prevent sending too many requests, send only if position has changed significantly
+         if (Math.abs(position - this.lastSentVideoPosition) >= 10) {  // Adjust the interval as needed (e.g., every 1 second)
+
+            updateVideoPosition({ "file_id": this.file.id, "position": position })
+
+            this.lastSentVideoPosition = position
+
+
+         }
+
+      },
+      getRendition(rendition) {
+         // rendition.hooks.content.register((contents) => {
+         //   rendition.manager.container.style['scroll-behavior'] = 'smooth'
+         // })
+         this.rendition = rendition
+         // Wait for the content to be fully rendered
+
+
+         this.applyStyles()
+
+      },
+      applyStyles() {
+         if (this.rendition) {
+            this.rendition.themes.default({
+               body: {
+                  "font-size": `${this.fontSize}%`
+
+
+               }
+            })
+            this.rendition.flow("paginated") // For continuous scrolling
+
+         }
+      },
+      increaseFontSize() {
+         if (this.fontSize < 500) {
+            this.fontSize += 20
+            localStorage.setItem("font-size", this.fontSize)
+            this.applyStyles()
+         }
+      },
+      calcCurrentLocation() {
+         let { displayed } = this.rendition.location.start
+         let percentage = Math.round(displayed.page / displayed.total * 100)
+         this.page = `${percentage}% finished • ${displayed.total - displayed.page} pages left in this chapter`
+
+      },
+
+      decreaseFontSize() {
+         if (this.fontSize > 60) {
+            this.fontSize -= 20
+            localStorage.setItem("font-size", this.fontSize)
+            this.applyStyles()
+         }
+      },
+      tocChanged(toc) {
+         this.toc = toc
+      },
+
+      locationChange(epubcifi) {
+         this.calcCurrentLocation()
+         //todo one day fix padding and location and mobile support etc
+         // if (isMobile) {
+         //   let container = this.rendition.manager.container
+         //   console.log(container)
+         //   let iframe = container.querySelector('iframe')
+         //   console.log(iframe)
+         //
+         //   if (iframe) {
+         //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
+         //     console.log(iframeDocument)
+         //     const body = iframeDocument.querySelector('body')
+         //
+         //     if (body) {
+         //       // Modify body styles directly
+         //       body.style.setProperty('padding-left', '30px', 'important')
+         //       body.style.setProperty('padding-right', '30px', 'important')
+         //       body.style.setProperty('padding-top', '20px', 'important')
+         //       body.style.setProperty('padding-bottom', '20px', 'important')
+         //     }
+         //   }
+         // }
+
+         // let container = this.rendition.manager.container
+         // console.log(container)
+         // let iframe = container.querySelector('iframe')
+         // console.log(iframe)
+         //
+         // if (iframe) {
+         //   const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
+         //   console.log(iframeDocument)
+         //
+         //   iframeDocument.addEventListener('scroll', (event) => {
+         //     const scrollDirection = event.deltaX < 0 ? 'left' : 'right'
+         //     // Handle the scroll direction and adjust navigation accordingly
+         //     console.log(`Scrolled ${scrollDirection}`)
+         //   })
+         // }
+
+         localStorage.setItem("book-progress-" + this.file.id, epubcifi)
+         this.bookLocation = epubcifi
       }
-      this.addSelected(this.file)
-
-      this.setLoading(false)
-
-      if (this.file.type === "video") {
-        this.$refs.video.currentTime = this.file.video_position
-
-      }
-
-      if (!this.isEpub) return
-      this.bookLocation = localStorage.getItem("book-progress-" + this.file.id)
-      let fontsize = localStorage.getItem("font-size")
-      this.fontSize = (fontsize < 600) ? fontsize : 100
-
-
-    },
-    moveToTrash() {
-      this.showHover({
-        prompt: "moveToTrash",
-        confirm: () => {
-          this.close()
-        }
-      })
-
-    },
-    rename() {
-      this.showHover("rename")
-
-    },
-    prev() {
-      this.hoverNav = false
-      if (this.hasPrevious) {
-        let previousFile = this.files[this.currentIndex - 1]
-        if (this.isInShareContext) {
-          this.$router.push({
-            name: "SharePreview",
-            params: { "folderId": previousFile.parent_id, "fileId": previousFile.id, "token": this.token }
-          })
-
-        } else {
-          this.$router.push({
-            name: "Preview",
-            params: { "fileId": previousFile.id, "lockFrom": previousFile.lockFrom }
-          })
-
-        }
-      }
-
-    },
-    next() {
-      this.hoverNav = false
-      if (this.hasNext) {
-        let nextFile = this.files[this.currentIndex + 1]
-        if (this.isInShareContext) {
-          this.$router.push({
-            name: "SharePreview",
-            params: { "folderId": nextFile.parent_id, "fileId": nextFile.id, "token": this.token }
-          })
-
-        } else {
-          this.$router.push({ name: "Preview", params: { "fileId": nextFile.id, "lockFrom": nextFile.lockFrom } })
-
-        }
-      }
-    },
-    key(event) {
-
-      if (this.currentPrompt !== null) {
-        return
-      }
-
-      if (event.which === 13 || event.which === 39) {
-        // right arrow
-        this.next()
-      } else if (event.which === 37) {
-        // left arrow
-        this.prev()
-      } else if (event.which === 27) {
-        // esc
-        this.close()
-      }
-    },
-
-
-    resetPrompts() {
-      this.closeHover()
-    },
-    toggleNavigation: throttle(function() {
-      this.showNav = true
-
-      if (this.navTimeout) {
-        clearTimeout(this.navTimeout)
-      }
-
-      this.navTimeout = setTimeout(() => {
-        this.showNav = this.hoverNav
-        this.navTimeout = null
-      }, 1500)
-    }, 500),
-    close() {
-
-      try {
-        let parent_id = this.file?.parent_id
-
-        if (this.isInShareContext) {
-          this.$router.push({ name: "Share", params: { "token": this.token, "folderId": this.folderId } })
-          return
-        }
-        if (parent_id) {
-
-          this.$router.push({ name: `Files`, params: { "folderId": parent_id } })
-
-        } else {
-          this.$router.push({ name: `Files`, params: { folderId: this.$store.state.user.root } })
-
-
-        }
-
-      // catch every error so user can always close...
-      } catch (e) {
-        console.error(e)
-        this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
-
-      }
-    },
-    download() {
-      window.open(this.selected[0].download_url, "_blank")
-      let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
-      this.$toast.success(message)
-    },
-
-    videoTimeUpdate() {
-
-       let position = Math.floor(this.$refs.video.currentTime) // round to seconds
-
-       // To prevent sending too many requests, send only if position has changed significantly
-       if (Math.abs(position - this.lastSentVideoPosition) >= 10) {  // Adjust the interval as needed (e.g., every 1 second)
-
-          updateVideoPosition({'file_id': this.file.id, 'position': position})
-
-          this.lastSentVideoPosition = position
-
-
-       }
-
-    },
-    getRendition(rendition) {
-      // rendition.hooks.content.register((contents) => {
-      //   rendition.manager.container.style['scroll-behavior'] = 'smooth'
-      // })
-      this.rendition = rendition
-      // Wait for the content to be fully rendered
-
-
-      this.applyStyles()
-
-    },
-    applyStyles() {
-      if (this.rendition) {
-        this.rendition.themes.default({
-          body: {
-            "font-size": `${this.fontSize}%`
-
-
-          }
-        })
-        this.rendition.flow("paginated") // For continuous scrolling
-
-      }
-    },
-    increaseFontSize() {
-      if (this.fontSize < 500) {
-        this.fontSize += 20
-        localStorage.setItem("font-size", this.fontSize)
-        this.applyStyles()
-      }
-    },
-    calcCurrentLocation() {
-      let { displayed } = this.rendition.location.start
-      let percentage = Math.round(displayed.page / displayed.total * 100)
-      this.page = `${percentage}% finished • ${displayed.total - displayed.page} pages left in this chapter`
-
-    },
-
-    decreaseFontSize() {
-      if (this.fontSize > 60) {
-        this.fontSize -= 20
-        localStorage.setItem("font-size", this.fontSize)
-        this.applyStyles()
-      }
-    },
-    tocChanged(toc) {
-      this.toc = toc
-    },
-
-    locationChange(epubcifi) {
-      this.calcCurrentLocation()
-      //todo one day fix padding and location and mobile support etc
-      // if (isMobile) {
-      //   let container = this.rendition.manager.container
-      //   console.log(container)
-      //   let iframe = container.querySelector('iframe')
-      //   console.log(iframe)
-      //
-      //   if (iframe) {
-      //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
-      //     console.log(iframeDocument)
-      //     const body = iframeDocument.querySelector('body')
-      //
-      //     if (body) {
-      //       // Modify body styles directly
-      //       body.style.setProperty('padding-left', '30px', 'important')
-      //       body.style.setProperty('padding-right', '30px', 'important')
-      //       body.style.setProperty('padding-top', '20px', 'important')
-      //       body.style.setProperty('padding-bottom', '20px', 'important')
-      //     }
-      //   }
-      // }
-
-      // let container = this.rendition.manager.container
-      // console.log(container)
-      // let iframe = container.querySelector('iframe')
-      // console.log(iframe)
-      //
-      // if (iframe) {
-      //   const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
-      //   console.log(iframeDocument)
-      //
-      //   iframeDocument.addEventListener('scroll', (event) => {
-      //     const scrollDirection = event.deltaX < 0 ? 'left' : 'right'
-      //     // Handle the scroll direction and adjust navigation accordingly
-      //     console.log(`Scrolled ${scrollDirection}`)
-      //   })
-      // }
-
-      localStorage.setItem("book-progress-" + this.file.id, epubcifi)
-      this.bookLocation = epubcifi
-    }
-  }
-};
+   }
+}
 </script>
 <style>
 
@@ -634,6 +645,7 @@ export default {
 html body {
  padding-left: 1px !important;
 }
+
 .thumbnail {
  height: 100%;
 }

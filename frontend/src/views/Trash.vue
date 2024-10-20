@@ -68,15 +68,25 @@ export default {
       ...mapActions(useMainStore, ["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
 
       async fetchFolder() {
-
-         this.setLoading(true)
-         this.setError(null)
-
          document.title = "Trash"
 
-         let res = await getTrash()
-         let items = res.trash
-         this.setItems(items)
+         this.setError(null)
+         this.setLoading(true)
+
+         try {
+            let res = await getTrash()
+            let items = res.trash
+            this.setItems(items)
+
+         }
+         catch (error) {
+            if (error.code === "ERR_CANCELED") return
+            this.setError(error)
+         }
+         finally {
+            this.setLoading(false)
+
+         }
 
       },
 

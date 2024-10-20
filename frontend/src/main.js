@@ -9,6 +9,7 @@ import "vue-toastification/dist/index.css"
 import AsyncComputed from 'vue-async-computed'
 import VueLazyLoad from 'vue3-lazyload'
 import Vue3TouchEvents from "vue3-touch-events"
+import { f } from "vue-native-websocket-vue3"
 
 
 const app = createApp(App)
@@ -22,12 +23,26 @@ app.use(Vue3TouchEvents)
 app.use(VueLazyLoad, {
    // options...
 })
+
+
+
+const filterBeforeCreate = (toast, toasts) => {
+   //discard it if the content is exactly the same
+   if (toasts.filter(t => t.content === toast.content).length !== 0) {
+      // Returning false discards the toast
+      return false;
+   }
+   return toast;
+
+}
+
 const options = {
    transition: "Vue-Toastification__bounce",
-   maxToasts: 20,
+   maxToasts: 3,
    position: "bottom-right",
    timeout: 2500,
    newestOnTop: true,
+   filterBeforeCreate: filterBeforeCreate,
 
 }
 app.use(Toast, options)

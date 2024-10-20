@@ -1,30 +1,27 @@
 from itertools import chain
 
 from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import last_modified, etag
+from django.views.decorators.http import etag
 from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, Fragment, ShareableLink, VideoPosition
-from ..tasks import prefetch_discord_message
-from ..utilities.Discord import discord
+from ..models import File, Folder, ShareableLink
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
-from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors, \
-    check_file, check_signed_url
+from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from ..utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
-from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, build_http_error_response, \
+from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
     calculate_size, calculate_file_and_folder_count
-from ..utilities.throttle import SearchRateThrottle, MediaRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import SearchRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
 
 
 def etag_func(request, folder_obj):
     folder_content = cache.get(folder_obj.id)
     if folder_content:
         return str(hash(str(folder_content)))
+
 
 def last_modified_func(request, file_obj, sequence=None):
     last_modified_str = file_obj.last_modified_at
@@ -38,7 +35,6 @@ def last_modified_func(request, file_obj, sequence=None):
 @check_folder_and_permissions
 @etag(etag_func)
 def get_folder_info(request, folder_obj):
-
     folder_content = cache.get(folder_obj.id)
     if not folder_content:
         print("=======using uncached version=======")
@@ -65,6 +61,7 @@ def get_dirs(request, folder_obj):
 
     folder_content['folder_path'] = folder_path
     return JsonResponse(folder_content)
+
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
@@ -118,7 +115,11 @@ def fetch_additional_info(request, folder_obj):
 @handle_common_errors
 @check_file_and_permissions
 def get_secrets(request, file_obj: File):
-    return JsonResponse({"key": file_obj.get_base64_key(), "iv": file_obj.get_base64_iv()}, status=200)
+    return JsonResponse({
+        "encryption_method": file_obj.encryption_method,
+        "key": file_obj.get_base64_key(),
+        "iv": file_obj.get_base64_iv()
+    }, status=200)
 
 
 @api_view(['GET'])
@@ -182,7 +183,8 @@ def search(request):
 
     # include locked files from "current" folder
     if lockFrom and password:
-        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password).order_by("-created_at")
+        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password).order_by(
+            "-created_at")
         files = list(chain(lockedFiles, files))
 
     files = files[:resultLimit]
@@ -192,7 +194,7 @@ def search(request):
     if include_folders and query and not file_type and not extension:
         for folder in folders:
             folder_dict = create_folder_dict(folder)
-            folder_dicts .append(folder_dict)
+            folder_dicts.append(folder_dict)
     if include_files:
         for file in files:
             file_dict = create_file_dict(file)
@@ -238,9 +240,3 @@ def check_password(request, resource_id):
         return HttpResponse(status=204)
 
     raise ResourcePermissionError("Folder password is incorrect")
-
-
-
-
-
-
