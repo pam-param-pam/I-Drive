@@ -68,6 +68,11 @@
     "pl": "P-Powish",
     "uwu": "UwU (*≧▽≦)"
   },
+  "login": {
+    "notAllowed": "",
+    "signup": "",
+    "tooManyRequests": ""
+  },
   "prompts": {
     "deleteMessageMultiple": "Awe you suwe you wish to dewete {count} fiwe(s)?",
     "deleteMessageShare": "Are you sure you wish to delete this share?",

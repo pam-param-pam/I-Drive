@@ -96,7 +96,7 @@
         <a
           rel="noopener noreferrer"
           target="_blank"
-          href="https://github.com/pam-param-pam/I-Drive-Frontend"
+          :href=repoLink
         >{{ name }} By {{ author }} v.{{ version }}</a
         >
       </span>
@@ -109,7 +109,7 @@
 
 <script>
 import * as auth from "@/utils/auth"
-import {signup, version} from "@/utils/constants"
+import {signup, version, githubUrl} from "@/utils/constants"
 import {getUsage} from "@/api/folder.js"
 import {author, name} from "@/utils/constants.js"
 import {filesize} from "@/utils/index.js"
@@ -126,6 +126,7 @@ export default {
       return {
          name: name,
          author: author,
+         repoLink: githubUrl,
          usage: {used: "0 B", total: "0 B", usedPercentage: 0},
       }
    },
@@ -144,7 +145,8 @@ export default {
    },
    watch: {
       currentFolder: async function() {
-         if (this.currentFolder) {
+
+         if (this.currentFolder && this.$route.name === "Files") {
 
             let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
             console.log(usage)

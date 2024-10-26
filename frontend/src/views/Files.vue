@@ -100,10 +100,9 @@ export default {
    watch: {
       $route: "fetchFolder"
    },
-   unmounted() {
+   mounted() {
       this.setItems(null)
       this.setCurrentFolder(null)
-
    },
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),

@@ -104,10 +104,13 @@
   "login": {
     "createAnAccount": "Utwórz konto",
     "loginInstead": "Mam już konto",
+    "notAllowed": "Nie jesteś uprawniony by utworzyć konto",
     "password": "Hasło",
     "passwordConfirm": "Potwierdzenie hasła",
     "passwordsDontMatch": "Hasła różnią się",
+    "signup": "Utwórz konto",
     "submit": "Zaloguj się",
+    "tooManyRequests": "Za dużo prób, spróbuj pózniej",
     "unexpectedError": "Niespodziewany błąd serwera",
     "unknownError": "Nieznany błąd",
     "username": "Nazwa użytkownika",

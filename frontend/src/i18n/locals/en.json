@@ -104,10 +104,13 @@
   "login": {
     "createAnAccount": "Create an account",
     "loginInstead": "Already have an account",
+    "notAllowed": "You are not allowed to register",
     "password": "Password",
     "passwordConfirm": "Password Confirmation",
     "passwordsDontMatch": "Passwords don't match",
+    "signup": "Register",
     "submit": "Login",
+    "tooManyRequests": "Too many register attempts",
     "unexpectedError": "Unexpected server error",
     "unknownError": "Unknown error",
     "username": "Username",

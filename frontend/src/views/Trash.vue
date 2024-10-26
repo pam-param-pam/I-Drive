@@ -58,7 +58,7 @@ export default {
    watch: {
       $route: "fetchFolder",
    },
-   beforeUnmount() {
+   mounted() {
       this.setItems(null)
       this.setCurrentFolder(null)
 

@@ -9,7 +9,6 @@ import "vue-toastification/dist/index.css"
 import AsyncComputed from 'vue-async-computed'
 import VueLazyLoad from 'vue3-lazyload'
 import Vue3TouchEvents from "vue3-touch-events"
-import { f } from "vue-native-websocket-vue3"
 
 
 const app = createApp(App)

@@ -6,11 +6,6 @@ import Login from "@/views/Login.vue"
 
 import {useMainStore} from "@/stores/mainStore.js"
 import {validateLogin} from "@/utils/auth.js"
-import VueNativeSock from "vue-native-websocket-vue3"
-import {baseWS} from "@/utils/constants.js"
-import app from "@/main.js"
-import onEvent from "@/utils/WsEventhandler.js"
-
 
 const router = createRouter({
 
@@ -197,19 +192,9 @@ async function initAuth() {
    } catch (error) {
       console.error(error)
    }
-   const token = localStorage.getItem("token")
-
-   app.use(VueNativeSock, baseWS + "/user", {reconnection: false, protocol: token})
-
-   app.config.globalProperties.$socket.onmessage = (data) => onEvent(data)
-
-   console.error("INIT AUTH")
-   console.log(app)
-   console.log(app.config.globalProperties.$socket)
 }
 
 router.beforeResolve(async (to, from, next) => {
-   console.log("BEFORE RESOLVE")
    const store = useMainStore()
    store.closeHovers()
    store.resetSelected()

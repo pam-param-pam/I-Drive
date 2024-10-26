@@ -189,8 +189,10 @@ REST_FRAMEWORK = {
         'media': '1000/m',
         'folder_password': '20/m',
         'password_change': '10/m',
-        'search': '20/m'
-    },
+        'search': '20/m',
+        'register': '51111/h',
+
+},
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),

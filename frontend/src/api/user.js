@@ -12,6 +12,22 @@ export async function getUser(token) {
    return response.data
 
 }
+export async function registerUser(data) {
+   let url = "/auth/register"
+   let response = await backend_instance.post(url, data,{
+      headers: {
+         "Authorization": false,
+      },
+      __displayErrorToast: false
+   })
+   return response.data
+}
+
+export async function logoutUser() {
+   let url = "/auth/token/logout"
+   let response = await backend_instance.post(url)
+   return response.data
+}
 
 export async function changePassword(data) {
    let url = `/user/changepassword`

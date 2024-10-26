@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 from django.http import HttpResponse, JsonResponse
 from djoser import utils
 from djoser.views import TokenDestroyView
+from rest_framework.authtoken.admin import User
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
@@ -13,7 +14,7 @@ from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets
-from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle
+from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle
 
 
 @api_view(['POST'])
@@ -37,6 +38,22 @@ def change_password(request):
     token, created = Token.objects.get_or_create(user=user)
     data = {"auth_token": str(token)}
     return JsonResponse(data, status=200)
+
+
+@api_view(['POST'])
+@throttle_classes([RegisterThrottle])
+@handle_common_errors
+def register_user(request):
+    raise ResourcePermissionError("This functionality is turned off.")
+    username = request.data['username']
+    password = request.data['password']
+
+    if User.objects.filter(username=username):
+        return HttpResponse("This username is taken", status=409)
+
+    user = User.objects.create_user(username=username, password=password)
+    user.save()
+    return HttpResponse(status=204)
 
 
 @api_view(['GET'])

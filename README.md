@@ -58,6 +58,8 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Fix double usage requests                               | ❌  Coming one day    |
 | Editor support for large files                          | ❌  Coming prob never |
 | Fix file types so they are not so hardcoded on frontend | ❌  Coming prob never |
+| Dark theme                                              | ❌  Coming prob never |
+| fix __prependStaticUrl                                  | ❌  Coming prob never |
 
 
 
@@ -104,7 +106,7 @@ Database is currently just sqlite3 file next to Backend.
 This is mostly for simplicity reasons and low demand.
 
 ### Redis
-Fast in memory databases for caching and message broker for celery.
+Fast in memory database for caching and message broker for celery.
 
 ### Celery
 Asynchronous task queue for delegating long tasks like file deletion outside of HTTP call lifecycle.

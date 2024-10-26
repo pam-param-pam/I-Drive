@@ -111,7 +111,7 @@
           :data="fileSrcUrl"
         ></object>
 
-        <div v-else class="info">
+        <div v-else-if="file" class="info">
           <div class="title">
             <i class="material-icons">feedback</i>
             {{ $t("files.noPreview") }}
@@ -127,7 +127,6 @@
               target="_blank"
               :href="fileSrcUrl"
               class="button button--flat"
-              v-if="!file?.isDir"
             >
               <div>
                 <i class="material-icons">open_in_new</i
@@ -251,7 +250,7 @@ export default {
                }
             })
          }
-         //return items
+
          return sortItems(files)
       },
       hasNext() {
@@ -289,26 +288,27 @@ export default {
       window.removeEventListener("keydown", this.key)
    },
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["setLoading", "setError", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
 
       async fetchData() {
 
          this.setLoading(true)
          this.setError(null)
 
-         // Ensure loadingImage state is updated in the DOM
+         // Ensure file is updated in the DOM
          this.file = null
-         this.$nextTick(() => {
-            if (this.items) {
-               for (let i = 0; i < this.items.length; i++) {
-                  if (this.items[i].id === this.fileId) {
-                     this.file = this.items[i]
-
-                  }
+         await this.$nextTick(); //this is very important
+         console.warn("AAAAAAAAAAAAAAAAA")
+         console.log(this.items)
+         if (this.items) {
+            for (let i = 0; i < this.items.length; i++) {
+               if (this.items[i].id === this.fileId) {
+                  this.file = this.items[i];
+                  break;
                }
             }
-         })
-         //only if file is null:
+         }
+
          if (!this.file) {
 
             if (this.isInShareContext) {

@@ -227,7 +227,7 @@ export async function createNeededFolders(files, parent_folder) {
     */
 
 
-      // check if we are uploading a folder or just files
+   // check if we are uploading a folder or just files
    let folder_upload =
          files[0].webkitRelativePath !== undefined &&
          files[0].webkitRelativePath !== ""

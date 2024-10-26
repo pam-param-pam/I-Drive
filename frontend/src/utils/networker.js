@@ -88,7 +88,7 @@ backend_instance.interceptors.request.use(
       cancelTokenMap.set(config.__cancelSignature, cancelSource)
 
       let token = localStorage.getItem("token")
-      if (token) {
+      if (token) { //todo check if config.headers['Authorization'] is not set to False
 
          config.headers['Authorization'] = `Token ${token}`
       }
@@ -222,10 +222,12 @@ backend_instance.interceptors.response.use(
          errorMessage = i18n.global.t("toasts.unauthorized")
          errorDetails = i18n.global.t("toasts.sessionExpired")
       }
-      toast.error(`${i18n.global.t(errorMessage)}\n${errorDetails}`, {
-         timeout: 5000,
-         position: "bottom-right",
-      })
+      if (config.__displayErrorToast !== false) {
+         toast.error(`${i18n.global.t(errorMessage)}\n${errorDetails}`, {
+            timeout: 5000,
+            position: "bottom-right",
+         })
+      }
 
 
       // If not a 469 error, just return the error

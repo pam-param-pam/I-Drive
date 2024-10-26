@@ -13,7 +13,7 @@ from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
 from .views.testViews import get_file_url_view
 from .views.uploadViews import create_file, create_thumbnail
-from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView
+from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user
 
 urlpatterns = [
 
@@ -35,6 +35,8 @@ urlpatterns = [
     path("file/video/position", update_video_position, name="update video position"),
 
     path("auth/token/login", TokenCreateView.as_view(), name="login"),
+    path("auth/register", register_user, name="register"),
+
     path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
     path('auth/user/me', users_me, name="get current user"),
 

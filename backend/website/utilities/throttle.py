@@ -105,3 +105,7 @@ class SearchRateThrottle(MyUserRateThrottleBase):
 class PasswordChangeThrottle(MyUserRateThrottleBase):
     scope = 'password_change'
     bucket = "FgHiJkLmNo"
+
+class RegisterThrottle(MyUserRateThrottleBase):
+    scope = 'register'
+    bucket = "FdHakamxf"

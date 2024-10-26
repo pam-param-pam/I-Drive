@@ -1,7 +1,10 @@
 import router from "@/router"
-import {baseURL} from "@/utils/constants"
-import {getUser} from "@/api/user.js"
+import { baseURL, baseWS } from "@/utils/constants"
+import { getUser, logoutUser, registerUser } from "@/api/user.js"
 import {useMainStore} from "@/stores/mainStore.js"
+import app from "@/main.js"
+import VueNativeSock from "vue-native-websocket-vue3"
+import onEvent from "@/utils/WsEventhandler.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
@@ -21,9 +24,9 @@ export async function validateLogin() { //this isn't really validate login - mor
    store.setPerms(body.perms)
    store.setToken(token)
 
-   //await openWebsocket(token)
 
-   console.log(store.user)
+   app.use(VueNativeSock, baseWS + "/user", {reconnection: false, protocol: token})
+   app.config.globalProperties.$socket.onmessage = (data) => onEvent(data)
 
 }
 
@@ -58,36 +61,18 @@ export async function login(username, password) {
 
 
 export async function signup(username, password) {
-   const data = {username, password}
-
-   const res = await fetch(`${baseURL}/signup`, {
-      method: "POST",
-      headers: {
-         "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-   })
-
-   if (res.status !== 200) {
-      throw new Error(res.status)
-   }
+   let data = {username, password}
+   await registerUser(data)
+   
 }
 
 export async function logout() {
    const store = useMainStore()
 
-
    let token = store.token
    if (token) {
-      const res = await fetch(`${baseURL}/auth/token/logout`, {
-         method: "POST",
-         headers: {
-            "Authorization": `Token ${token}`,
-         },
-
-      })
+      await logoutUser()
    }
-
 
    store.setUser(null)
    store.setSettings(null)
