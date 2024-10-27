@@ -2,123 +2,18 @@ import { create } from "@/api/folder.js"
 import i18n from "@/i18n/index.js"
 import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { useUploadStore } from "@/stores/uploadStore2.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
 import { discord_instance } from "@/utils/networker.js"
 import { chunkSize } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import JSChaCha20 from "js-chacha20";
+import { encrypt } from "@/utils/encryption.js"
 
 
 const toast = useToast()
 
-export async function checkFilesSizes(files) {
-   let smallFileCount = 0
-   let threshold = 100
-   let maxFileSize = 0.5 * 1024 * 1024 // 0.5 MB in bytes
-
-   for (let file of files) {
-      if (file.size < maxFileSize) {
-         smallFileCount++
-         if (smallFileCount > threshold) {
-            return true
-         }
-      }
-   }
-   return false
-}
-
-export async function scanFiles(dataTransfer) {
-   let files = [];
-   let items = dataTransfer.items;
-
-   for (let i = 0; i < items.length; i++) {
-      const item = items[i].webkitGetAsEntry(); // Get the entry (file or folder)
-
-      if (item) {
-         if (item.isFile) {
-            // Process and add the file with its path
-            files.push(await processFile(item, ""));
-         } else if (item.isDirectory) {
-            // Process directory and add files recursively with paths
-            files = files.concat(await processDirectory(item, ""));
-         }
-      }
-   }
-
-   console.log("Scanned Files:");
-   console.log(files);
-}
-
-// Process individual file (returns a Promise to read the file and add path)
-function processFile(fileEntry, path) {
-   return new Promise((resolve, reject) => {
-      fileEntry.file(function(file) {
-         // Return both the file and its relative path
-         const filePath = path ? `${path}/${fileEntry.name}` : fileEntry.name; // No leading slash for root level
-         resolve({ file, path: filePath });
-      }, reject);
-   });
-}
-
-// Process directory (recursively read contents and return all files with paths)
-function processDirectory(directoryEntry, parentPath) {
-   return new Promise((resolve, reject) => {
-      let reader = directoryEntry.createReader();
-      let files = [];
-      let currentPath = parentPath ? `${parentPath}/${directoryEntry.name}` : directoryEntry.name; // No leading slash for root level
-
-      // Keep reading until all entries are processed
-      function readEntries() {
-         reader.readEntries(async function(entries) {
-            if (entries.length === 0) {
-               resolve(files); // Resolve when no more entries
-               return;
-            }
-
-            for (let entry of entries) {
-               if (entry.isFile) {
-                  files.push(await processFile(entry, currentPath)); // Process file with path
-               } else if (entry.isDirectory) {
-                  files = files.concat(await processDirectory(entry, currentPath)); // Recursively process folder
-               }
-            }
-
-            readEntries(); // Continue reading until done
-         }, reject);
-      }
-
-      readEntries();
-   });
-}
-
-
-function detectExtension(filename) {
-   let arry = filename.split(".")
-
-   if (arry.length === 1) return ".txt" //missing extension defaults to .txt
-   return "." + arry[arry.length - 1]
-
-}
-
-function isVideoFile(file) {
-   // List of common video MIME types
-   const videoMimeTypes = [
-      "video/mp4",
-      "video/mpeg",
-      "video/ogg",
-      "video/webm",
-      "video/quicktime",
-      "video/x-msvideo",
-      "video/x-ms-wmv",
-      "video/x-flv",
-      "video/3gpp",
-      "video/3gpp2"
-   ]
-
-   return videoMimeTypes.includes(file.type)
-}
 
 function getVideoCover(file) {
    console.log("getting video cover for file: ", file)

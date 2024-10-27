@@ -16,7 +16,7 @@ represented by the same data structure. The structure looks like this:
    [ 
       {lastModified, name, size, type, path, 
       systemFile, uploadFolder, encryptionMethod, 
-      isEncrypted, uploadId, folder_context},
+      isEncrypted, uploadId, folderContext},
       ...
 
    ]

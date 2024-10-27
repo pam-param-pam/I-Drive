@@ -1,3 +1,5 @@
+import math
+
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
@@ -101,7 +103,6 @@ def create_file(request):
 
             file_id = file['file_id']
             fragment_sequence = file['fragment_sequence']
-            total_fragments = file['total_fragments']
             message_id = file['message_id']
             attachment_id = file['attachment_id']
             fragment_size = file['fragment_size']
@@ -118,6 +119,7 @@ def create_file(request):
             )
             fragment_obj.save()
 
+            total_fragments = math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE)
             if len(file_obj.fragments.all()) == total_fragments:
                 file_obj.ready = True
                 file_obj.created_at = timezone.now()

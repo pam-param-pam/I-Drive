@@ -28,6 +28,7 @@
     "simple-code-editor": "^2.0.9",
     "tweetnacl": "^1.0.3",
     "utif": "^3.1.0",
+    "uuid": "^11.0.0",
     "vue": "^3.4.29",
     "vue-i18n": "^9.14.0",
     "vue-loading-overlay": "6.0",

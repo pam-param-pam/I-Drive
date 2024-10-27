@@ -4,7 +4,7 @@ import i18n from "@/i18n/index.js"
 import {logout} from "@/utils/auth.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {useToast} from "vue-toastification"
-import {useUploadStore} from "@/stores/uploadStore.js";
+import {useUploadStore} from "@/stores/uploadStore2.js";
 
 const toast = useToast()
 

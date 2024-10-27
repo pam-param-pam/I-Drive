@@ -31,14 +31,14 @@ import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import FileListing from "@/views/files/FileListing.vue"
 import { getItems } from "@/api/folder.js"
-import { name } from "@/utils/constants.js"
+import { name, uploadType } from "@/utils/constants.js"
 import { search } from "@/api/search.js"
-import { checkFilesSizes } from "@/utils/upload.js"
+import { checkFilesSizes } from "@/utils/uploadHelper.js"
 import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import { useUploadStore } from "@/stores/uploadStore.js"
-import * as upload from "@/utils/upload.js"
+import { useUploadStore } from "@/stores/uploadStore2.js"
+import { scanFiles } from "@/utils/uploadHelper.js"
 
 export default {
    name: "files",
@@ -169,13 +169,11 @@ export default {
 
 
          let dt = event.dataTransfer
-         console.log(dt.files)
          let el = event.target
 
          if (dt.files.length <= 0) return
-         
 
-         let parent_id = this.currentFolder.id
+         let folderContextId = this.currentFolder.id
 
          //obtaining parent folder id
          for (let i = 0; i < 5; i++) {
@@ -184,31 +182,28 @@ export default {
             }
          }
          if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
-            parent_id = el.__vue__.item.id
+            folderContextId = el.__vue__.item.id
 
          }
-         console.log(parent_id)
+         let files = scanFiles(dt)
+
+         // await this.beginUpload(uploadType.dragAndDropInput, folderContextId, files)
 
 
-         let files = await upload.scanFiles(dt)
-         console.log("parent_id")
-         console.log(parent_id)
-         console.log("files")
-         console.log(files)
 
 
       },
-      async beginUpload(folder, files) {
+      async beginUpload(type, folderContextId, files) {
          if (await checkFilesSizes(files)) {
             this.showHover({
                prompt: "NotOptimizedForSmallFiles",
                confirm: () => {
-                  this.startUpload(files, folder)
+                  this.startUpload(type, folderContextId, files)
 
                }
             })
          } else {
-            this.startUpload(files, folder)
+            this.startUpload(type, folderContextId, files)
 
          }
       },
@@ -217,8 +212,7 @@ export default {
 
          let files = event.currentTarget.files
          let folder = this.currentFolder
-         console.log(files)
-         await this.beginUpload(folder, files)
+         await this.beginUpload(uploadType.browserInput, folder.id, files)
 
 
 

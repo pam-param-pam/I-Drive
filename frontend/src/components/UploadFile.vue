@@ -73,7 +73,7 @@
 <script>
 import ProgressBar from "@/components/UploadProgressBar.vue"
 import {mapState} from "pinia";
-import {useUploadStore} from "@/stores/uploadStore.js";
+import {useUploadStore} from "@/stores/uploadStore2.js";
 
 export default {
    components: {ProgressBar},

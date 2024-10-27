@@ -13,10 +13,8 @@ export const encryptionMethods = {1: "AES CTR", 2: "ChaCha20"}
 
 export const discordFileName = "Kocham Alternatywki"
 export const uploadType = {
-      filesInput: "filesInput",
-      folderInput: "folderInput",
-      filesDragAndDrop: "filesDragAndDrop",
-      folderDragAndDrop: "folderDragAndDrop",
+      browserInput: "browserInput",
+      dragAndDropInput: "dragAndDropInput",
 }
 
 export const requestType = {

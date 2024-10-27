@@ -6,7 +6,6 @@ import {createPinia} from "pinia"
 import Toast, {useToast} from "vue-toastification"
 import "vue-toastification/dist/index.css"
 
-import AsyncComputed from 'vue-async-computed'
 import VueLazyLoad from 'vue3-lazyload'
 import Vue3TouchEvents from "vue3-touch-events"
 
@@ -16,7 +15,6 @@ console.log("validate login")
 app.use(createPinia())
 app.use(router)
 app.use(i18n)
-app.use(AsyncComputed)
 app.use(Vue3TouchEvents)
 
 app.use(VueLazyLoad, {

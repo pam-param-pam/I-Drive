@@ -1,10 +1,10 @@
 import {defineStore} from "pinia"
 import buttons from "@/utils/buttons.js"
-import { createNeededFolders, encryptWithAesCtr, encryptWithChaCha20, handleCreatingFiles, prepareRequests, uploadOneRequest } from "@/utils/upload.js"
+import { createNeededFolders, handleCreatingFiles, prepareRequests, uploadOneRequest } from "@/utils/upload.js"
 import {useMainStore} from "@/stores/mainStore.js";
 
 
-export const useUploadStore = defineStore('upload', {
+export const useUploadStoreOld = defineStore('upload', {
    state: () => ({
       queue: [],
       filesUploading: [],

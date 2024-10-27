@@ -1,4 +1,4 @@
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { useUploadStore } from "@/stores/uploadStore2.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -18,17 +18,24 @@ export async function checkFilesSizes(files) {
 
 export async function scanFiles(dataTransfer) {
    let files = [];
-   let items = dataTransfer.items;
 
-   for (let i = 0; i < items.length; i++) {
-      const item = items[i].webkitGetAsEntry(); // Get the entry (file or folder)
+   console.log("dataTransfer.files");
+
+   console.log(dataTransfer.files);
+   files.push(...dataTransfer.files)
+
+   console.log(dataTransfer);
+   let directories = dataTransfer.items;
+
+   for (let i = 0; i < directories.length; i++) {
+      let item = directories[i].webkitGetAsEntry(); // Get the entry (file or folder)
 
       if (item) {
          if (item.isFile) {
-            // Process and add the file with its path
+            // Process and add the file with its flat path
             files.push(await processFile(item, ""));
          } else if (item.isDirectory) {
-            // Process directory and add files recursively with paths
+            // Process directory and add files recursively with flat paths
             files = files.concat(await processDirectory(item, ""));
          }
       }
@@ -36,20 +43,21 @@ export async function scanFiles(dataTransfer) {
 
    console.log("Scanned Files:");
    console.log(files);
+   return files; // Return the flat list of files with paths
 }
 
-// Process individual file (returns a Promise to read the file and add path)
+// Process individual file (returns a Promise to read the file and add flat path)
 function processFile(fileEntry, path) {
    return new Promise((resolve, reject) => {
       fileEntry.file(function(file) {
-         // Return both the file and its relative path
+         // Return both the file and its flat relative path
          const filePath = path ? `${path}/${fileEntry.name}` : fileEntry.name; // No leading slash for root level
          resolve({ file, path: filePath });
       }, reject);
    });
 }
 
-// Process directory (recursively read contents and return all files with paths)
+// Process directory (recursively read contents and return all files with flat paths)
 function processDirectory(directoryEntry, parentPath) {
    return new Promise((resolve, reject) => {
       let reader = directoryEntry.createReader();
@@ -66,9 +74,12 @@ function processDirectory(directoryEntry, parentPath) {
 
             for (let entry of entries) {
                if (entry.isFile) {
-                  files.push(await processFile(entry, currentPath)); // Process file with path
+                  // Push each file with its flat path directly
+                  files.push(await processFile(entry, currentPath));
                } else if (entry.isDirectory) {
-                  files = files.concat(await processDirectory(entry, currentPath)); // Recursively process folder
+                  // Recursively process folder and flatten the files list
+                  const dirFiles = await processDirectory(entry, currentPath);
+                  files = files.concat(dirFiles);
                }
             }
 
@@ -165,7 +176,7 @@ export function getVideoCover(file) {
 export function getFileId(file) {
    let uploadStore = useUploadStore()
 
-   let file = createdFiles[file.uploadId+file.path+file.name]
+   // file = createdFiles[file.uploadId+file.path+file.name]
    return file
 }
 export function getOrCreateFolder(path) {

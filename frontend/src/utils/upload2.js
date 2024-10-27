@@ -1,31 +1,39 @@
 import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { useUploadStore } from "@/stores/uploadStore2.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
 import { attachmentType, discordFileName, uploadStatus, uploadType } from "@/utils/constants.js"
-import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
+import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile, scanFiles } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
 import buttons from "@/utils/buttons.js"
-import i18n from "@/i18n/index.js"
+import { v4 as uuidv4 } from "uuid"
 
 
 const toast = useToast()
 
 
-export async function convertUploadInput(type, folder_context, uploadInput) {
+export async function convertUploadInput(type, folderContext, uploadInput) {
    /**
     This method converts different uploadInputs into 1, standard one
     */
-   if (type === uploadType.filesInput) {
+   console.warn("convertUploadInput")
+   console.log(uploadInput)
 
-   } else if (type === uploadType.folderInput) {
+   let uploadId = uuidv4();
 
-   } else if (type === uploadType.filesDragAndDrop) {
 
-   } else if (type === uploadType.folderDragAndDrop) {
-
+   if (type === uploadType.browserInput) {
+      uploadInput.forEach(file => {
+         file.path = file.webkitRelativePath
+         file.folderContext = folderContext.id
+         file.uploadId = uploadId
+         delete file.webkitRelativePath
+      })
+      console.log(uploadInput)
+   } else if (type === uploadType.dragAndDropInput) {
+      console.log(uploadInput)
    } else {
       console.error("convertUploadInput: invalid type: " + type)
    }
@@ -92,7 +100,6 @@ export async function* prepareRequests() {
          let attachment = { "type": attachmentType.entireFile, "fileObj": fileObj, "rawBlob": fileObj.systemFile, "fragment_sequence": 1}
          attachments.push(attachment)
          totalSize = totalSize + fileObj.systemFile.size
-
       }
 
       //We now need to generate a thumbnail if needed.
@@ -155,7 +162,7 @@ export async function preUploadRequest(request) {
    }
    let backendFiles = await createFile(files)
 
-   //monkey patch file and folder id to request attachment fileobjs
+   //monkey patch file,folder_id,key,encryption_method to request attachment fileobjs
 
 }
 

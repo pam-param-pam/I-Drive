@@ -5,8 +5,8 @@ import {
    prepareRequests,
    uploadRequest
 } from "@/utils/upload2.js"
-import {useMainStore} from "@/stores/mainStore2.js";
-
+import {useMainStore} from "@/stores/mainStore.js";
+import { v4 as uuidv4 } from 'uuid';
 
 export const useUploadStore = defineStore('upload2', {
    state: () => ({
@@ -38,11 +38,12 @@ export const useUploadStore = defineStore('upload2', {
 
       },
       filesInUploadCount() {
-         let queue = this.queue.length
-         let requestQueue = this.requestQueue.reduce((acc, obj) => acc + obj.numberOfFiles, 0);
-         let requestsUploading = this.requestsUploading.reduce((acc, obj) => acc + obj.numberOfFiles, 0);
-
-         return queue + requestQueue + requestsUploading
+         // let queue = this.queue.length
+         // let requestQueue = this.requestQueue.reduce((acc, obj) => acc + obj.numberOfFiles, 0);
+         // let requestsUploading = this.requestsUploading.reduce((acc, obj) => acc + obj.numberOfFiles, 0);
+         //
+         // return queue + requestQueue + requestsUploading
+         return 0
 
       },
       filesInUpload() {
@@ -50,6 +51,7 @@ export const useUploadStore = defineStore('upload2', {
 
          // return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
          // return files.sort((a, b) => a.progress - b.progress)
+         return []
       },
       progress() {
 
@@ -59,10 +61,11 @@ export const useUploadStore = defineStore('upload2', {
 
    actions: {
       async startUpload(type, folder_context, filesList) {
-         buttons.loading("upload")
-         window.addEventListener("beforeunload", beforeUnload)
+         // buttons.loading("upload")
+         // window.addEventListener("beforeunload", beforeUnload)
 
          let files = await convertUploadInput(type, folder_context, filesList)
+         //todo handle files.size == 0
          this.queue.push(...files)
          this.queue.sort()
 
@@ -99,6 +102,10 @@ export const useUploadStore = defineStore('upload2', {
          }
 
          let file = this.queue[0];
+
+         file.frontendId = uuidv4();
+         this.filesUploading.push(file)
+
          this.queue.shift(); // Remove the file from the queue
          return file
          }
