@@ -22,9 +22,9 @@ export async function createThumbnail(data) {
 
 }
 
-export async function createFile(data) {
+export async function createFile(data, config = {}) {
    let url = `/file/create`
-   let response = await backend_instance.post(url, data)
+   let response = await backend_instance.post(url, data, config)
    return response.data
 
 }

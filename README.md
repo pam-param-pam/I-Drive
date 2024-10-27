@@ -49,7 +49,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Proper encryption of big files > 2GB                    | ❌  Coming one day    |
 | Proper frontend networking & handling of errors         | ❌  Coming one day    |
 | Proper upload speed and remaining                       | ❌  Coming one day    |
-| Websocket working just after loging in                  | ❌  Coming one day    |
 | Cleanup upload functions                                | ❌  Coming one day    |
 | Stop, pause, abort uploads                              | ❌  Coming one day    |
 | Fix Search bugs                                         | ❌  Coming one day    |

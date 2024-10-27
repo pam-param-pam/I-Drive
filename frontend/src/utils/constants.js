@@ -11,6 +11,7 @@ export const chunkSize = 25 * 1023 * 1024 // <25MB in bytes
 export const githubUrl = 'https://github.com/pam-param-pam/I-Drive'
 export const encryptionMethods = {1: "AES CTR", 2: "ChaCha20"}
 
+export const discordFileName = "Kocham Alternatywki"
 export const uploadType = {
       filesInput: "filesInput",
       folderInput: "folderInput",
@@ -21,4 +22,16 @@ export const uploadType = {
 export const requestType = {
       multiAttachment: "multiAttachment",
       chunked: "chunked",
+}
+export const attachmentType = {
+      thumbnail: "multiAttachment",
+      chunked: "chunked",
+      entireFile: "entireFile",
+}
+export const uploadStatus = {
+      preparing: "preparing",
+      encrypting: "encrypting",
+      finishing: "finishing",
+      uploaded: "uploaded",
+
 }

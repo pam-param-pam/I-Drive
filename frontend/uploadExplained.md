@@ -16,7 +16,7 @@ represented by the same data structure. The structure looks like this:
    [ 
       {lastModified, name, size, type, path, 
       systemFile, uploadFolder, encryptionMethod, 
-      isEncrypted, uploadId},
+      isEncrypted, uploadId, folder_context},
       ...
 
    ]
@@ -34,7 +34,7 @@ represented by the same data structure. The structure looks like this:
    {
       totalSize: int, numberOfFiles: int, type: str, requestId: str, attachments: [
          {
-          type, rawChunk, fileObj
+          type, rawBlob, fileObj, fragment_sequence
          },
       ]
    }

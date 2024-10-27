@@ -46,3 +46,8 @@ export async function encryptWithChaCha20(base64Key, base64IV, file) {
 
    return new Blob([new Uint8Array(encryptedData)], { type: file.type })
 }
+
+export async function encrypt(attachment) {
+   //encrypt a file
+   //delete the old raw file to save up on RAM
+}
