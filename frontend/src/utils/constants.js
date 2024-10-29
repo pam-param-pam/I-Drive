@@ -22,7 +22,7 @@ export const requestType = {
       chunked: "chunked",
 }
 export const attachmentType = {
-      thumbnail: "multiAttachment",
+      thumbnail: "thumbnail",
       chunked: "chunked",
       entireFile: "entireFile",
 }

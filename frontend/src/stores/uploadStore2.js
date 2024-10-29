@@ -81,11 +81,21 @@ export const useUploadStore = defineStore('upload2', {
          if (!this.requestGenerator) {
             this.requestGenerator = prepareRequests()
          }
-         let {request, done} = this.requestGenerator.next()
-         if (done) {
-            console.info("The request generator is finished.");
+         let generated = this.requestGenerator.next()
+
+
+         if (generated.done) {
+            console.info("The request generator is finished.")
+            this.requestGenerator = null
+            return
          }
+         let request = generated.value
+
          this.currentRequests++
+
+         console.log("request")
+         console.log(request)
+
          request.id =  Math.random().toString(16).slice(2)
          uploadRequest(request)
 
@@ -93,7 +103,7 @@ export const useUploadStore = defineStore('upload2', {
 
       },
 
-      async getFileFromQueue() {
+      getFileFromQueue() {
          console.info("GETING FILE FROM QUEUE: ")
 
          if (this.queue.length === 0) {

@@ -16,81 +16,87 @@ export async function checkFilesSizes(files) {
    return false
 }
 
-export async function scanFiles(dataTransfer) {
-   let files = [];
+export async function scanDataTransfer(dataTransfer) {
+   let files = []
+   let items = dataTransfer.items
 
-   console.log("dataTransfer.files");
+   // Queue to hold items for processing, allowing files and directories to be handled consistently
+   let queue = []
 
-   console.log(dataTransfer.files);
-   files.push(...dataTransfer.files)
+   // Collect initial items into the queue
+   for (let i = 0; i < items.length; i++) {
+      let item = items[i].webkitGetAsEntry()
+      if (item) queue.push(item)
+   }
 
-   console.log(dataTransfer);
-   let directories = dataTransfer.items;
+   // Process each item in the queue
+   while (queue.length > 0) {
+      let item = queue.shift() // Get the next item in the queue
 
-   for (let i = 0; i < directories.length; i++) {
-      let item = directories[i].webkitGetAsEntry(); // Get the entry (file or folder)
-
-      if (item) {
-         if (item.isFile) {
-            // Process and add the file with its flat path
-            files.push(await processFile(item, ""));
-         } else if (item.isDirectory) {
-            // Process directory and add files recursively with flat paths
-            files = files.concat(await processDirectory(item, ""));
-         }
+      if (item.isFile) {
+         // Process and add the file
+         files.push(await processFile(item))
+      } else if (item.isDirectory) {
+         // Process directory and add its contents to the queue
+         let directoryFiles = await processDirectory(item)
+         files = files.concat(directoryFiles)
       }
    }
 
-   console.log("Scanned Files:");
-   console.log(files);
-   return files; // Return the flat list of files with paths
+   console.log("Scanned Files:")
+   console.log(files)
+   return files // Return the flat list of files with paths
 }
 
-// Process individual file (returns a Promise to read the file and add flat path)
-function processFile(fileEntry, path) {
+// Recursively process directories and collect files with their full paths
+async function processDirectory(directoryEntry) {
+   let files = []
+
+   // Create a reader to go through the directory's entries
+   let reader = directoryEntry.createReader()
+
+   // Use the reader to read entries in the directory (files and subdirectories)
+   const readEntries = () =>
+      new Promise((resolve, reject) => {
+         reader.readEntries((entries) => {
+            resolve(entries)
+         }, reject)
+      })
+   let entries = await readEntries()
+
+   // Iterate over each entry in the directory
+   for (let entry of entries) {
+      // Construct the new path for each entry
+
+      if (entry.isFile) {
+         // Process and add the file with its full path
+         files.push(await processFile(entry))
+      } else if (entry.isDirectory) {
+         // Recursively process subdirectory and add its files
+         files.push(...await processDirectory(entry))
+      }
+   }
+
+   return files // Return all files with their full paths
+}
+
+function processFile(fileEntry) {
    return new Promise((resolve, reject) => {
       fileEntry.file(function(file) {
-         // Return both the file and its flat relative path
-         const filePath = path ? `${path}/${fileEntry.name}` : fileEntry.name; // No leading slash for root level
-         resolve({ file, path: filePath });
+         // Check if the file is in a directory by looking for a "/"
+         let fullPath = fileEntry.fullPath;
+         console.log(fullPath)
+         console.log(file.name)
+         file.path = fullPath.startsWith("/") ? fullPath.slice(1) : fullPath;
+
+         if (file.path === file.name) {
+            file.path = ""
+         }
+
+         resolve(file);
       }, reject);
    });
 }
-
-// Process directory (recursively read contents and return all files with flat paths)
-function processDirectory(directoryEntry, parentPath) {
-   return new Promise((resolve, reject) => {
-      let reader = directoryEntry.createReader();
-      let files = [];
-      let currentPath = parentPath ? `${parentPath}/${directoryEntry.name}` : directoryEntry.name; // No leading slash for root level
-
-      // Keep reading until all entries are processed
-      function readEntries() {
-         reader.readEntries(async function(entries) {
-            if (entries.length === 0) {
-               resolve(files); // Resolve when no more entries
-               return;
-            }
-
-            for (let entry of entries) {
-               if (entry.isFile) {
-                  // Push each file with its flat path directly
-                  files.push(await processFile(entry, currentPath));
-               } else if (entry.isDirectory) {
-                  // Recursively process folder and flatten the files list
-                  const dirFiles = await processDirectory(entry, currentPath);
-                  files = files.concat(dirFiles);
-               }
-            }
-
-            readEntries(); // Continue reading until done
-         }, reject);
-      }
-
-      readEntries();
-   });
-}
-
 
 export function detectExtension(filename) {
    let arry = filename.split(".")
@@ -169,19 +175,22 @@ export function getVideoCover(file) {
             )
          })
       })
-      URL.revokeObjectURL(file);  // Free memory once done
+      URL.revokeObjectURL(file)  // Free memory once done
 
    })
 }
+
 export function getFileId(file) {
    let uploadStore = useUploadStore()
 
    // file = createdFiles[file.uploadId+file.path+file.name]
    return file
 }
+
 export function getOrCreateFolder(path) {
 
 }
+
 export function buildRequest(path) {
 
 }

@@ -34,7 +34,7 @@ represented by the same data structure. The structure looks like this:
    {
       totalSize: int, numberOfFiles: int, type: str, requestId: str, attachments: [
          {
-          type, rawBlob, fileObj, fragment_sequence
+          type, systemFile, fileObj, fragment_sequence
          },
       ]
    }

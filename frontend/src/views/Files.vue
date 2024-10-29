@@ -38,7 +38,7 @@ import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore2.js"
-import { scanFiles } from "@/utils/uploadHelper.js"
+import { scanDataTransfer } from "@/utils/uploadHelper.js"
 
 export default {
    name: "files",
@@ -185,9 +185,8 @@ export default {
             folderContextId = el.__vue__.item.id
 
          }
-         let files = scanFiles(dt)
-
-         // await this.beginUpload(uploadType.dragAndDropInput, folderContextId, files)
+         let files = await scanDataTransfer(dt)
+         await this.beginUpload(uploadType.dragAndDropInput, folderContextId, files)
 
 
 

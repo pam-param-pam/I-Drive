@@ -12,7 +12,7 @@ from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, R
 
 signer = TimestampSigner()
 
-def format_wait_time(seconds: int):
+def format_wait_time(seconds: int) -> str:
     if seconds >= 3600:  # More than or equal to 1 hour
         hours = seconds // 3600
         return f"{hours} hour{'s' if hours > 1 else ''}"
@@ -21,6 +21,7 @@ def format_wait_time(seconds: int):
         return f"{minutes} minute{'s' if minutes > 1 else ''}"
     else:
         return f"{seconds} second{'s' if seconds > 1 else ''}"
+
 
 # Function to sign a URL with an expiration time
 def sign_file_id_with_expiry(file_id: str) -> str:

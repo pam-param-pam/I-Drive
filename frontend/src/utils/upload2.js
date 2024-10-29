@@ -4,7 +4,7 @@ import { useUploadStore } from "@/stores/uploadStore2.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
 import { attachmentType, discordFileName, uploadStatus, uploadType } from "@/utils/constants.js"
-import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile, scanFiles } from "@/utils/uploadHelper.js"
+import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile, scanDataTransfer } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
 import buttons from "@/utils/buttons.js"
@@ -23,24 +23,29 @@ export async function convertUploadInput(type, folderContext, uploadInput) {
 
    let uploadId = uuidv4();
 
+   console.log(folderContext)
+   console.log(uploadInput)
+   let files = []
 
    if (type === uploadType.browserInput) {
-      uploadInput.forEach(file => {
+      for (let i = 0; i < uploadInput.length; i++) {
+         let file = uploadInput[i];
          file.path = file.webkitRelativePath
-         file.folderContext = folderContext.id
-         file.uploadId = uploadId
-         delete file.webkitRelativePath
-      })
-      console.log(uploadInput)
+         files.push({folderContext, uploadId, "systemFile": file})
+      }
+
    } else if (type === uploadType.dragAndDropInput) {
-      console.log(uploadInput)
+      for (let i = 0; i < uploadInput.length; i++) {
+         let file = uploadInput[i];
+         files.push({folderContext, uploadId, "systemFile": file})
+      }
    } else {
       console.error("convertUploadInput: invalid type: " + type)
    }
-
+   return files
 }
 
-export async function* prepareRequests() {
+export function* prepareRequests() {
    /**
     this is a generator function!
     */
@@ -55,11 +60,11 @@ export async function* prepareRequests() {
    // eslint-disable-next-line no-constant-condition
    while (true) {
 
-      let fileObj = await uploadStore.getFileFromQueue()
-      if (!fileObj) break //we break if there are no more files in the queue
+      let queueFile = uploadStore.getFileFromQueue()
+      if (!queueFile) break //we break if there are no more files in the queue
 
       //CASE 1, file is > 25mb
-      if (fileObj.size > chunkSize) {
+      if (queueFile.size > chunkSize) {
          //CASE 1.1, attachments already created, we yield the already created attachments in a request
          if (attachments.length !== 0) {
             let request = { "totalSize": totalSize, "attachments": attachments }
@@ -69,10 +74,10 @@ export async function* prepareRequests() {
          }
 
          //CASE 1.2 attachments are not created, we create chunked requests from the big file
-         for (let j = 0; j < fileObj.systemFile.size; j += chunkSize) {
-            let chunk = fileObj.systemFile.slice(j, j + chunkSize)
+         for (let j = 0; j < queueFile.size; j += chunkSize) {
+            let chunk = queueFile.slice(j, j + chunkSize)
 
-            let attachment = { "type": attachmentType.chunked, "fileObj": fileObj, "rawBlob": chunk, "fragment_sequence": j + 1 } //todo fragments shouldn't start at 1
+            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile, "rawBlob": chunk, "fragment_sequence": j + 1 } //todo fragments shouldn't start at 1
             attachments.push(attachment)
             totalSize = totalSize + chunk.size
 
@@ -89,7 +94,7 @@ export async function* prepareRequests() {
       else {
          //CASE 2.1 file is <25 mb but totalSize including fileObj.size is > 25mb or attachments.length == 10
          //we need to yield the already created attachments in a request
-         if (totalSize + fileObj.size > chunkSize || attachments.length === 10) {
+         if (totalSize + queueFile.systemFile.size > chunkSize || attachments.length === 10) {
             let request = { "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
@@ -97,14 +102,14 @@ export async function* prepareRequests() {
          }
 
          //CASE 2.2 file is < 25mb and attachments length < 10, and we can safely add it to attachments
-         let attachment = { "type": attachmentType.entireFile, "fileObj": fileObj, "rawBlob": fileObj.systemFile, "fragment_sequence": 1}
+         let attachment = { "type": attachmentType.entireFile, "fileObj": queueFile, "rawBlob": queueFile, "fragment_sequence": 1}
          attachments.push(attachment)
-         totalSize = totalSize + fileObj.systemFile.size
+         totalSize = totalSize + queueFile.systemFile.size
       }
 
       //We now need to generate a thumbnail if needed.
-      if (isVideoFile(fileObj.systemFile)) {
-         let thumbnail = getVideoCover(fileObj.systemFile)
+      if (isVideoFile(queueFile)) {
+         let thumbnail = getVideoCover(queueFile)
 
          //CASE 1, totalSize including thumbnail.size is > 25mb or attachments.length == 10
          if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
@@ -114,15 +119,22 @@ export async function* prepareRequests() {
             yield request
          }
 
-         let attachment = { "type": attachmentType.thumbnail, "fileObj": fileObj, "rawBlob": thumbnail }
+         let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile, "rawBlob": thumbnail }
          attachments.push(attachment)
          totalSize = totalSize + thumbnail.size
       }
 
    }
+   console.log("AAAAAAAAAAAAAAAAAAAAAAAA")
    //we need to handle the already created attachments after break
-   let request = { "totalSize": totalSize, "attachments": attachments }
-   yield request
+   console.log("attachments")
+   console.log(attachments)
+
+   if (attachments.length > 0) {
+      let request = { "totalSize": totalSize, "attachments": attachments }
+      yield request
+   }
+
 }
 
 export async function preUploadRequest(request) {
@@ -213,7 +225,7 @@ export async function uploadRequest(request) {
          let file_data = {
             "file_id": attachment.fileObj.file_id,
             "fragment_sequence": attachment.fragment_sequence,
-            "fragment_size": attachment.fileObj.systemFile.size,
+            "fragment_size": attachment.fileObj.size,
             "message_id": discord_response.data.id,
             "attachment_id": discord_response.data.attachments[i].id
          }
