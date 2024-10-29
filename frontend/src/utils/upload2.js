@@ -61,7 +61,7 @@ export function* prepareRequests() {
       if (!queueFile) break //we break if there are no more files in the queue
 
       //CASE 1, file is > 25mb
-      if (queueFile.size > chunkSize) {
+      if (queueFile.fileObj.size > chunkSize) {
          //CASE 1.1, attachments already created, we yield the already created attachments in a request
          if (attachments.length !== 0) {
             let request = { "totalSize": totalSize, "attachments": attachments }
@@ -71,8 +71,8 @@ export function* prepareRequests() {
          }
 
          //CASE 1.2 attachments are not created, we create chunked requests from the big file
-         for (let j = 0; j < queueFile.size; j += chunkSize) {
-            let chunk = queueFile.slice(j, j + chunkSize)
+         for (let j = 0; j < queueFile.fileObj.size; j += chunkSize) {
+            let chunk = queueFile.systemFile.slice(j, j + chunkSize)
 
             let attachment = { "type": attachmentType.chunked, "fileObj": queueFile, "rawBlob": chunk, "fragment_sequence": j + 1 } //todo fragments shouldn't start at 1
             attachments.push(attachment)

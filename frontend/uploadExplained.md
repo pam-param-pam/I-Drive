@@ -22,7 +22,8 @@ represented by the same data structure. The structure looks like this:
          }, 
          fileObj: {
             path, uploadFolder, encryptionMethod, 
-            isEncrypted, uploadId, folderContext
+            isEncrypted, uploadId, folderContext, 
+            size, name, type
          }
       }
    ]
@@ -43,7 +44,7 @@ represented by the same data structure. The structure looks like this:
    {
       totalSize: int, type: str, requestId: str, attachments: [
          {
-          type, rawFileData, fileObj, fragment_sequence
+          type, rawFileData, fileObj, fragmentSequence
          },
       ]
    }
@@ -52,7 +53,7 @@ represented by the same data structure. The structure looks like this:
    rawFileData is either systemFile or a blob depending on whatever its a file or a thumbnail
 
 7) preUploadRequest is called. It unpacks the request, and checks if a file/underlying folders has already been created
-if not, it creates them, else grabs from dictionary. parent_id and file_id are appended to the fileObj property.
+if not, it creates them, else grabs from dictionary. parentId and fileId are appended to the fileObj property.
 
 
 8) uploadRequest is called, it uploads the request with onUploadProgress callbacks.
