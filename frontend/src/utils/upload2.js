@@ -11,9 +11,6 @@ import buttons from "@/utils/buttons.js"
 import { v4 as uuidv4 } from "uuid"
 
 
-const toast = useToast()
-
-
 export async function convertUploadInput(type, folderContext, uploadInput) {
    /**
     This method converts different uploadInputs into 1, standard one

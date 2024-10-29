@@ -1,5 +1,4 @@
 import {defineStore} from "pinia"
-import buttons from "@/utils/buttons.js"
 import {
    convertUploadInput,
    prepareRequests,
