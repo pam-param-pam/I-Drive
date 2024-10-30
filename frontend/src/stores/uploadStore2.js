@@ -4,9 +4,10 @@ import {
    prepareRequests, preUploadRequest,
    uploadRequest
 } from "@/utils/upload2.js"
-import {useMainStore} from "@/stores/mainStore.js";
-import { v4 as uuidv4 } from 'uuid';
-import { uploadStatus } from "@/utils/constants.js"
+import {useMainStore} from "@/stores/mainStore.js"
+import {v4 as uuidv4} from 'uuid'
+import {attachmentType, uploadStatus} from "@/utils/constants.js"
+import buttons from "@/utils/buttons.js"
 
 export const useUploadStore = defineStore('upload2', {
    state: () => ({
@@ -112,15 +113,15 @@ export const useUploadStore = defineStore('upload2', {
 
          this.filesUploading.push(fileObj)
 
-         this.queue.shift(); // Remove the file from the queue
+         this.queue.shift() // Remove the file from the queue
          return file
       },
       setStatus(frontendId, status) {
-         let file = this.filesUploading.find(item => item.frontendId === frontendId);
+         let file = this.filesUploading.find(item => item.frontendId === frontendId)
          if (file) {
-            file.status = status;
+            file.status = status
          } else {
-            console.warn(`File with frontedId ${frontendId} not found in the queue.`);
+            console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
       },
       finishFileUpload(frontendId) {
@@ -133,15 +134,37 @@ export const useUploadStore = defineStore('upload2', {
 
       },
       setProgress(frontendId, percentage) {
-         let file = this.filesUploading.find(item => item.frontendId === frontendId);
+         let file = this.filesUploading.find(item => item.frontendId === frontendId)
          if (file) {
-            file.progress = percentage;
+            file.progress = percentage
          } else {
-            console.warn(`File with frontedId ${frontendId} not found in the queue.`);
+            console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
       },
-      setMultiAttachmentProgress(file_ids, progress) {
+      onUploadProgress(request, progressEvent) {
+         for (let attachment of request.attachments) {
+            let frontendId = attachment.fileObj.frontendId
 
+            if (attachment.type === attachmentType.entireFile) {
+               let progress = progressEvent.progress
+               let percentage = Math.round(progress * 100)
+               this.setProgress(frontendId, percentage)
+            } else if (attachment.type === attachmentType.chunked) {
+               let loadedBytes = progressEvent.loaded
+
+               if (this.progressMap.has(frontendId)) {
+                  // Key exists, update the value
+                  let currentValue = this.progressMap.get(frontendId)
+                  this.progressMap.set(frontendId, currentValue + loadedBytes)
+               } else {
+                  // Key does not exist, create it and set to 0
+                  this.progressMap.set(frontendId, 0)
+               }
+               let totalLoadedBytes = this.progressMap.get(frontendId)
+               let percentage = totalLoadedBytes / attachment.fileObj.size * 100
+               this.setProgress(attachment.fileObj.frontendId, percentage)
+            }
+         }
       },
       removeFileFromUpload(file_id) {
 
@@ -149,6 +172,8 @@ export const useUploadStore = defineStore('upload2', {
       finishRequest(requestId) {
          console.log("finishRequest")
          console.log(requestId)
+         buttons.success("upload")
+
          this.concurrentRequests--
          //this.uploadSpeedMap.delete(requestId)
          //this.etaMap.delete(requestId)

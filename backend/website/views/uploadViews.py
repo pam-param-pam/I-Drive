@@ -23,13 +23,13 @@ def create_file(request):
     if request.method == "POST":
         files = request.data['files']
         if not isinstance(files, list):
-            raise BadRequestError("'ids' must be a list.")
+            raise BadRequestError("'files' must be a list.")
 
         if len(files) > 100:
-            raise BadRequestError("'ids' cannot be larger than 100")
+            raise BadRequestError("'files' cannot be larger than 100")
 
         if len(files) == 0:
-            raise BadRequestError("'ids' length cannot be 0.")
+            raise BadRequestError("'files' length cannot be 0.")
 
         response_json = []
 
@@ -39,7 +39,7 @@ def create_file(request):
             extension = file['extension']
             mimetype = file['mimetype']
             file_size = file['size']
-            file_index = file['index']
+            frontend_id = file['frontend_id']
             is_encrypted = file['is_encrypted']
             encryption_method = file['encryption_method']
 
@@ -77,7 +77,7 @@ def create_file(request):
             file_obj.save()
             key = file_obj.get_base64_key()
             iv = file_obj.get_base64_iv()
-            file_response_dict = {"index": file_index, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
+            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
                                   "type": file_type, "is_encrypted": file_obj.is_encrypted, "encryption_method": file_obj.encryption_method}
 
             if file_obj.is_encrypted:
@@ -99,6 +99,7 @@ def create_file(request):
         if len(files) == 0:
             raise BadRequestError("'ids' length cannot be 0.")
 
+        response_json = []
         for file in files:
 
             file_id = file['file_id']
@@ -106,6 +107,7 @@ def create_file(request):
             message_id = file['message_id']
             attachment_id = file['attachment_id']
             fragment_size = file['fragment_size']
+            frontend_id = file['frontend_id']
 
             file_obj = get_file(file_id)
             check_resource_perms(request, file_obj, checkReady=False)
@@ -118,7 +120,7 @@ def create_file(request):
                 message_id=message_id,
             )
             fragment_obj.save()
-
+            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, 'ready': False}
             total_fragments = math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE)
             if len(file_obj.fragments.all()) == total_fragments:
                 file_obj.ready = True
@@ -127,11 +129,10 @@ def create_file(request):
 
                 send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
 
-                # return only in chunked file upload
-                if len(files) == 1:
-                    return HttpResponse("File is ready now", status=200)
+                file_response_dict['ready'] = True
 
-        return HttpResponse(status=204)
+            response_json.append(file_response_dict)
+        return JsonResponse(response_json, status=200)
 
     if request.method == "PUT":
         file_id = request.data['file_id']
@@ -200,25 +201,37 @@ def create_file(request):
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_thumbnail(request):
-    file_id = request.data['file_id']
-    message_id = request.data['message_id']
-    attachment_id = request.data['attachment_id']
-    size = request.data['size']
+    thumbnails = request.data['thumbnails']
+    if not isinstance(thumbnails, list):
+        raise BadRequestError("'thumbnails' must be a list.")
 
-    file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, checkReady=False)
+    if len(thumbnails) > 100:
+        raise BadRequestError("'thumbnails' cannot be larger than 100")
 
-    try:
-        if file_obj.thumbnail:
-            raise BadRequestError("A thumbnail already exists for this file.")
-    except File.thumbnail.RelatedObjectDoesNotExist:
-        pass
+    if len(thumbnails) == 0:
+        raise BadRequestError("'thumbnails' length cannot be 0.")
 
-    thumbnail_obj = Thumbnail(
-        file=file_obj,
-        message_id=message_id,
-        attachment_id=attachment_id,
-        size=size,
-    )
-    thumbnail_obj.save()
+    for thumbnail in thumbnails:
+        file_id = request.data['file_id']
+        message_id = request.data['message_id']
+        attachment_id = request.data['attachment_id']
+        size = request.data['size']
+
+        file_obj = get_file(file_id)
+        check_resource_perms(request, file_obj, checkReady=False)
+
+        try:
+            if file_obj.thumbnail:
+                raise BadRequestError("A thumbnail already exists for this file.")
+        except File.thumbnail.RelatedObjectDoesNotExist:
+            pass
+
+        thumbnail_obj = Thumbnail(
+            file=file_obj,
+            message_id=message_id,
+            attachment_id=attachment_id,
+            size=size,
+        )
+        thumbnail_obj.save()
+
     return HttpResponse(status=204)

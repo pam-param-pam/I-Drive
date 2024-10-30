@@ -218,36 +218,12 @@ export async function uploadRequest(request) {
          "Content-Type": "multipart/form-data"
       },
       onUploadProgress: function(progressEvent) {
-         //todo move this callback to uploadStore
-         for (let attachment of request.attachments) {
-            let frontendId = attachment.fileObj.frontendId
-
-            if (attachment.type === attachmentType.entireFile) {
-               let progress = progressEvent.progress
-               let percentage = Math.round(progress * 100)
-               uploadStore.setProgress(frontendId, percentage)
-            }
-            else if (attachment.type === attachmentType.chunked) {
-               let loadedBytes = progressEvent.loaded
-
-               if (uploadStore.progressMap.has(frontendId)) {
-                  // Key exists, update the value
-                  let currentValue = uploadStore.progressMap.get(frontendId)
-                  uploadStore.progressMap.set(frontendId, currentValue + loadedBytes)
-               } else {
-                  // Key does not exist, create it and set to 0
-                  uploadStore.progressMap.set(frontendId, 0)
-               }
-               let totalLoadedBytes = uploadStore.progressMap.get(frontendId)
-               let percentage = totalLoadedBytes / attachment.fileObj.size * 100
-               uploadStore.setProgress(attachment.fileObj.frontendId, percentage)
-            }
-         }
-
+         uploadStore.onUploadProgress(request, progressEvent)
       }
    })
 
    let filesData = []
+   let thumbnailData = []
 
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]
@@ -257,6 +233,7 @@ export async function uploadRequest(request) {
          uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.finishing)
 
          let file_data = {
+            "frontend_id": attachment.fileObj.frontendId,
             "file_id": attachment.fileObj.fileId,
             "fragment_sequence": attachment.fragmentSequence,
             "fragment_size": attachment.fileObj.size,
@@ -265,28 +242,41 @@ export async function uploadRequest(request) {
          }
          filesData.push(file_data)
       } else if (attachment.type === attachmentType.thumbnail) {
-         await saveThumbnail(attachment, discord_response.data.id, discord_response.data.attachments[i].id)
+         let thumbnail_data = {
+            "file_id": attachment.fileObj.fileId,
+            "size": attachment.size,
+            "message_id": discord_response.data.id,
+            "attachment_id": discord_response.data.attachments[i].id,
+         }
+         thumbnailData.push(thumbnail_data)
+         console.log("thumbnailData")
+         console.log(thumbnailData)
+
+         //todo save thumbnails in 1 request
       }
+   }
+   if (filesData.length > 0) {
+      let backendResponse = await patchFile({ "files": filesData })
+
+      backendResponse.forEach(backendFile => {
+         if (backendFile.ready) {
+            uploadStore.finishFileUpload(backendFile.frontendId)
+         }
+      })
+   }
+   if (thumbnailData.length > 0) {
+      await createThumbnail({ "thumbnails": thumbnailData })
+
    }
 
-   let backendResponse = await patchFile({ "files": filesData })
-   //todo 204 can be falsely returned by backend??
-   for (let attachment of request.attachments) {
-      if (attachment.type === attachmentType.entireFile) {
-         uploadStore.finishFileUpload(attachment.fileObj.frontendId)
-      }
-   }
-   //handle chunked files here
-   buttons.success("upload")
+
    uploadStore.finishRequest(request.id)
-
 
 }
 
 export async function saveThumbnail(attachment, messageId, attachmentId) {
 
    let fileId = await getFileId(attachment.fileObj)
-   let thumbnail = await encrypt(attachment)
 
    let file_data = {
       "file_id": fileId,
@@ -295,7 +285,6 @@ export async function saveThumbnail(attachment, messageId, attachmentId) {
       "attachment_id": attachmentId,
    }
 
-   await createThumbnail(file_data)
 
 }
 

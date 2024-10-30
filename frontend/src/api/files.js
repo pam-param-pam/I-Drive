@@ -31,8 +31,8 @@ export async function createFile(data, config = {}) {
 
 export async function patchFile(data) {
    let url = `/file/create`
-   return await backend_instance.patch(url, data)
-
+   let response = await backend_instance.patch(url, data)
+   return response.data
 }
 export async function getEncryptionSecrets(file_id) {
    let url = `/file/secrets/${file_id}`

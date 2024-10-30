@@ -240,7 +240,6 @@ export const useUploadStoreOld = defineStore('upload', {
 
          }
 
-
          let totalLoadedBytes = this.progressMap.get(file_id)
 
 
