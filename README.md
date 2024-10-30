@@ -39,26 +39,26 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Docker support                                            | ✅       |
 
 
-| TODO List                                               | Status               |
-|---------------------------------------------------------|----------------------|
-| Drag and drop upload                                    | ⚠️  Only partial     |
-| Docker CI/CD                                            | ⚠️  Only partial     |
-| Lock shares with password                               | ⚠️  Only partial     |
-| Error handling in upload process                        | ⚠️  Only partial     |
-| Proper handling of 429                                  | ❌  Coming one day    |
-| Proper encryption of big files > 2GB                    | ❌  Coming one day    |
-| Proper frontend networking & handling of errors         | ❌  Coming one day    |
-| Proper upload speed and remaining                       | ❌  Coming one day    |
-| Cleanup upload functions                                | ❌  Coming one day    |
-| Stop, pause, abort uploads                              | ❌  Coming one day    |
-| Fix Search bugs                                         | ❌  Coming one day    |
-| Fix race conditions                                     | ❌  Coming one day    |
-| Fix reuse of IV for encryption                          | ❌  Coming one day    |
-| Fix double usage requests                               | ❌  Coming one day    |
-| Editor support for large files                          | ❌  Coming prob never |
-| Fix file types so they are not so hardcoded on frontend | ❌  Coming prob never |
-| Dark theme                                              | ❌  Coming prob never |
-| fix __prependStaticUrl                                  | ❌  Coming prob never |
+| TODO List                                                       | Status               |
+|-----------------------------------------------------------------|----------------------|
+| Drag and drop upload                                            | ⚠️  Only partial     |
+| Docker CI/CD                                                    | ⚠️  Only partial     |
+| Lock shares with password                                       | ⚠️  Only partial     |
+| Error handling in upload process                                | ⚠️  Only partial     |
+| Proper handling of 429                                          | ❌  Coming one day    |
+| Proper encryption of big files > 2GB                            | ❌  Coming one day    |
+| Proper frontend networking & handling of errors                 | ❌  Coming one day    |
+| Proper upload speed and remaining                               | ❌  Coming one day    |
+| Cleanup upload functions                                        | ❌  Coming one day    |
+| Stop, pause, abort uploads                                      | ❌  Coming one day    |
+| Fix Search bugs                                                 | ❌  Coming one day    |
+| Fix race conditions                                             | ❌  Coming one day    |
+| Fix reuse of IV for encryption                                  | ❌  Coming one day    |
+| Fix are u sure dialog being skipped after folder password input | ❌  Coming one day    |
+| Editor support for large files                                  | ❌  Coming prob never |
+| Fix file types so they are not so hardcoded on frontend         | ❌  Coming prob never |
+| Dark theme                                                      | ❌  Coming prob never |
+| fix __prependStaticUrl                                          | ❌  Coming prob never |
 
 
 

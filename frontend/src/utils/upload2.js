@@ -227,10 +227,13 @@ export async function uploadRequest(request) {
 
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]
-
-      if (attachment.type === attachmentType.entireFile) {
-         //set status to finishing
-         uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.finishing)
+      console.log("saving")
+      console.log(attachment)
+      if (attachment.type === attachmentType.entireFile || attachment.type === attachmentType.chunked) {
+         if (attachment.type === attachmentType.entireFile) {
+            //set status to finishing
+            uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.finishing)
+         }
 
          let file_data = {
             "frontend_id": attachment.fileObj.frontendId,
@@ -244,15 +247,12 @@ export async function uploadRequest(request) {
       } else if (attachment.type === attachmentType.thumbnail) {
          let thumbnail_data = {
             "file_id": attachment.fileObj.fileId,
-            "size": attachment.size,
+            "size": attachment.rawBlob.size,
             "message_id": discord_response.data.id,
             "attachment_id": discord_response.data.attachments[i].id,
          }
          thumbnailData.push(thumbnail_data)
-         console.log("thumbnailData")
-         console.log(thumbnailData)
 
-         //todo save thumbnails in 1 request
       }
    }
    if (filesData.length > 0) {
@@ -260,7 +260,7 @@ export async function uploadRequest(request) {
 
       backendResponse.forEach(backendFile => {
          if (backendFile.ready) {
-            uploadStore.finishFileUpload(backendFile.frontendId)
+            uploadStore.finishFileUpload(backendFile.frontend_id)
          }
       })
    }
@@ -269,23 +269,9 @@ export async function uploadRequest(request) {
 
    }
 
-
    uploadStore.finishRequest(request.id)
 
 }
 
-export async function saveThumbnail(attachment, messageId, attachmentId) {
-
-   let fileId = await getFileId(attachment.fileObj)
-
-   let file_data = {
-      "file_id": fileId,
-      "size": thumbnail.size,
-      "message_id": messageId,
-      "attachment_id": attachmentId,
-   }
-
-
-}
 
 

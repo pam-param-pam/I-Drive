@@ -1,32 +1,25 @@
-import {defineStore} from "pinia"
-import {
-   convertUploadInput,
-   prepareRequests, preUploadRequest,
-   uploadRequest
-} from "@/utils/upload2.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {v4 as uuidv4} from 'uuid'
-import {attachmentType, uploadStatus} from "@/utils/constants.js"
+import { defineStore } from "pinia"
+import { convertUploadInput, prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload2.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { v4 as uuidv4 } from "uuid"
+import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 
-export const useUploadStore = defineStore('upload2', {
+export const useUploadStore = defineStore("upload2", {
    state: () => ({
       queue: [],
-      requestsUploading: [],
-
       concurrentRequests: 0,
+      filesUploading: [],
+      createdFolders: new Map(),
+      createdFiles: new Map(),
 
       //UI
       uploadSpeedMap: new Map(),
       progressMap: new Map(),
-      etaMap: new Map(),
 
       //experimental
       axiosRequests: [],
       pausedFiles: [],
-      filesUploading: [],
-      createdFolders: new Map(),
-      createdFiles: new Map(),
 
       //simply dumb
       requestGenerator: null
@@ -34,11 +27,34 @@ export const useUploadStore = defineStore('upload2', {
 
    getters: {
       uploadSpeed() {
-         return 0
+         let uploadSpeed = Array.from(this.uploadSpeedMap.values()).reduce((sum, value) => sum + value, 0)
+         if (isNaN(uploadSpeed)) {
+            return 0
+         }
+
+         return uploadSpeed
       },
       eta() {
-         return 0
+         //calc all
+         // Sum up total size in 'queue'
+         let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
 
+         // Calculate remaining bytes to be uploaded in 'filesUploading'
+         let remainingUploadSize = this.filesUploading.reduce((total, item) => {
+
+            // Adjust progress to a decimal by dividing by 100
+            let uploadedSize = item.size * (item.progress / 100)
+            let remainingSize = item.size - uploadedSize;
+            return total + remainingSize;
+         }, 0);
+
+         // Total size left to upload
+         let totalSizeRemaining = totalQueueSize + remainingUploadSize
+
+         // Calculate ETA in seconds
+         let etaInSeconds = this.uploadSpeed > 0 ? totalSizeRemaining / this.uploadSpeed : Infinity
+
+         return etaInSeconds
       },
       filesInUploadCount() {
          let queue = this.queue.length
@@ -49,7 +65,7 @@ export const useUploadStore = defineStore('upload2', {
       },
       progress() {
 
-      },
+      }
 
    },
 
@@ -128,9 +144,9 @@ export const useUploadStore = defineStore('upload2', {
          this.setStatus(frontendId, uploadStatus.uploaded)
          setTimeout(() => {
             //remove file from filesUploading
-            this.filesUploading = this.filesUploading.filter(item => item.file_id !== frontendId)
+            this.filesUploading = this.filesUploading.filter(item => item.frontendId !== frontendId)
 
-         }, 3500)
+         }, 2500)
 
       },
       setProgress(frontendId, percentage) {
@@ -142,6 +158,8 @@ export const useUploadStore = defineStore('upload2', {
          }
       },
       onUploadProgress(request, progressEvent) {
+         this.uploadSpeedMap.set(request.id, progressEvent.rate)
+
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId
 
@@ -150,7 +168,7 @@ export const useUploadStore = defineStore('upload2', {
                let percentage = Math.round(progress * 100)
                this.setProgress(frontendId, percentage)
             } else if (attachment.type === attachmentType.chunked) {
-               let loadedBytes = progressEvent.loaded
+               let loadedBytes = progressEvent.bytes
 
                if (this.progressMap.has(frontendId)) {
                   // Key exists, update the value
@@ -161,13 +179,10 @@ export const useUploadStore = defineStore('upload2', {
                   this.progressMap.set(frontendId, 0)
                }
                let totalLoadedBytes = this.progressMap.get(frontendId)
-               let percentage = totalLoadedBytes / attachment.fileObj.size * 100
+               let percentage = Math.round(totalLoadedBytes / attachment.fileObj.size * 100)
                this.setProgress(attachment.fileObj.frontendId, percentage)
             }
          }
-      },
-      removeFileFromUpload(file_id) {
-
       },
       finishRequest(requestId) {
          console.log("finishRequest")
@@ -175,23 +190,34 @@ export const useUploadStore = defineStore('upload2', {
          buttons.success("upload")
 
          this.concurrentRequests--
-         //this.uploadSpeedMap.delete(requestId)
+         this.uploadSpeedMap.delete(requestId)
          //this.etaMap.delete(requestId)
 
          this.processUploads()
       },
-      setUploadSpeedBytes(requestId, value) {
 
-      },
-      setETA(requestId, value) {
-
-      },
-      resetUpload() {
-
-      },
       abortAll() {
 
       },
+      finishUpload() {
+         this.requestGenerator = null
+         this.queue = []
+         this.filesUploading = []
+         this.pausedFiles = []
+         this.axiosRequests = []
+         this.createdFiles = new Map()
+         this.createdFolders = new Map()
+         this.uploadSpeedMap = new Map()
+         this.progressMap = new Map()
+
+
+
+         window.removeEventListener("beforeunload", beforeUnload)
+         buttons.success("upload")
+
+
+
+      }
 
    }
 })

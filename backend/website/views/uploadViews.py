@@ -18,7 +18,7 @@ from ..utilities.throttle import MyUserRateThrottle
 @api_view(['POST', 'PATCH', 'PUT'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-@handle_common_errors
+# @handle_common_errors //todo
 def create_file(request):
     if request.method == "POST":
         files = request.data['files']
@@ -86,7 +86,7 @@ def create_file(request):
 
             response_json.append(file_response_dict)
 
-        return JsonResponse(response_json, safe=False)
+        return JsonResponse(response_json, safe=False, status=200)
 
     if request.method == "PATCH":
         files = request.data['files']
@@ -132,7 +132,7 @@ def create_file(request):
                 file_response_dict['ready'] = True
 
             response_json.append(file_response_dict)
-        return JsonResponse(response_json, status=200)
+        return JsonResponse(response_json, safe=False, status=200)
 
     if request.method == "PUT":
         file_id = request.data['file_id']
@@ -212,10 +212,10 @@ def create_thumbnail(request):
         raise BadRequestError("'thumbnails' length cannot be 0.")
 
     for thumbnail in thumbnails:
-        file_id = request.data['file_id']
-        message_id = request.data['message_id']
-        attachment_id = request.data['attachment_id']
-        size = request.data['size']
+        file_id = thumbnail['file_id']
+        message_id = thumbnail['message_id']
+        attachment_id = thumbnail['attachment_id']
+        size = thumbnail['size']
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)

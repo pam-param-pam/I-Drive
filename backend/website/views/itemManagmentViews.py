@@ -24,6 +24,8 @@ def create_folder(request):
     parent = get_resource(parent_id)
     check_resource_perms(request, parent, checkRoot=False)
 
+    if name == "":
+        raise BadRequestError("Folder name cannot be empty")
     folder_obj = Folder(
         name=name,
         parent=parent,

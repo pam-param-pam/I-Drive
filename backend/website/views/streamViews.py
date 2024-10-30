@@ -148,7 +148,7 @@ def get_preview(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
-@handle_common_errors
+# @handle_common_errors
 @check_signed_url
 @check_file
 def get_thumbnail(request, file_obj: File):
@@ -156,9 +156,8 @@ def get_thumbnail(request, file_obj: File):
     if not thumbnail_content:
 
         if file_obj.is_encrypted:
-            cipher = Cipher(algorithms.AES(file_obj.key), modes.CTR(file_obj.iv), backend=default_backend())
+            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
-            decryptor = cipher.decryptor()
 
         # todo potential security risk, without stream its possible to overload the server
         url = discord.get_file_url(file_obj.thumbnail.message_id, file_obj.thumbnail.attachment_id)
@@ -166,7 +165,7 @@ def get_thumbnail(request, file_obj: File):
         if discord_response.ok:
             thumbnail_content = discord_response.content
             if file_obj.is_encrypted:
-                thumbnail_content = decryptor.update(thumbnail_content)
+                thumbnail_content = decryptor.decrypt(thumbnail_content)
                 decryptor.finalize()
 
         else:
