@@ -1,5 +1,5 @@
 import JSChaCha20 from "js-chacha20"
-import { encryptionMethod } from "@/utils/constants.js"
+import {attachmentType, chunkSize, encryptionMethod} from "@/utils/constants.js"
 
 function base64ToUint8Array(base64) {
    let binaryString = window.atob(base64)
@@ -49,7 +49,6 @@ export async function encryptWithChaCha20(base64Key, base64IV, file) {
 }
 
 // AES Counter (CTR) Helper for IV Increment
-// AES Counter (CTR) Helper for IV Increment
 function incrementIV(iv, bytesToSkip) {
    const blocksToSkip = Math.floor(bytesToSkip / 16) // AES block size is 16 bytes
    const ivArray = new Uint8Array(iv)
@@ -82,18 +81,20 @@ function calculateNonce(iv, bytesToSkip) {
 }
 
 export async function encrypt(attachment) {
-
    if (!attachment.fileObj.isEncrypted) {
       return attachment.rawBlob
    }
-
+   let bytesToSkip = 0
+   if (attachment.type === attachmentType.chunked) {
+      bytesToSkip = chunkSize * attachment.fragmentSequence
+   }
    let fileObj = attachment.fileObj
    let encrypMethod = fileObj.encryptionMethod
    if (encrypMethod === encryptionMethod.ChaCha20) {
-      return await encryptWithChaCha20(fileObj.encryptionKey, fileObj.encryptionIv, attachment.rawBlob)
+      return await encryptWithChaCha20(fileObj.encryptionKey, fileObj.encryptionIv, attachment.rawBlob, bytesToSkip)
 
    } else if (encrypMethod === encryptionMethod.AesCtr) {
-      return await encryptWithAesCtr(fileObj.encryptionKey, fileObj.encryptionIv, attachment.rawBlob)
+      return await encryptWithAesCtr(fileObj.encryptionKey, fileObj.encryptionIv, attachment.rawBlob, bytesToSkip)
 
    } else {
       console.warn("encrypt: invalid encryptionMethod: " + encrypMethod)

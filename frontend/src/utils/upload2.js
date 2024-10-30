@@ -218,7 +218,31 @@ export async function uploadRequest(request) {
          "Content-Type": "multipart/form-data"
       },
       onUploadProgress: function(progressEvent) {
+         //todo move this callback to uploadStore
+         for (let attachment of request.attachments) {
+            let frontendId = attachment.fileObj.frontendId
 
+            if (attachment.type === attachmentType.entireFile) {
+               let progress = progressEvent.progress
+               let percentage = Math.round(progress * 100)
+               uploadStore.setProgress(frontendId, percentage)
+            }
+            else if (attachment.type === attachmentType.chunked) {
+               let loadedBytes = progressEvent.loaded
+
+               if (uploadStore.progressMap.has(frontendId)) {
+                  // Key exists, update the value
+                  let currentValue = uploadStore.progressMap.get(frontendId)
+                  uploadStore.progressMap.set(frontendId, currentValue + loadedBytes)
+               } else {
+                  // Key does not exist, create it and set to 0
+                  uploadStore.progressMap.set(frontendId, 0)
+               }
+               let totalLoadedBytes = uploadStore.progressMap.get(frontendId)
+               let percentage = totalLoadedBytes / attachment.fileObj.size * 100
+               uploadStore.setProgress(attachment.fileObj.frontendId, percentage)
+            }
+         }
 
       }
    })
@@ -245,12 +269,14 @@ export async function uploadRequest(request) {
       }
    }
 
-   await patchFile({ "files": filesData })
-   //properly handle knowing if a file upload is finished
-   // for (let file of filesData) {
-   //    uploadStore.finishFileUpload(file.frontendId)
-   // }
-
+   let backendResponse = await patchFile({ "files": filesData })
+   //todo 204 can be falsely returned by backend??
+   for (let attachment of request.attachments) {
+      if (attachment.type === attachmentType.entireFile) {
+         uploadStore.finishFileUpload(attachment.fileObj.frontendId)
+      }
+   }
+   //handle chunked files here
    buttons.success("upload")
    uploadStore.finishRequest(request.id)
 
@@ -261,7 +287,6 @@ export async function saveThumbnail(attachment, messageId, attachmentId) {
 
    let fileId = await getFileId(attachment.fileObj)
    let thumbnail = await encrypt(attachment)
-
 
    let file_data = {
       "file_id": fileId,

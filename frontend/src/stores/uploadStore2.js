@@ -116,7 +116,7 @@ export const useUploadStore = defineStore('upload2', {
          return file
       },
       setStatus(frontendId, status) {
-         const file = this.filesUploading.find(item => item.frontendId === frontendId);
+         let file = this.filesUploading.find(item => item.frontendId === frontendId);
          if (file) {
             file.status = status;
          } else {
@@ -125,15 +125,20 @@ export const useUploadStore = defineStore('upload2', {
       },
       finishFileUpload(frontendId) {
          this.setStatus(frontendId, uploadStatus.uploaded)
-         // setTimeout(() => {
-         //    //remove file from filesUploading
-         //    this.filesUploading = this.filesUploading.filter(item => item.file_id !== frontendId)
-         //
-         // }, 3500)
+         setTimeout(() => {
+            //remove file from filesUploading
+            this.filesUploading = this.filesUploading.filter(item => item.file_id !== frontendId)
+
+         }, 3500)
 
       },
-      setProgress(file_id, loadedBytes) {
-
+      setProgress(frontendId, percentage) {
+         let file = this.filesUploading.find(item => item.frontendId === frontendId);
+         if (file) {
+            file.progress = percentage;
+         } else {
+            console.warn(`File with frontedId ${frontendId} not found in the queue.`);
+         }
       },
       setMultiAttachmentProgress(file_ids, progress) {
 
