@@ -7,9 +7,9 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb
-MAX_DISCORD_MESSAGE_SIZE = 25 * 1024 * 1024 - 1
+MAX_DISCORD_MESSAGE_SIZE = 25 * 1023 * 1024
 
-# Max size of a file that we allow to be previewable in bytes: 100Mbex
+# Max size of a file that we allow to be previewable in bytes: 100Mb
 MAX_SIZE_OF_PREVIEWABLE_FILE = 100 * 1024 * 1024
 
 # Max age of media cache in seconds: 1 month

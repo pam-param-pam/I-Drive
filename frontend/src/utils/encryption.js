@@ -1,5 +1,5 @@
 import JSChaCha20 from "js-chacha20"
-import {attachmentType, chunkSize, encryptionMethod} from "@/utils/constants.js"
+import { attachmentType, chunkSize, encryptionMethod } from "@/utils/constants.js"
 
 function base64ToUint8Array(base64) {
    let binaryString = window.atob(base64)
@@ -11,7 +11,7 @@ function base64ToUint8Array(base64) {
    return bytes
 }
 
-export async function encryptWithAesCtr(base64Key, base64IV, file) {
+export async function encryptWithAesCtr(base64Key, base64IV, file, bytesToSkip) {
 
    let key = base64ToUint8Array(base64Key)
    let iv = base64ToUint8Array(base64IV)
@@ -35,14 +35,17 @@ export async function encryptWithAesCtr(base64Key, base64IV, file) {
    return new Blob([new Uint8Array(encryptedArrayBuffer)], { type: file.type })
 }
 
-export async function encryptWithChaCha20(base64Key, base64IV, file) {
+export async function encryptWithChaCha20(base64Key, base64IV, file, bytesToSkip) {
 
    let key = base64ToUint8Array(base64Key)
    let iv = base64ToUint8Array(base64IV)
 
+   let counter = calculateCounter(bytesToSkip)
    let arrayBuffer = await file.arrayBuffer()
+   console.log("counter")
+   console.log(counter)
 
-   let encryptedData = new JSChaCha20(key, iv).encrypt(new Uint8Array(arrayBuffer))
+   let encryptedData = new JSChaCha20(key, iv, counter).encrypt(new Uint8Array(arrayBuffer))
 
 
    return new Blob([new Uint8Array(encryptedData)], { type: file.type })
@@ -50,34 +53,43 @@ export async function encryptWithChaCha20(base64Key, base64IV, file) {
 
 // AES Counter (CTR) Helper for IV Increment
 function incrementIV(iv, bytesToSkip) {
-   const blocksToSkip = Math.floor(bytesToSkip / 16) // AES block size is 16 bytes
-   const ivArray = new Uint8Array(iv)
+   let blocksToSkip = Math.floor(bytesToSkip / 16) // AES block size is 16 bytes
+   let ivArray = new Uint8Array(iv)
 
    // Increment the IV by the number of blocks to skip
    for (let i = ivArray.length - 1; i >= 0; i--) {
-      const increment = blocksToSkip % 256
-      const newByte = ivArray[i] + increment
+      let increment = blocksToSkip % 256
+      let newByte = ivArray[i] + increment
       ivArray[i] = newByte % 256
       if (newByte < 256) break
    }
 
    return ivArray
 }
-
 // ChaCha20 Nonce Calculation
-function calculateNonce(iv, bytesToSkip) {
-   const blocksToSkip = Math.floor(bytesToSkip / 64) // ChaCha20 block size is 64 bytes
-   const nonceArray = new Uint8Array(iv)
+function calculateCounter(bytesToSkip) {
 
-   // Update only the first 4 bytes of nonce with the incremented counter
-   for (let i = 0; i < 4; i++) {
-      const increment = blocksToSkip % 256
-      const newByte = nonceArray[i] + increment
-      nonceArray[i] = newByte % 256
-      if (newByte < 256) break
+   if (bytesToSkip === 0) {
+      return 0
    }
 
-   return nonceArray
+
+   let blocksToSkip = Math.floor(bytesToSkip / 64) // ChaCha20 block size is 64 bytes
+
+   return blocksToSkip
+   // let counter = new Uint8Array(4)
+   //
+   // // Set the counter value
+   // counter[0] = (blocksToSkip >> 24) & 0xff // highest byte
+   // counter[1] = (blocksToSkip >> 16) & 0xff
+   // counter[2] = (blocksToSkip >> 8) & 0xff
+   // counter[3] = blocksToSkip & 0xff // lowest byte
+   //
+   // console.log("counter")
+   // console.log(counter)
+   //
+   // return counter
+
 }
 
 export async function encrypt(attachment) {
@@ -85,9 +97,14 @@ export async function encrypt(attachment) {
       return attachment.rawBlob
    }
    let bytesToSkip = 0
+
    if (attachment.type === attachmentType.chunked) {
-      bytesToSkip = chunkSize * attachment.fragmentSequence
+      bytesToSkip = chunkSize * (attachment.fragmentSequence-1)
    }
+   console.log("bytesToSkip11111111111111")
+   console.log(bytesToSkip)
+
+
    let fileObj = attachment.fileObj
    let encrypMethod = fileObj.encryptionMethod
    if (encrypMethod === encryptionMethod.ChaCha20) {

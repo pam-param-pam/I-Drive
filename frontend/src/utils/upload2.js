@@ -6,7 +6,6 @@ import { attachmentType, discordFileName, uploadStatus, uploadType } from "@/uti
 import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
-import buttons from "@/utils/buttons.js"
 import { v4 as uuidv4 } from "uuid"
 
 
@@ -40,7 +39,7 @@ export async function convertUploadInput(typeOfUpload, folderContext, uploadInpu
       }
       // Remove filename from path if it exists at the end
       if (path && path.endsWith(file.name)) {
-         path = path.slice(0, -file.name.length-1)
+         path = path.slice(0, -file.name.length - 1)
       }
       files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, isEncrypted, size, type, name, frontendId }, "systemFile": file })
    }
@@ -79,10 +78,11 @@ export async function* prepareRequests() {
          }
 
          //CASE 1.2 attachments are not created, we create chunked requests from the big file
+         let i = 0
          for (let j = 0; j < queueFile.fileObj.size; j += chunkSize) {
             let chunk = queueFile.systemFile.slice(j, j + chunkSize)
 
-            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile.fileObj, "rawBlob": chunk, "fragmentSequence": j + 1 } //todo fragments shouldn't start at 1
+            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile.fileObj, "rawBlob": chunk, "fragmentSequence": i + 1 } //todo fragments shouldn't start at 1
             attachments.push(attachment)
             totalSize = totalSize + chunk.size
 
@@ -93,6 +93,7 @@ export async function* prepareRequests() {
                attachments = []
                yield request
             }
+            i++
          }
       }
       //CASE 2. file is < 25mb
@@ -169,9 +170,9 @@ export async function preUploadRequest(request) {
       }
    }
    if (files.length > 0) {
-      let backendFiles = await createFile({"files": files})
+      let backendFiles = await createFile({ "files": files })
 
-      // Monkey patch file_id to request attachments
+      // Monkey patch file_id, key, iv to request attachments
       backendFiles.forEach(backendFile => {
          let matchingAttachment = request.attachments.find(att => att.fileObj.frontendId === backendFile.frontend_id)
          if (matchingAttachment) {
@@ -188,12 +189,14 @@ export async function preUploadRequest(request) {
    console.log(request)
    return request
 
-
 }
 
 export async function uploadRequest(request) {
-   const uploadStore = useUploadStore()
-   const mainStore = useMainStore()
+   let uploadStore = useUploadStore()
+   let mainStore = useMainStore()
+   let abortController = new AbortController()
+
+   uploadStore.axiosRequests.set("blabla", abortController) // Store it with key "blabla"
 
    let attachmentJson = []
    let fileFormList = new FormData()
@@ -219,7 +222,9 @@ export async function uploadRequest(request) {
       },
       onUploadProgress: function(progressEvent) {
          uploadStore.onUploadProgress(request, progressEvent)
-      }
+      },
+      signal: abortController.signal
+
    })
 
    let filesData = []
@@ -244,12 +249,13 @@ export async function uploadRequest(request) {
             "attachment_id": discord_response.data.attachments[i].id
          }
          filesData.push(file_data)
+
       } else if (attachment.type === attachmentType.thumbnail) {
          let thumbnail_data = {
             "file_id": attachment.fileObj.fileId,
             "size": attachment.rawBlob.size,
             "message_id": discord_response.data.id,
-            "attachment_id": discord_response.data.attachments[i].id,
+            "attachment_id": discord_response.data.attachments[i].id
          }
          thumbnailData.push(thumbnail_data)
 

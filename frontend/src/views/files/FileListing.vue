@@ -191,6 +191,7 @@
             </div>
           </div>
         </div>
+
         <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
         <div v-if="dirsSize > 0">
           <item
@@ -310,7 +311,6 @@
 </template>
 
 <script>
-import * as upload from "@/utils/upload"
 import css from "@/utils/css"
 import throttle from "lodash.throttle"
 
@@ -327,6 +327,13 @@ import Search from "@/components/Search.vue"
 //todo reset selected on navigation
 export default {
    name: "FileListing",
+   components: {
+      Search, HeaderBar,
+      Action,
+      Item,
+      ContextMenu,
+
+   },
 
    props: {
       isSearchActive: Boolean,
@@ -336,13 +343,6 @@ export default {
    },
    emits: ["uploadInput", "dropUpload","upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download"],
 
-   components: {
-      Search, HeaderBar,
-      Action,
-      Item,
-      ContextMenu
-
-   },
    data() {
       return {
          columnWidth: 280,

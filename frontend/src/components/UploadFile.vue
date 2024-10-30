@@ -12,11 +12,15 @@
     <!-- Upper -->
     <div class="fileitem-header">
       <span class="file-name">{{ file.name }}</span>
-      <div v-if="showButtons" class="button-group">
-        <button class="pause-button" @click="togglePause">
+      <div class="button-group">
+        <button
+          v-if="showPauseButton"
+          class="pause-button"
+          @click="togglePause">
           <i class="material-icons">{{ file.status === 'paused' ? 'play_arrow' : 'pause' }}</i>
         </button>
         <button
+          v-if="showCancelButton"
           class="cancel-button"
           @mouseover="startShake"
           @mouseleave="stopShake"
@@ -69,9 +73,9 @@
 
 <script>
 import ProgressBar from "@/components/UploadProgressBar.vue"
-import {mapState} from "pinia";
+import { mapActions, mapState } from "pinia"
 import {useUploadStore} from "@/stores/uploadStore2.js";
-import { uploadStatus } from "@/utils/constants.js"
+import { chunkSize, uploadStatus } from "@/utils/constants.js"
 
 export default {
    components: {ProgressBar},
@@ -88,17 +92,32 @@ export default {
       uploadStatus() {
          return uploadStatus
       },
+
       ...mapState(useUploadStore, ['isInternet']),
-      showButtons() {
-         return this.file.status !== "success" & this.file.status !== "failed" & this.file.status !== "waiting" && this.isInternet
+      showPauseButton() {
+         return (this.file.status === uploadStatus.uploading ||
+            this.file.status === uploadStatus.resuming ||
+            this.file.status === uploadStatus.pausing ||
+            this.file.status === uploadStatus.paused) &&
+            this.isInternet && this.file.size > chunkSize
+      },
+      showCancelButton() {
+         return this.file.status === uploadStatus.uploading && this.isInternet && this.file.size > chunkSize
       }
    },
    methods: {
+      ...mapActions(useUploadStore, ['pauseFile', 'resumeFile', 'cancelFile']),
+
       togglePause() {
-         this.file.status = this.file.status === "uploading" ? "paused" : "uploading"
+         if (this.file.status === uploadStatus.paused) {
+            this.resumeFile(this.file.frontendId)
+         } else if (this.file.status === uploadStatus.uploading) {
+            this.pauseFile(this.file.frontendId)
+         }
       },
       cancel() {
-         // this.$store.commit("upload/cancelJob", this.file.id)
+         if (!(this.file.status === uploadStatus.uploading)) return
+         this.cancelFile(this.file.frontendId)
 
       },
       startShake() {

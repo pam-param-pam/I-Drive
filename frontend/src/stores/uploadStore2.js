@@ -4,12 +4,16 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { v4 as uuidv4 } from "uuid"
 import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
+import { useToast } from "vue-toastification"
+
+const toast = useToast()
 
 export const useUploadStore = defineStore("upload2", {
    state: () => ({
       queue: [],
       concurrentRequests: 0,
       filesUploading: [],
+
       createdFolders: new Map(),
       createdFiles: new Map(),
 
@@ -18,7 +22,7 @@ export const useUploadStore = defineStore("upload2", {
       progressMap: new Map(),
 
       //experimental
-      axiosRequests: [],
+      axiosRequests: new Map(),
       pausedFiles: [],
 
       //simply dumb
@@ -106,9 +110,9 @@ export const useUploadStore = defineStore("upload2", {
          console.log(request)
 
          request.id = uuidv4()
-         request = await preUploadRequest(request)
+         request = await preUploadRequest(request) //todo only if request has chunked attachments
 
-         uploadRequest(request)
+         uploadRequest(request) //todo else do it in here
 
          this.processUploads()
 
@@ -204,21 +208,30 @@ export const useUploadStore = defineStore("upload2", {
          this.queue = []
          this.filesUploading = []
          this.pausedFiles = []
-         this.axiosRequests = []
+         this.axiosRequests = new Map()
          this.createdFiles = new Map()
          this.createdFolders = new Map()
          this.uploadSpeedMap = new Map()
          this.progressMap = new Map()
 
-
-
          window.removeEventListener("beforeunload", beforeUnload)
          buttons.success("upload")
 
+      },
+      resumeFile(frontendId) {
+         toast.info("errors.notImplemented")
 
-
-      }
-
+      },
+      pauseFile(frontendId) {
+         toast.info("errors.notImplemented")
+      },
+      cancelFile(frontendId) {
+         let abortController = this.axiosRequests.get("blabla");
+         if (abortController) {
+            abortController.abort(); // Cancel the request
+            console.log("Upload request canceled by user.");
+         }
+      },
    }
 })
 const beforeUnload = (event) => {
