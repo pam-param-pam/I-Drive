@@ -301,8 +301,8 @@
     "noInternet": "Internet connection lost",
     "paused": "Paused",
     "pausing": "Pausing...",
+    "preparingUpload": "Preparing for upload",
     "success": "Uploaded",
-    "toggleUploadList": "Toggle file upload list",
-    "waiting": "Waiting for upload..."
+    "toggleUploadList": "Toggle file upload list"
   }
 }

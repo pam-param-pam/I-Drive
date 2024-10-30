@@ -1,18 +1,19 @@
 import {defineStore} from "pinia"
 import {
    convertUploadInput,
-   prepareRequests,
+   prepareRequests, preUploadRequest,
    uploadRequest
 } from "@/utils/upload2.js"
 import {useMainStore} from "@/stores/mainStore.js";
 import { v4 as uuidv4 } from 'uuid';
+import { uploadStatus } from "@/utils/constants.js"
 
 export const useUploadStore = defineStore('upload2', {
    state: () => ({
       queue: [],
       requestsUploading: [],
 
-      currentRequests: 0,
+      concurrentRequests: 0,
 
       //UI
       uploadSpeedMap: new Map(),
@@ -23,7 +24,8 @@ export const useUploadStore = defineStore('upload2', {
       axiosRequests: [],
       pausedFiles: [],
       filesUploading: [],
-
+      createdFolders: new Map(),
+      createdFiles: new Map(),
 
       //simply dumb
       requestGenerator: null
@@ -31,26 +33,18 @@ export const useUploadStore = defineStore('upload2', {
 
    getters: {
       uploadSpeed() {
-
+         return 0
       },
       eta() {
-
-      },
-      filesInUploadCount() {
-         // let queue = this.queue.length
-         // let requestQueue = this.requestQueue.reduce((acc, obj) => acc + obj.numberOfFiles, 0);
-         // let requestsUploading = this.requestsUploading.reduce((acc, obj) => acc + obj.numberOfFiles, 0);
-         //
-         // return queue + requestQueue + requestsUploading
          return 0
 
       },
-      filesInUpload() {
-         // return this.requestsUploading
+      filesInUploadCount() {
+         let queue = this.queue.length
+         let filesUploading = this.filesUploading.length
 
-         // return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
-         // return files.sort((a, b) => a.progress - b.progress)
-         return []
+         return queue + filesUploading
+
       },
       progress() {
 
@@ -74,13 +68,13 @@ export const useUploadStore = defineStore('upload2', {
       async processUploads() {
          const mainStore = useMainStore()
 
-         let canProcess = this.currentRequests < mainStore.settings.concurrentUploadRequests
+         let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests
          if (!canProcess) return
 
          if (!this.requestGenerator) {
             this.requestGenerator = prepareRequests()
          }
-         let generated = this.requestGenerator.next()
+         let generated = await this.requestGenerator.next()
 
 
          if (generated.done) {
@@ -89,19 +83,19 @@ export const useUploadStore = defineStore('upload2', {
             return
          }
          let request = generated.value
-
-         this.currentRequests++
+         this.concurrentRequests++
 
          console.log("request")
          console.log(request)
 
-         request.id =  Math.random().toString(16).slice(2)
+         request.id = uuidv4()
+         request = await preUploadRequest(request)
+
          uploadRequest(request)
 
          this.processUploads()
 
       },
-
       getFileFromQueue() {
          console.info("GETING FILE FROM QUEUE: ")
 
@@ -110,20 +104,32 @@ export const useUploadStore = defineStore('upload2', {
             return
          }
 
-         let file = this.queue[0];
+         let file = this.queue[0]
 
-         file.frontendId = uuidv4();
-         this.filesUploading.push(file)
+         let fileObj = file.fileObj
+         fileObj.status = uploadStatus.preparing
+         fileObj.progress = 0
+
+         this.filesUploading.push(fileObj)
 
          this.queue.shift(); // Remove the file from the queue
          return file
+      },
+      setStatus(frontendId, status) {
+         const file = this.filesUploading.find(item => item.frontendId === frontendId);
+         if (file) {
+            file.status = status;
+         } else {
+            console.warn(`File with frontedId ${frontendId} not found in the queue.`);
          }
-
       },
-      finishFileUpload(file_id) {
-
-      },
-      setStatus(file_id, status) {
+      finishFileUpload(frontendId) {
+         this.setStatus(frontendId, uploadStatus.uploaded)
+         // setTimeout(() => {
+         //    //remove file from filesUploading
+         //    this.filesUploading = this.filesUploading.filter(item => item.file_id !== frontendId)
+         //
+         // }, 3500)
 
       },
       setProgress(file_id, loadedBytes) {
@@ -134,6 +140,15 @@ export const useUploadStore = defineStore('upload2', {
       },
       removeFileFromUpload(file_id) {
 
+      },
+      finishRequest(requestId) {
+         console.log("finishRequest")
+         console.log(requestId)
+         this.concurrentRequests--
+         //this.uploadSpeedMap.delete(requestId)
+         //this.etaMap.delete(requestId)
+
+         this.processUploads()
       },
       setUploadSpeedBytes(requestId, value) {
 
@@ -148,6 +163,7 @@ export const useUploadStore = defineStore('upload2', {
 
       },
 
+   }
 })
 const beforeUnload = (event) => {
    event.preventDefault()

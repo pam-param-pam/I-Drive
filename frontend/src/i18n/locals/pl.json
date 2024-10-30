@@ -301,8 +301,8 @@
     "noInternet": "Brak internetu",
     "paused": "Zatrzymano",
     "pausing": "Zatrzymywanie...",
+    "preparingUpload": "Przygotowywanie przesyłania",
     "success": "Plik zapisany",
-    "toggleUploadList": "Przełącz liste",
-    "waiting": "Czekanie na przesył..."
+    "toggleUploadList": "Przełącz liste"
   }
 }

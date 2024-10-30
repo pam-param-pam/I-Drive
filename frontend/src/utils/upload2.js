@@ -2,47 +2,55 @@ import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
 import { useUploadStore } from "@/stores/uploadStore2.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { useToast } from "vue-toastification"
 import { attachmentType, discordFileName, uploadStatus, uploadType } from "@/utils/constants.js"
-import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile, scanDataTransfer } from "@/utils/uploadHelper.js"
+import { detectExtension, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
 import buttons from "@/utils/buttons.js"
 import { v4 as uuidv4 } from "uuid"
 
 
-export async function convertUploadInput(type, folderContext, uploadInput) {
+export async function convertUploadInput(typeOfUpload, folderContext, uploadInput) {
    /**
     This method converts different uploadInputs into 1, standard one
     */
    console.warn("convertUploadInput")
-   console.log(uploadInput)
 
-   let uploadId = uuidv4();
+   let mainStore = useMainStore()
 
-   console.log(folderContext)
-   console.log(uploadInput)
+   let uploadId = uuidv4()
+   let encryptionMethod = mainStore.settings.encryptionMethod
+   let isEncrypted = mainStore.settings.encryptFiles
+
    let files = []
+   for (let i = 0; i < uploadInput.length; i++) {
+      let file = uploadInput[i]
+      let size = file.size
+      let name = file.name
+      let type = file.type
+      let frontendId = uuidv4()
 
-   if (type === uploadType.browserInput) {
-      for (let i = 0; i < uploadInput.length; i++) {
-         let file = uploadInput[i];
-         file.path = file.webkitRelativePath
-         files.push({folderContext, uploadId, "systemFile": file})
+      let path
+      if (typeOfUpload === uploadType.browserInput) {
+         path = file.webkitRelativePath
+      } else if (typeOfUpload === uploadType.dragAndDropInput) {
+         path = file.path
+      } else {
+         console.error("convertUploadInput: invalid type: " + typeOfUpload)
       }
-
-   } else if (type === uploadType.dragAndDropInput) {
-      for (let i = 0; i < uploadInput.length; i++) {
-         let file = uploadInput[i];
-         files.push({folderContext, uploadId, "systemFile": file})
+      // Remove filename from path if it exists at the end
+      if (path && path.endsWith(file.name)) {
+         path = path.slice(0, -file.name.length-1)
       }
-   } else {
-      console.error("convertUploadInput: invalid type: " + type)
+      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, isEncrypted, size, type, name, frontendId }, "systemFile": file })
    }
+
+   console.log("files")
+   console.log(files)
    return files
 }
 
-export function* prepareRequests() {
+export async function* prepareRequests() {
    /**
     this is a generator function!
     */
@@ -74,7 +82,7 @@ export function* prepareRequests() {
          for (let j = 0; j < queueFile.fileObj.size; j += chunkSize) {
             let chunk = queueFile.systemFile.slice(j, j + chunkSize)
 
-            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile, "rawBlob": chunk, "fragment_sequence": j + 1 } //todo fragments shouldn't start at 1
+            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile.fileObj, "rawBlob": chunk, "fragmentSequence": j + 1 } //todo fragments shouldn't start at 1
             attachments.push(attachment)
             totalSize = totalSize + chunk.size
 
@@ -99,14 +107,14 @@ export function* prepareRequests() {
          }
 
          //CASE 2.2 file is < 25mb and attachments length < 10, and we can safely add it to attachments
-         let attachment = { "type": attachmentType.entireFile, "fileObj": queueFile, "rawBlob": queueFile, "fragment_sequence": 1}
+         let attachment = { "type": attachmentType.entireFile, "fileObj": queueFile.fileObj, "rawBlob": queueFile.systemFile, "fragmentSequence": 1 }
          attachments.push(attachment)
          totalSize = totalSize + queueFile.systemFile.size
       }
 
       //We now need to generate a thumbnail if needed.
       if (isVideoFile(queueFile)) {
-         let thumbnail = getVideoCover(queueFile)
+         let thumbnail = await getVideoCover(queueFile)
 
          //CASE 1, totalSize including thumbnail.size is > 25mb or attachments.length == 10
          if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
@@ -116,17 +124,13 @@ export function* prepareRequests() {
             yield request
          }
 
-         let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile, "rawBlob": thumbnail }
+         let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail }
          attachments.push(attachment)
          totalSize = totalSize + thumbnail.size
       }
 
    }
-   console.log("AAAAAAAAAAAAAAAAAAAAAAAA")
    //we need to handle the already created attachments after break
-   console.log("attachments")
-   console.log(attachments)
-
    if (attachments.length > 0) {
       let request = { "totalSize": totalSize, "attachments": attachments }
       yield request
@@ -135,58 +139,67 @@ export function* prepareRequests() {
 }
 
 export async function preUploadRequest(request) {
-   const mainStore = useMainStore()
-
+   let uploadStore = useUploadStore()
    let files = []
    for (let i = 0; i < request.attachments.length; i++) {
-      let fileObj = request.attachments[i].fileObj
+      let attachment = request.attachments[i]
+      if (attachment.type === attachmentType.entireFile || attachment.type === attachmentType.chunked) {
+         let fileObj = request.attachments[i].fileObj
 
-      let folderId = await getOrCreateFolder(fileObj.path)
-      request.attachments[i].fileObj.parent_id = folderId
+         let folderId = await getOrCreateFolder(fileObj)
+         request.attachments[i].fileObj.parent_id = folderId
 
-      let file_id = await getFileId(fileObj)
-      if (file_id) {
-         request.attachments[i].fileObj.file_id = file_id
-      } else {
-         let attachment = request.attachments[i]
-
-         let file_data = {
-            "name": fileObj.file.name,
-            "parent_id": folderId,
-            "mimetype": fileObj.file.type,
-            "extension": detectExtension(fileObj.file.name),
-            "size": fileObj.file.size,
-            "index": i,
-            "is_encrypted": mainStore.settings.encryptFiles,
-            "encryption_method": parseInt(mainStore.settings.encryptionMethod)
+         let file_id = await getFileId(fileObj)
+         if (file_id) {
+            request.attachments[i].fileObj.file_id = file_id
+         } else {
+            uploadStore.setStatus(fileObj.frontendId, uploadStatus.creating)
+            let file_data = {
+               "name": fileObj.name,
+               "parent_id": folderId,
+               "mimetype": fileObj.type,
+               "extension": detectExtension(fileObj.name),
+               "size": fileObj.size,
+               "frontend_id": fileObj.frontendId,
+               "is_encrypted": fileObj.isEncrypted,
+               "encryption_method": parseInt(fileObj.encryptionMethod)
+            }
+            files.push(file_data)
          }
-         if (attachment.type === attachmentType.thumbnail) {
-            console.warn("ERROR: file has not been yet created, thumbnail cannot be created!")
-            // console.warn("Attempting to create it, possible race conditions...")
-            // let thumbnail_file = await createFile([file_data], { __displayErrorToast: false })
-            // request.attachments[i].fileObj.file_id = file_id
-         }
-         files.push(file_data)
       }
    }
-   let backendFiles = await createFile(files)
+   if (files.length > 0) {
+      let backendFiles = await createFile({"files": files})
 
-   //monkey patch file,folder_id,key,encryption_method to request attachment fileobjs
+      // Monkey patch file_id to request attachments
+      backendFiles.forEach(backendFile => {
+         let matchingAttachment = request.attachments.find(att => att.fileObj.frontendId === backendFile.frontend_id)
+         if (matchingAttachment) {
+            matchingAttachment.fileObj.fileId = backendFile.file_id
+            matchingAttachment.fileObj.encryptionKey = backendFile.key
+            matchingAttachment.fileObj.encryptionIv = backendFile.iv
+
+            //save created file_id for future attachments
+            uploadStore.createdFiles[matchingAttachment.fileObj.frontendId] = backendFile.file_id
+         }
+      })
+   }
+   console.log("preUploadRequest")
+   console.log(request)
+   return request
+
 
 }
 
 export async function uploadRequest(request) {
    const uploadStore = useUploadStore()
-   const mainStore = useUploadStore()
-
-   uploadStore.currentRequests.push(request)
-
-   request = preUploadRequest(request)
+   const mainStore = useMainStore()
 
    let attachmentJson = []
    let fileFormList = new FormData()
    for (let i = 0; i < request.attachments.length; i++) {
-      let attachment = request.attachments[i];
+      let attachment = request.attachments[i]
+      uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.uploading)
 
       let encryptedBlob = await encrypt(attachment)
 
@@ -213,64 +226,48 @@ export async function uploadRequest(request) {
    let filesData = []
 
    for (let i = 0; i < request.attachments.length; i++) {
-      let attachment = request.attachments[i];
+      let attachment = request.attachments[i]
 
       if (attachment.type === attachmentType.entireFile) {
          //set status to finishing
-         uploadStore.setStatus(attachment.fileObj.file_id, uploadStatus.finishing)
+         uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.finishing)
 
          let file_data = {
-            "file_id": attachment.fileObj.file_id,
-            "fragment_sequence": attachment.fragment_sequence,
+            "file_id": attachment.fileObj.fileId,
+            "fragment_sequence": attachment.fragmentSequence,
             "fragment_size": attachment.fileObj.size,
             "message_id": discord_response.data.id,
             "attachment_id": discord_response.data.attachments[i].id
          }
          filesData.push(file_data)
-      }
-      else if(attachment.type === attachmentType.thumbnail) {
-         await saveThumbnail(attachment)
+      } else if (attachment.type === attachmentType.thumbnail) {
+         await saveThumbnail(attachment, discord_response.data.id, discord_response.data.attachments[i].id)
       }
    }
 
    await patchFile({ "files": filesData })
-   for (let file of filesData) {
-      uploadStore.finishFileUpload(file.file_id)
-   }
+   //properly handle knowing if a file upload is finished
+   // for (let file of filesData) {
+   //    uploadStore.finishFileUpload(file.frontendId)
+   // }
 
    buttons.success("upload")
-
-   uploadStore.currentRequests--
-   uploadStore.uploadSpeedMap.delete(request.requestId)
-   uploadStore.processUploads()
+   uploadStore.finishRequest(request.id)
 
 
 }
 
-export async function saveThumbnail(attachment) {
-   const mainStore = useMainStore()
-   const uploadStore = useUploadStore()
+export async function saveThumbnail(attachment, messageId, attachmentId) {
 
-   let file_id = await getFileId(attachment.fileObj)
-   let fileObj = attachment.fileObj
-
+   let fileId = await getFileId(attachment.fileObj)
    let thumbnail = await encrypt(attachment)
 
-   let formData = new FormData()
-   formData.append("file", thumbnail, discordFileName)
-   let webhook = mainStore.settings.webhook
-
-   let response = await discord_instance.post(webhook, formData, {
-      headers: {
-         "Content-Type": "multipart/form-data"
-      }
-   })
 
    let file_data = {
-      "file_id": fileObj.file_id,
+      "file_id": fileId,
       "size": thumbnail.size,
-      "message_id": response.data.id,
-      "attachment_id": response.data.attachments[0].id
+      "message_id": messageId,
+      "attachment_id": attachmentId,
    }
 
    await createThumbnail(file_data)

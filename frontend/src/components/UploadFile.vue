@@ -2,10 +2,10 @@
   <div
     class="fileitem-wrapper"
     :class="{
-      'failed-border': file.status === 'failed',
-      'success-border': file.status === 'success',
-      'paused-border': file.status === 'paused',
-      'uploading-border': file.status === 'uploading',
+      'failed-border': file.status === uploadStatus.failed,
+      'success-border': file.status === uploadStatus.uploaded,
+      'paused-border': file.status === uploadStatus.paused,
+      'uploading-border': file.status === uploadStatus.uploading,
       'shake-animation': isShaking,
     }"
   >
@@ -29,31 +29,28 @@
 
     <!-- Lower -->
     <div v-if="file.status && isInternet">
-      <span v-if="file.status === 'creating'">
+      <span v-if="file.status === uploadStatus.creating">
         <b class="creating">{{ $t('uploadFile.creating') }}</b>
       </span>
-      <span v-if="file.status === 'finishing'">
+      <span v-if="file.status === uploadStatus.finishing">
         <b class="creating">{{ $t('uploadFile.finishing') }}</b>
       </span>
-      <span v-if="file.status === 'failed'">
+      <span v-if="file.status === uploadStatus.failed">
         <b class="failed">{{ $t('uploadFile.failed') }}</b>
       </span>
-      <span v-if="file.status === 'waiting'">
-        <b class="creating">{{ $t('uploadFile.waiting') }}</b>
+      <span v-if="file.status === uploadStatus.preparing">
+        <b class="creating">{{ $t('uploadFile.preparingUpload') }}</b>
       </span>
-      <span v-if="file.status === 'generatingThumbnail'">
-        <b class="creating">{{ $t('uploadFile.generatingThumbnail') }}</b>
-      </span>
-      <span v-if="file.status === 'success'">
+      <span v-if="file.status === uploadStatus.uploaded">
         <b class="success">{{ $t('uploadFile.success') }}</b>
       </span>
-      <span v-if="file.status === 'paused'">
+      <span v-if="file.status === uploadStatus.paused">
         <b class="paused">{{ $t('uploadFile.paused') }}</b>
       </span>
-      <span v-if="file.status === 'pausing'">
+      <span v-if="file.status === uploadStatus.pausing">
         <b class="pausing">{{ $t('uploadFile.pausing') }}</b>
       </span>
-      <div class="fileitem-progress" v-if="file.status === 'uploading' && isInternet && file.progress">
+      <div class="fileitem-progress" v-if="file.status === uploadStatus.uploading">
         <ProgressBar
           :progress="file.progress"
         />
@@ -74,6 +71,7 @@
 import ProgressBar from "@/components/UploadProgressBar.vue"
 import {mapState} from "pinia";
 import {useUploadStore} from "@/stores/uploadStore2.js";
+import { uploadStatus } from "@/utils/constants.js"
 
 export default {
    components: {ProgressBar},
@@ -87,6 +85,9 @@ export default {
       }
    },
    computed: {
+      uploadStatus() {
+         return uploadStatus
+      },
       ...mapState(useUploadStore, ['isInternet']),
       showButtons() {
          return this.file.status !== "success" & this.file.status !== "failed" & this.file.status !== "waiting" && this.isInternet

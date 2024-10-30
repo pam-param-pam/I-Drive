@@ -481,7 +481,10 @@ export default {
          this.$toast.success(message)
       },
       videoTimeUpdate() {
-
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
          let position = Math.floor(this.$refs.video.currentTime) // round to seconds
 
          // To prevent sending too many requests, send only if position has changed significantly

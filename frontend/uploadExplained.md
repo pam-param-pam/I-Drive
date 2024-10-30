@@ -23,7 +23,7 @@ represented by the same data structure. The structure looks like this:
          fileObj: {
             path, uploadFolder, encryptionMethod, 
             isEncrypted, uploadId, folderContext, 
-            size, name, type
+            size, name, type, frontendId
          }
       }
    ]
@@ -44,13 +44,13 @@ represented by the same data structure. The structure looks like this:
    {
       totalSize: int, type: str, requestId: str, attachments: [
          {
-          type, rawFileData, fileObj, fragmentSequence
+          type, rawBlob, fileObj, fragmentSequence
          },
       ]
    }
     ```
    
-   rawFileData is either systemFile or a blob depending on whatever its a file or a thumbnail
+   rawBlob is either systemFile or a blob depending on whatever its a file or a thumbnail
 
 7) preUploadRequest is called. It unpacks the request, and checks if a file/underlying folders has already been created
 if not, it creates them, else grabs from dictionary. parentId and fileId are appended to the fileObj property.

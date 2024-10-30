@@ -32,10 +32,10 @@
       </div>
       <div class="card-content">
         <UploadFile
-          v-for="file in filesInUpload"
-          :key="file.file_id"
+          v-for="file in filesUploading"
+          :key="file.frontedId"
           :file="file"
-          :data-dir="file.isDir"
+          :data-dir="false"
           :data-type="file.type"
           :aria-label="file.name"
         />
@@ -59,7 +59,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useUploadStore, ["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta"]),
+      ...mapState(useUploadStore, ["filesUploading", "filesInUploadCount", "uploadSpeed", "eta"]),
       formattedETA() {
          if (!this.eta || this.eta === Infinity) {
             return "--:--:--"

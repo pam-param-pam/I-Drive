@@ -1,4 +1,5 @@
 import { useUploadStore } from "@/stores/uploadStore2.js"
+import { create } from "@/api/folder.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -43,9 +44,7 @@ export async function scanDataTransfer(dataTransfer) {
       }
    }
 
-   console.log("Scanned Files:")
-   console.log(files)
-   return files // Return the flat list of files with paths
+   return files
 }
 
 // Recursively process directories and collect files with their full paths
@@ -84,18 +83,16 @@ function processFile(fileEntry) {
    return new Promise((resolve, reject) => {
       fileEntry.file(function(file) {
          // Check if the file is in a directory by looking for a "/"
-         let fullPath = fileEntry.fullPath;
-         console.log(fullPath)
-         console.log(file.name)
-         file.path = fullPath.startsWith("/") ? fullPath.slice(1) : fullPath;
+         let fullPath = fileEntry.fullPath
+         file.path = fullPath.startsWith("/") ? fullPath.slice(1) : fullPath
 
          if (file.path === file.name) {
             file.path = ""
          }
 
-         resolve(file);
-      }, reject);
-   });
+         resolve(file)
+      }, reject)
+   })
 }
 
 export function detectExtension(filename) {
@@ -121,15 +118,15 @@ export function isVideoFile(file) {
       "video/3gpp2"
    ]
 
-   return videoMimeTypes.includes(file.type)
+   return videoMimeTypes.includes(file.fileObj.type)
 }
 
 export function getVideoCover(file) {
-   console.log("getting video cover for file: ", file)
+   console.log("getting video cover for file: ", file.fileObj.name)
    return new Promise((resolve, reject) => {
       // load the file to a video player
       let videoPlayer = document.createElement("video")
-      videoPlayer.setAttribute("src", URL.createObjectURL(file))
+      videoPlayer.setAttribute("src", URL.createObjectURL(file.systemFile))
       videoPlayer.load()
       videoPlayer.addEventListener("error", (ex) => {
          reject("error when loading video file", ex)
@@ -180,15 +177,41 @@ export function getVideoCover(file) {
    })
 }
 
-export function getFileId(file) {
+export function getFileId(fileObj) {
    let uploadStore = useUploadStore()
+   return uploadStore.createdFiles[fileObj.frontendId]
 
-   // file = createdFiles[file.uploadId+file.path+file.name]
-   return file
 }
 
-export function getOrCreateFolder(path) {
+export async function getOrCreateFolder(fileObj) {
+   let uploadStore = useUploadStore()
+   let path = fileObj.path
+   if (path === "") {
+      return fileObj.folderContext
+   }
 
+   // Split path into parts (e.g., ["folder_1", "folder_2", "folder_3"])
+   let pathParts = path.split("/")
+
+   let parentFolder = fileObj.folderContext
+   for (let i = 1; i <= pathParts.length; i++) {
+      // idziemy od tyłu po liscie czyli jesli lista to np [a1, b2, c3, d4, e5, f6]
+      // to najpierw bedziemy mieli a1
+      // potem a1, b2
+      // potem a1, b2, c3
+      let path_key = pathParts.slice(0, i).join("/")
+      if (uploadStore.createdFolders[path_key]) {
+         parentFolder = uploadStore.createdFolders[path_key]
+      }
+      else {
+         let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
+
+         let folder = await create({ "parent_id": parentFolder, "name": folderName })
+         parentFolder = folder.id
+         uploadStore.createdFolders[path_key] = folder.id
+      }
+   }
+   return parentFolder
 }
 
 export function buildRequest(path) {

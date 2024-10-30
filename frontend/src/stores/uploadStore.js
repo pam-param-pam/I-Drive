@@ -291,8 +291,7 @@ export const useUploadStoreOld = defineStore('upload', {
       },
       abortAll() {
          //todo
-         this.currentRequests = []
-         this.queue = []
+
 
       },
 

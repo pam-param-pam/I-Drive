@@ -164,6 +164,7 @@
   },
   "uploadFile": {
     "paused": "Paused",
+    "preparingUpload": "",
     "success": "Uploaded"
   }
 }

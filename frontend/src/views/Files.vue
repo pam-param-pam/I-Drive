@@ -189,8 +189,6 @@ export default {
          await this.beginUpload(uploadType.dragAndDropInput, folderContextId, files)
 
 
-
-
       },
       async beginUpload(type, folderContextId, files) {
          if (await checkFilesSizes(files)) {
