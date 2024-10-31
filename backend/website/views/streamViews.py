@@ -212,8 +212,8 @@ def stream_file(request, file_obj: File):
                 url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
 
                 headers = {
-                    'Range': 'bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte)}
-
+                    'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
+                print(headers)
                 async with session.get(url, headers=headers) as response:
                     if not response.ok:
                         print("===discord response error===")

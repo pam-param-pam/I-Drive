@@ -33,6 +33,13 @@ class Decryptor:
     def _calculate_nonce(self, bytes_to_skip: int):
         blocks_to_skip = bytes_to_skip // 64
         incremented_counter = blocks_to_skip.to_bytes(4, 'little')
+
+        print("blocks_to_skip")
+        print(blocks_to_skip)
+
+        print("incremented_counter")
+        print(incremented_counter)
+
         new_nonce = incremented_counter + self.iv
 
         return new_nonce

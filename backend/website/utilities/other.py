@@ -265,7 +265,12 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
 
     folder_dict = create_folder_dict(folder_obj)
 
-    folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
+    max_items = 50
+    folder_limit = min(len(folder_dicts), max_items)
+    file_limit = max_items - folder_limit
+
+    folder_dict["children"] = folder_dicts[:folder_limit] + file_dicts[:file_limit]
+    # folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
 
     return folder_dict
 
