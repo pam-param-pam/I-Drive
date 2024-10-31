@@ -220,7 +220,11 @@
           ></item>
 
         </div>
-
+        <div class="pagination">
+          <button :disabled="currentPage === 1" @click="prevPage">Previous</button>
+          <span>Page {{ currentPage }} of {{ totalPages }}</span>
+          <button :disabled="currentPage === totalPages" @click="nextPage">Next</button>
+        </div>
         <input
           style="display: none"
           type="file"
@@ -350,7 +354,11 @@ export default {
          itemWeight: 0,
          searchItemsFound: null,
          contextMenuPos: {},
-         isContextMenuVisible: false
+         isContextMenuVisible: false,
+
+         //experimental
+         currentPage: 1,
+         totalPages: 10,
       }
    },
    watch: {
@@ -729,3 +737,37 @@ export default {
 
 }
 </script>
+<style scoped>
+.pagination {
+ display: flex !important;
+ justify-content: center !important;
+ align-items: center;
+ gap: 10px; /* Space between elements */
+ margin-top: 20px;
+}
+
+.pagination button {
+ background-color: #3498db;
+ border: none;
+ color: white;
+ padding: 8px 16px;
+ border-radius: 4px;
+ cursor: pointer;
+ font-size: 14px;
+ transition: background-color 0.3s;
+}
+
+.pagination button:hover:not(:disabled) {
+ background-color: #2980b9;
+}
+
+.pagination button:disabled {
+ background-color: #bdc3c7;
+ cursor: not-allowed;
+}
+
+.pagination span {
+ font-size: 16px;
+ color: #333;
+}
+</style>

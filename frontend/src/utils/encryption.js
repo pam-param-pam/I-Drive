@@ -73,7 +73,6 @@ function calculateCounter(bytesToSkip) {
       return 0
    }
 
-
    let blocksToSkip = Math.floor(bytesToSkip / 64) // ChaCha20 block size is 64 bytes
 
    return blocksToSkip

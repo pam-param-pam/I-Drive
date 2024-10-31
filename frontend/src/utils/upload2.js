@@ -244,7 +244,7 @@ export async function uploadRequest(request) {
             "frontend_id": attachment.fileObj.frontendId,
             "file_id": attachment.fileObj.fileId,
             "fragment_sequence": attachment.fragmentSequence,
-            "fragment_size": attachment.fileObj.size,
+            "fragment_size": attachment.rawBlob.size,
             "message_id": discord_response.data.id,
             "attachment_id": discord_response.data.attachments[i].id
          }
