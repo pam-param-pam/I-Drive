@@ -39,6 +39,9 @@
       <span v-if="file.status === uploadStatus.finishing">
         <b class="creating">{{ $t('uploadFile.finishing') }}</b>
       </span>
+      <span v-if="file.status === uploadStatus.encrypting">
+        <b class="creating">{{ $t('uploadFile.encrypting') }}</b>
+      </span>
       <span v-if="file.status === uploadStatus.failed">
         <b class="failed">{{ $t('uploadFile.failed') }}</b>
       </span>
@@ -74,7 +77,7 @@
 <script>
 import ProgressBar from "@/components/UploadProgressBar.vue"
 import { mapActions, mapState } from "pinia"
-import {useUploadStore} from "@/stores/uploadStore2.js";
+import {useUploadStore} from "@/stores/uploadStore.js";
 import { chunkSize, uploadStatus } from "@/utils/constants.js"
 
 export default {

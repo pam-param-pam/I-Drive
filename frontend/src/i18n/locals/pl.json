@@ -295,6 +295,7 @@
   "uploadFile": {
     "abortAll": "Przerwij wszystko",
     "creating": "Tworzenie...",
+    "encrypting": "szyfrowanie...",
     "failed": "Wystąpił nieznany bląd",
     "finishing": "Zapisywanie...",
     "generatingThumbnail": "Tworzenie podglądu",

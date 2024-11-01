@@ -1,3 +1,5 @@
+import sys
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -25,7 +27,12 @@ class Decryptor:
     def _increment_iv(self, bytes_to_skip):
         blocks_to_skip = bytes_to_skip // 16
         counter_int = int.from_bytes(self.iv, byteorder='big')
+        print("counter_int")
+        print(counter_int)
         counter_int += blocks_to_skip
+        print("counter_int2222")
+        print(counter_int)
+
         new_iv = counter_int.to_bytes(len(self.iv), byteorder='big')
         self.iv = new_iv
 
@@ -33,15 +40,7 @@ class Decryptor:
     def _calculate_nonce(self, bytes_to_skip: int):
         blocks_to_skip = bytes_to_skip // 64
         incremented_counter = blocks_to_skip.to_bytes(4, 'little')
-
-        print("blocks_to_skip")
-        print(blocks_to_skip)
-
-        print("incremented_counter")
-        print(incremented_counter)
-
         new_nonce = incremented_counter + self.iv
-
         return new_nonce
 
     def decrypt(self, raw_data):

@@ -154,13 +154,12 @@ def get_preview(request, file_obj: File):
 def get_thumbnail(request, file_obj: File):
     thumbnail_content = cache.get(f"thumbnail:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
     if not thumbnail_content:
-
+        thumbnail = file_obj.thumbnail
         if file_obj.is_encrypted:
-            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
-
+            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=thumbnail.iv)
 
         # todo potential security risk, without stream its possible to overload the server
-        url = discord.get_file_url(file_obj.thumbnail.message_id, file_obj.thumbnail.attachment_id)
+        url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
         discord_response = requests.get(url)
         if discord_response.ok:
             thumbnail_content = discord_response.content
@@ -213,7 +212,6 @@ def stream_file(request, file_obj: File):
 
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
-                print(headers)
                 async with session.get(url, headers=headers) as response:
                     if not response.ok:
                         print("===discord response error===")

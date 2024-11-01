@@ -1,5 +1,6 @@
-import { useUploadStore } from "@/stores/uploadStore2.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
+import { encryptionMethod } from "@/utils/constants.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -213,7 +214,23 @@ export async function getOrCreateFolder(fileObj) {
    }
    return parentFolder
 }
+export function ivToBase64(iv) {
+   // First, convert the Uint8Array to a regular binary string
+   let binary = '';
+   iv.forEach((byte) => binary += String.fromCharCode(byte));
 
-export function buildRequest(path) {
+   // Then, encode the binary string in Base64
+   return btoa(binary);
+}
+export function generateThumbnailIv(fileObj) {
+   if (fileObj.encryptionMethod === encryptionMethod.AesCtr) {
+      let iv = crypto.getRandomValues(new Uint8Array(16))
+      return ivToBase64(iv)
+   }
+   if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
+      let iv =  crypto.getRandomValues(new Uint8Array(12))
+      return ivToBase64(iv)
+
+   }
 
 }

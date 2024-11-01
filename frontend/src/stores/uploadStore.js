@@ -1,299 +1,237 @@
-import {defineStore} from "pinia"
+import { defineStore } from "pinia"
+import { convertUploadInput, prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { v4 as uuidv4 } from "uuid"
+import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
-import { createNeededFolders, handleCreatingFiles, prepareRequests, uploadOneRequest } from "@/utils/upload.js"
-import {useMainStore} from "@/stores/mainStore.js";
+import { useToast } from "vue-toastification"
 
+const toast = useToast()
 
-export const useUploadStoreOld = defineStore('upload', {
+export const useUploadStore = defineStore("upload2", {
    state: () => ({
       queue: [],
+      concurrentRequests: 0,
       filesUploading: [],
-      currentRequests: [],
-      dummyLength: 0,
-      uploadSpeedMap: new Map(),
-      requestQueue: [],
-      progressMap: new Map(),
-      etaMap: new Map(),
 
-      //new
-      isInternet: true,
-      requestsUploading: []
+      createdFolders: new Map(),
+      createdFiles: new Map(),
+
+      //UI
+      uploadSpeedMap: new Map(),
+      progressMap: new Map(),
+
+      //experimental
+      axiosRequests: new Map(),
+      pausedFiles: [],
+
+      //simply dumb
+      requestGenerator: null
    }),
 
    getters: {
       uploadSpeed() {
-         console.log("uploadSpeed")
          let uploadSpeed = Array.from(this.uploadSpeedMap.values()).reduce((sum, value) => sum + value, 0)
-         console.log(uploadSpeed)
+         if (isNaN(uploadSpeed)) {
+            return 0
+         }
 
          return uploadSpeed
       },
       eta() {
-         //todo LOL this is sooo wrong
-         let totalQueueSize = this.queue.reduce((accumulator, currentItem) => {
-            return accumulator + currentItem.size;
+         //calc all
+         // Sum up total size in 'queue'
+         let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
+
+         // Calculate remaining bytes to be uploaded in 'filesUploading'
+         let remainingUploadSize = this.filesUploading.reduce((total, item) => {
+
+            // Adjust progress to a decimal by dividing by 100
+            let uploadedSize = item.size * (item.progress / 100)
+            let remainingSize = item.size - uploadedSize;
+            return total + remainingSize;
          }, 0);
-         let totalFilesUploadingSize = this.filesUploading.reduce((accumulator, currentItem) => {
-            return accumulator + currentItem.size;
-         }, 0);
 
-         let requestQueue = this.requestQueue.reduce((accumulator, currentItem) => {
-            return accumulator + currentItem.fileObj.size;
-         }, 0);
+         // Total size left to upload
+         let totalSizeRemaining = totalQueueSize + remainingUploadSize
 
-         let allBytes = totalQueueSize + totalFilesUploadingSize + requestQueue
+         // Calculate ETA in seconds
+         let etaInSeconds = this.uploadSpeed > 0 ? totalSizeRemaining / this.uploadSpeed : Infinity
 
-         let etaSeconds = allBytes / this.uploadSpeed
-         return  etaSeconds
-
+         return etaInSeconds
       },
       filesInUploadCount() {
-         return this.queue.length + this.filesUploading.length
-      },
-      filesInUpload() {
-         let files = []
+         let queue = this.queue.length
+         let filesUploading = this.filesUploading.length
 
-         for (let file of this.filesUploading.values()) {
+         return queue + filesUploading
 
-            let id = file.file_id
-            let name = file.name
-            let parent_id = file.parent_id
-            let size = file.systemFile.size
-            let progress =  file.progress
-            let type = file.type
-            let status = file.status
-            files.push({
-               status,
-               type,
-               size,
-               id,
-               parent_id,
-               name,
-               progress,
-            })
-
-         }
-
-         // return files.sort((a, b) => a.progress - b.progress).slice(0, 10)
-         return files.sort((a, b) => a.progress - b.progress)
       },
       progress() {
-         return 0
-      },
+
+      }
 
    },
 
    actions: {
-      async startUpload(filesList, parent_folder) {
-         buttons.loading("upload")
-         window.addEventListener("beforeunload", beforeUnload)
+      async startUpload(type, folder_context, filesList) {
+         // buttons.loading("upload")
+         // window.addEventListener("beforeunload", beforeUnload)
 
-         console.log("filesList1:" + JSON.stringify(filesList))
+         let files = await convertUploadInput(type, folder_context, filesList)
+         //todo handle files.size == 0
+         this.queue.push(...files)
+         this.queue.sort()
 
-         filesList = await createNeededFolders(filesList, parent_folder)
-         console.log("filesList2:" + JSON.stringify(filesList))
-
-         filesList.sort((a, b) => a.file.size - b.file.size)
-
-         let createdFiles = await handleCreatingFiles(filesList)
-         console.log("createdFiles1:" + JSON.stringify(createdFiles))
-
-         for (let createdFile of createdFiles) {
-            this.addToQueue(createdFile)
-         }
-
-         await this.processUploads()
-
+         this.processUploads()
 
       },
       async processUploads() {
-
-         if (this.requestQueue.length === 0) {
-            let requests = await prepareRequests()
-            if (requests && requests.length > 0) {
-               this.requestQueue.push(...requests)
-            }
-         }
-
          const mainStore = useMainStore()
 
-         while (this.currentRequests < mainStore.settings.concurrentUploadRequests) {
-            buttons.loading("upload")
-            let request = await this.getRequestFromRequestQueue()
-            if (!request) {
-               console.warn("nothing more to process")
-               break
-            }
-            this.currentRequests++
-            let requestId = Math.random().toString(16).slice(2)
+         let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests
+         if (!canProcess) return
 
-            uploadOneRequest(request, requestId)
-
+         if (!this.requestGenerator) {
+            this.requestGenerator = prepareRequests()
          }
+         let generated = await this.requestGenerator.next()
 
 
-      },
-      getFileFromFilesUploading(file_id) {
-         let file_obj = this.filesUploading.find(item => item.file_id === file_id)
-         if (!file_obj) {
-            console.warn(`No queueItem found for file_id: ${file_id}`)
+         if (generated.done) {
+            console.info("The request generator is finished.")
+            this.requestGenerator = null
             return
          }
-         return file_obj
-      },
+         let request = generated.value
+         this.concurrentRequests++
 
-      async getFileFromQueue() {
-         console.warn("GETING FILE FROM QUEUE: ")
+         console.log("request")
+         console.log(request)
+
+         request.id = uuidv4()
+         request = await preUploadRequest(request) //todo only if request has chunked attachments
+
+         uploadRequest(request) //todo else do it in here
+
+         this.processUploads()
+
+      },
+      getFileFromQueue() {
+         console.info("GETING FILE FROM QUEUE: ")
 
          if (this.queue.length === 0) {
             console.warn("getFileFromQueue is empty, yet it was called idk why")
             return
          }
-         while (this.queue.length > 0) {
-            let file = this.queue[0];
-            console.log(file.name)
-            // Check if the file size is greater than 0
-            if (file.size > 0) {
-               this.queue.shift(); // Remove the file from the queue
-               this.filesUploading.push(file); // Add the file to the filesUploading array
 
+         let file = this.queue[0]
 
-               // Process the file as needed
-               return file;
-            } else {
-               // If the file size is 0, remove it from the queue and continue the loop
-               this.queue.shift()
-            }
-         }
+         let fileObj = file.fileObj
+         fileObj.status = uploadStatus.preparing
+         fileObj.progress = 0
 
+         this.filesUploading.push(fileObj)
+
+         this.queue.shift() // Remove the file from the queue
+         return file
       },
-      getRequestFromRequestQueue() {
-         if (this.requestQueue.length === 0) {
-            console.warn("getRequestFromRequestQueue is empty, yet it was called idk why")
-            return
+      setStatus(frontendId, status) {
+         let file = this.filesUploading.find(item => item.frontendId === frontendId)
+         if (file) {
+            file.status = status
+         } else {
+            console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
-
-         let request = this.requestQueue[0]
-         request.requestId = Math.random().toString(16).slice(2)
-         this.requestQueue.shift()
-         if (request.type === "chunked") {
-            //set source id policy to abort requests
-         }
-         if (request.type === "multiAttachment") {
-            //set source id policy to abort requests
-         }
-
-         return request
       },
-      addToQueue(item) {
-         console.log(item)
-         let file = {
-            name: item.name,
-            file_id: item.file_id,
-            systemFile: item.file,
-            size: item.file.size,
-            parent_id: item.parent_id,
-            type: item.type,
-            encryption_key: item.encryption_key,
-            encryption_iv: item.encryption_iv,
-            is_encrypted: item.is_encrypted,
-            status: "waiting",
-            progress: 0
-         }
-
-         this.queue.push(file)
-
-      },
-
-
-      finishUpload(file_id) {
-         let file_obj = this.getFileFromFilesUploading(file_id)
-         if (!file_obj) return
-
-         file_obj.status = "success"
+      finishFileUpload(frontendId) {
+         this.setStatus(frontendId, uploadStatus.uploaded)
          setTimeout(() => {
-            this.removeFileFromUpload(file_id)
+            //remove file from filesUploading
+            this.filesUploading = this.filesUploading.filter(item => item.frontendId !== frontendId)
 
          }, 2500)
 
       },
-      setStatus(file_id, status) {
-         let file_obj = this.getFileFromFilesUploading(file_id)
-         if (!file_obj) return
-
-         file_obj.status = status
-
-      },
-      setProgress(file_id, loadedBytes) {
-         let file_obj = this.getFileFromFilesUploading(file_id)
-         if (!file_obj) return
-
-         // Check if the key "file_id" exists
-         if (this.progressMap.has(file_id)) {
-            // Key exists, update the value
-            let currentValue = this.progressMap.get(file_id)
-            this.progressMap.set(file_id, currentValue + loadedBytes)
+      setProgress(frontendId, percentage) {
+         let file = this.filesUploading.find(item => item.frontendId === frontendId)
+         if (file) {
+            file.progress = percentage
          } else {
-            // Key does not exist, create it and set to 0
-            this.progressMap.set(file_id, 0)
-            file_obj.status = "uploading"
-
-         }
-
-         let totalLoadedBytes = this.progressMap.get(file_id)
-
-
-         let percentage = Math.round( (totalLoadedBytes / file_obj.size) * 100)
-
-         file_obj.progress = percentage
-
-      },
-
-      setMultiAttachmentProgress(file_ids, progress) {
-         let percentage = Math.round(progress * 100)
-
-         for (let file_id of file_ids) {
-            let file_obj = this.getFileFromFilesUploading(file_id)
-            if (!file_obj) continue
-
-            file_obj.status = "uploading"
-            file_obj.progress = percentage
-
+            console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
       },
-      removeFileFromUpload(file_id) {
-         this.filesUploading = this.filesUploading.filter(item => item.file_id !== file_id)
+      onUploadProgress(request, progressEvent) {
+         this.uploadSpeedMap.set(request.id, progressEvent.rate)
 
-         let isFinished = this.queue.length === 0 && this.requestQueue.length === 0 && this.filesUploading.length === 0
-         console.log("isFinished")
-         console.log(isFinished)
+         for (let attachment of request.attachments) {
+            let frontendId = attachment.fileObj.frontendId
 
-         if (isFinished) {
-            window.removeEventListener("beforeunload", beforeUnload)
-            buttons.success("upload")
+            if (attachment.type === attachmentType.entireFile) {
+               let progress = progressEvent.progress
+               let percentage = Math.round(progress * 100)
+               this.setProgress(frontendId, percentage)
+            } else if (attachment.type === attachmentType.chunked) {
+               let loadedBytes = progressEvent.bytes
+
+               if (this.progressMap.has(frontendId)) {
+                  // Key exists, update the value
+                  let currentValue = this.progressMap.get(frontendId)
+                  this.progressMap.set(frontendId, currentValue + loadedBytes)
+               } else {
+                  // Key does not exist, create it and set to 0
+                  this.progressMap.set(frontendId, 0)
+               }
+               let totalLoadedBytes = this.progressMap.get(frontendId)
+               let percentage = Math.round(totalLoadedBytes / attachment.fileObj.size * 100)
+               this.setProgress(attachment.fileObj.frontendId, percentage)
+            }
          }
-
       },
-      setUploadSpeedBytes(requestId, value) {
-         if (value === undefined) return
-         this.uploadSpeedMap.set(requestId, value)
+      finishRequest(requestId) {
+         console.log("finishRequest")
+         console.log(requestId)
+         buttons.success("upload")
 
-      },
-      setETA(requestId, value) {
-         console.log("set eta ")
-         if (value === undefined) return
-         this.etaMap.set(requestId, value)
+         this.concurrentRequests--
+         this.uploadSpeedMap.delete(requestId)
+         //this.etaMap.delete(requestId)
 
+         this.processUploads()
       },
-      resetUpload() {
 
-      },
       abortAll() {
-         //todo
-
 
       },
+      finishUpload() {
+         this.requestGenerator = null
+         this.queue = []
+         this.filesUploading = []
+         this.pausedFiles = []
+         this.axiosRequests = new Map()
+         this.createdFiles = new Map()
+         this.createdFolders = new Map()
+         this.uploadSpeedMap = new Map()
+         this.progressMap = new Map()
 
+         window.removeEventListener("beforeunload", beforeUnload)
+         buttons.success("upload")
+
+      },
+      resumeFile(frontendId) {
+         toast.info("errors.notImplemented")
+
+      },
+      pauseFile(frontendId) {
+         toast.info("errors.notImplemented")
+      },
+      cancelFile(frontendId) {
+         let abortController = this.axiosRequests.get("blabla");
+         if (abortController) {
+            abortController.abort(); // Cancel the request
+            console.log("Upload request canceled by user.");
+         }
+      },
    }
 })
 const beforeUnload = (event) => {

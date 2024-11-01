@@ -1,512 +1,287 @@
-import { create } from "@/api/folder.js"
-import i18n from "@/i18n/index.js"
 import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
-import { useUploadStore } from "@/stores/uploadStore2.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { useToast } from "vue-toastification"
-import { discord_instance } from "@/utils/networker.js"
-import { chunkSize } from "@/utils/constants.js"
-import buttons from "@/utils/buttons.js"
-import JSChaCha20 from "js-chacha20";
+import { attachmentType, discordFileName, uploadStatus, uploadType } from "@/utils/constants.js"
+import { detectExtension, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
+import { discord_instance } from "@/utils/networker.js"
+import { v4 as uuidv4 } from "uuid"
 
 
-const toast = useToast()
+export async function convertUploadInput(typeOfUpload, folderContext, uploadInput) {
+   /**
+    This method converts different uploadInputs into 1, standard one
+    */
+   console.warn("convertUploadInput")
 
+   let mainStore = useMainStore()
 
-function getVideoCover(file) {
-   console.log("getting video cover for file: ", file)
-   return new Promise((resolve, reject) => {
-      // load the file to a video player
-      const videoPlayer = document.createElement("video")
-      videoPlayer.setAttribute("src", URL.createObjectURL(file))
-      videoPlayer.load()
-      videoPlayer.addEventListener("error", (ex) => {
-         reject("error when loading video file", ex)
-      })
-      // load metadata of the video to get video duration and dimensions
-      videoPlayer.addEventListener("loadedmetadata", () => {
+   let uploadId = uuidv4()
+   let encryptionMethod = mainStore.settings.encryptionMethod
+   let isEncrypted = mainStore.settings.encryptFiles
 
-         let seekTo
-         // seek to defined timestamp (in seconds) if possible
-         if (videoPlayer.duration >= 30) {
-            seekTo = 30
-         } else if (videoPlayer.duration >= 20) {
-            seekTo = 20
-         } else if (videoPlayer.duration >= 10) {
-            seekTo = 10
-         } else if (videoPlayer.duration >= 5) {
-            seekTo = 5
-         } else {
-            seekTo = 0
-         }
+   let files = []
+   for (let i = 0; i < uploadInput.length; i++) {
+      let file = uploadInput[i]
+      let size = file.size
+      let name = file.name
+      let type = file.type
+      let frontendId = uuidv4()
 
-         // delay seeking or else 'seeked' event won't fire on Safari
-         setTimeout(() => {
-            videoPlayer.currentTime = seekTo
-         }, 200)
-         // extract video thumbnail once seeking is complete
-         videoPlayer.addEventListener("seeked", () => {
-            console.log("video is now paused at %ss.", seekTo)
-            // define a canvas to have the same dimension as the video
-            const canvas = document.createElement("canvas")
-            canvas.width = videoPlayer.videoWidth
-            canvas.height = videoPlayer.videoHeight
-            // draw the video frame to canvas
-            const ctx = canvas.getContext("2d")
-            ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
-            // return the canvas image as a blob
-            ctx.canvas.toBlob(
-               blob => {
-                  resolve(blob)
-               },
-               "image/jpeg",
-               0.75
-            )
-         })
-      })
-   })
-}
-
-async function generateThumbnail(fileObj) {
-   const mainStore = useMainStore()
-   const uploadStore = useUploadStore()
-   uploadStore.setStatus(fileObj.file_id, "generatingThumbnail")
-
-   try {
-      let thumbnail = await getVideoCover(fileObj.unecryptedFile)
-
-      if (fileObj.is_encrypted)
-         thumbnail = await encrypt(fileObj.encryption_key, fileObj.encryption_iv, thumbnail)
-
-
-      let formData = new FormData()
-      formData.append("file", thumbnail, `Kocham Alternatywki`)
-
-      let webhook = mainStore.settings.webhook
-
-      let response = await discord_instance.post(webhook, formData, {
-         headers: {
-            "Content-Type": "multipart/form-data"
-         }
-
-      })
-
-      let file_data = {
-         "file_id": fileObj.file_id,
-         "size": thumbnail.size,
-         "message_id": response.data.id,
-         "attachment_id": response.data.attachments[0].id
+      let path
+      if (typeOfUpload === uploadType.browserInput) {
+         path = file.webkitRelativePath
+      } else if (typeOfUpload === uploadType.dragAndDropInput) {
+         path = file.path
+      } else {
+         console.error("convertUploadInput: invalid type: " + typeOfUpload)
       }
-
-      await createThumbnail(file_data)
-
-   } catch (err) {
-      console.error(err)
-      const toast = useToast()
-      toast.error(i18n.global.t("toasts.thumbnailError", { name: fileObj.name }))
+      // Remove filename from path if it exists at the end
+      if (path && path.endsWith(file.name)) {
+         path = path.slice(0, -file.name.length - 1)
+      }
+      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, isEncrypted, size, type, name, frontendId }, "systemFile": file })
    }
 
+   console.log("files")
+   console.log(files)
+   return files
 }
 
-export async function createNeededFolders(files, parent_folder) {
+export async function* prepareRequests() {
    /**
-    * This function creates all folders needed for upload,
-    * and also creates a nice file structure with it's corresponding parent folder id
-    *
-    * {fileList} = {file: file, parent_id: parent_id}
-    *
-    * @param {event.currentTarget.files} files - list of file objects
-    * @param {string} parent_folder - folder object in which to upload to
+    this is a generator function!
     */
 
-
-   // check if we are uploading a folder or just files
-   let folder_upload =
-         files[0].webkitRelativePath !== undefined &&
-         files[0].webkitRelativePath !== ""
-
-   let fileList = []
-   let folder = parent_folder
-   //if we are uploading a folder, we need to create all folders that don't already exist
-   if (folder_upload) {
-      let folder_structure = {}
-
-      for (let file of files) {
-         console.log("====file====")
-         // file.webkitRelativePath np: "nowyFolder/kolejnyFolder/plik.ext"
-         let folder_list = file.webkitRelativePath.split("/").slice(0, -1)  // Get list of folders by removing the file name
-         // folder_list np: ['nowyFolder', 'kolejnyFolder']
-
-
-         for (let i = 1; i <= folder_list.length; i++) {
-            // idziemy od tyłu po liscie czyli jesli lista to np [a1, b2, c3, d4, e5, f6]
-            // to najpierw bedziemy mieli a1
-            // potem a1, b2
-            // potem a1, b2, c3
-            let folder_list_key = folder_list.slice(0, i).join("/")
-            if (!(folder_list_key in folder_structure)) {
-
-               // zapytanie API
-               // stwórz folder o nazwie folder_list[0:i][-1] z parent_id = file_structure[folder_list[0:i-1]]
-               let parent_list = folder_structure[folder_list.slice(0, i - 1).join("/")]
-               let parent_list_id
-               let chatgpt_folder_name = folder_list.slice(0, i)[folder_list.slice(0, i).length - 1]
-
-               if (parent_list) {
-                  parent_list_id = parent_list["id"]
-               } else {
-                  parent_list_id = parent_folder.id
-                  let message = i18n.global.t("toasts.folderCreated", { name: chatgpt_folder_name }).toString()
-
-                  toast.success(message)
-               }
-
-               folder = await create({ "parent_id": parent_list_id, "name": chatgpt_folder_name })
-               folder_structure[folder_list_key] = { "id": folder.id, "parent_id": parent_list_id }
-
-            }
-         }
-         fileList.push({ "parent_id": folder.id, "file": file })
-
-      }
-   } else {
-      // jeżeli uploadujemy pliki a nie foldery to nie musimy sie bawić w to całe gówno jak na górze XD
-      for (let file of files) {
-         fileList.push({ "parent_id": parent_folder.id, "file": file })
-      }
-   }
-   return fileList
-}
-
-async function createFiles(fileList, filesInRequest) {
-   let createdFiles = []
-
-   let file_res = await createFile({ "files": filesInRequest })
-
-   for (let created_file of file_res) {
-      let file = fileList[created_file.index].file
-
-      createdFiles.push({
-         "file_id": created_file.file_id, "encryption_key": created_file.key, "encryption_iv": created_file.iv, "file": file,
-         "parent_id": created_file.parent_id, "name": created_file.name, "type": created_file.type, "is_encrypted": created_file.is_encrypted,
-         "encryption_method": created_file.encryption_method
-      })
-   }
-   return createdFiles
-}
-
-export async function handleCreatingFiles(fileList) {
-   const mainStore = useMainStore()
-
-   console.log(fileList)
-   //sortujemy rozmiarami
-   fileList.sort((a, b) => a.file.size - b.file.size)
-   let createdFiles = []
-   let filesInRequest = []
-
-   for (let i = 0; i < fileList.length; i++) {
-      let fileObj = fileList[i]
-      console.log("fileObj")
-      console.log(fileObj)
-
-      let file_obj =
-         {
-            "name": fileObj.file.name,
-            "parent_id": fileObj.parent_id,
-            "mimetype": fileObj.file.type,
-            "extension": detectExtension(fileObj.file.name),
-            "size": fileObj.file.size,
-            "index": i,
-            "is_encrypted": mainStore.settings.encryptFiles,
-            "encryption_method": parseInt(mainStore.settings.encryptionMethod)
-
-         }
-
-      filesInRequest.push(file_obj)
-      if (filesInRequest.length >= 100) {
-         createdFiles.push(...await createFiles(fileList, filesInRequest))
-         filesInRequest = []
-      }
-   }
-   if (filesInRequest.length > 0) {
-      createdFiles.push(...await createFiles(fileList, filesInRequest))
-   }
-   /**
-    createdFiles looks like this:
-    "file_id": created_file.file_id, "encryption_key": created_file.key, "file": file, "parent_id": created_file.parent_id, "name": created_file.name}
-    */
-   return createdFiles
-}
-
-
-export async function prepareRequests() {
    const uploadStore = useUploadStore()
+   const mainStore = useMainStore()
+   let chunkSize = mainStore.user.maxDiscordMessageSize
 
    let totalSize = 0
-   let filesForRequest = []
+   let attachments = []
+
+   // eslint-disable-next-line no-constant-condition
+   while (true) {
+
+      let queueFile = uploadStore.getFileFromQueue()
+      if (!queueFile) break //we break if there are no more files in the queue
+
+      //CASE 1, file is > 25mb
+      if (queueFile.fileObj.size > chunkSize) {
+         //CASE 1.1, attachments already created, we yield the already created attachments in a request
+         if (attachments.length !== 0) {
+            let request = { "totalSize": totalSize, "attachments": attachments }
+            totalSize = 0
+            attachments = []
+            yield request
+         }
+
+         //CASE 1.2 attachments are not created, we create chunked requests from the big file
+         let i = 0
+         for (let j = 0; j < queueFile.fileObj.size; j += chunkSize) {
+            let chunk = queueFile.systemFile.slice(j, j + chunkSize)
+
+            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile.fileObj, "rawBlob": chunk, "fragmentSequence": i + 1 } //todo fragments shouldn't start at 1
+            attachments.push(attachment)
+            totalSize = totalSize + chunk.size
+
+            //CASE 1.2.1 chunk size is already 25mb, so we yield it in a request
+            if (totalSize === chunkSize) {
+               let request = { "totalSize": totalSize, "attachments": attachments }
+               totalSize = 0
+               attachments = []
+               yield request
+            }
+            i++
+         }
+      }
+      //CASE 2. file is < 25mb
+      else {
+         //CASE 2.1 file is <25 mb but totalSize including fileObj.size is > 25mb or attachments.length == 10
+         //we need to yield the already created attachments in a request
+         if (totalSize + queueFile.systemFile.size > chunkSize || attachments.length === 10) {
+            let request = { "totalSize": totalSize, "attachments": attachments }
+            totalSize = 0
+            attachments = []
+            yield request
+         }
+
+         //CASE 2.2 file is < 25mb and attachments length < 10, and we can safely add it to attachments
+         let attachment = { "type": attachmentType.entireFile, "fileObj": queueFile.fileObj, "rawBlob": queueFile.systemFile, "fragmentSequence": 1 }
+         attachments.push(attachment)
+         totalSize = totalSize + queueFile.systemFile.size
+      }
+
+      //We now need to generate a thumbnail if needed.
+      if (isVideoFile(queueFile)) {
+         let thumbnail = await getVideoCover(queueFile)
+
+         //CASE 1, totalSize including thumbnail.size is > 25mb or attachments.length == 10
+         if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
+            let request = { "totalSize": totalSize, "attachments": attachments }
+            totalSize = 0
+            attachments = []
+            yield request
+         }
+
+         //we have to generate a new iv to not reuse the file one
+         let iv = generateThumbnailIv(queueFile.fileObj)
+         let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail, "iv": iv}
+         attachments.push(attachment)
+         totalSize = totalSize + thumbnail.size
+      }
+
+   }
+   //we need to handle the already created attachments after break
+   if (attachments.length > 0) {
+      let request = { "totalSize": totalSize, "attachments": attachments }
+      yield request
+   }
+
+}
+
+export async function preUploadRequest(request) {
+   let uploadStore = useUploadStore()
+   let files = []
+   for (let i = 0; i < request.attachments.length; i++) {
+      let attachment = request.attachments[i]
+      if (attachment.type === attachmentType.entireFile || attachment.type === attachmentType.chunked) {
+         let fileObj = request.attachments[i].fileObj
+
+         let folderId = await getOrCreateFolder(fileObj)
+         request.attachments[i].fileObj.parent_id = folderId
+
+         let file_id = await getFileId(fileObj)
+         if (file_id) {
+            request.attachments[i].fileObj.file_id = file_id
+         } else {
+            uploadStore.setStatus(fileObj.frontendId, uploadStatus.creating)
+            let file_data = {
+               "name": fileObj.name,
+               "parent_id": folderId,
+               "mimetype": fileObj.type,
+               "extension": detectExtension(fileObj.name),
+               "size": fileObj.size,
+               "frontend_id": fileObj.frontendId,
+               "is_encrypted": fileObj.isEncrypted,
+               "encryption_method": parseInt(fileObj.encryptionMethod)
+            }
+            files.push(file_data)
+         }
+      }
+   }
+   if (files.length > 0) {
+      let backendFiles = await createFile({ "files": files })
+
+      // Monkey patch file_id, key, iv to request attachments
+      backendFiles.forEach(backendFile => {
+         uploadStore.setStatus(backendFile.frontend_id, uploadStatus.encrypting)
+
+         let matchingAttachment = request.attachments.find(att => att.fileObj.frontendId === backendFile.frontend_id)
+         if (matchingAttachment) {
+            matchingAttachment.fileObj.fileId = backendFile.file_id
+            matchingAttachment.fileObj.encryptionKey = backendFile.key
+            matchingAttachment.fileObj.encryptionIv = backendFile.iv
+
+            //save created file_id for future attachments
+            uploadStore.createdFiles[matchingAttachment.fileObj.frontendId] = backendFile.file_id
+         }
+      })
+   }
+   console.log("preUploadRequest")
+   console.log(request)
+   return request
+
+}
+
+export async function uploadRequest(request) {
+   let uploadStore = useUploadStore()
+   let mainStore = useMainStore()
+   let abortController = new AbortController()
+
+   uploadStore.axiosRequests.set("blabla", abortController) // Store it with key "blabla"
+
    let attachmentJson = []
    let fileFormList = new FormData()
+   for (let i = 0; i < request.attachments.length; i++) {
+      let attachment = request.attachments[i]
+      let encryptedBlob = await encrypt(attachment)
+      uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.uploading)
 
-
-   let peekFile = null
-   let fileObj = null
-   try {
-      // if peekFile.size > 25MB we either return previously created multiAttachment request,
-      // or if it doesn't exist, we create a new chunked requests from that peeked file
-      let i = 0
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-
-         peekFile = uploadStore.queue[0]
-         if (!peekFile) break
-         //CASE 1, file is > 25mb
-         if (peekFile.size > chunkSize) {
-
-            //CASE 1.1, multiAttachment request already created, we break to exit the loop and handle it below
-            if (filesForRequest.length !== 0) {
-               break
-            }
-
-            //CAS 1.2 multiAttachment request is not created, we create chunked requests from peekFile
-            fileObj = await uploadStore.getFileFromQueue()
-            if (!fileObj) break
-
-            //generate thumbnail if needed
-            if (isVideoFile(fileObj.systemFile)) {
-               await generateThumbnail(fileObj) //todo fix
-            }
-
-
-            let chunks = []
-            for (let j = 0; j < fileObj.systemFile.size; j += chunkSize) {
-               let chunk = fileObj.systemFile.slice(j, j + chunkSize)
-               chunks.push(chunk)
-            }
-
-            let requestList = []
-            for (let j = 0; j < chunks.length; j++) {
-               let request = { "type": "chunked", "fileObj": fileObj, "chunk": chunks[j], "chunkNumber": j + 1, "totalChunks": chunks.length }
-               requestList.push(request)
-            }
-            return requestList
-         }
-
-
-         //CASE 2.1 file is <25 mb but total size including peekFile is > 25mb or filesForRequest + peekFile > 10
-         //we need to return the already created multiAttachment request
-         if (totalSize + peekFile.size > chunkSize || filesForRequest.length + 1 >= 10) {
-            if (filesForRequest.length !== 0) {
-               return [{ "type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest }]
-            }
-         }
-
-         //CASE 2.2 file is < 25mb, and we can safely add it to multiAttachment
-         fileObj = await uploadStore.getFileFromQueue()
-         if (!fileObj) break
-         if (isVideoFile(fileObj.systemFile)) {
-            await generateThumbnail(fileObj)
-         }
-
-         filesForRequest.push(fileObj)
-         fileFormList.append(`files[${i}]`, fileObj.systemFile, `Kocham Alternatywki`)
-         attachmentJson.push({
-            "id": i,
-            "filename": `Kocham Alternatywki`
-         })
-         totalSize = totalSize + fileObj.size
-         i++
-
-      }
-      if (filesForRequest.length !== 0) {
-         return [{ "type": "multiAttachment", "fileFormList": fileFormList, "attachmentJson": attachmentJson, "filesForRequest": filesForRequest }]
-      }
-
-
-   } catch (e) {
-      console.error(e)
-      if (fileObj) {
-         uploadStore.setStatus(fileObj.file_id, "failed")
-      } else if (peekFile) {
-         uploadStore.setStatus(peekFile.file_id, "failed")
-
-      }
+      fileFormList.append(`files[${i}]`, encryptedBlob, discordFileName)
+      attachmentJson.push({
+         "id": i,
+         "filename": discordFileName
+      })
    }
-
-}
-
-export async function uploadOneRequest(request, requestId) {
-   const uploadStore = useUploadStore()
-
-   try {
-      if (request.type === "chunked") {
-         await uploadChunk(request.chunk, request.chunkNumber, request.totalChunks, request.fileObj, requestId)
-
-      }
-
-      if (request.type === "multiAttachment") {
-         await uploadMultiAttachments(request.fileFormList, request.attachmentJson, request.filesForRequest, requestId)
-      }
-      uploadStore.currentRequests--
-      uploadStore.uploadSpeedMap.delete(requestId)
-      uploadStore.processUploads()
-
-   } catch (e) {
-      console.error(e)
-
-      if (request.type === "chunked") {
-         uploadStore.setStatus(request.fileObj.file_id, "failed")
-      }
-      if (request.type === "multiAttachment") {
-         for (let file of request.filesForRequest) {
-            uploadStore.setStatus(file.file_id, "failed")
-
-         }
-      }
-   }
-
-
-}
-
-export async function uploadMultiAttachments(fileFormList, attachmentJson, filesForRequest, requestId) {
-   const uploadStore = useUploadStore()
-   const mainStore = useMainStore()
-
 
    let webhook = mainStore.settings.webhook
-
    fileFormList.append("json_payload", JSON.stringify({ "attachments": attachmentJson }))
-   let file_ids = filesForRequest.map(obj => obj.file_id)
 
-   let response = await discord_instance.post(webhook, fileFormList, {
+   let discord_response = await discord_instance.post(webhook, fileFormList, {
       headers: {
          "Content-Type": "multipart/form-data"
       },
       onUploadProgress: function(progressEvent) {
-         uploadStore.setUploadSpeedBytes(requestId, progressEvent.rate)
-         uploadStore.setETA(requestId, progressEvent.estimated)
-         // Pass the progress details to Vuex
-         uploadStore.setMultiAttachmentProgress(file_ids, progressEvent.progress)
-
-      }
-   })
-   for (let file_id of file_ids) {
-      uploadStore.setStatus(file_id, "finishing")
-   }
-
-   let response_list = []
-   for (let i = 0; i < response.data.attachments.length; i++) {
-      let attachment = response.data.attachments[i]
-
-      let file_data = {
-         "file_id": filesForRequest[i].file_id,
-         "fragment_sequence": 1,
-         "total_fragments": 1,
-         "fragment_size": filesForRequest[i].systemFile.size,
-         "message_id": response.data.id,
-         "attachment_id": attachment.id
-
-      }
-      response_list.push(file_data)
-
-   }
-
-   await patchFile({ "files": response_list })
-   for (let file_id of file_ids) {
-      uploadStore.finishUpload(file_id)
-   }
-
-   buttons.success("upload")
-
-
-}
-
-export async function uploadChunk(chunk, chunkNumber, totalChunks, fileObj, requestId) {
-
-
-   const uploadStore = useUploadStore()
-   const mainStore = useMainStore()
-
-   let webhook = mainStore.settings.webhook
-
-   let formData = new FormData()
-
-
-   formData.append("file", chunk, `Kocham Alternatywki`)
-
-   let response = await discord_instance.post(webhook, formData, {
-      headers: {
-         "Content-Type": "multipart/form-data"
+         uploadStore.onUploadProgress(request, progressEvent)
       },
-      onUploadProgress: function(progressEvent) {
+      signal: abortController.signal
 
-         uploadStore.setUploadSpeedBytes(requestId, progressEvent.rate)
-         uploadStore.setETA(requestId, progressEvent.estimated)
-
-         uploadStore.setProgress(fileObj.file_id, progressEvent.bytes)
-
-      }
    })
 
+   let filesData = []
+   let thumbnailData = []
 
-   let file_data = {
-      "file_id": fileObj.file_id, "fragment_sequence": chunkNumber, "total_fragments": totalChunks,
-      "fragment_size": chunk.size, "message_id": response.data.id, "attachment_id": response.data.attachments[0].id
+   for (let i = 0; i < request.attachments.length; i++) {
+      let attachment = request.attachments[i]
+      console.log("saving")
+      console.log(attachment)
+      if (attachment.type === attachmentType.entireFile || attachment.type === attachmentType.chunked) {
+         if (attachment.type === attachmentType.entireFile) {
+            //set status to finishing
+            uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.finishing)
+         }
+
+         let file_data = {
+            "frontend_id": attachment.fileObj.frontendId,
+            "file_id": attachment.fileObj.fileId,
+            "fragment_sequence": attachment.fragmentSequence,
+            "fragment_size": attachment.rawBlob.size,
+            "message_id": discord_response.data.id,
+            "attachment_id": discord_response.data.attachments[i].id
+         }
+         filesData.push(file_data)
+
+      } else if (attachment.type === attachmentType.thumbnail) {
+         let thumbnail_data = {
+            "file_id": attachment.fileObj.fileId,
+            "size": attachment.rawBlob.size,
+            "message_id": discord_response.data.id,
+            "attachment_id": discord_response.data.attachments[i].id,
+            "iv": attachment.iv,
+         }
+         thumbnailData.push(thumbnail_data)
+
+      }
    }
-   let res = await patchFile({ "files": [file_data] })
+   if (filesData.length > 0) {
+      let backendResponse = await patchFile({ "files": filesData })
 
-   //status 200 means the file is ready
-   if (res.status === 200) {
-      uploadStore.finishUpload(fileObj.file_id)
+      backendResponse.forEach(backendFile => {
+         if (backendFile.ready) {
+            uploadStore.finishFileUpload(backendFile.frontend_id)
+         }
+      })
    }
-   uploadStore.progressMap.delete(requestId)
+   if (thumbnailData.length > 0) {
+      await createThumbnail({ "thumbnails": thumbnailData })
 
-}
-
-function base64ToUint8Array(base64) {
-   let binaryString = window.atob(base64)
-   let len = binaryString.length
-   let bytes = new Uint8Array(len)
-   for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i)
    }
-   return bytes
+
+   uploadStore.finishRequest(request.id)
+
 }
 
-export async function encryptWithAesCtr(base64Key, base64IV, file) {
-
-   let key = base64ToUint8Array(base64Key)
-   let iv = base64ToUint8Array(base64IV)
-
-   let algorithm = { name: "AES-CTR", counter: iv, length: 64 }
-   let cryptoKey = await crypto.subtle.importKey(
-      "raw",
-      key,
-      algorithm,
-      false,
-      ["encrypt"]
-   )
-
-   let arrayBuffer = await file.arrayBuffer()
-   let encryptedArrayBuffer = await crypto.subtle.encrypt(
-      { name: "AES-CTR", counter: iv, length: 64 },
-      cryptoKey,
-      arrayBuffer
-   )
-
-   return new Blob([new Uint8Array(encryptedArrayBuffer)], { type: file.type })
-}
-
-export async function encryptWithChaCha20(base64Key, base64IV, file) {
-
-   let key = base64ToUint8Array(base64Key)
-   let iv = base64ToUint8Array(base64IV)
-
-   let arrayBuffer = await file.arrayBuffer()
-
-   let encryptedData = new JSChaCha20(key, iv).encrypt(new Uint8Array(arrayBuffer))
 
 
-   return new Blob([new Uint8Array(encryptedData)], { type: file.type })
-}

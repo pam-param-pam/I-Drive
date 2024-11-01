@@ -163,6 +163,7 @@
     "webhookMissing": ""
   },
   "uploadFile": {
+    "encrypting": "",
     "paused": "Paused",
     "preparingUpload": "",
     "success": "Uploaded"

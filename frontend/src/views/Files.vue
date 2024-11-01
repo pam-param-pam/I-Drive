@@ -37,7 +37,7 @@ import { checkFilesSizes } from "@/utils/uploadHelper.js"
 import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import { useUploadStore } from "@/stores/uploadStore2.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 import { scanDataTransfer } from "@/utils/uploadHelper.js"
 
 export default {

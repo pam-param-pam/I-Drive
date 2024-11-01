@@ -52,69 +52,38 @@ export async function encryptWithChaCha20(base64Key, base64IV, file, bytesToSkip
 
    return new Blob([new Uint8Array(encryptedData)], { type: file.type })
 }
-// Convert the byte array to an integer (big-endian)
-function bytesToInt(byteArray) {
-   let value = 0; // Regular number
-   for (let i = 0; i < byteArray.length; i++) {
-      value = (value << 8) | byteArray[i];
-      if (value < 0) {
-         // Handle overflow if needed
-         console.warn('Value has exceeded safe integer limit.');
-      }
-   }
-   return value
-}
-function intToBytes(length, int) {
-   const byteArray = new Uint8Array(length);
-   for (let i = length - 1; i >= 0; i--) {
-      byteArray[i] = int & 0xff; // Get the last 8 bits of the integer
-      int = int >> 8; // Shift the integer 8 bits to the right
-   }
-   return byteArray;
-}
-// Function to add two Uint16Arrays with a fixed length of 16
-function addUint16ArraysFixedLength(arr1, arr2) {
-   // Create a new Uint16Array to hold the result with a fixed length of 16
-   const result = new Uint16Array(16);
 
-   // Loop through each index in the result array
-   for (let i = 0; i < result.length; i++) {
-      const val1 = arr1[i % arr1.length] || 0; // Wrap around arr1
-      const val2 = arr2[i % arr2.length] || 0; // Wrap around arr2
-      result[i] = val1 + val2;
-
-      // Optionally, cap the value at maximum Uint16
-      if (result[i] > 0xFFFF) {
-         result[i] = 0xFFFF; // Cap at maximum Uint16 value
-      }
-   }
-
-   return result;
-}
 
 // AES Counter (CTR) Helper for IV Increment
 function incrementIV(iv, bytesToSkip) {
+   if (bytesToSkip === 0) {
+      return iv
+   }
 
-   console.log("iv")
-   console.log(iv)
-   let blocksToSkip = Math.floor(bytesToSkip / 16)
-   console.log("blocksToSkip")
-   console.log(blocksToSkip)
+   // Copy the input array so we don’t mutate the original
+   let ivArray = new Uint8Array(iv);
 
+   // Calculate how many blocks have been processed
+   let blocksProcessed = Math.floor(bytesToSkip / 16);
 
-   let adjustedCounter = intToBytes(iv.length, blocksToSkip); // Convert to 16-byte big-endian array
-   console.log("adjustedCounter")
-   console.log(adjustedCounter)
+   // Extract current counter from the last 4 bytes
+   let counter = (
+      (ivArray[12] << 24) |
+      (ivArray[13] << 16) |
+      (ivArray[14] << 8) |
+      ivArray[15]
+   ) >>> 0; // Ensure it's treated as unsigned
 
+   // Increment the counter by the number of blocks processed
+   counter = (counter + blocksProcessed) >>> 0; // Ensure overflow wraps around
 
-   let newIv = addUint16ArraysFixedLength(iv, adjustedCounter);
+   // Update the last 4 bytes in the array with the new counter
+   ivArray[12] = (counter >>> 24) & 0xff;
+   ivArray[13] = (counter >>> 16) & 0xff;
+   ivArray[14] = (counter >>> 8) & 0xff;
+   ivArray[15] = counter & 0xff;
 
-   console.log("newIv")
-   console.log(newIv)
-
-
-
-   return newIv
+   return ivArray;
 
 }
 
@@ -137,16 +106,19 @@ export async function encrypt(attachment) {
    if (attachment.type === attachmentType.chunked) {
       bytesToSkip = chunkSize * (attachment.fragmentSequence-1)
    }
-   console.log("bytesToSkip11111111111111")
-   console.log(bytesToSkip)
 
    let fileObj = attachment.fileObj
    let encrypMethod = fileObj.encryptionMethod
+
+   let iv = fileObj.encryptionIv
+   if (attachment.type === attachmentType.thumbnail) {
+      iv = attachment.iv
+   }
    if (encrypMethod === encryptionMethod.ChaCha20) {
-      return await encryptWithChaCha20(fileObj.encryptionKey, fileObj.encryptionIv, attachment.rawBlob, bytesToSkip)
+      return await encryptWithChaCha20(fileObj.encryptionKey, iv, attachment.rawBlob, bytesToSkip)
 
    } else if (encrypMethod === encryptionMethod.AesCtr) {
-      return await encryptWithAesCtr(fileObj.encryptionKey, fileObj.encryptionIv, attachment.rawBlob, bytesToSkip)
+      return await encryptWithAesCtr(fileObj.encryptionKey, iv, attachment.rawBlob, bytesToSkip)
 
    } else {
       console.warn("encrypt: invalid encryptionMethod: " + encrypMethod)

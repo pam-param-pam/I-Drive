@@ -47,7 +47,7 @@
 <script>
 import UploadFile from "@/components/UploadFile.vue"
 import {mapActions, mapState} from "pinia"
-import {useUploadStore} from "@/stores/uploadStore2.js"
+import {useUploadStore} from "@/stores/uploadStore.js"
 import {filesize} from "@/utils/index.js"
 
 export default {

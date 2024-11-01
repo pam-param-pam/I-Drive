@@ -371,6 +371,8 @@ class Thumbnail(models.Model):
     attachment_id = models.CharField(max_length=255)
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
+    iv = models.BinaryField()
+    # key = models.BinaryField()
 
     def __str__(self):
         return self.file.name

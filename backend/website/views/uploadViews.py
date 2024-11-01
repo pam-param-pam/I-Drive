@@ -1,3 +1,4 @@
+import base64
 import math
 
 from django.http import JsonResponse, HttpResponse
@@ -216,6 +217,9 @@ def create_thumbnail(request):
         message_id = thumbnail['message_id']
         attachment_id = thumbnail['attachment_id']
         size = thumbnail['size']
+        iv = thumbnail['iv']
+        # key = thumbnail['key']
+        iv = base64.b64decode(iv)
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)
@@ -231,6 +235,7 @@ def create_thumbnail(request):
             message_id=message_id,
             attachment_id=attachment_id,
             size=size,
+            iv=iv,
         )
         thumbnail_obj.save()
 

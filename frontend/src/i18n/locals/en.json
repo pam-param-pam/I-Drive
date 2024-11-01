@@ -295,6 +295,7 @@
   "uploadFile": {
     "abortAll": "Abort all",
     "creating": "Creating...",
+    "encrypting": "encrypting...",
     "failed": "Failed, unknown error",
     "finishing": "Saving file...",
     "generatingThumbnail": "Generating thumbnail",
