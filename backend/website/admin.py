@@ -96,7 +96,7 @@ class FolderAdmin(admin.ModelAdmin):
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'formatted_nonce', 'streamable', 'ready', "created_at", "size", "media_tag")
+    readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'streamable', 'ready', "created_at", "size", "media_tag")
     ordering = ["-created_at"]
     list_display = ["name", "parent", "readable_size", "owner", "ready",  "created_at",
                     "inTrash", "_is_locked"]
@@ -132,12 +132,8 @@ class FileAdmin(admin.ModelAdmin):
     def formatted_iv(self, obj: File):
         return obj.get_base64_iv()
 
-    def formatted_nonce(self, obj: File):
-        return obj.get_base64_nonce()
-
     formatted_key.short_description = "Encryption key (base64)"
     formatted_iv.short_description = "Encryption iv (base64)"
-    formatted_nonce.short_description = "Encryption nonce (base64)"
 
     media_tag.short_description = 'PREVIEW MEDIA FILE'
 

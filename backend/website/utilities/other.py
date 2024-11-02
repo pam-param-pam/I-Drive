@@ -119,7 +119,6 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         'created': formatDate(file_obj.created_at),
         'last_modified': formatDate(file_obj.last_modified_at),
         'isLocked': file_obj.is_locked,
-        'is_encrypted': file_obj.is_encrypted,
         'encryption_method': file_obj.encryption_method
 
     }

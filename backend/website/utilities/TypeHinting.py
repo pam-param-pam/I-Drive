@@ -25,7 +25,6 @@ class FileDict(TypedDict):
     created: str
     last_modified: str
     isLocked: bool
-    is_encrypted: bool
     encryption_method: int
     lockFrom: Optional[ShortUUIDField]
     in_trash_since: Optional[str]

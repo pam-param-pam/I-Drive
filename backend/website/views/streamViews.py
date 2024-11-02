@@ -155,7 +155,7 @@ def get_thumbnail(request, file_obj: File):
     thumbnail_content = cache.get(f"thumbnail:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
     if not thumbnail_content:
         thumbnail = file_obj.thumbnail
-        if file_obj.is_encrypted:
+        if file_obj.is_encrypted():
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=thumbnail.iv)
 
         # todo potential security risk, without stream its possible to overload the server
@@ -163,7 +163,7 @@ def get_thumbnail(request, file_obj: File):
         discord_response = requests.get(url)
         if discord_response.ok:
             thumbnail_content = discord_response.content
-            if file_obj.is_encrypted:
+            if file_obj.is_encrypted():
                 thumbnail_content = decryptor.decrypt(thumbnail_content)
                 decryptor.finalize()
 
@@ -204,7 +204,7 @@ def stream_file(request, file_obj: File):
 
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
-            if file_obj.is_encrypted:
+            if file_obj.is_encrypted():
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
@@ -228,7 +228,7 @@ def stream_file(request, file_obj: File):
                     total_bytes = 0
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         # If the file is encrypted, decrypt it asynchronously
-                        if file_obj.is_encrypted:
+                        if file_obj.is_encrypted():
                             start_time = time.perf_counter()
                             decrypted_data = decryptor.decrypt(raw_data)
                             end_time = time.perf_counter()
@@ -243,7 +243,7 @@ def stream_file(request, file_obj: File):
                     print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
                 index += 1
-            if file_obj.is_encrypted:
+            if file_obj.is_encrypted():
                 yield decryptor.finalize()
 
     # parse range header to get start byte and end byte
@@ -314,7 +314,7 @@ def stream_zip_files(request, token):
     async def stream_zip_file(file_obj: File, fragments, chunk_size=8192):
         print(f"========={file_obj.name}=========")
 
-        if file_obj.is_encrypted:
+        if file_obj.is_encrypted():
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
         async for fragment in fragments:
@@ -329,7 +329,7 @@ def stream_zip_files(request, token):
                     # Asynchronously iterate over the content in chunks
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         # If the file is encrypted, decrypt it asynchronously
-                        if file_obj.is_encrypted:
+                        if file_obj.is_encrypted():
                             decrypted_data = decryptor.decrypt(raw_data)
                             yield decrypted_data
                         else:

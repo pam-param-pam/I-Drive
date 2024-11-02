@@ -40,5 +40,6 @@ class EventCode(Enum):
 
 
 class EncryptionMethod(Enum):
+    Not_Encrypted = 0
     AES_CTR = 1
     CHA_CHA_20 = 2

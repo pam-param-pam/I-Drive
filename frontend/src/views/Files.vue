@@ -191,6 +191,11 @@ export default {
 
       },
       async beginUpload(type, folderContextId, files) {
+         if (!this.settings.webhook) {
+            this.$toast.error("toasts.webhookMissing")
+            return
+         }
+
          if (await checkFilesSizes(files)) {
             this.showHover({
                prompt: "NotOptimizedForSmallFiles",
@@ -248,12 +253,6 @@ export default {
 
       },
       upload() {
-         console.log(this.settings)
-         if (!this.settings.webhook) {
-            let message = this.$t("toasts.webhookMissing")
-            this.$toast.error(message)
-            return
-         }
 
          if (
             typeof window.DataTransferItem !== "undefined" &&

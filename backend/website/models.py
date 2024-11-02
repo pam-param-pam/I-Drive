@@ -159,7 +159,6 @@ class File(models.Model):
     lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     key = models.BinaryField()
     iv = models.BinaryField(null=True)
-    is_encrypted = models.BooleanField(default=True)
     webhook = models.TextField(null=False, blank=False)
     encryption_method = models.SmallIntegerField()
 
@@ -218,6 +217,8 @@ class File(models.Model):
                 self.iv = secrets.token_bytes(16)
             elif encryption_method == EncryptionMethod.CHA_CHA_20:
                 self.iv = secrets.token_bytes(12)
+            elif encryption_method == EncryptionMethod.Not_Encrypted:
+                pass
             else:
                 raise ValueError(f"Encryption Method is invalid: {self.encryption_method}")
 
@@ -231,6 +232,9 @@ class File(models.Model):
 
     def get_base64_iv(self):
         return base64.b64encode(self.iv).decode('utf-8')
+
+    def is_encrypted(self):
+        return self.get_encryption_method() != EncryptionMethod.Not_Encrypted
 
     def delete(self, *args, **kwargs):
         # invalidate any cache
@@ -272,7 +276,6 @@ class UserSettings(models.Model):
     view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
-    encrypt_files = models.BooleanField(default=True)
     concurrent_upload_requests = models.SmallIntegerField(default=4)
     subfolders_in_shares = models.BooleanField(default=False)
     discord_webhook = models.TextField(null=True)
@@ -371,8 +374,8 @@ class Thumbnail(models.Model):
     attachment_id = models.CharField(max_length=255)
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     message_id = models.CharField(max_length=255)
-    iv = models.BinaryField()
-    # key = models.BinaryField()
+    iv = models.BinaryField(null=True)
+    key = models.BinaryField(null=True)
 
     def __str__(self):
         return self.file.name

@@ -41,7 +41,6 @@ def create_file(request):
             mimetype = file['mimetype']
             file_size = file['size']
             frontend_id = file['frontend_id']
-            is_encrypted = file['is_encrypted']
             encryption_method = file['encryption_method']
 
             _ = EncryptionMethod(encryption_method)  # validate encryption_method if its wrong it will raise KeyError which will be caught
@@ -65,7 +64,6 @@ def create_file(request):
                 type=file_type,
                 owner_id=request.user.id,
                 parent=parent,
-                is_encrypted=is_encrypted,
                 encryption_method=encryption_method,
             )
             #  apply lock if needed
@@ -76,14 +74,13 @@ def create_file(request):
                 file_obj.ready = True
 
             file_obj.save()
-            key = file_obj.get_base64_key()
-            iv = file_obj.get_base64_iv()
-            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
-                                  "type": file_type, "is_encrypted": file_obj.is_encrypted, "encryption_method": file_obj.encryption_method}
 
-            if file_obj.is_encrypted:
-                file_response_dict['key'] = key
-                file_response_dict['iv'] = iv
+            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
+                                  "type": file_type, "encryption_method": file_obj.encryption_method}
+
+            if file_obj.is_encrypted():
+                file_response_dict['key'] = file_obj.get_base64_key()
+                file_response_dict['iv'] = file_obj.get_base64_iv()
 
             response_json.append(file_response_dict)
 
@@ -200,7 +197,7 @@ def create_file(request):
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-@handle_common_errors
+# @handle_common_errors
 def create_thumbnail(request):
     thumbnails = request.data['thumbnails']
     if not isinstance(thumbnails, list):
@@ -217,11 +214,19 @@ def create_thumbnail(request):
         message_id = thumbnail['message_id']
         attachment_id = thumbnail['attachment_id']
         size = thumbnail['size']
-        iv = thumbnail['iv']
-        # key = thumbnail['key']
-        iv = base64.b64decode(iv)
+        iv = thumbnail.get('iv')
+        # key = thumbnail.get('key')
 
         file_obj = get_file(file_id)
+
+        if file_obj.is_encrypted() and (not iv): # or not key
+            raise BadRequestError("Encryption key and iv not provided")
+
+        if iv:
+            iv = base64.b64decode(iv)
+        # if key:
+        #     key = base64.b64decode(key)
+
         check_resource_perms(request, file_obj, checkReady=False)
 
         try:

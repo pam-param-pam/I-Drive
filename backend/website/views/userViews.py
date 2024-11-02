@@ -77,8 +77,7 @@ def users_me(request):
                              "dateFormat": settings.date_format,
                              "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
                              "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
-                             "webhook": settings.discord_webhook, "encryptFiles": settings.encrypt_files,
-                             "concurrentUploadRequests": settings.concurrent_upload_requests,
+                             "webhook": settings.discord_webhook, "concurrentUploadRequests": settings.concurrent_upload_requests,
                              "encryptionMethod": encryptionMethod.value
                              }}
 
@@ -92,7 +91,6 @@ def users_me(request):
 def update_settings(request):
     locale = request.data.get('locale')
     hideLockedFolders = request.data.get('hideLockedFolders')
-    encryptFiles = request.data.get('encryptFiles')
     concurrentUploadRequests = request.data.get('concurrentUploadRequests')
     dateFormat = request.data.get('dateFormat')
     viewMode = request.data.get('viewMode')
@@ -109,8 +107,6 @@ def update_settings(request):
         settings.date_format = dateFormat
     if isinstance(hideLockedFolders, bool):
         settings.hide_locked_folders = hideLockedFolders
-    if isinstance(encryptFiles, bool):
-        settings.encrypt_files = encryptFiles
     if isinstance(concurrentUploadRequests, int):
         settings.concurrent_upload_requests = concurrentUploadRequests
     if viewMode in ["list", "mosaic", "mosaic gallery"]:
