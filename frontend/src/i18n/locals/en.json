@@ -281,6 +281,7 @@
     "itemsMovedToTrash": "Moved to Trash!",
     "itemsRestoredFromTrash": "Restored items from Trash!",
     "movedItems": "Moved items!",
+    "noEncryptionWarning": "Warning: file encryption is turned off",
     "passwordIsBeingUpdated": "Folder password is updating...",
     "passwordIsRequired": "Password is required for access",
     "passwordUpdated": "Password updated!",

@@ -281,6 +281,7 @@
     "itemsMovedToTrash": "Przeniesiono do kosza!",
     "itemsRestoredFromTrash": "Przywrócono z kosza!",
     "movedItems": "Przeniesiono itemy!",
+    "noEncryptionWarning": "Uwaga: szyfrowanie plików jest wylączone",
     "passwordIsBeingUpdated": "Hasło do folderu jest zmieniane...",
     "passwordIsRequired": "Hasło jest wymagane",
     "passwordUpdated": "Hasło zostało zaktualizowane!",

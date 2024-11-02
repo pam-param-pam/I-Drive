@@ -162,6 +162,7 @@
     "itemMoved": "Mowed {amount} itwems (ᗒᗨᗕ)",
     "itemMovedToTrash": "Mowed {amount} itwems to twash hehe",
     "itemRenamed": "Nyame changed",
+    "noEncryptionWarning": "",
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
     "webhookMissing": ""
   },

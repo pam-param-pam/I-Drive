@@ -31,7 +31,7 @@ import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import FileListing from "@/views/files/FileListing.vue"
 import { getItems } from "@/api/folder.js"
-import { name, uploadType } from "@/utils/constants.js"
+import { encryptionMethod, name, uploadType } from "@/utils/constants.js"
 import { search } from "@/api/search.js"
 import { checkFilesSizes } from "@/utils/uploadHelper.js"
 import { createZIP } from "@/api/item.js"
@@ -192,8 +192,11 @@ export default {
       },
       async beginUpload(type, folderContextId, files) {
          if (!this.settings.webhook) {
-            this.$toast.error("toasts.webhookMissing")
+            this.$toast.error(this.$t("toasts.webhookMissing"))
             return
+         }
+         if (this.settings.encryptionMethod === encryptionMethod.NotEncrypted) {
+            this.$toast.info(this.$t("toasts.noEncryptionWarning"))
          }
 
          if (await checkFilesSizes(files)) {
