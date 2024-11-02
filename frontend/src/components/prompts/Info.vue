@@ -36,15 +36,10 @@
 
       </p>
 
-      <p v-if="is_encrypted !== null">
-        <strong>{{ $t("prompts.isEncrypted") }}:</strong>
-        <span v-if="is_encrypted" class="checkmark-true"></span> <!-- Green checkmark emoji -->
-        <span v-else class="checkmark-false"></span> <!-- Red cross emoji -->
-      </p>
-
       <p v-if="encryptionMethod">
-        <strong>{{ $t("settings.encryptionMethod") }}:</strong> {{ encryptionMethod }}
-
+        <strong>{{ $t("settings.encryptionMethod") }}:</strong> {{ $t(encryptionMethod) }}
+        <span v-if="is_encrypted" class="checkmark-true"></span>
+        <span v-else class="checkmark-false"></span>
       </p>
 
       <p v-if="owner">
@@ -225,7 +220,7 @@ export default {
       is_encrypted() {
          if (this.selectedCount === 1) {
             if (this.selected[0].isDir) return null
-            return this.selected[0].is_encrypted
+            return this.selected[0].encryption_method !== 0
          }
          return null
       },

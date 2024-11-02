@@ -1,7 +1,7 @@
 <template>
   <select v-on:change="change" :value="encryptionMethod">
     <option v-for="(method, value) in encryptionMethods" :key="value" :value="value">
-      {{ method }}
+      {{ $t(method) }}
     </option>
   </select>
 </template>

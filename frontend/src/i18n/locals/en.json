@@ -206,6 +206,8 @@
     "video": "Video"
   },
   "settings": {
+    "AES_CTR": "AES CTR",
+    "ChaCha20": "ChaCha20",
     "ShareName": "Name",
     "changePassword": "Change password",
     "concurrentUploadRequests": "Concurrent upload requests",
@@ -216,6 +218,7 @@
     "language": "Language",
     "newPassword": "Your new password",
     "newPasswordConfirm": "Confirm your new password",
+    "notEncrypted": "No encryption",
     "password": "Password",
     "passwordUpdated": "Password updated!",
     "path": "Path",

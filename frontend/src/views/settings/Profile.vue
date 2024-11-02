@@ -20,10 +20,6 @@
             <input type="checkbox" v-model="dateFormat"/>
             {{ $t("settings.setDateFormat") }}
           </p>
-          <p>
-            <input type="checkbox" v-model="encryptFiles"/>
-            {{ $t("settings.encryptFiles") }}
-          </p>
           <div>
             <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
             <input
@@ -147,7 +143,6 @@ export default {
          webhook: "",
          theme: "",
          concurrentUploadRequests: 4,
-         encryptFiles: true,
          encryptionMethod: null
       }
    },
@@ -172,7 +167,6 @@ export default {
       this.locale = this.settings.locale
       this.hideLockedFolders = this.settings.hideLockedFolders
       this.subfoldersInShares = this.settings.subfoldersInShares
-      this.encryptFiles = this.settings.encryptFiles
       this.webhook = this.settings.webhook
       this.dateFormat = this.settings.dateFormat
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
@@ -205,7 +199,6 @@ export default {
             locale: this.locale,
             subfoldersInShares: this.subfoldersInShares,
             hideLockedFolders: this.hideLockedFolders,
-            encryptFiles: this.encryptFiles,
             dateFormat: this.dateFormat,
             webhook: this.webhook,
             concurrentUploadRequests: this.concurrentUploadRequests,

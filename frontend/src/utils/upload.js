@@ -19,7 +19,6 @@ export async function convertUploadInput(typeOfUpload, folderContext, uploadInpu
 
    let uploadId = uuidv4()
    let encryptionMethod = mainStore.settings.encryptionMethod
-   let isEncrypted = mainStore.settings.encryptFiles
 
    let files = []
    for (let i = 0; i < uploadInput.length; i++) {
@@ -41,7 +40,7 @@ export async function convertUploadInput(typeOfUpload, folderContext, uploadInpu
       if (path && path.endsWith(file.name)) {
          path = path.slice(0, -file.name.length - 1)
       }
-      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, isEncrypted, size, type, name, frontendId }, "systemFile": file })
+      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId }, "systemFile": file })
    }
 
    console.log("files")
@@ -164,7 +163,6 @@ export async function preUploadRequest(request) {
                "extension": detectExtension(fileObj.name),
                "size": fileObj.size,
                "frontend_id": fileObj.frontendId,
-               "is_encrypted": fileObj.isEncrypted,
                "encryption_method": parseInt(fileObj.encryptionMethod)
             }
             files.push(file_data)

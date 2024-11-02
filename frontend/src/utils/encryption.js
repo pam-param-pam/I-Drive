@@ -94,7 +94,10 @@ function calculateCounter(bytesToSkip) {
 }
 
 export async function encrypt(attachment) {
-   if (!attachment.fileObj.isEncrypted) {
+   let fileObj = attachment.fileObj
+   let encrypMethod = fileObj.encryptionMethod
+
+   if (encrypMethod === encryptionMethod.NotEncrypted) {
       return attachment.rawBlob
    }
    let bytesToSkip = 0
@@ -102,9 +105,6 @@ export async function encrypt(attachment) {
    if (attachment.type === attachmentType.chunked) {
       bytesToSkip = chunkSize * (attachment.fragmentSequence - 1)
    }
-
-   let fileObj = attachment.fileObj
-   let encrypMethod = fileObj.encryptionMethod
 
    let iv = fileObj.encryptionIv
    if (attachment.type === attachmentType.thumbnail) {

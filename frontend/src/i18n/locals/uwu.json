@@ -114,6 +114,8 @@
     "video": "Video (・ω・)"
   },
   "settings": {
+    "AES_CTR": "",
+    "ChaCha20": "",
     "ShareName": "Nyame *blushes*",
     "changePassword": "Change passwowd ɾ⚈▿⚈ɹ",
     "currentPassword": "Youw cuwwent passwowd",
@@ -122,6 +124,7 @@
     "language": "Wanguage uwu",
     "newPassword": "Youw nyew passwowd",
     "newPasswordConfirm": "Confiwm youw nyew passwowd *giggles*",
+    "notEncrypted": "",
     "password": "Passwowd *blushes*",
     "passwordUpdated": "Passwowd u-updated! *blushes*",
     "path": "Path murr~",
