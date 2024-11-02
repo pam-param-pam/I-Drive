@@ -117,10 +117,10 @@ export default {
          this.addSelected(this.item)
       },
 
-      humanSize: function () {
+      humanSize() {
          return this.type === "invalid_link" ? "invalid link" : filesize(this.item.size)
       },
-      humanTime: function () {
+      humanTime() {
 
          if (this.settings.dateFormat) {
             return moment(this.item.created, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
@@ -133,7 +133,7 @@ export default {
          return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
       },
 
-      dragStart: function () {
+      dragStart() {
          if (this.selectedCount === 0) {
             this.addSelected(this.item)
             return
@@ -145,7 +145,7 @@ export default {
          }
       },
 
-      dragOver: function (event) {
+      dragOver(event) {
          if (!this.canDrop) return
 
          let el = event.target

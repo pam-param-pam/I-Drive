@@ -77,7 +77,7 @@ export default {
       document.removeEventListener("mouseup", this.onMouseUp)
    },
    watch: {
-      src: function () {
+      src() {
          if (!this.decodeUTIF()) {
             this.$refs.imgex.src = this.src
          }

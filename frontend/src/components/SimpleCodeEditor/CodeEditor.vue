@@ -34,7 +34,7 @@
         <closeButton @click="$emit('close')"></closeButton>
 
         <Dropdown
-          v-if="displayThemes"
+          v-if="displayLanguage"
           :width="themeListWidth"
           :title="localTheme[1]"
           :disabled="themes.length <= 1"

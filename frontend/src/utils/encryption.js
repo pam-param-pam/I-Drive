@@ -44,8 +44,6 @@ export async function encryptWithChaCha20(base64Key, base64IV, file, bytesToSkip
 
    let counter = calculateCounter(bytesToSkip)
    let arrayBuffer = await file.arrayBuffer()
-   console.log("counter")
-   console.log(counter)
 
    let encryptedData = new JSChaCha20(key, iv, counter).encrypt(new Uint8Array(arrayBuffer))
 
@@ -53,18 +51,16 @@ export async function encryptWithChaCha20(base64Key, base64IV, file, bytesToSkip
    return new Blob([new Uint8Array(encryptedData)], { type: file.type })
 }
 
-
-// AES Counter (CTR) Helper for IV Increment
+// Calculate iv for AES CTR
 function incrementIV(iv, bytesToSkip) {
    if (bytesToSkip === 0) {
       return iv
    }
 
-   // Copy the input array so we don’t mutate the original
-   let ivArray = new Uint8Array(iv);
+   let ivArray = new Uint8Array(iv)
 
    // Calculate how many blocks have been processed
-   let blocksProcessed = Math.floor(bytesToSkip / 16);
+   let blocksProcessed = Math.floor(bytesToSkip / 16)
 
    // Extract current counter from the last 4 bytes
    let counter = (
@@ -72,26 +68,26 @@ function incrementIV(iv, bytesToSkip) {
       (ivArray[13] << 16) |
       (ivArray[14] << 8) |
       ivArray[15]
-   ) >>> 0; // Ensure it's treated as unsigned
+   ) >>> 0 // Ensure it's treated as unsigned
 
    // Increment the counter by the number of blocks processed
-   counter = (counter + blocksProcessed) >>> 0; // Ensure overflow wraps around
+   counter = (counter + blocksProcessed) >>> 0 // Ensure overflow wraps around
 
    // Update the last 4 bytes in the array with the new counter
-   ivArray[12] = (counter >>> 24) & 0xff;
-   ivArray[13] = (counter >>> 16) & 0xff;
-   ivArray[14] = (counter >>> 8) & 0xff;
-   ivArray[15] = counter & 0xff;
+   ivArray[12] = (counter >>> 24) & 0xff
+   ivArray[13] = (counter >>> 16) & 0xff
+   ivArray[14] = (counter >>> 8) & 0xff
+   ivArray[15] = counter & 0xff
 
-   return ivArray;
+   return ivArray
 
 }
 
+// Calculate counter for ChaCha20
 function calculateCounter(bytesToSkip) {
    if (bytesToSkip === 0) {
       return 0
    }
-
    let blocksToSkip = Math.floor(bytesToSkip / 64) // ChaCha20 block size is 64 bytes
    return blocksToSkip
 
@@ -104,7 +100,7 @@ export async function encrypt(attachment) {
    let bytesToSkip = 0
 
    if (attachment.type === attachmentType.chunked) {
-      bytesToSkip = chunkSize * (attachment.fragmentSequence-1)
+      bytesToSkip = chunkSize * (attachment.fragmentSequence - 1)
    }
 
    let fileObj = attachment.fileObj
@@ -123,6 +119,5 @@ export async function encrypt(attachment) {
    } else {
       console.warn("encrypt: invalid encryptionMethod: " + encrypMethod)
    }
-   //encrypt a file
-   //delete the old raw file to save up on RAM
+
 }

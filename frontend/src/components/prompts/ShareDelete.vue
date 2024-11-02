@@ -36,7 +36,7 @@ export default {
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
-      submit: function () {
+      submit() {
          if (this.currentPrompt.confirm) this.currentPrompt.confirm()
       },
    },

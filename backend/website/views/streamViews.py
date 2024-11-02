@@ -148,7 +148,7 @@ def get_preview(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
-# @handle_common_errors
+@handle_common_errors
 @check_signed_url
 @check_file
 def get_thumbnail(request, file_obj: File):

@@ -28,7 +28,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Video thumbnails                                          | ✅       |
 | Caching support                                           | ✅       |
 | Move                                                      | ✅       |
-| Drag and drop move                                        | ✅       |
 | Code editor with highlighting                             | ✅       |
 | Raw image previewer                                       | ✅       |
 | Right-click context menu                                  | ✅       |
@@ -37,6 +36,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Backend rate limiting                                     | ✅       |
 | Custom ZIP64 Library to zip & stream files on the fly     | ✅       |
 | Docker support                                            | ✅       |
+| Drag and drop support                                     | ✅       |
 
 
 | TODO List                                                       | Status               |
@@ -51,6 +51,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Fix are u sure dialog being skipped after folder password input | ❌  Coming one day    |
 | Fix locate                                                      | ❌  Coming one day    |
 | auto scroll after preview/editor close                          | ❌  Coming one day    |
+| celery + Unable to process this request at the moment           | ❌  Coming one day    |
 | Virtual lists                                                   | ❌  Coming prob never |
 | Editor support for large files                                  | ❌  Coming prob never |
 | Fix file types so they are not so hardcoded on frontend         | ❌  Coming prob never |

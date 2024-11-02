@@ -264,7 +264,7 @@ export default {
 
    },
    watch: {
-      $route: function() {
+      $route() {
          this.fetchData()
          this.toggleNavigation()
       }
@@ -337,7 +337,7 @@ export default {
                try {
                  this.file = await getFile(this.fileId, this.lockFrom)
                  if (!this.currentFolder) {
-                    const res = await getItems(this.file.parent_id, this.file.lockFrom)
+                    let res = await getItems(this.file.parent_id, this.file.lockFrom)
 
                     this.setItems(res.folder.children)
                     this.setCurrentFolder(res.folder)

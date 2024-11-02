@@ -144,7 +144,7 @@ export default {
 
    },
    watch: {
-      currentFolder: async function() {
+      async currentFolder() {
 
          if (this.currentFolder && this.$route.name === "Files") {
 

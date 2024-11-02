@@ -54,7 +54,7 @@ export default {
    name: "shell",
    computed: {
       ...mapState(useMainStore, ["user", "showShell", "isFiles"]),
-      path: function () {
+      path() {
          if (this.isFiles) {
             return this.$route.path
          }
@@ -139,7 +139,7 @@ export default {
          }
       }, 32),
 
-      scroll: function () {
+      scroll() {
          this.$refs.scrollable.scrollTop = this.$refs.scrollable.scrollHeight
       },
 

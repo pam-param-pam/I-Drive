@@ -25,11 +25,11 @@
 export default {
    name: "upload",
    methods: {
-      uploadFile: function () {
+      uploadFile() {
          document.getElementById("upload-input").value = ""
          document.getElementById("upload-input").click()
       },
-      uploadFolder: function () {
+      uploadFolder() {
          document.getElementById("upload-folder-input").value = ""
          document.getElementById("upload-folder-input").click()
       },
