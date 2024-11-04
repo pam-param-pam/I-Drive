@@ -67,22 +67,23 @@ export async function signup(username, password) {
 }
 
 export async function logout() {
-   const store = useMainStore()
+   let store = useMainStore()
 
    let token = store.token
+   store.setToken(null)
+   localStorage.removeItem("token")
+
    if (token) {
       await logoutUser()
    }
 
    store.setUser(null)
    store.setSettings(null)
-   store.setToken(null)
    store.setCurrentFolder(null)
    store.setItems(null)
    store.setPerms(null)
    store.resetFolderPassword()
 
-   localStorage.removeItem("token")
    await router.push({path: "/login"})
    router.go(0) // make sure every state is removed just in case
 }

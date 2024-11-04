@@ -11,7 +11,6 @@ from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, B
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError
 from ..utilities.other import build_http_error_response, verify_signed_file_id, check_resource_perms, get_file, get_folder
 
-
 def check_signed_url(view_func):
     @wraps(view_func)
     def wrapper(request, signed_file_id, *args, **kwargs):

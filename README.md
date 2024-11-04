@@ -44,6 +44,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Docker CI/CD                                                    | ⚠️  Only partial     |
 | Lock shares with password                                       | ⚠️  Only partial     |
 | Error handling in upload process                                | ⚠️  Only partial     |
+| Fix edit folder password dialon on wrong password               | ❌  Coming one day    |
 | Proper handling of 429                                          | ❌  Coming one day    |
 | Proper frontend networking & handling of errors                 | ❌  Coming one day    |
 | Stop, pause, abort uploads                                      | ❌  Coming one day    |
@@ -57,7 +58,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Fix file types so they are not so hardcoded on frontend         | ❌  Coming prob never |
 | Dark theme                                                      | ❌  Coming prob never |
 | fix __prependStaticUrl                                          | ❌  Coming prob never |
-
 
 
 # How it works

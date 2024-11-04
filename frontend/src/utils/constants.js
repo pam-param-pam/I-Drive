@@ -36,6 +36,4 @@ export const uploadStatus = {
       resuming: "resuming",
       canceling: "canceling",
       canceled: "canceled",
-
-
 }

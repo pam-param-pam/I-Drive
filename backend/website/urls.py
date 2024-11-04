@@ -11,7 +11,7 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position
 from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
-from .views.testViews import get_file_url_view
+from .views.testViews import get_folder_password
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user
 
@@ -67,7 +67,7 @@ urlpatterns = [
 
     path('admin', admin.site.urls),
 
-    path('test', get_file_url_view),
+    path('test', get_folder_password),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

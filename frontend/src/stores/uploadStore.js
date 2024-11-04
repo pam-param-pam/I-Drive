@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid"
 import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
+import { UploadEstimator } from "@/utils/UploadEstimator.js"
 
 const toast = useToast()
 
@@ -26,7 +27,10 @@ export const useUploadStore = defineStore("upload2", {
       pausedFiles: [],
 
       //simply dumb
-      requestGenerator: null
+      requestGenerator: null,
+      estimator: new UploadEstimator(),
+
+      eta: Infinity
    }),
 
    getters: {
@@ -38,7 +42,7 @@ export const useUploadStore = defineStore("upload2", {
 
          return uploadSpeed
       },
-      eta() {
+      remainingBytes() {
          //calc all
          // Sum up total size in 'queue'
          let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
@@ -55,10 +59,7 @@ export const useUploadStore = defineStore("upload2", {
          // Total size left to upload
          let totalSizeRemaining = totalQueueSize + remainingUploadSize
 
-         // Calculate ETA in seconds
-         let etaInSeconds = this.uploadSpeed > 0 ? totalSizeRemaining / this.uploadSpeed : Infinity
-
-         return etaInSeconds
+         return totalSizeRemaining
       },
       filesInUploadCount() {
          let queue = this.queue.length
@@ -163,6 +164,9 @@ export const useUploadStore = defineStore("upload2", {
       },
       onUploadProgress(request, progressEvent) {
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
+         this.estimator.updateSpeed(this.uploadSpeed)
+
+         this.eta = this.estimator.estimateRemainingTime(this.remainingBytes)
 
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId

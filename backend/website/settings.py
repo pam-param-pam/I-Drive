@@ -74,6 +74,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173', # frontend
     'http://127.0.0.1:8080',  # frontend on nginx
     'http://localhost:8080',  # frontend on nginx
+    'http://192.168.1.17:8001',  # backend on rpi without nginx
+    'http://192.168.1.17:8001',  # backend on rpi without nginx
 
 ]
 
@@ -82,6 +84,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:5173',  # frontend
     'http://127.0.0.1:8080',  # frontend on nginx
     'http://localhost:8080',  # frontend on nginx
+    'http://192.168.1.17:8001',  # backend on rpi without nginx
+    'http://192.168.1.17:8001',  # backend on rpi without nginx
 
 ]
 

@@ -21,6 +21,7 @@ export async function convertUploadInput(typeOfUpload, folderContext, uploadInpu
    let encryptionMethod = mainStore.settings.encryptionMethod
 
    let files = []
+
    for (let i = 0; i < uploadInput.length; i++) {
       let file = uploadInput[i]
       let size = file.size
@@ -60,11 +61,8 @@ export async function* prepareRequests() {
    let totalSize = 0
    let attachments = []
 
-   // eslint-disable-next-line no-constant-condition
-   while (true) {
-
-      let queueFile = uploadStore.getFileFromQueue()
-      if (!queueFile) break //we break if there are no more files in the queue
+   let queueFile
+   while ((queueFile = uploadStore.getFileFromQueue())) {
 
       //CASE 1, file is > 25mb
       if (queueFile.fileObj.size > chunkSize) {

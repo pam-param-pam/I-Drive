@@ -102,7 +102,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "closeHover"]),
+      ...mapActions(useMainStore, ["setLoading", "closeHover", "showHover"]),
 
       async deleteLink(event, share) {
          event.preventDefault()

@@ -131,6 +131,13 @@ backend_instance.interceptors.response.use(
       }
 
       let {config, response} = error
+      if (!config.__retryCount) {
+         config.__retryCount = 0
+      }
+      if (config.__retryCount > 3) {
+         return Promise.reject(error)
+      }
+      config.__retryCount++
 
       // Check if the error is 469 INCORRECT OR MISSING FOLDER PASSWORD
       if (response && response.status === 469) {
