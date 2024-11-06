@@ -88,7 +88,14 @@ CSRF_TRUSTED_ORIGINS = [
     'http://192.168.1.17:8001',  # backend on rpi without nginx
 
 ]
-
+CSRF_ALLOWED_ORIGINS = [
+    f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
+    'http://127.0.0.1:5173',  # frontend
+    'http://127.0.0.1:8080',  # frontend on nginx
+    'http://localhost:8080',  # frontend on nginx
+    'http://192.168.1.17:8001',  # backend on rpi without nginx
+    'http://192.168.1.17:8001',  # backend on rpi without nginx
+]
 CORS_EXPOSE_HEADERS = (
     "retry-after",
     "X-RateLimit-Remaining",

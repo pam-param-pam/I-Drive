@@ -8,7 +8,7 @@ export class UploadEstimator {
    }
 
    updateSpeed(currentSpeed) {
-      const currentTime = Date.now() // Capture the current timestamp in milliseconds
+      let currentTime = Date.now() // Capture the current timestamp in milliseconds
 
       // Add new speed with timestamp to the buffer
       this.buffer.push({ currentSpeed, currentTime })
@@ -24,7 +24,7 @@ export class UploadEstimator {
       if (this.buffer.length === 0) return 0
 
       // Sum up the speeds in the buffer
-      const speedSum = this.buffer.reduce((sum, entry) => sum + entry.currentSpeed, 0)
+      let speedSum = this.buffer.reduce((sum, entry) => sum + entry.currentSpeed, 0)
 
       // Calculate the average speed
       return speedSum / this.buffer.length
@@ -42,11 +42,11 @@ export class UploadEstimator {
 
       // Adjust based on previous estimate error
       if (this.previousEstimate !== null && this.previousRemainingBytes !== null) {
-         const actualBytesTransferred = this.previousRemainingBytes - remainingBytes
-         const actualTimeElapsed = actualBytesTransferred / averageSpeed
+         let actualBytesTransferred = this.previousRemainingBytes - remainingBytes
+         let actualTimeElapsed = actualBytesTransferred / averageSpeed
 
          // Calculate the error as the difference between estimated and actual time
-         const error = actualTimeElapsed - this.previousEstimate
+         let error = actualTimeElapsed - this.previousEstimate
 
          // Adjust current estimate based on feedback from previous error
          estimatedTime -= error * this.feedbackFactor

@@ -56,6 +56,11 @@ def create_file(request):
             check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
 
             file_type = mimetype.split("/")[0]
+            if extension == ".mov":
+                file_type = "video"
+            if extension == ".mod":
+                file_type = "text"
+
             file_obj = File(
                 extension=extension,
                 name=file_name,
