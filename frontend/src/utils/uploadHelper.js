@@ -1,6 +1,7 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
+import { generateVideoThumbnails } from "@rajesh896/video-thumbnails-generator"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -152,7 +153,7 @@ export function getVideoCover(file) {
          // delay seeking or else 'seeked' event won't fire on Safari
          setTimeout(() => {
             videoPlayer.currentTime = seekTo
-         }, 200)
+         }, 50)
          // extract video thumbnail once seeking is complete
          videoPlayer.addEventListener("seeked", () => {
             console.log("video is now paused at %ss.", seekTo)
@@ -177,6 +178,7 @@ export function getVideoCover(file) {
 
    })
 }
+
 
 export function getFileId(fileObj) {
    let uploadStore = useUploadStore()
@@ -203,8 +205,7 @@ export async function getOrCreateFolder(fileObj) {
       let path_key = pathParts.slice(0, i).join("/")
       if (uploadStore.createdFolders[path_key]) {
          parentFolder = uploadStore.createdFolders[path_key]
-      }
-      else {
+      } else {
          let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
 
          let folder = await create({ "parent_id": parentFolder, "name": folderName })
@@ -214,23 +215,46 @@ export async function getOrCreateFolder(fileObj) {
    }
    return parentFolder
 }
+
 export function ivToBase64(iv) {
    // First, convert the Uint8Array to a regular binary string
-   let binary = '';
-   iv.forEach((byte) => binary += String.fromCharCode(byte));
+   let binary = ""
+   iv.forEach((byte) => binary += String.fromCharCode(byte))
 
    // Then, encode the binary string in Base64
-   return btoa(binary);
+   return btoa(binary)
 }
+
 export function generateThumbnailIv(fileObj) {
    if (fileObj.encryptionMethod === encryptionMethod.AesCtr) {
       let iv = crypto.getRandomValues(new Uint8Array(16))
       return ivToBase64(iv)
    }
    if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
-      let iv =  crypto.getRandomValues(new Uint8Array(12))
+      let iv = crypto.getRandomValues(new Uint8Array(12))
       return ivToBase64(iv)
 
    }
 
+}
+export function b64toBlob(b64Data, contentType='', sliceSize=512) {
+   const base64String = b64Data.includes("base64,") ? b64Data.split("base64,")[1] : b64Data;
+
+   const byteCharacters = atob(b64Data);
+   const byteArrays = [];
+
+   for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+         byteNumbers[i] = slice.charCodeAt(i);
+      }
+
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+   }
+
+   const blob = new Blob(byteArrays, {type: contentType});
+   return blob;
 }

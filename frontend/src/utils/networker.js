@@ -230,7 +230,7 @@ backend_instance.interceptors.response.use(
          errorDetails = i18n.global.t("toasts.sessionExpired")
       }
       if (config.__displayErrorToast !== false) {
-         toast.error(`${i18n.global.t(errorMessage)}\n${errorDetails}`, {
+         toast.error(`${i18n.global.t(errorMessage)}\n${i18n.global.t(errorDetails)}`, {
             timeout: 5000,
             position: "bottom-right",
          })

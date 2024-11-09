@@ -335,7 +335,7 @@ export default {
       Search, HeaderBar,
       Action,
       Item,
-      ContextMenu,
+      ContextMenu
 
    },
 
@@ -345,7 +345,7 @@ export default {
       readonly: Boolean,
       headerButtons: {}
    },
-   emits: ["uploadInput", "dropUpload","upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download"],
+   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download"],
 
    data() {
       return {
@@ -358,7 +358,7 @@ export default {
 
          //experimental
          currentPage: 1,
-         totalPages: 10,
+         totalPages: 10
       }
    },
    watch: {
@@ -405,6 +405,7 @@ export default {
       document.addEventListener("dragenter", this.dragEnter)
       document.addEventListener("dragleave", this.dragLeave)
       document.addEventListener("drop", this.drop)
+      document.addEventListener("drag", this.autoScroll)
 
 
    },
@@ -421,6 +422,7 @@ export default {
       document.removeEventListener("dragenter", this.dragEnter)
       document.removeEventListener("dragleave", this.dragLeave)
       document.removeEventListener("drop", this.drop)
+      document.removeEventListener("drag", this.autoScroll)
 
 
    },
@@ -632,9 +634,20 @@ export default {
          this.$emit("dropUpload", event)
 
       },
+      autoScroll(event) {
+         event.preventDefault()
+         let scrollSpeed = 500
 
+         let mouseY = event.clientY
 
-
+         // // Scroll up
+         if (mouseY < 100) {
+            window.scrollBy({ "top": -scrollSpeed, behavior: 'smooth' });
+         }
+         if (mouseY + 50 >  window.innerHeight) {
+            window.scrollBy({ "top": scrollSpeed, behavior: 'smooth' });
+         }
+      },
       async sort(by) {
          let asc = false
 

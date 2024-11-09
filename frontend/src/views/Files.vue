@@ -77,7 +77,7 @@ export default {
          return {
             info: !this.disabledCreation,
             shell: this.perms.execute,
-            upload: this.perms.create,
+            upload: this.perms.create && this.currentFolder,
             download: this.perms.download && this.selectedCount > 0,
             moveToTrash: this.selectedCount > 0 && this.perms.delete,
             modify: this.selectedCount === 1 && this.perms.modify,

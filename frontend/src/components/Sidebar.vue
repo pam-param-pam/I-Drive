@@ -13,7 +13,7 @@
 
       <div v-if="perms.create">
         <button
-          :disabled="disabledCreation"
+          :disabled="disabledCreation || !currentFolder"
           @click="showHover('newDir')"
           class="action"
           :aria-label="$t('sidebar.newFolder')"

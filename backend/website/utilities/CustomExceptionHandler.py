@@ -18,8 +18,8 @@ def custom_exception_handler(exc, context):
 
     if isinstance(exc, PermissionDenied):
         custom_response_data = {
-            'error': 'Permission denied',
-            'details': 'You are not allowed to perform this action',
+            'error': 'errors.permissionDenied',
+            'details': 'errors.permissionDeniedDetails',
         }
         response.data = custom_response_data
 

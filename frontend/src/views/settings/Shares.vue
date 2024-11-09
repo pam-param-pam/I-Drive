@@ -1,5 +1,5 @@
 <template>
-  <errors v-if="error" :errorCode="error.response.status"/>
+  <errors v-if="error" :errorCode="error.response.status" />
   <div class="row" v-else-if="!loading">
     <div class="column">
       <div class="card">
@@ -63,14 +63,14 @@
 import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
 import Errors from "@/views/Errors.vue"
-import {getAllShares, removeShare} from "@/api/share.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { getAllShares, removeShare } from "@/api/share.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
    name: "shares",
    components: {
-      Errors,
+      Errors
    },
    computed: mapState(useMainStore, ["settings", "loading"]),
 
@@ -78,13 +78,12 @@ export default {
       return {
          error: null,
          shares: [],
-         clip: null,
+         clip: null
       }
    },
    async created() {
 
       this.setLoading(true)
-
       this.shares = await getAllShares()
       this.setLoading(false)
 
@@ -111,11 +110,11 @@ export default {
             prompt: "share-delete",
             confirm: () => {
                this.closeHover()
-               removeShare({"token": share.token})
+               removeShare({ "token": share.token })
                this.shares = this.shares.filter((item) => item.token !== share.token)
                this.$toast.success(this.$t("toasts.shareDeleted"))
 
-            },
+            }
          })
       },
 
@@ -125,12 +124,12 @@ export default {
 
          moment.locale(locale)
          // Parse the target date
-         return moment(time, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
+         return moment(time, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
       },
 
       buildLink(share) {
          return "/share/" + share.token
-      },
-   },
+      }
+   }
 }
 </script>

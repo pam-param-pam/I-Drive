@@ -191,9 +191,12 @@ export async function preUploadRequest(request) {
 
 }
 
-export async function uploadRequest(request) {
+export async function uploadRequest(request, preUploadRequestDone) {
    let uploadStore = useUploadStore()
    let mainStore = useMainStore()
+
+   if (!preUploadRequestDone) request = await preUploadRequest(request)
+
    let abortController = new AbortController()
 
    uploadStore.axiosRequests.set("blabla", abortController) // Store it with key "blabla"

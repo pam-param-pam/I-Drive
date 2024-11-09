@@ -12,6 +12,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = 'static/'
 
 SECRET_KEY = os.environ['I_DRIVE_BACKEND_SECRET_KEY']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTOCOL', 'https')
 
 is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
@@ -21,7 +22,7 @@ SILKY_PYTHON_PROFILER = is_env
 
 ALLOWED_HOSTS = ['*']  # todo
 
-USE_X_FORWARDED_HOST = True  # todo fix admin
+# USE_X_FORWARDED_HOST = True  # todo fix admin
 
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True

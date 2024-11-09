@@ -1,4 +1,5 @@
 {
+  "": "Brak uprawnień",
   "buttons": {
     "cancel": "Anuluj",
     "close": "Zamknij",
@@ -54,6 +55,8 @@
     "missingOrIncorrectResourcePassword": "Niepoprawne hasło do zasobu",
     "notFound": "Ten adres nie jest poprawny.",
     "notImplemented": "Funkcja jeszcze nie dostępna.",
+    "permissionDenied": "Brak uprawnień",
+    "permissionDeniedDetails": "Nie masz uprawnień do wykonania tej akcji.       ",
     "rateLimit": "Za szybko wysyłasz zapytania!",
     "resourceAccessForbidden": "Nie posiadasz uprawnień potrzebnych, by uzyskać do tego dostęp.",
     "resourceDoesntExist": "Zasób nie istnieje",

@@ -1,11 +1,12 @@
 import { defineStore } from "pinia"
-import { convertUploadInput, prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload.js"
+import { prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { v4 as uuidv4 } from "uuid"
 import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
 import { UploadEstimator } from "@/utils/UploadEstimator.js"
+import { Uploader } from "@/utils/Uploader.js"
 
 const toast = useToast()
 
@@ -42,6 +43,13 @@ export const useUploadStore = defineStore("upload2", {
 
          return uploadSpeed
       },
+      filesInUpload() {
+         // Assuming `this.uploadQueue` is an array of files with a `progress` property (0 to 100)
+         // Get the top 10 items
+         return this.filesUploading
+            .sort((a, b) => b.progress - a.progress)
+            .slice(0, 10)
+      },
       remainingBytes() {
          //calc all
          // Sum up total size in 'queue'
@@ -52,9 +60,9 @@ export const useUploadStore = defineStore("upload2", {
 
             // Adjust progress to a decimal by dividing by 100
             let uploadedSize = item.size * (item.progress / 100)
-            let remainingSize = item.size - uploadedSize;
-            return total + remainingSize;
-         }, 0);
+            let remainingSize = item.size - uploadedSize
+            return total + remainingSize
+         }, 0)
 
          // Total size left to upload
          let totalSizeRemaining = totalQueueSize + remainingUploadSize
@@ -75,16 +83,10 @@ export const useUploadStore = defineStore("upload2", {
    },
 
    actions: {
-      async startUpload(type, folder_context, filesList) {
-         // buttons.loading("upload")
-         // window.addEventListener("beforeunload", beforeUnload)
-
-         let files = await convertUploadInput(type, folder_context, filesList)
-         //todo handle files.size == 0
-         this.queue.push(...files)
-         this.queue.sort()
-
-         this.processUploads()
+      async startUpload(type, folderContext, filesList) {
+         console.log(filesList)
+         let uploader = new Uploader()
+         uploader.processNewFiles(type, folderContext, filesList)
 
       },
       async processUploads() {
@@ -111,9 +113,16 @@ export const useUploadStore = defineStore("upload2", {
          console.log(request)
 
          request.id = uuidv4()
-         request = await preUploadRequest(request) //todo only if request has chunked attachments
 
-         uploadRequest(request) //todo else do it in here
+         let doPreUploadRequestNow = request.attachments?.some(
+            attachment => attachment.type === attachmentType.chunked
+         )
+
+         console.log("doPreUploadRequestNow")
+         console.log(doPreUploadRequestNow)
+         if (doPreUploadRequestNow) request = await preUploadRequest(request)
+
+         uploadRequest(request, doPreUploadRequestNow) //todo else do it in here
 
          this.processUploads()
 
@@ -230,12 +239,12 @@ export const useUploadStore = defineStore("upload2", {
          toast.info("errors.notImplemented")
       },
       cancelFile(frontendId) {
-         let abortController = this.axiosRequests.get("blabla");
+         let abortController = this.axiosRequests.get("blabla")
          if (abortController) {
-            abortController.abort(); // Cancel the request
-            console.log("Upload request canceled by user.");
+            abortController.abort() // Cancel the request
+            console.log("Upload request canceled by user.")
          }
-      },
+      }
    }
 })
 const beforeUnload = (event) => {

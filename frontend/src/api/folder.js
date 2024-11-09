@@ -70,7 +70,7 @@ export async function getUsage(folderId, lockFrom) {
 }
 
 export async function resetPassword(folderId, accountPassword, newPassword) {
-   let url = `/older/password/reset/${folderId}`
+   let url = `/folder/password/reset/${folderId}`
 
 
    let data = {"accountPassword": accountPassword, "folderPassword": newPassword}
