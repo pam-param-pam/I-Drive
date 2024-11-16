@@ -1,6 +1,5 @@
 #listing {
   --item-selected: white;
-
 }
 
 body.rtl #listing {
@@ -20,7 +19,6 @@ body.rtl #listing {
 }
 
 #listing>div {
-  display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
 }

@@ -137,22 +137,24 @@ export function getVideoCover(file) {
 
          let seekTo
          // seek to defined timestamp (in seconds) if possible
-         if (videoPlayer.duration >= 30) {
+         if (videoPlayer.duration >= 60) {
             seekTo = 30
-         } else if (videoPlayer.duration >= 20) {
+         } else if (videoPlayer.duration >= 40) {
             seekTo = 20
-         } else if (videoPlayer.duration >= 10) {
+         } else if (videoPlayer.duration >= 20) {
             seekTo = 10
-         } else if (videoPlayer.duration >= 5) {
+         } else if (videoPlayer.duration >= 15) {
             seekTo = 5
-         } else {
+         } else if (videoPlayer.duration >= 5) {
+            seekTo = 2
+         }  else {
             seekTo = 0
          }
 
          // delay seeking or else 'seeked' event won't fire on Safari
          setTimeout(() => {
             videoPlayer.currentTime = seekTo
-         }, 50)
+         }, 25)
          // extract video thumbnail once seeking is complete
          videoPlayer.addEventListener("seeked", () => {
             console.log("video is now paused at %ss.", seekTo)

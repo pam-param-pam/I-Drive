@@ -143,7 +143,6 @@
     "fileInfo": "Informacje o pliku",
     "fileType": "Typ pliku",
     "filesSelected": "Wybrano {count} plików",
-    "filterMessage": "Wybiersz filtry szukania",
     "focalLength": "Ogniskowa",
     "iDriveNotOptimized": "Za dużo małych plików",
     "iDriveNotOptimizedMessage": "I Drive nie jest zoptymalizowany by przechowywać wiele bardzo małych plików. Rozważ z-zipowanie ich i wgranie ponownie.",

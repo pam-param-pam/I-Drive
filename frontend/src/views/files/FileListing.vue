@@ -191,40 +191,81 @@
             </div>
           </div>
         </div>
-
         <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
-        <div v-if="dirsSize > 0">
-          <item
-            v-for="item in dirs" :key="item.id"
-            :item="item"
-            :readOnly="readonly"
-            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
-            @onOpen="$emit('onOpen', item)"
-            @contextmenu.prevent="showContextMenu($event, item)"
+        <RecycleScroller
+          class="scroller"
+          :items="dirs"
+          :item-size="0.1"
 
-          >
-          </item>
-        </div>
+          key-field="id"
+          v-slot="{ item }"
+        >
+          <div class="user">
+            <item
+              :item="item"
+              :readOnly="readonly"
+              :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
+              @onOpen="$emit('onOpen', item)"
+              @contextmenu.prevent="showContextMenu($event, item)"
+
+            >
+            </item>
+          </div>
+        </RecycleScroller>
 
         <h2 v-if="filesSize > 0">{{ $t("files.files") }}</h2>
-        <div v-if="filesSize > 0">
+        <RecycleScroller
+          class="scroller"
+          :items="files"
+          :item-size="1"
+          key-field="id"
+          v-slot="{ item }"
+        >
+          <div class="user">
+            <item
+              :item="item"
+              :readOnly="readonly"
+              :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
+              @onOpen="$emit('onOpen', item)"
+              @contextmenu.prevent="showContextMenu($event, item)"
 
-          <item
-            v-for="item in files" :key="item.id"
-            :item="item"
-            :readOnly="readonly"
-            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
-            @onOpen="$emit('onOpen', item)"
-            @contextmenu.prevent="showContextMenu($event, item)"
+            >
+            </item>
+          </div>
+        </RecycleScroller>
 
-          ></item>
+<!--        <div v-if="dirsSize > 0">-->
+<!--          <item-->
+<!--            v-for="item in dirs" :key="item.id"-->
+<!--            :item="item"-->
+<!--            :readOnly="readonly"-->
+<!--            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"-->
+<!--            @onOpen="$emit('onOpen', item)"-->
+<!--            @contextmenu.prevent="showContextMenu($event, item)"-->
 
-        </div>
-        <div class="pagination">
-          <button :disabled="currentPage === 1" @click="prevPage">Previous</button>
-          <span>Page {{ currentPage }} of {{ totalPages }}</span>
-          <button :disabled="currentPage === totalPages" @click="nextPage">Next</button>
-        </div>
+<!--          >-->
+<!--          </item>-->
+<!--        </div>-->
+
+<!--        <h2 v-if="filesSize > 0">{{ $t("files.files") }}</h2>-->
+<!--        <div v-if="filesSize > 0">-->
+
+<!--          <item-->
+<!--            v-for="item in files" :key="item.id"-->
+<!--            :item="item"-->
+<!--            :readOnly="readonly"-->
+<!--            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"-->
+<!--            @onOpen="$emit('onOpen', item)"-->
+<!--            @contextmenu.prevent="showContextMenu($event, item)"-->
+
+<!--          ></item>-->
+
+<!--        </div>-->
+<!--        <div class="pagination">-->
+<!--          <button :disabled="currentPage === 1" @click="prevPage">Previous</button>-->
+<!--          <span>Page {{ currentPage }} of {{ totalPages }}</span>-->
+<!--          <button :disabled="currentPage === totalPages" @click="nextPage">Next</button>-->
+<!--        </div>-->
         <input
           style="display: none"
           type="file"
@@ -327,6 +368,7 @@ import ContextMenu from "@/components/ContextMenu.vue"
 import Action from "@/components/header/Action.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Search from "@/components/Search.vue"
+import { RecycleScroller } from "vue-virtual-scroller"
 
 //todo reset selected on navigation
 export default {
@@ -335,8 +377,8 @@ export default {
       Search, HeaderBar,
       Action,
       Item,
-      ContextMenu
-
+      ContextMenu,
+      RecycleScroller,
    },
 
    props: {

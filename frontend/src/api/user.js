@@ -23,9 +23,13 @@ export async function registerUser(data) {
    return response.data
 }
 
-export async function logoutUser() {
+export async function logoutUser(token) {
    let url = "/auth/token/logout"
-   let response = await backend_instance.post(url)
+   let response = await backend_instance.post(url, {}, {
+      headers: {
+         "Authorization": "token " + token,
+      }
+   })
    return response.data
 }
 

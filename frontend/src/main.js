@@ -8,6 +8,7 @@ import "vue-toastification/dist/index.css"
 
 import VueLazyLoad from "vue3-lazyload"
 import Vue3TouchEvents from "vue3-touch-events"
+import VueVirtualScroller from 'vue-virtual-scroller'
 
 const app = createApp(App)
 console.log("validate login")
@@ -20,6 +21,7 @@ app.use(VueLazyLoad, {
    // options...
 })
 
+app.use(VueVirtualScroller)
 
 const filterBeforeCreate = (toast, toasts) => {
 

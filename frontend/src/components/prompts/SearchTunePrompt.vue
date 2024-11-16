@@ -5,7 +5,6 @@
     </div>
 
     <div class="card-content">
-      <p>{{ $t("prompts.filterMessage") }}:</p>
 
       <div>
         <label>{{ $t("prompts.fileType") }}</label>

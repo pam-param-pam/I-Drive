@@ -143,7 +143,6 @@
     "fileInfo": "File information",
     "fileType": "File type",
     "filesSelected": "{count} files selected.",
-    "filterMessage": "Select search filters",
     "focalLength": "Focal length",
     "iDriveNotOptimized": "Too Many small files",
     "iDriveNotOptimizedMessage": "I Drive is not optimized to handle both uploading and downloading of large number of small files. Consider ziping them and uploading again.",

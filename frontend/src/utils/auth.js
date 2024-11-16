@@ -74,15 +74,15 @@ export async function logout() {
    localStorage.removeItem("token")
 
    if (token) {
-      await logoutUser()
+      await logoutUser(token)
    }
 
-   store.setUser(null)
-   store.setSettings(null)
-   store.setCurrentFolder(null)
-   store.setItems(null)
-   store.setPerms(null)
-   store.resetFolderPassword()
+   // store.setUser(null)
+   // store.setSettings(null)
+   // store.setCurrentFolder(null)
+   // store.setItems(null)
+   // store.setPerms(null)
+   // store.resetFolderPassword()
 
    await router.push({path: "/login"})
    router.go(0) // make sure every state is removed just in case
