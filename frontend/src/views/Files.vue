@@ -31,14 +31,13 @@ import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import FileListing from "@/views/files/FileListing.vue"
 import { getItems } from "@/api/folder.js"
-import { encryptionMethod, name, uploadType } from "@/utils/constants.js"
 import { search } from "@/api/search.js"
-import { checkFilesSizes } from "@/utils/uploadHelper.js"
 import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { scanDataTransfer } from "@/utils/uploadHelper.js"
+import { uploadType } from "@/utils/constants.js"
 
 export default {
    name: "files",
@@ -186,39 +185,18 @@ export default {
 
          }
          let files = await scanDataTransfer(dt)
-         await this.beginUpload(uploadType.dragAndDropInput, folderContextId, files)
+
+         await this.startUpload(uploadType.dragAndDropInput, folderContextId, files)
 
 
       },
-      async beginUpload(type, folderContextId, files) {
-         if (!this.settings.webhook) {
-            this.$toast.error(this.$t("toasts.webhookMissing"))
-            return
-         }
-         if (this.settings.encryptionMethod === encryptionMethod.NotEncrypted) {
-            this.$toast.info(this.$t("toasts.noEncryptionWarning"))
-         }
 
-         if (await checkFilesSizes(files)) {
-            this.showHover({
-               prompt: "NotOptimizedForSmallFiles",
-               confirm: () => {
-                  this.startUpload(type, folderContextId, files)
-
-               }
-            })
-         } else {
-            this.startUpload(type, folderContextId, files)
-
-         }
-      },
       async onUploadInput(event) {
          this.closeHover()
 
          let files = event.currentTarget.files
-         let folder = this.currentFolder
-         await this.beginUpload(uploadType.browserInput, folder.id, files)
-
+         let folderContextId = this.currentFolder.id
+         await this.startUpload(uploadType.browserInput, folderContextId, files)
 
 
       },

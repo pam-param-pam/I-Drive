@@ -2,52 +2,11 @@ import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { attachmentType, discordFileName, uploadStatus, uploadType } from "@/utils/constants.js"
+import { attachmentType, discordFileName, uploadStatus } from "@/utils/constants.js"
 import { detectExtension, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
-import { v4 as uuidv4 } from "uuid"
 
-
-export async function convertUploadInput(typeOfUpload, folderContext, uploadInput) {
-   /**
-    This method converts different uploadInputs into 1, standard one
-    */
-   console.warn("convertUploadInput")
-
-   let mainStore = useMainStore()
-
-   let uploadId = uuidv4()
-   let encryptionMethod = mainStore.settings.encryptionMethod
-
-   let files = []
-
-   for (let i = 0; i < uploadInput.length; i++) {
-      let file = uploadInput[i]
-      let size = file.size
-      let name = file.name
-      let type = file.type
-      let frontendId = uuidv4()
-
-      let path
-      if (typeOfUpload === uploadType.browserInput) {
-         path = file.webkitRelativePath
-      } else if (typeOfUpload === uploadType.dragAndDropInput) {
-         path = file.path
-      } else {
-         console.error("convertUploadInput: invalid type: " + typeOfUpload)
-      }
-      // Remove filename from path if it exists at the end
-      if (path && path.endsWith(file.name)) {
-         path = path.slice(0, -file.name.length - 1)
-      }
-      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId }, "systemFile": file })
-   }
-
-   console.log("files")
-   console.log(files)
-   return files
-}
 
 export async function* prepareRequests() {
    /**
@@ -151,7 +110,7 @@ export async function preUploadRequest(request) {
 
          let file_id = await getFileId(fileObj)
          if (file_id) {
-            request.attachments[i].fileObj.file_id = file_id
+            request.attachments[i].fileObj.fileId = file_id
          } else {
             uploadStore.setStatus(fileObj.frontendId, uploadStatus.creating)
             let file_data = {
@@ -161,7 +120,8 @@ export async function preUploadRequest(request) {
                "extension": detectExtension(fileObj.name),
                "size": fileObj.size,
                "frontend_id": fileObj.frontendId,
-               "encryption_method": parseInt(fileObj.encryptionMethod)
+               "encryption_method": parseInt(fileObj.encryptionMethod),
+               "created_at": fileObj.createdAt
             }
             files.push(file_data)
          }

@@ -1,5 +1,4 @@
 {
-  "": "Permission denied",
   "buttons": {
     "cancel": "Cancel",
     "close": "Close",
@@ -217,6 +216,7 @@
     "currentPassword": "Your current password",
     "encryptFiles": "Encrypt files",
     "encryptionMethod": "Encryption method",
+    "hideFileNames": "Hide file names",
     "hideLockedFolders": "Hide locked folders",
     "language": "Language",
     "newPassword": "Your new password",
@@ -234,6 +234,7 @@
     "shareExpiry": "Share Expiry",
     "shareManagement": "Share Management",
     "subfoldersInShares": "Include subfolders in shares",
+    "keepCreationTimestamp": "Keep original file creation timestamp",
     "themes": {
       "dark": "Dark",
       "default": "System default",

@@ -35,7 +35,7 @@
       <i v-else class="material-icons"></i>
     </div>
     <div>
-      <p class="name">{{ item.name }}</p>
+      <p v-if="(item.isDir || !settings.hideFilenames || type !== 'video' || !item.thumbnail_url) || settings.viewMode !== 'mosaic gallery'" class="name">{{ item.name }}</p>
 
       <p v-if="item.isDir" class="size" data-order="-1">&mdash;</p>
       <p v-else class="size" :data-order="item.size">{{ humanSize() }}</p>

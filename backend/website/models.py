@@ -280,6 +280,8 @@ class UserSettings(models.Model):
     subfolders_in_shares = models.BooleanField(default=False)
     discord_webhook = models.TextField(null=True)
     encryption_method = models.SmallIntegerField(default=1)
+    hide_filenames = models.BooleanField(default=False)
+    keep_creation_timestamp = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username + "'s settings"

@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from "uuid"
 import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
-import { UploadEstimator } from "@/utils/UploadEstimator.js"
 import { Uploader } from "@/utils/Uploader.js"
 
 const toast = useToast()
@@ -29,9 +28,11 @@ export const useUploadStore = defineStore("upload2", {
 
       //simply dumb
       requestGenerator: null,
-      estimator: new UploadEstimator(),
+      uploader: new Uploader(),
 
-      eta: Infinity
+      eta: Infinity,
+
+      bufferedRequests: [],
    }),
 
    getters: {
@@ -84,11 +85,30 @@ export const useUploadStore = defineStore("upload2", {
 
    actions: {
       async startUpload(type, folderContext, filesList) {
-         console.log(filesList)
-         let uploader = new Uploader()
-         uploader.processNewFiles(type, folderContext, filesList)
+
+         this.uploader.processNewFiles(type, folderContext, filesList)
+
 
       },
+      // async bufferRequests() {
+      //    if (!this.requestGenerator) {
+      //       this.requestGenerator = prepareRequests()
+      //    }
+      //
+      //    if (this.bufferedRequests.length < 1) {
+      //       this.requestGenerator.next().then((generated) => {
+      //          if (generated.done) {
+      //             console.info("The request generator is finished.")
+      //             this.requestGenerator = null
+      //             return
+      //          }
+      //          this.bufferedRequests.push(generated.value);
+      //       });
+      //
+      //    }
+      //
+      //
+      // },
       async processUploads() {
          const mainStore = useMainStore()
 
@@ -111,6 +131,7 @@ export const useUploadStore = defineStore("upload2", {
 
          console.log("request")
          console.log(request)
+         console.log(request.totalSize)
 
          request.id = uuidv4()
 
@@ -173,9 +194,8 @@ export const useUploadStore = defineStore("upload2", {
       },
       onUploadProgress(request, progressEvent) {
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
-         this.estimator.updateSpeed(this.uploadSpeed)
-
-         this.eta = this.estimator.estimateRemainingTime(this.remainingBytes)
+         this.uploader.estimator.updateSpeed(this.uploadSpeed)
+         this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)
 
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId

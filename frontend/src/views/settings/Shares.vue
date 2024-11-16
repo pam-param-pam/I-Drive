@@ -1,5 +1,5 @@
 <template>
-  <errors v-if="error" :errorCode="error.response.status" />
+  <errors v-if="error" :errorCode="error?.response.status" />
   <div class="row" v-else-if="!loading">
     <div class="column">
       <div class="card">
@@ -72,7 +72,7 @@ export default {
    components: {
       Errors
    },
-   computed: mapState(useMainStore, ["settings", "loading"]),
+   computed: mapState(useMainStore, ["settings", "loading", "error"]),
 
    data() {
       return {
@@ -84,8 +84,16 @@ export default {
    async created() {
 
       this.setLoading(true)
-      this.shares = await getAllShares()
-      this.setLoading(false)
+      try {
+         this.shares = await getAllShares()
+      }
+      catch (error) {
+         console.error(error)
+         this.setError(error)
+      }
+      finally {
+         this.setLoading(false)
+      }
 
    },
 
@@ -101,7 +109,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "closeHover", "showHover"]),
+      ...mapActions(useMainStore, ["setLoading", "closeHover", "showHover", "setError"]),
 
       async deleteLink(event, share) {
          event.preventDefault()

@@ -1,5 +1,4 @@
 {
-  "": "Brak uprawnień",
   "buttons": {
     "cancel": "Anuluj",
     "close": "Zamknij",
@@ -50,7 +49,7 @@
     "databaseError": "Błąd bazy danych.",
     "discordBlocked": "Discord jest chwilowo zablokowany.",
     "folderPasswordRequired": "Hasło jest wymagane by odblokować folder.",
-    "forbidden": "Nie posiadasz uprawnień potrzebnych, by uzyskać do tego dostęp.",
+    "forbidden": "Nie posiadasz potrzebnych uprawnień.",
     "internal": "Pojawił się poważny problem.",
     "missingOrIncorrectResourcePassword": "Niepoprawne hasło do zasobu",
     "notFound": "Ten adres nie jest poprawny.",
@@ -217,6 +216,7 @@
     "currentPassword": "Twoje obecne hasło",
     "encryptFiles": "Szyfrowanie plików",
     "encryptionMethod": "Metoda szyfrowania",
+    "hideFileNames": "Ukryj nazwy plików",
     "hideLockedFolders": "Ukryj zablokowane foldery",
     "language": "Język",
     "newPassword": "Twoje nowe hasło",
@@ -234,6 +234,7 @@
     "shareExpiry": "Kiedy wygasa?",
     "shareManagement": "Zarządzanie udostępnianiem",
     "subfoldersInShares": "Zezwól na dostep do podfolderów w udostępnionych folderach",
+    "keepCreationTimestamp": "Zachowaj oryginalną date utworzenia pliku",
     "themes": {
       "dark": "Ciemny",
       "default": "Domyślny systemowy",

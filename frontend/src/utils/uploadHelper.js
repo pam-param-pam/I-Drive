@@ -1,7 +1,6 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
-import { generateVideoThumbnails } from "@rajesh896/video-thumbnails-generator"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -86,13 +85,13 @@ function processFile(fileEntry) {
       fileEntry.file(function(file) {
          // Check if the file is in a directory by looking for a "/"
          let fullPath = fileEntry.fullPath
-         file.path = fullPath.startsWith("/") ? fullPath.slice(1) : fullPath
+         let path = fullPath.startsWith("/") ? fullPath.slice(1) : fullPath
 
-         if (file.path === file.name) {
-            file.path = ""
+         if (path === file.name) {
+            path = ""
          }
 
-         resolve(file)
+         resolve({file, path})
       }, reject)
    })
 }

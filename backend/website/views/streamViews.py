@@ -9,8 +9,6 @@ import imageio
 import rawpy
 import requests
 from cryptography.fernet import Fernet
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.db.utils import IntegrityError
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse, HttpResponse
@@ -22,10 +20,10 @@ from zipFly import GenFile, ZipFly
 
 from ..models import File, UserZIP
 from ..models import Fragment, Preview
+from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
-from ..utilities.Decryptor import Decryptor
 from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict
 from ..utilities.other import send_event
@@ -309,9 +307,9 @@ def stream_file(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
-@handle_common_errors
+# @handle_common_errors
 def stream_zip_files(request, token):
-    async def stream_zip_file(file_obj: File, fragments, chunk_size=8192):
+    async def stream_zip_file(file_obj: File, fragments, chunk_size=1024):
         print(f"========={file_obj.name}=========")
 
         if file_obj.is_encrypted():
@@ -337,7 +335,7 @@ def stream_zip_files(request, token):
                             yield raw_data
 
     user_zip = UserZIP.objects.get(token=token)
-    files = user_zip.files.all()
+    files = user_zip.files.filter(ready=True, inTrash=False)
     folders = user_zip.folders.all()
     dict_files = []
 

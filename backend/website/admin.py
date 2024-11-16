@@ -116,10 +116,28 @@ class FileAdmin(admin.ModelAdmin):
 
         elif obj.type == "video":
             url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
+            poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"  # Example poster URL
+
             return format_html(
-                '<video controls style="width: 350px; height: auto;">'
+                '<video controls style="width: 350px; height: auto;" poster="{}">'
                 '<source src="{}" type="video/mp4">'
                 '</video>',
+                poster_url,
+                url
+            )
+        elif obj.type == "audio":
+            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
+            poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"  # Example poster URL
+
+            return format_html(
+                '<div style="display: flex; align-items: center;">'
+                '<img src="{}" alt="Audio Thumbnail" style="width: 100px; height: 100px; margin-right: 10px;">'
+                '<audio controls style="width: 240px;">'
+                '<source src="{}" type="audio/mpeg">'
+                'Your browser does not support the audio element.'
+                '</audio>'
+                '</div>',
+                poster_url,
                 url
             )
         else:

@@ -263,13 +263,13 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
         folder_dicts.append(folder_dict)
 
     folder_dict = create_folder_dict(folder_obj)
-
-    max_items = 50
-    folder_limit = min(len(folder_dicts), max_items)
-    file_limit = max_items - folder_limit
-
-    folder_dict["children"] = folder_dicts[:folder_limit] + file_dicts[:file_limit]
-    # folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
+    #
+    # max_items = 50
+    # folder_limit = min(len(folder_dicts), max_items)
+    # file_limit = max_items - folder_limit
+    #
+    # folder_dict["children"] = folder_dicts[:folder_limit] + file_dicts[:file_limit]
+    folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
 
     return folder_dict
 
@@ -386,15 +386,17 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
 
 def get_flattened_children(folder: Folder, full_path="", single_root=False) -> List[ZipFileDict]:
     """
-    Recursively collects all children (folders and files) of the given folder
+    Recursively collects all children [folders and files(not in and trash and ready)] of the given folder
     into a flattened list with file IDs and names including folders.
+
+    This function is used by zip
     """
 
     children = []
     check_resource_perms("dummy request", folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     # Collect all files in the current folder
-    files = folder.files.all()
+    files = folder.files.filter(ready=True, inTrash=False)
     if files:
         for file in files:
             file_full_path = f"{full_path}{folder.name}/{file.name}"

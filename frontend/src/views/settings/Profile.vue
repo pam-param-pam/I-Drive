@@ -20,6 +20,14 @@
             <input type="checkbox" v-model="dateFormat"/>
             {{ $t("settings.setDateFormat") }}
           </p>
+          <p>
+            <input type="checkbox" v-model="keepCreationTimestamp"/>
+            {{ $t("settings.keepCreationTimestamp") }}
+          </p>
+          <p>
+            <input type="checkbox" v-model="hideFilenames"/>
+            {{ $t("settings.hideFileNames") }}
+          </p>
           <div>
             <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
             <input
@@ -138,12 +146,15 @@ export default {
          passwordConf: "",
          hideLockedFolders: false,
          subfoldersInShares: false,
+         hideFilenames: false,
          dateFormat: false,
          locale: "",
          webhook: "",
          theme: "",
          concurrentUploadRequests: 4,
-         encryptionMethod: null
+         encryptionMethod: null,
+         keepCreationTimestamp: false
+
       }
    },
    computed: {
@@ -171,6 +182,8 @@ export default {
       this.dateFormat = this.settings.dateFormat
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
       this.encryptionMethod = this.settings.encryptionMethod
+      this.hideFilenames = this.settings.hideFilenames
+      this.keepCreationTimestamp = this.settings.keepCreationTimestamp
 
    },
    methods: {
@@ -202,7 +215,9 @@ export default {
             dateFormat: this.dateFormat,
             webhook: this.webhook,
             concurrentUploadRequests: this.concurrentUploadRequests,
-            encryptionMethod: this.encryptionMethod
+            encryptionMethod: this.encryptionMethod,
+            hideFilenames: this.hideFilenames,
+            keepCreationTimestamp: this.keepCreationTimestamp,
 
          }
 
@@ -214,24 +229,10 @@ export default {
       }, 1000),
 
       getMediaPreference() {
-         let hasDarkPreference = window.matchMedia(
-            "(prefers-color-scheme: dark)"
-         ).matches
-         if (hasDarkPreference) {
-            return "dark"
-         } else {
-            return "light"
-         }
+
       },
       setTheme(theme) {
-         let html = document.documentElement
-         if (!theme) {
-            theme = this.getMediaPreference()
 
-            html.className = theme
-         } else {
-            html.className = theme
-         }
       }
    },
 }

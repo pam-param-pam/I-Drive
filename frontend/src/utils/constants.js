@@ -37,3 +37,9 @@ export const uploadStatus = {
       canceling: "canceling",
       canceled: "canceled",
 }
+
+export const workerEvent = {
+      processDragAndDrop: "processDragAndDrop",
+      processFiles: "processFiles",
+
+}

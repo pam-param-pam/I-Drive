@@ -78,7 +78,7 @@ def users_me(request):
                              "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
                              "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
                              "webhook": settings.discord_webhook, "concurrentUploadRequests": settings.concurrent_upload_requests,
-                             "encryptionMethod": encryptionMethod.value
+                             "encryptionMethod": encryptionMethod.value, "hideFilenames": settings.hide_filenames, "keepCreationTimestamp": settings.keep_creation_timestamp
                              }}
 
     return JsonResponse(response, safe=False, status=200)
@@ -99,6 +99,8 @@ def update_settings(request):
     subfoldersInShares = request.data.get('subfoldersInShares')
     webhookURL = request.data.get('webhook')
     encryptionMethod = request.data.get('encryptionMethod')
+    hideFilenames = request.data.get('hideFilenames')
+    keepCreationTimestamp = request.data.get('keepCreationTimestamp')
 
     settings = UserSettings.objects.get(user=request.user)
     if locale in ["pl", "en", "uwu"]:
@@ -117,6 +119,10 @@ def update_settings(request):
         settings.sort_by_asc = sortByAsc
     if isinstance(subfoldersInShares, bool):
         settings.subfolders_in_shares = subfoldersInShares
+    if isinstance(hideFilenames, bool):
+        settings.hide_filenames = hideFilenames
+    if isinstance(keepCreationTimestamp, bool):
+        settings.keep_creation_timestamp = keepCreationTimestamp
     if isinstance(webhookURL, str):
         obj = urlparse(webhookURL)
         if obj.hostname != 'discord.com':

@@ -1,5 +1,6 @@
 import base64
 import math
+from datetime import datetime
 
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -43,6 +44,8 @@ def create_file(request):
             frontend_id = file['frontend_id']
             encryption_method = file['encryption_method']
 
+            created_at = file.get('created_at')
+
             _ = EncryptionMethod(encryption_method)  # validate encryption_method if its wrong it will raise KeyError which will be caught
 
             if mimetype == "":
@@ -71,6 +74,15 @@ def create_file(request):
                 parent=parent,
                 encryption_method=encryption_method,
             )
+
+            if created_at:
+                try:
+                    timestamp_in_seconds = int(created_at) / 1000
+                    created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
+                    print(created_at)
+                except (ValueError, OverflowError):
+                    raise BadRequestError("Invalid 'created_at' timestamp format.")
+                file_obj.created_at = created_at
             #  apply lock if needed
             if parent.is_locked:
                 file_obj.applyLock(parent.lockFrom, parent.password)
@@ -127,7 +139,6 @@ def create_file(request):
             total_fragments = math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE)
             if len(file_obj.fragments.all()) == total_fragments:
                 file_obj.ready = True
-                file_obj.created_at = timezone.now()
                 file_obj.save()
 
                 send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
