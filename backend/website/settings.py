@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_user_agents',
 
 ]
 
@@ -61,8 +62,7 @@ MIDDLEWARE = [
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-
+    'django_user_agents.middleware.UserAgentMiddleware',
 
 ]
 CORS_ALLOW_HEADERS = "*"

@@ -6,7 +6,7 @@ from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.utils.html import format_html
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
 from .utilities.other import sign_file_id_with_expiry
@@ -252,3 +252,7 @@ class UserZIPAdmin(admin.ModelAdmin):
 
     def owner_name(self, obj: UserZIP):
         return obj.owner.username
+
+@admin.register(AuditEntry)
+class AuditEntryAdmin(admin.ModelAdmin):
+    list_display = ['action', 'user', 'ip', 'user_agent', 'datetime']

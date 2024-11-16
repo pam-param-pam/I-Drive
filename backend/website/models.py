@@ -2,16 +2,18 @@ import base64
 import secrets
 
 import shortuuid
+from django.contrib.auth import user_logged_out, user_logged_in, user_login_failed
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
 
 
 class Folder(models.Model):
@@ -423,8 +425,6 @@ class UserZIP(models.Model):
             self.name = f"I-Drive-{self.id}"
         super(UserZIP, self).save(*args, **kwargs)
 
-
-
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(days=7)
 
@@ -433,3 +433,28 @@ class VideoPosition(models.Model):
     file = models.OneToOneField(File, on_delete=models.CASCADE)
     modified_at = models.DateTimeField(default=timezone.now)
     timestamp = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.file.name
+
+
+class AuditEntry(models.Model):
+    action = models.CharField(max_length=64)
+    ip = models.GenericIPAddressField(null=True)
+    datetime = models.DateTimeField(default=timezone.now)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    user_agent = models.CharField(max_length=250)
+
+    def __str__(self):
+        return '{0} - {1} - {2}'.format(self.action, self.user.username, self.ip)
+
+@receiver(user_logged_in)
+def user_logged_in_callback(sender, request, user, **kwargs):
+    ip = request.META.get('REMOTE_ADDR')
+    AuditEntry.objects.create(action=AuditAction.USER_LOGGED_IN.name, ip=ip, user=user, user_agent=request.user_agent)
+
+
+@receiver(user_logged_out)
+def user_logged_out_callback(sender, request, user, **kwargs):
+    ip = request.META.get('REMOTE_ADDR')
+    AuditEntry.objects.create(action=AuditAction.USER_LOGGED_OUT.name, ip=ip, user=user, user_agent=request.user_agent)

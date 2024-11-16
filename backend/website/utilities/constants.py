@@ -43,3 +43,9 @@ class EncryptionMethod(Enum):
     Not_Encrypted = 0
     AES_CTR = 1
     CHA_CHA_20 = 2
+
+
+class AuditAction(Enum):
+    USER_LOGGED_IN = 1
+    USER_LOGGED_OUT = 2
+

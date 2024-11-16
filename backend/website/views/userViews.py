@@ -8,9 +8,9 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, UserPerms
+from ..models import UserSettings, Folder, UserPerms, AuditEntry
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, AuditAction
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets
