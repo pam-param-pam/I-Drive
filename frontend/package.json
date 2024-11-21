@@ -40,8 +40,7 @@
     "vue-toastification": "^2.0.0-rc.5",
     "vue-virtual-scroller": "^2.0.0-beta.8",
     "vue3-lazyload": "^0.3.8",
-    "vue3-touch-events": "^4.2.0",
-    "vue3-virtual-scroll-list": "^0.2.1"
+    "vue3-touch-events": "^4.2.0"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",

@@ -100,18 +100,9 @@
       </template>
 
     </header-bar>
-    <div v-if="loading">
-      <h2 class="message delayed">
-        <div class="spinner">
-          <div class="bounce1"></div>
-          <div class="bounce2"></div>
-          <div class="bounce3"></div>
-        </div>
-        <span>{{ $t("files.loading") }}</span>
-      </h2>
-    </div>
+    <loading-spinner/>
 
-    <template v-else-if="error == null">
+    <template v-if="!error && !loading">
 
       <div v-if="dirsSize + filesSize === 0">
         <h2 class="message">
@@ -195,7 +186,9 @@
         <RecycleScroller
           class="scroller"
           :items="dirs"
-          :item-size="0.1"
+          :gridItems="4"
+          :item-secondary-size="1000"
+          :item-size="1"
 
           key-field="id"
           v-slot="{ item }"
@@ -369,6 +362,7 @@ import Action from "@/components/header/Action.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Search from "@/components/Search.vue"
 import { RecycleScroller } from "vue-virtual-scroller"
+import loadingSpinner from "@/components/loadingSpinner.vue"
 
 //todo reset selected on navigation
 export default {
@@ -379,6 +373,7 @@ export default {
       Item,
       ContextMenu,
       RecycleScroller,
+      loadingSpinner,
    },
 
    props: {

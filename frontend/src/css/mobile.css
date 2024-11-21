@@ -45,12 +45,6 @@
     z-index: 99999;
   }
 
-  body.rtl #dropdown {
-    right: unset;
-    left: 1em;
-    transform-origin: top left;
-  }
-
   #dropdown > div {
     display: block;
   }
@@ -107,17 +101,8 @@
     left: -17em;
   }
 
-  body.rtl nav {
-    left: unset;
-    right: -17em;
-  }
   nav.active {
     left: 0;
-  }
-
-  body.rtl nav.active {
-    left: unset;
-    right: 0;
   }
 
   .shell__divider {
@@ -134,23 +119,6 @@
   #listing {
     margin-bottom: 5em;
   }
-
-  body.rtl #listing {
-    margin-right: unset;
-  }
-
-  body.rtl .breadcrumbs {
-    transform: translateX(16em);
-  }
-
-  body.rtl #nav .wrapper {
-    margin-right: unset;
-  }
-  
-  body.rtl .dashboard .row {
-    margin-right: unset;
-  }
-
   main {
     margin: 0 1em;
     width: calc(100% - 2em);
