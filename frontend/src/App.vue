@@ -1,7 +1,7 @@
 <template>
-  <div>
+
     <router-view></router-view>
-  </div>
+
 </template>
 
 <script>
@@ -21,4 +21,10 @@ export default {
 
 <style>
 @import "./css/styles.css";
+html,
+body,
+#app {
+ box-sizing: border-box;
+ height: 100%;
+}
 </style>

@@ -9,6 +9,7 @@ import "vue-toastification/dist/index.css"
 import VueLazyLoad from "vue3-lazyload"
 import Vue3TouchEvents from "vue3-touch-events"
 import VueVirtualScroller from 'vue-virtual-scroller'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 const app = createApp(App)
 console.log("validate login")

@@ -1,51 +1,52 @@
 <template>
-  <div
-    ref="wrapper"
-    class="item"
-    role="button"
-    tabindex="0"
-    :draggable="isDraggable"
-    @dragstart="dragStart"
-    @dragover="dragOver"
-    @drop="drop"
-    @dblclick="$emit('onOpen', item)"
-    @click="click"
-    :data-dir="item.isDir"
-    :data-type="type"
-    :aria-label="item.name"
-    :aria-selected="isSelected"
-  >
+  <div class="item-wrapper">
+    <div
+      ref="wrapper"
+      class="item"
+      role="button"
+      tabindex="0"
+      :draggable="isDraggable"
+      @dragstart="dragStart"
+      @dragover="dragOver"
+      @drop="drop"
+      @dblclick="$emit('onOpen', item)"
+      @click="click"
+      :data-dir="item.isDir"
+      :data-type="type"
+      :aria-label="item.name"
+      :aria-selected="isSelected"
+    >
 
-    <div>
-      <img
-        v-if="item.preview_url && type === 'image' && item.size > 0"
-        v-lazy="{src: item.preview_url, error: '/img/imageFailed.png'}"
+      <div>
+        <img
+          v-if="item.preview_url && type === 'image' && item.size > 0"
+          v-lazy="{src: item.preview_url, error: '/img/imageFailed.png'}"
+          :style="`min-width: ${imageWidth}px; height: ${imageHeight}px;`"
+        />
+        <img
+          v-else-if="item.download_url && type === 'image' && item.size > 0"
+          v-lazy="{src: item.download_url, error: '/img/imageFailed.png'}"
+          :style="`min-width: ${imageWidth}px; height: ${imageHeight}px;`"
 
-      />
-      <img
-        v-else-if="item.download_url && type === 'image' && item.size > 0"
-        v-lazy="{src: item.download_url, error: '/img/imageFailed.png'}"
+        />
+        <img
+          v-else-if="item.thumbnail_url && type === 'video'"
+          v-lazy="{src: item.thumbnail_url, error: '/img/imageFailed.png'}"
+          :style="`min-width: ${imageWidth}px; height: ${imageHeight}px;`"
 
-      />
-      <img
-        v-else-if="item.thumbnail_url && type === 'video'"
-        v-lazy="{src: item.thumbnail_url, error: '/img/imageFailed.png'}"
 
-      />
-      <i v-else class="material-icons"></i>
-    </div>
-    <div>
-      <p v-if="(item.isDir || !settings.hideFilenames || type !== 'video' || !item.thumbnail_url) || settings.viewMode !== 'mosaic gallery'" class="name">{{ item.name }}</p>
-
-      <p v-if="item.isDir" class="size" data-order="-1">&mdash;</p>
-      <p v-else class="size" :data-order="item.size">{{ humanSize() }}</p>
-
-      <p class="created">
-        <time :datetime="item.created">{{ humanTime() }}</time>
-      </p>
-
+        />
+        <i v-else class="material-icons"></i>
+      </div>
+      <div class="size">
+        <p >{{ item.size }}</p>
+      </div>
+      <div class="name">
+        <p >{{ item.name }}</p>
+      </div>
     </div>
   </div>
+
 </template>
 
 <script>
@@ -60,7 +61,7 @@ export default {
    name: "item",
 
    emits: ['onOpen'],
-   props: ["readOnly", "item"],
+   props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount"]),
@@ -199,3 +200,53 @@ export default {
    },
 }
 </script>
+<style>
+.grid .item-wrapper:hover {
+ box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 1px 2px rgba(0, 0, 0, .24) !important;
+ background: var(--light-blue);
+ transform: scale(1.03);
+
+}
+/*.grid .item:hover {*/
+
+/* transform: scale(1.03);*/
+
+/*}*/
+
+.grid .item-wrapper {
+ border-radius: 10px;
+ margin: 0.5em;
+ background-color: #f7f8fd;
+ overflow: hidden;
+ box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px, rgba(0, 0, 0, 0.12) 0 1px 2px;
+
+}
+
+.grid .item-wrapper .item {
+
+ display: flex;
+ flex-direction: column;
+ text-align: center;
+}
+
+.grid .item-wrapper .item img {
+ /*-webkit-filter: blur(35px);*/
+ margin-top: 0.5em;
+ box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px, rgba(0, 0, 0, 0.12) 0 1px 2px;
+ max-width: 100%;
+ object-fit: cover;
+ background: #ffffff;
+
+}
+.grid .item-wrapper .item .name p {
+ text-overflow: ellipsis;
+ overflow: hidden;
+ font-size: 15px;
+ margin: 0.5em 2em;
+ white-space: nowrap;
+}
+
+.grid .item-wrapper .item .size  {
+ display: none;
+}
+</style>

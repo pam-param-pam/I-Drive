@@ -131,9 +131,6 @@
 
       <div
         v-else
-        id="listing"
-        ref="listing"
-        :class="settings.viewMode + ' file-icons'"
         @dragenter.prevent @dragover.prevent
       >
         <div>
@@ -182,83 +179,65 @@
             </div>
           </div>
         </div>
-        <h2 v-if="dirsSize > 0">{{ $t("files.folders") }}</h2>
-        <RecycleScroller
-          class="scroller"
-          :items="dirs"
-          :gridItems="4"
-          :item-secondary-size="1000"
-          :item-size="1"
 
-          key-field="id"
-          v-slot="{ item }"
-        >
-          <div class="user">
-            <item
-              :item="item"
-              :readOnly="readonly"
-              :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
-              @onOpen="$emit('onOpen', item)"
-              @contextmenu.prevent="showContextMenu($event, item)"
 
+        <div class="wrapper" v-if="files.length > 0">
+          <div class="grid">
+            <RecycleScroller
+              ref="scroller"
+              id="scroller"
+              class="scroller"
+              :items="files"
+              :item-size="tileHeight"
+              :grid-items="numberOfTiles"
+              :item-secondary-size="tileWidth"
+              v-slot="{ item }"
             >
-            </item>
+              <item
+                :item="item"
+                :readOnly="readonly"
+                :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
+                :imageWidth="imageWidth"
+                :imageHeight="imageHeight"
+                :tileHeight="tileHeight"
+                :tileWidth="tileWidth"
+                @onOpen="$emit('onOpen', item)"
+                @contextmenu.prevent="showContextMenu($event, item)"
+              >
+              </item>
+
+            </RecycleScroller>
           </div>
-        </RecycleScroller>
-
-        <h2 v-if="filesSize > 0">{{ $t("files.files") }}</h2>
-        <RecycleScroller
-          class="scroller"
-          :items="files"
-          :item-size="1"
-          key-field="id"
-          v-slot="{ item }"
-        >
-          <div class="user">
-            <item
-              :item="item"
-              :readOnly="readonly"
-              :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
-              @onOpen="$emit('onOpen', item)"
-              @contextmenu.prevent="showContextMenu($event, item)"
-
+        </div>
+        <div class="wrapper" v-if="files.length > 0">
+          <div class="grid">
+            <RecycleScroller
+              ref="scroller"
+              id="scroller"
+              class="scroller"
+              :items="dirs"
+              :item-size="tileHeight"
+              :grid-items="numberOfTiles"
+              :item-secondary-size="tileWidth"
+              v-slot="{ item }"
             >
-            </item>
+              <item
+                :item="item"
+                :readOnly="readonly"
+                :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
+                :imageWidth="imageWidth"
+                :imageHeight="imageHeight"
+                :tileHeight="tileHeight"
+                :tileWidth="tileWidth"
+                @onOpen="$emit('onOpen', item)"
+                @contextmenu.prevent="showContextMenu($event, item)"
+              >
+              </item>
+
+            </RecycleScroller>
           </div>
-        </RecycleScroller>
+        </div>
 
-<!--        <div v-if="dirsSize > 0">-->
-<!--          <item-->
-<!--            v-for="item in dirs" :key="item.id"-->
-<!--            :item="item"-->
-<!--            :readOnly="readonly"-->
-<!--            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"-->
-<!--            @onOpen="$emit('onOpen', item)"-->
-<!--            @contextmenu.prevent="showContextMenu($event, item)"-->
-
-<!--          >-->
-<!--          </item>-->
-<!--        </div>-->
-
-<!--        <h2 v-if="filesSize > 0">{{ $t("files.files") }}</h2>-->
-<!--        <div v-if="filesSize > 0">-->
-
-<!--          <item-->
-<!--            v-for="item in files" :key="item.id"-->
-<!--            :item="item"-->
-<!--            :readOnly="readonly"-->
-<!--            :ref="item.id === locatedItem?.id ? 'locatedItem' : null"-->
-<!--            @onOpen="$emit('onOpen', item)"-->
-<!--            @contextmenu.prevent="showContextMenu($event, item)"-->
-
-<!--          ></item>-->
-
-<!--        </div>-->
-<!--        <div class="pagination">-->
-<!--          <button :disabled="currentPage === 1" @click="prevPage">Previous</button>-->
-<!--          <span>Page {{ currentPage }} of {{ totalPages }}</span>-->
-<!--          <button :disabled="currentPage === totalPages" @click="nextPage">Next</button>-->
-<!--        </div>-->
         <input
           style="display: none"
           type="file"
@@ -364,7 +343,6 @@ import Search from "@/components/Search.vue"
 import { RecycleScroller } from "vue-virtual-scroller"
 import loadingSpinner from "@/components/loadingSpinner.vue"
 
-//todo reset selected on navigation
 export default {
    name: "FileListing",
    components: {
@@ -394,8 +372,11 @@ export default {
          isContextMenuVisible: false,
 
          //experimental
-         currentPage: 1,
-         totalPages: 10
+         tileWidth: 100,
+         tileHeight: 100,
+         imageHeight: 100,
+         imageWidth: 100,
+         numberOfTiles: 4,
       }
    },
    watch: {
@@ -411,7 +392,7 @@ export default {
             // const selectedItem = this.$refs.locatedItem[0]
             //
             // selectedItem.myScroll()
-
+            this.calculateGridLayoutWrapper()
          })
       }
 
@@ -419,18 +400,17 @@ export default {
    beforeUpdate() {
       console.log("beforeUpdate")
 
+
+
    },
    mounted() {
 
       console.log("MOUNTED")
-      // Check the columns size for the first time.
-      this.columnsResize()
 
-      // How much every listing item affects the window height
-      this.setItemWeight()
-
-      // Fill and fit the window with listing items
-      this.fillWindow(true)
+      // let element = document.getElementById("scroller")
+      // this.calculateGridLayout(element.clientWidth-15)
+      //
+      window.addEventListener("resize", this.calculateGridLayoutWrapper)
 
       // Add the needed event listeners to the window and document.
       window.addEventListener("keydown", this.keyEvent)
@@ -453,6 +433,7 @@ export default {
       window.removeEventListener("keydown", this.keyEvent)
       window.removeEventListener("scroll", this.scrollEvent)
       window.removeEventListener("resize", this.windowsResize)
+      window.addEventListener("resize", this.calculateGridLayoutWrapper)
 
       if (!this.user || !this.perms?.create) return
       document.removeEventListener("dragover", this.preventDefault)
@@ -530,9 +511,34 @@ export default {
 
       ...mapActions(useMainStore, ["toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
+      calculateGridLayoutWrapper() {
+         let element = document.getElementById("scroller");
+         this.calculateGridLayout(element.clientWidth);
+      },
+      calculateGridLayout(containerWidth) {
+
+         const maxTileWidth = 400;
+
+         // Calculate the maximum number of tiles that can fit using the minimum width
+         let numberOfTiles = Math.ceil(containerWidth / maxTileWidth);
+
+         // Calculate the actual width of each tile
+         let tileWidth = containerWidth / numberOfTiles;
+
+         // Update the data properties
+         this.numberOfTiles = numberOfTiles;
+         this.tileWidth = tileWidth;
+         this.tileHeight = this.tileWidth*300/400
+
+         this.imageWidth = 175/400 * this.tileWidth
+         this.imageHeight = 240/300 * this.tileHeight - 15/numberOfTiles
+
+
+      },
       async uploadInput(event) {
          this.$emit("uploadInput", event)
       },
+
       showContextMenu(event, item) {
          this.resetSelected()
          this.addSelected(item)
@@ -555,7 +561,6 @@ export default {
          if ((posY + max_y_size) > viewportHeight) {
             posY = viewportHeight - max_y_size
          }
-
 
          this.contextMenuPos = {
             x: posX,
@@ -788,36 +793,27 @@ export default {
 }
 </script>
 <style scoped>
-.pagination {
- display: flex !important;
- justify-content: center !important;
- align-items: center;
- gap: 10px; /* Space between elements */
- margin-top: 20px;
+.grid {
+ flex: 1; /* Fills available space in the flex container */
+ overflow-y: hidden; /* Allows vertical scrolling if content overflows */
+
 }
 
-.pagination button {
- background-color: #3498db;
- border: none;
- color: white;
- padding: 8px 16px;
- border-radius: 4px;
- cursor: pointer;
- font-size: 14px;
- transition: background-color 0.3s;
+.grid .scroller {
+ padding-bottom: 1em;
+ background-color: #fafafa;
+ height: calc(100% - 20px);
+ overflow-y: auto;
+
+}
+.wrapper {
+ display: flex;
+ flex-direction: column;
+ overflow: hidden;
+ height: 100%;
+
 }
 
-.pagination button:hover:not(:disabled) {
- background-color: #2980b9;
-}
 
-.pagination button:disabled {
- background-color: #bdc3c7;
- cursor: not-allowed;
-}
 
-.pagination span {
- font-size: 16px;
- color: #333;
-}
 </style>

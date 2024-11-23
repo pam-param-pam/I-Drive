@@ -29,9 +29,8 @@ def sign_file_id_with_expiry(file_id: str) -> str:
     # if cached_signed_file_id:
     #     return cached_signed_file_id
     signed_file_id = signer.sign(file_id)
-    cache.set(file_id, signed_file_id, timeout=SIGNED_URL_EXPIRY_SECONDS)
+    # cache.set(file_id, signed_file_id, timeout=SIGNED_URL_EXPIRY_SECONDS)
     return signed_file_id
-
 
 # Function to verify and extract the file id
 def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:

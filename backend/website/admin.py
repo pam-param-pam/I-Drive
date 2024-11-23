@@ -127,17 +127,17 @@ class FileAdmin(admin.ModelAdmin):
             )
         elif obj.type == "audio":
             url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
-            poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"  # Example poster URL
+            # poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
 
             return format_html(
                 '<div style="display: flex; align-items: center;">'
-                '<img src="{}" alt="Audio Thumbnail" style="width: 100px; height: 100px; margin-right: 10px;">'
-                '<audio controls style="width: 240px;">'
+                # '<img src="{}" alt="Audio Thumbnail" style="width: 100px; height: 100px; margin-right: 10px;">'
+                '<audio controls ">'
                 '<source src="{}" type="audio/mpeg">'
                 'Your browser does not support the audio element.'
                 '</audio>'
                 '</div>',
-                poster_url,
+                # poster_url,
                 url
             )
         else:
@@ -223,6 +223,7 @@ class PreviewAdmin(admin.ModelAdmin):
 class ThumbnailAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "created_at"]
+    readonly_fields = ["thumbnail_media"]
 
     def file_name(self, obj: Thumbnail):
         return obj.file.name
@@ -233,6 +234,12 @@ class ThumbnailAdmin(admin.ModelAdmin):
     def readable_size(self, obj: Thumbnail):
         return filesizeformat(obj.size)
 
+    def thumbnail_media(self, obj: Thumbnail):
+        signed_file_id = sign_file_id_with_expiry(obj.file.id)
+        url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+        return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+
+    thumbnail_media.short_description = 'PREVIEW THUMBNAIL'
 
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
