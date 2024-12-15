@@ -374,37 +374,11 @@ export default {
             let element = document.getElementById("filesScroller")
             this.calculateGridLayout(element.clientWidth - 15)
 
-            if (!this.lastItem) return
-
-            let index = this.files.findIndex(file => file.id === this.lastItem.id)
-
-            let filesScroller = this.$refs.filesScroller
-            setTimeout(function () {
-               filesScroller.scrollToItem(index-4)
-               },250)
-
-            let itemElement = this.$refs[this.lastItem.id];
-
-            if (itemElement) {
-               itemElement.$el.classList.add('pulse-animation');
-
-               // Remove the animation class after 5 seconds
-               setTimeout(() => {
-                  itemElement.$el.classList.remove('pulse-animation');
-               }, 3500); // 5 seconds
-            }
-
-
-
          })
       }
 
    },
-   beforeUpdate() {
-      console.log("beforeUpdate")
 
-
-   },
    mounted() {
 
       console.log("MOUNTED")
@@ -421,7 +395,7 @@ export default {
          let filesScroller = this.$refs.filesScroller
          setTimeout(function () {
             filesScroller.scrollToItem(index-4)
-         },250)
+         },50)
 
          let itemElement = this.$refs[this.lastItem.id];
 
@@ -853,7 +827,7 @@ export default {
 .grid .scroller {
  background-color: #fafafa;
  overflow-y: auto;
- height: calc(100% - 95px);
+ height: calc(100% - 120px);
  /*height: 100%;*/
 
 

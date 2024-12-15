@@ -6,10 +6,9 @@ import {sortItems} from "@/utils/common.js";
 export const useMainStore = defineStore('main', {
    state: () => ({
       user: null,
-      items: [],
       perms: null,
       settings: null,
-      currentFolder: null,
+      currentFolderData: null,
       progress: 0,
       token: "",
       loading: false,
@@ -22,9 +21,20 @@ export const useMainStore = defineStore('main', {
       folderPasswords: {},
       searchFilters: {"files": true, "folders": true},
       lastItem: null,
+
    }),
 
    getters: {
+      currentFolder() {
+         return this.currentFolderData?.folder
+      },
+      items() {
+         return this.currentFolderData?.folder.children
+      },
+      breadcrumbs() {
+         if (this.currentFolderData) return this.currentFolderData.breadcrumbs
+         return []
+      },
       isLogged() {
          return this.user !== null
       },
@@ -77,7 +87,14 @@ export const useMainStore = defineStore('main', {
    },
 
    actions: {
-
+      setCurrentFolderData(value) {
+         console.log("setting items")
+         this.currentFolderData = value
+      },
+      setItems(value) {
+         console.log("setting items")
+         this.currentFolderData.folder.children = value
+      },
       setFolderPassword(payload) {
          this.folderPasswords[payload.folderId] = payload.password
       },
@@ -122,19 +139,10 @@ export const useMainStore = defineStore('main', {
             cancel: value?.cancel,
          })
       },
-      setItemIndex({ id, index }) {
-         let item = this.items.find(item => item.id === id)
-         if (item) {
-            item.index = index
-         }
-      },
       setLoading(value) {
          console.log("setting loading")
          console.log(value)
          this.loading = value
-      },
-      setReload(value) {
-         this.reload = value
       },
       setToken(value) {
          this.token = value
@@ -147,7 +155,6 @@ export const useMainStore = defineStore('main', {
          this.user = value
       },
       setLastItem(value) {
-
         this.lastItem = value
       },
       addSelected(value) {
@@ -170,25 +177,10 @@ export const useMainStore = defineStore('main', {
       resetSelected() {
          this.selected = []
       },
-      updateUser(value) {
-         if (typeof value !== "object") return
-
-         for (let field in value) {
-            if (field === "locale") {
-               moment.locale("pl")
-
-               i18n.global.locale = value[field]
-            }
-            this.user[field] = value[field]
-         }
-      },
       updateItems(value) {
          this.items.push(value)
       },
-      setItems(value) {
-         console.log("seting items")
-         this.items = value
-      },
+
       renameItem({ id, newName }) {
          const index1 = this.items.findIndex(item => item.id === id)
          const index2 = this.selected.findIndex(item => item.id === id)

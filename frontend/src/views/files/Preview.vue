@@ -298,59 +298,43 @@ export default {
 
          // Ensure file is updated in the DOM
          this.file = null
-         await this.$nextTick(); //this is very important
-         console.warn("AAAAAAAAAAAAAAAAA")
-         console.log(this.items)
+         await this.$nextTick() //this is very important
          if (this.items) {
             for (let i = 0; i < this.items.length; i++) {
                if (this.items[i].id === this.fileId) {
-                  this.file = this.items[i];
-                  break;
+                  this.file = this.items[i]
+                  break
                }
             }
          }
 
          if (!this.file) {
+            try {
+              if (this.isInShareContext) {
+                    let res = await getShare(this.token, this.folderId)
+                    this.shareObj = res
+                    this.setItems(res.share)
+                    this.folderList = res.breadcrumbs
 
-            if (this.isInShareContext) {
+                    for (let i = 0; i < this.items.length; i++) {
+                       if (this.items[i].id === this.fileId) {
+                          this.file = this.items[i]
+                       }
+                    }
+              } else {
+                  this.file = await getFile(this.fileId, this.lockFrom)
+                  if (!this.currentFolder) {
+                     let res = await getItems(this.file.parent_id, this.file.lockFrom)
 
-               try {
-                  let res = await getShare(this.token, this.folderId)
-                  this.shareObj = res
-
-                  this.setItems(res.share)
-                  this.folderList = res.breadcrumbs
-
-                  for (let i = 0; i < this.items.length; i++) {
-                     if (this.items[i].id === this.fileId) {
-                        this.file = this.items[i]
-                     }
+                     this.setItems(res.folder.children)
+                     this.setCurrentFolder(res.folder)
                   }
-               } catch (error) {
+              }
+            } catch (error) {
                   if (error.code === "ERR_CANCELED") return
                   this.setError(error)
-               } finally {
-                  this.setLoading(false)
-
-               }
-
-            } else {
-               try {
-                 this.file = await getFile(this.fileId, this.lockFrom)
-                 if (!this.currentFolder) {
-                    let res = await getItems(this.file.parent_id, this.file.lockFrom)
-
-                    this.setItems(res.folder.children)
-                    this.setCurrentFolder(res.folder)
-                 }
-               } catch (error) {
-                  if (error.code === "ERR_CANCELED") return
-                  this.setError(error)
-               } finally {
-                  this.setLoading(false)
-
-               }
-
+            } finally {
+              this.setLoading(false)
             }
          }
          this.addSelected(this.file)

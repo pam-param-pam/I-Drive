@@ -1,17 +1,17 @@
 <template>
-  <div>
-    <errors v-if="error" :errorCode="error.response.status"/>
-    <h4 v-if="!error" class="listing-notice">{{ $t('trash.info') }}</h4>
 
-    <FileListing
-      ref="listing"
-      :isSearchActive="false"
-      :readonly="true"
-      :headerButtons="headerButtons"
-      @onOpen="onOpen"
+  <errors v-if="error" :errorCode="error.response.status"/>
+  <h4 v-if="!error" class="listing-notice">{{ $t('trash.info') }}</h4>
 
-    ></FileListing>
-  </div>
+  <FileListing
+    ref="listing"
+    :isSearchActive="false"
+    :readonly="true"
+    :headerButtons="headerButtons"
+    @onOpen="onOpen"
+
+  ></FileListing>
+
 </template>
 
 <script>

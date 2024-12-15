@@ -2,7 +2,7 @@
   <div style="height: 100%">
     <breadcrumbs v-if="!isSearchActive"
                  base="/files"
-                 :folderList="folderList"
+                 :folderList="breadcrumbs"
     />
     <errors v-if="error" :errorCode="error.response?.status" />
 
@@ -72,7 +72,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
+      ...mapState(useMainStore, ["breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
 
       headerButtons() {
          return {
@@ -86,7 +86,7 @@ export default {
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
             locate: this.selectedCount === 1 && this.isSearchActive,
             search: true,
-            openInNewWindow: true,
+            openInNewWindow: true
          }
       }
    },
@@ -257,26 +257,33 @@ export default {
          console.log(this.currentFolder?.id)
          console.log(this.folderId)
          if (this.currentFolder?.id === this.folderId) {
-            // this.$refs.listing.calculateGridLayoutWrapper()
+            this.folderList = this.currentFolder.breadcrumbs
             return
          }
 
          this.setError(null)
          this.setLoading(true)
          try {
-           let res = await getItems(this.folderId, this.lockFrom)
+            let res = await getItems(this.folderId, this.lockFrom)
+            const mainStore = useMainStore()
+            mainStore.setCurrentFolderData(res)
+            // this.items = res.folder.children
+            // this.folderList = res.breadcrumbs
+            //
+            // res.folder.breadcrumbs = this.folderList
+            //
+            //
+            //
+            //
+            //
+            // this.setItems(this.items)
+            // this.setCurrentFolder(res.folder)
 
-           this.items = res.folder.children
-           this.folderList = res.breadcrumbs
-
-           this.setItems(this.items)
-           this.setCurrentFolder(res.folder)
-
-           if (res.parent_id) { //only set title if its not root folder
-              document.title = `${res.name} - ` + name
-           } else {
-              document.title = name
-           }
+            if (res.parent_id) { //only set title if its not root folder
+               document.title = `${res.name} - ` + name
+            } else {
+               document.title = name
+            }
          } catch (error) {
             console.log(error)
             if (error.code === "ERR_CANCELED") return
@@ -289,15 +296,14 @@ export default {
       },
       openInNewWindow(item) {
          if (item.isDir) {
-            let url = this.$router.resolve({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom, } }).href;
-            window.open(url, "_blank");
-         }
-         else if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
-            let url = this.$router.resolve({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } }).href;
-            window.open(url, "_blank");
+            let url = this.$router.resolve({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } }).href
+            window.open(url, "_blank")
+         } else if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
+            let url = this.$router.resolve({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } }).href
+            window.open(url, "_blank")
          } else {
-            let url = this.$router.resolve({ name: "Editor", params: { "fileId": item.id, "lockFrom": item.lockFrom, } }).href;
-            window.open(url, "_blank");
+            let url = this.$router.resolve({ name: "Editor", params: { "fileId": item.id, "lockFrom": item.lockFrom } }).href
+            window.open(url, "_blank")
          }
 
       },
