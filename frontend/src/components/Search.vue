@@ -30,6 +30,7 @@
 
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
+import throttle from "lodash.throttle"
 
 export default {
    name: "search",
@@ -49,14 +50,13 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["showHover", "setDisabledCreation", "resetSelected"]),
-      async search() {
+      search: throttle(async function (event) {
          //copying to not mutate vuex store state
          let searchDict = {...this.searchFilters}
          searchDict["query"] = this.query
          this.$emit('onSearchQuery', searchDict)
 
-      },
-
+      }, 500),
       onTuneClick() {
          this.showHover({
             prompt: "SearchTunePrompt",

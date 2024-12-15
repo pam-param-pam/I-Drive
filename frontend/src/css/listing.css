@@ -225,7 +225,7 @@
 
 #listing.list .item.header {
   display: flex !important;
-  background: #fafafa;
+  background: var(--background);
   z-index: 999;
   padding: .85em;
   border: 0;

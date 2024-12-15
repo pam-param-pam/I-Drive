@@ -228,12 +228,6 @@ export default {
 
       }, 1000),
 
-      getMediaPreference() {
-
-      },
-      setTheme(theme) {
-
-      }
    },
 }
 </script>

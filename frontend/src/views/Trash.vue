@@ -18,12 +18,10 @@
 
 import Errors from "@/views/Errors.vue"
 import {getTrash} from "@/api/user.js"
-import HeaderBar from "@/components/header/HeaderBar.vue"
-import Action from "@/components/header/Action.vue"
-import {isMobile} from "@/utils/common.js"
 import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
 import FileListing from "@/views/files/FileListing.vue"
+import {name} from "@/utils/constants"
 
 export default {
    name: "trash",
@@ -68,7 +66,7 @@ export default {
       ...mapActions(useMainStore, ["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
 
       async fetchFolder() {
-         document.title = "Trash"
+         document.title = this.$t("trash.trashName") + " - " + name
 
          this.setError(null)
          this.setLoading(true)

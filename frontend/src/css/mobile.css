@@ -4,7 +4,7 @@
   }
   /* Mobile Only fix div hidden by bottom navigation bar of mobile browser when using height: 100vh */
   #previewer .preview {
-    /*height: calc(100% - 4em) !important;*/
+    height: calc(100% - 2em) !important;
     /*todo*/
 
   }
@@ -96,7 +96,6 @@
   nav {
     top: 0;
     z-index: 99999;
-    background: #fff;
     height: 100%;
     width: 16em;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);

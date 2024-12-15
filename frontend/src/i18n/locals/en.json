@@ -218,6 +218,7 @@
     "encryptionMethod": "Encryption method",
     "hideFileNames": "Hide file names",
     "hideLockedFolders": "Hide locked folders",
+    "keepCreationTimestamp": "Keep original file creation timestamp",
     "language": "Language",
     "newPassword": "Your new password",
     "newPasswordConfirm": "Confirm your new password",
@@ -234,7 +235,6 @@
     "shareExpiry": "Share Expiry",
     "shareManagement": "Share Management",
     "subfoldersInShares": "Include subfolders in shares",
-    "keepCreationTimestamp": "Keep original file creation timestamp",
     "themes": {
       "dark": "Dark",
       "default": "System default",
@@ -255,6 +255,7 @@
     "newFolder": "New Folder",
     "register": "Register",
     "settings": "Settings",
+    "toggleDarkMode": "Toggle dark mode",
     "trash": "Trash"
   },
   "time": {
@@ -298,7 +299,8 @@
     "websocketError": "Couldn't connect to websocket, site will not function properly."
   },
   "trash": {
-    "info": "Items in trash will be deleted after 30 days!"
+    "info": "Items in trash will be deleted after 30 days!",
+    "trashName": "Trash"
   },
   "uploadFile": {
     "abortAll": "Abort all",

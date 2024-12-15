@@ -279,18 +279,19 @@ class File(models.Model):
 
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    sorting_by = models.TextField(max_length=50, null=False, default="name")
+    sorting_by = models.CharField(max_length=50, null=False, default="name")
     sort_by_asc = models.BooleanField(default=False)
-    locale = models.TextField(max_length=50, null=False, default="en")
-    view_mode = models.TextField(max_length=50, null=False, default="mosaic gallery")
+    locale = models.CharField(max_length=20, null=False, default="en")
+    view_mode = models.CharField(max_length=20, null=False, default="width grid")
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
     concurrent_upload_requests = models.SmallIntegerField(default=4)
     subfolders_in_shares = models.BooleanField(default=False)
-    discord_webhook = models.TextField(null=True)
+    discord_webhook = models.CharField(null=True, max_length=20)
     encryption_method = models.SmallIntegerField(default=1)
     hide_filenames = models.BooleanField(default=False)
     keep_creation_timestamp = models.BooleanField(default=False)
+    theme = models.CharField(default="light", max_length=20)
 
     def __str__(self):
         return self.user.username + "'s settings"

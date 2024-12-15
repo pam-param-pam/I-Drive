@@ -1,4 +1,4 @@
-export const name ="I drive"
+export const name ="I Drive"
 export const baseWS = import.meta.env.VITE_BACKEND_BASE_WS
 export const baseURL = import.meta.env.VITE_BACKEND_BASE_URL
 export const author = "Pam"

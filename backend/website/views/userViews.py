@@ -8,9 +8,9 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, UserPerms, AuditEntry
+from ..models import UserSettings, Folder, UserPerms
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, AuditAction
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets
@@ -73,12 +73,11 @@ def users_me(request):
                           "lock": perms.lock,
                           "modify": perms.modify, "delete": perms.delete, "share": perms.share,
                           "download": perms.download},
-                "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders,
-                             "dateFormat": settings.date_format,
-                             "viewMode": settings.view_mode, "sortingBy": settings.sorting_by,
-                             "sortByAsc": settings.sort_by_asc, "subfoldersInShares": settings.subfolders_in_shares,
-                             "webhook": settings.discord_webhook, "concurrentUploadRequests": settings.concurrent_upload_requests,
-                             "encryptionMethod": encryptionMethod.value, "hideFilenames": settings.hide_filenames, "keepCreationTimestamp": settings.keep_creation_timestamp
+                "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
+                             "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
+                             "subfoldersInShares": settings.subfolders_in_shares, "webhook": settings.discord_webhook,
+                             "concurrentUploadRequests": settings.concurrent_upload_requests, "encryptionMethod": encryptionMethod.value,
+                             "hideFilenames": settings.hide_filenames, "keepCreationTimestamp": settings.keep_creation_timestamp
                              }}
 
     return JsonResponse(response, safe=False, status=200)
@@ -101,6 +100,7 @@ def update_settings(request):
     encryptionMethod = request.data.get('encryptionMethod')
     hideFilenames = request.data.get('hideFilenames')
     keepCreationTimestamp = request.data.get('keepCreationTimestamp')
+    theme = request.data.get('theme')
 
     settings = UserSettings.objects.get(user=request.user)
     if locale in ["pl", "en", "uwu"]:
@@ -111,7 +111,7 @@ def update_settings(request):
         settings.hide_locked_folders = hideLockedFolders
     if isinstance(concurrentUploadRequests, int):
         settings.concurrent_upload_requests = concurrentUploadRequests
-    if viewMode in ["list", "grid"]:
+    if viewMode in ["list", "height grid", "width grid"]:
         settings.view_mode = viewMode
     if sortingBy in ["name", "size", "created"]:
         settings.sorting_by = sortingBy
@@ -132,6 +132,8 @@ def update_settings(request):
     if isinstance(encryptionMethod, int):
         _ = EncryptionMethod(encryptionMethod)  # validate encryption_method if its wrong it will raise KeyError which will be caught
         settings.encryption_method = encryptionMethod
+    if theme in ["dark", "light"]:
+        settings.theme = theme
 
     settings.save()
     return HttpResponse(status=204)

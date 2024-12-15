@@ -104,6 +104,7 @@
         <a @click="help">{{ $t("sidebar.help") }}</a>
       </span>
     </p>
+    <dark-mode-button/>
   </nav>
 </template>
 
@@ -116,10 +117,12 @@ import {filesize} from "@/utils/index.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
 import ProgressBar from "@/components/SimpleProgressBar.vue"
+import DarkModeButton from "@/components/DarkModeButton.vue"
 
 export default {
    name: "sidebar",
    components: {
+      DarkModeButton,
       ProgressBar,
    },
    data() {

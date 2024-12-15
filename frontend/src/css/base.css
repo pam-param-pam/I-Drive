@@ -1,7 +1,9 @@
 body {
+  --background: #f5f5f5;
+  --surfacePrimary: #ffffff;
   font-family: "Roboto", sans-serif;
   padding-top: 4em;
-  background-color: #fafafa;
+  background-color: var(--background);
   color: #333333;
 
 }
@@ -93,8 +95,9 @@ nav .action > * {
 }
 
 main {
+  height: 100%;
   min-height: 1em;
-  margin: 0 1em 1em auto;
+  margin: 0 0em 1em auto;
   width: calc(100% - 19em);
 }
 

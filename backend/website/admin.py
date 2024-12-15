@@ -52,7 +52,7 @@ class FolderAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "_is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model']
-    search_fields = ["id"]
+    search_fields = ["id", "name"]
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
         ids = []

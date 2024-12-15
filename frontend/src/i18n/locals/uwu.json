@@ -147,6 +147,7 @@
     "newFolder": "nyew fowdew (ﾉ´ з `)ノ",
     "register": "Wegistew",
     "settings": "S-Swettings OwO",
+    "toggleDarkMode": "",
     "trash": "Twash (・`ω´・)"
   },
   "time": {
@@ -169,6 +170,9 @@
     "noEncryptionWarning": "",
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
     "webhookMissing": ""
+  },
+  "trash": {
+    "trashName": ""
   },
   "uploadFile": {
     "encrypting": "",

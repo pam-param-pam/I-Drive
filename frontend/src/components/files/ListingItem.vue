@@ -26,13 +26,11 @@
         <img
           v-else-if="item.download_url && type === 'image' && item.size > 0"
           v-lazy="{src: item.download_url, error: '/img/imageFailed.png'}"
-          :style="`min-width: ${imageWidth}px; height: ${imageHeight}px;`"
 
         />
         <img
           v-else-if="item.thumbnail_url && type === 'video'"
           v-lazy="{src: item.thumbnail_url, error: '/img/imageFailed.png'}"
-          :style="imageStyle"
 
 
         />
@@ -91,25 +89,19 @@ export default {
          }
          return true
       },
-      iconSize() {
-         return this.imageWidth / 12
-      },
-      iconStyle() {
-         if(this.settings.viewMode === "grid") {
-            return `font-size: ${this.iconSize}em;`
-         }
-         return null
-      },
-      imageStyle() {
-         if(this.settings.viewMode === "grid") {
-            return `min-width: ${this.imageWidth}px; height: ${this.imageHeight}px;`
-         }
-         return null
 
+      iconStyle() {
+         if(this.settings.viewMode === "height grid") {
+            return `font-size: ${this.imageHeight / 25}em; padding-top: 15px;`
+         }
+         if(this.settings.viewMode === "width grid") {
+            return `font-size: ${this.imageHeight / 15}em; padding-top: 15px;`
+         }
+         return null
       },
       divStyle() {
-         if(this.settings.viewMode === "grid") {
-            return `min-width: ${this.imageWidth}px; height: ${this.imageHeight}px;`
+         if(this.settings.viewMode.includes("grid")) {
+            return `min-width: ${this.imageWidth}px; height: ${this.imageHeight}px;  vertical-align: text-bottom; display: flex; justify-content: center; align-items: center;`
          }
          return null
       },
@@ -118,11 +110,6 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected"]),
-      myScroll() {
-         let wrapper = this.$refs.wrapper
-         wrapper.scrollIntoView()
-         this.addSelected(this.item)
-      },
 
       humanSize() {
          return filesize(this.item.size)
@@ -236,7 +223,7 @@ export default {
 .grid .item-wrapper {
  border-radius: 10px;
  margin: 0.5em;
- background-color: #f0f1fd;
+ background-color: var(--surfacePrimary);
  overflow: hidden;
  box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px, rgba(0, 0, 0, 0.12) 0 1px 2px;
 
@@ -259,7 +246,8 @@ export default {
  margin-top: 0.5em;
  max-width: 100%;
  object-fit: cover;
- background: #ffffff;
+ height: 100%;
+
 
 }
 .grid .item-wrapper .item .name p {
@@ -275,131 +263,14 @@ export default {
 }
 
 .grid .item-wrapper [aria-selected=true] {
- background: #c4e6ff !important;
+ background: #c4e6ff;
 }
 
 .grid .item-wrapper [data-dir=true] p {
  font-size: 20px !important;
+ font-weight: 300;
  margin-top: 0.5em !important;
  padding-bottom: 0.25em !important;
 }
 
-
-
-
-.list .item-wrapper {
- flex-direction: column;
- width: 100%;
- max-width: 100%;
- margin: 0;
-}
-
-.list .item-wrapper .item {
- width: 100%;
- margin: 0;
- border: 1px solid rgba(0, 0, 0, 0.1);
- padding: 1em;
- border-top: 0;
-}
-.list .item-wrapper .item i {
-  font-size: 1em;
-
-}
-.list h2 {
- display: none;
-}
-
-/*#listing .item[aria-selected=true] {*/
-/*  background: var(--blue) !important;*/
-/*  !*color: var(--item-selected) !important;*!*/
-/*}*/
-
-.list .item div:first-of-type {
- width: 3em;
-}
-
-.list .item div:first-of-type i {
- font-size: 2em;
-}
-
-.list .item div:first-of-type img {
- width: 2em;
- height: 2em;
-}
-
-.list .item div:last-of-type {
- width: calc(100% - 3em);
- display: flex;
- align-items: center;
-}
-
-.list .item-wrapper .item .name {
- width: 50%;
-}
-
-.list .item-wrapper .item .size {
- width: 25%;
-}
-
-/*#listing .item.header {*/
-/* display: none !important;*/
-/* background-color: #ccc;*/
-/*}*/
-
-.list .header i {
- font-size: 1.5em;
- vertical-align: middle;
- margin-left: .2em;
-}
-
-.list .item.header {
- display: flex !important;
- background: #fafafa;
- z-index: 999;
- padding: .85em;
- border: 0;
- border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.list .item.header>div:first-child {
- width: 0;
-}
-
-.list .item.header .name {
- margin-right: 3em;
-}
-
-.list .header a {
- color: inherit;
-}
-
-.list .item.header>div:first-child {
- width: 0;
-}
-
-.list .name {
- font-weight: normal;
-}
-
-.list .item.header .name {
- margin-right: 3em;
-}
-
-.list .header span {
- vertical-align: middle;
-}
-
-.list .header i {
- opacity: 0;
- transition: .1s ease all;
-}
-
-.list .header p:hover i,
-.list .header .active i {
- opacity: 1;
-}
-
-.list .item.header .active {
- font-weight: bold;
-}
 </style>

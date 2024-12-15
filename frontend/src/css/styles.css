@@ -12,12 +12,10 @@
 @import "./dashboard.css";
 @import "./login.css";
 @import "./mobile.css";
+@import "./dark.css";
 
 .link {
   color: var(--blue);
-}
-main {
-  height: 100%;
 }
 main .spinner {
   display: block;
@@ -303,7 +301,7 @@ main .spinner .bounce2 {
 #editor-container {
   display: flex;
   flex-direction: column;
-  background-color: #fafafa;
+  background-color: var(--background);
   position: fixed;
   top: 0;
   left: 0;

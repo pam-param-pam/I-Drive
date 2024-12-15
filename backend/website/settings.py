@@ -65,18 +65,17 @@ MIDDLEWARE = [
 
 ]
 CORS_ALLOW_HEADERS = "*"
-
 CORS_ALLOW_PRIVATE_NETWORK = True
 
 prefix = 'http://' if is_env else 'https://'
 CORS_ALLOWED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-    'http://127.0.0.1:5173', # frontend
+    'http://127.0.0.1:5173',  # frontend
     'http://127.0.0.1:8080',  # frontend on nginx
     'http://localhost:8080',  # frontend on nginx
     'http://192.168.1.17:8001',  # backend on rpi without nginx
     'http://192.168.1.17:8001',  # backend on rpi without nginx
-
+    'http://192.168.1.14:5173',  # backend on comp
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -86,6 +85,7 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8080',  # frontend on nginx
     'http://192.168.1.17:8001',  # backend on rpi without nginx
     'http://192.168.1.17:8001',  # backend on rpi without nginx
+    'http://192.168.1.14:5173',  # backend on comp
 
 ]
 CSRF_ALLOWED_ORIGINS = [
@@ -95,6 +95,8 @@ CSRF_ALLOWED_ORIGINS = [
     'http://localhost:8080',  # frontend on nginx
     'http://192.168.1.17:8001',  # backend on rpi without nginx
     'http://192.168.1.17:8001',  # backend on rpi without nginx
+    'http://192.168.1.14:5173',  # backend on comp
+
 ]
 CORS_EXPOSE_HEADERS = (
     "retry-after",
@@ -198,7 +200,7 @@ REST_FRAMEWORK = {
         'media': '1000/m',
         'folder_password': '20/m',
         'password_change': '10/m',
-        'search': '20/m',
+        'search': '1000/m',
         'register': '51111/h',
 
 },

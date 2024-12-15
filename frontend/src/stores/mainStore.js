@@ -1,14 +1,13 @@
 import { defineStore } from "pinia"
 import moment from "moment"
 import i18n from "@/i18n/index.js"
-import {sortItems} from "@/utils/common.js";
+import { updateSettings } from "@/api/user.js"
 
-export const useMainStore = defineStore('main', {
+export const useMainStore = defineStore("main", {
    state: () => ({
       user: null,
       perms: null,
       settings: null,
-      currentFolderData: null,
       progress: 0,
       token: "",
       loading: false,
@@ -19,22 +18,17 @@ export const useMainStore = defineStore('main', {
       showShell: false,
       disabledCreation: false,
       folderPasswords: {},
-      searchFilters: {"files": true, "folders": true},
+      searchFilters: { "files": true, "folders": true },
       lastItem: null,
+
+      breadcrumbs: [],
+      currentFolder: null,
+      items: []
 
    }),
 
    getters: {
-      currentFolder() {
-         return this.currentFolderData?.folder
-      },
-      items() {
-         return this.currentFolderData?.folder.children
-      },
-      breadcrumbs() {
-         if (this.currentFolderData) return this.currentFolderData.breadcrumbs
-         return []
-      },
+
       isLogged() {
          return this.user !== null
       },
@@ -63,37 +57,47 @@ export const useMainStore = defineStore('main', {
          return this.previousPrompt?.prompt
       },
       sortedItems() {
-         let allItems = [];
-         console.log(this.items);
+         let allItems = []
+         console.log(this.items)
          if (this.items != null) {
             this.items.forEach((item) => {
                if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
-                  allItems.push({ ...item, isDir: true });
+                  allItems.push({ ...item, isDir: true })
                } else if (!item.isDir) {
-                  allItems.push({ ...item, isDir: false });
+                  allItems.push({ ...item, isDir: false })
                }
-            });
+            })
          }
          // Sort the combined array, placing directories first
          allItems.sort((a, b) => {
-            if (a.isDir && !b.isDir) return -1; // Folders come first
-            if (!a.isDir && b.isDir) return 1;  // Files come after
-            return 0;                           // Keep the original order otherwise
-         });
+            if (a.isDir && !b.isDir) return -1 // Folders come first
+            if (!a.isDir && b.isDir) return 1  // Files come after
+            return 0                           // Keep the original order otherwise
+         })
 
-         return allItems;
+         return allItems
       }
 
    },
 
    actions: {
       setCurrentFolderData(value) {
-         console.log("setting items")
-         this.currentFolderData = value
+         console.log("setCurrentFolderData")
+
+         this.setItems(value.folder.children)
+         this.setBreadcrumbs(value.breadcrumbs)
+         this.setCurrentFolder(value.folder)
+
       },
       setItems(value) {
          console.log("setting items")
-         this.currentFolderData.folder.children = value
+         this.items = value
+      },
+      setBreadcrumbs(value) {
+         this.breadcrumbs = value
+      },
+      setCurrentFolder(value) {
+         this.currentFolder = value
       },
       setFolderPassword(payload) {
          this.folderPasswords[payload.folderId] = payload.password
@@ -126,7 +130,7 @@ export const useMainStore = defineStore('main', {
                confirm: null,
                action: null,
                props: null,
-               cancel: null,
+               cancel: null
             })
             return
          }
@@ -136,7 +140,7 @@ export const useMainStore = defineStore('main', {
             confirm: value?.confirm,
             action: value?.action,
             props: value?.props,
-            cancel: value?.cancel,
+            cancel: value?.cancel
          })
       },
       setLoading(value) {
@@ -155,7 +159,7 @@ export const useMainStore = defineStore('main', {
          this.user = value
       },
       setLastItem(value) {
-        this.lastItem = value
+         this.lastItem = value
       },
       addSelected(value) {
          console.log("addSelected")
@@ -192,7 +196,7 @@ export const useMainStore = defineStore('main', {
             this.selected[index2].name = newName
          }
       },
-      changeLockStatusAndPasswordCache({ folderId, newLockStatus, lockFrom}) {
+      changeLockStatusAndPasswordCache({ folderId, newLockStatus, lockFrom }) {
          const index1 = this.items.findIndex(item => item.id === folderId)
          const index2 = this.selected.findIndex(item => item.id === folderId)
 
@@ -229,10 +233,6 @@ export const useMainStore = defineStore('main', {
             this.selected[index2].exposure_time = exposure_time
          }
       },
-
-      setCurrentFolder(value) {
-         this.currentFolder = value
-      },
       setPerms(value) {
          this.perms = value
       },
@@ -257,7 +257,7 @@ export const useMainStore = defineStore('main', {
          const country = "pl"
          moment.locale(country)
          i18n.global.locale = country
-         this.settings = {sortByAsc: false, sortingBy: "name", viewMode: "list", dateFormat: false, locale: country}
+         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "list", dateFormat: false, locale: country }
       },
       updateSettings(value) {
          if (typeof value !== "object") return
@@ -276,6 +276,13 @@ export const useMainStore = defineStore('main', {
       setError(value) {
          this.error = value
          this.loading = false
+      },
+      setTheme(theme) {
+         this.settings.theme = theme
+         let isDarkMode = false
+         if (theme === "dark") isDarkMode=true
+         document.body.classList.toggle("dark-mode", isDarkMode);
+
       }
    }
 })

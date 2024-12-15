@@ -20,7 +20,7 @@ from ..utilities.throttle import MyUserRateThrottle
 @api_view(['POST', 'PATCH', 'PUT'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-# @handle_common_errors //todo
+@handle_common_errors
 def create_file(request):
     if request.method == "POST":
         files = request.data['files']

@@ -79,22 +79,6 @@ export default {
       openSidebar() {
          this.showHover("sidebar")
       },
-      async switchView() {
-         const modes = {
-            list: "mosaic",
-            mosaic: "mosaic gallery",
-            "mosaic gallery": "list",
-         }
-         const data = {
-            viewMode: modes[this.settings.viewMode] || "list",
-         }
-
-         // Await ensures correct value for setItemWeight()
-         await this.updateSettings(data)
-         await updateSettings(data)
-
-      },
-
    },
 
 }
