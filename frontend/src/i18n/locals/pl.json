@@ -217,6 +217,7 @@
     "encryptionMethod": "Metoda szyfrowania",
     "hideFileNames": "Ukryj nazwy plików",
     "hideLockedFolders": "Ukryj zablokowane foldery",
+    "keepCreationTimestamp": "Zachowaj oryginalną date utworzenia pliku",
     "language": "Język",
     "newPassword": "Twoje nowe hasło",
     "newPasswordConfirm": "Potwierdź swoje nowe hasło",
@@ -233,7 +234,6 @@
     "shareExpiry": "Kiedy wygasa?",
     "shareManagement": "Zarządzanie udostępnianiem",
     "subfoldersInShares": "Zezwól na dostep do podfolderów w udostępnionych folderach",
-    "keepCreationTimestamp": "Zachowaj oryginalną date utworzenia pliku",
     "themes": {
       "dark": "Ciemny",
       "default": "Domyślny systemowy",
@@ -297,7 +297,8 @@
     "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie."
   },
   "trash": {
-    "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!"
+    "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!",
+    "trashName": "Kosz"
   },
   "uploadFile": {
     "abortAll": "Przerwij wszystko",

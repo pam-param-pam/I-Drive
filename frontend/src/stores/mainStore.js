@@ -8,7 +8,6 @@ export const useMainStore = defineStore('main', {
       user: null,
       perms: null,
       settings: null,
-      currentFolderData: null,
       progress: 0,
       token: "",
       loading: false,
@@ -22,19 +21,14 @@ export const useMainStore = defineStore('main', {
       searchFilters: {"files": true, "folders": true},
       lastItem: null,
 
+      breadcrumbs: [],
+      currentFolder: {},
+      items: [],
+
    }),
 
    getters: {
-      currentFolder() {
-         return this.currentFolderData?.folder
-      },
-      items() {
-         return this.currentFolderData?.folder.children
-      },
-      breadcrumbs() {
-         if (this.currentFolderData) return this.currentFolderData.breadcrumbs
-         return []
-      },
+
       isLogged() {
          return this.user !== null
       },
@@ -88,12 +82,22 @@ export const useMainStore = defineStore('main', {
 
    actions: {
       setCurrentFolderData(value) {
-         console.log("setting items")
-         this.currentFolderData = value
+         console.log("setCurrentFolderData")
+
+         this.setItems(value.folder.children)
+         this.setBreadcrumbs(value.breadcrumbs)
+         this.setCurrentFolder(value.folder)
+
       },
       setItems(value) {
          console.log("setting items")
-         this.currentFolderData.folder.children = value
+         this.items = value
+      },
+      setBreadcrumbs(value) {
+         this.breadcrumbs = value
+      },
+      setCurrentFolder(value) {
+         this.currentFolder = value
       },
       setFolderPassword(payload) {
          this.folderPasswords[payload.folderId] = payload.password
@@ -228,10 +232,6 @@ export const useMainStore = defineStore('main', {
             this.selected[index2].model_name = model_name
             this.selected[index2].exposure_time = exposure_time
          }
-      },
-
-      setCurrentFolder(value) {
-         this.currentFolder = value
       },
       setPerms(value) {
          this.perms = value

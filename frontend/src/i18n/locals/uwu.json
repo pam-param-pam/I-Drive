@@ -170,6 +170,9 @@
     "selectFilesFirst": "OwO Sewect f-fiwe(s) fiwst!",
     "webhookMissing": ""
   },
+  "trash": {
+    "trashName": ""
+  },
   "uploadFile": {
     "encrypting": "",
     "paused": "Paused",

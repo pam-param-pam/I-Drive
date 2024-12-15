@@ -118,11 +118,6 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected"]),
-      myScroll() {
-         let wrapper = this.$refs.wrapper
-         wrapper.scrollIntoView()
-         this.addSelected(this.item)
-      },
 
       humanSize() {
          return filesize(this.item.size)

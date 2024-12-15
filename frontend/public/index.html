@@ -9,7 +9,7 @@
     />
 
     <title>
-      [{[ if .Name -]}][{[ .Name ]}][{[ else ]}]File Browser[{[ end ]}]
+      [{[ if .Name -]}][{[ .Name ]}][{[ else ]}]I Drive[{[ end ]}]
     </title>
 
     <link
@@ -64,8 +64,8 @@
         return `${window.FileBrowser.StaticURL}/${url.replace(/^\/+/, "")}`;
       };
       var dynamicManifest = {
-        name: window.FileBrowser.Name || "File Browser",
-        short_name: window.FileBrowser.Name || "File Browser",
+        name: window.FileBrowser.Name || "I Drive",
+        short_name: window.FileBrowser.Name || "I Drive",
         icons: [
           {
             src: window.__prependStaticUrl("/img/icons/android-chrome-192x192.png"),

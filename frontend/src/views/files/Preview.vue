@@ -314,7 +314,6 @@ export default {
                     let res = await getShare(this.token, this.folderId)
                     this.shareObj = res
                     this.setItems(res.share)
-                    this.folderList = res.breadcrumbs
 
                     for (let i = 0; i < this.items.length; i++) {
                        if (this.items[i].id === this.fileId) {
@@ -325,9 +324,7 @@ export default {
                   this.file = await getFile(this.fileId, this.lockFrom)
                   if (!this.currentFolder) {
                      let res = await getItems(this.file.parent_id, this.file.lockFrom)
-
-                     this.setItems(res.folder.children)
-                     this.setCurrentFolder(res.folder)
+                     this.setCurrentFolderData(res)
                   }
               }
             } catch (error) {
@@ -451,7 +448,7 @@ export default {
                this.$router.push({ name: `Files`, params: { "folderId": parent_id } })
 
             } else {
-               this.$router.push({ name: `Files`, params: { folderId: this.$store.state.user.root } })
+               this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
 
 
             }

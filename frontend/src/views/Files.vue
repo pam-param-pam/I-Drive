@@ -32,6 +32,7 @@
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
 import Errors from "@/views/Errors.vue"
 import FileListing from "@/views/files/FileListing.vue"
+
 import { getItems } from "@/api/folder.js"
 import { search } from "@/api/search.js"
 import { createZIP } from "@/api/item.js"
@@ -40,6 +41,7 @@ import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { scanDataTransfer } from "@/utils/uploadHelper.js"
 import { uploadType } from "@/utils/constants.js"
+import {name} from "@/utils/constants"
 
 export default {
    name: "files",
@@ -73,7 +75,6 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
-
       headerButtons() {
          return {
             info: !this.disabledCreation,
@@ -92,24 +93,79 @@ export default {
    },
    created() {
       this.setDisabledCreation(false)
-
       this.fetchFolder()
-
-   },
-   renderTriggered({ key, target, type }) {
-      console.log(`Render triggered on component 'Files'`, { key, target, type })
    },
    watch: {
       $route: "fetchFolder"
    },
-   mounted() {
-      // this.setItems(null)
-      // this.setCurrentFolder(null)
-   },
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),
+      ...mapActions(useMainStore, ["setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),
       ...mapActions(useUploadStore, ["startUpload"]),
 
+      async onSearchQuery(query) {
+         this.setLoading(true)
+
+         let realLockFrom = this.lockFrom || this.folderId
+         let password = this.getFolderPassword(realLockFrom)
+         try {
+            this.items = await search(query, realLockFrom, password)
+            this.isSearchActive = true
+            this.setCurrentFolder(null)
+            this.setItems(this.items)
+
+         } catch (error) {
+            if (error.code === "ERR_CANCELED") return
+            this.setError(error)
+         } finally {
+            this.setLoading(false)
+
+         }
+
+      },
+      upload() {
+
+         if (
+            typeof window.DataTransferItem !== "undefined" &&
+            typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
+         ) {
+            this.showHover("upload")
+         } else {
+            document.getElementById("upload-input").click()
+         }
+      },
+
+      async fetchFolder() {
+         this.isSearchActive = false
+         this.setError(null)
+
+         this.searchItemsFound = null
+
+         if (this.currentFolder?.id === this.folderId) {
+            this.folderList = this.currentFolder.breadcrumbs
+
+         }
+         else {
+            try {
+               this.setLoading(true)
+               let res = await getItems(this.folderId, this.lockFrom)
+               this.setCurrentFolderData(res)
+
+            } catch (error) {
+               console.log(error)
+               if (error.code === "ERR_CANCELED") return
+               this.setError(error)
+            } finally {
+               this.setLoading(false)
+            }
+         }
+         if (this.currentFolder.parent_id) { //only set title if its not root folder
+            document.title = `${this.currentFolder.name} - ` + name
+         } else {
+            document.title = name
+         }
+
+
+      },
       onDragEnter() {
          this.dragCounter++
 
@@ -201,97 +257,6 @@ export default {
          let folderContextId = this.currentFolder.id
          await this.startUpload(uploadType.browserInput, folderContextId, files)
 
-
-      },
-      locateItem() {
-         this.$emit("onSearchClosed")
-         let item = this.selected[0]
-         let parent_id = item.parent_id
-
-         this.$router.push({ name: "Files", params: { "folderId": "stupidAhHack" } })
-         this.$router.push({ name: "Files", params: { "folderId": parent_id, "locatedItem": item } })
-
-         let message = this.$t("toasts.itemLocated")
-         this.$toast.info(message)
-
-
-      },
-      async onSearchQuery(query) {
-         this.setLoading(true)
-
-         let realLockFrom = this.lockFrom || this.folderId
-         let password = this.getFolderPassword(realLockFrom)
-         try {
-            this.items = await search(query, realLockFrom, password)
-            this.isSearchActive = true
-            this.setCurrentFolder(null)
-            this.setItems(this.items)
-
-         } catch (error) {
-            if (error.code === "ERR_CANCELED") return
-            this.setError(error)
-         } finally {
-            this.setLoading(false)
-
-         }
-
-      },
-      upload() {
-
-         if (
-            typeof window.DataTransferItem !== "undefined" &&
-            typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
-         ) {
-            this.showHover("upload")
-         } else {
-            document.getElementById("upload-input").click()
-         }
-      },
-
-      async fetchFolder() {
-         this.isSearchActive = false
-         this.setError(null)
-
-         this.searchItemsFound = null
-         console.log("1121212121")
-         console.log(this.currentFolder?.id)
-         console.log(this.folderId)
-         if (this.currentFolder?.id === this.folderId) {
-            this.folderList = this.currentFolder.breadcrumbs
-            return
-         }
-
-         this.setError(null)
-         this.setLoading(true)
-         try {
-            let res = await getItems(this.folderId, this.lockFrom)
-            const mainStore = useMainStore()
-            mainStore.setCurrentFolderData(res)
-            // this.items = res.folder.children
-            // this.folderList = res.breadcrumbs
-            //
-            // res.folder.breadcrumbs = this.folderList
-            //
-            //
-            //
-            //
-            //
-            // this.setItems(this.items)
-            // this.setCurrentFolder(res.folder)
-
-            if (res.parent_id) { //only set title if its not root folder
-               document.title = `${res.name} - ` + name
-            } else {
-               document.title = name
-            }
-         } catch (error) {
-            console.log(error)
-            if (error.code === "ERR_CANCELED") return
-            this.setError(error)
-         } finally {
-            this.setLoading(false)
-
-         }
 
       },
       openInNewWindow(item) {
