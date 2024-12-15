@@ -2,6 +2,8 @@
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
+class MalformedDatabaseRecord(Exception):
+    """Raised when data is malformed in the database."""
 
 class ResourceNotFoundError(IDriveException):
     """Raised when resource can't be found in the database"""

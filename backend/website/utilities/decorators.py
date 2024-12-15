@@ -8,7 +8,7 @@ from rest_framework.exceptions import Throttled
 
 from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError
+    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord
 from ..utilities.other import build_http_error_response, verify_signed_file_id, check_resource_perms, get_file, get_folder
 
 def check_signed_url(view_func):
@@ -71,26 +71,25 @@ def handle_common_errors(view_func):
 
         # 404 NOT FOUND
         except Folder.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Folder not found"),
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except File.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="File not found"),
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except ShareableLink.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share with provided token not found"),
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except Thumbnail.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Thumbnail doesn't exist"),
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except Preview.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Preview doesn't exist"),
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except UserZIP.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Zip doesn't exist"), status=404)
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""), status=404)
 
         except ResourceNotFoundError as e:
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(e)), status=404)
-
 
         # 400 BAD REQUEST
         except (ValidationError, BadRequestError) as e:
@@ -134,7 +133,7 @@ def handle_common_errors(view_func):
             return JsonResponse(json_error, status=469)
 
         # 500 SERVER ERROR
-        except (ConnectError, SSLError) as e:
+        except (ConnectError, SSLError, MalformedDatabaseRecord) as e:
             return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(e)), status=500)
 
         # 503 Service Unavailable

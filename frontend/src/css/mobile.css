@@ -4,7 +4,9 @@
   }
   /* Mobile Only fix div hidden by bottom navigation bar of mobile browser when using height: 100vh */
   #previewer .preview {
-    height: calc(100% - 4em) !important;
+    /*height: calc(100% - 4em) !important;*/
+    /*todo*/
+
   }
 }
 
@@ -16,7 +18,8 @@
 
 @media (max-width: 950px) {
   body {
-    padding-bottom: 5em;
+    /*todo*/
+    /*padding-bottom: 5em;*/
   }
   #listing.list .item .size {
     display: none;

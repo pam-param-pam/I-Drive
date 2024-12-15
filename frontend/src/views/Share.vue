@@ -17,6 +17,8 @@
       :readonly="true"
       :headerButtons="headerButtons"
       @onOpen="onOpen"
+      @download="download"
+      @openInNewWindow="openInNewWindow"
 
     ></FileListing>
     <errors v-if="shareState === 'passwordRequired'" :errorCode="error.response?.status"/>
@@ -28,7 +30,7 @@
 <script>
 
 import Breadcrumbs from "@/components/Breadcrumbs.vue"
-import {getShare} from "@/api/share.js"
+import { createShareZIP, getShare } from "@/api/share.js"
 import {createZIP} from "@/api/item.js"
 import moment from "moment/min/moment-with-locales.js"
 import {useMainStore} from "@/stores/mainStore.js"
@@ -70,7 +72,9 @@ export default {
       headerButtons() {
          return {
             download: this.selectedCount > 0,
-            info: this.selectedCount > 0
+            info: this.selectedCount > 0,
+            openInNewWindow: true,
+
          }
       }
 
@@ -97,7 +101,6 @@ export default {
       ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setAnonState", "setItems"]),
 
       async download() {
-         console.log(this.selectedCount)
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
             window.open(this.selected[0].download_url, '_blank')
             let message = this.$t("toasts.downloadingSingle", {name: this.selected[0].name})
@@ -105,7 +108,7 @@ export default {
 
          } else {
             const ids = this.selected.map(obj => obj.id)
-            let res = await createZIP({"ids": ids})
+            let res = await createShareZIP(this.token, {"ids": ids})
             window.open(res.download_url, '_blank')
 
             let message = this.$t("toasts.downloadingZIP")
@@ -113,7 +116,20 @@ export default {
 
          }
       },
+      openInNewWindow(item) {
+         if (item.isDir) {
+            let url = this.$router.resolve({ name: "Share", params: { "folderId": item.id, "token": this.token } }).href;
+            window.open(url, "_blank");
+         }
+         else if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
+            let url = this.$router.resolve({ name: "SharePreview", params: { "folderId": item.parent_id, "fileId": item.id, "token": this.token  } }).href;
+            window.open(url, "_blank");
+         } else {
+            let url = this.$router.resolve({ name: "ShareEditor", params: { "folderId": item.parent_id, "fileId": item.id, "token": this.token  } }).href;
+            window.open(url, "_blank");
+         }
 
+      },
       onOpen(item) {
          if (item.isDir) {
             this.$router.push({name: "Share", params: {"token": this.token, "folderId": item.id}})

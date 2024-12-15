@@ -1,11 +1,12 @@
 <template>
-  <div>
+  <div class="wrapper">
     <header-bar>
       <Search
         v-if="headerButtons.search"
         @onSearchQuery="(query) => $emit('onSearchQuery', query)"
         @exit="$emit('onSearchClosed')"
       />
+      <button @click="removeThirdItem">Remove 3rd Item</button>
 
       <title></title>
       <template #actions>
@@ -100,7 +101,7 @@
       </template>
 
     </header-bar>
-    <loading-spinner/>
+    <loading-spinner />
 
     <template v-if="!error && !loading">
 
@@ -128,138 +129,123 @@
           multiple
         />
       </div>
+      <div v-else class="wrapper">
+        <div
+          :class="settings.viewMode + ' file-icons'"
+          @dragenter.prevent @dragover.prevent
+        >
+<!--          <div>-->
 
-      <div
-        v-else
-        @dragenter.prevent @dragover.prevent
-      >
-        <div>
+<!--            <div class="item header">-->
+<!--              <div></div>-->
+<!--              <div>-->
+<!--                <p-->
+<!--                  :class="{ active: nameSorted }"-->
+<!--                  class="nameSort"-->
+<!--                  role="button"-->
+<!--                  tabindex="0"-->
+<!--                  @click="sort('name')"-->
+<!--                  :title="$t('files.sortByName')"-->
+<!--                  :aria-label="$t('files.sortByName')"-->
+<!--                >-->
+<!--                  <span>{{ $t("files.name") }}</span>-->
+<!--                  <i class="material-icons">{{ nameIcon }}</i>-->
+<!--                </p>-->
 
-          <div class="item header">
-            <div></div>
-            <div>
-              <p
-                :class="{ active: nameSorted }"
-                class="name"
-                role="button"
-                tabindex="0"
-                @click="sort('name')"
-                :title="$t('files.sortByName')"
-                :aria-label="$t('files.sortByName')"
-              >
-                <span>{{ $t("files.name") }}</span>
-                <i class="material-icons">{{ nameIcon }}</i>
-              </p>
+<!--                <p-->
+<!--                  :class="{ active: sizeSorted }"-->
+<!--                  class="sizeSort"-->
+<!--                  role="button"-->
+<!--                  tabindex="0"-->
+<!--                  @click="sort('size')"-->
+<!--                  :title="$t('files.sortBySize')"-->
+<!--                  :aria-label="$t('files.sortBySize')"-->
+<!--                >-->
+<!--                  <span>{{ $t("files.size") }}</span>-->
+<!--                  <i class="material-icons">{{ sizeIcon }}</i>-->
+<!--                </p>-->
 
-              <p
-                :class="{ active: sizeSorted }"
-                class="size"
-                role="button"
-                tabindex="0"
-                @click="sort('size')"
-                :title="$t('files.sortBySize')"
-                :aria-label="$t('files.sortBySize')"
-              >
-                <span>{{ $t("files.size") }}</span>
-                <i class="material-icons">{{ sizeIcon }}</i>
-              </p>
+<!--                <p-->
+<!--                  :class="{ active: createdSorted }"-->
+<!--                  class="createdSort"-->
+<!--                  role="button"-->
+<!--                  tabindex="0"-->
+<!--                  @click="sort('created')"-->
+<!--                  :title="$t('files.sortByCreated')"-->
+<!--                  :aria-label="$t('files.sortByCreated')"-->
+<!--                >-->
+<!--                  <span>{{ $t("files.created") }}</span>-->
+<!--                  <i class="material-icons">{{ createdIcon }}</i>-->
+<!--                </p>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          </div>-->
 
-              <p
-                :class="{ active: createdSorted }"
-                class="created"
-                role="button"
-                tabindex="0"
-                @click="sort('created')"
-                :title="$t('files.sortByCreated')"
-                :aria-label="$t('files.sortByCreated')"
-              >
-                <span>{{ $t("files.created") }}</span>
-                <i class="material-icons">{{ createdIcon }}</i>
-              </p>
-            </div>
-          </div>
-        </div>
+          <h2 v-if="filesSize > 0">files and folders</h2>
+          <RecycleScroller
+            ref="filesScroller"
+            id="filesScroller"
+            class="scroller"
+            :items="sortedItems"
+            :item-size="tileHeight"
+            :grid-items="gridItems"
+            :prerender="400"
+            :item-secondary-size="tileWidth"
 
-
-        <div class="wrapper" v-if="files.length > 0">
-          <div class="grid">
-            <RecycleScroller
-              ref="scroller"
-              id="scroller"
-              class="scroller"
-              :items="files"
-              :item-size="tileHeight"
-              :grid-items="numberOfTiles"
-              :item-secondary-size="tileWidth"
-              v-slot="{ item }"
+            v-slot="{ item }"
+          >
+            <item
+              :item="item"
+              :readOnly="readonly"
+              :ref="item.id"
+              :imageWidth="imageWidth"
+              :imageHeight="imageHeight"
+              :tileHeight="tileHeight"
+              :tileWidth="tileWidth"
+              @onOpen="$emit('onOpen', item)"
+              @contextmenu.prevent="showContextMenu($event, item)"
             >
-              <item
-                :item="item"
-                :readOnly="readonly"
-                :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
-                :imageWidth="imageWidth"
-                :imageHeight="imageHeight"
-                :tileHeight="tileHeight"
-                :tileWidth="tileWidth"
-                @onOpen="$emit('onOpen', item)"
-                @contextmenu.prevent="showContextMenu($event, item)"
-              >
-              </item>
+            </item>
 
-            </RecycleScroller>
-          </div>
+          </RecycleScroller>
+
+
+          <input
+            style="display: none"
+            type="file"
+            id="upload-input"
+            @change="uploadInput($event)"
+            multiple
+          />
+          <input
+            style="display: none"
+            type="file"
+            id="upload-folder-input"
+            @change="uploadInput($event)"
+            webkitdirectory
+            multiple
+          />
+
         </div>
-        <div class="wrapper" v-if="files.length > 0">
-          <div class="grid">
-            <RecycleScroller
-              ref="scroller"
-              id="scroller"
-              class="scroller"
-              :items="dirs"
-              :item-size="tileHeight"
-              :grid-items="numberOfTiles"
-              :item-secondary-size="tileWidth"
-              v-slot="{ item }"
-            >
-              <item
-                :item="item"
-                :readOnly="readonly"
-                :ref="item.id === locatedItem?.id ? 'locatedItem' : null"
-                :imageWidth="imageWidth"
-                :imageHeight="imageHeight"
-                :tileHeight="tileHeight"
-                :tileWidth="tileWidth"
-                @onOpen="$emit('onOpen', item)"
-                @contextmenu.prevent="showContextMenu($event, item)"
-              >
-              </item>
-
-            </RecycleScroller>
-          </div>
-        </div>
-
-        <input
-          style="display: none"
-          type="file"
-          id="upload-input"
-          @change="uploadInput($event)"
-          multiple
-        />
-        <input
-          style="display: none"
-          type="file"
-          id="upload-folder-input"
-          @change="uploadInput($event)"
-          webkitdirectory
-          multiple
-        />
-
       </div>
+
       <context-menu
         :show="isContextMenuVisible"
         :pos="contextMenuPos"
         @hide="hideContextMenu"
       >
+        <action
+          v-if="headerButtons.openInNewWindow && selected[0]?.isDir"
+          icon="open_in_new"
+          :label="$t('buttons.openFolder')"
+          @action="$emit('openInNewWindow', selected[0])"
+        />
+        <action
+          v-if="headerButtons.openInNewWindow && !selected[0]?.isDir"
+          icon="open_in_new"
+          :label="$t('buttons.openFile')"
+          @action="$emit('openInNewWindow', selected[0])"
+        />
         <action icon="info" :label="$t('buttons.info')" show="info" />
 
         <action
@@ -325,6 +311,7 @@
     </template>
 
   </div>
+
 </template>
 
 <script>
@@ -351,7 +338,7 @@ export default {
       Item,
       ContextMenu,
       RecycleScroller,
-      loadingSpinner,
+      loadingSpinner
    },
 
    props: {
@@ -360,7 +347,7 @@ export default {
       readonly: Boolean,
       headerButtons: {}
    },
-   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download"],
+   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download", "openInNewWindow"],
 
    data() {
       return {
@@ -372,27 +359,43 @@ export default {
          isContextMenuVisible: false,
 
          //experimental
-         tileWidth: 100,
-         tileHeight: 100,
+         tileWidth: 40,
+         tileHeight: 50,
          imageHeight: 100,
          imageWidth: 100,
-         numberOfTiles: 4,
+         numberOfTiles: 4
       }
    },
    watch: {
       items() {
          // Ensures that the listing is displayed
          this.$nextTick(() => {
-            // // How much every listing item affects the window height
-            // this.setItemWeight()
-            // // Fill and fit the window with listing items
-            // this.fillWindow(true)
 
-            // if (this.locatedItem === undefined) return
-            // const selectedItem = this.$refs.locatedItem[0]
-            //
-            // selectedItem.myScroll()
-            this.calculateGridLayoutWrapper()
+            let element = document.getElementById("filesScroller")
+            this.calculateGridLayout(element.clientWidth - 15)
+
+            if (!this.lastItem) return
+
+            let index = this.files.findIndex(file => file.id === this.lastItem.id)
+
+            let filesScroller = this.$refs.filesScroller
+            setTimeout(function () {
+               filesScroller.scrollToItem(index-4)
+               },250)
+
+            let itemElement = this.$refs[this.lastItem.id];
+
+            if (itemElement) {
+               itemElement.$el.classList.add('pulse-animation');
+
+               // Remove the animation class after 5 seconds
+               setTimeout(() => {
+                  itemElement.$el.classList.remove('pulse-animation');
+               }, 3500); // 5 seconds
+            }
+
+
+
          })
       }
 
@@ -401,14 +404,39 @@ export default {
       console.log("beforeUpdate")
 
 
-
    },
    mounted() {
 
       console.log("MOUNTED")
 
-      // let element = document.getElementById("scroller")
-      // this.calculateGridLayout(element.clientWidth-15)
+      this.$nextTick(() => {
+
+         let element = document.getElementById("filesScroller")
+         this.calculateGridLayout(element.clientWidth - 15)
+
+         if (!this.lastItem) return
+
+         let index = this.files.findIndex(file => file.id === this.lastItem.id)
+
+         let filesScroller = this.$refs.filesScroller
+         setTimeout(function () {
+            filesScroller.scrollToItem(index-4)
+         },250)
+
+         let itemElement = this.$refs[this.lastItem.id];
+
+         if (itemElement) {
+            itemElement.$el.classList.add('pulse-animation');
+
+            // Remove the animation class after 5 seconds
+            setTimeout(() => {
+               itemElement.$el.classList.remove('pulse-animation');
+            }, 3500); // 5 seconds
+         }
+
+
+
+      })
       //
       window.addEventListener("resize", this.calculateGridLayoutWrapper)
 
@@ -445,12 +473,19 @@ export default {
 
    },
    computed: {
-      ...mapState(useMainStore, ["items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
+      ...mapState(useMainStore, ["lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
+
+      gridItems() {
+         if(this.settings.viewMode === "grid") {
+            return this.numberOfTiles
+         }
+         return null
+      },
       viewIcon() {
          const icons = {
             list: "view_module",
-            mosaic: "grid_view",
-            "mosaic gallery": "view_list"
+            grid: "view_list",
+            // "mosaic gallery": "view_list"
          }
          return icons[this.settings.viewMode]
       },
@@ -512,33 +547,46 @@ export default {
       ...mapActions(useMainStore, ["toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       calculateGridLayoutWrapper() {
-         let element = document.getElementById("scroller");
-         this.calculateGridLayout(element.clientWidth);
+         console.log("calculateGridLayoutWrapper")
+         let element = document.getElementById("filesScroller")
+         this.calculateGridLayout(element.clientWidth)
       },
       calculateGridLayout(containerWidth) {
+         if(this.settings.viewMode !== "grid") return
 
-         const maxTileWidth = 400;
+         const maxTileWidth = 400
 
          // Calculate the maximum number of tiles that can fit using the minimum width
-         let numberOfTiles = Math.ceil(containerWidth / maxTileWidth);
+         let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
 
          // Calculate the actual width of each tile
-         let tileWidth = containerWidth / numberOfTiles;
+         let tileWidth = containerWidth / numberOfTiles
 
          // Update the data properties
-         this.numberOfTiles = numberOfTiles;
-         this.tileWidth = tileWidth;
-         this.tileHeight = this.tileWidth*300/400
+         this.numberOfTiles = numberOfTiles
+         this.tileWidth = tileWidth
+         this.tileHeight = this.tileWidth * 300 / 400
 
-         this.imageWidth = 175/400 * this.tileWidth
-         this.imageHeight = 240/300 * this.tileHeight - 15/numberOfTiles
+         this.imageWidth = 175 / 400 * this.tileWidth
+         this.imageHeight = 240 / 300 * this.tileHeight - 10 - 25 / numberOfTiles
 
 
       },
       async uploadInput(event) {
          this.$emit("uploadInput", event)
       },
+      async removeThirdItem() {
+         console.log("removing item")
+         console.log(this.items.length)
+         this.setItems(this.items.filter(item => item.name !== "ac1d9da3738c4e20778de891cc46a5e7.mp4"))
+         console.log(this.items.length)
 
+         // this.renderGrid = false
+         // await this.$nextTick();
+         // this.renderGrid = true
+
+
+      },
       showContextMenu(event, item) {
          this.resetSelected()
          this.addSelected(item)
@@ -684,10 +732,10 @@ export default {
 
          // // Scroll up
          if (mouseY < 100) {
-            window.scrollBy({ "top": -scrollSpeed, behavior: 'smooth' });
+            window.scrollBy({ "top": -scrollSpeed, behavior: "smooth" })
          }
-         if (mouseY + 50 >  window.innerHeight) {
-            window.scrollBy({ "top": scrollSpeed, behavior: 'smooth' });
+         if (mouseY + 50 > window.innerHeight) {
+            window.scrollBy({ "top": scrollSpeed, behavior: "smooth" })
          }
       },
       async sort(by) {
@@ -765,18 +813,17 @@ export default {
       },
       async switchView() {
          console.log("switch view")
-         const modes = {
-            list: "mosaic",
-            mosaic: "mosaic gallery",
-            "mosaic gallery": "list"
+         let modes = {
+            list: "grid",
+            grid: "list",
          }
-         const data = {
+         let data = {
             viewMode: modes[this.settings.viewMode] || "list"
          }
 
          // Await ensures correct value for setItemWeight()
          await this.updateSettings(data)
-
+         this.calculateGridLayoutWrapper()
 
          this.setItemWeight()
          this.fillWindow()
@@ -793,27 +840,49 @@ export default {
 }
 </script>
 <style scoped>
-.grid {
- flex: 1; /* Fills available space in the flex container */
- overflow-y: hidden; /* Allows vertical scrolling if content overflows */
 
+.wrapper {
+ height: 100%;
 }
+
+.grid {
+ height: 100%;
+}
+
 
 .grid .scroller {
- padding-bottom: 1em;
  background-color: #fafafa;
- height: calc(100% - 20px);
  overflow-y: auto;
+ height: calc(100% - 95px);
+ /*height: 100%;*/
 
-}
-.wrapper {
- display: flex;
- flex-direction: column;
- overflow: hidden;
- height: 100%;
 
 }
 
+.grid h2 {
+ margin: 0 0 1em 0.5em;
+ font-size: .9em;
+ padding-top: 1em;
+ color: rgba(0, 0, 0, 0.38);
+ font-weight: 500;
+}
 
+.grid .createdSort, .sizeSort, .nameSort {
+ display: none;
 
+}
+
+.pulse-animation {
+ animation: pulse 2s ease-out;
+}
+
+@keyframes pulse {
+ 0% {
+  background: #80c6ff;
+ }
+ 100% {
+  background: #d3e3fd;
+ }
+
+}
 </style>

@@ -111,7 +111,7 @@ def update_settings(request):
         settings.hide_locked_folders = hideLockedFolders
     if isinstance(concurrentUploadRequests, int):
         settings.concurrent_upload_requests = concurrentUploadRequests
-    if viewMode in ["list", "mosaic", "mosaic gallery"]:
+    if viewMode in ["list", "grid"]:
         settings.view_mode = viewMode
     if sortingBy in ["name", "size", "created"]:
         settings.sorting_by = sortingBy

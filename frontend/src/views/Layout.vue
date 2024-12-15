@@ -1,5 +1,5 @@
 <template>
-  <div>
+
     <div v-if="progress" class="progress">
       <div v-bind:style="{ width: this.progress + '%' }"></div>
     </div>
@@ -10,7 +10,7 @@
     </main>
     <upload-files></upload-files>
     <prompts></prompts>
-  </div>
+
 </template>
 
 <script>

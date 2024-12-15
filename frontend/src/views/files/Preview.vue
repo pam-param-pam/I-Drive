@@ -70,6 +70,7 @@
           ref="video"
           id="video"
           controls
+          loop
           :poster="file?.thumbnail_url"
           :src="fileSrcUrl"
           :autoplay="autoPlay"
@@ -288,7 +289,7 @@ export default {
       window.removeEventListener("keydown", this.key)
    },
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setError", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["setLastItem", "setLoading", "setError", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
 
       async fetchData() {
 
@@ -383,6 +384,7 @@ export default {
          this.hoverNav = false
          if (this.hasPrevious) {
             let previousFile = this.files[this.currentIndex - 1]
+
             if (this.isInShareContext) {
                this.$router.push({
                   name: "SharePreview",
@@ -403,6 +405,7 @@ export default {
          this.hoverNav = false
          if (this.hasNext) {
             let nextFile = this.files[this.currentIndex + 1]
+
             if (this.isInShareContext) {
                this.$router.push({
                   name: "SharePreview",
@@ -450,6 +453,7 @@ export default {
          }, 1500)
       }, 500),
       close() {
+         this.setLastItem(this.file)
 
          try {
             let parent_id = this.file?.parent_id

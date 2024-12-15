@@ -234,7 +234,7 @@ def check_password(request, resource_id):
         try:
             item = ShareableLink.objects.get(id=resource_id)
         except ShareableLink.DoesNotExist:
-            raise ResourceNotFoundError(f"Couldn't find resource or share with id {resource_id}")
+            raise ResourceNotFoundError()
     password = request.headers.get("X-Resource-Password")
 
     if item.password == password:

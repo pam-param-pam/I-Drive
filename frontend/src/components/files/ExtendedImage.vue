@@ -294,9 +294,4 @@ export default {
  transition: none;
 }
 
-.image-ex-img-ready {
- left: 0;
- top: 0;
- transition: transform 0.1s ease;
-}
 </style>

@@ -138,11 +138,6 @@ export default {
       signup: () => signup,
       version: () => version,
    },
-   created() {
-      console.log("created")
-      console.log(this.$route)
-
-   },
    watch: {
       async currentFolder() {
 

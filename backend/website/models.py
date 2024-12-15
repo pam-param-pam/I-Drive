@@ -14,6 +14,7 @@ from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
 from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
+from .utilities.errors import BadRequestError
 
 
 class Folder(models.Model):
@@ -50,6 +51,8 @@ class Folder(models.Model):
             folder, created = Folder.objects.get_or_create(owner=instance, name="root")
 
     def save(self, *args, **kwargs):
+        from .utilities.other import is_subitem
+
         self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
 
         self.last_modified_at = timezone.now()
@@ -66,6 +69,10 @@ class Folder(models.Model):
             cache.delete(old_object.parent.id)
         except Folder.DoesNotExist:
             pass
+
+        if self.parent == self or is_subitem(self.parent, self):
+            raise BadRequestError("Invalid parent, recursion detected.")
+
         super(Folder, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

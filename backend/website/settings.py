@@ -18,14 +18,13 @@ is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_env
-SILKY_PYTHON_PROFILER = is_env
 
 ALLOWED_HOSTS = ['*']  # todo
 
 # USE_X_FORWARDED_HOST = True  # todo fix admin
 
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True # todo fix
+# SESSION_COOKIE_SECURE = True
 
 # Application definition
 INSTALLED_APPS = [
@@ -103,8 +102,6 @@ CORS_EXPOSE_HEADERS = (
     "X-RateLimit-Reset-After",
     "X-RateLimit-Bucket"
 )
-
-
 
 ROOT_URLCONF = 'website.urls'
 

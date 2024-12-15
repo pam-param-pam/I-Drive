@@ -8,9 +8,10 @@ from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosit
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
-from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError
+from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, MalformedDatabaseRecord
 
 signer = TimestampSigner()
+
 
 def format_wait_time(seconds: int) -> str:
     if seconds >= 3600:  # More than or equal to 1 hour
@@ -32,10 +33,11 @@ def sign_file_id_with_expiry(file_id: str) -> str:
     # cache.set(file_id, signed_file_id, timeout=SIGNED_URL_EXPIRY_SECONDS)
     return signed_file_id
 
+
 # Function to verify and extract the file id
 def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
     try:
-        file_id = signer.unsign(signed_file_id, max_age=99999999999999999999) #timedelta(seconds=expiry_seconds)
+        file_id = signer.unsign(signed_file_id, max_age=99999999999999999999)  # timedelta(seconds=expiry_seconds)
         return file_id
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("URL not valid or expired.")
@@ -75,13 +77,20 @@ def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[Li
     )
 
 
-def create_breadcrumbs(folder_obj: Folder) -> List[Breadcrumbs]:
+def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
     folder_path = []
+    visited_ids = set()
 
     while folder_obj.parent:
+        if folder_obj.id in visited_ids:
+            # Detected a circular reference, break to prevent infinite recursion, this should never happen, but the guard exists to prevent denial of service
+            raise MalformedDatabaseRecord("Circular reference detected in folder hierarchy in breadcrumbs")
+
+        visited_ids.add(folder_obj.id)
         data = {"name": folder_obj.name, "id": folder_obj.id}
         folder_path.append(data)
         folder_obj = get_folder(folder_obj.parent.id)
+
     folder_path.reverse()
     return folder_path
 
@@ -184,7 +193,7 @@ def create_folder_dict(folder_obj: Folder) -> FolderDict:
         folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
     if folder_obj.inTrashSince:
-        folder_dict["in_trash_since"] = formatDate(folder_obj.inTrashSince)
+        folder_dict[""] = formatDate(folder_obj.inTrashSince)
 
     return folder_dict
 
@@ -195,7 +204,7 @@ def create_share_dict(share: ShareableLink) -> ShareDict:
     except ResourceNotFoundError:
         # looks like folder/file no longer exist, deleting time!
         share.delete()
-        raise ResourceNotFoundError(f"Resource with id {share.object_id} not found! Most likely underlying resource was deleted. Share is no longer valid.")
+        raise ResourceNotFoundError()
 
     isDir = True if isinstance(obj, Folder) else False
 
@@ -209,6 +218,7 @@ def create_share_dict(share: ShareableLink) -> ShareDict:
     }
     return item
 
+
 def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDict, FolderDict]) -> Dict:
     # hide lockFrom info
     del resource_dict['isLocked']
@@ -220,6 +230,7 @@ def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDi
         resource_dict['isLocked'] = True
         resource_dict['lockFrom'] = share.id
     return resource_dict
+
 
 def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource) -> Dict:
     if isinstance(resource_in_share, Folder):
@@ -241,6 +252,7 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
         folder_dict['children'] = censored_children
 
     return folder_dict
+
 
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
     file_children = []
@@ -277,22 +289,25 @@ def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}
 
 
-def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:  #todo  maybe change to build_http_error_response?
+def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:  # todo  maybe change to build_http_error_response?
     return {"code": code, "error": error, "details": details}
+
 
 def get_file(file_id: str) -> File:
     try:
         file = File.objects.get(id=file_id)
     except File.DoesNotExist:
-        raise ResourceNotFoundError(f"File with id of '{file_id}' doesn't exist.")
+        raise ResourceNotFoundError()
     return file
+
 
 def get_folder(folder_id: str) -> Folder:
     try:
         folder = Folder.objects.get(id=folder_id)
     except Folder.DoesNotExist:
-        raise ResourceNotFoundError(f"Folder with id of '{folder_id}' doesn't exist.")
+        raise ResourceNotFoundError()
     return folder
+
 
 def get_resource(obj_id: str) -> Resource:
     try:
@@ -301,7 +316,7 @@ def get_resource(obj_id: str) -> Resource:
         try:
             item = get_file(obj_id)
         except ResourceNotFoundError:
-            raise ResourceNotFoundError(f"Resource with id of '{obj_id}' doesn't exist.")
+            raise ResourceNotFoundError()
     return item
 
 
@@ -341,7 +356,6 @@ def check_folder_password(request, resource: Resource) -> None:
 
 
 def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
-
     check_resource_perms("dummy request", file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     return {"name": file_name, "isDir": False, "fileObj": file_obj}
@@ -351,7 +365,6 @@ def calculate_size(folder: Folder) -> int:
     """
     Function to recursively calculate size of a folder
     """
-
     size = 0
     for file_in_folder in folder.files.filter(ready=True, inTrash=False):
         size += file_in_folder.size
@@ -407,7 +420,7 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
             children.append(file_dict)
     else:
         pass
-        #todo handle empty dirs
+        # todo handle empty dirs
 
     # Recursively collect all subfolders and their children
     for subfolder in folder.subfolders.all():
@@ -417,4 +430,70 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
     return children
 
 
+def get_share(request, token) -> ShareableLink:
+    password = request.headers.get("X-Resource-Password")
+    share = ShareableLink.objects.get(token=token)
+    if share.is_expired():
+        share.delete()
+        raise ResourceNotFoundError()
 
+    if share.password and share.password != password:
+        share.name = "Share"
+        raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+
+    return share
+
+
+def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
+    """:return: True if the item is a subfile/subfolder of parent_folder, otherwise False."""
+
+    if isinstance(item, File):
+        # Check if the file belongs directly to the folder
+        if item.parent == parent_folder:
+            return True
+
+        # If not directly in the folder, check recursively in subfolders
+        for subfolder in parent_folder.subfolders.all():
+            if is_subitem(item, subfolder):
+                return True
+
+        return False
+
+    elif isinstance(item, Folder):
+        # Traverse up the folder hierarchy to check if parent_folder is an ancestor
+        current_folder = item.parent
+        while current_folder:
+            if current_folder == parent_folder:
+                return True
+            current_folder = current_folder.parent
+
+    return False
+
+
+def validate_and_add_to_zip(user_zip, item):
+    if isinstance(item, Folder):
+        # Checking if the folder is already present in the zip model
+        if user_zip.folders.filter(id=item.id).exists():
+            raise BadRequestError(f"Folder({item.name}) is already in the ZIP")
+
+        # goofy checking if folder isn't a subfolder of a folder already in zip
+        re_item = item
+        while re_item:
+            if user_zip.folders.filter(id=re_item.id).exists():
+                raise BadRequestError(f"Folder({re_item.name}) is already a subfolder in the ZIP(1)")
+            re_item = re_item.parent
+
+        for re_folder in user_zip.folders.all():
+            while re_folder:
+                if re_folder == item:
+                    raise BadRequestError(f"Folder({re_folder.name}) is already a subfolder in the ZIP(2)")
+                re_folder = re_folder.parent
+
+        user_zip.folders.add(item)
+
+    else:
+        # Checking if the file is already present in the zip model
+        if user_zip.files.filter(id=item.id).exists():
+            raise BadRequestError(f"File({item.name}) is already in the ZIP")
+
+        user_zip.files.add(item)

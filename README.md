@@ -39,25 +39,27 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Drag and drop support                                     | ✅       |
 
 
-| TODO List                                                       | Status               |
-|-----------------------------------------------------------------|----------------------|
-| Docker CI/CD                                                    | ⚠️  Only partial     |
-| Lock shares with password                                       | ⚠️  Only partial     |
-| Error handling in upload process                                | ⚠️  Only partial     |
-| Fix edit folder password dialon on wrong password               | ❌  Coming one day    |
-| Proper handling of 429                                          | ❌  Coming one day    |
-| Proper frontend networking & handling of errors                 | ❌  Coming one day    |
-| Stop, pause, abort uploads                                      | ❌  Coming one day    |
-| Where should iv and keys be generated?                          | ❌  Coming one day    |
-| Fix are u sure dialog being skipped after folder password input | ❌  Coming one day    |
-| Fix locate                                                      | ❌  Coming one day    |
-| auto scroll after preview/editor close                          | ❌  Coming one day    |
-| celery + Unable to process this request at the moment           | ❌  Coming one day    |
-| Virtual lists                                                   | ❌  Coming prob never |
-| Editor support for large files                                  | ❌  Coming prob never |
-| Fix file types so they are not so hardcoded on frontend         | ❌  Coming prob never |
-| Dark theme                                                      | ❌  Coming prob never |
-| fix __prependStaticUrl                                          | ❌  Coming prob never |
+| TODO List                                                                        | Status               |
+|----------------------------------------------------------------------------------|----------------------|
+| Docker CI/CD                                                                     | ⚠️  Only partial     |
+| Lock shares with password                                                        | ⚠️  Only partial     |
+| Error handling in upload process                                                 | ⚠️  Only partial     |
+| Fix edit folder password dialon on wrong password                                | ❌  Coming one day    |
+| Proper handling of 429                                                           | ❌  Coming one day    |
+| Proper frontend networking & handling of errors                                  | ❌  Coming one day    |
+| Stop, pause, abort uploads                                                       | ❌  Coming one day    |
+| Where should iv and keys be generated?                                           | ❌  Coming one day    |
+| Fix are u sure dialog being skipped after folder password input                  | ❌  Coming one day    |
+| Fix locate                                                                       | ❌  Coming one day    |
+| auto scroll after preview/editor close                                           | ❌  Coming one day    |
+| celery + Unable to process this request at the moment                            | ❌  Coming one day    |
+| Virtual lists                                                                    | ❌  Coming prob never |
+| Editor support for large files                                                   | ❌  Coming prob never |
+| Fix file types so they are not so hardcoded on frontend                          | ❌  Coming prob never |
+| Dark theme                                                                       | ❌  Coming prob never |
+| fix __prependStaticUrl                                                           | ❌  Coming prob never |
+| possible denial of service by infinite recursive folder fetch malformed parents  | ❌  Coming prob never |
+| fix   resourceNotFound to return the same response no matter if its actually 403 | ❌  Coming prob never |
 
 
 # How it works

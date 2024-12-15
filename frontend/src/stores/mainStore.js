@@ -21,6 +21,7 @@ export const useMainStore = defineStore('main', {
       disabledCreation: false,
       folderPasswords: {},
       searchFilters: {"files": true, "folders": true},
+      lastItem: null,
    }),
 
    getters: {
@@ -52,20 +53,25 @@ export const useMainStore = defineStore('main', {
          return this.previousPrompt?.prompt
       },
       sortedItems() {
-         let allItems = []
-         console.log(this.items)
+         let allItems = [];
+         console.log(this.items);
          if (this.items != null) {
             this.items.forEach((item) => {
                if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
-                  allItems.push({...item, isDir: true})
+                  allItems.push({ ...item, isDir: true });
                } else if (!item.isDir) {
-                  allItems.push({...item, isDir: false})
+                  allItems.push({ ...item, isDir: false });
                }
-            })
+            });
          }
-         // Sort the combined array
-         return sortItems(allItems)
-         // return allItems
+         // Sort the combined array, placing directories first
+         allItems.sort((a, b) => {
+            if (a.isDir && !b.isDir) return -1; // Folders come first
+            if (!a.isDir && b.isDir) return 1;  // Files come after
+            return 0;                           // Keep the original order otherwise
+         });
+
+         return allItems;
       }
 
    },
@@ -139,6 +145,10 @@ export const useMainStore = defineStore('main', {
             return
          }
          this.user = value
+      },
+      setLastItem(value) {
+
+        this.lastItem = value
       },
       addSelected(value) {
          console.log("addSelected")

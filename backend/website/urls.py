@@ -9,7 +9,7 @@ from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, ge
     get_trash, check_password, get_dirs, fetch_additional_info, get_secrets
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position
-from .views.shareViews import get_shares, delete_share, create_share, view_share
+from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
 from .views.testViews import get_folder_password
 from .views.uploadViews import create_file, create_thumbnail
@@ -46,6 +46,8 @@ urlpatterns = [
     path("shares", get_shares, name="get user's shares"),
     path("share/delete", delete_share, name="delete share"),
     path("share/create", create_share, name="create share"),
+    path("share/zip/<token>", create_share_zip_model, name="create zip for share"),
+
     re_path(r'^share/(?P<token>[^/]+)(/(?P<folder_id>[^/]+))?$', view_share, name='view_share'),
 
     path("folder/create", create_folder, name="create folder"),

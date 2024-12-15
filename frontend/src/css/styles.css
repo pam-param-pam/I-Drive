@@ -16,7 +16,9 @@
 .link {
   color: var(--blue);
 }
-
+main {
+  height: 100%;
+}
 main .spinner {
   display: block;
   text-align: center;

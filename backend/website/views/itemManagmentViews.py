@@ -9,7 +9,7 @@ from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockP
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file
+from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, is_subitem
 from ..utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -76,31 +76,15 @@ def move(request):
         else:
             item_dict = create_file_dict(item)
 
-        if item == new_parent:
-            # 'item' and 'new_parent_id' cannot be the same!
+        if item == new_parent or item.parent == new_parent:
             raise BadRequestError("Invalid move destination.")
-
-        if item.parent == new_parent:
-            # 'new_parent_id' and 'old_parent_id' cannot be the same!
-            raise BadRequestError("Invalid move destination.")
-
-        real_new_parent = new_parent
-        x = 0
-        while new_parent.parent:  # cannot move item to its descendant
-            x += 1
-            if new_parent.parent == item.parent and x > 1:
-                raise BadRequestError("Invalid move destination.")
-            new_parent = get_folder(new_parent.parent.id)
 
         items.append(item)
 
         ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
-        new_parent = real_new_parent
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
-
-    new_parent = get_folder(new_parent_id)    # goofy ah redeclaration
 
     # invalidate any cache
     cache.delete(new_parent.id)

@@ -21,7 +21,6 @@ class UserConsumer(WebsocketConsumer):
             self.close()
 
     def disconnect(self, close_code):
-        print("disscconect")
         async_to_sync(self.channel_layer.group_discard)("user", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
@@ -35,11 +34,7 @@ class UserConsumer(WebsocketConsumer):
                                   "task_id": event["request_id"]}))
 
     def send_event(self, event):
-        print("send event")
-
-        print(event['op_code'])
         if self.scope['user'].id == event['user_id']:
-            print("send event")
             self.send(json.dumps({"op_code": event['op_code'], "data": event['data']}))
 
     def logout(self, event):
@@ -56,7 +51,6 @@ class CommandConsumer(WebsocketConsumer):
 
     def connect(self):
         user = self.scope['user']
-        print(user)
         if user.is_anonymous:
             self.close()
         else:
@@ -68,7 +62,6 @@ class CommandConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_discard)("command", self.channel_name)
 
     def receive(self, text_data=None, bytes_data=None):
-        print(text_data)
         """
         command protocol is made from json messages each representing a different command
         An example json message can look like this:

@@ -1,17 +1,17 @@
-#listing {
-  --item-selected: white;
+.grid {
+  /*--item-selected: none;*/
 }
 
-body.rtl #listing {
-  margin-right: 16em;
-}
+/*body.rtl #listing {*/
+/*  margin-right: 16em;*/
+/*}*/
 
-#listing h2 {
-  margin: 0 0 0 0.5em;
-  font-size: .9em;
-  color: rgba(0, 0, 0, 0.38);
-  font-weight: 500;
-}
+/*#listing h2 {*/
+/*  margin: 0 0 0 0.5em;*/
+/*  font-size: .9em;*/
+/*  color: rgba(0, 0, 0, 0.38);*/
+/*  font-weight: 500;*/
+/*}*/
 
 #listing .item div:last-of-type * {
   text-overflow: ellipsis;
@@ -180,10 +180,10 @@ body.rtl #listing {
   display: none;
 }
 
-#listing .item[aria-selected=true] {
-  background: var(--blue) !important;
-  color: var(--item-selected) !important;
-}
+/*#listing .item[aria-selected=true] {*/
+/*  background: var(--blue) !important;*/
+/*  !*color: var(--item-selected) !important;*!*/
+/*}*/
 
 #listing.list .item div:first-of-type {
   width: 3em;
@@ -293,7 +293,7 @@ body.rtl #listing {
 
 #listing #multiple-selection p,
 #listing #multiple-selection i {
-  color: var(--item-selected);
+  /*color: var(--item-selected);*/
 }
 
 .listing-notice {

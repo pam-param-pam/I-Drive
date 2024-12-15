@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="height: 100%">
     <breadcrumbs v-if="!isSearchActive"
                  base="/files"
                  :folderList="folderList"
@@ -21,6 +21,8 @@
       @upload="upload"
       @download="download"
       @dropUpload="onDropUpload"
+      @openInNewWindow="openInNewWindow"
+
     ></FileListing>
   </div>
 </template>
@@ -83,7 +85,8 @@ export default {
             share: this.selectedCount === 1 && this.perms.share,
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
             locate: this.selectedCount === 1 && this.isSearchActive,
-            search: true
+            search: true,
+            openInNewWindow: true,
          }
       }
    },
@@ -100,8 +103,8 @@ export default {
       $route: "fetchFolder"
    },
    mounted() {
-      this.setItems(null)
-      this.setCurrentFolder(null)
+      // this.setItems(null)
+      // this.setCurrentFolder(null)
    },
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),
@@ -247,8 +250,16 @@ export default {
 
       async fetchFolder() {
          this.isSearchActive = false
+         this.setError(null)
 
          this.searchItemsFound = null
+         console.log("1121212121")
+         console.log(this.currentFolder?.id)
+         console.log(this.folderId)
+         if (this.currentFolder?.id === this.folderId) {
+            // this.$refs.listing.calculateGridLayoutWrapper()
+            return
+         }
 
          this.setError(null)
          this.setLoading(true)
@@ -273,6 +284,20 @@ export default {
          } finally {
             this.setLoading(false)
 
+         }
+
+      },
+      openInNewWindow(item) {
+         if (item.isDir) {
+            let url = this.$router.resolve({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom, } }).href;
+            window.open(url, "_blank");
+         }
+         else if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
+            let url = this.$router.resolve({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } }).href;
+            window.open(url, "_blank");
+         } else {
+            let url = this.$router.resolve({ name: "Editor", params: { "fileId": item.id, "lockFrom": item.lockFrom, } }).href;
+            window.open(url, "_blank");
          }
 
       },

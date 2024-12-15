@@ -34,4 +34,8 @@ export async function createShare(data) {
 
 }
 
-
+export async function createShareZIP(token, data) {
+   let url = "/share/zip/" + token
+   let response = await backend_instance.post(url, data)
+   return response.data
+}
