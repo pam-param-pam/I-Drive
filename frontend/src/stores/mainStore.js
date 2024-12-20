@@ -1,6 +1,7 @@
 import { defineStore } from "pinia"
 import moment from "moment"
 import i18n from "@/i18n/index.js"
+import { updateSettings } from "@/api/user.js"
 
 export const useMainStore = defineStore("main", {
    state: () => ({
@@ -23,6 +24,7 @@ export const useMainStore = defineStore("main", {
       breadcrumbs: [],
       currentFolder: null,
       items: []
+
    }),
 
    getters: {
