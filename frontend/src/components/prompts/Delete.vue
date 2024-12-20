@@ -60,9 +60,9 @@ export default {
                id: res.task_id,
             })
             if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+            this.resetSelected()
 
          } finally {
-            this.resetSelected()
             this.closeHover()
          }
       },

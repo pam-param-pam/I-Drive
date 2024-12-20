@@ -3,10 +3,11 @@
     <img v-if="showLogo" :src="logoURL"/>
     <action
       v-if="showMenu"
-      class="menu-button"
+      class="menu-button hideMobileTap"
       icon="menu"
       :label="$t('buttons.toggleSidebar')"
       @action="openSidebar()"
+
     />
 
     <slot/>
@@ -64,14 +65,6 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["settings", "currentPromptName"]),
-      viewIcon() {
-         const icons = {
-            list: "view_module",
-            mosaic: "grid_view",
-            "mosaic gallery": "view_list",
-         }
-         return icons[this.settings.viewMode]
-      },
 
    },
    methods: {
@@ -84,4 +77,6 @@ export default {
 }
 </script>
 
-<style></style>
+<style>
+
+</style>

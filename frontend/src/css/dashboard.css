@@ -1,10 +1,13 @@
 .dashboard {
   margin: 1em 0;
+  padding-left: 1em;
+  padding-right: 1em;
 }
 
 .dashboard .row {
   display: flex;
-  margin: 0 -.5em;
+  /*changed*/
+  overflow: auto;
   flex-wrap: wrap;
 }
 
@@ -14,9 +17,10 @@ body.rtl .dashboard .row {
 
 .dashboard .row .column {
   display: flex;
-  padding: 0 .5em;
   width: 50%;
+  padding: 0px 0.5em;
 }
+
 
 .dashboard .row .column .card {
   flex-grow: 1;

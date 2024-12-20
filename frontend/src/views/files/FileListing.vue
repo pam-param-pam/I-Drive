@@ -878,7 +878,6 @@ export default {
 
 .grid .scroller {
  background-color: var(--background);
- overflow-y: auto;
  height: calc(100% - 120px);
  /*height: 100%;*/
 

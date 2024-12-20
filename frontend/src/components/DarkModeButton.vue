@@ -16,6 +16,7 @@
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { updateSettings } from "@/api/user.js"
+import throttle from "lodash.throttle"
 
 export default {
    name: "DarkModeButton",
@@ -27,18 +28,22 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["setTheme"]),
 
+      throttledUpdateSettings: throttle(function (newTheme) {
+         updateSettings({ theme: newTheme });
+      }, 1000),
+
       toggleDarkMode() {
          const themes = {"light": "dark", "dark": "light"}
          let newTheme = themes[this.settings.theme]
          this.setTheme(newTheme)
-         updateSettings({ "theme": newTheme })
+
+         this.throttledUpdateSettings()
 
       },
 
    },
 };
 </script>
-
 <style scoped>
 /* General Styles */
 .dark-mode-toggle {
@@ -53,8 +58,24 @@ export default {
  cursor: pointer;
  transition: background-color 0.3s ease, color 0.3s ease;
  outline: none;
+ -webkit-tap-highlight-color: transparent; /* Disable mobile tap highlight */
 }
 
+/* Disable unwanted hover styles for touch devices */
+@media (hover: none) {
+ .dark-mode-toggle:hover {
+  background-color: transparent; /* Remove hover background */
+  color: inherit; /* Retain original text color */
+ }
+}
+
+/* Explicitly handle the :active state */
+.dark-mode-toggle:active {
+ background-color: transparent; /* Ensure no background on active */
+ color: inherit;
+}
+
+/* Material Icon Styles */
 .dark-mode-toggle .material-icons {
  font-size: 28px;
 }
@@ -69,6 +90,5 @@ export default {
  background-color: var(--background);
  color: #ffffff;
 }
-
 
 </style>

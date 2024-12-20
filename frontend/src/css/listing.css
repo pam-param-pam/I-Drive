@@ -298,12 +298,11 @@
 
 .listing-notice {
   background-color: #cee0fd;
-  color: #3f3f3f;
   font-size: 16px;
   font-weight: bold;
   padding: 10px;
   border-radius: 5px;
-  margin: 15px 0;
   text-align: center;
   border: 1px solid #d3dce6;
+  margin: 15px 1em 15px 0;
 }

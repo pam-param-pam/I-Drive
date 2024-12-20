@@ -12,6 +12,14 @@
 /*323338
 
  */
+
+.dark-mode .listing-notice {
+ background-color: var(--surfaceSecondary);
+ border: 1px solid var(--surfaceSecondary);
+ color: #dcdcdc;
+
+
+}
 .dark-mode #loading {
  background: var(--background);
 }

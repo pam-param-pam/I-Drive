@@ -40,7 +40,7 @@
     top: 1em;
     right: 1em;
     display: block;
-    background-color: #fff;
+    background-color: var(--surfaceSecondary);
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
     transform: scale(0);
     transition: .1s ease-in-out transform;
@@ -96,6 +96,7 @@
   nav {
     top: 0;
     z-index: 99999;
+    background: var(--background);
     height: 100%;
     width: 16em;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
@@ -121,14 +122,26 @@
   #listing {
     margin-bottom: 5em;
   }
+  .breadcrumbs {
+    padding-left: 1em;
+  }
+  header {
+    padding-left: 0.5em;
+  }
   main {
-    margin: 0 1em;
-    width: calc(100% - 2em);
+    margin: 0 0;
+    width: 100%;
   }
   #search {
     max-width: 15em;
 
   }
+  .listing-notice {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+
+  }
+
 }
 
 @media (max-width: 450px) {

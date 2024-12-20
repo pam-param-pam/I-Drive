@@ -58,6 +58,12 @@ export default {
    },
    mounted() {
       document.title = this.$t("settings.settingsName") + " - " + name
+      document.body.classList.add("enable-scroll");
+
+
+   },
+   unmounted() {
+      document.body.classList.remove("enable-scroll");
 
    },
    created() {
@@ -66,3 +72,8 @@ export default {
 
 }
 </script>
+<style scoped>
+html, body, #app, .dashboard {
+ overflow: auto !important;
+}
+</style>
