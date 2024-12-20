@@ -129,55 +129,57 @@
       </div>
       <div v-else class="wrapper">
         <div
-          :class="viewMode + ' file-icons'"
+          :class="settings.viewMode + ' file-icons'"
           @dragenter.prevent @dragover.prevent
         >
+<!--          <div>-->
 
+<!--            <div class="item header">-->
+<!--              <div></div>-->
+<!--              <div>-->
+<!--                <p-->
+<!--                  :class="{ active: nameSorted }"-->
+<!--                  class="nameSort"-->
+<!--                  role="button"-->
+<!--                  tabindex="0"-->
+<!--                  @click="sort('name')"-->
+<!--                  :title="$t('files.sortByName')"-->
+<!--                  :aria-label="$t('files.sortByName')"-->
+<!--                >-->
+<!--                  <span>{{ $t("files.name") }}</span>-->
+<!--                  <i class="material-icons">{{ nameIcon }}</i>-->
+<!--                </p>-->
 
-          <div class="item header">
-            <div>
-              <p
-                :class="{ active: nameSorted }"
-                class="nameSort"
-                role="button"
-                tabindex="0"
-                @click="sort('name')"
-                :title="$t('files.sortByName')"
-                :aria-label="$t('files.sortByName')"
-              >
-                <span>{{ $t("files.name") }}</span>
-                <i class="material-icons">{{ nameIcon }}</i>
-              </p>
+<!--                <p-->
+<!--                  :class="{ active: sizeSorted }"-->
+<!--                  class="sizeSort"-->
+<!--                  role="button"-->
+<!--                  tabindex="0"-->
+<!--                  @click="sort('size')"-->
+<!--                  :title="$t('files.sortBySize')"-->
+<!--                  :aria-label="$t('files.sortBySize')"-->
+<!--                >-->
+<!--                  <span>{{ $t("files.size") }}</span>-->
+<!--                  <i class="material-icons">{{ sizeIcon }}</i>-->
+<!--                </p>-->
 
-              <p
-                :class="{ active: sizeSorted }"
-                class="sizeSort"
-                role="button"
-                tabindex="0"
-                @click="sort('size')"
-                :title="$t('files.sortBySize')"
-                :aria-label="$t('files.sortBySize')"
-              >
-                <span>{{ $t("files.size") }}</span>
-                <i class="material-icons">{{ sizeIcon }}</i>
-              </p>
+<!--                <p-->
+<!--                  :class="{ active: createdSorted }"-->
+<!--                  class="createdSort"-->
+<!--                  role="button"-->
+<!--                  tabindex="0"-->
+<!--                  @click="sort('created')"-->
+<!--                  :title="$t('files.sortByCreated')"-->
+<!--                  :aria-label="$t('files.sortByCreated')"-->
+<!--                >-->
+<!--                  <span>{{ $t("files.created") }}</span>-->
+<!--                  <i class="material-icons">{{ createdIcon }}</i>-->
+<!--                </p>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          </div>-->
 
-              <p
-                :class="{ active: createdSorted }"
-                class="createdSort"
-                role="button"
-                tabindex="0"
-                @click="sort('created')"
-                :title="$t('files.sortByCreated')"
-                :aria-label="$t('files.sortByCreated')"
-              >
-                <span>{{ $t("files.created") }}</span>
-                <i class="material-icons">{{ createdIcon }}</i>
-              </p>
-            </div>
-          </div>
-
-
+          <h2 v-if="filesSize > 0">files and folders</h2>
           <RecycleScroller
             ref="filesScroller"
             id="filesScroller"
@@ -367,32 +369,9 @@ export default {
          // Ensures that the listing is displayed
          this.$nextTick(() => {
 
-            this.calculateGridLayoutWrapper()
+            let element = document.getElementById("filesScroller")
+            this.calculateGridLayout(element.clientWidth - 15)
 
-            if (!this.lastItem) return
-
-            let index = this.files.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
-            console.log("scrolling to: " + index)
-            let filesScroller = this.$refs.filesScroller
-            let realThis = this
-            let lastItemId = this.lastItem.id
-
-            setTimeout(function() {
-               filesScroller.scrollToItem(index)
-
-               setTimeout(function() {
-                  let itemElement = realThis.$refs[lastItemId]
-                  if (itemElement) {
-                     itemElement.$el.classList.add("pulse-animation")
-
-                     // Remove the animation class after 5 seconds
-                     setTimeout(() => {
-                        itemElement.$el.classList.remove("pulse-animation")
-                     }, 3500) // 5 seconds
-                  }
-               }, 100);
-
-            }, 50)
          })
       }
 
@@ -409,30 +388,23 @@ export default {
 
          if (!this.lastItem) return
 
-         let index = this.files.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
-         console.log("scrolling to: " + index)
+         let index = this.files.findIndex(file => file.id === this.lastItem.id)
+
          let filesScroller = this.$refs.filesScroller
+         setTimeout(function () {
+            filesScroller.scrollToItem(index-4)
+         },50)
 
-         let realThis = this
-         let lastItemId = this.lastItem.id
-         setTimeout(function() {
-            filesScroller.scrollToItem(index)
+         let itemElement = this.$refs[this.lastItem.id];
 
-            setTimeout(function() {
-               let itemElement = realThis.$refs[lastItemId]
-               if (itemElement) {
-                  itemElement.$el.classList.add("pulse-animation")
+         if (itemElement) {
+            itemElement.$el.classList.add('pulse-animation');
 
-                  // Remove the animation class after 5 seconds
-                  setTimeout(() => {
-                     itemElement.$el.classList.remove("pulse-animation")
-                  }, 3500) // 5 seconds
-               }
-            }, 100);
-
-
-         }, 50)
-
+            // Remove the animation class after 5 seconds
+            setTimeout(() => {
+               itemElement.$el.classList.remove('pulse-animation');
+            }, 3500); // 5 seconds
+         }
 
 
 
@@ -474,21 +446,18 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
-      viewMode() {
-         if (this.settings.viewMode === "list") return "list"
-         return "grid"
-      },
+
       gridItems() {
-         if (this.viewMode === "grid") {
+         if(this.settings.viewMode === "grid") {
             return this.numberOfTiles
          }
          return null
       },
       viewIcon() {
          const icons = {
-            "list": "view_module",
-            "width grid": "view_list",
-            "height grid": "view_column"
+            list: "view_module",
+            grid: "view_list",
+            // "mosaic gallery": "view_list"
          }
          return icons[this.settings.viewMode]
       },
@@ -547,7 +516,7 @@ export default {
    methods: {
       isMobile,
 
-      ...mapActions(useMainStore, ["setLastItem", "toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
+      ...mapActions(useMainStore, ["toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       calculateGridLayoutWrapper() {
          console.log("calculateGridLayoutWrapper")
@@ -555,28 +524,24 @@ export default {
          this.calculateGridLayout(element.clientWidth)
       },
       calculateGridLayout(containerWidth) {
-         if (this.viewMode !== "grid") return
+         if(this.settings.viewMode !== "grid") return
 
-         const maxTileWidth = 250
+         const maxTileWidth = 400
 
          // Calculate the maximum number of tiles that can fit using the minimum width
          let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
-         // if (numberOfTiles === 1) numberOfTiles = 2
 
          // Calculate the actual width of each tile
          let tileWidth = containerWidth / numberOfTiles
 
+         // Update the data properties
          this.numberOfTiles = numberOfTiles
+         this.tileWidth = tileWidth
+         this.tileHeight = this.tileWidth * 300 / 400
 
-         if (this.settings.viewMode === "width grid") {
-            this.tileWidth = tileWidth
-            this.tileHeight = tileWidth * 0.75
-         } else {
-            this.tileWidth = tileWidth
-            this.tileHeight = tileWidth * 1.5
-         }
+         this.imageWidth = 175 / 400 * this.tileWidth
+         this.imageHeight = 240 / 300 * this.tileHeight - 10 - 25 / numberOfTiles
 
-         this.imageHeight = this.tileHeight - 65
 
       },
       async uploadInput(event) {
@@ -732,21 +697,18 @@ export default {
 
       },
       autoScroll(event) {
-         console.log("autoScroll")
-         //todo
-         // make it work with new vritual scroller
-         // event.preventDefault()
-         // let scrollSpeed = 500
-         //
-         // let mouseY = event.clientY
-         //
-         // // // Scroll up
-         // if (mouseY < 100) {
-         //    window.scrollBy({ "top": -scrollSpeed, behavior: "smooth" })
-         // }
-         // if (mouseY + 50 > window.innerHeight) {
-         //    window.scrollBy({ "top": scrollSpeed, behavior: "smooth" })
-         // }
+         event.preventDefault()
+         let scrollSpeed = 500
+
+         let mouseY = event.clientY
+
+         // // Scroll up
+         if (mouseY < 100) {
+            window.scrollBy({ "top": -scrollSpeed, behavior: "smooth" })
+         }
+         if (mouseY + 50 > window.innerHeight) {
+            window.scrollBy({ "top": scrollSpeed, behavior: "smooth" })
+         }
       },
       async sort(by) {
          let asc = false
@@ -821,27 +783,11 @@ export default {
          this.showLimit = showQuantity > totalItems ? totalItems : showQuantity
 
       },
-      async locateItem() {
-         this.$emit("onSearchClosed")
-         let item = this.selected[0]
-         let parent_id = item.parent_id
-
-         this.setLastItem(item)
-         await this.$nextTick()
-
-         this.$router.push({ name: "Files", params: { "folderId": parent_id } })
-         let message = this.$t("toasts.locating")
-
-         this.isContextMenuVisible = false
-         this.$toast.info(message)
-
-      },
       async switchView() {
          console.log("switch view")
          let modes = {
-            "list": "width grid",
-            "width grid": "height grid",
-            "height grid": "list"
+            list: "grid",
+            grid: "list",
          }
          let data = {
             viewMode: modes[this.settings.viewMode] || "list"
@@ -877,7 +823,7 @@ export default {
 
 
 .grid .scroller {
- background-color: var(--background);
+ background-color: #fafafa;
  overflow-y: auto;
  height: calc(100% - 120px);
  /*height: 100%;*/
@@ -893,10 +839,10 @@ export default {
  font-weight: 500;
 }
 
-/*.grid .createdSort, .sizeSort, .nameSort {*/
-/* display: none;*/
+.grid .createdSort, .sizeSort, .nameSort {
+ display: none;
 
-/*}*/
+}
 
 .pulse-animation {
  animation: pulse 2s ease-out;
@@ -911,53 +857,4 @@ export default {
  }
 
 }
-
-
-/* General container styling for the header */
-.item.header {
- display: flex;
- justify-content: flex-start; /* Align to the left */
- align-items: center;
- font-family: Arial, sans-serif;
-
-}
-
-/* Styling for the sort buttons container */
-.item.header > div {
- display: flex;
- gap: 10px; /* Smaller gap */
-}
-
-/* Shared styling for all sort buttons */
-.item.header p {
- display: flex;
- align-items: center;
- gap: 5px;
- cursor: pointer;
- color: #555;
- font-size: 14px; /* Smaller font size */
- margin: 0;
- padding: 10px 15px 10px;
- border-radius: 3px;
- transition: color 0.3s;
-}
-
-/* Styling for active sort buttons */
-.item.header p.active {
- font-weight: bold; /* Bolder when active */
- color: #000; /* Black text for active state */
-}
-
-/* Hover effect for sort buttons */
-.item.header p:hover {
- background-color: #e0e0e0;
-}
-
-/* Styling for icons within sort buttons */
-.item.header i.material-icons {
- font-size: 14px; /* Smaller icon size */
- color: inherit; /* Matches text color */
-}
-
-
 </style>
