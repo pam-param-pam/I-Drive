@@ -141,6 +141,11 @@
     margin-right: 0.5em;
 
   }
+  .message img {
+    max-width: 100%;
+    padding-left: 0.75em;
+    max-height: 100%
+  }
 
 }
 

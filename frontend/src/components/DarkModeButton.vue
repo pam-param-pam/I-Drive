@@ -7,7 +7,7 @@
       :aria-label="$t('sidebar.toggleDarkMode')"
       :title="$t('sidebar.toggleDarkMode')"
     >
-      <span class="material-icons">{{ settings.theme==="dark" ? 'dark_mode' : 'light_mode' }}</span>
+      <span class="material-icons">{{ settings.theme !== "dark" ? 'dark_mode' : 'light_mode' }}</span>
     </button>
   </div>
 </template>
@@ -22,7 +22,7 @@ export default {
    name: "DarkModeButton",
 
    computed: {
-      ...mapState(useMainStore, ["settings"]),
+      ...mapState(useMainStore, ["settings", "isLogged"]),
 
    },
    methods: {
@@ -37,7 +37,8 @@ export default {
          let newTheme = themes[this.settings.theme]
          this.setTheme(newTheme)
 
-         this.throttledUpdateSettings()
+         if (!this.isLogged) return
+         this.throttledUpdateSettings(newTheme)
 
       },
 

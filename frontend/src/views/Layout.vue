@@ -19,7 +19,7 @@ import Prompts from "@/components/prompts/Prompts.vue"
 import Shell from "@/components/Shell.vue"
 import UploadFiles from "../components/prompts/UploadFiles.vue"
 import {useMainStore} from "@/stores/mainStore.js"
-import {mapState} from "pinia"
+import { mapActions, mapState } from "pinia"
 import {useUploadStore} from "@/stores/uploadStore.js";
 
 export default {
@@ -34,13 +34,24 @@ export default {
    renderTriggered({key, target, type}) {
       console.log(`Render triggered on component 'Layout'`, {key, target, type})
    },
+   created() {
+      console.log("IS logged")
+      console.log(this.isLogged)
+      if (!this.isLogged) {
+
+         this.setAnonState()
+      }
+   },
    computed: {
-      ...mapState(useMainStore, ["perms"]),
+      ...mapState(useMainStore, ["perms", "isLogged"]),
       ...mapState(useUploadStore, ["progress"]),
 
       isExecEnabled() {
          return this.perms?.execute
       }
    },
+   methods: {
+      ...mapActions(useMainStore, ["setAnonState"]),
+   }
 }
 </script>

@@ -1,6 +1,6 @@
 <!--Package Name: Simple Code Editor-->
 <!--Author: justcaliturner (https://github.com/justcaliturner)-->
-<!--Copied in here to add theme dropdown-->
+<!--Copied in here to add theme dropdown and modify some other things-->
 
 <template>
   <div
@@ -147,7 +147,7 @@ export default {
       theme: {
          type: Array,
          default: function () {
-            return ["night-owl", "Night Owl"];
+            return ["atom-one-dark", "Atom One Dark"];
          },
       },
       tabSpaces: {
@@ -203,7 +203,7 @@ export default {
       themes: {
          type: Array,
          default: function () {
-            return [["night-owl", "Night Owl"]];
+            return [["atom-one-dark", "Atom One Dark"]];
          },
       },
       langListWidth: {
@@ -251,10 +251,54 @@ export default {
          default: "20px",
       },
    },
+   created() {
+      //we are registering vue language plugin
+      function hljsDefineVue(e) {
+         return {
+            subLanguage: "xml",
+            contains: [e.COMMENT("\x3c!--", "--\x3e", {
+               relevance: 10
+            }), {
+               begin: /^(\s*)(<script>)/gm,
+               end: /^(\s*)(<\/script>)/gm,
+               subLanguage: "javascript",
+               excludeBegin: !0,
+               excludeEnd: !0
+            }, {
+               begin: /^(\s*)(<script lang=["']ts["']>)/gm,
+               end: /^(\s*)(<\/script>)/gm,
+               subLanguage: "typescript",
+               excludeBegin: !0,
+               excludeEnd: !0
+            }, {
+               begin: /^(\s*)(<style(\sscoped)?>)/gm,
+               end: /^(\s*)(<\/style>)/gm,
+               subLanguage: "css",
+               excludeBegin: !0,
+               excludeEnd: !0
+            }, {
+               begin: /^(\s*)(<style lang=["'](scss|sass)["'](\sscoped)?>)/gm,
+               end: /^(\s*)(<\/style>)/gm,
+               subLanguage: "scss",
+               excludeBegin: !0,
+               excludeEnd: !0
+            }, {
+               begin: /^(\s*)(<style lang=["']stylus["'](\sscoped)?>)/gm,
+               end: /^(\s*)(<\/style>)/gm,
+               subLanguage: "stylus",
+               excludeBegin: !0,
+               excludeEnd: !0
+            }]
+         }
+      }
+      hljs.registerLanguage("vue", hljsDefineVue);
+   },
    directives: {
       highlight: {
          mounted(el, binding) {
             el.textContent = binding.value;
+
+
             hljs.highlightElement(el);
          },
          updated(el, binding) {
@@ -312,13 +356,7 @@ export default {
             this.$emit("update:modelValue", e.target.value);
          }
       },
-      changeLang(lang) {
-         this.languageTitle = lang[1] ? lang[1] : lang[0];
-         this.languageClass = "language-" + lang[0];
-         this.$emit("lang", lang[0]);
-      },
       changeTheme(theme) {
-         // eslint-disable-next-line vue/no-mutating-props
          this.localTheme = theme
 
          this.$emit("theme", theme[0]);
@@ -378,7 +416,7 @@ export default {
          const singleLineHeight = this.$refs.lineNums.firstChild.offsetHeight;
          const heightNum = parseInt(this.textareaHeight / singleLineHeight) - 1;
          // displayed lineNum
-         this.lineNum = this.height == "auto" ? lineNum : lineNum > heightNum ? lineNum : heightNum;
+         this.lineNum = this.height === "auto" ? lineNum : lineNum > heightNum ? lineNum : heightNum;
       },
    },
    mounted() {

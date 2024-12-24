@@ -6,10 +6,10 @@
       :aria-label="$t('files.home')"
       :title="$t('files.home')"
       draggable="false"
-      @drop="drop(user.root)"
-      @dragenter="dragEnter(user.root)"
+      @drop="drop(user?.root)"
+      @dragenter="dragEnter(user?.root)"
       @dragleave="dragLeave"
-      :class="breadcrumbClass(user.root)"
+      :class="breadcrumbClass(user?.root)"
     >
       <i class="material-icons">home</i>
     </component>
@@ -79,7 +79,6 @@ export default {
       dragEnter(folderId) {
          if (this.canDrop(folderId)) {
             this.draggedOverFolderId = folderId
-            console.log(this.draggedOverFolderId)
          }
       },
 

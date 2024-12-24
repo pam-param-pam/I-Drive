@@ -77,3 +77,8 @@ export default {
    },
 }
 </script>
+<style scoped>
+.file-list {
+ padding-right: 1em;
+}
+</style>

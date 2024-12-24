@@ -55,7 +55,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: #ffffff; /* Ensure background color matches the rest of the card */
+  background-color: var(--background); /* Ensure background color matches the rest of the card */
   box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2);
 
 }

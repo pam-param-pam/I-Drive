@@ -1,7 +1,6 @@
 import { defineStore } from "pinia"
 import moment from "moment"
 import i18n from "@/i18n/index.js"
-import { updateSettings } from "@/api/user.js"
 
 export const useMainStore = defineStore("main", {
    state: () => ({
@@ -57,33 +56,36 @@ export const useMainStore = defineStore("main", {
          return this.previousPrompt?.prompt
       },
       sortedItems() {
-         let allItems = []
-         console.log(this.items)
-         if (this.items != null) {
-            this.items.forEach((item) => {
-               if (item.isDir && (!item.isLocked || !this.settings.hideLockedFolders)) {
-                  allItems.push({ ...item, isDir: true })
-               } else if (!item.isDir) {
-                  allItems.push({ ...item, isDir: false })
-               }
-            })
-         }
-         // Sort the combined array, placing directories first
-         allItems.sort((a, b) => {
-            if (a.isDir && !b.isDir) return -1 // Folders come first
-            if (!a.isDir && b.isDir) return 1  // Files come after
-            return 0                           // Keep the original order otherwise
-         })
 
-         return allItems
+         let fieldName = this.settings.sortingBy
+
+         let orderFactor = this.settings.sortByAsc ? 1 : -1;
+
+         return this.items
+            .slice()
+            .sort((a, b) => {
+               // 1. Folders First
+               if (a.isDir !== b.isDir) {
+                  return a.isDir ? -1 : 1;
+               }
+
+               // 2. Sort by chosen field
+               let fieldA = a[fieldName];
+               let fieldB = b[fieldName];
+
+               if (fieldA < fieldB) return orderFactor;
+               if (fieldA > fieldB) return -1 *orderFactor;
+
+               return 0;
+            })
+            .map((item, index) => ({ ...item, index }));
       }
 
    },
 
    actions: {
-      setCurrentFolderData(value) {
-         console.log("setCurrentFolderData")
 
+      setCurrentFolderData(value) {
          this.setItems(value.folder.children)
          this.setBreadcrumbs(value.breadcrumbs)
          this.setCurrentFolder(value.folder)
@@ -243,7 +245,6 @@ export const useMainStore = defineStore("main", {
          this.settings.sortByAsc = value
       },
       setSettings(value) {
-         console.log("finished settings")
 
          let locale = value?.locale
          if (locale === "") {
@@ -257,7 +258,9 @@ export const useMainStore = defineStore("main", {
          const country = "pl"
          moment.locale(country)
          i18n.global.locale = country
-         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "list", dateFormat: false, locale: country }
+
+         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "width grid", dateFormat: false, locale: country}
+         this.setTheme("dark")
       },
       updateSettings(value) {
          if (typeof value !== "object") return
@@ -271,7 +274,6 @@ export const useMainStore = defineStore("main", {
             moment.locale(locale)
             i18n.global.locale = locale
          }
-         console.log("update settings")
       },
       setError(value) {
          this.error = value

@@ -1,5 +1,4 @@
 <template>
-  <div>
     <h4 v-if="shareState === 'error'" class="listing-notice">{{ $t('share.shareNotFound') }}</h4>
 
     <h4 v-if="shareState === 'success'" class="listing-notice">
@@ -23,8 +22,6 @@
     ></FileListing>
     <errors v-if="shareState === 'passwordRequired'" :errorCode="error.response?.status"/>
 
-
-  </div>
 </template>
 
 <script>
@@ -82,11 +79,6 @@ export default {
    created() {
       document.title = "share"
 
-      //if anonymous user, we need to set state like locale or viewMode etc
-      if (!this.isLogged) {
-         this.setAnonState()
-      }
-
       this.setDisabledCreation(true)
       this.fetchShare()
    },
@@ -98,7 +90,7 @@ export default {
 
 
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setAnonState", "setItems"]),
+      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems"]),
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {

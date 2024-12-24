@@ -87,7 +87,7 @@
       style="width: 80%; margin: 2em 2.5em 3em 2.5em"
     >
       <progress-bar :val="usage.usedPercentage" size="small"></progress-bar>
-      <br/>
+      <br />
       {{ usage.used }} of {{ usage.total }} used
     </div>
 
@@ -104,18 +104,18 @@
         <a @click="help">{{ $t("sidebar.help") }}</a>
       </span>
     </p>
-    <dark-mode-button/>
+    <dark-mode-button />
   </nav>
 </template>
 
 <script>
 import * as auth from "@/utils/auth"
-import {signup, version, githubUrl} from "@/utils/constants"
-import {getUsage} from "@/api/folder.js"
-import {author, name} from "@/utils/constants.js"
-import {filesize} from "@/utils/index.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { githubUrl, signup, version } from "@/utils/constants"
+import { getUsage } from "@/api/folder.js"
+import { author, name } from "@/utils/constants.js"
+import { filesize } from "@/utils/index.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import ProgressBar from "@/components/SimpleProgressBar.vue"
 import DarkModeButton from "@/components/DarkModeButton.vue"
 
@@ -123,14 +123,14 @@ export default {
    name: "sidebar",
    components: {
       DarkModeButton,
-      ProgressBar,
+      ProgressBar
    },
    data() {
       return {
          name: name,
          author: author,
          repoLink: githubUrl,
-         usage: {used: "0 B", total: "0 B", usedPercentage: 0},
+         usage: { used: "0 B", total: "0 B", usedPercentage: 0 }
       }
    },
    computed: {
@@ -139,37 +139,42 @@ export default {
          return this.currentPrompt?.prompt === "sidebar"
       },
       signup: () => signup,
-      version: () => version,
+      version: () => version
+   },
+   async mounted() {
+      await this.fetchUsage()
+
    },
    watch: {
       async currentFolder() {
-
-         if (this.currentFolder && this.$route.name === "Files") {
-
-            let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
-            console.log(usage)
-            this.usage = {
-               used: filesize(usage.used),
-               total: filesize(usage.total),
-               usedPercentage: Math.round((usage.used / usage.total) * 100),
-            }
-         }
-      },
+         await this.fetchUsage()
+      }
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover", "showHover"]),
+      async fetchUsage() {
+         if (this.currentFolder && this.$route.name === "Files") {
+
+            let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
+            this.usage = {
+               used: filesize(usage.used),
+               total: filesize(usage.total),
+               usedPercentage: Math.round((usage.used / usage.total) * 100)
+            }
+         }
+      },
       toRoot() {
-         this.$router.push({name: `Files`, params: {folderId: this.user.root}}).catch(err => {
+         this.$router.push({ name: `Files`, params: { folderId: this.user.root } }).catch(err => {
          })
          this.closeHover()
       },
       toTrash() {
-         this.$router.push({name: `Trash`}).catch(err => {
+         this.$router.push({ name: `Trash` }).catch(err => {
          })
          this.closeHover()
       },
       toSettings() {
-         this.$router.push({name: `Settings`}).catch(err => {
+         this.$router.push({ name: `Settings` }).catch(err => {
          })
          this.closeHover()
       },
@@ -177,8 +182,8 @@ export default {
          this.showHover("help")
 
       },
-      logout: auth.logout,
-   },
+      logout: auth.logout
+   }
 
 }
 </script>

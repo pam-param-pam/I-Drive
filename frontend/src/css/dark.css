@@ -6,6 +6,7 @@
  --divider: rgba(255, 255, 255, 0.12);
  --textPrimary: rgba(255, 255, 255, 0.87);
  --textSecondary: rgba(255, 255, 255, 0.6);
+ --sb-thumb-color: var(--surfaceSecondary);
 }
 /*1e1f23*!*/
 /*2c2d31*/

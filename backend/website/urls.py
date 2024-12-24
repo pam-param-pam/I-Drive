@@ -70,6 +70,7 @@ urlpatterns = [
     path('admin', admin.site.urls),
 
     path('test', get_folder_password),
+    # path('download-test/', download_large_file, name='download_test'),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

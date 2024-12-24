@@ -94,9 +94,8 @@ export default {
    },
 
    created() {
-      console.log("CREATED0")
+
       this.fetchData()
-      console.log("CREATED1")
       window.addEventListener("keydown", this.keyEvent)
    },
    beforeUnmount() {
@@ -109,11 +108,11 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setItems", "addSelected", "showHover"]),
       guessLanguage() {
-         console.log("aaaaa")
+         console.log("guessLanguage")
 
          let extensionMap = {
             'js': 'javascript',
-            'vue': "js",
+            'vue': "vue",
             'py': 'python',
             'java': 'java',
             'cpp': 'Cpp',
@@ -152,13 +151,10 @@ export default {
             'md': 'markdown',
             'apache': 'apache',
             'ino': 'arduino',
-            'xml': 'xml'
+            'xml': 'xml',
          };
-         console.log(this.file)
          let ext = this.file.name.split('.').pop().toLowerCase()
-         console.warn(extensionMap[ext])
          let lang = extensionMap[ext] || 'plaintext'
-         console.log([[lang, lang]])
          return [[lang, lang]]
       },
       async fetchData() {

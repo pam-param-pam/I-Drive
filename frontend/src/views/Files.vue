@@ -83,7 +83,7 @@ export default {
             download: this.perms.download && this.selectedCount > 0,
             moveToTrash: this.selectedCount > 0 && this.perms.delete,
             modify: this.selectedCount === 1 && this.perms.modify,
-            move: this.selectedCount > 1 && this.perms.modify,
+            move: this.selectedCount >= 1 && this.perms.modify,
             share: this.selectedCount === 1 && this.perms.share,
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
             locate: this.selectedCount === 1 && this.isSearchActive,
@@ -292,8 +292,8 @@ export default {
             this.$router.push({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } })
 
          } else {
-
-            if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
+            console.log(item.size)
+            if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
                this.$router.push({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } })
 
             } else {

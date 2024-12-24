@@ -24,6 +24,7 @@ app.use(VueLazyLoad, {
 app.use(VueVirtualScroller)
 app.use(createPinia())
 
+
 const filterBeforeCreate = (toast, toasts) => {
 
    for (let i = 0; i < toasts.length; i++) {

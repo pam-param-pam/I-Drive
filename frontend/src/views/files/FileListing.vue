@@ -103,7 +103,7 @@
 
     <template v-if="!error && !loading">
 
-      <div v-if="dirsSize + filesSize === 0">
+      <div v-if="sortedItems.length === 0">
         <h2 class="message">
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
             <img
@@ -182,6 +182,7 @@
             ref="filesScroller"
             id="filesScroller"
             class="scroller"
+            :style="scrollerClass"
             :items="sortedItems"
             :item-size="tileHeight"
             :grid-items="gridItems"
@@ -194,6 +195,7 @@
               :item="item"
               :readOnly="readonly"
               :ref="item.id"
+              :key="item.id"
               :imageWidth="imageWidth"
               :imageHeight="imageHeight"
               :tileHeight="tileHeight"
@@ -271,7 +273,7 @@
           show="delete"
         />
         <action
-          v-if="headerButtons.modify"
+          v-if="headerButtons.move"
           id="move-button"
           icon="forward"
           :label="$t('buttons.moveFile')"
@@ -312,11 +314,10 @@
 
 <script>
 import css from "@/utils/css"
-import throttle from "lodash.throttle"
 
 import Item from "@/components/files/ListingItem.vue"
 import { updateSettings } from "@/api/user.js"
-import { isMobile, sortItems } from "@/utils/common.js"
+import { isMobile } from "@/utils/common.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import ContextMenu from "@/components/ContextMenu.vue"
@@ -356,7 +357,7 @@ export default {
 
          //experimental
          tileWidth: 40,
-         tileHeight: 50,
+         tileHeight: 75,
          imageHeight: 100,
          imageWidth: 100,
          numberOfTiles: 4
@@ -366,12 +367,12 @@ export default {
       items() {
          // Ensures that the listing is displayed
          this.$nextTick(() => {
-
+            console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
             this.calculateGridLayoutWrapper()
 
             if (!this.lastItem) return
 
-            let index = this.files.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
+            let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
             console.log("scrolling to: " + index)
             let filesScroller = this.$refs.filesScroller
             let realThis = this
@@ -404,12 +405,11 @@ export default {
 
       this.$nextTick(() => {
 
-         let element = document.getElementById("filesScroller")
-         this.calculateGridLayout(element.clientWidth - 15)
+         this.calculateGridLayoutWrapper()
 
          if (!this.lastItem) return
 
-         let index = this.files.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
+         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
          console.log("scrolling to: " + index)
          let filesScroller = this.$refs.filesScroller
 
@@ -473,7 +473,7 @@ export default {
 
    },
    computed: {
-      ...mapState(useMainStore, ["lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "sortedItems"]),
+      ...mapState(useMainStore, ["sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt"]),
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
          return "grid"
@@ -497,21 +497,6 @@ export default {
       },
       sizeSorted() {
          return this.settings.sortingBy === "size"
-      },
-
-      dirs() {
-         return this.sortedItems.filter(item => item.isDir)
-      },
-
-      files() {
-         return this.sortedItems.filter(item => !item.isDir)
-      },
-
-      dirsSize() {
-         return this.dirs.length
-      },
-      filesSize() {
-         return this.files.length
       },
       createdSorted() {
          return this.settings.sortingBy === "created"
@@ -540,6 +525,19 @@ export default {
          }
 
          return "arrow_upward"
+      },
+      minusSize() {
+         let component = this.$route.name
+         console.log(component)
+         console.log("component")
+         if (component === "Files") return 100
+         if (component === "Trash") return 120
+         if (component === "Share") return 165
+         return 0
+      },
+      scrollerClass() {
+         return `height: calc(100% - ${this.minusSize}px);`
+
       }
 
    },
@@ -551,13 +549,16 @@ export default {
 
       calculateGridLayoutWrapper() {
          console.log("calculateGridLayoutWrapper")
-         let element = document.getElementById("filesScroller")
-         this.calculateGridLayout(element.clientWidth)
+         let width = document.getElementById("filesScroller").clientWidth
+         if (!isMobile()) width -= 5
+         this.calculateGridLayout(width)
       },
       calculateGridLayout(containerWidth) {
          if (this.viewMode !== "grid") return
+         console.log("calculateGridLayout")
+         console.log(containerWidth)
 
-         const maxTileWidth = 250
+         const maxTileWidth = 225
 
          // Calculate the maximum number of tiles that can fit using the minimum width
          let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
@@ -582,18 +583,7 @@ export default {
       async uploadInput(event) {
          this.$emit("uploadInput", event)
       },
-      async removeThirdItem() {
-         console.log("removing item")
-         console.log(this.items.length)
-         this.setItems(this.items.filter(item => item.name !== "ac1d9da3738c4e20778de891cc46a5e7.mp4"))
-         console.log(this.items.length)
 
-         // this.renderGrid = false
-         // await this.$nextTick();
-         // this.renderGrid = true
-
-
-      },
       showContextMenu(event, item) {
          this.resetSelected()
          this.addSelected(item)
@@ -688,28 +678,6 @@ export default {
          items.style.width = `calc(${100 / columns}% - 1em)`
       },
 
-      scrollEvent: throttle(function() {
-         const totalItems = this.filesSize + this.dirsSize
-
-         // All items are displayed
-         if (this.showLimit >= totalItems) return
-
-         const currentPos = window.innerHeight + window.scrollY
-
-         // Trigger at the 75% of the window height
-         const triggerPos = document.body.offsetHeight - window.innerHeight * 0.25
-
-         if (currentPos > triggerPos) {
-            // Quantity of items needed to fill 2x of the window height
-            const showQuantity = Math.ceil(
-               (window.innerHeight * 2) / this.itemWeight
-            )
-
-            // Increase the number of displayed items
-            this.showLimit += showQuantity
-         }
-      }, 100),
-
 
       dragEnter() {
          this.$emit("dragEnter")
@@ -764,63 +732,15 @@ export default {
                asc = true
             }
          }
-
          this.setSortingBy(by)
          this.setSortByAsc(asc)
 
-         let items = sortItems(this.items)
-         this.setItems(items)
-
+         if (!this.isLogged) return
          await updateSettings({ "sortingBy": by, "sortByAsc": asc })
 
       },
 
-      windowsResize: throttle(function() {
-         this.columnsResize()
 
-         // Listing element is not displayed
-         if (this.$refs.listing == null) return
-
-         // How much every listing item affects the window height
-         this.setItemWeight()
-
-         // Fill but not fit the window
-         this.fillWindow()
-      }, 100),
-
-      setItemWeight() {
-         //if (this.$refs.listing == null || this.currentFolder == null) return
-         if (this.$refs.listing == null) return
-
-
-         let itemQuantity = this.filesSize + this.dirsSize
-         if (itemQuantity > this.showLimit) itemQuantity = this.showLimit
-
-         // How much every listing item affects the window height
-         this.itemWeight = this.$refs.listing.offsetHeight / itemQuantity
-      },
-      fillWindow(fit = false) {
-         //if (this.currentFolder == null) return
-
-         const totalItems = this.filesSize + this.dirsSize
-
-         // More items are displayed than the total
-         if (this.showLimit >= totalItems && !fit) return
-
-         const windowHeight = window.innerHeight
-
-         // Quantity of items needed to fill 2x of the window height
-         const showQuantity = Math.ceil(
-            (windowHeight + windowHeight * 2) / this.itemWeight
-         )
-
-         // Less items to display than current
-         if (this.showLimit > showQuantity && !fit) return
-
-         // Set the number of displayed items
-         this.showLimit = showQuantity > totalItems ? totalItems : showQuantity
-
-      },
       async locateItem() {
          this.$emit("onSearchClosed")
          let item = this.selected[0]
@@ -847,12 +767,8 @@ export default {
             viewMode: modes[this.settings.viewMode] || "list"
          }
 
-         // Await ensures correct value for setItemWeight()
          await this.updateSettings(data)
          this.calculateGridLayoutWrapper()
-
-         this.setItemWeight()
-         this.fillWindow()
 
          if (this.isLogged) {
             await updateSettings(data)
@@ -866,39 +782,21 @@ export default {
 }
 </script>
 <style scoped>
-
 .wrapper {
- height: 100%;
+ padding-bottom: 0.5em;
 }
-
+.wrapper,
+.list,
 .grid {
  height: 100%;
 }
 
-
-.grid .scroller {
+.scroller {
  background-color: var(--background);
- height: calc(100% - 120px);
- /*height: 100%;*/
-
-
 }
-
-.grid h2 {
- margin: 0 0 1em 0.5em;
- font-size: .9em;
- padding-top: 1em;
- color: rgba(0, 0, 0, 0.38);
- font-weight: 500;
-}
-
-/*.grid .createdSort, .sizeSort, .nameSort {*/
-/* display: none;*/
-
-/*}*/
 
 .pulse-animation {
- animation: pulse 2s ease-out;
+ animation: pulse 3s ease-out;
 }
 
 @keyframes pulse {
@@ -906,57 +804,59 @@ export default {
   background: #80c6ff;
  }
  100% {
-  background: #d3e3fd;
+  background: var(--surfacePrimary);
  }
 
 }
 
+/* ============================= */
+/* 📝 GRID SORT HEADER  STYLES   */
+/* ============================= */
 
-/* General container styling for the header */
-.item.header {
+.grid .item.header {
  display: flex;
- justify-content: flex-start; /* Align to the left */
+ justify-content: flex-start;
  align-items: center;
  font-family: Arial, sans-serif;
 
 }
 
-/* Styling for the sort buttons container */
-.item.header > div {
+.grid .item.header > div {
  display: flex;
- gap: 10px; /* Smaller gap */
+ gap: 10px;
 }
 
-/* Shared styling for all sort buttons */
-.item.header p {
+.grid .item.header p {
  display: flex;
  align-items: center;
  gap: 5px;
  cursor: pointer;
- color: #555;
- font-size: 14px; /* Smaller font size */
+ font-size: 14px;
  margin: 0;
  padding: 10px 15px 10px;
  border-radius: 3px;
  transition: color 0.3s;
+ border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
 }
 
-/* Styling for active sort buttons */
-.item.header p.active {
- font-weight: bold; /* Bolder when active */
- color: #000; /* Black text for active state */
+.grid .item.header p.active {
+ font-weight: bold;
 }
 
-/* Hover effect for sort buttons */
-.item.header p:hover {
- background-color: #e0e0e0;
+.grid.item.header i.material-icons {
+ font-size: 14px;
+ color: inherit;
 }
 
-/* Styling for icons within sort buttons */
-.item.header i.material-icons {
- font-size: 14px; /* Smaller icon size */
- color: inherit; /* Matches text color */
-}
+
+
+
+
+
+
+
+
 
 
 </style>

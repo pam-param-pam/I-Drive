@@ -2,6 +2,7 @@ body {
   --background: #f5f5f5;
   --surfacePrimary: #ffffff;
   --surfaceSecondary: #ffffff;
+  --sb-thumb-color: #c5c8c7;
   font-family: "Roboto", sans-serif;
   padding-top: 4em;
   background-color: var(--background);
@@ -171,4 +172,22 @@ body.rtl .breadcrumbs a {
 .hideMobileTap {
   -webkit-tap-highlight-color: transparent;
 
+}
+* {
+  --sb-track-color: #141d24;
+  --sb-size: 10px;
+}
+
+::-webkit-scrollbar {
+  width: var(--sb-size);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb-color);
+  border-radius: 10px;
 }

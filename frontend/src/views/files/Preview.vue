@@ -171,7 +171,6 @@ import { getFile, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
 import { VueReader } from "vue-reader"
-import { sortItems } from "@/utils/common.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 
@@ -219,7 +218,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["items", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
+      ...mapState(useMainStore, ["items", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged", "sortedItems"]),
       isEpub() {
          if (!this.file) return false
          return this.file.extension === ".epub"
@@ -244,15 +243,15 @@ export default {
       files() {
          let files = []
 
-         if (this.items != null) {
-            this.items.forEach((item) => {
+         if (this.sortedItems != null) {
+            this.sortedItems.forEach((item) => {
                if (!item.isDir && item.type !== "text" && item.type !== "application") {
                   files.push(item)
                }
             })
          }
 
-         return sortItems(files)
+         return files
       },
       hasNext() {
          return this.currentIndex < this.files.length - 1 // list starts at 0 lul
@@ -271,10 +270,7 @@ export default {
       }
    },
    created() {
-      if (!this.isLogged) {
-         this.setAnonState()
 
-      }
       this.fetchData()
 
    },
@@ -289,7 +285,7 @@ export default {
       window.removeEventListener("keydown", this.key)
    },
    methods: {
-      ...mapActions(useMainStore, ["setCurrentFolderData", "setLastItem", "setLoading", "setError", "setAnonState", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["setCurrentFolderData", "setLastItem", "setLoading", "setError", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
 
       async fetchData() {
 
@@ -466,6 +462,7 @@ export default {
          this.$toast.success(message)
       },
       videoTimeUpdate() {
+         if (!this.isLogged) return
          if (!this.$refs.video) {
             console.warn("this.$refs.video is falsy")
             return

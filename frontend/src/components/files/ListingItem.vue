@@ -36,11 +36,14 @@
         />
         <i v-else class="material-icons" :style="iconStyle"></i>
       </div>
-      <div class="size">
-        <p >{{ item.size }}</p>
-      </div>
       <div class="name">
         <p >{{ item.name }}</p>
+      </div>
+      <div class="size">
+        <p class="size" :data-order="humanSize()">{{ humanSize() }}</p>
+      </div>
+      <div class="created">
+        <p >{{ item.created }}</p>
       </div>
     </div>
   </div>
@@ -64,7 +67,7 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount"]),
       type() {
-        console.log(this.item.extension)
+         //todo fix hard coded values
          if (this.item.isDir) return "folder"
          if (this.item.type === "application") return "pdf"
          if (this.item.extension === ".epub") return "ebook"
@@ -112,6 +115,7 @@ export default {
       ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected"]),
 
       humanSize() {
+         if (this.item.isDir) return  "-"
          return filesize(this.item.size)
       },
       humanTime() {
@@ -212,13 +216,14 @@ export default {
 }
 </script>
 <style scoped>
+/* ========================= */
+/* 📝 GRID VIEW STYLES       */
+/* ========================= */
 .grid .item-wrapper:hover {
  box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 1px 2px rgba(0, 0, 0, .24) !important;
  background: var(--light-blue);
  transform: scale(1.03);
-
 }
-
 
 .grid .item-wrapper {
  border-radius: 10px;
@@ -226,7 +231,6 @@ export default {
  background-color: var(--surfacePrimary);
  overflow: hidden;
  box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px, rgba(0, 0, 0, 0.12) 0 1px 2px;
-
 }
 
 .grid .item-wrapper .item {
@@ -237,17 +241,12 @@ export default {
  cursor: pointer;
  user-select: none;
 }
-.grid .item-wrapper .item i {
 
-
-}
 .grid .item-wrapper .item img {
- /*-webkit-filter: blur(35px);*/
  margin-top: 0.5em;
  max-width: 100%;
  object-fit: cover;
  height: 100%;
-
 
 }
 .grid .item-wrapper .item .name p {
@@ -258,6 +257,7 @@ export default {
  white-space: nowrap;
 }
 
+.grid .item-wrapper .item .created,
 .grid .item-wrapper .item .size  {
  display: none;
 }
@@ -272,5 +272,80 @@ export default {
  margin-top: 0.5em !important;
  padding-bottom: 0.25em !important;
 }
+
+/* ========================= */
+/* 📝 LIST VIEW STYLES       */
+/* ========================= */
+
+.list .item-wrapper {
+ width: 100%;
+ display: flex;
+ flex-direction: column;
+}
+
+/* List Item Styling */
+.list .item-wrapper .item {
+ display: flex;
+ align-items: center;
+ border-bottom: 1px solid var(--divider);
+ padding: 8px 12px;
+ cursor: pointer;
+ transition: background-color 0.2s ease-in-out;
+}
+
+.list .item-wrapper .item:hover {
+ background-color: var(--surfaceSecondary);
+}
+
+/* Column Styles */
+.list .item-wrapper .item > div {
+ padding: 4px 8px;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ white-space: nowrap;
+}
+
+/* Icon/Image Column */
+.list .item-wrapper .item > div:first-child {
+ flex: 0 0 40px; /* Fixed width for icons/images */
+ text-align: center;
+}
+
+/* Name Column */
+.list .item-wrapper .name {
+ flex: 2;
+ font-weight: 500;
+}
+
+/* Size Column */
+.list .item-wrapper .size {
+ flex: 1;
+ text-align: right;
+ color: #666;
+ font-size: 0.9em;
+}
+
+/* Created Column */
+.list .item-wrapper .created {
+ flex: 1.5;
+ text-align: right;
+ color: #999;
+ font-size: 0.9em;
+}
+
+/* Image Styling */
+.list .item-wrapper img {
+ max-width: 32px;
+ max-height: 32px;
+ object-fit: cover;
+ border-radius: 4px;
+}
+
+/* Icon Styling */
+.list .item-wrapper .material-icons {
+ font-size: 24px;
+ color: #666;
+}
+
 
 </style>

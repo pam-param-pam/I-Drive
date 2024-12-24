@@ -28,7 +28,7 @@ function success(button) {
    let el = document.querySelector(`#${button}-button > i`)
 
    if (el === undefined || el === null) {
-      console.log('Error getting button ' + button) // eslint-disable-line
+      console.log('Error getting button ' + button)
       return
    }
 
@@ -36,6 +36,7 @@ function success(button) {
 
    setTimeout(() => {
       el.classList.remove("spin")
+      let prev_icon = el.innerHTML
       el.innerHTML = "done"
       el.style.opacity = 1
 
@@ -43,7 +44,7 @@ function success(button) {
          el.style.opacity = 0
 
          setTimeout(() => {
-            el.innerHTML = el.dataset.icon
+            el.innerHTML = prev_icon
             el.style.opacity = 1
          }, 100)
       }, 2000)

@@ -123,7 +123,6 @@ export default {
       },
 
       onPasswordReset() {
-         console.log("onPasswordReset")
          this.finishAndShowAnotherPrompt()
 
       },

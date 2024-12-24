@@ -99,7 +99,6 @@ export default {
       ...mapState(useMainStore, ["searchFilters", "currentPrompt"]),
    },
    created() {
-      console.log(this.searchFilters)
       this.fileType = this.searchFilters.type || "all"
       this.extension = this.searchFilters.extension || null
       this.includeFiles = this.searchFilters.files
