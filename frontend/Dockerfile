@@ -11,7 +11,7 @@ COPY package-lock.json .
 # Install dependencies
 RUN npm install
 
-# Install another dependencie
+# Install another dependency
 RUN npm install sass-embedded-linux-arm64
 
 # Copy the rest of the application code
@@ -29,6 +29,8 @@ RUN mkdir -p /var/www/idrive/frontend
 # Copy built app from the 'build' stage
 COPY --from=build /app/dist /var/www/idrive/frontend
 
+
+# todo nginx.conf should be moved back to docker, it was commented out for easier development
 # Copy nginx file
 #COPY nginx.conf /etc/nginx/nginx.conf
 

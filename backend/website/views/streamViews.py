@@ -16,16 +16,16 @@ from django.utils.encoding import smart_str
 from django.views.decorators.cache import cache_page
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
-from zipFly import GenFile, ZipFly, LocalFile
+from zipFly import GenFile, ZipFly
 
 from ..models import File, UserZIP
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
-from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache, API_BASE_URL
+from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
 from ..utilities.errors import DiscordError, BadRequestError
-from ..utilities.other import get_flattened_children, create_zip_file_dict, sign_file_id_with_expiry
+from ..utilities.other import get_flattened_children, create_zip_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
 
@@ -211,16 +211,8 @@ def stream_file(request, file_obj: File):
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
                 async with session.get(url, headers=headers) as response:
-                    if not response.ok:
-                        print("===discord response error===")
-                        print(response.status)
-                        print(response.text())
+                    response.raise_for_status()
 
-                        print('bytes={}-{}'.format(start_byte, end_byte) if end_byte else 'bytes={}-'.format(start_byte))
-                        print(fragments[index].sequence)
-                        print(fragments[index].size)
-
-                        return
                     # Asynchronously iterate over the content in chunks
                     total_decryption_time = 0
                     total_bytes = 0
@@ -291,10 +283,10 @@ def stream_file(request, file_obj: File):
     response['Content-Length'] = file_size
     response['Content-Disposition'] = content_disposition
 
-    # if file_obj.type == "text": //todo uncomment this
-    response['Cache-Control'] = "no-cache"
-    # else:
-    #     response['Cache-Control'] = f"max-age={2628000}"  # 1 month
+    if file_obj.type == "text":
+        response['Cache-Control'] = "no-cache"
+    else:
+        response['Cache-Control'] = f"max-age={2628000}"  # 1 month
 
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
@@ -309,17 +301,27 @@ def stream_file(request, file_obj: File):
 @throttle_classes([MyUserRateThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):
-    async def stream_file(fileObj):
-        signed_file_id = sign_file_id_with_expiry(fileObj.id)
-        url = f"{API_BASE_URL}/stream/{signed_file_id}" #todo dont call the server itself :sob: this is so dumb
-
+    async def stream_file(file_obj, fragments, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    async for chunk in response.content.iter_any():
-                        yield chunk
-                else:
-                    raise Exception(f"Failed to fetch file from URL: {url}, Status: {response.status}")
+            if file_obj.is_encrypted():
+                decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
+
+            async for fragment in fragments:
+                url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
+
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    async for raw_data in response.content.iter_chunked(chunk_size):
+                        # If the file is encrypted, decrypt it asynchronously
+                        if file_obj.is_encrypted():
+                            decrypted_data = decryptor.decrypt(raw_data)
+                            yield decrypted_data
+                        else:
+                            # Yield raw data if not encrypted
+                            yield raw_data
+
+            if file_obj.is_encrypted():
+                yield decryptor.finalize()
 
     user_zip = UserZIP.objects.get(token=token)
     files = user_zip.files.filter(ready=True, inTrash=False)
@@ -344,7 +346,8 @@ def stream_zip_files(request, token):
     files = []
     for file in dict_files:
         if not file["isDir"]:
-            file = GenFile(name=file['name'], generator=stream_file(file["fileObj"]), size=file["fileObj"].size)
+            fragments = file['fileObj'].fragments.all().order_by("sequence")
+            file = GenFile(name=file['name'], generator=stream_file(file["fileObj"], fragments), size=file["fileObj"].size)
             files.append(file)
 
     zipFly = ZipFly(files)

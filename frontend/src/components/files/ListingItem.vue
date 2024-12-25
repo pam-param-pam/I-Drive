@@ -65,7 +65,7 @@ export default {
    props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
    computed: {
-      ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount"]),
+      ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       type() {
          //todo fix hard coded values
          if (this.item.isDir) return "folder"
@@ -171,6 +171,8 @@ export default {
          this.$emit('onOpen', this.item)
       },
       click(event) {
+         console.log("CLICK ON ITEM")
+         console.log(this.item)
          // Deselect items if no shift or ctrl key is pressed and there are selected items
          // then add current item to selected if it wasn't previously selected
          if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {
@@ -184,9 +186,13 @@ export default {
 
          // Shift+Click functionality for range selection
          if (event.shiftKey && this.selectedCount > 0) {
-
+            console.log("RANGE SELECTION")
             let fromItem = this.item
             let toItem = this.selected[this.selected.length - 1]
+            console.log("FROM ITEM")
+            console.log(fromItem)
+            console.log("TO ITEM")
+            console.log(toItem)
 
             let fromIndex = fromItem.index
             let toIndex = toItem.index
@@ -195,7 +201,7 @@ export default {
             let end = Math.max(fromIndex, toIndex)
             this.resetSelected()
 
-            this.items.forEach(item => {
+            this.sortedItems.forEach(item => {
                if (item.index >= start && item.index <= end) {
                   this.addSelected(item)
                }

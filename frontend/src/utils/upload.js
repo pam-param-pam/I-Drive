@@ -3,7 +3,7 @@ import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, discordFileName, uploadStatus } from "@/utils/constants.js"
-import { detectExtension, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
+import { detectExtension, detectType, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
 
@@ -116,7 +116,7 @@ export async function preUploadRequest(request) {
             let file_data = {
                "name": fileObj.name,
                "parent_id": folderId,
-               "mimetype": fileObj.type,
+               "mimetype": detectType(fileObj),
                "extension": detectExtension(fileObj.name),
                "size": fileObj.size,
                "frontend_id": fileObj.frontendId,

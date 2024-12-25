@@ -106,7 +106,7 @@ export default {
 
    },
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setItems", "addSelected", "showHover"]),
+      ...mapActions(useMainStore, ["setLoading", "setItems", "addSelected", "showHover", "setLastItem"]),
       guessLanguage() {
          console.log("guessLanguage")
 
@@ -274,6 +274,8 @@ export default {
        }, 1000),
 
       onClose() {
+         this.setLastItem(this.file)
+
          try {
             if (this.isInShareContext) {
                this.$router.push({name: "Share", params: {"token": this.token, "folderId": this.folderId}})

@@ -103,7 +103,21 @@ export function detectExtension(filename) {
    return "." + arry[arry.length - 1]
 
 }
+export function detectType(fileObj) {
+   let extension = detectExtension(fileObj.name)
+   const RAW_IMAGE_EXTENSIONS = [
+      '.IIQ', '.3FR', '.DCR', '.K25', '.KDC',
+      '.CRW', '.CR2', '.CR3', '.ERF', '.MEF',
+      '.MOS', '.NEF', '.NRW', '.ORF', '.PEF',
+      '.RW2', '.ARW', '.SRF', '.SR2'
+   ];
+   if (RAW_IMAGE_EXTENSIONS.includes(extension.toUpperCase())) {
+      return "image/raw"
+   }
 
+   return fileObj.type
+
+}
 export function isVideoFile(file) {
    // List of common video MIME types
    const videoMimeTypes = [

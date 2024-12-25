@@ -17,8 +17,7 @@ export async function validateLogin() { //this isn't really validate login - mor
       return
    }
    let body = await getUser(token)
-   console.log("body")
-   console.log(body)
+
    store.setUser(body.user)
    store.setSettings(body.settings)
    store.setPerms(body.perms)
