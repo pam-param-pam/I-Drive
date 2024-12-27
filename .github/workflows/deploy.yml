@@ -61,7 +61,7 @@ jobs:
           
           curl -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
             -o docker-compose.yml \
-            -L https://raw.githubusercontent.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml
+            -L https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/docker-compose.yml
           
           ls -a
           docker compose pull
