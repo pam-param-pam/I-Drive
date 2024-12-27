@@ -62,10 +62,10 @@
 <script>
 import moment from "moment/min/moment-with-locales.js"
 import Clipboard from "clipboard"
-import Errors from "@/views/Errors.vue"
 import { getAllShares, removeShare } from "@/api/share.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
+import Errors from "@/components/Errors.vue"
 
 export default {
    name: "shares",
