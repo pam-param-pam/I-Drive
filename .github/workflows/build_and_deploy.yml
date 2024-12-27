@@ -3,6 +3,10 @@ name: build and deploy
 on:
   workflow_dispatch:
 
+permissions:
+  packages: write
+  contents: read
+
 jobs:
   build:
     uses: ./.github/workflows/build.yml
