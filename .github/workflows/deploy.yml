@@ -58,12 +58,10 @@ jobs:
           echo "I_DRIVE_BACKEND_STORAGE_DIR=/app/data" >> .env
           
           echo "Pulling docker-compose.yml..."
-          curl -O  https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml?token=GHSAT0AAAAAACYQHJIEVYPWGNGDY3IP6WHIZYFNRTQ
-          mv 'docker-compose.yml?token=GHSAT0AAAAAACYQHJIEVYPWGNGDY3IP6WHIZYFNRTQ' docker-compose.yml
           
-          curl -O  https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/nginx.conf?token=GHSAT0AAAAAACYQHJIFRES225KXBMFZY2SMZYFO3OA
-          mv 'nginx.conf?token=GHSAT0AAAAAACYQHJIFRES225KXBMFZY2SMZYFO3OA' nginx.conf
-
+          curl -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
+            -o docker-compose.yml \
+            -L https://raw.githubusercontent.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml
           
           ls -a
           docker compose pull
