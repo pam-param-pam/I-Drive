@@ -14,13 +14,13 @@
 </template>
 
 <script>
-import Sidebar from "@/components/Sidebar.vue"
 import Prompts from "@/components/prompts/Prompts.vue"
 import Shell from "@/components/Shell.vue"
 import UploadFiles from "../components/prompts/UploadFiles.vue"
 import {useMainStore} from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import {useUploadStore} from "@/stores/uploadStore.js";
+import Sidebar from "@/components/sidebar/Sidebar.vue"
 
 export default {
    name: "layout",

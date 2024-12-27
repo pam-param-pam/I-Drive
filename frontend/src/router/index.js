@@ -1,32 +1,16 @@
 import {createRouter, createWebHistory} from 'vue-router'
-import Preview from "@/views/files/Preview.vue"
 import Trash from "@/views/Trash.vue"
 import Layout from "@/views/Layout.vue"
 import Login from "@/views/Login.vue"
 
 import {useMainStore} from "@/stores/mainStore.js"
 import {validateLogin} from "@/utils/auth.js"
+import Preview from "@/views/Preview.vue"
 
 const router = createRouter({
 
    history: createWebHistory(import.meta.env.BASE_URL),
    routes: [
-      {
-         path: "/test",
-         name: "Test",
-         component: () => import('../views/GridDemo.vue'),
-         meta: {
-            requiresAuth: false,
-         },
-      },
-      // {
-      //    path: "/test1",
-      //    name: "Test1",
-      //    component: () => import('../views/files/FileListing.vue'),
-      //    meta: {
-      //       requiresAuth: false,
-      //    },
-      // },
       {
          path: "/login",
          name: "Login",
@@ -82,7 +66,7 @@ const router = createRouter({
                path: "/editor/:folderId?/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3
                name: "ShareEditor",
                // component: Editor,
-               component: () => import('../views/files/Editor.vue'),
+               component: () => import('../views/Editor.vue'),
                props: true,
                meta: {
                   requiresAuth: false,
@@ -93,7 +77,7 @@ const router = createRouter({
                path: "/editor/:fileId",
                name: "Editor",
                // component: Editor,
-               component: () => import('../views/files/Editor.vue'),
+               component: () => import('../views/Editor.vue'),
 
                props: true,
                meta: {
@@ -146,33 +130,6 @@ const router = createRouter({
                ],
             },
          ],
-      },
-      {
-         path: "/403",
-         name: "Forbidden",
-         component: () => import('../views/Errors.vue'),
-         props: {
-            errorCode: 403,
-            showHeader: true,
-         },
-      },
-      {
-         path: "/404",
-         name: "NotFound",
-         component: () => import('../views/Errors.vue'),
-         props: {
-            errorCode: 404,
-            showHeader: true,
-         },
-      },
-      {
-         path: "/500",
-         name: "InternalServerError",
-         component: () => import('../views/Errors.vue'),
-         props: {
-            errorCode: 500,
-            showHeader: true,
-         },
       },
       {
          path: "/:catchAll(.*)",

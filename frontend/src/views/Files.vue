@@ -4,7 +4,7 @@
                  base="/files"
                  :folderList="breadcrumbs"
     />
-    <errors v-if="error" :errorCode="error.response?.status" />
+    <errors v-if="error" :error="error" />
 
     <h4 v-if="!error && isSearchActive && !loading">{{ $t("files.searchItemsFound", { amount: this.items.length }) }}</h4>
     <FileListing
@@ -28,9 +28,7 @@
 
 <script>
 
-import Breadcrumbs from "@/components/Breadcrumbs.vue"
-import Errors from "@/views/Errors.vue"
-import FileListing from "@/views/files/FileListing.vue"
+
 
 import { getItems } from "@/api/folder.js"
 import { search } from "@/api/search.js"
@@ -40,7 +38,10 @@ import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { scanDataTransfer } from "@/utils/uploadHelper.js"
 import { uploadType } from "@/utils/constants.js"
-import {name} from "@/utils/constants"
+import { name } from "@/utils/constants"
+import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
+import Errors from "@/components/Errors.vue"
+import FileListing from "@/components/FileListing.vue"
 
 export default {
    name: "files",
@@ -57,7 +58,7 @@ export default {
       },
       lockFrom: {
          type: String
-      },
+      }
 
    },
    data() {
@@ -140,8 +141,7 @@ export default {
          if (this.currentFolder?.id === this.folderId) {
             this.folderList = this.currentFolder.breadcrumbs
 
-         }
-         else {
+         } else {
             try {
                this.setLoading(true)
                let res = await getItems(this.folderId, this.lockFrom)
@@ -256,50 +256,43 @@ export default {
 
 
       },
-      openInNewWindow(item) {
+      getNewRoute(item) {
          if (item.isDir) {
-            let url = this.$router.resolve({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } }).href
-            window.open(url, "_blank")
-         } else if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 25 * 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
-            let url = this.$router.resolve({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } }).href
-            window.open(url, "_blank")
+            return { name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } }
          } else {
-            let url = this.$router.resolve({ name: "Editor", params: { "fileId": item.id, "lockFrom": item.lockFrom } }).href
-            window.open(url, "_blank")
+            if (item.type === "text" && item.size < 1024 * 1024) {
+               return { name: "Editor", params: { "fileId": item.id, "lockFrom": item.lockFrom } }
+            } else {
+               return { name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } }
+            }
          }
+      },
+      openInNewWindow(item) {
+         let route = this.getNewRoute(item)
+         let url = this.$router.resolve(route).href
+         window.open(url, "_blank")
 
       },
       onOpen(item) {
          this.$refs.listing.hideContextMenu()
-
+         let route = this.getNewRoute(item)
          if (item.isDir) {
             if (item.isLocked === true) {
                let password = this.getFolderPassword(item.lockFrom)
                if (!password) {
                   this.showHover({
                      prompt: "FolderPassword",
-                     //todo name should be lockfrom_name not just item _name
+
                      props: { requiredFolderPasswords: [{ "id": item.lockFrom, "name": item.name }] },
                      confirm: () => {
-                        this.$router.push({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } })
+                        this.$router.push(route)
                      }
                   })
                   return
                }
             }
-            this.$router.push({ name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } })
-
-         } else {
-            console.log(item.size)
-            if (item.type === "audio" || item.type === "video" || item.type === "image" || item.size >= 1024 * 1024 || item.extension === ".pdf" || item.extension === ".epub") {
-               this.$router.push({ name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } })
-
-            } else {
-               this.$router.push({ name: "Editor", params: { "fileId": item.id } })
-
-            }
-
          }
+         this.$router.push(route)
       }
    }
 }

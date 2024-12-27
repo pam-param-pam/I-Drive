@@ -1,6 +1,6 @@
 <template>
 
-  <errors v-if="error" :errorCode="error.response.status"/>
+  <errors v-if="error" :error="error"/>
   <h4 v-if="!error" class="listing-notice">{{ $t('trash.info') }}</h4>
 
   <FileListing
@@ -16,12 +16,12 @@
 
 <script>
 
-import Errors from "@/views/Errors.vue"
 import {getTrash} from "@/api/user.js"
 import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
-import FileListing from "@/views/files/FileListing.vue"
 import {name} from "@/utils/constants"
+import Errors from "@/components/Errors.vue"
+import FileListing from "@/components/FileListing.vue"
 
 export default {
    name: "trash",

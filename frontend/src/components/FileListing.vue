@@ -316,7 +316,7 @@
 
 <script>
 
-import Item from "@/components/files/ListingItem.vue"
+import Item from "@/components/listing/ListingItem.vue"
 import { updateSettings } from "@/api/user.js"
 import { isMobile } from "@/utils/common.js"
 import { useMainStore } from "@/stores/mainStore.js"

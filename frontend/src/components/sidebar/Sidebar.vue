@@ -116,8 +116,8 @@ import { author, name } from "@/utils/constants.js"
 import { filesize } from "@/utils/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import ProgressBar from "@/components/SimpleProgressBar.vue"
-import DarkModeButton from "@/components/DarkModeButton.vue"
+import DarkModeButton from "@/components/sidebar/DarkModeButton.vue"
+import ProgressBar from "@/components/sidebar/SimpleProgressBar.vue"
 
 export default {
    name: "sidebar",

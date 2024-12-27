@@ -166,13 +166,13 @@
 import throttle from "lodash.throttle"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
-import ExtendedImage from "@/components/files/ExtendedImage.vue"
 import { getFile, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
 import { VueReader } from "vue-reader"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
+import ExtendedImage from "@/components/listing/ExtendedImage.vue"
 
 export default {
    name: "preview",

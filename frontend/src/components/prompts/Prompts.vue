@@ -23,7 +23,6 @@ import DiscardEditorChanges from "./DiscardEditorChanges.vue"
 import Share from "./Share.vue"
 import Upload from "./Upload.vue"
 import ShareDelete from "./ShareDelete.vue"
-import Sidebar from "../Sidebar.vue"
 import FolderPassword from "@/components/prompts/FolderPassword.vue"
 import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue"
 import MoveToTrash from "@/components/prompts/MoveToTrash.vue"
@@ -33,6 +32,7 @@ import NotOptimizedForSmallFiles from "@/components/prompts/NotOptimizedForSmall
 import ResetFolderPassword from "@/components/prompts/ResetFolderPassword.vue"
 import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
+import Sidebar from "@/components/sidebar/Sidebar.vue"
 
 export default {
    name: "prompts",

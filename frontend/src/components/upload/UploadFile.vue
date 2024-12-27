@@ -10,7 +10,13 @@
     }"
   >
     <!-- Upper -->
-    <div class="fileitem-header">
+    <div class="fileitem-header file-icons">
+      <div
+        :data-type="type"
+        >
+        <i class="material-icons file-icon"></i>
+      </div>
+
       <span class="file-name">{{ file.name }}</span>
       <div class="button-group">
         <button
@@ -75,7 +81,7 @@
 </template>
 
 <script>
-import ProgressBar from "@/components/UploadProgressBar.vue"
+import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { mapActions, mapState } from "pinia"
 import {useUploadStore} from "@/stores/uploadStore.js";
 import { chunkSize, uploadStatus } from "@/utils/constants.js"
@@ -92,6 +98,10 @@ export default {
       }
    },
    computed: {
+      type() {
+         //todo rn file.type return mimetype bcs type is calculated later in upload
+         return "audio"
+      },
       uploadStatus() {
          return uploadStatus
       },
@@ -262,5 +272,9 @@ export default {
   animation: shake 0.3s ease infinite;
   border-color: red;
 
+}
+.file-icons .file-icon {
+  color: var(--color-text);
+  padding-right: 10px;
 }
 </style>

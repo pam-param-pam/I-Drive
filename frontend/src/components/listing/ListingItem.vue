@@ -74,7 +74,6 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       type() {
-         //todo fix hard coded values
          if (this.item.isDir) return "folder"
          if (this.item.type === "application") return "pdf"
          if (this.item.extension === ".epub") return "ebook"
@@ -283,7 +282,7 @@ export default {
  text-overflow: ellipsis;
  overflow: hidden;
  font-size: 15px;
- margin: 1.5em 2em 0.5em;
+ margin: 1.25em 2em 0.75em;
  white-space: nowrap;
 }
 
@@ -296,12 +295,11 @@ export default {
  background: #c4e6ff;
 }
 
-/*.grid .item-wrapper [data-dir=true] p {*/
-/* font-size: 20px !important;*/
-/* font-weight: 300;*/
-/* margin-top: 0.5em !important;*/
-/* padding-bottom: 0.25em !important;*/
-/*}*/
+.grid .item-wrapper [data-dir=true] p {
+ font-size: 20px !important;
+ font-weight: 300;
+ margin-top: 0.5em !important;
+}
 
 /* ========================= */
 /* 📝 LIST VIEW STYLES       */

@@ -44,7 +44,8 @@
     "upload": "Upload"
   },
   "errors": {
-    "Unauthenticated": "Unauthenticated",
+    "unknownError": "Unknown error has occurred. Status code: {code}, response: {response}",
+    "unauthenticated": "Unauthenticated",
     "badRequest": "Bad Request",
     "connection": "The server can't be reached.",
     "databaseError": "Database Error",

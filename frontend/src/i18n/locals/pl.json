@@ -43,7 +43,8 @@
     "upload": "Prześlij"
   },
   "errors": {
-    "Unauthenticated": "Użytkownik nieuwierzytelniony",
+    "unknownError": "Wystąpił nieznany błąd. Kod: {code}, Odpowiedż: {response}",
+    "unauthenticated": "Użytkownik nieuwierzytelniony",
     "badRequest": "Niepoprawne żądanie.",
     "connection": "Serwer nie odpowiada.",
     "databaseError": "Błąd bazy danych.",
@@ -265,6 +266,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+
     "locating": "Lokalizowanie...",
     "uploadNotAllowedHere": "Nie można tutaj przesyłac plików",
     "PreparingUpload": "Rozpoczęto proces przesyłania plików...",

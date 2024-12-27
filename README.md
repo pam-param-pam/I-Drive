@@ -60,6 +60,8 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | fix __prependStaticUrl                                                           | ❌  Coming prob never |
 | possible denial of service by infinite recursive folder fetch malformed parents  | ❌  Coming prob never |
 | fix   resourceNotFound to return the same response no matter if its actually 403 | ❌  Coming prob never |
+| fix folder upload getting doubled cuz race conditions                            | ❌  Coming prob never |
+| fix enable-scroll                                                                | ❌  Coming prob never |
 
 
 # How it works

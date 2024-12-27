@@ -1,18 +1,15 @@
 <template>
   <div>
-    <header-bar v-if="showHeader" showMenu showLogo/>
-
     <h2 class="message">
       <i class="material-icons">{{ info.icon }}</i>
-      <span>{{ $t(info.message) }}</span>
+      <span>{{ $t(info.message, {"code": errorCode, "response": error.response.data}) }}</span>
     </h2>
   </div>
 </template>
 
 <script>
-import HeaderBar from "@/components/header/HeaderBar.vue"
-
 const errors = {
+
    0: {
       icon: "cloud_off",
       message: "errors.connection",
@@ -37,19 +34,23 @@ const errors = {
       icon: "error_outline",
       message: "errors.internal",
    },
+   1000: {
+      icon: "error_outline",
+      message: "errors.unknownError",
+   },
 }
 
 export default {
    name: "errors",
-   components: {
-      HeaderBar,
-   },
-   props: ["errorCode", "showHeader"],
+   props: ["error"],
    methods: {},
 
    computed: {
+      errorCode() {
+        return this.error?.response.status
+      },
       info() {
-         return errors[this.errorCode] ? errors[this.errorCode] : errors[500]
+         return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]
       },
    },
 }

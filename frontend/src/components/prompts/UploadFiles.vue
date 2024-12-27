@@ -45,10 +45,10 @@
 </template>
 
 <script>
-import UploadFile from "@/components/UploadFile.vue"
 import {mapActions, mapState} from "pinia"
 import {useUploadStore} from "@/stores/uploadStore.js"
 import {filesize} from "@/utils/index.js"
+import UploadFile from "@/components/upload/UploadFile.vue"
 
 export default {
    name: "uploadFiles",
