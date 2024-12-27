@@ -60,8 +60,9 @@ app.mixin({
 // provide v-focus for components
 app.directive("focus", {
    mounted: async (el) => {
-      // initiate focus for the element
-      el.focus()
+      setTimeout(() => {
+         el.focus()
+      }, 50)
    }
 })
 router.isReady().then(() => app.mount("#app"))

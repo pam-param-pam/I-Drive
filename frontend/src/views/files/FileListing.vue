@@ -537,14 +537,13 @@ export default {
 
          let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
          let filesScroller = this.$refs.filesScroller
-         let realThis = this
          let lastItemId = this.lastItem.id
 
-         setTimeout(function() {
+         setTimeout(() => {
             filesScroller.scrollToItem(index)
 
-            setTimeout(function() {
-               let itemElement = realThis.$refs[lastItemId]
+            setTimeout(() => {
+               let itemElement = this.$refs[lastItemId]
                if (itemElement) {
                   itemElement.$el.classList.add("pulse-animation")
 

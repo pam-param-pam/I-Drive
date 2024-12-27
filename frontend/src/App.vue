@@ -12,7 +12,7 @@ export default {
       const loading = document.getElementById("loading")
       loading.classList.add("done")
 
-      setTimeout(function() {
+      setTimeout(() => {
          loading.parentNode.removeChild(loading)
       }, 200)
    }

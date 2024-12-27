@@ -22,6 +22,7 @@
         <input
           class="input input--block styled-input"
           type="text"
+          v-focus
           v-model.trim="extension"
         />
       </div>

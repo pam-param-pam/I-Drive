@@ -7,8 +7,7 @@
     <div class="card-content">
       <p>{{ $t("prompts.newDirMessage") }}</p>
       <input
-
-        ref="input"
+        v-focus
         class="input input--block"
         type="text"
         v-model.trim="name"

@@ -9,6 +9,7 @@
 
       <div>
         <input
+          v-focus
           class="input input--block styled-input"
           :placeholder="$t('prompts.accountPassword')"
           v-model.trim="accountPassword"

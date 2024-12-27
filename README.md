@@ -37,6 +37,8 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Custom ZIP64 Library to zip & stream files on the fly     | ✅       |
 | Docker support                                            | ✅       |
 | Drag and drop support                                     | ✅       |
+| Dark theme                                                | ✅       |
+| Virtual list                                              | ✅       |
 
 
 | TODO List                                                                        | Status               |
@@ -50,13 +52,11 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Stop, pause, abort uploads                                                       | ❌  Coming one day    |
 | Where should iv and keys be generated?                                           | ❌  Coming one day    |
 | Fix are u sure dialog being skipped after folder password input                  | ❌  Coming one day    |
-| Fix locate                                                                       | ❌  Coming one day    |
-| auto scroll after preview/editor close                                           | ❌  Coming one day    |
+| Auto scroll when dragging                                                        | ❌  Coming one day    |
 | celery + Unable to process this request at the moment                            | ❌  Coming one day    |
-| Virtual lists                                                                    | ❌  Coming prob never |
+| Virtual list view                                                                | ❌  Coming prob never |
 | Editor support for large files                                                   | ❌  Coming prob never |
 | Fix file types so they are not so hardcoded on frontend                          | ❌  Coming prob never |
-| Dark theme                                                                       | ❌  Coming prob never |
 | fix __prependStaticUrl                                                           | ❌  Coming prob never |
 | possible denial of service by infinite recursive folder fetch malformed parents  | ❌  Coming prob never |
 | fix   resourceNotFound to return the same response no matter if its actually 403 | ❌  Coming prob never |
