@@ -270,6 +270,8 @@ export default {
 
       },
       onOpen(item) {
+         this.$refs.listing.hideContextMenu()
+
          if (item.isDir) {
             if (item.isLocked === true) {
                let password = this.getFolderPassword(item.lockFrom)
@@ -302,3 +304,8 @@ export default {
    }
 }
 </script>
+<style>
+h4 {
+ padding-left: 1em;
+}
+</style>

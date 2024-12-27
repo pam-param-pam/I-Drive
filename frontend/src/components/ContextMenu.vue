@@ -48,18 +48,18 @@ export default {
    watch: {
       show(val) {
          if (val) {
-            document.addEventListener("click", this.hideContextMenu)
+            document.addEventListener("mouseup", this.hideContextMenu)
          } else {
-            document.removeEventListener("click", this.hideContextMenu)
+            document.removeEventListener("mouseup", this.hideContextMenu)
          }
       }
    },
    beforeUnmount() {
-      document.removeEventListener("click", this.hideContextMenu)
+      document.removeEventListener("mouseup", this.hideContextMenu)
    },
    methods: {
       hideContextMenu() {
-         this.$emit("hide")
+        this.$emit("hide")
       }
    }
 }

@@ -315,7 +315,6 @@
 </template>
 
 <script>
-import css from "@/utils/css"
 
 import Item from "@/components/files/ListingItem.vue"
 import { updateSettings } from "@/api/user.js"
@@ -559,6 +558,7 @@ export default {
          }, 50)
       },
       showContextMenu(event, item) {
+         console.log("AAAAAAAAAA")
          this.resetSelected()
          this.addSelected(item)
 
@@ -586,9 +586,12 @@ export default {
             y: posY
          }
 
+         console.log(this.contextMenuPos)
          this.isContextMenuVisible = true
+         console.log(1111111)
       },
       hideContextMenu() {
+         console.log(2222)
          this.isContextMenuVisible = false
       },
       keyEvent(event) {
@@ -601,6 +604,8 @@ export default {
          if (event.keyCode === 27) {
             // Reset files selection.
             this.resetSelected()
+            this.hideContextMenu()
+
          }
 
          // Del!
@@ -719,8 +724,7 @@ export default {
          await this.$router.push({ name: "Settings"})
          this.$router.push({ name: "Files", params: { "folderId": parent_id } })
 
-         this.isContextMenuVisible = false
-
+         this.hideContextMenu()
       },
       async switchView() {
          let modes = {

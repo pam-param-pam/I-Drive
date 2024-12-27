@@ -11,7 +11,6 @@
       @drop="drop"
       @dblclick="open"
       @click="click"
-      v-touch:tap="openContextMenu"
       :data-dir="item.isDir"
       :data-type="type"
       :aria-label="item.name"
@@ -38,13 +37,13 @@
         <i v-else class="material-icons" :style="iconStyle"></i>
       </div>
       <div class="name">
-        <p >{{ item.name }}</p>
+        <p>{{ item.name }}</p>
       </div>
       <div class="size">
         <p class="size" :data-order="humanSize()">{{ humanSize() }}</p>
       </div>
       <div class="created">
-        <p >{{ item.created }}</p>
+        <p>{{ item.created }}</p>
       </div>
     </div>
   </div>
@@ -52,20 +51,26 @@
 </template>
 
 <script>
-import {filesize} from "@/utils"
+import { filesize } from "@/utils"
 import moment from "moment/min/moment-with-locales.js"
-import {move} from "@/api/item.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { move } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import { isMobile } from "@/utils/common.js"
 
 export default {
 
    name: "item",
 
-   emits: ['onOpen', 'onLongPress'],
+   emits: ["onOpen", "onLongPress"],
    props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
+   data() {
+      return {
+         clickTimer: null,
+         clickDelay: 210
+      }
+   },
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       type() {
@@ -96,20 +101,20 @@ export default {
       },
 
       iconStyle() {
-         if(this.settings.viewMode === "height grid") {
+         if (this.settings.viewMode === "height grid") {
             return `font-size: ${this.imageHeight / 25}em; padding-top: 15px;`
          }
-         if(this.settings.viewMode === "width grid") {
+         if (this.settings.viewMode === "width grid") {
             return `font-size: ${this.imageHeight / 15}em; padding-top: 15px;`
          }
          return null
       },
       divStyle() {
-         if(this.settings.viewMode.includes("grid")) {
+         if (this.settings.viewMode.includes("grid")) {
             return `min-width: ${this.imageWidth}px; height: ${this.imageHeight}px;  vertical-align: text-bottom; display: flex; justify-content: center; align-items: center;`
          }
          return null
-      },
+      }
 
    },
 
@@ -117,7 +122,7 @@ export default {
       ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected"]),
 
       humanSize() {
-         if (this.item.isDir) return  "-"
+         if (this.item.isDir) return "-"
          return filesize(this.item.size)
       },
       humanTime() {
@@ -130,7 +135,7 @@ export default {
 
          moment.locale(locale)
          // Parse the target date
-         return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
+         return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
       },
 
       dragStart() {
@@ -162,28 +167,44 @@ export default {
          if (this.selectedCount === 0) return
 
          let listOfIds = this.selected.map(obj => obj.id)
-         await move({ids: listOfIds, "new_parent_id": this.item.id})
+         await move({ ids: listOfIds, "new_parent_id": this.item.id })
 
-         let message = this.$t('toasts.movedItems')
+         let message = this.$t("toasts.movedItems")
          this.$toast.success(message)
 
-        this.resetSelected()
+         this.resetSelected()
       },
       open() {
          if (this.item.isDir) this.setLastItem(null)
 
-         this.$emit('onOpen', this.item)
+         this.$emit("onOpen", this.item)
       },
-      openContextMenu(){
-         this.$emit('onLongPress', this.item)
+      openContextMenu(event) {
+         this.$emit("onLongPress", event, this.item)
       },
       click(event) {
-         console.log("CLICK ON ITEM")
-         console.log(this.item)
+
+         if (isMobile()) {
+            if (this.clickTimer) {
+               clearTimeout(this.clickTimer)
+               this.clickTimer = null
+               return
+            }
+
+            this.clickTimer = setTimeout(() => {
+               this.clickTimer = null
+
+               if (isMobile()) {
+                  this.openContextMenu(event)
+               }
+            }, this.clickDelay)
+         }
+
          // Deselect items if no shift or ctrl key is pressed and there are selected items
          // then add current item to selected if it wasn't previously selected
          if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {
             let shouldAdd = (!this.isSelected || this.selected.length >= this.items.length) && this.items.length > 1
+            this.selected = []
             this.resetSelected()
             if (shouldAdd) {
                this.addSelected(this.item)
@@ -193,13 +214,8 @@ export default {
 
          // Shift+Click functionality for range selection
          if (event.shiftKey && this.selectedCount > 0) {
-            console.log("RANGE SELECTION")
             let fromItem = this.item
             let toItem = this.selected[this.selected.length - 1]
-            console.log("FROM ITEM")
-            console.log(fromItem)
-            console.log("TO ITEM")
-            console.log(toItem)
 
             let fromIndex = fromItem.index
             let toIndex = toItem.index
@@ -223,9 +239,9 @@ export default {
             this.addSelected(this.item)
          }
 
-      },
+      }
 
-   },
+   }
 }
 </script>
 <style scoped>
@@ -262,6 +278,7 @@ export default {
  height: 100%;
 
 }
+
 .grid .item-wrapper .item .name p {
  text-overflow: ellipsis;
  overflow: hidden;
@@ -271,7 +288,7 @@ export default {
 }
 
 .grid .item-wrapper .item .created,
-.grid .item-wrapper .item .size  {
+.grid .item-wrapper .item .size {
  display: none;
 }
 
