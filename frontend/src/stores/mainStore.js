@@ -56,7 +56,7 @@ export const useMainStore = defineStore("main", {
          return this.previousPrompt?.prompt
       },
       sortedItems() {
-
+         if (!this.items) return
          let fieldName = this.settings.sortingBy
 
          let orderFactor = this.settings.sortByAsc ? 1 : -1;

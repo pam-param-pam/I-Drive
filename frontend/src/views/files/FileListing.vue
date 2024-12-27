@@ -2,6 +2,7 @@
   <div class="wrapper">
     <header-bar>
       <Search
+        ref="search"
         v-if="headerButtons.search"
         @onSearchQuery="(query) => $emit('onSearchQuery', query)"
         @exit="$emit('onSearchClosed')"
@@ -201,6 +202,7 @@
               :tileHeight="tileHeight"
               :tileWidth="tileWidth"
               @onOpen="$emit('onOpen', item)"
+              @onLongPress="showContextMenu($event, item)"
               @contextmenu.prevent="showContextMenu($event, item)"
             >
             </item>
@@ -232,6 +234,12 @@
         :pos="contextMenuPos"
         @hide="hideContextMenu"
       >
+        <action
+          v-if="headerButtons.locate"
+          icon="location_on"
+          :label="$t('buttons.locate')"
+          @action="locateItem"
+        />
         <action
           v-if="headerButtons.openInNewWindow && selected[0]?.isDir"
           icon="open_in_new"
@@ -278,12 +286,6 @@
           icon="forward"
           :label="$t('buttons.moveFile')"
           show="move"
-        />
-        <action
-          v-if="headerButtons.locate"
-          icon="location_on"
-          :label="$t('buttons.locate')"
-          @action="locateItem"
         />
         <action
           v-if="headerButtons.download"
@@ -340,7 +342,6 @@ export default {
 
    props: {
       isSearchActive: Boolean,
-      locatedItem: {},
       readonly: Boolean,
       headerButtons: {}
    },
@@ -367,33 +368,8 @@ export default {
       items() {
          // Ensures that the listing is displayed
          this.$nextTick(() => {
-            console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
             this.calculateGridLayoutWrapper()
-
-            if (!this.lastItem) return
-
-            let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
-            console.log("scrolling to: " + index)
-            let filesScroller = this.$refs.filesScroller
-            let realThis = this
-            let lastItemId = this.lastItem.id
-
-            setTimeout(function() {
-               filesScroller.scrollToItem(index)
-
-               setTimeout(function() {
-                  let itemElement = realThis.$refs[lastItemId]
-                  if (itemElement) {
-                     itemElement.$el.classList.add("pulse-animation")
-
-                     // Remove the animation class after 5 seconds
-                     setTimeout(() => {
-                        itemElement.$el.classList.remove("pulse-animation")
-                     }, 3500) // 5 seconds
-                  }
-               }, 100);
-
-            }, 50)
+            this.scrollToLastItem()
          })
       }
 
@@ -406,36 +382,7 @@ export default {
       this.$nextTick(() => {
 
          this.calculateGridLayoutWrapper()
-
-         if (!this.lastItem) return
-
-         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
-         console.log("scrolling to: " + index)
-         let filesScroller = this.$refs.filesScroller
-
-         let realThis = this
-         let lastItemId = this.lastItem.id
-         setTimeout(function() {
-            filesScroller.scrollToItem(index)
-
-            setTimeout(function() {
-               let itemElement = realThis.$refs[lastItemId]
-               if (itemElement) {
-                  itemElement.$el.classList.add("pulse-animation")
-
-                  // Remove the animation class after 5 seconds
-                  setTimeout(() => {
-                     itemElement.$el.classList.remove("pulse-animation")
-                  }, 3500) // 5 seconds
-               }
-            }, 100);
-
-
-         }, 50)
-
-
-
-
+         this.scrollToLastItem()
       })
       //
       window.addEventListener("resize", this.calculateGridLayoutWrapper)
@@ -530,9 +477,9 @@ export default {
          let component = this.$route.name
          console.log(component)
          console.log("component")
-         if (component === "Files") return 100
-         if (component === "Trash") return 120
-         if (component === "Share") return 165
+         if (component === "Files") return 80
+         if (component === "Trash") return 105
+         if (component === "Share") return 150
          return 0
       },
       scrollerClass() {
@@ -558,8 +505,10 @@ export default {
          console.log("calculateGridLayout")
          console.log(containerWidth)
 
-         const maxTileWidth = 225
-
+         let maxTileWidth = 225
+         if (isMobile()) {
+            maxTileWidth -= 50
+         }
          // Calculate the maximum number of tiles that can fit using the minimum width
          let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
          // if (numberOfTiles === 1) numberOfTiles = 2
@@ -578,12 +527,37 @@ export default {
          }
 
          this.imageHeight = this.tileHeight - 65
+         if (isMobile()) this.imageHeight += 20
 
       },
       async uploadInput(event) {
          this.$emit("uploadInput", event)
       },
+      scrollToLastItem() {
+         if (!this.lastItem) return
 
+         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
+         let filesScroller = this.$refs.filesScroller
+         let realThis = this
+         let lastItemId = this.lastItem.id
+
+         setTimeout(function() {
+            filesScroller.scrollToItem(index)
+
+            setTimeout(function() {
+               let itemElement = realThis.$refs[lastItemId]
+               if (itemElement) {
+                  itemElement.$el.classList.add("pulse-animation")
+
+                  // Remove the animation class after 5 seconds
+                  setTimeout(() => {
+                     itemElement.$el.classList.remove("pulse-animation")
+                  }, 3500) // 5 seconds
+               }
+            }, 100);
+
+         }, 50)
+      },
       showContextMenu(event, item) {
          this.resetSelected()
          this.addSelected(item)
@@ -666,18 +640,6 @@ export default {
          }
       },
 
-      columnsResize() {
-         // Update the columns size based on the window width.
-         let items = css(["#listing.mosaic .item", ".mosaic#listing .item"])
-         if (!items) return
-
-         let columns = Math.floor(
-            document.querySelector("main").offsetWidth / this.columnWidth
-         )
-         if (columns === 0) columns = 1
-         items.style.width = `calc(${100 / columns}% - 1em)`
-      },
-
 
       dragEnter() {
          this.$emit("dragEnter")
@@ -692,6 +654,7 @@ export default {
 
       async drop(event) {
          if (!this.currentFolder) {
+            event.preventDefault()
             this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
             return
          }
@@ -742,22 +705,24 @@ export default {
 
 
       async locateItem() {
+
          this.$emit("onSearchClosed")
+         let message = this.$t("toasts.locating")
+         this.$toast.info(message)
+
          let item = this.selected[0]
          let parent_id = item.parent_id
 
-         this.setLastItem(item)
-         await this.$nextTick()
+         this.$refs.search.exit()
 
+         this.setLastItem(item)
+         await this.$router.push({ name: "Settings"})
          this.$router.push({ name: "Files", params: { "folderId": parent_id } })
-         let message = this.$t("toasts.locating")
 
          this.isContextMenuVisible = false
-         this.$toast.info(message)
 
       },
       async switchView() {
-         console.log("switch view")
          let modes = {
             "list": "width grid",
             "width grid": "height grid",

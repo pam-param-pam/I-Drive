@@ -17,6 +17,17 @@
 }
 
 @media (max-width: 950px) {
+  * {
+    --sb-size: 4px;
+  }
+  .grid .item-wrapper {
+    margin: 0.25em !important;
+  }
+  .grid .item-wrapper .item .name p {
+    font-size: 13px !important;
+    margin: 1em 1em 0.5em !important;
+  }
+
   body {
     /*todo*/
     /*padding-bottom: 5em;*/

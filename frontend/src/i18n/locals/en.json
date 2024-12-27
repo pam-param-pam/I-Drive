@@ -266,6 +266,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "locating": "Locating item...",
+    "uploadNotAllowedHere": "Upload is not allowed here",
     "PreparingUpload": "Started proccesing files for upload...",
     "aborting": "Aborting...",
     "deleting": "Deleting {percentage}%...",

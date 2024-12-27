@@ -24,10 +24,6 @@
             <input type="checkbox" v-model="keepCreationTimestamp"/>
             {{ $t("settings.keepCreationTimestamp") }}
           </p>
-          <p>
-            <input type="checkbox" v-model="hideFilenames"/>
-            {{ $t("settings.hideFileNames") }}
-          </p>
           <div>
             <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
             <input
@@ -57,15 +53,6 @@
             class="input input--block"
             v-model:locale="locale"
           ></languages>
-
-          <p>
-            <label for="theme">{{ $t("settings.themes.title") }}</label>
-            <themes
-              class="input input--block"
-              v-model:theme="theme"
-              id="theme"
-            ></themes>
-          </p>
 
         </div>
 
@@ -123,7 +110,6 @@
 
 <script>
 import Languages from "@/components/settings/Languages.vue"
-import Themes from "@/components/settings/Themes.vue"
 import {changePassword, updateSettings} from "@/api/user.js"
 import router from "@/router/index.js"
 import throttle from "lodash.throttle"
@@ -135,7 +121,6 @@ import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
 export default {
    name: "settings",
    components: {
-      Themes,
       Languages,
       EncryptionMethod,
    },
@@ -146,11 +131,9 @@ export default {
          passwordConf: "",
          hideLockedFolders: false,
          subfoldersInShares: false,
-         hideFilenames: false,
          dateFormat: false,
          locale: "",
          webhook: "",
-         theme: "",
          concurrentUploadRequests: 4,
          encryptionMethod: null,
          keepCreationTimestamp: false
@@ -182,7 +165,6 @@ export default {
       this.dateFormat = this.settings.dateFormat
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
       this.encryptionMethod = this.settings.encryptionMethod
-      this.hideFilenames = this.settings.hideFilenames
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
 
    },
@@ -216,7 +198,6 @@ export default {
             webhook: this.webhook,
             concurrentUploadRequests: this.concurrentUploadRequests,
             encryptionMethod: this.encryptionMethod,
-            hideFilenames: this.hideFilenames,
             keepCreationTimestamp: this.keepCreationTimestamp,
 
          }

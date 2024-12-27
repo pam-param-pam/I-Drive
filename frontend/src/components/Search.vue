@@ -49,8 +49,9 @@ export default {
     //TODO FIX THIS SHIT
 
    methods: {
-      ...mapActions(useMainStore, ["showHover", "setDisabledCreation", "resetSelected"]),
+      ...mapActions(useMainStore, ["setLastItem", "showHover", "setDisabledCreation", "resetSelected"]),
       search: throttle(async function (event) {
+         this.setLastItem(null)
          //copying to not mutate vuex store state
          let searchDict = {...this.searchFilters}
          searchDict["query"] = this.query
@@ -97,5 +98,8 @@ export default {
 .material-icons:hover {
  color: #007BFF;
  transform: scale(1.1);
+}
+#search input {
+ color: var(--color-text);
 }
 </style>

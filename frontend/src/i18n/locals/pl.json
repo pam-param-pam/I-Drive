@@ -265,6 +265,8 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "locating": "Lokalizowanie...",
+    "uploadNotAllowedHere": "Nie można tutaj przesyłac plików",
     "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
     "aborting": "Przerywanie...",
     "deleting": "Usuwanie {percentage}%...",

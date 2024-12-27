@@ -76,8 +76,7 @@ def users_me(request):
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
                              "subfoldersInShares": settings.subfolders_in_shares, "webhook": settings.discord_webhook,
-                             "concurrentUploadRequests": settings.concurrent_upload_requests, "encryptionMethod": encryptionMethod.value,
-                             "hideFilenames": settings.hide_filenames, "keepCreationTimestamp": settings.keep_creation_timestamp
+                             "concurrentUploadRequests": settings.concurrent_upload_requests, "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp
                              }}
 
     return JsonResponse(response, safe=False, status=200)
@@ -98,7 +97,6 @@ def update_settings(request):
     subfoldersInShares = request.data.get('subfoldersInShares')
     webhookURL = request.data.get('webhook')
     encryptionMethod = request.data.get('encryptionMethod')
-    hideFilenames = request.data.get('hideFilenames')
     keepCreationTimestamp = request.data.get('keepCreationTimestamp')
     theme = request.data.get('theme')
 
@@ -119,8 +117,6 @@ def update_settings(request):
         settings.sort_by_asc = sortByAsc
     if isinstance(subfoldersInShares, bool):
         settings.subfolders_in_shares = subfoldersInShares
-    if isinstance(hideFilenames, bool):
-        settings.hide_filenames = hideFilenames
     if isinstance(keepCreationTimestamp, bool):
         settings.keep_creation_timestamp = keepCreationTimestamp
     if isinstance(webhookURL, str):

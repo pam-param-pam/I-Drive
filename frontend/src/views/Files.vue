@@ -9,7 +9,6 @@
     <h4 v-if="!error && isSearchActive && !loading">{{ $t("files.searchItemsFound", { amount: this.items.length }) }}</h4>
     <FileListing
       ref="listing"
-      :locatedItem=locatedItem
       :isSearchActive="isSearchActive"
       :headerButtons="headerButtons"
       @onOpen="onOpen"
@@ -59,9 +58,6 @@ export default {
       lockFrom: {
          type: String
       },
-      locatedItem: {
-         type: Object
-      }
 
    },
    data() {

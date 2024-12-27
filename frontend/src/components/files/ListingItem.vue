@@ -11,6 +11,7 @@
       @drop="drop"
       @dblclick="open"
       @click="click"
+      v-touch:tap="openContextMenu"
       :data-dir="item.isDir"
       :data-type="type"
       :aria-label="item.name"
@@ -56,12 +57,13 @@ import moment from "moment/min/moment-with-locales.js"
 import {move} from "@/api/item.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
+import { isMobile } from "@/utils/common.js"
 
 export default {
 
    name: "item",
 
-   emits: ['onOpen'],
+   emits: ['onOpen', 'onLongPress'],
    props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
    computed: {
@@ -112,7 +114,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected"]),
+      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected"]),
 
       humanSize() {
          if (this.item.isDir) return  "-"
@@ -168,7 +170,12 @@ export default {
         this.resetSelected()
       },
       open() {
+         if (this.item.isDir) this.setLastItem(null)
+
          this.$emit('onOpen', this.item)
+      },
+      openContextMenu(){
+         this.$emit('onLongPress', this.item)
       },
       click(event) {
          console.log("CLICK ON ITEM")
@@ -272,12 +279,12 @@ export default {
  background: #c4e6ff;
 }
 
-.grid .item-wrapper [data-dir=true] p {
- font-size: 20px !important;
- font-weight: 300;
- margin-top: 0.5em !important;
- padding-bottom: 0.25em !important;
-}
+/*.grid .item-wrapper [data-dir=true] p {*/
+/* font-size: 20px !important;*/
+/* font-weight: 300;*/
+/* margin-top: 0.5em !important;*/
+/* padding-bottom: 0.25em !important;*/
+/*}*/
 
 /* ========================= */
 /* 📝 LIST VIEW STYLES       */
