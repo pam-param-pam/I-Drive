@@ -10,7 +10,9 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/build.yml
+    secrets: ${{ secrets }}
 
   deploy:
     needs: build
     uses: ./.github/workflows/deploy.yml
+    secrets: ${{ secrets }}
