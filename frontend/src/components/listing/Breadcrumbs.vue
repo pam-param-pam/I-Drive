@@ -9,6 +9,7 @@
       @drop="drop(user?.root)"
       @dragenter="dragEnter(user?.root)"
       @dragleave="dragLeave"
+      @dragover.prevent
       :class="breadcrumbClass(user?.root)"
     >
       <i class="material-icons">home</i>
@@ -26,6 +27,7 @@
         @drop="drop(folder.id)"
         @dragenter="dragEnter(folder.id)"
         @dragleave="dragLeave"
+        @dragover.prevent
         :class="breadcrumbClass(folder.id)"
       >
         {{ folder.name }}
@@ -34,12 +36,11 @@
   </div>
 </template>
 
-
 <script>
-import {isMobile} from "@/utils/common.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapState} from "pinia"
-import {move} from "@/api/item.js"
+import { isMobile } from "@/utils/common.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapState } from "pinia"
+import { move } from "@/api/item.js"
 
 export default {
    name: "breadcrumbs",
@@ -47,7 +48,7 @@ export default {
 
    data() {
       return {
-         draggedOverFolderId: null,
+         draggedOverFolderId: null
       }
    },
 
@@ -63,16 +64,19 @@ export default {
       },
 
       breadcrumbs() {
-         if (this.folderList.length >= this.maxBreadcrumbs) {
-            while (this.folderList.length !== this.maxBreadcrumbs) {
-               this.folderList.shift()
+         let folders = [...this.folderList]
+         if (folders.length >= this.maxBreadcrumbs) {
+            while (folders.length !== this.maxBreadcrumbs) {
+               folders.shift()
             }
-
-            this.folderList[0].name = "..."
+            folders[0].name = "..."
          }
-
-         return this.folderList
+         return folders
       },
+
+      selectedCount() {
+         return this.selected.length || 0
+      }
    },
 
    methods: {
@@ -87,34 +91,35 @@ export default {
       },
 
       canDrop(folder_id) {
-         return (this.selected[0].parent_id !== folder_id) && this.$route.name === "Files"
+         return this.selected[0]?.parent_id !== folder_id && this.$route.name === "Files"
       },
 
       async drop(folder_id) {
-         if (!this.canDrop(folder_id)) return
-         if (this.selectedCount === 0) return
+         if (!this.canDrop(folder_id) || this.selectedCount === 0) return
 
-         let listOfIds = this.selected.map(obj => obj.id)
-         await move({ids: listOfIds, "new_parent_id": folder_id})
+         let listOfIds = this.selected.map((obj) => obj.id)
+         await move({ ids: listOfIds, new_parent_id: folder_id })
 
-         let message = this.$t('toasts.movedItems')
+         let message = this.$t("toasts.movedItems")
          this.$toast.success(message)
          this.dragLeave()
       },
 
       breadcrumbClass(folderId) {
          return {
-            'breadcrumb-hovered': this.draggedOverFolderId === folderId,
-            'breadcrumb-faded': this.draggedOverFolderId && this.draggedOverFolderId !== folderId,
+            "breadcrumb-hovered": this.draggedOverFolderId === folderId,
+            "breadcrumb-faded":
+               this.draggedOverFolderId && this.draggedOverFolderId !== folderId
          }
       }
-   },
+   }
 }
 </script>
 <style scoped>
 .breadcrumb-hovered {
  font-weight: bold;
  opacity: 1;
+ transition: all 0.2s ease-in-out;
 }
 
 .breadcrumb-hovered i.material-icons {
@@ -124,5 +129,6 @@ export default {
 
 .breadcrumb-faded {
  opacity: 0.5;
+ transition: opacity 0.2s ease-in-out;
 }
 </style>

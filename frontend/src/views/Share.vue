@@ -130,7 +130,7 @@ export default {
       },
 
       async fetchShare() {
-
+         this.setLoading(true)
          try {
             let res = await getShare(this.token, this.folderId)
 
@@ -146,7 +146,7 @@ export default {
             this.setItems(null)
          }
          finally {
-            //todo
+            this.setLoading(false)
          }
 
 

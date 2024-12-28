@@ -495,7 +495,9 @@ export default {
 
       calculateGridLayoutWrapper() {
          console.log("calculateGridLayoutWrapper")
-         let width = document.getElementById("filesScroller").clientWidth
+         let element = document.getElementById("filesScroller")
+         if (!element) return
+         let width = element.clientWidth
          if (!isMobile()) width -= 5
          this.calculateGridLayout(width)
       },

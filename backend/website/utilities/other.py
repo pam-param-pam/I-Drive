@@ -513,10 +513,12 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, item:  Union[F
 
     if item != obj_in_share:
         if not settings.subfolders_in_shares:
-            raise ResourceNotFoundError()
-
-        if isinstance(obj_in_share, Folder):
-            if not is_subitem(item, obj_in_share):
+            if isinstance(obj_in_share, Folder) and item not in obj_in_share.files.all():
                 raise ResourceNotFoundError()
+
         else:
-            raise ResourceNotFoundError()
+            if isinstance(obj_in_share, Folder):
+                if not is_subitem(item, obj_in_share):
+                    raise ResourceNotFoundError()
+            else:
+                raise ResourceNotFoundError()
