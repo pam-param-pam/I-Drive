@@ -9,7 +9,7 @@ from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, ge
     get_trash, check_password, get_dirs, fetch_additional_info, get_secrets
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position
-from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model
+from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
 from .views.testViews import get_folder_password
 from .views.uploadViews import create_file, create_thumbnail
@@ -18,7 +18,7 @@ from .views.userViews import change_password, users_me, update_settings, MyToken
 urlpatterns = [
 
     path("zip", create_zip_model, name="create zip model"),
-    path('stream/<signed_file_id>', stream_file),
+    path('stream/<signed_file_id>', stream_file, name="stream file"),
     path('zip/<token>', stream_zip_files),
     path("trash", get_trash, name="trash"),
     path("search", search, name="search"),
@@ -47,6 +47,9 @@ urlpatterns = [
     path("share/delete", delete_share, name="delete share"),
     path("share/create", create_share, name="create share"),
     path("share/zip/<token>", create_share_zip_model, name="create zip for share"),
+    path("share/stream/<token>/<file_id>", share_view_stream, name="view share file stream"),
+    path("share/thumbnail/<token>/<file_id>", share_view_thumbnail, name="view share file thumbnail"),
+    path("share/preview/<token>/<file_id>", share_view_preview, name="view share file preview"),
 
     re_path(r'^share/(?P<token>[^/]+)(/(?P<folder_id>[^/]+))?$', view_share, name='view_share'),
 

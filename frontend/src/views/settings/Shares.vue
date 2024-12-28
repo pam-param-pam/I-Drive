@@ -17,10 +17,10 @@
             </tr>
 
             <tr v-for="share in shares" :key="share.token">
-              <td>
+              <td class="share-name-column">
                 <a :href="buildLink(share)" target="_blank">{{ share.name }}</a>
               </td>
-              <td>
+              <td class="expiry-column">
                 <template v-if="share.expire !== 0">{{
                     humanTime(share.expire)
                   }}
@@ -141,3 +141,16 @@ export default {
    }
 }
 </script>
+
+<style scoped>
+.share-name-column {
+ max-width: 200px;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ white-space: nowrap;
+}
+
+.expiry-column {
+ padding-left: 1em;
+}
+</style>

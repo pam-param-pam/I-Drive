@@ -104,7 +104,7 @@
 
     <template v-if="!error && !loading">
 
-      <div v-if="sortedItems.length === 0">
+      <div v-if="sortedItems?.length === 0">
         <h2 class="message">
           <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
             <img

@@ -55,7 +55,6 @@ export default {
 
    data() {
       return {
-         items: [],
          folderList: [],
          expiry: null,
          shareObj: {},
@@ -136,12 +135,17 @@ export default {
             let res = await getShare(this.token, this.folderId)
 
             this.shareObj = res
-            this.items = res.share
             this.folderList = res.breadcrumbs
             this.expiry = res.expiry
-            this.setItems(this.items)
+            this.setItems(res.share)
             this.shareState = "success"
-         } finally {
+
+         } catch (e) {
+            console.log(e)
+            this.shareState = "error"
+            this.setItems(null)
+         }
+         finally {
             //todo
          }
 

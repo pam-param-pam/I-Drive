@@ -1,13 +1,13 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import Union, List, Dict
 
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition
+from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition, UserSettings, UserZIP
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
+from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, MalformedDatabaseRecord
 
 signer = TimestampSigner()
@@ -37,7 +37,7 @@ def sign_file_id_with_expiry(file_id: str) -> str:
 # Function to verify and extract the file id
 def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
     try:
-        file_id = signer.unsign(signed_file_id, max_age=99999999999999999999)  # timedelta(seconds=expiry_seconds) #TODO
+        file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=expiry_seconds))
         return file_id
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("URL not valid or expired.")
@@ -193,7 +193,7 @@ def create_folder_dict(folder_obj: Folder) -> FolderDict:
         folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
     if folder_obj.inTrashSince:
-        folder_dict[""] = formatDate(folder_obj.inTrashSince)
+        folder_dict["in_trash_since"] = formatDate(folder_obj.inTrashSince)
 
     return folder_dict
 
@@ -229,6 +229,7 @@ def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDi
     if share.is_locked():
         resource_dict['isLocked'] = True
         resource_dict['lockFrom'] = share.id
+
     return resource_dict
 
 
@@ -236,21 +237,33 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
     if isinstance(resource_in_share, Folder):
         resource_dict = create_folder_dict(resource_in_share)
     else:
-        resource_dict = create_file_dict(resource_in_share)
+        resource_dict = create_file_dict(resource_in_share, hide=True)
+        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{resource_in_share.id}"
+        thumbnail = Thumbnail.objects.filter(file=resource_in_share)
+
+        if thumbnail.exists():
+            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{resource_in_share.id}"
+        if resource_in_share.extension in (
+                '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
+            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{resource_in_share.id}"
 
     return hide_info_in_share_context(share, resource_dict)
 
 
-def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
-    folder_dict = build_folder_content(folder_obj, include_folders, include_files)
+def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
 
-    if share.is_locked():
-        censored_children = []
-        for resource_dict in folder_dict['children']:
-            censored_child = hide_info_in_share_context(share, resource_dict)
-            censored_children.append(censored_child)
-        folder_dict['children'] = censored_children
+    children = []
+    children.extend(folder_obj.files.filter(ready=True, inTrash=False))
+    if include_folders:
+        children.extend(folder_obj.subfolders.filter(inTrash=False))
 
+    children_dicts = []
+    for item in children:
+        file_dict = create_share_resource_dict(share, item)
+        children_dicts.append(file_dict)
+
+    folder_dict = create_share_resource_dict(share, folder_obj)
+    folder_dict["children"] = children_dicts
     return folder_dict
 
 
@@ -274,12 +287,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
         folder_dicts.append(folder_dict)
 
     folder_dict = create_folder_dict(folder_obj)
-    #
-    # max_items = 50
-    # folder_limit = min(len(folder_dicts), max_items)
-    # file_limit = max_items - folder_limit
-    #
-    # folder_dict["children"] = folder_dicts[:folder_limit] + file_dicts[:file_limit]
+
     folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
 
     return folder_dict
@@ -430,12 +438,12 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
     return children
 
 
-def get_share(request, token) -> ShareableLink:
+def get_share(request, token: str) -> ShareableLink:
     password = request.headers.get("X-Resource-Password")
     share = ShareableLink.objects.get(token=token)
     if share.is_expired():
         share.delete()
-        raise ResourceNotFoundError()
+        raise ResourceNotFoundError("Share not found or expired")
 
     if share.password and share.password != password:
         share.name = "Share"
@@ -470,7 +478,7 @@ def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     return False
 
 
-def validate_and_add_to_zip(user_zip, item):
+def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
     if isinstance(item, Folder):
         # Checking if the folder is already present in the zip model
         if user_zip.folders.filter(id=item.id).exists():
@@ -497,3 +505,18 @@ def validate_and_add_to_zip(user_zip, item):
             raise BadRequestError(f"File({item.name}) is already in the ZIP")
 
         user_zip.files.add(item)
+
+def check_if_item_belongs_to_share(request, share: ShareableLink, item:  Union[File, Folder]) -> None:
+    check_resource_perms(request, item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    obj_in_share = get_resource(share.object_id)
+    settings = UserSettings.objects.get(user=share.owner)
+
+    if item != obj_in_share:
+        if not settings.subfolders_in_shares:
+            raise ResourceNotFoundError()
+
+        if isinstance(obj_in_share, Folder):
+            if not is_subitem(item, obj_in_share):
+                raise ResourceNotFoundError()
+        else:
+            raise ResourceNotFoundError()

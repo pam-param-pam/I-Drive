@@ -77,7 +77,7 @@ def handle_common_errors(view_func):
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except ShareableLink.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found or expired"),
                                 status=404)
         except Thumbnail.DoesNotExist:
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),

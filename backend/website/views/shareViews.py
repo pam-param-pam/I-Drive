@@ -6,14 +6,15 @@ from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from ..models import UserSettings, ShareableLink, UserZIP, Folder
+from .streamViews import stream_file, get_thumbnail, get_preview
+from ..models import UserSettings, ShareableLink, UserZIP
 from ..utilities.Permissions import SharePerms
 from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_dict, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, \
     build_share_folder_content, get_folder, \
-    get_file, get_share, is_subitem, validate_and_add_to_zip
+    get_file, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_file_id_with_expiry
 from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -115,23 +116,14 @@ def view_share(request, token, folder_id=None):
         raise ResourceNotFoundError()
 
     if folder_id:
-        requested_folder = get_resource(folder_id)
-        check_resource_perms(request, requested_folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
-
-        if requested_folder != obj_in_share and not settings.subfolders_in_shares:
-            raise ResourceNotFoundError()
+        requested_folder = get_folder(folder_id)
+        check_if_item_belongs_to_share(request, share, requested_folder)
 
         breadcrumbs = create_share_breadcrumbs(requested_folder, obj_in_share, True)
 
-        folder = requested_folder
-        while folder:
-            if folder == obj_in_share:
-                folder_content = build_share_folder_content(share, requested_folder, include_folders=settings.subfolders_in_shares)["children"]
+        folder_content = build_share_folder_content(share, requested_folder, include_folders=settings.subfolders_in_shares)["children"]
 
-                return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
-            folder = folder.parent
-
-        raise ResourceNotFoundError()
+        return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
 
     return JsonResponse({"share": [response_dict], "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
 
@@ -150,27 +142,54 @@ def create_share_zip_model(request, token):
     user_zip = UserZIP.objects.create(owner=request.user)
 
     share = get_share(request, token)
-    obj_in_share = get_resource(share.object_id)
-    settings = UserSettings.objects.get(user=share.owner)
 
     for item_id in ids:
-
         item = get_resource(item_id)
-
-        check_resource_perms(request, item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
-
-        if item != obj_in_share:
-            if not settings.subfolders_in_shares:
-                raise ResourceNotFoundError("0")
-
-            if isinstance(obj_in_share, Folder):
-                if not is_subitem(item, obj_in_share):
-                    raise ResourceNotFoundError("1")
-            else:
-                raise ResourceNotFoundError("2")
-
+        check_if_item_belongs_to_share(request, share, item)
         validate_and_add_to_zip(user_zip, item)
 
     user_zip.save()
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
 
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([AllowAny])
+@handle_common_errors
+def share_view_stream(request, token, file_id):
+    share = get_share(request, token)
+
+    item = get_resource(file_id)
+    check_if_item_belongs_to_share(request, share, item)
+
+    signed_file_id = sign_file_id_with_expiry(item.id)
+
+    # Extremely hacky way,
+    # we do this instead of redirects to make this view is not accessible immediately after the share has been deleted
+    # request is changed into rest's framework's request with the decorators,
+    # so wee need to access the django's request using _request
+    request = request._request
+    request.GET = request.GET.copy()
+    request.GET['inline'] = 'True'
+    return stream_file(request, signed_file_id)
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([AllowAny])
+@handle_common_errors
+def share_view_thumbnail(request, token, file_id):
+    share = get_share(request, token)
+    item = get_resource(file_id)
+    check_if_item_belongs_to_share(request, share, item)
+    signed_file_id = sign_file_id_with_expiry(item.id)
+    return get_thumbnail(request._request, signed_file_id)
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([AllowAny])
+@handle_common_errors
+def share_view_preview(request, token, file_id):
+    share = get_share(request, token)
+    item = get_resource(file_id)
+    check_if_item_belongs_to_share(request, share, item)
+    signed_file_id = sign_file_id_with_expiry(item.id)
+    return get_preview(request._request, signed_file_id)

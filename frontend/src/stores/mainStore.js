@@ -93,6 +93,7 @@ export const useMainStore = defineStore("main", {
       },
       setItems(value) {
          console.log("setting items")
+         if (!value) value = []
          this.items = value
       },
       setBreadcrumbs(value) {
