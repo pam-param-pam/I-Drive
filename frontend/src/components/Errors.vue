@@ -2,7 +2,7 @@
   <div>
     <h2 class="message">
       <i class="material-icons">{{ info.icon }}</i>
-      <span>{{ $t(info.message, {"code": errorCode, "response": error.response.data}) }}</span>
+      <span>{{ $t(info.message, {"code": errorCode, "response": error?.response?.data}) }}</span>
     </h2>
   </div>
 </template>
@@ -47,7 +47,7 @@ export default {
 
    computed: {
       errorCode() {
-        return this.error?.response.status
+        return this.error?.response?.status
       },
       info() {
          return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]

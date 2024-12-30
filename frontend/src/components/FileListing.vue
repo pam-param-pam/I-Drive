@@ -376,8 +376,6 @@ export default {
 
    mounted() {
 
-      console.log("MOUNTED")
-
       this.$nextTick(() => {
 
          this.calculateGridLayoutWrapper()
@@ -474,8 +472,6 @@ export default {
       },
       minusSize() {
          let component = this.$route.name
-         console.log(component)
-         console.log("component")
          if (component === "Files") return 80
          if (component === "Trash") return 105
          if (component === "Share") return 150
@@ -494,7 +490,6 @@ export default {
       ...mapActions(useMainStore, ["setLastItem", "toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       calculateGridLayoutWrapper() {
-         console.log("calculateGridLayoutWrapper")
          let element = document.getElementById("filesScroller")
          if (!element) return
          let width = element.clientWidth
@@ -503,8 +498,6 @@ export default {
       },
       calculateGridLayout(containerWidth) {
          if (this.viewMode !== "grid") return
-         console.log("calculateGridLayout")
-         console.log(containerWidth)
 
          let maxTileWidth = 225
          if (isMobile()) {

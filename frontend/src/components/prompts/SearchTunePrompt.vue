@@ -115,6 +115,7 @@ export default {
 
 
          if (this.fileType === "all") this.fileType = null
+         if (this.resultLimit > 500) this.resultLimit = 500
 
          let searchFilterDict = {
             files: this.includeFiles,

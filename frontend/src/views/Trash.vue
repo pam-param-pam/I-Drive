@@ -32,7 +32,8 @@ export default {
 
    data() {
       return {
-         isSearchActive: false
+         isSearchActive: false,
+         isActive: true,
 
       }
    },
@@ -47,6 +48,9 @@ export default {
          }
       },
 
+   },
+   unmounted() {
+      this.isActive = false
    },
    created() {
       this.setDisabledCreation(true)
@@ -82,7 +86,7 @@ export default {
             this.setError(error)
          }
          finally {
-            this.setLoading(false)
+            if (this.isActive) this.setLoading(false)
 
          }
 

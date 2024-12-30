@@ -67,7 +67,8 @@ export default {
          isSearchActive: false,
          folderList: [],
          source: null,
-         dragCounter: 0
+         dragCounter: 0,
+         isActive: true,
       }
    },
    computed: {
@@ -92,6 +93,9 @@ export default {
    created() {
       this.setDisabledCreation(false)
       this.fetchFolder()
+   },
+   unmounted() {
+      this.isActive = false
    },
    watch: {
       $route: "fetchFolder"
@@ -152,13 +156,12 @@ export default {
                if (error.code === "ERR_CANCELED") return
                this.setError(error)
             } finally {
-               this.setLoading(false)
+               if (this.isActive) this.setLoading(false)
+
             }
          }
          if (this.currentFolder.parent_id) { //only set title if its not root folder
             document.title = `${this.currentFolder.name} - ` + name
-         } else {
-            document.title = name
          }
 
 

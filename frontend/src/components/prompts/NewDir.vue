@@ -49,8 +49,14 @@ export default {
          name: "",
       }
    },
+   props: {
+      folder: {
+         type: Object,
+         required: false,
+      },
+   },
    computed: {
-      ...mapState(useMainStore, ["currentFolder"]),
+      ...mapState(useMainStore, ["currentFolder", "currentPrompt"]),
       canSubmit() {
          return this.name.length > 0
       }
@@ -61,11 +67,11 @@ export default {
       async submit(event) {
          if (this.canSubmit) {
             try {
-
-               await create({"parent_id": this.currentFolder?.id, "name": this.name})
+               let folder = this.folder || this.currentFolder
+               let res = await create({"parent_id": folder.id, "name": this.name})
                let message = this.$t('toasts.folderCreated', {name: this.name})
                this.$toast.success(message)
-
+               if (this.currentPrompt.confirm) this.currentPrompt.confirm(res)
             } finally {
                this.closeHover()
             }

@@ -25,7 +25,7 @@ def format_wait_time(seconds: int) -> str:
 
 
 # Function to sign a URL with an expiration time
-def sign_file_id_with_expiry(file_id: str) -> str:
+def sign_resource_id_with_expiry(file_id: str) -> str:
     # cached_signed_file_id = cache.get(file_id)
     # if cached_signed_file_id:
     #     return cached_signed_file_id
@@ -35,7 +35,7 @@ def sign_file_id_with_expiry(file_id: str) -> str:
 
 
 # Function to verify and extract the file id
-def verify_signed_file_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
+def verify_signed_resource_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
     try:
         file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=expiry_seconds))
         return file_id
@@ -148,7 +148,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         pass
 
     if not hide:
-        signed_file_id = sign_file_id_with_expiry(file_obj.id)
+        signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
         if file_obj.extension in (
                 '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
@@ -237,21 +237,21 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
     if isinstance(resource_in_share, Folder):
         resource_dict = create_folder_dict(resource_in_share)
     else:
+        signed_id = sign_resource_id_with_expiry(resource_in_share.id)
         resource_dict = create_file_dict(resource_in_share, hide=True)
-        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{resource_in_share.id}"
+        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{signed_id}"
         thumbnail = Thumbnail.objects.filter(file=resource_in_share)
 
         if thumbnail.exists():
-            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{resource_in_share.id}"
+            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{signed_id}"
         if resource_in_share.extension in (
                 '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{resource_in_share.id}"
+            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{signed_id}"
 
     return hide_info_in_share_context(share, resource_dict)
 
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
-
     children = []
     children.extend(folder_obj.files.filter(ready=True, inTrash=False))
     if include_folders:
@@ -438,16 +438,17 @@ def get_flattened_children(folder: Folder, full_path="", single_root=False) -> L
     return children
 
 
-def get_share(request, token: str) -> ShareableLink:
+def get_share(request, token: str, ignorePassword: bool = False) -> ShareableLink:
     password = request.headers.get("X-Resource-Password")
     share = ShareableLink.objects.get(token=token)
     if share.is_expired():
         share.delete()
         raise ResourceNotFoundError("Share not found or expired")
 
-    if share.password and share.password != password:
-        share.name = "Share"
-        raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+    if not ignorePassword:
+        if share.password and share.password != password:
+            share.name = "Share"
+            raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
 
     return share
 
@@ -506,7 +507,8 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
 
         user_zip.files.add(item)
 
-def check_if_item_belongs_to_share(request, share: ShareableLink, item:  Union[File, Folder]) -> None:
+
+def check_if_item_belongs_to_share(request, share: ShareableLink, item: Union[File, Folder]) -> None:
     check_resource_perms(request, item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
     obj_in_share = get_resource(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)

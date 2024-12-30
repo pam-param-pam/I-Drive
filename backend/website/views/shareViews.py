@@ -14,7 +14,7 @@ from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_dict, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, \
     build_share_folder_content, get_folder, \
-    get_file, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_file_id_with_expiry
+    get_file, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, verify_signed_resource_id
 from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -122,10 +122,11 @@ def view_share(request, token, folder_id=None):
         breadcrumbs = create_share_breadcrumbs(requested_folder, obj_in_share, True)
 
         folder_content = build_share_folder_content(share, requested_folder, include_folders=settings.subfolders_in_shares)["children"]
+    else:
 
-        return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
+        folder_content = [response_dict]
+    return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time), "id": share.id}, status=200)
 
-    return JsonResponse({"share": [response_dict], "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time)}, status=200)
 
 
 @api_view(['POST'])
@@ -155,13 +156,14 @@ def create_share_zip_model(request, token):
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
-def share_view_stream(request, token, file_id):
-    share = get_share(request, token)
+def share_view_stream(request, token, signed_file_id):
+    share = get_share(request, token, ignorePassword=True)
 
+    file_id = verify_signed_resource_id(signed_file_id)
     item = get_resource(file_id)
     check_if_item_belongs_to_share(request, share, item)
 
-    signed_file_id = sign_file_id_with_expiry(item.id)
+    signed_file_id = sign_resource_id_with_expiry(item.id)
 
     # Extremely hacky way,
     # we do this instead of redirects to make this view is not accessible immediately after the share has been deleted
@@ -176,20 +178,22 @@ def share_view_stream(request, token, file_id):
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
-def share_view_thumbnail(request, token, file_id):
-    share = get_share(request, token)
+def share_view_thumbnail(request, token, signed_file_id):
+    share = get_share(request, token, ignorePassword=True)
+    file_id = verify_signed_resource_id(signed_file_id)
     item = get_resource(file_id)
     check_if_item_belongs_to_share(request, share, item)
-    signed_file_id = sign_file_id_with_expiry(item.id)
+    signed_file_id = sign_resource_id_with_expiry(item.id)
     return get_thumbnail(request._request, signed_file_id)
 
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
-def share_view_preview(request, token, file_id):
-    share = get_share(request, token)
+def share_view_preview(request, token, signed_file_id):
+    share = get_share(request, token, ignorePassword=True)
+    file_id = verify_signed_resource_id(signed_file_id)
     item = get_resource(file_id)
     check_if_item_belongs_to_share(request, share, item)
-    signed_file_id = sign_file_id_with_expiry(item.id)
+    signed_file_id = sign_resource_id_with_expiry(item.id)
     return get_preview(request._request, signed_file_id)

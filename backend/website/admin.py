@@ -9,7 +9,7 @@ from django.utils.html import format_html
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
-from .utilities.other import sign_file_id_with_expiry
+from .utilities.other import sign_resource_id_with_expiry
 
 admin.site.register(UserSettings)
 admin.site.register(UserPerms)
@@ -104,7 +104,7 @@ class FileAdmin(admin.ModelAdmin):
     search_fields = ["name"]
 
     def media_tag(self, obj: File):
-        signed_file_id = sign_file_id_with_expiry(obj.id)
+        signed_file_id = sign_resource_id_with_expiry(obj.id)
 
         if obj.extension in RAW_IMAGE_EXTENSIONS:
             url = f"{API_BASE_URL}/api/file/preview/{signed_file_id}"
@@ -235,7 +235,7 @@ class ThumbnailAdmin(admin.ModelAdmin):
         return filesizeformat(obj.size)
 
     def thumbnail_media(self, obj: Thumbnail):
-        signed_file_id = sign_file_id_with_expiry(obj.file.id)
+        signed_file_id = sign_resource_id_with_expiry(obj.file.id)
         url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 

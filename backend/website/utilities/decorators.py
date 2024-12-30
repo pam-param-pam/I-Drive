@@ -9,13 +9,13 @@ from rest_framework.exceptions import Throttled
 from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord
-from ..utilities.other import build_http_error_response, verify_signed_file_id, check_resource_perms, get_file, get_folder
+from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
 
 def check_signed_url(view_func):
     @wraps(view_func)
     def wrapper(request, signed_file_id, *args, **kwargs):
 
-        file_id = verify_signed_file_id(signed_file_id)
+        file_id = verify_signed_resource_id(signed_file_id)
 
         return view_func(request, file_id, *args, **kwargs)
 

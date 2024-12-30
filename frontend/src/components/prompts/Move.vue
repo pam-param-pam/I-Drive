@@ -5,8 +5,8 @@
     </div>
 
     <div class="card-content">
-      <file-list ref="fileList" @update:current="(val) => (dest = val)">
-      </file-list>
+      <FolderList ref="fileList" @update:current="(val) => (dest = val)">
+      </FolderList>
     </div>
 
     <div
@@ -16,7 +16,7 @@
       <template v-if="perms.create">
         <button
           class="button button--flat"
-          @click="$refs.fileList.createDir()"
+          @click="createDir()"
           :aria-label="$t('sidebar.newFolder')"
           :title="$t('sidebar.newFolder')"
           style="justify-self: left;"
@@ -48,18 +48,18 @@
 </template>
 
 <script>
-import FileList from "@/components/FileList.vue"
-import {move} from "@/api/item.js"
+import FolderList from "@/components/FolderList.vue"
+import { move } from "@/api/item.js"
 import throttle from "lodash.throttle"
-import {mapActions, mapState} from "pinia"
-import {useMainStore} from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
    name: "move",
-   components: {FileList},
+   components: { FolderList },
    data() {
       return {
-         dest: null,
+         dest: null
       }
    },
    computed: {
@@ -71,18 +71,26 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover"]),
-
-      submit: throttle(async function (event) {
+      ...mapActions(useMainStore, ["closeHover", "addSelected", "showHover"]),
+      createDir() {
+         this.showHover({
+            prompt: "newDir",
+            props: {"folder": this.dest},
+            confirm: (data) => {
+               this.$refs.fileList.dirs.push(data)
+            }
+         })
+      },
+      submit: throttle(async function(event) {
          let listOfIds = this.selected.map(obj => obj.id)
-         await move({ids: listOfIds, "new_parent_id": this.dest.id})
+         await move({ ids: listOfIds, "new_parent_id": this.dest.id })
 
-         let message = this.$t('toasts.movedItems')
+         let message = this.$t("toasts.movedItems")
          this.$toast.success(message)
 
          this.closeHover()
 
       }, 1000)
-   },
+   }
 }
 </script>

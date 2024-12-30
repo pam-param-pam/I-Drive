@@ -123,11 +123,14 @@ export default {
       },
 
       onPasswordReset() {
+         console.log("onPasswordReset")
          this.finishAndShowAnotherPrompt()
 
       },
 
       forgotPassword() {
+         console.log("forgotPassword")
+
          this.showHover({
             prompt: "ResetFolderPassword",
             props: {folderId: this.folder.id, lockFrom: this.folder.lockFrom},

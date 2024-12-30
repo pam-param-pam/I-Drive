@@ -333,7 +333,7 @@ export default {
          this.addSelected(this.file)
 
 
-         if (this.file.type === "video") {
+         if (this.file.type === "video" && this.$refs.video) {
             this.$refs.video.currentTime = this.file.video_position
          }
 
@@ -463,6 +463,7 @@ export default {
       },
       videoTimeUpdate() {
          if (!this.isLogged) return
+         if (this.$route.name !== "Files") return
          if (!this.$refs.video) {
             console.warn("this.$refs.video is falsy")
             return

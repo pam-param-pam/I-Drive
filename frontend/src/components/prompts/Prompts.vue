@@ -1,12 +1,14 @@
 <template>
   <div>
     <component
-      v-if="showOverlay"
-      :ref="currentPromptName"
-      :is="currentPromptName"
-      v-bind="currentPrompt.props"
-    >
-    </component>
+      v-for="(prompt, index) in prompts"
+      :key="index"
+      v-show="prompt.prompt === currentPromptName"
+      :ref="prompt.prompt"
+      :is="prompt.prompt"
+      v-bind="prompt.props"
+    />
+
     <div v-show="showOverlay" @click="resetPrompts" class="overlay"></div>
     <div v-show="!showOverlay" @click="resetPrompts"></div>
   </div>
@@ -57,7 +59,6 @@ export default {
       ResetFolderPassword,
    },
    created() {
-
       window.addEventListener("keydown", (event) => {
          if (this.currentPrompt == null) return
 
@@ -70,20 +71,21 @@ export default {
          if (event.code === "Enter") {
             event.preventDefault()
 
-            let promptComponent = this.$refs[this.currentPromptName]
+            let promptComponent = this.$refs[this.currentPromptName][0]
+            console.log(promptComponent)
             if (promptComponent && typeof promptComponent.submit === 'function') {
                promptComponent.submit()
+
             } else {
                console.warn("couldn't find submit method for prompt:")
                console.warn(this.currentPromptName)
-               this.closeHover()
             }
          }
       })
    },
 
    computed: {
-      ...mapState(useMainStore, ["currentPrompt", "currentPromptName"]),
+      ...mapState(useMainStore, ["currentPrompt", "currentPromptName", "prompts"]),
       showOverlay() {
          return this.currentPrompt !== null && this.currentPromptName !== "more"
       },
@@ -92,17 +94,15 @@ export default {
       ...mapActions(useMainStore, ["closeHover"]),
 
       resetPrompts() {
-         let promptComponent = this.$refs[this.currentPromptName]
+         let promptComponent = this.$refs[this.currentPromptName][0]
          if (promptComponent && typeof promptComponent.cancel === 'function') {
             promptComponent.cancel()
          } else {
             console.warn("couldn't find cancel method for prompt:")
             console.warn(this.currentPromptName)
             this.closeHover()
-
          }
       },
-
    },
 }
 </script>

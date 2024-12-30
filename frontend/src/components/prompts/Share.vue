@@ -6,41 +6,43 @@
 
     <template v-if="listing">
       <div class="card-content">
-        <table>
-          <tr>
-            <th>#</th>
-            <th>{{ $t("settings.shareExpiry") }}</th>
-            <th></th>
-            <th></th>
-          </tr>
+        <div class="share-table-container">
+          <table>
+            <tr>
+              <th>#</th>
+              <th>{{ $t("settings.shareExpiry") }}</th>
+              <th></th>
+              <th></th>
+            </tr>
 
-          <tr v-for="(link, index) in links" :key="link.id">
-            <td>{{ index + 1 }}</td>
-            <td>
-              {{ humanTime(link.expire) }}
-            </td>
-            <td class="small">
-              <button
-                class="action copy-clipboard"
-                :data-clipboard-text="buildLink(link)"
-                :aria-label="$t('buttons.copyToClipboard')"
-                :title="$t('buttons.copyToClipboard')"
-              >
-                <i class="material-icons">content_paste</i>
-              </button>
-            </td>
-            <td class="small">
-              <button
-                class="action"
-                @click="deleteLink($event, link)"
-                :aria-label="$t('buttons.delete')"
-                :title="$t('buttons.delete')"
-              >
-                <i class="material-icons">delete</i>
-              </button>
-            </td>
-          </tr>
-        </table>
+            <tr v-for="(link, index) in links" :key="link.id">
+              <td>{{ index + 1 }}</td>
+              <td>
+                {{ humanTime(link.expire) }}
+              </td>
+              <td class="small">
+                <button
+                  class="action copy-clipboard"
+                  :data-clipboard-text="buildLink(link)"
+                  :aria-label="$t('buttons.copyToClipboard')"
+                  :title="$t('buttons.copyToClipboard')"
+                >
+                  <i class="material-icons">content_paste</i>
+                </button>
+              </td>
+              <td class="small">
+                <button
+                  class="action"
+                  @click="deleteLink($event, link)"
+                  :aria-label="$t('buttons.delete')"
+                  :title="$t('buttons.delete')"
+                >
+                  <i class="material-icons">delete</i>
+                </button>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
 
       <div class="card-action">
@@ -130,42 +132,49 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["selected"]),
+      ...mapState(useMainStore, ["selected", "settings"]),
    },
 
-   async created() {
-
-      let links = await getAllShares()
-
-      links = links.filter(item => item.resource_id === this.selected[0].id)
-
-      this.links = links
-      this.sort()
-
-      if (this.links.length === 0) {
-         this.listing = false
-      }
-
+   unmounted() {
+      console.log("DESTROYED")
    },
-   mounted() {
+
+   async mounted() {
       this.clip = new Clipboard(".copy-clipboard")
       this.clip.on("success", () => {
          this.$toast.success(this.$t("success.linkCopied"))
       })
+      await this.fetchShares()
+
    },
    beforeUnmount() {
       this.clip.destroy()
    },
    methods: {
-      ...mapActions(useMainStore, ["closeHover"]),
-     submit: throttle(async function (event) {
+      ...mapActions(useMainStore, ["closeHover", "showHover"]),
+
+     async fetchShares() {
+        let links = await getAllShares()
+
+        links = links.filter(item => item.resource_id === this.selected[0].id)
+
+        this.links = links
+        this.sort()
+
+        if (this.links.length === 0) {
+           this.listing = false
+        }
+     },
+      submit: throttle(async function (event) {
+         if (this.listing) return
          let res = await createShare({
             "resource_id": this.selected[0].id,
             "password": this.password,
             "value": this.time,
             "unit": this.unit
          })
-
+         console.log(res)
+         console.log("1111111111111111111 throttle")
          this.links.push(res)
          this.sort()
 
@@ -173,8 +182,10 @@ export default {
          this.unit = "days"
          this.password = ""
 
+         this.$toast.success(this.$root.$t("settings.shareCreated"))
+
          this.listing = true
-         this.$toast.success(this.$t("settings.shareCreated"))
+
       }, 1000),
 
       async deleteLink(event, share) {
@@ -184,9 +195,8 @@ export default {
          this.links = this.links.filter((item) => item.id !== share.id)
          this.$toast.success(this.$t("settings.shareDeleted"))
          if (this.links.length === 0) {
-           this.listing = !this.listing
+           this.listing = false
          }
-
 
       },
       humanTime(time) {

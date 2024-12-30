@@ -9,6 +9,7 @@
     :base="'/share/' + token"
     :folderList="folderList"
   />
+  <errors v-if="error" :error="error" />
 
   <FileListing
     ref="listing"
@@ -20,7 +21,6 @@
     @openInNewWindow="openInNewWindow"
 
   ></FileListing>
-  <errors v-if="shareState === 'passwordRequired'" :error="error" />
 
 </template>
 
@@ -70,9 +70,8 @@ export default {
             download: this.selectedCount > 0,
             info: this.selectedCount > 0,
             openInNewWindow: true
-
          }
-      }
+      },
 
    },
    created() {
@@ -84,13 +83,10 @@ export default {
 
    watch: {
       $route: "fetchShare"
-
    },
 
-
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems"]),
-
+      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "getFolderPassword"]),
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
             window.open(this.selected[0].download_url, "_blank")
@@ -137,6 +133,8 @@ export default {
             this.shareObj = res
             this.folderList = res.breadcrumbs
             this.expiry = res.expiry
+            this.id = res.id
+
             this.setItems(res.share)
             this.shareState = "success"
 
@@ -144,6 +142,8 @@ export default {
             console.log(e)
             this.shareState = "error"
             this.setItems(null)
+            this.setError(e)
+
          }
          finally {
             this.setLoading(false)
