@@ -43,8 +43,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 
 | TODO List                                                                        | Status               |
 |----------------------------------------------------------------------------------|----------------------|
-| Docker CI/CD                                                                     | ⚠️  Only partial     |
-| Lock shares with password                                                        | ⚠️  Only partial     |
 | Error handling in upload process                                                 | ⚠️  Only partial     |
 | Proper handling of 429                                                           | ❌  Coming one day    |
 | Proper frontend networking & handling of errors                                  | ❌  Coming one day    |
@@ -55,16 +53,15 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | celery + Unable to process this request at the moment                            | ❌  Coming one day    |
 | Virtual list view                                                                | ❌  Coming prob never |
 | Editor support for large files                                                   | ❌  Coming prob never |
-| Fix file types so they are not so hardcoded on frontend                          | ❌  Coming prob never |
 | fix __prependStaticUrl                                                           | ❌  Coming prob never |
 | possible denial of service by infinite recursive folder fetch malformed parents  | ❌  Coming prob never |
-| fix   resourceNotFound to return the same response no matter if its actually 403 | ❌  Coming prob never |
 | fix folder upload getting doubled cuz race conditions                            | ❌  Coming prob never |
 | fix enable-scroll                                                                | ❌  Coming prob never |
 | cached docker build                                                              | ❌  Coming prob never |
 | fix scrollbar in shares prompt                                                   | ❌  Coming prob never |
 | fix 401 in locked folders in shares                                              | ❌  Coming prob never |
-      
+| upload in locked folders, speed it up                                            | ❌  Coming prob never |
+
 
 
 # How it works

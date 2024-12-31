@@ -48,10 +48,6 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["showHover"]),
       async fetchData(folder) {
-         //todo known bug that causes lack of state in move/file list:
-         //when new prompt is displayed like folder password or new dir
-         //the previous one is destroyed causing it to go back to initial state
-
          let res = await getDirs(folder.id)
 
          let dirs = res.children
