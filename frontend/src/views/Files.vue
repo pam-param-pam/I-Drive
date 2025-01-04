@@ -240,8 +240,7 @@ export default {
             }
          }
          if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
-            folderContextId = el.__vue__.item.id
-
+            folderContextId = el.dataset.id
          }
          let files = await scanDataTransfer(dt)
 

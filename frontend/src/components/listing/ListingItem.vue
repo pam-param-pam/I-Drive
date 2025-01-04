@@ -14,6 +14,7 @@
       :data-dir="item.isDir"
       :data-type="type"
       :aria-label="item.name"
+      :data-id="item.id"
       :aria-selected="isSelected"
     >
 
