@@ -62,6 +62,9 @@ app.directive("focus", {
    mounted: async (el) => {
       setTimeout(() => {
          el.focus()
+         //for inputs
+         let pos = el.value.lastIndexOf('.');
+         el.setSelectionRange(pos, pos)
       }, 50)
    }
 })

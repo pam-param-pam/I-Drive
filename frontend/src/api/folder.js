@@ -41,7 +41,8 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
    }
    let data = {"new_password": password}
    let response = await backend_instance.post(url, data, {
-      headers: headers
+      headers: headers,
+      __manage469: false,
    })
    return response.data
 

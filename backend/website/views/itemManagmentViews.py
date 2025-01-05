@@ -286,8 +286,12 @@ def rename(request):
     item.name = new_name
     item.save()
 
-    send_event(request.user.id, EventCode.ITEM_NAME_CHANGE, request.request_id,
-               [{'parent_id': item.parent.id, 'id': item.id, 'new_name': new_name}])
+    if isinstance(item, File):
+        data = create_file_dict(item)
+    else:
+        data = create_folder_dict(item)
+
+    send_event(request.user.id, EventCode.ITEM_UPDATE, request.request_id, data)
     return HttpResponse(status=204)
 
 

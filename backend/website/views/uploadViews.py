@@ -231,7 +231,7 @@ def create_thumbnail(request):
         attachment_id = thumbnail['attachment_id']
         size = thumbnail['size']
         iv = thumbnail.get('iv')
-        # key = thumbnail.get('key')
+        # key = thumbnail.get('key') todo
 
         file_obj = get_file(file_id)
 
@@ -259,5 +259,7 @@ def create_thumbnail(request):
             iv=iv,
         )
         thumbnail_obj.save()
+
+        send_event(request.user.id, EventCode.ITEM_UPDATE, request.request_id, create_file_dict(file_obj))
 
     return HttpResponse(status=204)

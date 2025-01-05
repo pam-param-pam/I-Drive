@@ -137,7 +137,7 @@ def get_preview(request, file_obj: File):
                      "model_name": preview.model_name,
                      "aperture": preview.aperture, "exposure_time": preview.exposure_time,
                      "focal_length": preview.focal_length}
-        send_event(file_obj.owner.id, EventCode.ITEM_PREVIEW_INFO_ADD, request.request_id, [file_dict])
+        send_event(file_obj.owner.id, EventCode.ITEM_UPDATE, request.request_id, [file_dict])
 
     except IntegrityError:
         pass

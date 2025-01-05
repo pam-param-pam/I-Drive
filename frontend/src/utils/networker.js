@@ -142,7 +142,7 @@ backend_instance.interceptors.response.use(
       config.__retryCount++
 
       // Check if the error is 469 INCORRECT OR MISSING FOLDER PASSWORD
-      if (response && response.status === 469) {
+      if (response && response.status === 469 && (config.__manage469 === true || config.__manage469 === undefined)) {
 
          //Reset cached passwords in case we have outdated cached ones to not end up in an infinite loop
          if (config.__469Retried) {

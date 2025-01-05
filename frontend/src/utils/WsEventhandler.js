@@ -29,11 +29,11 @@ export default function onEvent(message) {
       }
 
    }
-   if (jsonObject.op_code === 3) { // items name change event
-      for (let item of jsonObject.data) {
-         if (item.parent_id !== currentFolder?.id) return
-         store.renameItem({id: item.id, newName: item.new_name})
-      }
+   if (jsonObject.op_code === 3) { // item updated event
+      let item = jsonObject.data
+      if (item.parent_id !== currentFolder?.id) return
+      store.updateItem(item)
+
    }
 
    if (jsonObject.op_code === 5) { // items moved event
@@ -50,17 +50,6 @@ export default function onEvent(message) {
          }
       }
    }
-   if (jsonObject.op_code === 6) { // items preview info add event
-      for (let item of jsonObject.data) {
-         if (item.parent_id !== currentFolder?.id) return
-         store.updatePreviewInfo(
-            {
-               id: item.id, iso: item.iso,
-               model_name: item.model_name, exposure_time: item.exposure_time,
-               aperture: item.aperture, focal_length: item.focal_length
-            })
-      }
-   }
    if (jsonObject.op_code === 7) { // force folder navigation from server
       let id = jsonObject.data.folder_id
       this.$router.push({name: `Files`, params: {"folderId": id}})
@@ -68,15 +57,10 @@ export default function onEvent(message) {
    }
 
    if (jsonObject.op_code === 8) { // folder lock status change
-      console.log(1111)
       for (let item of jsonObject.data) {
-         console.log(2222)
 
          if (item.parent_id !== currentFolder?.id) return
-         console.log(3333)
-
          store.changeLockStatusAndPasswordCache({folderId: item.id, newLockStatus: item.isLocked, lockFrom: item.lockFrom})
-         console.log(4444)
 
       }
 
@@ -85,7 +69,6 @@ export default function onEvent(message) {
    if (jsonObject.op_code === 9) { // items move to trash event
       // current view is 'Files'
       if (currentFolder) {
-         console.log(JSON.stringify(jsonObject.data))
          for (let item of jsonObject.data) {
 
             let updatedItems = store.items.filter(ListItem => ListItem.id !== item.id)

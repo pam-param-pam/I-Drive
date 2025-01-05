@@ -188,20 +188,20 @@ export const useMainStore = defineStore("main", {
          this.items.push(value)
       },
 
-      renameItem({ id, newName }) {
-         const index1 = this.items.findIndex(item => item.id === id)
-         const index2 = this.selected.findIndex(item => item.id === id)
+      updateItem(newItem) {
+         let index1 = this.items.findIndex(item => item.id === newItem.id)
+         let index2 = this.selected.findIndex(item => item.id === newItem.id)
 
          if (index1 !== -1) {
-            this.items[index1].name = newName
+            this.items[index1]= newItem
          }
          if (index2 !== -1) {
-            this.selected[index2].name = newName
+            this.selected[index2] = newItem
          }
       },
       changeLockStatusAndPasswordCache({ folderId, newLockStatus, lockFrom }) {
-         const index1 = this.items.findIndex(item => item.id === folderId)
-         const index2 = this.selected.findIndex(item => item.id === folderId)
+         let index1 = this.items.findIndex(item => item.id === folderId)
+         let index2 = this.selected.findIndex(item => item.id === folderId)
 
          if (index1 !== -1) {
             this.items[index1].isLocked = newLockStatus
@@ -210,8 +210,7 @@ export const useMainStore = defineStore("main", {
          }
          if (index2 !== -1) {
             this.selected[index2].isLocked = newLockStatus
-            this.items[index2].isLocked = newLockStatus
-            this.items[index2].lockFrom = lockFrom
+            this.selected[index2].lockFrom = lockFrom
 
 
          }

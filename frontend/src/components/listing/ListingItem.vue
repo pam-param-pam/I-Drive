@@ -204,7 +204,7 @@ export default {
          // then add current item to selected if it wasn't previously selected
          if (!event.ctrlKey && !event.shiftKey && this.selected.length > 0) {
             let shouldAdd = (!this.isSelected || this.selected.length >= this.items.length) && this.items.length > 1
-            this.selected = []
+            this.resetSelected()
             this.resetSelected()
             if (shouldAdd) {
                this.addSelected(this.item)
