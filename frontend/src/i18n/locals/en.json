@@ -18,6 +18,7 @@
     "lockFolder": "Lock folder",
     "more": "More",
     "move": "Move",
+    "copyFileShareUrl": "Copy URL",
     "moveFile": "Move file",
     "moveToTrash": "Move to Trash",
     "new": "New",
@@ -267,6 +268,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "linkCopied": "Link copied!",
     "locating": "Locating item...",
     "uploadNotAllowedHere": "Upload is not allowed here",
     "PreparingUpload": "Started proccesing files for upload...",

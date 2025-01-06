@@ -237,16 +237,15 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
     if isinstance(resource_in_share, Folder):
         resource_dict = create_folder_dict(resource_in_share)
     else:
-        signed_id = sign_resource_id_with_expiry(resource_in_share.id)
         resource_dict = create_file_dict(resource_in_share, hide=True)
-        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{signed_id}"
+        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{resource_in_share.id}"
         thumbnail = Thumbnail.objects.filter(file=resource_in_share)
 
         if thumbnail.exists():
-            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{signed_id}"
+            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{resource_in_share.id}"
         if resource_in_share.extension in (
                 '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{signed_id}"
+            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{resource_in_share.id}"
 
     return hide_info_in_share_context(share, resource_dict)
 

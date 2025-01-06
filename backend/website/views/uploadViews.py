@@ -213,7 +213,7 @@ def create_file(request):
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-# @handle_common_errors
+@handle_common_errors
 def create_thumbnail(request):
     thumbnails = request.data['thumbnails']
     if not isinstance(thumbnails, list):
@@ -235,7 +235,7 @@ def create_thumbnail(request):
 
         file_obj = get_file(file_id)
 
-        if file_obj.is_encrypted() and (not iv): # or not key
+        if file_obj.is_encrypted() and (not iv):  # or not key
             raise BadRequestError("Encryption key and iv not provided")
 
         if iv:

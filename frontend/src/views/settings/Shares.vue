@@ -86,12 +86,10 @@ export default {
       this.setLoading(true)
       try {
          this.shares = await getAllShares()
-      }
-      catch (error) {
+      } catch (error) {
          console.error(error)
          this.setError(error)
-      }
-      finally {
+      } finally {
          this.setLoading(false)
       }
 
@@ -100,7 +98,7 @@ export default {
    mounted() {
       this.clip = new Clipboard(".copy-clipboard")
       this.clip.on("success", () => {
-         this.$toast.success(this.$t("success.linkCopied"))
+         this.$toast.success(this.$t("toasts.linkCopied"))
       })
    },
 
@@ -136,7 +134,8 @@ export default {
       },
 
       buildLink(share) {
-         return "/share/" + share.token
+         let route = this.$router.resolve({ name: "Share", params: { "token": share.token } })
+         return new URL(route.href, window.location.origin).href
       }
    }
 }

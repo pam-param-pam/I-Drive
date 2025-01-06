@@ -47,9 +47,9 @@ urlpatterns = [
     path("share/delete", delete_share, name="delete share"),
     path("share/create", create_share, name="create share"),
     path("share/zip/<token>", create_share_zip_model, name="create zip for share"),
-    path("share/stream/<token>/<signed_file_id>", share_view_stream, name="view share file stream"),
-    path("share/thumbnail/<token>/<signed_file_id>", share_view_thumbnail, name="view share file thumbnail"),
-    path("share/preview/<token>/<signed_file_id>", share_view_preview, name="view share file preview"),
+    path("share/stream/<token>/<file_id>", share_view_stream, name="view share file stream"),
+    path("share/thumbnail/<token>/<file_id>", share_view_thumbnail, name="view share file thumbnail"),
+    path("share/preview/<token>/<file_id>", share_view_preview, name="view share file preview"),
 
     re_path(r'^share/(?P<token>[^/]+)(/(?P<folder_id>[^/]+))?$', view_share, name='view_share'),
 

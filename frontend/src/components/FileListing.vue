@@ -305,7 +305,12 @@
           :label="$t('buttons.lockFolder')"
           show="editFolderPassword"
         />
-
+        <action
+          v-if="headerButtons.copyShare"
+          icon="content_copy"
+          :label="$t('buttons.copyFileShareUrl')"
+          @action="$emit('copyFileShareUrl')"
+        />
       </context-menu>
 
     </template>
@@ -344,7 +349,7 @@ export default {
       readonly: Boolean,
       headerButtons: {}
    },
-   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download", "openInNewWindow"],
+   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download", "openInNewWindow", "copyFileShareUrl"],
 
    data() {
       return {

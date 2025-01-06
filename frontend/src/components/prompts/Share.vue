@@ -142,7 +142,7 @@ export default {
    async mounted() {
       this.clip = new Clipboard(".copy-clipboard")
       this.clip.on("success", () => {
-         this.$toast.success(this.$t("success.linkCopied"))
+         this.$toast.success(this.$t("toasts.linkCopied"))
       })
       await this.fetchShares()
 

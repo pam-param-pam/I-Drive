@@ -19,7 +19,7 @@
     @onOpen="onOpen"
     @download="download"
     @openInNewWindow="openInNewWindow"
-
+    @copyFileShareUrl="copyFileShareUrl"
   ></FileListing>
 
 </template>
@@ -69,9 +69,11 @@ export default {
          return {
             download: this.selectedCount > 0,
             info: this.selectedCount > 0,
-            openInNewWindow: true
+            openInNewWindow: true,
+            copyShare: this.selectedCount === 1,
          }
       },
+
 
    },
    created() {
@@ -124,7 +126,11 @@ export default {
          let route = this.getNewRoute(item)
          this.$router.push(route)
       },
-
+      copyFileShareUrl() {
+         let url = this.selected[0].download_url + "?inline=True"
+         this.$toast.success(this.$t("toasts.linkCopied"))
+         navigator.clipboard.writeText(url);
+      },
       async fetchShare() {
          this.setLoading(true)
          try {
@@ -151,7 +157,6 @@ export default {
 
 
       },
-
       humanExpiry(date) {
          //todo czm globalny local nie działa?
          let locale = this.settings?.locale || "en"
@@ -162,6 +167,7 @@ export default {
          return moment(date, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
 
       }
+
 
    }
 }

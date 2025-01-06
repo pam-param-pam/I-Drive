@@ -17,6 +17,7 @@
     "locate": "Znajdź",
     "lockFolder": "Zablokuj folder",
     "more": "Więcej",
+    "copyFileShareUrl": "Skopiuj link",
     "move": "Przenieś",
     "moveFile": "Przenieś plik",
     "moveToTrash": "Przenieś do kosza",
@@ -266,7 +267,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
-
+    "linkCopied": "Link skopiowany!",
     "locating": "Lokalizowanie...",
     "uploadNotAllowedHere": "Nie można tutaj przesyłac plików",
     "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
