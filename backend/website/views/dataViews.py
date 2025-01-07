@@ -212,7 +212,7 @@ def get_trash(request):
 
     trash_items = []
     for file in files:
-        file_dict = create_file_dict(file, hide=True)
+        file_dict = create_file_dict(file)
         trash_items.append(file_dict)
 
     for folder in folders:

@@ -761,6 +761,7 @@ export default {
 
 .scroller {
  background-color: var(--background);
+ padding-bottom: 2em;
 }
 
 .pulse-animation {

@@ -157,7 +157,9 @@
     padding-left: 0.75em;
     max-height: 100%
   }
-
+  .scroller {
+    padding-bottom: 0.5em !important;
+  }
 }
 
 @media (max-width: 450px) {
@@ -166,5 +168,8 @@
   }
   #listing.list .item .name {
     width: 100%;
+  }
+  .scroller {
+    padding-bottom: 0.5em !important;
   }
 }

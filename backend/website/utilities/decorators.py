@@ -39,7 +39,7 @@ def check_file(view_func):
     def wrapper(request, file_id, *args, **kwargs):
 
         file_obj = get_file(file_id)
-        check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+        check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False)
 
         if file_obj.inTrash and file_obj.is_locked:
             raise ResourcePermissionError("Cannot access resource in trash!")

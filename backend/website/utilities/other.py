@@ -147,7 +147,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
     except Preview.DoesNotExist:
         pass
 
-    if not hide:
+    if not hide and not (file_obj.is_locked and file_obj.inTrash):
         signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
         if file_obj.extension in (
