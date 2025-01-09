@@ -134,7 +134,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt"]),
+      ...mapState(useMainStore, ["user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading"]),
       active() {
          return this.currentPrompt?.prompt === "sidebar"
       },

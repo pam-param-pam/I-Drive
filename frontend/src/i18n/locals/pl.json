@@ -44,6 +44,7 @@
     "upload": "Prześlij"
   },
   "errors": {
+    "retry": "Spróbuj ponownie",
     "unknownError": "Wystąpił nieznany błąd. Kod: {code}, Odpowiedż: {response}",
     "unauthenticated": "Użytkownik nieuwierzytelniony",
     "badRequest": "Niepoprawne żądanie.",

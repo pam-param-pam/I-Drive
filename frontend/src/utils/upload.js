@@ -6,6 +6,7 @@ import { attachmentType, discordFileName, uploadStatus } from "@/utils/constants
 import { detectExtension, detectType, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discord_instance } from "@/utils/networker.js"
+import { v4 as uuidv4 } from "uuid"
 
 
 export async function* prepareRequests() {
@@ -91,7 +92,7 @@ export async function* prepareRequests() {
    }
    //we need to handle the already created attachments after break
    if (attachments.length > 0) {
-      let request = { "totalSize": totalSize, "attachments": attachments }
+      let request = { "totalSize": totalSize, "attachments": attachments, "id": uuidv4() }
       yield request
    }
 
@@ -155,7 +156,7 @@ export async function uploadRequest(request, preUploadRequestDone) {
    let uploadStore = useUploadStore()
    let mainStore = useMainStore()
 
-   if (!preUploadRequestDone) request = await preUploadRequest(request)
+   // if (!preUploadRequestDone) request = await preUploadRequest(request)
 
    let abortController = new AbortController()
 

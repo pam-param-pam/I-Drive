@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Union, List, Dict
+from urllib.parse import unquote
 
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
@@ -350,6 +351,8 @@ def check_resource_perms(request, resource: Resource, checkOwnership=True, check
 
 def check_folder_password(request, resource: Resource) -> None:
     password = request.headers.get("X-Resource-Password")
+    if password:
+        password = unquote(password)
     passwords = request.data.get('resourcePasswords')
     if resource.is_locked:
         if password:

@@ -133,7 +133,6 @@ export const useUploadStore = defineStore("upload2", {
          console.log(request)
          console.log(request.totalSize)
 
-         request.id = uuidv4()
 
          let doPreUploadRequestNow = request.attachments?.some(
             attachment => attachment.type === attachmentType.chunked
@@ -141,9 +140,11 @@ export const useUploadStore = defineStore("upload2", {
 
          console.log("doPreUploadRequestNow")
          console.log(doPreUploadRequestNow)
-         if (doPreUploadRequestNow) request = await preUploadRequest(request)
+         request = await preUploadRequest(request)
 
-         uploadRequest(request, doPreUploadRequestNow) //todo else do it in here
+         // if (doPreUploadRequestNow) request = await preUploadRequest(request) // TODO this is causing network races in async with folder creation
+
+         uploadRequest(request, false) //todo else do it in here
 
          this.processUploads()
 

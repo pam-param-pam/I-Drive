@@ -18,7 +18,7 @@ admin.site.register(VideoPosition)
 
 @admin.register(Fragment)
 class FragmentAdmin(admin.ModelAdmin):
-    # readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
+    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
@@ -45,12 +45,17 @@ class FragmentAdmin(admin.ModelAdmin):
             return file_name
         return "*File name to long to display*"
 
+    owner.admin_order_field = "file__owner__username"
+    folder.admin_order_field = "file__parent__name"
+    readable_size.admin_order_field = "size"
+    file_name.admin_order_field = "file__name"
+
 
 @admin.register(Folder)
 class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
-    list_display = ["name", "owner", "ready", "created_at", "inTrash", "_is_locked"]
+    list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model']
     search_fields = ["id", "name"]
 
@@ -93,13 +98,18 @@ class FolderAdmin(admin.ModelAdmin):
         cache.delete(obj.parent.id)
         super().save_model(request, obj, form, change)
 
+    def is_locked(self, obj: File):
+        return obj._is_locked()
+
+    is_locked.admin_order_field = 'password'
+    is_locked.boolean = True
 
 @admin.register(File)
 class FileAdmin(admin.ModelAdmin):
-    readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'streamable', 'ready', "created_at", "size", "media_tag")
+    readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'streamable', 'ready', "created_at", "readable_size", "media_tag")
     ordering = ["-created_at"]
     list_display = ["name", "parent", "readable_size", "owner", "ready",  "created_at",
-                    "inTrash", "_is_locked"]
+                    "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
     search_fields = ["name"]
 
@@ -195,7 +205,14 @@ class FileAdmin(admin.ModelAdmin):
     def readable_size(self, obj: File):
         return filesizeformat(obj.size)
 
-    readable_size.short_description = 'SIZE'
+    readable_size.short_description = 'Size'
+    readable_size.admin_order_field = 'size'
+
+    def is_locked(self, obj: File):
+        return obj._is_locked()
+
+    is_locked.admin_order_field = 'password'
+    is_locked.boolean = True
 
     def save_model(self, request, obj: File, form: ModelForm, change: bool):
         super().save_model(request, obj, form, change)

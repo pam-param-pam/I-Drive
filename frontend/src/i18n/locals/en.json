@@ -45,6 +45,7 @@
     "upload": "Upload"
   },
   "errors": {
+    "retry": "Try again",
     "unknownError": "Unknown error has occurred. Status code: {code}, response: {response}",
     "unauthenticated": "Unauthenticated",
     "badRequest": "Bad Request",

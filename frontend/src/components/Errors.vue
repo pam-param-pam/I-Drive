@@ -4,6 +4,9 @@
       <i class="material-icons">{{ info.icon }}</i>
       <span>{{ $t(info.message, {"code": errorCode, "response": error?.response?.data}) }}</span>
     </h2>
+    <button @click="retry" class="message retry-button">
+      {{ $t('errors.retry') }}
+    </button>
   </div>
 </template>
 
@@ -55,3 +58,20 @@ export default {
    },
 }
 </script>
+<style scoped>
+
+
+.retry-button {
+ margin-top: 10px;
+ padding: 8px 16px;
+ font-size: 14px;
+ color: var(--background);
+ background-color: transparent;
+ border: 1px solid #007bff;
+ cursor: pointer;
+}
+
+.retry-button:hover {
+ background-color: rgba(0, 123, 255, 0.1);
+}
+</style>

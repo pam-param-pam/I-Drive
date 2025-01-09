@@ -41,26 +41,28 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Virtual list                                              | ✅       |
 
 
-| TODO List                                                                        | Status               |
-|----------------------------------------------------------------------------------|----------------------|
-| Error handling in upload process                                                 | ⚠️  Only partial     |
-| Proper handling of 429                                                           | ❌  Coming one day    |
-| Proper frontend networking & handling of errors                                  | ❌  Coming one day    |
-| Stop, pause, abort uploads                                                       | ❌  Coming one day    |
-| Where should iv and keys be generated?                                           | ❌  Coming one day    |
-| Fix are u sure dialog being skipped after folder password input                  | ❌  Coming one day    |
-| Auto scroll when dragging                                                        | ❌  Coming one day    |
-| celery + Unable to process this request at the moment                            | ❌  Coming one day    |
-| Virtual list view                                                                | ❌  Coming prob never |
-| Editor support for large files                                                   | ❌  Coming prob never |
-| fix __prependStaticUrl                                                           | ❌  Coming prob never |
-| possible denial of service by infinite recursive folder fetch malformed parents  | ❌  Coming prob never |
-| fix folder upload getting doubled cuz race conditions                            | ❌  Coming prob never |
-| fix enable-scroll                                                                | ❌  Coming prob never |
-| cached docker build                                                              | ❌  Coming prob never |
-| fix scrollbar in shares prompt                                                   | ❌  Coming prob never |
-| fix 401 in locked folders in shares                                              | ❌  Coming prob never |
-| upload in locked folders, speed it up                                            | ❌  Coming prob never |
+| TODO List                                                                       | Status               |
+|---------------------------------------------------------------------------------|----------------------|
+| Error handling in upload process                                                | ⚠️  Only partial     |
+| Proper handling of 429                                                          | ❌  Coming one day    |
+| Proper frontend networking & handling of errors                                 | ❌  Coming one day    |
+| Stop, pause, abort uploads                                                      | ❌  Coming one day    |
+| Where should iv and keys be generated?                                          | ❌  Coming one day    |
+| Fix are u sure dialog being skipped after folder password input                 | ❌  Coming one day    |
+| Auto scroll when dragging                                                       | ❌  Coming one day    |
+| celery + Unable to process this request at the moment                           | ❌  Coming one day    |
+| Virtual list view                                                               | ❌  Coming prob never |
+| Editor support for large files                                                  | ❌  Coming prob never |
+| fix __prependStaticUrl                                                          | ❌  Coming prob never |
+| possible denial of service by infinite recursive folder fetch malformed parents | ❌  Coming prob never |
+| fix folder upload getting doubled cuz race conditions                           | ❌  Coming prob never |
+| fix enable-scroll                                                               | ❌  Coming prob never |
+| cached docker build                                                             | ❌  Coming prob never |
+| fix scrollbar in shares prompt                                                  | ❌  Coming prob never |
+| fix 401 in locked folders in shares                                             | ❌  Coming prob never |
+| upload in locked folders, speed it up                                           | ❌  Coming prob never |
+| fix upload, add multiple files in 1 attachment support                          | ❌  Coming prob never |
+| fix teleporting back to top after move                                          | ❌  Coming prob never |
 
 
 
