@@ -39,6 +39,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Drag and drop support                                     | ✅       |
 | Dark theme                                                | ✅       |
 | Virtual list                                              | ✅       |
+| File tags                                                 | ✅       |
 
 
 | TODO List                                                                       | Status               |
@@ -56,7 +57,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | fix __prependStaticUrl                                                          | ❌  Coming prob never |
 | possible denial of service by infinite recursive folder fetch malformed parents | ❌  Coming prob never |
 | fix folder upload getting doubled cuz race conditions                           | ❌  Coming prob never |
-| fix enable-scroll                                                               | ❌  Coming prob never |
+| fix enable-scroll css cuz it's cursed                                           | ❌  Coming prob never |
 | cached docker build                                                             | ❌  Coming prob never |
 | fix scrollbar in shares prompt                                                  | ❌  Coming prob never |
 | fix 401 in locked folders in shares                                             | ❌  Coming prob never |

@@ -380,6 +380,12 @@ def add_tag(request):
     if not tag_name:
         raise BadRequestError("Tag cannot be empty")
 
+    if " " in tag_name:
+        raise BadRequestError("Tag cannot contain spaces")
+
+    if len(tag_name) > 15:
+        raise BadRequestError("Tag length cannot be > 15")
+
     file_obj = get_file(file_id)
     check_resource_perms(request, file_obj)
 

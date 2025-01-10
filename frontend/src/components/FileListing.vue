@@ -508,70 +508,10 @@ export default {
 
       ...mapActions(useMainStore, ["setLastItem", "toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
-      calculateGridLayoutWrapper() {
-         let element = document.getElementById("filesScroller")
-         if (!element) return
-         let width = element.clientWidth
-         if (!isMobile()) width -= 5
-         this.calculateGridLayout(width)
-      },
-      calculateGridLayout(containerWidth) {
-         if (this.viewMode !== "grid") return
-
-         let maxTileWidth = 225
-         if (isMobile()) {
-            maxTileWidth -= 50
-         }
-         // Calculate the maximum number of tiles that can fit using the minimum width
-         let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
-         // if (numberOfTiles === 1) numberOfTiles = 2
-
-         // Calculate the actual width of each tile
-         let tileWidth = containerWidth / numberOfTiles
-
-         this.numberOfTiles = numberOfTiles
-
-         if (this.settings.viewMode === "width grid") {
-            this.tileWidth = tileWidth
-            this.tileHeight = tileWidth * 0.75
-         } else {
-            this.tileWidth = tileWidth
-            this.tileHeight = tileWidth * 1.5
-         }
-
-         this.imageHeight = this.tileHeight - 65
-         if (isMobile()) this.imageHeight += 20
-
-      },
       async uploadInput(event) {
          this.$emit("uploadInput", event)
       },
-      scrollToLastItem() {
-         if (!this.lastItem) return
-
-         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
-         let filesScroller = this.$refs.filesScroller
-         let lastItemId = this.lastItem.id
-
-         setTimeout(() => {
-            filesScroller.scrollToItem(index)
-
-            setTimeout(() => {
-               let itemElement = this.$refs[lastItemId]
-               if (itemElement) {
-                  itemElement.$el.classList.add("pulse-animation")
-
-                  // Remove the animation class after 5 seconds
-                  setTimeout(() => {
-                     itemElement.$el.classList.remove("pulse-animation")
-                  }, 3500) // 5 seconds
-               }
-            }, 100);
-
-         }, 50)
-      },
       showContextMenu(event, item) {
-         console.log("AAAAAAAAAA")
          this.resetSelected()
          this.addSelected(item)
 
@@ -581,11 +521,9 @@ export default {
          let posX = event.clientX + 30
          let posY = event.clientY - 40
 
-         // Get the viewport dimensions
          const viewportWidth = window.innerWidth
          const viewportHeight = window.innerHeight
 
-         // Check if the coordinates + 200px are outside the visible area
          if ((posX + max_x_size) > viewportWidth) {
             posX = viewportWidth - max_x_size
          }
@@ -601,10 +539,8 @@ export default {
 
          console.log(this.contextMenuPos)
          this.isContextMenuVisible = true
-         console.log(1111111)
       },
       hideContextMenu() {
-         console.log(2222)
          this.isContextMenuVisible = false
       },
       keyEvent(event) {
@@ -618,7 +554,6 @@ export default {
             // Reset files selection.
             this.resetSelected()
             this.hideContextMenu()
-
          }
 
          // Del!
@@ -658,15 +593,15 @@ export default {
          }
       },
 
-
       dragEnter() {
          this.$emit("dragEnter")
       },
+
       dragLeave() {
          this.$emit("dragLeave")
       },
+
       preventDefault(event) {
-         // Wrapper around prevent default.
          event.preventDefault()
       },
 
@@ -697,6 +632,7 @@ export default {
          //    window.scrollBy({ "top": scrollSpeed, behavior: "smooth" })
          // }
       },
+
       async sort(by) {
          let asc = false
 
@@ -721,9 +657,7 @@ export default {
 
       },
 
-
       async locateItem() {
-
          this.$emit("onSearchClosed")
          let message = this.$t("toasts.locating")
          this.$toast.info(message)
@@ -731,7 +665,7 @@ export default {
          let item = this.selected[0]
          let parent_id = item.parent_id
 
-         this.$refs.search.exit()
+         await this.$refs.search.exit()
 
          this.setLastItem(item)
          await this.$router.push({ name: "Settings"})
@@ -739,6 +673,7 @@ export default {
 
          this.hideContextMenu()
       },
+
       async switchView() {
          let modes = {
             "list": "width grid",
@@ -755,12 +690,70 @@ export default {
          if (this.isLogged) {
             await updateSettings(data)
          }
+      },
 
-      }
+      calculateGridLayoutWrapper() {
+         let element = document.getElementById("filesScroller")
+         if (!element) return
+         let width = element.clientWidth
+         if (!isMobile()) width -= 5
+         this.calculateGridLayout(width)
+      },
 
+      calculateGridLayout(containerWidth) {
+         if (this.viewMode !== "grid") return
+
+         let maxTileWidth = 225
+         if (isMobile()) {
+            maxTileWidth -= 50
+         }
+         // Calculate the maximum number of tiles that can fit using the minimum width
+         let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
+         // if (numberOfTiles === 1) numberOfTiles = 2
+
+         // Calculate the actual width of each tile
+         let tileWidth = containerWidth / numberOfTiles
+
+         this.numberOfTiles = numberOfTiles
+
+         if (this.settings.viewMode === "width grid") {
+            this.tileWidth = tileWidth
+            this.tileHeight = tileWidth * 0.75
+         } else {
+            this.tileWidth = tileWidth
+            this.tileHeight = tileWidth * 1.5
+         }
+
+         this.imageHeight = this.tileHeight - 65
+         if (isMobile()) this.imageHeight += 20
+
+      },
+
+      scrollToLastItem() {
+         if (!this.lastItem) return
+
+         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
+         let filesScroller = this.$refs.filesScroller
+         let lastItemId = this.lastItem.id
+
+         setTimeout(() => {
+            filesScroller.scrollToItem(index)
+
+            setTimeout(() => {
+               let itemElement = this.$refs[lastItemId]
+               if (itemElement) {
+                  itemElement.$el.classList.add("pulse-animation")
+
+                  // Remove the animation class after 5 seconds
+                  setTimeout(() => {
+                     itemElement.$el.classList.remove("pulse-animation")
+                  }, 3500) // 5 seconds
+               }
+            }, 100);
+
+         }, 50)
+      },
    }
-
-
 }
 </script>
 <style scoped>

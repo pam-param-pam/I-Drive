@@ -35,7 +35,7 @@
           class="input input--block"
           v-focus
           type="text"
-          v-model.trim="tagName"
+          v-model="tagName"
           :placeholder="$t('prompts.enterTagName')"
         />
       </div>
@@ -93,7 +93,14 @@ export default {
       ...mapState(useMainStore, ["selected"])
 
    },
-
+   watch: {
+      tagName(newVal) {
+         console.log(newVal)
+         if (newVal.includes(" ")) {
+            this.submit()
+         }
+      }
+   },
    methods: {
       ...mapActions(useMainStore, ["closeHover", "resetSelected", "updateItem"]),
 
@@ -101,12 +108,12 @@ export default {
          if (this.tagName === "") {
             this.closeHover()
          }
-
-         await addTag({ "tag_name": this.tagName, "file_id": this.selected[0].id })
-         let file = this.selected[0]
-         file.tags = [...file.tags, this.tagName];
-
+         let tagName = this.tagName.trim()
          this.tagName = ""
+
+         await addTag({ "tag_name": tagName, "file_id": this.selected[0].id })
+         let file = this.selected[0]
+         file.tags = [...file.tags, tagName];
 
          this.updateItem(file)
       },
@@ -159,8 +166,8 @@ export default {
  font-size: 10px;
 }
 .remove-tag-button i {
- padding-bottom: 0 !important;
- padding-top: 4px !important;
+ padding-bottom: 0;
+ padding-top: 4px;
 }
 .tag-icon {
  font-size: 16px;
