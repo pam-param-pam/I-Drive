@@ -17,6 +17,13 @@
             @action="locateItem"
           />
           <action
+            v-if="headerButtons.tag"
+            id="tag"
+            icon="sell"
+            :label="$t('buttons.editTags')"
+            show="EditTags"
+          />
+          <action
             v-if="headerButtons.share"
             icon="share"
             :label="$t('buttons.share')"
@@ -28,7 +35,6 @@
             :label="$t('buttons.rename')"
             show="rename"
           />
-
           <action
             v-if="headerButtons.move"
             id="move-button"
@@ -56,6 +62,7 @@
             :label="$t('buttons.delete')"
             show="delete"
           />
+
 
         </template>
         <action
@@ -310,6 +317,13 @@
           icon="content_copy"
           :label="$t('buttons.copyFileShareUrl')"
           @action="$emit('copyFileShareUrl')"
+        />
+        <action
+          v-if="headerButtons.tag"
+          id="tag"
+          icon="sell"
+          :label="$t('buttons.editTags')"
+          show="EditTags"
         />
       </context-menu>
 

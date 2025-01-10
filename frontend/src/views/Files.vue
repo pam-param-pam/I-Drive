@@ -86,7 +86,8 @@ export default {
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
             locate: this.selectedCount === 1 && this.isSearchActive,
             search: true,
-            openInNewWindow: true
+            openInNewWindow: true,
+            tag: this.selectedCount === 1 && !this.selected[0].isDir,
          }
       }
    },
@@ -162,6 +163,9 @@ export default {
          }
          if (this.currentFolder.parent_id) { //only set title if its not root folder
             document.title = `${this.currentFolder.name} - ` + name
+         }
+         else {
+            document.title = name
          }
 
 

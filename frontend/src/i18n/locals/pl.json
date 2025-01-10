@@ -1,5 +1,9 @@
 {
   "buttons": {
+    "removeTag": "Usuń tag",
+    "addTag": "Dodaj tag",
+    "editTags": "Edytuj tagi",
+    "add": "Dodaj",
     "cancel": "Anuluj",
     "close": "Zamknij",
     "copyToClipboard": "Skopiuj do schowka",
@@ -123,6 +127,11 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "tags": "Tagi",
+    "enterTags": "Wpisz tagi, użyj spacji by je odzielić",
+    "enterTagName": "Wpisz nazwe tagu",
+    "editTags": "Edytuj tagi",
+    "editTagsDescription": "Dodaj lub usuń tagi",
     "accountPassword": "Hasło do konta",
     "all": "wszystkie",
     "aperture": "Przesłona",

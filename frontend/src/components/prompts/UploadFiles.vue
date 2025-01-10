@@ -17,7 +17,7 @@
           :aria-label="$t('uploadFile.abortAll')"
           :title="$t('uploadFile.abortAll')"
         >
-          <i class="material-icons">{{ "cancel" }}</i>
+          <i class="material-icons">cancel</i>
         </button>
         <button
           class="action"

@@ -11,6 +11,8 @@
 </template>
 
 <script>
+import router from "@/router/index.js"
+
 const errors = {
 
    0: {
@@ -46,7 +48,6 @@ const errors = {
 export default {
    name: "errors",
    props: ["error"],
-   methods: {},
 
    computed: {
       errorCode() {
@@ -56,6 +57,11 @@ export default {
          return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]
       },
    },
+   methods: {
+      retry() {
+         router.go(0)
+      }
+   }
 }
 </script>
 <style scoped>
@@ -67,7 +73,7 @@ export default {
  font-size: 14px;
  color: var(--background);
  background-color: transparent;
- border: 1px solid #007bff;
+ border: 1px solid var(--background);
  cursor: pointer;
 }
 

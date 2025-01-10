@@ -53,3 +53,17 @@ export async function updateVideoPosition(data) {
    return response.data
 
 }
+
+export async function addTag(data) {
+   let url = `/file/tag/add`
+   let response = await backend_instance.post(url, data)
+   return response.data
+
+}
+
+export async function removeTag(data) {
+   let url = `/file/tag/remove`
+   let response = await backend_instance.post(url, data)
+   return response.data
+
+}

@@ -4,20 +4,22 @@ from django.contrib import admin
 from django.db.models import QuerySet
 from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
+from django.urls import reverse
 from django.utils.html import format_html
+from simple_history.admin import SimpleHistoryAdmin
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
 from .utilities.other import sign_resource_id_with_expiry
 
-admin.site.register(UserSettings)
-admin.site.register(UserPerms)
+admin.site.register(UserSettings, SimpleHistoryAdmin)
+admin.site.register(UserPerms, SimpleHistoryAdmin)
 admin.site.register(VideoPosition)
 
 
 @admin.register(Fragment)
-class FragmentAdmin(admin.ModelAdmin):
+class FragmentAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
@@ -52,7 +54,7 @@ class FragmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(Folder)
-class FolderAdmin(admin.ModelAdmin):
+class FolderAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
@@ -105,13 +107,14 @@ class FolderAdmin(admin.ModelAdmin):
     is_locked.boolean = True
 
 @admin.register(File)
-class FileAdmin(admin.ModelAdmin):
+class FileAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'streamable', 'ready', "created_at", "readable_size", "media_tag")
     ordering = ["-created_at"]
     list_display = ["name", "parent", "readable_size", "owner", "ready",  "created_at",
                     "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
-    search_fields = ["name"]
+    search_fields = ["name", "id"]
+    filter_horizontal = ('tags',)
 
     def media_tag(self, obj: File):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
@@ -219,7 +222,7 @@ class FileAdmin(admin.ModelAdmin):
 
 
 @admin.register(Preview)
-class PreviewAdmin(admin.ModelAdmin):
+class PreviewAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
 
@@ -237,7 +240,7 @@ class PreviewAdmin(admin.ModelAdmin):
 
 
 @admin.register(Thumbnail)
-class ThumbnailAdmin(admin.ModelAdmin):
+class ThumbnailAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "created_at"]
     readonly_fields = ["thumbnail_media"]
@@ -280,3 +283,28 @@ class UserZIPAdmin(admin.ModelAdmin):
 @admin.register(AuditEntry)
 class AuditEntryAdmin(admin.ModelAdmin):
     list_display = ['action', 'user', 'ip', 'user_agent', 'datetime']
+
+
+@admin.register(Tag)
+class TagAdmin(SimpleHistoryAdmin):
+    list_display = ['name', 'owner', 'amount_of_files']
+    search_fields = ('name',)
+
+    readonly_fields = ('file_list', 'created_at')
+
+    def all_files(self, obj: Tag):
+        return obj.files.all()
+
+    def amount_of_files(self, obj: Tag):
+        return len(self.all_files(obj))
+
+    def file_list(self, obj: Tag):
+        files = self.all_files(obj)
+        if files:
+            # Create clickable links to the file's admin page
+            return format_html(
+                "<br>".join([format_html('<a href="{}">{}</a>', reverse('admin:%s_file_change' % file._meta.app_label, args=[file.id]), file.name) for file in files])
+            )
+        return "No files"
+
+    file_list.short_description = "Files"

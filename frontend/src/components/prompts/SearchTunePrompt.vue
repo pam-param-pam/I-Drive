@@ -55,6 +55,17 @@
           v-model.number="resultLimit"
         />
       </div>
+
+      <div>
+        <label>{{ $t("prompts.tags") }}</label>
+        <input
+          class="input input--block styled-input"
+          type="text"
+          v-model.trim="tags"
+          :placeholder="$t('prompts.enterTags')"
+        />
+      </div>
+
     </div>
 
     <div class="card-action">
@@ -94,6 +105,8 @@ export default {
          includeFolders: null,
          resultLimit: null,
          fileTypes: ["application", "audio", "document", "image", "video", "text"],
+         tags: null,
+
       }
    },
    computed: {
@@ -105,6 +118,7 @@ export default {
       this.includeFiles = this.searchFilters.files
       this.includeFolders = this.searchFilters.folders
       this.resultLimit = this.searchFilters.resultLimit || 25
+      this.tags = this.searchFilters.tags || ""
    },
    methods: {
       ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover"]),
@@ -121,7 +135,9 @@ export default {
             files: this.includeFiles,
             folders: this.includeFolders,
             resultLimit: this.resultLimit,
+            tags: this.tags
          }
+
          if (this.fileType !== null) searchFilterDict.type = this.fileType
          if (this.extension !== null) searchFilterDict.extension = this.extension
 

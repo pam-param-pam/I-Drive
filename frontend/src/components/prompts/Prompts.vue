@@ -35,6 +35,7 @@ import ResetFolderPassword from "@/components/prompts/ResetFolderPassword.vue"
 import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
 import Sidebar from "@/components/sidebar/Sidebar.vue"
+import EditTags from "@/components/prompts/EditTags.vue"
 
 export default {
    name: "prompts",
@@ -57,6 +58,7 @@ export default {
       SearchTunePrompt,
       NotOptimizedForSmallFiles,
       ResetFolderPassword,
+      EditTags,
    },
    created() {
       window.addEventListener("keydown", (event) => {

@@ -28,6 +28,7 @@ ALLOWED_HOSTS = ['*']  # todo
 
 # Application definition
 INSTALLED_APPS = [
+    'simple_history',
     'django.contrib.admin',
     'website',
     'corsheaders',
@@ -62,6 +63,7 @@ MIDDLEWARE = [
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 
 ]
 CORS_ALLOW_HEADERS = "*"

@@ -146,6 +146,9 @@ def search(request):
 
     lockFrom = request.GET.get('lockFrom', None)
     password = request.headers.get("X-resource-Password")
+
+    tags = request.GET.get('tags', None)
+
     if resultLimit > 500:
         raise BadRequestError("'showLimit' cannot be > 500")
 
@@ -163,11 +166,15 @@ def search(request):
     else:
         include_folders = True
 
+    if tags:
+        tags = [tag.strip() for tag in tags.split(" ")]
+
     # Start with a base queryset
     files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__lockFrom__isnull=True).order_by("-created_at")
     folders = Folder.objects.filter(owner_id=user.id, parent__lockFrom__isnull=True, inTrash=False, parent__isnull=False).order_by("-created_at")
-    if query is None and file_type is None and extension is None and not include_files and not include_folders:
-        raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension']")
+    if not (query or file_type or extension or tags or include_files or include_folders):
+        raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension', 'tags']")
+
     if query:
         if include_files:
             files = files.filter(name__icontains=query)
@@ -181,10 +188,20 @@ def search(request):
         if include_files:
             files = files.filter(extension="." + extension)
 
+    if tags:
+        if include_files:
+            files = files.filter(tags__name__in=tags, password=None).distinct()
+
+        folders = []
+
+
+
     # include locked files from "current" folder
     if lockFrom and password:
-        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password).order_by(
-            "-created_at")
+        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password, tags__name__in=tags).distinct().order_by("-created_at")
+
+
+        print(lockedFiles)
         files = list(chain(lockedFiles, files))
 
     files = files[:resultLimit]
@@ -195,6 +212,7 @@ def search(request):
         for folder in folders:
             folder_dict = create_folder_dict(folder)
             folder_dicts.append(folder_dict)
+
     if include_files:
         for file in files:
             file_dict = create_file_dict(file)

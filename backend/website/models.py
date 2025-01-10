@@ -2,7 +2,7 @@ import base64
 import secrets
 
 import shortuuid
-from django.contrib.auth import user_logged_out, user_logged_in, user_login_failed
+from django.contrib.auth import user_logged_out, user_logged_in
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -12,17 +12,28 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
+from simple_history.models import HistoricalRecords
 
 from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
 from .utilities.errors import BadRequestError
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return self.name
 
 
 class Folder(models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.TextField(max_length=255, null=False)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_modified_at = models.DateTimeField(auto_now_add=True)
     inTrash = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     inTrashSince = models.DateTimeField(null=True, blank=True)
@@ -30,6 +41,7 @@ class Folder(models.Model):
     autoLock = models.BooleanField(default=False)
     ready = models.BooleanField(default=True)
     lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -157,8 +169,8 @@ class File(models.Model):
     mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
     type = models.CharField(max_length=15, null=False, blank=False, default="text")
     inTrash = models.BooleanField(default=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    last_modified_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_modified_at = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files')
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -168,8 +180,10 @@ class File(models.Model):
     lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     key = models.BinaryField()
     iv = models.BinaryField(null=True)
-    webhook = models.TextField(null=False, blank=False)
+    webhook = models.TextField(null=False, blank=False)  # TODO implement webhook
     encryption_method = models.SmallIntegerField()
+    tags = models.ManyToManyField(Tag, blank=True, related_name='files')
+    history = HistoricalRecords()
 
     def _is_locked(self):
         if self.password:
@@ -291,6 +305,7 @@ class UserSettings(models.Model):
     encryption_method = models.SmallIntegerField(default=1)
     keep_creation_timestamp = models.BooleanField(default=False)
     theme = models.CharField(default="light", max_length=20)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.user.username + "'s settings"
@@ -318,6 +333,7 @@ class UserPerms(models.Model):
     settings_modify = models.BooleanField(default=True)
     change_password = models.BooleanField(default=True)
     reset_lock = models.BooleanField(default=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.user.username + "'s perms"
@@ -340,6 +356,7 @@ class Fragment(models.Model):
     size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     attachment_id = models.CharField(max_length=255, null=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return f"Fragment[file={self.file.name}, sequence={self.sequence}, owner={self.file.owner.username}"
@@ -387,6 +404,7 @@ class Thumbnail(models.Model):
     message_id = models.CharField(max_length=255)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.file.name
@@ -406,6 +424,7 @@ class Preview(models.Model):
     exposure_time = models.CharField(max_length=50, null=True)
     model_name = models.CharField(max_length=50, null=True)
     focal_length = models.CharField(max_length=50, null=True)
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.file.name
@@ -438,7 +457,7 @@ class UserZIP(models.Model):
 
 class VideoPosition(models.Model):
     file = models.OneToOneField(File, on_delete=models.CASCADE)
-    modified_at = models.DateTimeField(default=timezone.now)
+    modified_at = models.DateTimeField(auto_now_add=True)
     timestamp = models.IntegerField(default=0)
 
     def __str__(self):
@@ -448,12 +467,12 @@ class VideoPosition(models.Model):
 class AuditEntry(models.Model):
     action = models.CharField(max_length=64)
     ip = models.GenericIPAddressField(null=True)
-    datetime = models.DateTimeField(default=timezone.now)
+    datetime = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     user_agent = models.CharField(max_length=250)
 
     def __str__(self):
-        return '{0} - {1} - {2}'.format(self.action, self.user.username, self.ip)
+        return f'{self.action} - {self.user.username} - {self.ip}'
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):

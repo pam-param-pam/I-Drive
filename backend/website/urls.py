@@ -8,7 +8,7 @@ from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_secrets
 from .views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position
+    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
 from .views.testViews import get_folder_password
@@ -33,6 +33,9 @@ urlpatterns = [
     path("file/secrets/<file_id>", get_secrets, name="gets encryption key and iv"),
 
     path("file/video/position", update_video_position, name="update video position"),
+
+    path("file/tag/add", add_tag, name="add a tag"),
+    path("file/tag/remove", remove_tag, name="remove a tag"),
 
     path("auth/token/login", TokenCreateView.as_view(), name="login"),
     path("auth/register", register_user, name="register"),

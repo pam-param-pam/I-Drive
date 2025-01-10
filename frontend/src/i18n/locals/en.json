@@ -1,5 +1,9 @@
 {
   "buttons": {
+    "removeTag": "Remove tag",
+    "addTag": "Add tag",
+    "editTags": "Edit tags",
+    "add": "Add",
     "cancel": "Cancel",
     "close": "Close",
     "copyToClipboard": "Copy to clipboard",
@@ -124,6 +128,11 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "tags": "Tags",
+    "enterTags": "Enter tags, use spaces to separate them",
+    "enterTagName": "Enter tag's name",
+    "editTags": "Edit Tags",
+    "editTagsDescription": "Add or remove tags",
     "accountPassword": "Account password",
     "all": "all",
     "aperture": "Aperture",
