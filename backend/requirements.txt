@@ -22,3 +22,4 @@ pyyaml==6.0.1
 ua-parser==0.18.0
 user-agents==2.2.0
 django-user-agents==0.4.0
+django-simple-history==3.7.0
