@@ -48,6 +48,7 @@
     "upload": "Prześlij"
   },
   "errors": {
+    "goBack": "Zabierz mnie stąd",
     "retry": "Spróbuj ponownie",
     "unknownError": "Wystąpił nieznany błąd. Kod: {code}, Odpowiedż: {response}",
     "unauthenticated": "Użytkownik nieuwierzytelniony",
@@ -127,6 +128,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "enterExtension": "mp4",
+    "enterResultLimit": "Wpisz maksymalną ilość itemów",
     "tags": "Tagi",
     "enterTags": "Wpisz tagi, użyj spacji by je odzielić",
     "enterTagName": "Wpisz nazwe tagu",

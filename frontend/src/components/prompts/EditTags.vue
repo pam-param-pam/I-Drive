@@ -107,6 +107,7 @@ export default {
       async submit() {
          if (this.tagName === "") {
             this.closeHover()
+            return
          }
          let tagName = this.tagName.trim()
          this.tagName = ""

@@ -24,6 +24,7 @@
           type="text"
           v-focus
           v-model.trim="extension"
+          :placeholder="$t('prompts.enterExtension')"
         />
       </div>
 
@@ -53,6 +54,8 @@
           class="input input--block styled-input"
           type="number"
           v-model.number="resultLimit"
+          :placeholder="$t('prompts.enterResultLimit')"
+
         />
       </div>
 
@@ -127,6 +130,7 @@ export default {
          this.setDisabledCreation(true)
          this.resetSelected()
 
+         this.resultLimit = this.resultLimit || 1
 
          if (this.fileType === "all") this.fileType = null
          if (this.resultLimit > 500) this.resultLimit = 500

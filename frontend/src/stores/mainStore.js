@@ -164,6 +164,9 @@ export const useMainStore = defineStore("main", {
       setLastItem(value) {
          this.lastItem = value
       },
+      setSelected(items) {
+         this.selected = items
+      },
       addSelected(value) {
          console.log("addSelected")
          if (typeof value !== "object") return

@@ -42,24 +42,21 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
+      ...mapActions(useMainStore, ["closeHover", "resetSelected", "setItems"]),
       async submit() {
          try {
             let ids = this.selected.map(item => item.id)
 
             let res = await restoreFromTrash({"ids": ids})
-            if (res.status !== 204) {
-               res = await res.data
-               let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
-               this.$toast.info(message, {
-                  timeout: null,
-                  id: res.task_id
-               })
-            } else {
-               let message = this.$t('toasts.itemsRestoredFromTrash', {amount: ids.length})
 
-               this.$toast.success(message)
-            }
+             res = await res.data
+             let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
+             this.$toast.info(message, {
+                timeout: null,
+                id: res.task_id
+             })
+            let filteredItems = this.items.filter(item => !ids.includes(item.id));
+            this.setItems(filteredItems)
 
             this.currentPrompt?.confirm()
 

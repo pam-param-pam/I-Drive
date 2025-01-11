@@ -14,7 +14,7 @@ from django.utils import timezone
 from .celery import app
 from .models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
 from .utilities.Discord import discord
-from .utilities.constants import EventCode
+from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError
 
 logger = get_task_logger(__name__)
@@ -74,20 +74,27 @@ def save_preview(file_id, celery_file):
 
 @app.task
 def smart_delete(user_id, request_id, ids):
+    from .utilities.other import send_event  # circular error aah
+    send_event(user_id, EventCode.ITEM_DELETE, request_id, ids)
+
     send_message("toasts.deleting", {"percentage": 0}, False, user_id, request_id)
 
+    files = File.objects.filter(id__in=ids).prefetch_related("parent", "thumbnail", "preview")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+
+    if files.exists():
+        files.update(ready=False)
+
+    if folders.exists():
+        folders.update(ready=False)
+
+    items = list(files) + list(folders)
+
+    for item in items:
+        cache.delete(item.id)
+        cache.delete(item.parent.id)
+
     try:
-        items = []
-        for item_id in ids:
-            try:
-                item = Folder.objects.get(id=item_id)
-            except Folder.DoesNotExist:
-                item = File.objects.get(id=item_id)
-
-            item.ready = False
-            item.save()
-
-            items.append(item)
 
         message_structure = {}
         all_files = []
@@ -116,7 +123,8 @@ def smart_delete(user_id, request_id, ids):
 
             # deleting file preview if it exists
             try:
-                preview = Preview.objects.get(file=file)
+                preview = file.preview
+                #todo YIKES THIS IS NOT TRUE ANYMORE, THATS WHY FILES WERE MISSING LOL
                 # no need to check if it exists cuz previews are always stored as separate messages
                 message_structure[preview.message_id] = [preview.attachment_id]
             except Preview.DoesNotExist:
@@ -124,9 +132,10 @@ def smart_delete(user_id, request_id, ids):
 
             # deleting file thumbnail if it exists
             try:
-                preview = Thumbnail.objects.get(file=file)
+                #todo YIKES THIS IS NOT TRUE ANYMORE, THATS WHY FILES WERE MISSING LOL
+                thumbnail = file.thumbnail
                 # no need to check if it exists cuz previews are always stored as separate messages
-                message_structure[preview.message_id] = [preview.attachment_id]
+                message_structure[thumbnail.message_id] = [thumbnail.attachment_id]
             except Thumbnail.DoesNotExist:
                 pass
 
@@ -183,16 +192,59 @@ def prefetch_discord_message(message_id, attachment_id):
     discord.get_file_url(message_id, attachment_id)
 
 @app.task
-def move_to_trash_task(user_id, request_id, folder_id):
-    folder = Folder.objects.get(id=folder_id)
-    folder.moveToTrash()
+def move_to_trash_task(user_id, request_id, ids):
+    from .utilities.other import create_file_dict, send_event, create_folder_dict  # circular error aah
+
+    files = File.objects.filter(id__in=ids).prefetch_related("parent")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+
+    if files.exists():
+        file_dicts = [create_file_dict(file) for file in files]
+        send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, file_dicts)
+        files.update(inTrash=True, inTrashSince=timezone.now())
+
+    for file in files:
+        cache.delete(file.id)
+        cache.delete(file.parent.id)
+
+    total_length = len(folders)
+
+    for index, folder in enumerate(folders):
+        folder_dict = create_folder_dict(folder)
+        send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, folder_dict)
+        folder.moveToTrash()
+        percentage = round((index + 1) / total_length * 100)
+        send_message(message="toasts.movingToTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+
     send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
 
 @app.task
-def restore_from_trash_task(user_id, request_id, folder_id):
-    folder = Folder.objects.get(id=folder_id)
-    folder.restoreFromTrash()
-    send_message("toasts.itemsRestoredFromTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
+def restore_from_trash_task(user_id, request_id, ids):
+    from .utilities.other import create_file_dict, send_event, create_folder_dict  # circular error aah
+
+    files = File.objects.filter(id__in=ids).prefetch_related("parent")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+
+    if files.exists():
+        file_dicts = [create_file_dict(file) for file in files]
+        send_event(user_id, EventCode.ITEM_RESTORE_FROM_TRASH, request_id, file_dicts)
+        files.update(inTrash=False, inTrashSince=None)
+
+    for file in files:
+        cache.delete(file.id)
+        cache.delete(file.parent.id)
+
+    total_length = len(folders)
+
+    for index, folder in enumerate(folders):
+        folder_dict = create_folder_dict(folder)
+        send_event(user_id, EventCode.ITEM_RESTORE_FROM_TRASH, request_id, folder_dict)
+        folder.restoreFromTrash()
+        percentage = round((index + 1) / total_length * 100)
+        send_message(message="toasts.restoringFromTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+
+    send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
+
 
 @app.task
 def lock_folder(user_id, request_id, folder_id, password):
@@ -221,7 +273,6 @@ def delete_unready_files():
 
             smart_delete.delay(file.owner.id, request_id, [file.id])
 
-
     #todo delete unready folders and their content
 
 @app.task
@@ -246,6 +297,8 @@ def delete_files_from_trash():
         # remove the file
         if elapsed_time >= timedelta(days=30):
             smart_delete.delay(folder.owner.id, request_id, [folder.id])
+
+    #todo delete better using with 1 call to task with list of ids
 
 @app.task
 def delete_expired_shares():

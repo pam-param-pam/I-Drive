@@ -506,7 +506,7 @@ export default {
    methods: {
       isMobile,
 
-      ...mapActions(useMainStore, ["setLastItem", "toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
+      ...mapActions(useMainStore, ["setSelected", "setLastItem", "toggleShell", "addSelected", "setItems", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
          this.$emit("uploadInput", event)
@@ -586,9 +586,7 @@ export default {
 
             if (key === "a") {
                event.preventDefault()
-               this.items.forEach((item) => {
-                  this.addSelected(item)
-               })
+               this.setSelected(this.items)
             }
          }
       },

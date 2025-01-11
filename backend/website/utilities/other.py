@@ -138,12 +138,11 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         file_dict["in_trash_since"] = formatDate(file_obj.inTrashSince)
 
     try:
-        preview = Preview.objects.get(file=file_obj)
-        file_dict["iso"] = preview.iso
-        file_dict["model_name"] = preview.model_name
-        file_dict["aperture"] = preview.aperture
-        file_dict["exposure_time"] = preview.exposure_time
-        file_dict["focal_length"] = preview.focal_length
+        file_dict["iso"] = file_obj.preview.iso
+        file_dict["model_name"] = file_obj.preview.model_name
+        file_dict["aperture"] = file_obj.preview.aperture
+        file_dict["exposure_time"] = file_obj.preview.exposure_time
+        file_dict["focal_length"] = file_obj.preview.focal_length
 
     except Preview.DoesNotExist:
         pass
@@ -165,10 +164,11 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
 
         file_dict['download_url'] = download_url
 
-        thumbnail = Thumbnail.objects.filter(file=file_obj)
-
-        if thumbnail.exists():
-            file_dict['thumbnail_url'] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+        try:
+            if file_obj.thumbnail:
+                file_dict['thumbnail_url'] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+        except Thumbnail.DoesNotExist:
+            pass
 
         if file_obj.type == "video":
             position = 0
@@ -276,24 +276,17 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
     file_children = []
     if include_files:
-        file_children = folder_obj.files.filter(ready=True, inTrash=False)
+        file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
+            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags")
 
     folder_children = []
     if include_folders:
-        folder_children = folder_obj.subfolders.filter(inTrash=False)
+        folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
 
-    file_dicts = []
-    for file in file_children:
-        file_dict = create_file_dict(file)
-        file_dicts.append(file_dict)
-
-    folder_dicts = []
-    for folder in folder_children:
-        folder_dict = create_folder_dict(folder)
-        folder_dicts.append(folder_dict)
+    file_dicts = [create_file_dict(file) for file in file_children]
+    folder_dicts = [create_folder_dict(folder) for folder in folder_children]
 
     folder_dict = create_folder_dict(folder_obj)
-
     folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
 
     return folder_dict
@@ -532,3 +525,17 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, item: Union[Fi
                     raise ResourceNotFoundError()
             else:
                 raise ResourceNotFoundError()
+
+
+def get_required_folder_passwords(request, required_folder_passwords, item):
+    """
+    Checks for missing or incorrect folder passwords in a list of files/folders.
+    Returns a list of unique item IDs requiring passwords.
+    """
+    try:
+        check_resource_perms(request, item)
+    except MissingOrIncorrectResourcePasswordError:
+        if item.lockFrom and item.lockFrom not in required_folder_passwords:
+            required_folder_passwords.append(item.lockFrom)
+
+    return required_folder_passwords

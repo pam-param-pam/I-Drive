@@ -49,6 +49,7 @@
     "upload": "Upload"
   },
   "errors": {
+    "goBack": "Go back",
     "retry": "Try again",
     "unknownError": "Unknown error has occurred. Status code: {code}, response: {response}",
     "unauthenticated": "Unauthenticated",
@@ -128,6 +129,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "enterExtension": "mp4",
+    "enterResultLimit": "Enter max amount of items to return",
     "tags": "Tags",
     "enterTags": "Enter tags, use spaces to separate them",
     "enterTagName": "Enter tag's name",

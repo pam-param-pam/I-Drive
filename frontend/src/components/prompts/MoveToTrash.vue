@@ -5,7 +5,7 @@
         {{ $t("prompts.moveToTrashMessageSingle") }}
       </p>
       <p v-else-if="selectedCount > 1">
-        {{ $t("prompts.moveToTrashMessageMultiple", {count: selectedCount}) }}
+        {{ $t("prompts.moveToTrashMessageMultiple", { count: selectedCount }) }}
       </p>
     </div>
     <div class="card-action">
@@ -31,14 +31,14 @@
 </template>
 
 <script>
-import {moveToTrash} from "@/api/item.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { moveToTrash } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
    name: "MoveToTrash",
    computed: {
-      ...mapState(useMainStore, ["selected", "items", "selectedCount", "currentPrompt"]),
+      ...mapState(useMainStore, ["selected", "items", "selectedCount", "currentPrompt"])
    },
 
    methods: {
@@ -47,20 +47,19 @@ export default {
          try {
             let ids = this.selected.map(item => item.id)
 
-            let res = await moveToTrash({"ids": ids})
-            if (res.status !== 204) {
-               let message = this.$t('toasts.itemsAreBeingMovedToTrash', {amount: ids.length})
+            let res = await moveToTrash({ "ids": ids })
 
-               res = await res.data
-               this.$toast.info(message, {
-                  timeout: null,
-                  id: res.task_id,
-               })
-            } else {
-               let message = this.$t('toasts.itemsMovedToTrash', {amount: ids.length})
+            let message = this.$t("toasts.itemsAreBeingMovedToTrash", { amount: ids.length })
 
-               this.$toast.success(message)
-            }
+            res = await res.data
+            this.$toast.info(message, {
+               timeout: null,
+               id: res.task_id
+            })
+
+            let filteredItems = this.items.filter(item => !ids.includes(item.id))
+            this.setItems(filteredItems)
+
             if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
          } finally {
@@ -68,7 +67,7 @@ export default {
             this.closeHover()
 
          }
-      },
-   },
+      }
+   }
 }
 </script>

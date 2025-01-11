@@ -52,16 +52,21 @@ def move(request):
     new_parent = get_resource(new_parent_id)
     check_resource_perms(request, new_parent,  checkRoot=False)
 
-    items = []
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
+    if len(ids) > 1000:
+        raise BadRequestError("'ids' length cannot > 1000.")
 
     ws_data = []
     required_folder_passwords = []
-    for item_id in ids:
-        item = get_resource(item_id)
+
+    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    items = list(files) + list(folders)
+
+    for item in items:
 
         # handle multiple folder passwords
         try:
@@ -79,8 +84,6 @@ def move(request):
         if item == new_parent or item.parent == new_parent:
             raise BadRequestError("Invalid move destination.")
 
-        items.append(item)
-
         ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
 
     if len(required_folder_passwords) > 0:
@@ -94,7 +97,7 @@ def move(request):
         item.parent = new_parent
         item.last_modified_at = timezone.now()
 
-        #  apply lock if needed
+        # apply lock if needed
         # this will overwrite any previous locks - yes this is a conscious decision
         if new_parent.is_locked:
             item.applyLock(new_parent.lockFrom, new_parent.password)
@@ -121,18 +124,22 @@ def move(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move_to_trash(request):
-    items = []
     ids = request.data['ids']
 
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
+    if len(ids) > 10000:
+        raise BadRequestError("'ids' length cannot > 10000.")
 
+    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+
+    # Combine and check permissions in bulk
+    items = list(files) + list(folders)
     required_folder_passwords = []
-    for item_id in ids:
-        item = get_resource(item_id)
-
+    for item in items:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
@@ -147,32 +154,12 @@ def move_to_trash(request):
         if isinstance(item, Folder) and not item.parent:
             raise RootPermissionError()
 
-        items.append(item)
-
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
 
-    long_process = False
-    for item in items:
-        if isinstance(item, File):
-            file_dict = create_file_dict(item)
-            send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
-                       [file_dict])
-            item.inTrash = True
-            item.inTrashSince = timezone.now()
-            item.save()
+    move_to_trash_task.delay(request.user.id, request.request_id, ids)
 
-        elif isinstance(item, Folder):
-
-            folder_dict = create_folder_dict(item)
-            send_event(request.user.id, EventCode.ITEM_MOVE_TO_TRASH, request.request_id,
-                       [folder_dict])
-            move_to_trash_task.delay(request.user.id, request.request_id, item.id)
-            long_process = True
-
-    if long_process:
-        return JsonResponse(build_response(request.request_id, "Moving from Trash..."))
-    return HttpResponse(status=204)
+    return JsonResponse(build_response(request.request_id, "Moving from Trash..."))
 
 
 @api_view(['PATCH'])
@@ -180,18 +167,22 @@ def move_to_trash(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def restore_from_trash(request):
-    items = []
     ids = request.data['ids']
 
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
+    if len(ids) > 10000:
+        raise BadRequestError("'ids' length cannot > 10000.")
 
+    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+
+    # Combine and check permissions in bulk
+    items = list(files) + list(folders)
     required_folder_passwords = []
-    for item_id in ids:
-        item = get_resource(item_id)
-
+    for item in items:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
@@ -203,33 +194,12 @@ def restore_from_trash(request):
         if not item.inTrash:
             raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
 
-        if isinstance(item, Folder) and not item.parent:
-            raise RootPermissionError()
-
-        items.append(item)
-
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
 
-    long_process = False
-    for item in items:
-        if isinstance(item, File):
-            send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
-                       [create_file_dict(item)])
-            item.inTrash = False
-            item.inTrashSince = None
-            item.save()
+    restore_from_trash_task.delay(request.user.id, request.request_id, ids)
 
-        elif isinstance(item, Folder):
-            send_event(request.user.id, EventCode.ITEM_RESTORE_FROM_TRASH, request.request_id,
-                       [create_folder_dict(item)])
-
-            restore_from_trash_task.delay(request.user.id, request.request_id, item.id)
-            long_process = True
-
-    if long_process:
-        return JsonResponse(build_response(request.request_id, "Restoring from Trash..."))
-    return HttpResponse(status=204)
+    return JsonResponse(build_response(request.request_id, "Restoring from Trash..."))
 
 
 @api_view(['PATCH'])
@@ -239,15 +209,21 @@ def restore_from_trash(request):
 def delete(request):
     ids = request.data['ids']
 
-    items = []
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
+    if len(ids) > 10000:
+        raise BadRequestError("'ids' length cannot > 10000.")
+
+    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+
+    # Combine and check permissions in bulk
+    items = list(files) + list(folders)
 
     required_folder_passwords = []
-    for item_id in ids:
-        item = get_resource(item_id)
+    for item in items:
 
         # handle multiple folder passwords
         try:
@@ -257,14 +233,10 @@ def delete(request):
             if item.lockFrom and item.lockFrom not in required_folder_passwords:
                 required_folder_passwords.append(item.lockFrom)
 
-        items.append(item)
-
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
 
     smart_delete.delay(request.user.id, request.request_id, ids)
-
-    send_event(request.user.id, EventCode.ITEM_DELETE, request.request_id, ids)
 
     return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
 
