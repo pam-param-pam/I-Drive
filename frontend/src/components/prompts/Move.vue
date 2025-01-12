@@ -91,6 +91,7 @@ export default {
             id: res.task_id
          })
 
+         this.resetSelected()
          this.closeHover()
 
       }, 1000)

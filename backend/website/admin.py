@@ -303,7 +303,6 @@ class TagAdmin(SimpleHistoryAdmin):
     def file_list(self, obj: Tag):
         files = self.all_files(obj)
         if files:
-            # Create clickable links to the file's admin page
             return format_html(
                 "<br>".join([format_html('<a href="{}">{}</a>', reverse('admin:%s_file_change' % file._meta.app_label, args=[file.id]), file.name) for file in files])
             )

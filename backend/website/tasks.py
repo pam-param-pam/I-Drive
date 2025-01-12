@@ -103,6 +103,7 @@ def smart_delete(user_id, request_id, ids):
         webhook = settings.discord_webhook
         length = len(message_structure)
 
+        last_percentage = 0
         for index, key in enumerate(message_structure.keys()):
 
             try:
@@ -141,11 +142,13 @@ def smart_delete(user_id, request_id, ids):
                 send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
                 return
 
-            # time.sleep(0.1)
             percentage = round((index + 1) / length * 100)
-            send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            if percentage != last_percentage:
+                send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+                last_percentage = percentage
 
             print("sleeping")
+            # time.sleep(0.1)
         for item in items:
             item.delete()
 
@@ -177,7 +180,7 @@ def move_task(user_id, request_id, ids, new_parent_id):
     cache.delete(new_parent.id)
 
     item_dicts_batch = []
-
+    last_percentage = 0
     for index, item in enumerate(items):
         if isinstance(item, Folder):
             item_dict = create_folder_dict(item)
@@ -208,7 +211,9 @@ def move_task(user_id, request_id, ids, new_parent_id):
         item.save()
 
         percentage = round((index + 1) / total_length * 100)
-        send_message(message="toasts.movingItems", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+        if percentage != last_percentage:
+            send_message(message="toasts.movingItems", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            last_percentage = percentage
 
         if len(item_dicts_batch) == 50:
             send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
@@ -236,13 +241,15 @@ def move_to_trash_task(user_id, request_id, ids):
         cache.delete(file.parent.id)
 
     total_length = len(folders)
-
+    last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = create_folder_dict(folder)
         send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, folder_dict)
         folder.moveToTrash()
         percentage = round((index + 1) / total_length * 100)
-        send_message(message="toasts.movingToTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+        if percentage != last_percentage:
+            send_message(message="toasts.movingToTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            last_percentage = percentage
 
     send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
 
@@ -264,13 +271,15 @@ def restore_from_trash_task(user_id, request_id, ids):
         cache.delete(file.parent.id)
 
     total_length = len(folders)
-
+    last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = create_folder_dict(folder)
         send_event(user_id, EventCode.ITEM_RESTORE_FROM_TRASH, request_id, folder_dict)
         folder.restoreFromTrash()
         percentage = round((index + 1) / total_length * 100)
-        send_message(message="toasts.restoringFromTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+        if percentage != last_percentage:
+            send_message(message="toasts.restoringFromTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            last_percentage = percentage
 
     send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
 
