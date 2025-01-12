@@ -1,7 +1,6 @@
 import { defineStore } from "pinia"
 import { prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { v4 as uuidv4 } from "uuid"
 import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
@@ -45,30 +44,22 @@ export const useUploadStore = defineStore("upload2", {
          return uploadSpeed
       },
       filesInUpload() {
-         // Assuming `this.uploadQueue` is an array of files with a `progress` property (0 to 100)
-         // Get the top 10 items
+
          return this.filesUploading
             .sort((a, b) => b.progress - a.progress)
             .slice(0, 10)
       },
       remainingBytes() {
-         //calc all
-         // Sum up total size in 'queue'
          let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
 
-         // Calculate remaining bytes to be uploaded in 'filesUploading'
          let remainingUploadSize = this.filesUploading.reduce((total, item) => {
 
-            // Adjust progress to a decimal by dividing by 100
             let uploadedSize = item.size * (item.progress / 100)
             let remainingSize = item.size - uploadedSize
             return total + remainingSize
          }, 0)
 
-         // Total size left to upload
-         let totalSizeRemaining = totalQueueSize + remainingUploadSize
-
-         return totalSizeRemaining
+         return totalQueueSize + remainingUploadSize
       },
       filesInUploadCount() {
          let queue = this.queue.length
@@ -78,7 +69,7 @@ export const useUploadStore = defineStore("upload2", {
 
       },
       progress() {
-
+         return 50
       }
 
    },

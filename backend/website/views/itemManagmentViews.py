@@ -1,15 +1,16 @@
+from typing import Union
+
 from django.http import HttpResponse, JsonResponse
-from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Folder, VideoPosition, Tag
-from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder
+from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder, move_task
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
-from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError
-from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, is_subitem
+from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
+from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file
 from ..utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -49,23 +50,21 @@ def move(request):
     ids = request.data['ids']
     new_parent_id = request.data['new_parent_id']
 
-    new_parent = get_resource(new_parent_id)
+    new_parent = get_folder(new_parent_id)
     check_resource_perms(request, new_parent,  checkRoot=False)
 
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
-    if len(ids) > 1000:
-        raise BadRequestError("'ids' length cannot > 1000.")
-
-    ws_data = []
-    required_folder_passwords = []
+    if len(ids) > 10000:
+        raise BadRequestError("'ids' length cannot > 10000.")
 
     files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
-    items = list(files) + list(folders)
+    items: list[Union[File, Folder]] = list(files) + list(folders)
 
+    required_folder_passwords = []
     for item in items:
 
         # handle multiple folder passwords
@@ -76,47 +75,15 @@ def move(request):
             if item.lockFrom and item.lockFrom not in required_folder_passwords:
                 required_folder_passwords.append(item.lockFrom)
 
-        if isinstance(item, Folder):
-            item_dict = create_folder_dict(item)
-        else:
-            item_dict = create_file_dict(item)
-
         if item == new_parent or item.parent == new_parent:
             raise BadRequestError("Invalid move destination.")
-
-        ws_data.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
 
-    # invalidate any cache
-    cache.delete(new_parent.id)
+    move_task.delay(request.user.id, request.request_id, ids, new_parent_id)
 
-    for item in items:
-
-        item.parent = new_parent
-        item.last_modified_at = timezone.now()
-
-        # apply lock if needed
-        # this will overwrite any previous locks - yes this is a conscious decision
-        if new_parent.is_locked:
-            item.applyLock(new_parent.lockFrom, new_parent.password)
-
-        # if the folder was previously locked but is now moved to an "unlocked" folder, The folder for security reasons should stay locked
-        # And we need to update lockFrom to point to itself now, instead of the old parent before move operation
-        #
-        # if it's instead a file we remove the lock
-        else:
-            if item.is_locked:
-                if isinstance(item, File):
-                    item.removeLock()
-                else:
-                    item.applyLock(item.lockFrom, item.password)
-
-        item.save()
-
-    send_event(request.user.id, EventCode.ITEM_MOVED, request.request_id, ws_data)
-    return HttpResponse(status=204)
+    return JsonResponse(build_response(request.request_id, "Moving items..."))
 
 
 @api_view(['PATCH'])
@@ -137,7 +104,7 @@ def move_to_trash(request):
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
-    items = list(files) + list(folders)
+    items: list[Union[File, Folder]] = list(files) + list(folders)
     required_folder_passwords = []
     for item in items:
         # handle multiple folder passwords
@@ -180,7 +147,7 @@ def restore_from_trash(request):
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
-    items = list(files) + list(folders)
+    items: list[Union[File, Folder]] = list(files) + list(folders)
     required_folder_passwords = []
     for item in items:
         # handle multiple folder passwords
@@ -220,7 +187,7 @@ def delete(request):
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
-    items = list(files) + list(folders)
+    items: list[Union[File, Folder]] = list(files) + list(folders)
 
     required_folder_passwords = []
     for item in items:
@@ -232,6 +199,9 @@ def delete(request):
             # check if folder id is in list of tuples
             if item.lockFrom and item.lockFrom not in required_folder_passwords:
                 required_folder_passwords.append(item.lockFrom)
+
+        if not item.ready:
+            raise BadRequestError("Cannot delete. At least one item is not ready.")
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)

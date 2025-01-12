@@ -281,10 +281,10 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "movingItems": "Moving items {percentage}%...",
     "linkCopied": "Link copied!",
     "locating": "Locating item...",
     "uploadNotAllowedHere": "Upload is not allowed here",
-    "PreparingUpload": "Started proccesing files for upload...",
     "aborting": "Aborting...",
     "deleting": "Deleting {percentage}%...",
     "deletingItems": "Deleting {amount} items",

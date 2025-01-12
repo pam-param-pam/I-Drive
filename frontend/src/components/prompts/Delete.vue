@@ -48,7 +48,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
+      ...mapActions(useMainStore, ["closeHover", "resetSelected", "setItems"]),
       async submit() {
          try {
             let ids = this.selected.map(item => item.id)
@@ -59,6 +59,10 @@ export default {
                timeout: null,
                id: res.task_id,
             })
+
+            let filteredItems = this.items.filter(item => !ids.includes(item.id));
+            this.setItems(filteredItems)
+
             if (this.currentPrompt.confirm) this.currentPrompt.confirm()
             this.resetSelected()
 

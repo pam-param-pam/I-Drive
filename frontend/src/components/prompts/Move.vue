@@ -82,11 +82,14 @@ export default {
          })
       },
       submit: throttle(async function(event) {
-         let listOfIds = this.selected.map(obj => obj.id)
-         await move({ ids: listOfIds, "new_parent_id": this.dest.id })
+         let ids = this.selected.map(obj => obj.id)
+         let res = await move({ "ids": ids, "new_parent_id": this.dest.id })
 
-         let message = this.$t("toasts.movedItems")
-         this.$toast.success(message)
+         let message = this.$t("toasts.movingItems")
+         this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id
+         })
 
          this.closeHover()
 

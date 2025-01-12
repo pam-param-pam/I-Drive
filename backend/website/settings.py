@@ -202,8 +202,8 @@ REST_FRAMEWORK = {
         'media': '1000/m',
         'folder_password': '20/m',
         'password_change': '10/m',
-        'search': '1000/m',
-        'register': '51111/h',
+        'search': '100/m',
+        'register': '20/h',
 
 },
     'DEFAULT_RENDERER_CLASSES': (

@@ -5,7 +5,7 @@
         {{ $t("prompts.restoreFromTrashMessageSingle") }}
       </p>
       <p v-else-if="selectedCount > 1">
-        {{ $t("prompts.restoreFromTrashMessageMultiple", {count: selectedCount}) }}
+        {{ $t("prompts.restoreFromTrashMessageMultiple", { count: selectedCount }) }}
       </p>
     </div>
     <div class="card-action">
@@ -31,14 +31,14 @@
 </template>
 
 <script>
-import {restoreFromTrash} from "@/api/item.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { restoreFromTrash } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
    name: "RestoreFromTrash",
    computed: {
-      ...mapState(useMainStore, ["selectedCount", "currentPrompt", "selected", "items"]),
+      ...mapState(useMainStore, ["selectedCount", "currentPrompt", "selected", "items"])
    },
 
    methods: {
@@ -47,15 +47,14 @@ export default {
          try {
             let ids = this.selected.map(item => item.id)
 
-            let res = await restoreFromTrash({"ids": ids})
+            let res = await restoreFromTrash({ "ids": ids })
 
-             res = await res.data
-             let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', {amount: ids.length})
-             this.$toast.info(message, {
-                timeout: null,
-                id: res.task_id
-             })
-            let filteredItems = this.items.filter(item => !ids.includes(item.id));
+            let message = this.$t("toasts.itemsAreBeingRestoredFromTrash", { amount: ids.length })
+            this.$toast.info(message, {
+               timeout: null,
+               id: res.task_id
+            })
+            let filteredItems = this.items.filter(item => !ids.includes(item.id))
             this.setItems(filteredItems)
 
             this.currentPrompt?.confirm()
@@ -65,7 +64,7 @@ export default {
             this.resetSelected()
 
          }
-      },
-   },
+      }
+   }
 }
 </script>

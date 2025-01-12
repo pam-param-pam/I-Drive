@@ -39,20 +39,20 @@ export default function onEvent(message) {
    if (jsonObject.op_code === 5) { // items moved event
       for (let item of jsonObject.data) {
          if (item.old_parent_id === currentFolder?.id) {
-            //removeShare
+            //remove
             let updatedItems = store.items.filter(ListItem => ListItem.id !== item.item.id)
             store.setItems(updatedItems)
          }
          if (item.new_parent_id === currentFolder?.id) {
             //add
-            store.setItems(item.item)
+            store.updateItems(item.item)
 
          }
       }
    }
    if (jsonObject.op_code === 7) { // force folder navigation from server
-      let id = jsonObject.data.folder_id
-      this.$router.push({name: `Files`, params: {"folderId": id}})
+      let folder_id = jsonObject.data.folder_id
+      this.$router.push({name: `Files`, params: {"folderId": folder_id}})
 
    }
 

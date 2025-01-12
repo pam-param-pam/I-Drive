@@ -42,7 +42,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "resetSelected"]),
+      ...mapActions(useMainStore, ["closeHover", "resetSelected", "setItems"]),
       async submit() {
          try {
             let ids = this.selected.map(item => item.id)
@@ -51,7 +51,6 @@ export default {
 
             let message = this.$t("toasts.itemsAreBeingMovedToTrash", { amount: ids.length })
 
-            res = await res.data
             this.$toast.info(message, {
                timeout: null,
                id: res.task_id

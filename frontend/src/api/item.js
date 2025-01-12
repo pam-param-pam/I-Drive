@@ -2,7 +2,8 @@ import {backend_instance} from "@/utils/networker.js"
 
 export async function moveToTrash(data) {
    let url = "/item/moveToTrash"
-   return await backend_instance.patch(url, data)
+   let response = await backend_instance.patch(url, data)
+   return response.data
 }
 
 export async function breadcrumbs(folder_id) {
@@ -13,7 +14,8 @@ export async function breadcrumbs(folder_id) {
 
 export async function restoreFromTrash(data) {
    let url = "/item/restoreFromTrash"
-   return await backend_instance.patch(url, data)
+   let response = await backend_instance.patch(url, data)
+   return response.data
 }
 
 export async function rename(data) {

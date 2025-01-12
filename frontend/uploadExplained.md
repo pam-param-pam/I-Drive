@@ -59,4 +59,14 @@ if not, it creates them, else grabs from dictionary. parentId and fileId are app
 8) uploadRequest is called, it uploads the request with onUploadProgress callbacks.
 
 
-9) 
+9) this is all out dated, lets start from scratch!
+
+
+Optimizations:
+
+- move everything to workers
+- get thumbnail inside an upload worker not in request generator
+
+fixes:
+- figure out how to remove bottleneck from request generator having to create dirs
+- advanced error handling, handling both rate limits and internet being off

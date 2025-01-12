@@ -280,10 +280,10 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "movingItems": "Przenoszenie itemów {percentage}%...",
     "linkCopied": "Link skopiowany!",
     "locating": "Lokalizowanie...",
     "uploadNotAllowedHere": "Nie można tutaj przesyłac plików",
-    "PreparingUpload": "Rozpoczęto proces przesyłania plików...",
     "aborting": "Przerywanie...",
     "deleting": "Usuwanie {percentage}%...",
     "deletingItems": "Usuwanie {amount} itemów",
