@@ -97,7 +97,9 @@ class FolderAdmin(SimpleHistoryAdmin):
 
     def save_model(self, request, obj: Folder, form: ModelForm, change: bool):
         cache.delete(obj.id)
-        cache.delete(obj.parent.id)
+        if obj.parent:
+            cache.delete(obj.parent.id)
+
         super().save_model(request, obj, form, change)
 
     def is_locked(self, obj: File):

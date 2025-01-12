@@ -107,20 +107,24 @@ def smart_delete(user_id, request_id, ids):
 
             try:
                 fragments = Fragment.objects.filter(message_id=key)
-                previews = Preview.objects.filter(message_id=key)
+                thumbnails = Thumbnail.objects.filter(message_id=key)
 
-                if len(fragments) + len(previews) == 1:
+                if len(fragments) + len(thumbnails) == 1:
                     discord.remove_message(key)
                 else:
                     attachment_ids = []
                     for fragment in fragments:
                         attachment_ids.append(fragment.attachment_id)
 
-                    for preview in previews:
-                        attachment_ids.append(preview.attachment_id)
+                    for thumbnail in thumbnails:
+                        attachment_ids.append(thumbnail.attachment_id)
 
                     all_attachment_ids = set(attachment_ids)
                     attachment_ids_to_remove = set(message_structure[key])
+                    print("attachment_ids_to_remove")
+                    print(attachment_ids_to_remove)
+                    print("all_attachment_ids")
+                    print(all_attachment_ids)
 
                     # Get the difference
                     attachment_ids_to_keep = list(all_attachment_ids - attachment_ids_to_remove)

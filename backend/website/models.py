@@ -70,15 +70,16 @@ class Folder(models.Model):
         self.last_modified_at = timezone.now()
 
         # invalidate any cache
-        cache.delete(self.id)
-        if self.parent:
-            cache.delete(self.parent.id)
+        self._remove_cache()
+
         # invalidate also cache of 'old' parent if the parent was changed
         # we make a db lookup to get the old parent
         # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
         try:
             old_object = Folder.objects.get(id=self.id)
-            cache.delete(old_object.parent.id)
+            if old_object.parent:
+                cache.delete(old_object.parent.id)
+
         except Folder.DoesNotExist:
             pass
 
@@ -88,9 +89,8 @@ class Folder(models.Model):
         super(Folder, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        # invalidate any cache
-        cache.delete(self.id)
-        cache.delete(self.parent.id)
+        self._remove_cache()
+
         super(Folder, self).delete()
 
     def moveToTrash(self):
@@ -155,10 +155,13 @@ class Folder(models.Model):
         return children
 
     def force_delete(self):
-        cache.delete(self.id)
-        cache.delete(self.parent.id)
+        self._remove_cache()
         self.delete()
 
+    def _remove_cache(self):
+        cache.delete(self.id)
+        if self.parent:
+            cache.delete(self.parent.id)
 
 class File(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)
@@ -405,6 +408,10 @@ class Thumbnail(models.Model):
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
     history = HistoricalRecords()
+
+    def delete(self, *args, **kwargs):
+        cache.delete(f"thumbnail:{self.file.id}")
+        super(Thumbnail, self).delete()
 
     def __str__(self):
         return self.file.name

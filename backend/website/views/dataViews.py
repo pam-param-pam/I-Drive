@@ -142,15 +142,15 @@ def search(request):
     query = request.GET.get('query', None)
     file_type = request.GET.get('type', None)
     extension = request.GET.get('extension', None)
-    resultLimit = int(request.GET.get('resultLimit', 20))
+    resultLimit = int(request.GET.get('resultLimit', 25))
 
     lockFrom = request.GET.get('lockFrom', None)
     password = request.headers.get("X-resource-Password")
 
     tags = request.GET.get('tags', None)
 
-    if resultLimit > 500:
-        raise BadRequestError("'showLimit' cannot be > 500")
+    if resultLimit > 10_000:
+        resultLimit = 10_000
 
     # goofy ah
     include_files = request.GET.get('files', 'True')
@@ -170,8 +170,10 @@ def search(request):
         tags = [tag.strip() for tag in tags.split(" ")]
 
     # Start with a base queryset
-    files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__lockFrom__isnull=True).order_by("-created_at")
-    folders = Folder.objects.filter(owner_id=user.id, parent__lockFrom__isnull=True, inTrash=False, parent__isnull=False).order_by("-created_at")
+    #todo do this only if include_files:
+    files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__lockFrom__isnull=True).select_related(
+            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at")
+    folders = Folder.objects.filter(owner_id=user.id, parent__lockFrom__isnull=True, inTrash=False, parent__isnull=False).select_related("parent").order_by("-created_at")
     if not (query or file_type or extension or tags or include_files or include_folders):
         raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension', 'tags']")
 
@@ -194,15 +196,16 @@ def search(request):
 
         folders = []
 
-
+    # include locked files from "current" folder
+    if lockFrom and password and include_files:
+        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password, tags__name__in=tags).select_related(
+            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by("-created_at")
+        files = list(chain(lockedFiles, files))
 
     # include locked files from "current" folder
-    if lockFrom and password:
-        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password, tags__name__in=tags).distinct().order_by("-created_at")
-
-
-        print(lockedFiles)
-        files = list(chain(lockedFiles, files))
+    if lockFrom and password and include_folders:
+        lockedFolders = Folder.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password).select_related("parent").order_by("-created_at")
+        folders = list(chain(lockedFolders, folders))
 
     files = files[:resultLimit]
     folders = folders[:resultLimit]
@@ -225,8 +228,9 @@ def search(request):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 def get_trash(request):
-    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True)
-    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True)
+    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
+            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags")
+    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
 
     trash_items = []
     for file in files:

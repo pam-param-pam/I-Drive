@@ -95,12 +95,6 @@ def handle_common_errors(view_func):
         except (ValidationError, BadRequestError) as e:
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(e)), status=400)
 
-        except DiscordError as e:
-            return JsonResponse(build_http_error_response(code=400, error="errors.unexpectedDiscordResponse", details=str(e)), status=400)
-
-        except DiscordBlockError as e:
-            return JsonResponse(build_http_error_response(code=400, error="errors.discordBlocked", details=str(e)), status=400)
-
         except NotImplementedError as e:
             return JsonResponse(build_http_error_response(code=400, error="error.notImplemented", details=str(e)), status=400)
 
@@ -139,5 +133,11 @@ def handle_common_errors(view_func):
         # 503 Service Unavailable
         except CannotProcessDiscordRequestError as e:
             return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(e)), status=503)
+
+        except DiscordError as e:
+            return JsonResponse(build_http_error_response(code=503, error="errors.unexpectedDiscordResponse", details=str(e)), status=503)
+
+        except DiscordBlockError as e:
+            return JsonResponse(build_http_error_response(code=503, error="errors.discordBlocked", details=str(e)), status=503)
 
     return wrapper

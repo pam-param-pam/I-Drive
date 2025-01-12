@@ -22,7 +22,7 @@ def create_folder(request):
     name = request.data['name']
     parent_id = request.data['parent_id']
 
-    parent = get_resource(parent_id)
+    parent = get_folder(parent_id)
     check_resource_perms(request, parent, checkRoot=False)
 
     if name == "":

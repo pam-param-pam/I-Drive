@@ -58,7 +58,7 @@
           <action
             v-if="headerButtons.delete"
             id="delete-button"
-            icon="delete"
+            icon="delete_forever"
             :label="$t('buttons.delete')"
             show="delete"
           />
@@ -283,7 +283,7 @@
         <action
           v-if="headerButtons.delete"
           id="delete-button"
-          icon="delete"
+          icon="delete_forever"
           :label="$t('buttons.delete')"
           show="delete"
         />
