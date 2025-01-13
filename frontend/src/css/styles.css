@@ -403,21 +403,3 @@ body.rtl .breadcrumbs .chevron {
   margin-left: 0.5rem;
 }
 
-/* * * * * * * * * * * * * * * *
- *         RTL overrides       *
- * * * * * * * * * * * * * * * */
-
-body.rtl .card-content textarea {
-  direction: ltr;
-  text-align: left;
-}
-
-body.rtl .card-content .small + input {
-  direction: ltr;
-  text-align: left;
-}
-
-body.rtl .card.floating .card-content .file-list {
-  direction: ltr;
-  text-align: left;
-}

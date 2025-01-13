@@ -481,6 +481,27 @@ class AuditEntry(models.Model):
     def __str__(self):
         return f'{self.action} - {self.user.username} - {self.ip}'
 
+
+class Webhook(models.Model):
+    url = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return self.url
+
+
+class DiscordToken(models.Model):
+    token = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return self.token
+
+
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):
     ip = request.META.get('REMOTE_ADDR')
@@ -491,3 +512,5 @@ def user_logged_in_callback(sender, request, user, **kwargs):
 def user_logged_out_callback(sender, request, user, **kwargs):
     ip = request.META.get('REMOTE_ADDR')
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_OUT.name, ip=ip, user=user, user_agent=request.user_agent)
+
+
