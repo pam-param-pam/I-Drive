@@ -126,7 +126,11 @@ const router = createRouter({
                      name: "Shares",
                      component: () => import('../views/settings/Shares.vue'),
                   },
-
+                  {
+                     path: "/settings/discord",
+                     name: "DiscordSettings",
+                     component: () => import('../views/settings/Discord.vue'),
+                  },
                ],
             },
          ],

@@ -27,7 +27,7 @@
           <div>
             <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
             <input
-              class="input "
+              class="input"
               type="number"
               v-model="concurrentUploadRequests"
             />
@@ -67,7 +67,7 @@
     </div>
 
     <div class="column">
-      <form class="card" v-if="!user.lockPassword" @submit.prevent="savePassword">
+      <form class="card" @submit.prevent="savePassword">
         <div class="card-title">
           <h2>{{ $t("settings.changePassword") }}</h2>
         </div>
@@ -119,7 +119,7 @@ import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
 
 
 export default {
-   name: "settings",
+   name: "profileSettings",
    components: {
       Languages,
       EncryptionMethod,

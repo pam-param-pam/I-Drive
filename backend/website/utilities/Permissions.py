@@ -53,6 +53,11 @@ class SettingsModifyPerms(BasePermission):
         perms = UserPerms.objects.get(user=request.user)
         return (perms.settings_modify or perms.admin) and not perms.globalLock
 
+class DiscordModifyPerms(BasePermission):
+    def has_permission(self, request, view):
+        perms = UserPerms.objects.get(user=request.user)
+        return (perms.discord_modify or perms.admin) and not perms.globalLock
+
 class ChangePassword(BasePermission):
     def has_permission(self, request, view):
         perms = UserPerms.objects.get(user=request.user)

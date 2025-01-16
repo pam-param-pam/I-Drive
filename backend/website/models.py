@@ -18,16 +18,6 @@ from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMeth
 from .utilities.errors import BadRequestError
 
 
-class Tag(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    history = HistoricalRecords()
-
-    def __str__(self):
-        return self.name
-
-
 class Folder(models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.TextField(max_length=255, null=False)
@@ -185,7 +175,7 @@ class File(models.Model):
     iv = models.BinaryField(null=True)
     webhook = models.TextField(null=False, blank=False)  # TODO implement webhook
     encryption_method = models.SmallIntegerField()
-    tags = models.ManyToManyField(Tag, blank=True, related_name='files')
+    tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     history = HistoricalRecords()
 
     def _is_locked(self):
@@ -295,7 +285,7 @@ class File(models.Model):
 
 
 class UserSettings(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
     sorting_by = models.CharField(max_length=50, null=False, default="name")
     sort_by_asc = models.BooleanField(default=False)
     locale = models.CharField(max_length=20, null=False, default="en")
@@ -319,7 +309,7 @@ class UserSettings(models.Model):
 
 
 class UserPerms(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
 
     globalLock = models.BooleanField(default=False)
 
@@ -334,6 +324,8 @@ class UserPerms(models.Model):
     download = models.BooleanField(default=True)
     read = models.BooleanField(default=True)
     settings_modify = models.BooleanField(default=True)
+    discord_modify = models.BooleanField(default=True)
+
     change_password = models.BooleanField(default=True)
     reset_lock = models.BooleanField(default=True)
     history = HistoricalRecords()
@@ -346,11 +338,6 @@ class UserPerms(models.Model):
             profile, created = UserPerms.objects.get_or_create(user=instance)
 
 
-post_save.connect(UserPerms._create_user_perms, sender=User)
-post_save.connect(UserSettings._create_user_settings, sender=User)
-post_save.connect(Folder._create_user_root, sender=User)
-
-
 class Fragment(models.Model):
     sequence = models.SmallIntegerField()
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -359,6 +346,9 @@ class Fragment(models.Model):
     size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     attachment_id = models.CharField(max_length=255, null=True)
+
+    webhook = models.ForeignKey('Webhook', on_delete=models.CASCADE)
+
     history = HistoricalRecords()
 
     def __str__(self):
@@ -403,7 +393,7 @@ class Thumbnail(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
     attachment_id = models.CharField(max_length=255)
-    file = models.OneToOneField(File, on_delete=models.CASCADE)
+    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
     message_id = models.CharField(max_length=255)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
@@ -423,7 +413,7 @@ class Preview(models.Model):
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
     attachment_id = models.CharField(max_length=255, null=True)
-    file = models.OneToOneField(File, on_delete=models.CASCADE)
+    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
     message_id = models.CharField(max_length=255)
     key = models.BinaryField()
     iso = models.CharField(max_length=50, null=True)
@@ -463,7 +453,7 @@ class UserZIP(models.Model):
 
 
 class VideoPosition(models.Model):
-    file = models.OneToOneField(File, on_delete=models.CASCADE)
+    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
     modified_at = models.DateTimeField(auto_now_add=True)
     timestamp = models.IntegerField(default=0)
 
@@ -482,24 +472,57 @@ class AuditEntry(models.Model):
         return f'{self.action} - {self.user.username} - {self.ip}'
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return self.name
+
+
 class Webhook(models.Model):
     url = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    guild_id = models.CharField(max_length=100)
+    channel_id = models.CharField(max_length=100)
+    discord_id = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
     history = HistoricalRecords()
 
     def __str__(self):
         return self.url
 
 
-class DiscordToken(models.Model):
+class Bot(models.Model):
     token = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    discord_id = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
     history = HistoricalRecords()
 
     def __str__(self):
         return self.token
+
+
+class DiscordSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
+    webhooks = models.ManyToManyField(Webhook, blank=True, related_name='discord_settings')
+    bots = models.ManyToManyField(Bot, blank=True, related_name='discord_settings')
+    channel_id = models.CharField(max_length=100)
+    guild_id = models.CharField(max_length=100)
+
+    history = HistoricalRecords()
+
+    def __str__(self):
+        return self.user.username + "'s discord settings"
+
+    def _create_user_discord_settings(sender, instance, created, **kwargs):
+        if created:
+            settings, created = DiscordSettings.objects.get_or_create(user=instance)
 
 
 @receiver(user_logged_in)
@@ -514,3 +537,7 @@ def user_logged_out_callback(sender, request, user, **kwargs):
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_OUT.name, ip=ip, user=user, user_agent=request.user_agent)
 
 
+post_save.connect(UserPerms._create_user_perms, sender=User)
+post_save.connect(UserSettings._create_user_settings, sender=User)
+post_save.connect(Folder._create_user_root, sender=User)
+post_save.connect(DiscordSettings._create_user_discord_settings, sender=User)

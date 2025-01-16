@@ -223,6 +223,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "discordSettings": "Ustawienia discorda",
     "AES_CTR": "AES CTR",
     "ChaCha20": "ChaCha20",
     "ShareName": "Nazwa",

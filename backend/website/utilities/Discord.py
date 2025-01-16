@@ -3,6 +3,7 @@ import os
 import time
 
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Union
 from urllib.parse import urlparse, parse_qs
 
@@ -83,9 +84,8 @@ class Discord:
 
         self.token_dict = {
             token: {
-                'requests_remaining': 5,  # Default discord remaining
+                'requests_remaining': 4,  # Default discord remaining
                 'reset_time': None,
-                'locked': False,
             }
             for token in self.bot_tokens
         }
@@ -95,6 +95,7 @@ class Discord:
 
         self.headers = {"Content-Type": 'application/json'}
         self.file_upload_headers = {}
+        self.lock = Lock()
 
     def get_token(self):
         slept = 0
@@ -103,41 +104,36 @@ class Discord:
             current_time = datetime.now(timezone.utc).timestamp()
 
             for token, data in self.token_dict.items():
-
-                if data['requests_remaining'] > 3:  # I have no clue why but when its 0, we still hi 429? probably race conditions or some other shit, cannot care less
-                    # self.token_dict[token]['locked'] = True
-                    self.token_dict[token]['requests_remaining'] -= 1
-                    return token
-
-                if data['reset_time']:
-
-                    reset_time = float(data['reset_time'])
-
-                    # print(reset_time)
-                    # print(current_time)
-                    if current_time >= reset_time:
-                        # # self.token_dict[token]['locked'] = True
-                        # print("TOKEN {}")
-                        # # self.token_dict[token]['requests_remaining'] = 4
-
+                with self.lock:
+                    if data['requests_remaining'] > 2:  # I have no clue why but when its 0, we still hi 429? probably race conditions or some other shit, cannot care less
+                        self.token_dict[token]['requests_remaining'] -= 1
                         return token
 
-            time.sleep(1)
-            print(f"===sleeping==={slept}")
-            slept += 1
+                    if data['reset_time']:
 
-        raise CannotProcessDiscordRequestError("Unable to process this request at the moment")
+                        reset_time = float(data['reset_time'])
+
+                        if current_time >= reset_time:
+                            self.token_dict[token]['requests_remaining'] = 1
+                            return token
+
+            time.sleep(0.5)
+            print(f"===sleeping==={slept}")
+            slept += 0.5
+
+        raise CannotProcessDiscordRequestError("Unable to process this request at the moment, server is too busy.")
 
     def update_token(self, token: str, headers: dict):
         print(f"update token: {token}")
 
         reset_time = headers.get('X-RateLimit-Reset')
         requests_remaining = headers.get('X-RateLimit-remaining')
-        if requests_remaining and reset_time:
-            self.token_dict[token]['reset_time'] = reset_time
-            self.token_dict[token]['requests_remaining'] = int(requests_remaining)
-        else:
-            print("===Missing ratelimit headers====")
+        with self.lock:  # Ensure thread safety when updating token_dict
+            if requests_remaining and reset_time:
+                self.token_dict[token]['reset_time'] = reset_time
+                self.token_dict[token]['requests_remaining'] = int(requests_remaining)
+            else:
+                print("===Missing ratelimit headers====")
 
     def make_request(self, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         token = self.get_token()

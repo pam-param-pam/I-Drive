@@ -8,8 +8,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, UserPerms
-from ..utilities.Permissions import ChangePassword, SettingsModifyPerms
+from ..models import UserSettings, Folder, UserPerms, DiscordSettings
+from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
@@ -143,3 +143,48 @@ class MyTokenDestroyView(TokenDestroyView):
     def post(self, request):
         logout_and_close_websockets(request.user.id)
         return super().post(request)
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
+def discord_settings(request):
+
+    settings = DiscordSettings.objects.get(user=request.user).prefetch_related("webhooks", "bots")
+    webhooks = settings.webhooks.all()
+    bots = settings.bots.all()
+
+    fake_discord_settings = {"webhooks": [
+        {"name": "Captain Hook", "id": "321333333333332231", "created_at": "fsdfsdfsdf"},
+        {"name": "Captain Hook v2", "id": "32133333432423333332231", "created_at": "fsaSQsdfsdf"}],
+        "bots": []
+    }
+
+
+@api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([DiscordModifyPerms])
+@handle_common_errors
+def add_webhook(request):
+    pass
+
+@api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([DiscordModifyPerms])
+@handle_common_errors
+def delete_webhook(request):
+    pass
+
+@api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([DiscordModifyPerms])
+@handle_common_errors
+def add_bot(request):
+    pass
+
+@api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([DiscordModifyPerms])
+@handle_common_errors
+def delete_bot(request):
+    pass

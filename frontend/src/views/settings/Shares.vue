@@ -143,6 +143,7 @@ export default {
 
 <style scoped>
 .share-name-column {
+ padding-right: 1em;
  max-width: 200px;
  overflow: hidden;
  text-overflow: ellipsis;

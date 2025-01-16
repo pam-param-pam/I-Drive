@@ -5,20 +5,21 @@
     <div id="nav">
       <div class="wrapper">
         <ul>
-          <router-link to="/settings/profile"
-          >
+          <router-link to="/settings/profile">
             <li :class="{ active: $route.path === '/settings/profile' }">
               {{ $t("settings.profileSettings") }}
             </li>
-          </router-link
-          >
-          <router-link to="/settings/shares" v-if="perms.share"
-          >
+          </router-link>
+          <router-link to="/settings/shares" v-if="perms.share">
             <li :class="{ active: $route.path === '/settings/shares' }">
               {{ $t("settings.shareManagement") }}
             </li>
-          </router-link
-          >
+          </router-link>
+          <router-link to="/settings/discord">
+            <li :class="{ active: $route.path === '/settings/discord' }">
+              {{ $t("settings.discordSettings") }}
+            </li>
+          </router-link>
         </ul>
       </div>
     </div>
