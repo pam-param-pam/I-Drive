@@ -8,13 +8,15 @@ from django.urls import reverse
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings
 from .tasks import smart_delete
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
 from .utilities.other import sign_resource_id_with_expiry
 
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
+admin.site.register(DiscordSettings, SimpleHistoryAdmin)
+
 admin.site.register(VideoPosition)
 
 
@@ -309,3 +311,11 @@ class TagAdmin(SimpleHistoryAdmin):
         return "No files"
 
     file_list.short_description = "Files"
+
+@admin.register(Webhook)
+class WebhookAdmin(admin.ModelAdmin):
+    list_display = ['name', 'owner', 'created_at']
+
+@admin.register(Bot)
+class BotAdmin(admin.ModelAdmin):
+    list_display = ['name', 'owner', 'created_at']

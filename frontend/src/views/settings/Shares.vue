@@ -10,8 +10,8 @@
         <div class="card-content full" v-if="shares.length > 0">
           <table>
             <tr>
-              <th>{{ $t("settings.ShareName") }}</th>
-              <th>{{ $t("settings.shareExpiry") }}</th>
+              <th>{{ $t("settings.name") }}</th>
+              <th class="expiry-column">{{ $t("settings.shareExpiry") }}</th>
               <th></th>
               <th></th>
             </tr>
@@ -140,17 +140,3 @@ export default {
    }
 }
 </script>
-
-<style scoped>
-.share-name-column {
- padding-right: 1em;
- max-width: 200px;
- overflow: hidden;
- text-overflow: ellipsis;
- white-space: nowrap;
-}
-
-.expiry-column {
- padding-left: 1em;
-}
-</style>

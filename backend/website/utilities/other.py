@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition, UserSettings, UserZIP
+from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition, UserSettings, UserZIP, Webhook, Bot
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
@@ -526,15 +526,9 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, item: Union[Fi
                 raise ResourceNotFoundError()
 
 
-def get_required_folder_passwords(request, required_folder_passwords, item):
-    """
-    Checks for missing or incorrect folder passwords in a list of files/folders.
-    Returns a list of unique item IDs requiring passwords.
-    """
-    try:
-        check_resource_perms(request, item)
-    except MissingOrIncorrectResourcePasswordError:
-        if item.lockFrom and item.lockFrom not in required_folder_passwords:
-            required_folder_passwords.append(item.lockFrom)
+def create_webhook_dict(webhook: Webhook):
+    return {"name": webhook.name, "created_at": formatDate(webhook.created_at), "discord_id": webhook.discord_id}
 
-    return required_folder_passwords
+
+def create_bot_dict(bot: Bot):
+    return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id}

@@ -173,7 +173,6 @@ class File(models.Model):
     lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     key = models.BinaryField()
     iv = models.BinaryField(null=True)
-    webhook = models.TextField(null=False, blank=False)  # TODO implement webhook
     encryption_method = models.SmallIntegerField()
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     history = HistoricalRecords()
@@ -347,7 +346,7 @@ class Fragment(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     attachment_id = models.CharField(max_length=255, null=True)
 
-    webhook = models.ForeignKey('Webhook', on_delete=models.CASCADE)
+    # webhook = models.ForeignKey('Webhook', on_delete=models.CASCADE) #todo implement this
 
     history = HistoricalRecords()
 
@@ -483,7 +482,7 @@ class Tag(models.Model):
 
 
 class Webhook(models.Model):
-    url = models.CharField(max_length=100, unique=True)
+    url = models.CharField(max_length=150, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=100)
@@ -510,11 +509,8 @@ class Bot(models.Model):
 
 class DiscordSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
-    webhooks = models.ManyToManyField(Webhook, blank=True, related_name='discord_settings')
-    bots = models.ManyToManyField(Bot, blank=True, related_name='discord_settings')
     channel_id = models.CharField(max_length=100)
     guild_id = models.CharField(max_length=100)
-
     history = HistoricalRecords()
 
     def __str__(self):

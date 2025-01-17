@@ -3,7 +3,7 @@ import {backend_instance} from "@/utils/networker.js"
 export async function getUser(token) {
    if (!token) return
 
-   let url = "/auth/user/me"
+   let url = "/user/me"
    let response = await backend_instance.get(url, {
       headers: {
          "Authorization": `Token ${token}`,
@@ -55,6 +55,18 @@ export async function getTrash() {
    })
    return response.data
 
+}
+
+export async function getDiscordSettings() {
+   let url = `/user/discordSettings`
+   let response = await backend_instance.get(url)
+   return response.data
+}
+
+export async function addDiscordWebhook(data) {
+   let url = `/user/discordSettings/webhook/add`
+   let response = await backend_instance.post(url, data)
+   return response.data
 }
 
 

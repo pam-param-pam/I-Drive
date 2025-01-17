@@ -8,12 +8,13 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, UserPerms, DiscordSettings
+from ..models import UserSettings, Folder, UserPerms, DiscordSettings, Webhook, Bot
+from ..utilities.Discord import discord
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import logout_and_close_websockets
+from ..utilities.other import logout_and_close_websockets, formatDate, create_webhook_dict, create_bot_dict
 from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle
 
 
@@ -148,17 +149,20 @@ class MyTokenDestroyView(TokenDestroyView):
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
-def discord_settings(request):
+def get_discord_settings(request):
 
-    settings = DiscordSettings.objects.get(user=request.user).prefetch_related("webhooks", "bots")
-    webhooks = settings.webhooks.all()
-    bots = settings.bots.all()
+    settings = DiscordSettings.objects.get(user=request.user)
+    webhooks = Webhook.objects.filter(owner=request.user)
+    bots = Bot.objects.filter(owner=request.user)
+    webhook_dicts = []
+    for webhook in webhooks:
+        webhook_dicts.append(create_webhook_dict(webhook))
 
-    fake_discord_settings = {"webhooks": [
-        {"name": "Captain Hook", "id": "321333333333332231", "created_at": "fsdfsdfsdf"},
-        {"name": "Captain Hook v2", "id": "32133333432423333332231", "created_at": "fsaSQsdfsdf"}],
-        "bots": []
-    }
+    bots_dicts = []
+    for bot in bots:
+        bots_dicts.append(create_bot_dict(bot))
+
+    return JsonResponse({"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id})
 
 
 @api_view(['POST'])
@@ -166,7 +170,26 @@ def discord_settings(request):
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def add_webhook(request):
-    pass
+    url = request.data.get('webhook_url')
+    if urlparse(url).netloc != "discord.com":
+        raise BadRequestError("Webhook URL is invalid")
+
+    if Webhook.objects.filter(url=url, owner=request.user).exists():
+        raise BadRequestError("Webhook with this URL already exists!")
+
+    guild_id, channel_id, discord_id, name = discord.check_webhook(request.user, url)
+
+    webhook = Webhook(
+        url=url,
+        owner=request.user,
+        guild_id=guild_id,
+        channel_id=channel_id,
+        discord_id=discord_id,
+        name=name,
+    )
+    webhook.save()
+
+    return JsonResponse(create_webhook_dict(webhook), status=200)
 
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])

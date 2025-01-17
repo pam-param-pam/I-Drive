@@ -1,3 +1,4 @@
+import time
 from datetime import timedelta
 
 from django.contrib.contenttypes.models import ContentType
@@ -7,13 +8,13 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, get_thumbnail, get_preview
-from ..models import UserSettings, ShareableLink, UserZIP, File
+from ..models import UserSettings, ShareableLink, UserZIP
 from ..utilities.Permissions import SharePerms
 from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import handle_common_errors, check_file
+from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_dict, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, \
-    build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, verify_signed_resource_id, get_file
+    build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, get_file
 from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 
 
@@ -21,7 +22,6 @@ from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
 def get_shares(request):
-
     shares = ShareableLink.objects.filter(owner=request.user)
     items = []
 

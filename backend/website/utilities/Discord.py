@@ -9,8 +9,9 @@ from urllib.parse import urlparse, parse_qs
 
 import httpx
 
+from ..models import DiscordSettings
 from ..utilities.constants import cache
-from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError
+from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
 
 
 def retry(func):
@@ -135,7 +136,7 @@ class Discord:
             else:
                 print("===Missing ratelimit headers====")
 
-    def make_request(self, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+    def _make_request(self, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         token = self.get_token()
         if not headers:
             headers = {}
@@ -152,7 +153,7 @@ class Discord:
             if not retry_after:  # retry_after is missing if discord blocked us
                 raise DiscordBlockError("Discord is stupid :(")
 
-            return self.make_request(method, url, headers, json, files, timeout)
+            return self._make_request(method, url, headers, json, files, timeout)
         elif not response.is_success:
             raise DiscordError(response.text, response.status_code)
 
@@ -163,13 +164,13 @@ class Discord:
         payload = {'content': message}
         headers = {"Content-Type": 'application/json'}
 
-        response = self.make_request('POST', url, headers=headers, json=payload)
+        response = self._make_request('POST', url, headers=headers, json=payload)
         return response
 
     def send_file(self, files: dict) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
 
-        response = self.make_request('POST', url, files=files, timeout=None)
+        response = self._make_request('POST', url, files=files, timeout=None)
 
         message = response.json()
         expiry = self._calculate_expiry(message)
@@ -193,7 +194,7 @@ class Discord:
 
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
 
-        response = self.make_request('GET', url)
+        response = self._make_request('GET', url)
 
         message = response.json()
         expiry = self._calculate_expiry(message)
@@ -203,7 +204,7 @@ class Discord:
     @retry
     def remove_message(self, message_id: str) -> httpx.Response:
         url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
-        response = self.make_request('DELETE', url)
+        response = self._make_request('DELETE', url)
         return response
 
     @retry
@@ -230,6 +231,26 @@ class Discord:
         current_datetime = datetime.utcnow()
         ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
         return ttl_seconds
+
+    def check_webhook(self, user, webhook_url):
+        settings = DiscordSettings.objects.get(user=user)
+
+        response = self._make_request('GET', webhook_url)
+
+        if not response.is_success:
+            raise DiscordError(f"Webhook returned {response.status_code} status code")
+
+        data = response.json()
+        print(data)
+        guild_id = data['guild_id']
+        channel_id = data['channel_id']
+        discord_id = data['id']
+        name = data['name']
+
+        if settings.guild_id != guild_id or settings.channel_id != channel_id:
+            raise BadRequestError("Channel ID or Guild ID is not the same!")
+
+        return guild_id, channel_id, discord_id, name
 
 
 discord = Discord()

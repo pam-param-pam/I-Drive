@@ -150,13 +150,6 @@ table tr>*:first-child {
   padding-left: 1em;
 }
 
-body.rtl table tr>* {
-  padding-left: unset;
-  padding-right: 1em;
-  text-align: right;
-  direction: ltr;
-}
-
 table tr>*:last-child {
   padding-right: 1em;
 }
@@ -488,8 +481,14 @@ body.rtl .card .card-title>*:first-child {
   font-weight: 500;
 }
 
-/*** RTL - Fix disk usage information (in english) ***/
-body.rtl .credits {
-  text-align: right;
-  direction: ltr;
+.share-name-column {
+  padding-right: 1em;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expiry-column {
+  padding-left: 1em;
 }

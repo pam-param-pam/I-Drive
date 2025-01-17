@@ -19,9 +19,12 @@
  background-color: var(--surfaceSecondary);
  border: 1px solid var(--surfaceSecondary);
  color: #dcdcdc;
-
-
 }
+
+.dark-mode table tr {
+ border-bottom: 1px solid var(--surfaceSecondary);
+}
+
 .dark-mode #loading {
  background: var(--background);
 }
