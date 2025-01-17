@@ -346,7 +346,7 @@ class Fragment(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     attachment_id = models.CharField(max_length=255, null=True)
 
-    # webhook = models.ForeignKey('Webhook', on_delete=models.CASCADE) #todo implement this
+    webhook = models.ForeignKey('Webhook', on_delete=models.PROTECT)
 
     history = HistoricalRecords()
 

@@ -78,7 +78,7 @@ export const useUploadStore = defineStore("upload2", {
       async startUpload(type, folderContext, filesList) {
 
          this.uploader.processNewFiles(type, folderContext, filesList)
-
+         //todo NotOptimizedForSmallFiles
 
       },
       // async bufferRequests() {

@@ -13,7 +13,8 @@ from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
 from .views.testViews import get_folder_password
 from .views.uploadViews import create_file, create_thumbnail
-from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook
+from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
+    update_upload_destination
 
 urlpatterns = [
 
@@ -46,6 +47,10 @@ urlpatterns = [
     path("user/updatesettings", update_settings, name="update settings"),
     path("user/discordSettings", get_discord_settings, name="get discord settings"),
     path("user/discordSettings/webhook/add", add_webhook, name="add a webhook"),
+    path("user/discordSettings/webhook/delete", delete_webhook, name="delete a webhook"),
+    path("user/discordSettings/bot/add", add_bot, name="add a bot"),
+    path("user/discordSettings/bot/delete", delete_bot, name="delete a bot"),
+    path("user/updateDiscordSettings", update_upload_destination, name="update upload destination"),
 
     path("shares", get_shares, name="get user's shares"),
     path("share/delete", delete_share, name="delete share"),

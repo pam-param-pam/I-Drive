@@ -1,11 +1,11 @@
 <template>
   <div class="card floating">
     <div class="card-title">
-      <h2>{{ $t("prompts.iDriveNotOptimized") }}</h2>
+      <h2>{{ $t("prompts.uploadDestination") }}</h2>
     </div>
     <div class="card-content">
       <p>
-        {{ $t("prompts.iDriveNotOptimizedMessage") }}
+        {{ $t("prompts.uploadDestinationWarning") }}
       </p>
 
 
@@ -22,10 +22,10 @@
       <button
         @click="submit"
         class="button button--flat button--red"
-        :aria-label="$t('buttons.delete')"
-        :title="$t('buttons.delete')"
+        :aria-label="$t('buttons.imSure')"
+        :title="$t('buttons.imSure')"
       >
-        {{ $t("buttons.proceedAnyway") }}
+        {{ $t("buttons.imSure") }}
       </button>
 
     </div>
@@ -38,7 +38,7 @@ import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
 
 export default {
-   name: "NotOptimizedForSmallFiles",
+   name: "UploadDestinationWarning",
    computed: {
       ...mapState(useMainStore, ["currentPrompt"]),
    },

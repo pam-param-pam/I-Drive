@@ -9,6 +9,7 @@
   /*changed*/
   overflow: auto;
   flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 body.rtl .dashboard .row {

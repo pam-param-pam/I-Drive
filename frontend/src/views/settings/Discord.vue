@@ -1,72 +1,109 @@
 <template>
-  <errors v-if="error" :error="error" />
-  <div class="row" v-else-if="!loading">
+  <div class="row" v-if="!loading">
     <div class="column">
-      <div class="card">
-        <div class="card-title">
-          <h2>{{ $t("settings.webhooks") }}</h2>
-        </div>
-        <div class="card-content">
-          <div v-if="webhooks.length > 0" class="table-wrapper">
-            <table>
-              <tr>
-                <th>#</th>
-                <th>{{ $t("settings.name") }}</th>
-                <th class="expiry-column">{{ $t("settings.createdAt") }}</th>
-                <th></th>
-              </tr>
+      <div class="cards-wrapper">
+        <!--        START OF WEBHOOKS CARD-->
+        <div v-if="canAddBotsOrWebhooks" class="card">
+          <div class="card-title">
+            <h2>{{ $t("settings.webhooks") }}</h2>
+          </div>
+          <div class="card-content">
+            <div v-if="webhooks.length > 0" class="table-wrapper">
+              <table>
+                <tr>
+                  <th>#</th>
+                  <th>{{ $t("settings.name") }}</th>
+                  <th class="expiry-column">{{ $t("settings.createdAt") }}</th>
+                  <th></th>
+                </tr>
 
-              <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id">
-                <td>{{ index + 1 }}</td>
-                <td class="share-name-column">
-                  <a>{{ webhook.name }}</a>
-                </td>
-                <td class="expiry-column">
-                  <a>{{ webhook.created_at }}</a>
-                </td>
-                <td class="small">
-                  <button
-                    class="action"
-                    @click="removeWebhook(webhook.discord_id)"
-                    :aria-label="$t('buttons.delete')"
-                    :title="$t('buttons.delete')"
-                  >
-                    <i class="material-icons">delete</i>
-                  </button>
-                </td>
-              </tr>
-            </table>
-          </div>
-          <div v-else class="info">
+                <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id">
+                  <td>{{ index + 1 }}</td>
+                  <td class="share-name-column">
+                    <a>{{ webhook.name }}</a>
+                  </td>
+                  <td class="expiry-column">
+                    <a>{{ webhook.created_at }}</a>
+                  </td>
+                  <td class="small">
+                    <button
+                      class="action"
+                      @click="removeWebhook(webhook.discord_id)"
+                      :aria-label="$t('buttons.delete')"
+                      :title="$t('buttons.delete')"
+                    >
+                      <i class="material-icons">delete</i>
+                    </button>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <div v-else class="info">
             <span>
-              {{$t('settings.webhookInfo')}}
+              {{ $t("settings.webhookInfo") }}
               <br>
               <br>
-              {{$t('settings.webhookAdvice')}}
+              {{ $t("settings.webhookAdvice") }}
             </span>
+            </div>
+            <input
+              v-if="showWebhookInput || webhooks.length === 0"
+              v-model="webhookUrl"
+              type="text"
+              :placeholder="$t('settings.newWebhookPlaceholder')"
+              class="input"
+            />
           </div>
-          <input
-            v-if="showWebhookInput || webhooks.length === 0"
-            v-model="webhookUrl"
-            type="text"
-            :placeholder="$t('settings.newWebhookPlaceholder')"
-            class="input"
-          />
+          <div class="card-action">
+            <button
+              class="button button--flat"
+              @click="addWebhook"
+              :aria-label="$t('buttons.add')"
+              :title="$t('buttons.add')"
+            >
+              {{ $t("buttons.add") }}
+            </button>
+          </div>
         </div>
-        <div class="card-action">
-          <button
-            class="button button--flat"
-            @click="addWebhook"
-            :aria-label="$t('buttons.add')"
-            :title="$t('buttons.add')"
-          >
-            {{ $t("buttons.add") }}
-          </button>
+        <!--        START OF UPLOAD DEST CARD-->
+        <div class="card">
+          <div class="card-title">
+            <h2>{{ $t("settings.uploadDestination") }}</h2>
+          </div>
+          <div class="card-content">
+            <h3>{{ $t("settings.guildId") }}</h3>
+            <input
+              class="input"
+              type="text"
+              :disabled="canAddBotsOrWebhooks"
+              v-model="guildId"
+            />
+
+            <h3>{{ $t("settings.channelId") }}</h3>
+            <input
+              class="input"
+              :disabled="canAddBotsOrWebhooks"
+              type="text"
+              v-model="channelId"
+            />
+          </div>
+          <div class="card-action">
+            <button
+              class="button button--flat"
+              @click="saveUploadDestination"
+              :aria-label="$t('buttons.save')"
+              :title="$t('buttons.save')"
+            >
+              {{ $t("buttons.save") }}
+            </button>
+          </div>
         </div>
+        <!--        END OF UPLOAD DEST CARD-->
       </div>
     </div>
 
-    <div class="column">
+    <div v-if="canAddBotsOrWebhooks" class="column">
+
       <div class="card">
         <div class="card-title">
           <h2>{{ $t("settings.bots") }}</h2>
@@ -104,10 +141,10 @@
           </div>
           <div v-else class="info">
             <span>
-              {{$t('settings.botInfo')}}
+              {{ $t("settings.botInfo") }}
               <br>
               <br>
-              {{$t('settings.botAdvice')}}
+              {{ $t("settings.botAdvice") }}
             </span>
           </div>
           <input
@@ -134,15 +171,13 @@
 </template>
 
 <script>
-import { addDiscordWebhook, getDiscordSettings } from "@/api/user.js";
-import throttle from "lodash.throttle";
-import Errors from "@/components/Errors.vue"
+import { addDiscordBot, addDiscordWebhook, deleteDiscordBot, deleteDiscordWebhook, getDiscordSettings, updateDiscordSettings } from "@/api/user.js"
+import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
 
 export default {
-   components: { Errors },
    data() {
       return {
          webhooks: [],
@@ -153,74 +188,81 @@ export default {
          guild_id: null,
          showBotInput: false,
          botToken: "",
-      };
+         canAddBotsOrWebhooks: false
+      }
    },
    computed: mapState(useMainStore, ["loading", "error"]),
    async created() {
       this.setLoading(true)
-      let res = await getDiscordSettings();
-      this.webhooks = res.webhooks;
-      this.bots = res.bots;
-      this.channel_id = res.channel_id;
-      this.guild_id = res.guild_id;
+      let res = await getDiscordSettings()
+      this.webhooks = res.webhooks
+      this.bots = res.bots
+      this.channelId = res.channel_id
+      this.guildId = res.guild_id
+      this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
       this.setLoading(false)
 
    },
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setError"]),
+      ...mapActions(useMainStore, ["setLoading", "showHover"]),
 
-      addWebhook: throttle(async function (event) {
+      addWebhook: throttle(async function(event) {
          if (this.webhookUrl === "") {
-            this.showWebhookInput = true;
-            return;
+            this.showWebhookInput = true
+            return
          }
-         let res = await addDiscordWebhook({ webhook_url: this.webhookUrl });
-         this.webhookUrl = "";
-         this.webhooks.push(res);
-         this.showWebhookInput = false;
+         let res = await addDiscordWebhook({ webhook_url: this.webhookUrl })
+         this.webhookUrl = ""
+         this.webhooks.push(res)
+         this.showWebhookInput = false
+         this.$toast.success(this.$t("toasts.webhookAdded"))
+
       }, 1000),
 
 
-      addBot: throttle(async function (event) {
+      addBot: throttle(async function(event) {
          if (this.botToken === "") {
-            this.showBotInput = true;
-            return;
+            this.showBotInput = true
+            return
          }
-         // let res = await addDiscordWebhook({ webhook_url: this.webhookUrl });
-         this.botToken = "";
-         // this.webhooks.push(res);
-         this.showBotInput = false;
+         let res = await addDiscordBot({ token: this.botToken })
+         this.botToken = ""
+         this.bots.push(res)
+         this.showBotInput = false
+         this.$toast.success(this.$t("toasts.botAdded"))
+
       }, 1000),
 
+      async removeWebhook(discord_id) {
+         await deleteDiscordWebhook({ "discord_id": discord_id })
+         this.webhooks = this.webhooks.filter(webhook => webhook.discord_id !== discord_id)
+         this.$toast.success(this.$t("toasts.webhookDeleted"))
 
-      removeWebhook(index) {
-         this.webhooks.splice(index, 1);
       },
 
-      saveWebhooks() {
-         console.log("Webhooks saved", this.webhooks);
+      async removeBot(discord_id) {
+         await deleteDiscordBot({ "discord_id": discord_id })
+         this.bots = this.bots.filter(webhook => webhook.discord_id !== discord_id)
+         this.$toast.success(this.$t("toasts.botDeleted"))
       },
 
-      removeBot(index) {
-         this.bots.splice(index, 1);
-      },
-
-      saveBots() {
-         console.log("Bots saved", this.bots);
+      async saveUploadDestination() {
+         this.showHover({
+            prompt: "UploadDestinationWarning",
+            confirm: async () => {
+               await updateDiscordSettings({"channel_id": this.channel_id, "guild_id": this.guild_id})
+               this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
+            },
+         })
       }
+
    }
-};
+}
 </script>
 
 <style scoped>
 .table-wrapper {
  padding-bottom: 1em;
-}
-
-.list-item {
- display: flex;
- gap: 10px;
- margin-block-end: 0em !important;
 }
 
 .button {
@@ -230,19 +272,19 @@ export default {
  cursor: pointer;
 }
 
-.button--add {
- background-color: var(--background);
-}
-
-.button--remove {
- background-color: var(--dark-red);
-}
-
 .info {
  padding-bottom: 1em;
 }
 
-.button:hover {
- opacity: 0.9;
+.input:disabled {
+ color: gray;
+}
+
+.input:disabled:hover {
+ cursor: not-allowed;
+}
+
+.cards-wrapper {
+ width: 100%;
 }
 </style>

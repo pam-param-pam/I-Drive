@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "imSure": "Jestem pewien, chcę kontynować",
     "removeTag": "Usuń tag",
     "addTag": "Dodaj tag",
     "editTags": "Edytuj tagi",
@@ -129,6 +130,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "uploadDestination": "Miejsce przesyłania pików",
+    "uploadDestinationWarning": "Czy jesteś pewien że ID kanału oraz ID serwera są poprawne? Nie będziesz wstanie zmienić tego pózniej, chyba że usuniesz wszystkie pliki.",
     "enterExtension": "mp4",
     "enterResultLimit": "Wpisz maksymalną ilość itemów",
     "tags": "Tagi",
@@ -226,12 +229,15 @@
     "webhooks": "Webhooki",
     "bots": "Boty",
     "createdAt": "Utworzone",
+    "guildId": "ID serwera",
+    "channelId": "ID kanału",
+    "uploadDestination": "Miejsce przesyłania plików",
     "newWebhookPlaceholder": "Wpisz URL webhooka",
     "newBotPlaceholder": "Wpisz token bota",
     "webhookInfo": "Dodaj webhooki by przesyłać pliki. Wszystkie webhooki muszą być przypisane do tego samego serwera i kanału.",
     "webhookAdvice": "Zalecane jest nie używać więcej niż 3 webhooki.",
     "botInfo": "Dodaj boty by przesyłać pliki. Wszystkie boty muszą mieć READ, WRITE, MANAGE permisje.",
-    "botAdvice": "Zalecane jest używać conajmniej 5 botów.",
+    "botAdvice": "Zalecane jest używanie conajmniej 5 botów.",
     "discordSettings": "Ustawienia discorda",
     "AES_CTR": "AES CTR",
     "ChaCha20": "ChaCha20",
@@ -291,6 +297,10 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "botAdded": "Dodano bot!",
+    "botDeleted": "Usunięto bot!",
+    "webhookAdded": "Dodano webhook!",
+    "webhookDeleted": "Usunięto webhook!",
     "movingItems": "Przenoszenie itemów {percentage}%...",
     "linkCopied": "Link skopiowany!",
     "locating": "Lokalizowanie...",

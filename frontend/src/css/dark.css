@@ -154,7 +154,7 @@
 }
 
 /* Flat button hover */
-.dark-mode .button--flat:hover {
+.dark-mode .button--flat:not(:disabled):hover {
  background: var(--surfaceSecondary);
 }
 

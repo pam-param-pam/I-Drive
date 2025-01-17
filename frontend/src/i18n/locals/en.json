@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "imSure": "I'm sure and want to continue",
     "removeTag": "Remove tag",
     "addTag": "Add tag",
     "editTags": "Edit tags",
@@ -129,6 +130,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "uploadDestination": "Upload destination",
+    "uploadDestinationWarning": "Are you sure these values are correct? You will not be able to change this until ALL files are deleted.",
     "enterExtension": "mp4",
     "enterResultLimit": "Enter max amount of items to return",
     "tags": "Tags",
@@ -225,6 +228,9 @@
   "settings": {
     "webhooks": "Webhooks",
     "bots": "Bots",
+    "uploadDestination": "Upload destination",
+    "guildId": "Guild ID",
+    "channelId": "Channel ID",
     "newWebhookPlaceholder": "Enter webhook URL",
     "newBotPlaceholder": "Enter bot token",
     "webhookInfo": "Add webhooks to upload files. All webhooks must use the same channel and guild.",
@@ -290,6 +296,10 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "botAdded": "Bot added!",
+    "botDeleted": "Bot deleted!",
+    "webhookAdded": "Webhook added!",
+    "webhookDeleted": "Webhook deleted!",
     "movingItems": "Moving items {percentage}%...",
     "linkCopied": "Link copied!",
     "locating": "Locating item...",

@@ -5,6 +5,7 @@ from django.core.cache import caches
 
 API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
+DISCORD_BASE_URL = "https://discord.com/api/v10"
 
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb
 MAX_DISCORD_MESSAGE_SIZE = 25 * 1023 * 1024

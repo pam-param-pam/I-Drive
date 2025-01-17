@@ -36,6 +36,7 @@ import {mapActions, mapState} from "pinia"
 import {useMainStore} from "@/stores/mainStore.js"
 import Sidebar from "@/components/sidebar/Sidebar.vue"
 import EditTags from "@/components/prompts/EditTags.vue"
+import UploadDestinationWarning from "@/components/prompts/UploadDestinationWarning.vue"
 
 export default {
    name: "prompts",
@@ -59,6 +60,7 @@ export default {
       NotOptimizedForSmallFiles,
       ResetFolderPassword,
       EditTags,
+      UploadDestinationWarning,
    },
    created() {
       window.addEventListener("keydown", (event) => {

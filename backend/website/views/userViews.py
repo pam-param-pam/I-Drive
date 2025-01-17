@@ -8,13 +8,14 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, UserPerms, DiscordSettings, Webhook, Bot
+from ..models import UserSettings, Folder, UserPerms, DiscordSettings, Webhook, Bot, File, Fragment
 from ..utilities.Discord import discord
+from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
-from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import logout_and_close_websockets, formatDate, create_webhook_dict, create_bot_dict
+from ..utilities.errors import ResourcePermissionError, BadRequestError, DiscordError
+from ..utilities.other import logout_and_close_websockets, formatDate, create_webhook_dict, create_bot_dict, check_webhook
 from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle
 
 
@@ -152,8 +153,8 @@ class MyTokenDestroyView(TokenDestroyView):
 def get_discord_settings(request):
 
     settings = DiscordSettings.objects.get(user=request.user)
-    webhooks = Webhook.objects.filter(owner=request.user)
-    bots = Bot.objects.filter(owner=request.user)
+    webhooks = Webhook.objects.filter(owner=request.user).order_by('created_at')
+    bots = Bot.objects.filter(owner=request.user).order_by('created_at')
     webhook_dicts = []
     for webhook in webhooks:
         webhook_dicts.append(create_webhook_dict(webhook))
@@ -162,7 +163,8 @@ def get_discord_settings(request):
     for bot in bots:
         bots_dicts.append(create_bot_dict(bot))
 
-    return JsonResponse({"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id})
+    can_add_bots_or_webhooks = bool(settings.guild_id and settings.channel_id)
+    return JsonResponse({"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id, "can_add_bots_or_webhooks": can_add_bots_or_webhooks})
 
 
 @api_view(['POST'])
@@ -177,7 +179,12 @@ def add_webhook(request):
     if Webhook.objects.filter(url=url, owner=request.user).exists():
         raise BadRequestError("Webhook with this URL already exists!")
 
-    guild_id, channel_id, discord_id, name = discord.check_webhook(request.user, url)
+    try:
+        webhook = discord.get_webhook(url)
+    except DiscordError:
+        raise BadRequestError("Webhook URL is invalid")
+
+    guild_id, channel_id, discord_id, name = check_webhook(request, webhook)
 
     webhook = Webhook(
         url=url,
@@ -191,23 +198,70 @@ def add_webhook(request):
 
     return JsonResponse(create_webhook_dict(webhook), status=200)
 
+
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def delete_webhook(request):
-    pass
+    discord_id = request.data.get('discord_id')
+
+    webhook = Webhook.objects.get(discord_id=discord_id, owner=request.user)
+    if not webhook:
+        raise BadRequestError("Webhook with this URL doesn't exists!")
+
+    if Fragment.objects.filter(webhook=webhook, file__owner=request.user).exists():
+        raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
+
+    webhook.delete()
+    return HttpResponse(status=204)
+
 
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def add_bot(request):
-    pass
+    token = request.data.get('token')
+
+    if Bot.objects.filter(token=token, owner=request.user).exists():
+        raise BadRequestError("Bot with this token already exists!")
+
+    settings = DiscordSettings.objects.get(user=request.user)
+    helper = DiscordHelper(token, settings.guild_id, settings.channel_id)
+    bot = helper.check_and_get_bot()
+    bot.owner = request.user
+    bot.save()
+    return JsonResponse(create_bot_dict(bot), status=200)
 
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def delete_bot(request):
-    pass
+    discord_id = request.data.get('discord_id')
+
+    bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
+    if not bot:
+        raise BadRequestError("Bot with this token doesn't exists!")
+
+    bot.delete()
+    return HttpResponse(status=204)
+
+@api_view(['PUT'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([DiscordModifyPerms])
+@handle_common_errors
+def update_upload_destination(request):
+    guild_id = request.data.get('guild_id')
+    channel_id = request.data.get('channel_id')
+
+    if Fragment.objects.filter(file__owner=request.user).exists():
+        raise BadRequestError("Cannot change upload destination. Remove all files first")
+
+    settings = DiscordSettings.objects.get(user=request.user)
+    settings.guild_id = guild_id
+    settings.channel_id = channel_id
+    settings.save()
+
+    return HttpResponse(status=204)

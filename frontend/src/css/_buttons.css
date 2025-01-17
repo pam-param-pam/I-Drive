@@ -10,9 +10,14 @@
   transition: .1s ease all;
 }
 
-.button:hover {
+.button:not(:disabled):hover {
   background-color: var(--dark-blue);
 }
+
+.button:disabled {
+  cursor: not-allowed !important;
+}
+
 
 .button--block {
   margin: 0 0 0.5em;
@@ -36,7 +41,7 @@
   text-transform: uppercase;
 }
 
-.button--flat:hover {
+.button--flat:not(:disabled):hover {
   background: var(--moon-grey);
 }
 

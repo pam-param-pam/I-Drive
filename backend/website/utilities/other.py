@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
-from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition, UserSettings, UserZIP, Webhook, Bot
+from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition, UserSettings, UserZIP, Webhook, Bot, DiscordSettings
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
@@ -532,3 +532,20 @@ def create_webhook_dict(webhook: Webhook):
 
 def create_bot_dict(bot: Bot):
     return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id}
+
+def check_webhook(request, webhook: dict):
+    settings = DiscordSettings.objects.get(user=request.user)
+
+    if not settings.guild_id or not settings.channel_id:
+        raise BadRequestError("First specify Channel ID and Guild ID.")
+
+    guild_id = webhook['guild_id']
+    channel_id = webhook['channel_id']
+    discord_id = webhook['id']
+    name = webhook['name']
+
+    if settings.guild_id != guild_id or settings.channel_id != channel_id:
+        raise BadRequestError("Channel ID or Guild ID is not the same!")
+
+    return guild_id, channel_id, discord_id, name
+

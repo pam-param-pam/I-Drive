@@ -69,5 +69,27 @@ export async function addDiscordWebhook(data) {
    return response.data
 }
 
+export async function deleteDiscordWebhook(data) {
+   let url = `/user/discordSettings/webhook/delete`
+   let response = await backend_instance.post(url, data)
+   return response.data
+}
 
+export async function addDiscordBot(data) {
+   let url = `/user/discordSettings/bot/add`
+   let response = await backend_instance.post(url, data)
+   return response.data
+}
+
+export async function deleteDiscordBot(data) {
+   let url = `/user/discordSettings/bot/delete`
+   let response = await backend_instance.post(url, data)
+   return response.data
+}
+
+export async function updateDiscordSettings(data) {
+   let url = `/user/updateDiscordSettings`
+   let response = await backend_instance.put(url, data)
+   return response.data
+}
 

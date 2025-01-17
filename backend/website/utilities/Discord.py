@@ -1,7 +1,5 @@
-import logging
 import os
 import time
-
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Union
@@ -9,57 +7,8 @@ from urllib.parse import urlparse, parse_qs
 
 import httpx
 
-from ..models import DiscordSettings
-from ..utilities.constants import cache
-from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
-
-
-def retry(func):
-    def decorator(*args, **kwargs):
-        # args[0].semaphore.acquire()
-
-        response = func(*args, **kwargs)
-
-        #
-        # if response.status_code == 429:
-        #     print("hit 429!!!!!!!!!!!!!!!")
-        #     try:
-        #         retry_after = response.json()["retry_after"]
-        #         time.sleep(retry_after)
-        #         args[0].switch_token()
-        #
-        #     # discord returns an error json that doesn't contain retry_after if it blocked us for longer period of time. Should make it cleaner
-        #     except KeyError as e:
-        #         raise DiscordBlockError("Discord is stupid :(") from e
-        #     return decorator(*args, **kwargs)
-        #
-        # if response.headers["X-ratelimit-remaining"] == "1":
-        #     retry_after = float(response.headers["X-RateLimit-Reset-After"])
-        #     #time.sleep(retry_after)
-        #     args[0].switch_token()
-        # # args[0].semaphore.release()
-
-        return response
-
-    return decorator
-
-
-def webhook_retry(func):
-    def decorator(*args, **kwargs):
-        response = func(*args, **kwargs)
-        if response.status_code == 429:
-            retry_after = response.json()["retry_after"]
-            time.sleep(retry_after)
-            return decorator(*args, **kwargs)
-
-        if response.headers["X-ratelimit-remaining"] == "0":
-            retry_after = response.json()["X-RateLimit-Reset"]
-            time.sleep(retry_after)
-            return decorator(*args, **kwargs)
-
-        return response
-
-    return decorator
+from ..utilities.constants import cache, DISCORD_BASE_URL
+from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError
 
 
 class Discord:
@@ -90,7 +39,6 @@ class Discord:
             }
             for token in self.bot_tokens
         }
-        self.BASE_URL = 'https://discord.com/api/v10'
         self.channel_id = '870781149583130644'
         self.current_token_index = 0
 
@@ -160,7 +108,7 @@ class Discord:
         return response
 
     def send_message(self, message: str) -> httpx.Response:
-        url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
+        url = f'{DISCORD_BASE_URL}/channels/{self.channel_id}/messages'
         payload = {'content': message}
         headers = {"Content-Type": 'application/json'}
 
@@ -168,7 +116,7 @@ class Discord:
         return response
 
     def send_file(self, files: dict) -> httpx.Response:
-        url = f'{self.BASE_URL}/channels/{self.channel_id}/messages'
+        url = f'{DISCORD_BASE_URL}/channels/{self.channel_id}/messages'
 
         response = self._make_request('POST', url, files=files, timeout=None)
 
@@ -192,7 +140,7 @@ class Discord:
             return cached_message
         print("hit discord api")
 
-        url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
+        url = f'{DISCORD_BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
 
         response = self._make_request('GET', url)
 
@@ -201,15 +149,12 @@ class Discord:
         cache.set(message["id"], response, timeout=expiry)
         return response
 
-    @retry
     def remove_message(self, message_id: str) -> httpx.Response:
-        url = f'{self.BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
+        url = f'{DISCORD_BASE_URL}/channels/{self.channel_id}/messages/{message_id}'
         response = self._make_request('DELETE', url)
         return response
 
-    @retry
     def edit_attachments(self, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
-        # todo
         attachments_to_keep = []
         for attachment_id in attachment_ids_to_keep:
             attachments_to_keep.append({"id": attachment_id})
@@ -219,7 +164,7 @@ class Discord:
             return response
         raise DiscordError(response.text, response.status_code)
 
-    def _calculate_expiry(self, message: dict):
+    def _calculate_expiry(self, message: dict) -> float:
         url = message["attachments"][0]["url"]
         parsed_url = urlparse(url)
         query_params = parse_qs(parsed_url.query)
@@ -232,25 +177,10 @@ class Discord:
         ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
         return ttl_seconds
 
-    def check_webhook(self, user, webhook_url):
-        settings = DiscordSettings.objects.get(user=user)
-
+    def get_webhook(self, webhook_url):
+        # todo this call uses bots token auth
         response = self._make_request('GET', webhook_url)
-
-        if not response.is_success:
-            raise DiscordError(f"Webhook returned {response.status_code} status code")
-
-        data = response.json()
-        print(data)
-        guild_id = data['guild_id']
-        channel_id = data['channel_id']
-        discord_id = data['id']
-        name = data['name']
-
-        if settings.guild_id != guild_id or settings.channel_id != channel_id:
-            raise BadRequestError("Channel ID or Guild ID is not the same!")
-
-        return guild_id, channel_id, discord_id, name
+        return response.json()
 
 
 discord = Discord()
