@@ -177,6 +177,8 @@ export const useUploadStore = defineStore("upload2", {
          }
       },
       onUploadProgress(request, progressEvent) {
+         this.isInternet = true
+
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
          this.uploader.estimator.updateSpeed(this.uploadSpeed)
          this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)

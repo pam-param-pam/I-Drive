@@ -140,15 +140,13 @@ export function isVideoFile(file) {
 }
 
 export function getWebhook(currentWebhook = null) {
-   //todo revert
    const mainStore = useMainStore()
 
    let webhooks = mainStore.webhooks
-   // let currentWebhookIndex = webhooks.findIndex(webhook => webhook.discord_id === currentWebhook.discord_id)
-   // currentWebhookIndex = (currentWebhookIndex + 1) % webhooks.length
-   //
-   // return webhooks[currentWebhookIndex]
-   return webhooks[0]
+   let currentWebhookIndex = webhooks.findIndex(webhook => webhook.discord_id === currentWebhook.discord_id)
+   currentWebhookIndex = (currentWebhookIndex + 1) % webhooks.length
+
+   return webhooks[currentWebhookIndex]
 }
 
 export function getVideoCover(file, seekTo=-2) {
@@ -187,7 +185,7 @@ export function getVideoCover(file, seekTo=-2) {
             // Convert canvas to blob and resolve promise
             ctx.canvas.toBlob(
                (blob) => {
-                  
+
                   // checking if the thumbnail is not pitch black
                   ctx.canvas.width=ctx.canvas.height = 1;
                   ctx.drawImage(videoPlayer,0,0,1,1);

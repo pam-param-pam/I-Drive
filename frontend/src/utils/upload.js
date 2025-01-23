@@ -33,7 +33,7 @@ export async function* prepareRequests() {
    let queueFile
    while ((queueFile = uploadStore.getFileFromQueue())) {
 
-      //CASE 1, file is > 25mb
+      //CASE 1, file is > 10Mb
       if (queueFile.fileObj.size > chunkSize) {
          //CASE 1.1, attachments already created, we yield the already created attachments in a request
          if (attachments.length !== 0) {
@@ -53,7 +53,7 @@ export async function* prepareRequests() {
             attachments.push(attachment)
             totalSize = totalSize + chunk.size
 
-            //CASE 1.2.1 chunk size is already 25mb, so we yield it in a request
+            //CASE 1.2.1 chunk size is already 10Mb, so we yield it in a request
             if (totalSize === chunkSize) {
                let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
                totalSize = 0
@@ -64,9 +64,9 @@ export async function* prepareRequests() {
             i++
          }
       }
-      //CASE 2. file is < 25mb
+      //CASE 2. file is < 10Mb
       else {
-         //CASE 2.1 file is <25 mb but totalSize including fileObj.size is > 25mb or attachments.length == 10
+         //CASE 2.1 file is <10Mb but totalSize including fileObj.size is > 10Mb or attachments.length == 10
          //we need to yield the already created attachments in a request
          if (totalSize + queueFile.systemFile.size > chunkSize || attachments.length === 10) {
             let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
@@ -76,7 +76,7 @@ export async function* prepareRequests() {
             yield request
          }
 
-         //CASE 2.2 file is < 25mb and attachments length < 10, and we can safely add it to attachments
+         //CASE 2.2 file is < 10Mb and attachments length < 10, and we can safely add it to attachments
          let attachment = { "type": attachmentType.entireFile, "fileObj": queueFile.fileObj, "rawBlob": queueFile.systemFile, "fragmentSequence": 1 }
          attachments.push(attachment)
          totalSize = totalSize + queueFile.systemFile.size
@@ -87,7 +87,7 @@ export async function* prepareRequests() {
          try {
             let thumbnail = await getVideoCover(queueFile)
 
-            //CASE 1, totalSize including thumbnail.size is > 25mb or attachments.length == 10
+            //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
             if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
                let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
                totalSize = 0
@@ -202,6 +202,7 @@ export async function uploadRequest(request) {
       onUploadProgress: function(progressEvent) {
          uploadStore.onUploadProgress(request, progressEvent)
       },
+
 
    })
    await afterUploadRequest(request, discordResponse)
