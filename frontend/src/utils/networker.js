@@ -9,6 +9,10 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 const toast = useToast()
 
 const cancelTokenMap = new Map()
+function retry(error, delay) {
+   console.log(`Retrying request after ${delay} milliseconds`)
+   return new Promise(resolve => setTimeout(resolve, delay)).then(() => discordInstance(error.config))
+}
 
 //todo handle backends 429 policy lel
 export const backendInstance = axios.create({
@@ -38,31 +42,17 @@ discordInstance.interceptors.response.use(
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {
          let retryAfter = error.response.headers["retry-after"]
-
          if (retryAfter) {
             let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
             console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
-
-            // Wait for the specified time before retrying the request
-            return new Promise(function(resolve) {
-               setTimeout(function() {
-                  resolve(discordInstance(error.config))
-               }, waitTime)
-            })
+            return retry(error, waitTime)
          }
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502 || error.code === 429 || error.code === 500) {
+      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
-
-         function retry() {
-            let delay = 5000 // waiting for 5 seconds cuz, I felt like it.
-            console.log(`Retrying request after ${delay} milliseconds`)
-            return new Promise(resolve => setTimeout(resolve, delay)).then(() => discordInstance(error.config))
-         }
-
-         return retry()
+         return retry(error, 5000)
       }
 
       // If not a 429 error or no Retry-After header, just return the error
@@ -115,18 +105,25 @@ backendInstance.interceptors.response.use(
          return Promise.reject(error)
 
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502 || error.code === 429 || error.code === 500) {
+      // Check if the error is 429 Too Many Requests errors
+      if (error.response && error.response.status === 429 && error.config.__retry500) {
+         let retryAfter = error.response.headers["retry-after"]
+         if (retryAfter) {
+            let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
+            console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
+            return retry(error, waitTime)
+         }
+      }
+      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
+         return retry(error, 5000)
+      }
 
-         function retry() {
-            let delay = 5000 // waiting for 5 seconds cuz, I felt like it.
-            console.log(`Retrying request after ${delay} milliseconds`)
-            return new Promise(resolve => setTimeout(resolve, delay)).then(() => discordInstance(error.config))
-         }
-
-         return retry()
+      if (error.response && error.code === 500 && error.config.__retry500) {
+         console.log(`Received 500, retrying after 1 seconds.`)
+         return retry(error, 1000)
       }
 
       let { config, response } = error

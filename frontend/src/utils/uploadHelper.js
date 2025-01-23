@@ -242,7 +242,9 @@ export async function getOrCreateFolder(fileObj) {
       } else {
          let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
 
-         let folder = await create({ "parent_id": parentFolder, "name": folderName })
+         let folder = await create({ "parent_id": parentFolder, "name": folderName }, {
+            __retry500: true,
+         })
          parentFolder = folder.id
          uploadStore.createdFolders[path_key] = folder.id
       }

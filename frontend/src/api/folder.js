@@ -48,9 +48,9 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
 
 }
 
-export async function create(data) {
+export async function create(data, config={}) {
    let url = "/folder/create"
-   let response = await backendInstance.post(url, data)
+   let response = await backendInstance.post(url, data, config)
    return response.data
 
 }

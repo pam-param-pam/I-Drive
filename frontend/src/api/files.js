@@ -17,21 +17,27 @@ export async function getFile(file_id, lockFrom) {
 
 export async function createThumbnail(data) {
    let url = `/file/thumbnail/create`
-   let response = await backendInstance.post(url, data)
+   let response = await backendInstance.post(url, data, {
+      __retry500: true,
+   })
    return response.data
 
 }
 
-export async function createFile(data, config = {}) {
+export async function createFile(data) {
    let url = `/file/create`
-   let response = await backendInstance.post(url, data, config)
+   let response = await backendInstance.post(url, data, {
+      __retry500: true,
+   })
    return response.data
 
 }
 
 export async function patchFile(data) {
    let url = `/file/create`
-   let response = await backendInstance.patch(url, data)
+   let response = await backendInstance.patch(url, data, {
+      __retry500: true,
+   })
    return response.data
 }
 export async function getEncryptionSecrets(file_id) {

@@ -163,8 +163,6 @@ def smart_delete(user_id, request_id, ids):
                 send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
                 last_percentage = percentage
 
-            print("sleeping")
-            # time.sleep(0.1)
         for item in items:
             item.delete()
 
