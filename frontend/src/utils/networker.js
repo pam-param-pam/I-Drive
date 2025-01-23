@@ -48,7 +48,7 @@ discordInstance.interceptors.response.use(
             return retry(error, waitTime)
          }
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
+      if ((!error.response && error.code === "ERR_NETWORK") || response.status === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
@@ -97,36 +97,37 @@ backendInstance.interceptors.response.use(
       return response
    },
    async function(error) {
+      let { config, response } = error
 
       const store = useMainStore()
-      console.log("ON REJECTED")
+      console.warn("ON REJECTED")
 
       if (axios.isCancel(error)) {
          return Promise.reject(error)
 
       }
       // Check if the error is 429 Too Many Requests errors
-      if (error.response && error.response.status === 429 && error.config.__retry500) {
+      if (response && response.status === 429 && error.config.__retry500) {
          let retryAfter = error.response.headers["retry-after"]
          if (retryAfter) {
             let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
-            console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
+            console.warn(`Received 429, retrying after ${waitTime} milliseconds.`)
             return retry(error, waitTime)
          }
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
+      if ((!response && error.code === "ERR_NETWORK") || response.status === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
          return retry(error, 5000)
       }
 
-      if (error.response && error.code === 500 && error.config.__retry500) {
-         console.log(`Received 500, retrying after 1 seconds.`)
+
+      if (response && response.status === 500 && config.__retry500) {
+         console.warn(`Received 500, retrying after 1 seconds.`)
          return retry(error, 1000)
       }
 
-      let { config, response } = error
       if (!config.__retryCount) {
          config.__retryCount = 0
       }

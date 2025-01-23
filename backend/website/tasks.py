@@ -258,7 +258,7 @@ def move_to_trash_task(user_id, request_id, ids):
     last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = create_folder_dict(folder)
-        send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, folder_dict)
+        send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, [folder_dict])
         folder.moveToTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:

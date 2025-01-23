@@ -1,13 +1,14 @@
 import base64
 import math
 from datetime import datetime
+from random import random
 
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Fragment, UserSettings, Thumbnail, Webhook
+from ..models import File, Fragment, Thumbnail
 from ..utilities.Discord import discord
 from ..utilities.Permissions import CreatePerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode, EncryptionMethod
@@ -20,8 +21,9 @@ from ..utilities.throttle import MyUserRateThrottle
 @api_view(['POST', 'PATCH', 'PUT'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-# @handle_common_errors
+@handle_common_errors
 def create_file(request):
+
     if request.method == "POST":
         files = request.data['files']
         if not isinstance(files, list):
