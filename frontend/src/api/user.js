@@ -1,4 +1,5 @@
 import {backendInstance} from "@/utils/networker.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 
 export async function getUser(token) {
    if (!token) return
@@ -96,5 +97,16 @@ export async function updateDiscordSettings(data) {
 export async function enableDiscordBot(data) {
    let url = `/user/discordSettings/bot/enable`
    let response = await backendInstance.post(url, data)
+   return response.data
+}
+export async function canUpload() {
+   let url = `/user/canUpload`
+   let response = await backendInstance.get(url)
+   if (response.data.can_upload) {
+      let uploadStore = useUploadStore()
+      uploadStore.setWebhooks(response.data.webhooks)
+      uploadStore.setAttachmentName(response.data.attachment_name)
+   }
+
    return response.data
 }

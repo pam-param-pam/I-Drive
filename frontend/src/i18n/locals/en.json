@@ -226,6 +226,7 @@
     "video": "Video"
   },
   "settings": {
+    "attachmentName": "Discord's attachment name",
     "webhooks": "Webhooks",
     "bots": "Bots",
     "botDisabledNoPerms": "This bot lacks required permission.",
@@ -298,6 +299,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "uploadDestinationUpdated": "Saved!",
     "botRemovedForInsufficientPerms": "Bot: {name} was removed due to lack of required permission.",
     "botAdded": "Bot added!",
     "botDeleted": "Bot deleted!",

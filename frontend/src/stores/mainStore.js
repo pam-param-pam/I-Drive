@@ -223,18 +223,6 @@ export const useMainStore = defineStore("main", {
       setPerms(value) {
          this.perms = value
       },
-      addToWebhooks(webhook) {
-         this.webhooks.push(webhook)
-         console.log("AAAAAAAAAAA")
-      },
-      removeWebhook(discord_id) {
-         this.webhooks = this.webhooks.filter(webhook => webhook.discord_id !== discord_id)
-         console.log("dsfsdfsdfsfsdfsd")
-
-      },
-      setWebhooks(value) {
-         this.webhooks = value
-      },
       setSortingBy(value) {
          this.settings.sortingBy = value
       },

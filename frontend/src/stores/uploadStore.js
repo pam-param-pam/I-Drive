@@ -5,6 +5,7 @@ import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
 import { Uploader } from "@/utils/Uploader.js"
+import { canUpload } from "@/api/user.js"
 
 const toast = useToast()
 
@@ -30,6 +31,8 @@ export const useUploadStore = defineStore("upload2", {
       uploader: new Uploader(),
 
       eta: Infinity,
+      attachmentName: "",
+      webhooks: [],
 
       bufferedRequests: [],
    }),
@@ -76,6 +79,12 @@ export const useUploadStore = defineStore("upload2", {
 
    actions: {
       async startUpload(type, folderContext, filesList) {
+         let res = await canUpload()
+         if (!res.can_upload) {
+            toast.error("errors.notAllowedToUpload")
+            return
+         }
+
 
          this.uploader.processNewFiles(type, folderContext, filesList)
          //todo NotOptimizedForSmallFiles
@@ -235,7 +244,19 @@ export const useUploadStore = defineStore("upload2", {
             abortController.abort() // Cancel the request
             console.log("Upload request canceled by user.")
          }
-      }
+      },
+      addToWebhooks(webhook) {
+         this.webhooks.push(webhook)
+      },
+      removeWebhook(discord_id) {
+         this.webhooks = this.webhooks.filter(webhook => webhook.discord_id !== discord_id)
+      },
+      setWebhooks(value) {
+         this.webhooks = value
+      },
+      setAttachmentName(value) {
+         this.attachmentName = value
+      },
    }
 })
 const beforeUnload = (event) => {

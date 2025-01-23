@@ -8,7 +8,7 @@ import onEvent from "@/utils/WsEventhandler.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
-   const store = useMainStore()
+   const mainStore = useMainStore()
 
 
    let token = localStorage.getItem("token")
@@ -18,12 +18,11 @@ export async function validateLogin() { //this isn't really validate login - mor
    }
    let body = await getUser(token)
 
-   store.setUser(body.user)
-   store.setSettings(body.settings)
-   store.setPerms(body.perms)
-   store.setWebhooks(body.webhooks)
-   store.setToken(token)
-   store.setTheme(body.settings.theme)
+   mainStore.setUser(body.user)
+   mainStore.setSettings(body.settings)
+   mainStore.setPerms(body.perms)
+   mainStore.setToken(token)
+   mainStore.setTheme(body.settings.theme)
 
    app.use(VueNativeSock, baseWS + "/user", {reconnection: false, protocol: token})
    app.config.globalProperties.$socket.onmessage = (data) => onEvent(data)

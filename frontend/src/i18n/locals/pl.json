@@ -226,6 +226,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "attachmentName": "Nazwa plików na discordzie",
     "webhooks": "Webhooki",
     "bots": "Boty",
     "botDisabledNoPerms": "Ten bot jest wyłączony z powodu braku wymaganych permisji.",
@@ -299,6 +300,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "uploadDestinationUpdated": "Zapisano!",
     "botRemovedForInsufficientPerms": "Bot: {name} został usunięty z powodu braku wymaganych permisji.",
     "botAdded": "Dodano bot!",
     "botDeleted": "Usunięto bot!",

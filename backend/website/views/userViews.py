@@ -60,17 +60,28 @@ def register_user(request):
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated])
+# @handle_common_errors
+def can_upload(request):
+    discordSettings = request.user.discordsettings
+    webhooks = Webhook.objects.filter(owner=request.user)
+    webhook_dicts = []
+
+    for webhook in webhooks:
+        webhook_dicts.append(create_webhook_dict(webhook))
+
+    can_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0)
+    return JsonResponse({"can_upload": can_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name})
+
+
+@api_view(['GET'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated])
 @handle_common_errors
 def users_me(request):
     user = request.user
-    settings = request.user.usersettings
-    perms = request.user.userperms
-    root = Folder.objects.get(owner=request.user, parent=None)
-    webhooks = Webhook.objects.filter(owner=request.user)
-
-    webhook_dicts = []
-    for webhook in webhooks:
-        webhook_dicts.append(create_webhook_dict(webhook))
+    settings = user.usersettings
+    perms = user.userperms
+    root = Folder.objects.get(owner=user, parent=None)
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
 
@@ -84,7 +95,6 @@ def users_me(request):
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
                              "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp
                              },
-                "webhooks": webhook_dicts
                 }
 
     return JsonResponse(response, safe=False, status=200)
@@ -164,8 +174,8 @@ def get_discord_settings(request):
         bots_dicts.append(create_bot_dict(bot))
 
     can_add_bots_or_webhooks = bool(settings.guild_id and settings.channel_id)
-    return JsonResponse(
-        {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id, "can_add_bots_or_webhooks": can_add_bots_or_webhooks})
+    return JsonResponse({"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id,
+                         "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks})
 
 
 @api_view(['POST'])
@@ -294,15 +304,24 @@ def enable_bot(request):
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def update_upload_destination(request):
-    guild_id = request.data.get('guild_id')
-    channel_id = request.data.get('channel_id')
+    guild_id = request.data['guild_id']
+    channel_id = request.data['channel_id']
+    attachment_name = request.data['attachment_name']
 
-    if Fragment.objects.filter(file__owner=request.user).exists():
-        raise BadRequestError("Cannot change upload destination. Remove all files first")
+    if len(attachment_name) > 20:
+        raise BadRequestError("Attachment name length cannot be > 20")
 
     settings = DiscordSettings.objects.get(user=request.user)
+
+    if Fragment.objects.filter(file__owner=request.user).exists() and (guild_id != settings.guild_id or channel_id != settings.channel_id):
+        raise BadRequestError("Cannot change upload destination. Remove all files first")
+
+    # validate
+
     settings.guild_id = guild_id
     settings.channel_id = channel_id
+    settings.attachment_name = attachment_name
+
     settings.save()
     discord.remove_user_state(request.user)
 

@@ -139,10 +139,10 @@ export function isVideoFile(file) {
    return videoMimeTypes.includes(file.fileObj.type)
 }
 
-export function getWebhook(currentWebhook = null) {
-   const mainStore = useMainStore()
+export function getWebhook(currentWebhook) {
+   const uploadStore = useUploadStore()
 
-   let webhooks = mainStore.webhooks
+   let webhooks = uploadStore.webhooks
    let currentWebhookIndex = webhooks.findIndex(webhook => webhook.discord_id === currentWebhook.discord_id)
    currentWebhookIndex = (currentWebhookIndex + 1) % webhooks.length
 

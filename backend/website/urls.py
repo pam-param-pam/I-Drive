@@ -14,7 +14,7 @@ from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_z
 from .views.testViews import get_folder_password
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
-    update_upload_destination, enable_bot
+    update_upload_destination, enable_bot, can_upload
 
 urlpatterns = [
 
@@ -43,6 +43,7 @@ urlpatterns = [
     path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
 
     path('user/me', users_me, name="get current user"),
+    path('user/canUpload', can_upload, name="check if user is allowed to upload"),
     path("user/changepassword", change_password, name="change password"),
     path("user/updatesettings", update_settings, name="update settings"),
     path("user/discordSettings", get_discord_settings, name="get discord settings"),

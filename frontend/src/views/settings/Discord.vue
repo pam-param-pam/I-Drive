@@ -86,6 +86,12 @@
               type="text"
               v-model="channelId"
             />
+            <h3>{{ $t("settings.attachmentName") }}</h3>
+            <input
+              class="input"
+              type="text"
+              v-model="attachmentName"
+            />
           </div>
           <div class="card-action">
             <button
@@ -199,6 +205,7 @@ import {
 import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 
 export default {
    data() {
@@ -207,10 +214,13 @@ export default {
          showWebhookInput: false,
          webhookUrl: "",
          channel_id: null,
-         guild_id: null,
+         guildId: null,
          showBotInput: false,
          botToken: "",
-         canAddBotsOrWebhooks: false
+         attachmentName: "",
+         canAddBotsOrWebhooks: false,
+
+         res: null,
       }
    },
    computed: mapState(useMainStore, ["loading", "error", "webhooks"]),
@@ -222,12 +232,15 @@ export default {
       this.bots = res.bots
       this.channelId = res.channel_id
       this.guildId = res.guild_id
+      this.attachmentName = res.attachment_name
       this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
       this.setLoading(false)
+      this.res = res
 
    },
    methods: {
       ...mapActions(useMainStore, ["setLoading", "showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
+      ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
 
       addWebhook: throttle(async function() {
          if (this.webhookUrl === "") {
@@ -241,7 +254,6 @@ export default {
          this.addToWebhooks(res)
          this.showWebhookInput = false
          this.$toast.success(this.$t("toasts.webhookAdded"))
-         // https://discord.com/api/webhooks/1328179752019820646/CsUBAbwiCxsbckoqmAaabRH4UCePXG0vkc7J6GMR1cX1mEes48oZpqhcRu3GowkPyof7
 
       }, 1000),
 
@@ -279,13 +291,21 @@ export default {
       }, 1000),
 
       saveUploadDestination: throttle(async function() {
-         this.showHover({
-            prompt: "UploadDestinationWarning",
-            confirm: async () => {
-               await updateDiscordSettings({ "channel_id": this.channel_id, "guild_id": this.guild_id })
-               this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
-            }
-         })
+         if (this.res.guild_id !== this.guildId || this.res.channel_id !== this.channelId) {
+            this.showHover({
+               prompt: "UploadDestinationWarning",
+               confirm: async () => {
+                  await updateDiscordSettings({ "channel_id": this.channelId, "guild_id": this.guildId, "attachment_name": this.attachmentName })
+                  this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
+
+               }
+            })
+         }
+         else {
+            await updateDiscordSettings({ "channel_id": this.channelId, "guild_id": this.guildId, "attachment_name": this.attachmentName })
+            this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
+         }
+
       }, 1000)
 
    }

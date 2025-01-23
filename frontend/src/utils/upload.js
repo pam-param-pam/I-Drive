@@ -2,7 +2,7 @@ import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { attachmentType, discordFileName, uploadStatus } from "@/utils/constants.js"
+import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import { detectExtension, detectType, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, getWebhook, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discordInstance } from "@/utils/networker.js"
@@ -22,7 +22,7 @@ export async function* prepareRequests() {
 
    let totalSize = 0
    let attachments = []
-   let webhook = mainStore.webhooks[0]
+   let webhook = uploadStore.webhooks[0]
    let queueFile
    while ((queueFile = uploadStore.getFileFromQueue())) {
 
@@ -164,6 +164,7 @@ export async function preUploadRequest(request) {
 
 export async function uploadRequest(request) {
    const uploadStore = useUploadStore()
+   let attachmentName = uploadStore.attachmentName
 
    let attachmentJson = []
    let fileFormList = new FormData()
@@ -178,10 +179,10 @@ export async function uploadRequest(request) {
       let encryptedBlob = await encrypt(attachment)
       uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.uploading)
 
-      fileFormList.append(`files[${i}]`, encryptedBlob, discordFileName)
+      fileFormList.append(`files[${i}]`, encryptedBlob, attachmentName)
       attachmentJson.push({
          "id": i,
-         "filename": discordFileName
+         "filename": attachmentName
       })
    }
 

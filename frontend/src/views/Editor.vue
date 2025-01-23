@@ -46,7 +46,8 @@ import { discordInstance } from "@/utils/networker.js"
 import { isMobile } from "@/utils/common.js"
 import throttle from "lodash.throttle"
 import { encryptWithAesCtr, encryptWithChaCha20 } from "@/utils/encryption.js"
-import { discordFileName, encryptionMethod } from "@/utils/constants.js"
+import { encryptionMethod } from "@/utils/constants.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 
 
 export default {
@@ -82,7 +83,8 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["loading", "items", "settings", "error", "user", "webhooks"]),
+      ...mapState(useMainStore, ["loading", "items", "settings", "error", "user"]),
+      ...mapState(useUploadStore, ["webhooks", "attachmentName"]),
 
       isInShareContext() {
          return this.token !== undefined
@@ -249,7 +251,7 @@ export default {
             }
             let blob = new Blob([content])
 
-            formData.append("file", blob, discordFileName)
+            formData.append("file", blob, this.attachmentName)
 
             let response = await discordInstance.post(webhook.url, formData, {
                headers: {

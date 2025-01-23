@@ -513,8 +513,10 @@ class Bot(models.Model):
 
 class DiscordSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
-    channel_id = models.CharField(max_length=100)
-    guild_id = models.CharField(max_length=100)
+    channel_id = models.CharField(max_length=100, default="", blank=True)
+    guild_id = models.CharField(max_length=100, default="", blank=True)
+    attachment_name = models.CharField(max_length=20, default="", blank=True)
+
     history = HistoricalRecords()
 
     def __str__(self):
