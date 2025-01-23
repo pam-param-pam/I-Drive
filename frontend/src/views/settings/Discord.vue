@@ -223,7 +223,11 @@ export default {
          res: null,
       }
    },
-   computed: mapState(useMainStore, ["loading", "error", "webhooks"]),
+   computed: {
+      ...mapState(useMainStore, ["loading", "error", "webhooks"]),
+      ...mapState(useUploadStore, ["webhooks"])
+   },
+
    async created() {
       this.setLoading(true)
       let res = await getDiscordSettings()

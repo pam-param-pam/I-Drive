@@ -308,6 +308,9 @@ def update_upload_destination(request):
     channel_id = request.data['channel_id']
     attachment_name = request.data['attachment_name']
 
+    if int(guild_id) < 18 or len(guild_id) > 19 or int(channel_id) < 18 or len(channel_id) > 19:
+        raise BadRequestError("Invalid discord IDS")
+
     if len(attachment_name) > 20:
         raise BadRequestError("Attachment name length cannot be > 20")
 
