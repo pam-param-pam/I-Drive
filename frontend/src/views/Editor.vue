@@ -35,35 +35,37 @@
 </template>
 
 <script>
-import {editFile, getEncryptionSecrets, getFile} from "@/api/files.js"
-import {breadcrumbs} from "@/api/item.js"
-import {getShare} from "@/api/share.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { editFile, getEncryptionSecrets, getFile } from "@/api/files.js"
+import { breadcrumbs } from "@/api/item.js"
+import { getShare } from "@/api/share.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 import CodeEditor from "@/components/SimpleCodeEditor/CodeEditor.vue"
-import {discordInstance} from "@/utils/networker.js";
-import {isMobile} from "@/utils/common.js";
+import { discordInstance } from "@/utils/networker.js"
+import { isMobile } from "@/utils/common.js"
 import throttle from "lodash.throttle"
+import { encryptWithAesCtr, encryptWithChaCha20 } from "@/utils/encryption.js"
+import { discordFileName, encryptionMethod } from "@/utils/constants.js"
 
 
 export default {
    name: "editor",
    components: {
-      CodeEditor,
+      CodeEditor
 
    },
    props: {
       fileId: {
          type: String,
-         required: true,
+         required: true
       },
       token: {
-         type: String,
+         type: String
       },
       folderId: {
-         type: String,
-      },
+         type: String
+      }
 
    },
 
@@ -71,7 +73,7 @@ export default {
       return {
          file: null,
          res: null,
-         raw: '',
+         raw: "",
          editor: null,
          folderList: [],
          isSaveBtnLoading: false,
@@ -80,7 +82,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["loading", "items", "settings", "error", "user"]),
+      ...mapState(useMainStore, ["loading", "items", "settings", "error", "user", "webhooks"]),
 
       isInShareContext() {
          return this.token !== undefined
@@ -88,7 +90,7 @@ export default {
       fontSize() {
          if (isMobile()) return "10px"
          else return "15px"
-      },
+      }
 
 
    },
@@ -111,50 +113,50 @@ export default {
          console.log("guessLanguage")
 
          let extensionMap = {
-            'js': 'javascript',
-            'vue': "vue",
-            'py': 'python',
-            'java': 'java',
-            'cpp': 'Cpp',
-            'cs': 'Cs',
-            'php': 'php',
-            'rb': 'ruby',
-            'ts': 'typescript',
-            'swift': 'swift',
-            'go': 'go',
-            'kt': 'kotlin',
-            'rs': 'rust',
-            'dart': 'dart',
-            'sh': 'shell',
-            'css': 'css',
-            'sql': 'sql',
-            'pl': 'perl',
-            'r': 'r',
-            'scala': 'scala',
-            'lua': 'lua',
-            'm': 'matlab',
-            'json': 'json',
-            'bash': 'bash',
-            'yml': 'yaml',
-            'yaml': 'yaml',
-            'ps1': 'powershell',
-            'txt': 'plaintext',
-            'mk': 'makefile',
-            'nginx': 'nginx',
-            'gradle': 'gradle',
-            'http': 'http',
-            'jl': 'julia',
-            'ex': 'elixir',
-            'exs': 'elixir',
-            'html': 'html',
-            'dockerfile': 'dockerfile',
-            'md': 'markdown',
-            'apache': 'apache',
-            'ino': 'arduino',
-            'xml': 'xml',
-         };
-         let ext = this.file.name.split('.').pop().toLowerCase()
-         let lang = extensionMap[ext] || 'plaintext'
+            "js": "javascript",
+            "vue": "vue",
+            "py": "python",
+            "java": "java",
+            "cpp": "Cpp",
+            "cs": "Cs",
+            "php": "php",
+            "rb": "ruby",
+            "ts": "typescript",
+            "swift": "swift",
+            "go": "go",
+            "kt": "kotlin",
+            "rs": "rust",
+            "dart": "dart",
+            "sh": "shell",
+            "css": "css",
+            "sql": "sql",
+            "pl": "perl",
+            "r": "r",
+            "scala": "scala",
+            "lua": "lua",
+            "m": "matlab",
+            "json": "json",
+            "bash": "bash",
+            "yml": "yaml",
+            "yaml": "yaml",
+            "ps1": "powershell",
+            "txt": "plaintext",
+            "mk": "makefile",
+            "nginx": "nginx",
+            "gradle": "gradle",
+            "http": "http",
+            "jl": "julia",
+            "ex": "elixir",
+            "exs": "elixir",
+            "html": "html",
+            "dockerfile": "dockerfile",
+            "md": "markdown",
+            "apache": "apache",
+            "ino": "arduino",
+            "xml": "xml"
+         }
+         let ext = this.file.name.split(".").pop().toLowerCase()
+         let lang = extensionMap[ext] || "plaintext"
          return [[lang, lang]]
       },
       async fetchData() {
@@ -202,7 +204,6 @@ export default {
          console.log("STOPPED FETCHING")
          this.setLoading(false)
 
-         // this.raw = "aaaa"
          this.raw = await res.text()
          this.copyRaw = this.raw
 
@@ -223,72 +224,76 @@ export default {
          this.onSave()
       },
 
-       onSave: throttle(async function (event) {
-         document.querySelector('#save-button').classList.add('loading'); // Set to loading
+      onSave: throttle(async function(event) {
+         document.querySelector("#save-button").classList.add("loading")
 
          if (this.raw !== this.copyRaw) {
-            // this.isSaveBtnLoading = true
-            let webhook = this.settings.webhook
+            let webhook = this.webhooks[0]
 
             let formData = new FormData()
             let content = this.raw
-
-            if (this.file.is_encrypted) {
+            console.log(this.file)
+            if (this.file.encryption_method !== encryptionMethod.NotEncrypted) {
                let secrets = await getEncryptionSecrets(this.file.id)
                // Ensure content is a Blob before encrypting
-               if (typeof content === 'string') {
-                  content = new Blob([content], {type: 'text/plain'})
+               if (typeof content === "string") {
+                  content = new Blob([content], { type: "text/plain" })
                }
-               // content = await encrypt(secrets.key, secrets.iv, content) //todo fix encryptiopn
+               if (this.file.encryption_method === encryptionMethod.ChaCha20) {
+                  content = await encryptWithChaCha20(secrets.key, secrets.iv, content, 0)
+
+               } else if (this.file.encryption_method === encryptionMethod.AesCtr) {
+                  content = await encryptWithAesCtr(secrets.key, secrets.iv, content, 0)
+               }
 
             }
             let blob = new Blob([content])
 
-            formData.append('file', blob, `chunk_${1}`)
+            formData.append("file", blob, discordFileName)
 
-            let response = await discordInstance.post(webhook, formData, {
+            let response = await discordInstance.post(webhook.url, formData, {
                headers: {
-                  'Content-Type': 'multipart/form-data'
-               },
+                  "Content-Type": "multipart/form-data"
+               }
             })
 
             let json = response.data
             let file_data = {
                "file_id": this.file.id, "fragment_sequence": 1, "total_fragments": 1,
-               "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id
+               "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id, "webhook": webhook.discord_id
             }
 
 
             await editFile(file_data)
             this.copyRaw = this.raw
          }
-         document.querySelector('#save-button').classList.remove('loading'); // Remove loading
+         document.querySelector("#save-button").classList.remove("loading")
 
-         document.querySelector('#save-button').classList.add('success'); // Set to success
+         document.querySelector("#save-button").classList.add("success")
          setTimeout(() => {
-            document.querySelector('#save-button').classList.remove('success'); // Remove loading
+            document.querySelector("#save-button").classList.remove("success")
          }, 2500)
-         let message = this.$t('toasts.fileSaved')
+         let message = this.$t("toasts.fileSaved")
          this.$toast.success(message)
 
-       }, 1000),
+      }, 1000),
 
       onClose() {
          this.setLastItem(this.file)
 
          try {
             if (this.isInShareContext) {
-               this.$router.push({name: "Share", params: {"token": this.token, "folderId": this.folderId}})
+               this.$router.push({ name: "Share", params: { "token": this.token, "folderId": this.folderId } })
                return
             }
-            let uri = {name: `Files`, params: {folderId: this.file.parent_id}}
+            let uri = { name: `Files`, params: { folderId: this.file.parent_id } }
             if (this.raw !== this.copyRaw) {
                this.showHover({
                   prompt: "discardEditorChanges",
                   confirm: () => {
                      this.$router.push(uri)
 
-                  },
+                  }
                })
                return
             }
@@ -298,12 +303,12 @@ export default {
             // catch every error so user can always close...
          catch (e) {
             console.error(e)
-            this.$router.push({name: `Files`, params: {folderId: this.user.root}})
+            this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
 
          }
 
 
-      },
+      }
 
    }
 }

@@ -293,7 +293,6 @@ class UserSettings(models.Model):
     hide_locked_folders = models.BooleanField(default=False)
     concurrent_upload_requests = models.SmallIntegerField(default=4)
     subfolders_in_shares = models.BooleanField(default=False)
-    discord_webhook = models.CharField(null=True, max_length=20)
     encryption_method = models.SmallIntegerField(default=1)
     keep_creation_timestamp = models.BooleanField(default=False)
     theme = models.CharField(default="light", max_length=20)

@@ -146,7 +146,7 @@ def smart_delete(user_id, request_id, ids):
                     # Get the difference
                     attachment_ids_to_keep = list(all_attachment_ids - attachment_ids_to_remove)
                     if len(attachment_ids_to_keep) > 0:
-                        discord.edit_attachments(webhook, key, attachment_ids_to_keep)
+                        discord.edit_attachments(user, webhook.url, key, attachment_ids_to_keep)
                     else:
                         discord.remove_message(user, key)
             except DiscordError as e:

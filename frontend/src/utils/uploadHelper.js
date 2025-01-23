@@ -149,7 +149,7 @@ export function getWebhook(currentWebhook = null) {
    return webhooks[currentWebhookIndex]
 }
 
-export function getVideoCover(file, seekTo=-2) {
+export function getVideoCover(file, seekTo = -2) {
    console.log("getting video cover for file: ", file.fileObj.name)
 
    return new Promise((resolve, reject) => {
@@ -187,14 +187,13 @@ export function getVideoCover(file, seekTo=-2) {
                (blob) => {
 
                   // checking if the thumbnail is not pitch black
-                  ctx.canvas.width=ctx.canvas.height = 1;
-                  ctx.drawImage(videoPlayer,0,0,1,1);
-                  let result = ctx.getImageData(0,0,1,1);
-                  result = result.data[0]+result.data[1]+result.data[2]+result.data[3]
-                  if (result===255) {
-                     resolve(getVideoCover(file, seekTo+3))
-                  }
-                  else {
+                  ctx.canvas.width = ctx.canvas.height = 1
+                  ctx.drawImage(videoPlayer, 0, 0, 1, 1)
+                  let result = ctx.getImageData(0, 0, 1, 1)
+                  result = result.data[0] + result.data[1] + result.data[2] + result.data[3]
+                  if (result === 255) {
+                     resolve(getVideoCover(file, seekTo + 3))
+                  } else {
                      resolve(blob)
                   }
 
@@ -271,25 +270,4 @@ export function generateThumbnailIv(fileObj) {
 
    }
 
-}
-export function b64toBlob(b64Data, contentType='', sliceSize=512) {
-   const base64String = b64Data.includes("base64,") ? b64Data.split("base64,")[1] : b64Data;
-
-   const byteCharacters = atob(b64Data);
-   const byteArrays = [];
-
-   for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-      const slice = byteCharacters.slice(offset, offset + sliceSize);
-
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-         byteNumbers[i] = slice.charCodeAt(i);
-      }
-
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-   }
-
-   const blob = new Blob(byteArrays, {type: contentType});
-   return blob;
 }

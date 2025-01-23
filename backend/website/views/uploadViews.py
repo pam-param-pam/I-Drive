@@ -155,6 +155,10 @@ def create_file(request):
 
     if request.method == "PUT":
         file_id = request.data['file_id']
+        fragment_size = request.data['fragment_size']
+        message_id = request.data['message_id']
+        attachment_id = request.data['attachment_id']
+        webhook_id = request.data['webhook']
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)
@@ -169,9 +173,7 @@ def create_file(request):
         if len(fragments) > 1:
             raise BadRequestError("Fragments > 1")
 
-        fragment_size = request.data['fragment_size']
-        message_id = request.data['message_id']
-        attachment_id = request.data['attachment_id']
+        webhook = get_webhook(request, webhook_id)
 
         # if file is not empty
         if len(fragments) > 0:
@@ -185,14 +187,12 @@ def create_file(request):
                     if fragment != old_fragment:
                         attachment_ids.append(fragment.attachment_id)
 
-                settings = UserSettings.objects.get(user_id=request.user)
-                webhook = settings.discord_webhook
 
-                discord.edit_attachments(webhook, old_message_id, attachment_ids)
+                discord.edit_attachments(old_fragment.webhook.url, old_message_id, attachment_ids)
             else:
                 # single file in 1 message
 
-                discord.remove_message(old_message_id)
+                discord.remove_message(request.user, old_message_id)
             old_message_id = old_fragment.message_id
 
             old_fragment.delete()
@@ -205,6 +205,7 @@ def create_file(request):
             size=fragment_size,
             attachment_id=attachment_id,
             message_id=message_id,
+            webhook=webhook
         )
         fragment_obj.save()
         file_obj.size = fragment_size

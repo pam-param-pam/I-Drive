@@ -8,11 +8,12 @@ import "vue-toastification/dist/index.css"
 
 import VueLazyLoad from "vue3-lazyload"
 import Vue3TouchEvents from "vue3-touch-events"
-import VueVirtualScroller from 'vue-virtual-scroller'
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
-import FloatingVue from 'floating-vue'
-import 'floating-vue/dist/style.css'
-FloatingVue.options.themes.tooltip.placement = 'top-start'
+import VueVirtualScroller from "vue-virtual-scroller"
+import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
+import FloatingVue from "floating-vue"
+import "floating-vue/dist/style.css"
+
+FloatingVue.options.themes.tooltip.placement = "top-start"
 
 const app = createApp(App)
 console.log("validate login")
@@ -68,7 +69,7 @@ app.directive("focus", {
       setTimeout(() => {
          el.focus()
          //for inputs
-         let pos = el.value.lastIndexOf('.');
+         let pos = el.value.lastIndexOf(".")
          el.setSelectionRange(pos, pos)
       }, 50)
    }

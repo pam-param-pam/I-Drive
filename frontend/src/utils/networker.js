@@ -1,10 +1,10 @@
-import axios from 'axios'
-import {baseURL} from "@/utils/constants.js"
+import axios from "axios"
+import { baseURL } from "@/utils/constants.js"
 import i18n from "@/i18n/index.js"
-import {logout} from "@/utils/auth.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {useToast} from "vue-toastification"
-import {useUploadStore} from "@/stores/uploadStore.js";
+import { logout } from "@/utils/auth.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { useToast } from "vue-toastification"
+import { useUploadStore } from "@/stores/uploadStore.js"
 
 const toast = useToast()
 
@@ -15,47 +15,43 @@ export const backendInstance = axios.create({
    baseURL: baseURL,
    timeout: 20000,
    headers: {
-      "Content-Type": "application/json",
-   },
+      "Content-Type": "application/json"
+   }
 })
 
 export const discordInstance = axios.create({
    headers: {
-      "Content-Type": "application/json",
-   },
+      "Content-Type": "application/json"
+   }
 })
-
-
-
-
 
 
 // Add a response interceptor
 discordInstance.interceptors.response.use(
-   function (response) {
+   function(response) {
       const uploadStore = useUploadStore()
       uploadStore.isInternet = true
       return response
    },
-   function (error) {
+   function(error) {
 
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {
-         let retryAfter = error.response.headers['retry-after']
+         let retryAfter = error.response.headers["retry-after"]
 
          if (retryAfter) {
             let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
             console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
 
             // Wait for the specified time before retrying the request
-            return new Promise(function (resolve) {
-               setTimeout(function () {
+            return new Promise(function(resolve) {
+               setTimeout(function() {
                   resolve(discordInstance(error.config))
                }, waitTime)
             })
          }
       }
-      if ((!error.response && error.code === 'ERR_NETWORK') || error.code === 502) {
+      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
@@ -75,7 +71,7 @@ discordInstance.interceptors.response.use(
 )
 
 backendInstance.interceptors.request.use(
-   function (config) {
+   function(config) {
 
       if (config.__cancelSignature !== undefined && cancelTokenMap.has(config.__cancelSignature)) {
          cancelTokenMap.get(config.__cancelSignature).cancel(`Request cancelled due to a new request with the same cancel signature (${config.__cancelSignature}).`)
@@ -90,27 +86,27 @@ backendInstance.interceptors.request.use(
       let token = localStorage.getItem("token")
       console.log("aaaaaaaaaaaa")
       console.log(token)
-      console.log(config.headers['Authorization'])
-      if (token && !config.headers['Authorization']) {
-         config.headers['Authorization'] = `Token ${token}`
+      console.log(config.headers["Authorization"])
+      if (token && !config.headers["Authorization"]) {
+         config.headers["Authorization"] = `Token ${token}`
       }
 
       return config
 
    },
-   function (error) {
+   function(error) {
       return Promise.reject(error)
    }
 )
 
 backendInstance.interceptors.response.use(
-   function (response) {
+   function(response) {
       //store.commit("setLoading", false)
       const uploadStore = useUploadStore()
       uploadStore.isInternet = true
       return response
    },
-   async function (error) {
+   async function(error) {
 
       const store = useMainStore()
       console.log("ON REJECTED")
@@ -119,10 +115,11 @@ backendInstance.interceptors.response.use(
          return Promise.reject(error)
 
       }
-      if ((!error.response && error.code === 'ERR_NETWORK') || error.code === 502) {
+      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
+
          function retry() {
             let delay = 5000 // waiting for 5 seconds cuz, I felt like it.
             console.log(`Retrying request after ${delay} milliseconds`)
@@ -132,7 +129,7 @@ backendInstance.interceptors.response.use(
          return retry()
       }
 
-      let {config, response} = error
+      let { config, response } = error
       if (!config.__retryCount) {
          config.__retryCount = 0
       }
@@ -158,21 +155,21 @@ backendInstance.interceptors.response.use(
          function retry469Request() {
             return new Promise((resolve, reject) => {
                // Ensure config.data is an object and not a parsed JSON into a string
-               if (typeof config.data === 'string') {
+               if (typeof config.data === "string") {
                   config.data = JSON.parse(config.data)
                }
 
                passwordMissing.forEach(folder => {
                   let password = store.getFolderPassword(folder.id)
                   if (password) {
-                     passwordExists.push({id: folder.id, password: password})
+                     passwordExists.push({ id: folder.id, password: password })
                   }
                })
 
-               if (config.method === 'get') {
+               if (config.method === "get") {
                   config.headers = {
                      ...config.headers,
-                     'X-resource-password': passwordExists[0]?.password || '',
+                     "X-resource-password": passwordExists[0]?.password || ""
                   }
                } else {
                   config.data.resourcePasswords = {}
@@ -196,10 +193,10 @@ backendInstance.interceptors.response.use(
                let password = store.getFolderPassword(folder.id)
                if (password) {
                   // Password exists in cache
-                  passwordExists.push({id: folder.id, password: password})
+                  passwordExists.push({ id: folder.id, password: password })
                } else {
                   // Password does not exist in cache
-                  passwordMissing.push({id: folder.id, name: folder.name})
+                  passwordMissing.push({ id: folder.id, name: folder.name })
                }
             })
 
@@ -208,12 +205,12 @@ backendInstance.interceptors.response.use(
 
                   store.showHover({
                      prompt: "FolderPassword",
-                     props: {requiredFolderPasswords: response.data.requiredFolderPasswords},
+                     props: { requiredFolderPasswords: response.data.requiredFolderPasswords },
                      confirm: () => {
                         retry469Request(config)
                            .then(resolve)
                            .catch(reject)
-                     },
+                     }
                   })
                })
             } else {
@@ -234,7 +231,7 @@ backendInstance.interceptors.response.use(
       if (config.__displayErrorToast !== false) {
          toast.error(`${i18n.global.t(errorMessage)}\n${i18n.global.t(errorDetails)}`, {
             timeout: 5000,
-            position: "bottom-right",
+            position: "bottom-right"
          })
       }
 

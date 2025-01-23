@@ -2,13 +2,12 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { v4 as uuidv4 } from "uuid"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { UploadEstimator } from "@/utils/UploadEstimator.js"
-import { attachmentType } from "@/utils/constants.js"
-import { prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload.js"
+import { prepareRequests } from "@/utils/upload.js"
 
 export class Uploader {
    constructor() {
-      this.fileProcessorWorker = new Worker(new URL('../workers/fileProcessorWorker.js', import.meta.url), { type: 'module' });
-      this.requestGeneratorWorker = new Worker(new URL('../workers/requestGeneratorWorker.js', import.meta.url), { type: 'module' });
+      this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
+      this.requestGeneratorWorker = new Worker(new URL("../workers/requestGeneratorWorker.js", import.meta.url), { type: "module" })
 
       this.estimator = new UploadEstimator()
 
@@ -22,12 +21,12 @@ export class Uploader {
          this.uploadStore.queue.push(...event.data)
          this.uploadStore.queue.sort()
          this.uploadStore.processUploads()
-      };
+      }
 
       this.requestGeneratorWorker.onmessage = (event) => {
 
          console.log(event)
-      };
+      }
    }
 
    processNewFiles(typeOfUpload, folderContext, filesList) {
@@ -38,24 +37,24 @@ export class Uploader {
       let uploadId = uuidv4()
       let encryptionMethod = this.mainStore.settings.encryptionMethod
 
-      this.fileProcessorWorker.postMessage({typeOfUpload, folderContext, filesList, uploadId, encryptionMethod});
+      this.fileProcessorWorker.postMessage({ typeOfUpload, folderContext, filesList, uploadId, encryptionMethod })
 
 
    }
 
    generate() {
       console.log("UPLOADER GENERATE")
-      const uploadStore = useUploadStore(); // Get the necessary data from your Vue store or elsewhere
-      const mainStore = useMainStore();
-      this.requestGeneratorWorker.postMessage({uploadStore, mainStore});
-
+      const uploadStore = useUploadStore() // Get the necessary data from your Vue store or elsewhere
+      const mainStore = useMainStore()
+      this.requestGeneratorWorker.postMessage({ uploadStore, mainStore })
 
 
    }
+
    async startUploading() {
 
       if (this.requestBuffer.length < 2) {
-         this.requestGeneratorWorker.postMessage(this.requestGenerator);
+         this.requestGeneratorWorker.postMessage(this.requestGenerator)
       }
 
    }

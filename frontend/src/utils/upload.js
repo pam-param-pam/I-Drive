@@ -3,14 +3,7 @@ import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, discordFileName, uploadStatus } from "@/utils/constants.js"
-import {
-   detectExtension,
-   detectType,
-   generateThumbnailIv,
-   getFileId,
-   getOrCreateFolder, getVideoCover, getWebhook,
-   isVideoFile
-} from "@/utils/uploadHelper.js"
+import { detectExtension, detectType, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, getWebhook, isVideoFile } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discordInstance } from "@/utils/networker.js"
 import { v4 as uuidv4 } from "uuid"
@@ -37,7 +30,7 @@ export async function* prepareRequests() {
       if (queueFile.fileObj.size > chunkSize) {
          //CASE 1.1, attachments already created, we yield the already created attachments in a request
          if (attachments.length !== 0) {
-            let request = {"webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+            let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
             webhook = getWebhook(webhook)
@@ -97,11 +90,10 @@ export async function* prepareRequests() {
             }
 
 
-            let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail}
+            let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail }
             attachments.push(attachment)
             totalSize = totalSize + thumbnail.size
-         }
-         catch (e) {
+         } catch (e) {
             toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
          }
 
@@ -201,7 +193,7 @@ export async function uploadRequest(request) {
       },
       onUploadProgress: function(progressEvent) {
          uploadStore.onUploadProgress(request, progressEvent)
-      },
+      }
 
 
    })
@@ -209,6 +201,7 @@ export async function uploadRequest(request) {
 
 
 }
+
 export async function afterUploadRequest(request, discordResponse) {
    const uploadStore = useUploadStore()
 
@@ -232,7 +225,7 @@ export async function afterUploadRequest(request, discordResponse) {
             "fragment_size": attachment.rawBlob.size,
             "message_id": discordResponse.data.id,
             "attachment_id": discordResponse.data.attachments[i].id,
-            "webhook": request.webhook.discord_id,
+            "webhook": request.webhook.discord_id
          }
          filesData.push(file_data)
 
@@ -243,7 +236,7 @@ export async function afterUploadRequest(request, discordResponse) {
             "message_id": discordResponse.data.id,
             "attachment_id": discordResponse.data.attachments[i].id,
             "iv": attachment.iv,
-            "webhook": request.webhook.discord_id,
+            "webhook": request.webhook.discord_id
 
          }
          thumbnailData.push(thumbnail_data)

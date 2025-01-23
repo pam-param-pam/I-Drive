@@ -81,25 +81,7 @@ export const useUploadStore = defineStore("upload2", {
          //todo NotOptimizedForSmallFiles
 
       },
-      // async bufferRequests() {
-      //    if (!this.requestGenerator) {
-      //       this.requestGenerator = prepareRequests()
-      //    }
-      //
-      //    if (this.bufferedRequests.length < 1) {
-      //       this.requestGenerator.next().then((generated) => {
-      //          if (generated.done) {
-      //             console.info("The request generator is finished.")
-      //             this.requestGenerator = null
-      //             return
-      //          }
-      //          this.bufferedRequests.push(generated.value);
-      //       });
-      //
-      //    }
-      //
-      //
-      // },
+
       async processUploads() {
          const mainStore = useMainStore()
          console.log("this.concurrentRequests")

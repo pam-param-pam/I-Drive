@@ -81,9 +81,8 @@ def users_me(request):
                           "download": perms.download},
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
-                             "subfoldersInShares": settings.subfolders_in_shares, "webhook": settings.discord_webhook,
-                             "concurrentUploadRequests": settings.concurrent_upload_requests, "encryptionMethod": encryptionMethod.value,
-                             "keepCreationTimestamp": settings.keep_creation_timestamp
+                             "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
+                             "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp
                              },
                 "webhooks": webhook_dicts
                 }
@@ -104,7 +103,6 @@ def update_settings(request):
     sortingBy = request.data.get('sortingBy')
     sortByAsc = request.data.get('sortByAsc')
     subfoldersInShares = request.data.get('subfoldersInShares')
-    webhookURL = request.data.get('webhook')
     encryptionMethod = request.data.get('encryptionMethod')
     keepCreationTimestamp = request.data.get('keepCreationTimestamp')
     theme = request.data.get('theme')
@@ -128,12 +126,6 @@ def update_settings(request):
         settings.subfolders_in_shares = subfoldersInShares
     if isinstance(keepCreationTimestamp, bool):
         settings.keep_creation_timestamp = keepCreationTimestamp
-    if isinstance(webhookURL, str):
-        obj = urlparse(webhookURL)
-        if obj.hostname != 'discord.com':
-            raise BadRequestError("Only webhook urls from 'discord.com' are allowed")
-        settings.discord_webhook = webhookURL
-
     if isinstance(encryptionMethod, int):
         _ = EncryptionMethod(encryptionMethod)  # validate encryption_method if its wrong it will raise KeyError which will be caught
         settings.encryption_method = encryptionMethod

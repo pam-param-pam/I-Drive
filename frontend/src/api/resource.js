@@ -1,4 +1,4 @@
-import {backendInstance} from "@/utils/networker.js";
+import { backendInstance } from "@/utils/networker.js"
 
 export async function isPasswordCorrect(folder_id, password) {
    let url = `/resource/password/${folder_id}`

@@ -121,7 +121,7 @@ import moment from "moment/min/moment-with-locales.js"
 import {fetchAdditionalInfo} from "@/api/folder.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
-import { encryptionMethods } from "@/utils/constants.js"
+import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
 
 
 export default {
@@ -220,7 +220,7 @@ export default {
       is_encrypted() {
          if (this.selectedCount === 1) {
             if (this.selected[0].isDir) return null
-            return this.selected[0].encryption_method !== 0
+            return this.selected[0].encryption_method !== encryptionMethod.NotEncrypted
          }
          return null
       },

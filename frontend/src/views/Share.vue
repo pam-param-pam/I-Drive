@@ -70,9 +70,9 @@ export default {
             download: this.selectedCount > 0,
             info: this.selectedCount > 0,
             openInNewWindow: true,
-            copyShare: this.selectedCount === 1,
+            copyShare: this.selectedCount === 1
          }
-      },
+      }
 
 
    },
@@ -129,7 +129,7 @@ export default {
       copyFileShareUrl() {
          let url = this.selected[0].download_url + "?inline=True"
          this.$toast.success(this.$t("toasts.linkCopied"))
-         navigator.clipboard.writeText(url);
+         navigator.clipboard.writeText(url)
       },
       async fetchShare() {
          this.setLoading(true)
@@ -150,8 +150,7 @@ export default {
             this.setItems(null)
             this.setError(e)
 
-         }
-         finally {
+         } finally {
             this.setLoading(false)
          }
 
