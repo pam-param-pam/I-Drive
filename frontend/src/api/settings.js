@@ -1,9 +1,9 @@
-import {backend_instance} from "@/utils/networker.js"
+import {backendInstance} from "@/utils/networker.js"
 
 
 export async function update(data) {
    let url = "/settings"
-   let response = await backend_instance.put(url, data)
+   let response = await backendInstance.put(url, data)
    return response.data
 
 }

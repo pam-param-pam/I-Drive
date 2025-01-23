@@ -7,6 +7,7 @@ export const useMainStore = defineStore("main", {
       user: null,
       perms: null,
       settings: null,
+      webhooks: [],
       progress: 0,
       token: "",
       loading: false,
@@ -59,26 +60,26 @@ export const useMainStore = defineStore("main", {
          if (!this.items) return
          let fieldName = this.settings.sortingBy
 
-         let orderFactor = this.settings.sortByAsc ? 1 : -1;
+         let orderFactor = this.settings.sortByAsc ? 1 : -1
 
          return this.items
             .slice()
             .sort((a, b) => {
                // 1. Folders First
                if (a.isDir !== b.isDir) {
-                  return a.isDir ? -1 : 1;
+                  return a.isDir ? -1 : 1
                }
 
                // 2. Sort by chosen field
-               let fieldA = a[fieldName];
-               let fieldB = b[fieldName];
+               let fieldA = a[fieldName]
+               let fieldB = b[fieldName]
 
-               if (fieldA < fieldB) return orderFactor;
-               if (fieldA > fieldB) return -1 *orderFactor;
+               if (fieldA < fieldB) return orderFactor
+               if (fieldA > fieldB) return -1 * orderFactor
 
-               return 0;
+               return 0
             })
-            .map((item, index) => ({ ...item, index }));
+            .map((item, index) => ({ ...item, index }))
       }
 
    },
@@ -196,7 +197,7 @@ export const useMainStore = defineStore("main", {
          let index2 = this.selected.findIndex(item => item.id === newItem.id)
 
          if (index1 !== -1) {
-            this.items[index1]= newItem
+            this.items[index1] = newItem
          }
          if (index2 !== -1) {
             this.selected[index2] = newItem
@@ -219,27 +220,20 @@ export const useMainStore = defineStore("main", {
          }
          this.updateFolderPassword({ folderId, password: null })
       },
-      updatePreviewInfo({ id, iso, focal_length, aperture, model_name, exposure_time }) {
-         const index1 = this.items.findIndex(item => item.id === id)
-         const index2 = this.selected.findIndex(item => item.id === id)
-
-         if (index1 !== -1) {
-            this.items[index1].iso = iso
-            this.items[index1].focal_length = focal_length
-            this.items[index1].aperture = aperture
-            this.items[index1].model_name = model_name
-            this.items[index1].exposure_time = exposure_time
-         }
-         if (index2 !== -1) {
-            this.selected[index2].iso = iso
-            this.selected[index2].focal_length = focal_length
-            this.selected[index2].aperture = aperture
-            this.selected[index2].model_name = model_name
-            this.selected[index2].exposure_time = exposure_time
-         }
-      },
       setPerms(value) {
          this.perms = value
+      },
+      addToWebhooks(webhook) {
+         this.webhooks.push(webhook)
+         console.log("AAAAAAAAAAA")
+      },
+      removeWebhook(discord_id) {
+         this.webhooks = this.webhooks.filter(webhook => webhook.discord_id !== discord_id)
+         console.log("dsfsdfsdfsfsdfsd")
+
+      },
+      setWebhooks(value) {
+         this.webhooks = value
       },
       setSortingBy(value) {
          this.settings.sortingBy = value
@@ -262,7 +256,7 @@ export const useMainStore = defineStore("main", {
          moment.locale(country)
          i18n.global.locale = country
 
-         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "width grid", dateFormat: false, locale: country}
+         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "width grid", dateFormat: false, locale: country }
          this.setTheme("dark")
       },
       updateSettings(value) {
@@ -285,8 +279,8 @@ export const useMainStore = defineStore("main", {
       setTheme(theme) {
          this.settings.theme = theme
          let isDarkMode = false
-         if (theme === "dark") isDarkMode=true
-         document.body.classList.toggle("dark-mode", isDarkMode);
+         if (theme === "dark") isDarkMode = true
+         document.body.classList.toggle("dark-mode", isDarkMode)
 
       }
    }

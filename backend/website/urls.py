@@ -14,7 +14,7 @@ from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_z
 from .views.testViews import get_folder_password
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
-    update_upload_destination
+    update_upload_destination, enable_bot
 
 urlpatterns = [
 
@@ -50,6 +50,7 @@ urlpatterns = [
     path("user/discordSettings/webhook/delete", delete_webhook, name="delete a webhook"),
     path("user/discordSettings/bot/add", add_bot, name="add a bot"),
     path("user/discordSettings/bot/delete", delete_bot, name="delete a bot"),
+    path("user/discordSettings/bot/enable", enable_bot, name="enable a bot"),
     path("user/updateDiscordSettings", update_upload_destination, name="update upload destination"),
 
     path("shares", get_shares, name="get user's shares"),
@@ -81,7 +82,7 @@ urlpatterns = [
 
     path('admin', admin.site.urls),
 
-    path('test', get_folder_password),
+    path('test/<file_id>', get_folder_password),
     # path('download-test/', download_large_file, name='download_test'),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),

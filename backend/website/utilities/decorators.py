@@ -8,7 +8,7 @@ from rest_framework.exceptions import Throttled
 
 from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord
+    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
 from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
 
 def check_signed_url(view_func):
@@ -94,6 +94,9 @@ def handle_common_errors(view_func):
         # 400 BAD REQUEST
         except (ValidationError, BadRequestError) as e:
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(e)), status=400)
+
+        except NoBotsError:
+            return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="User has no bots, unable to fetch anything from discord."), status=400)
 
         except NotImplementedError as e:
             return JsonResponse(build_http_error_response(code=400, error="error.notImplemented", details=str(e)), status=400)

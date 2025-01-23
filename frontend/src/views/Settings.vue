@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <header-bar/>
+    <header-bar />
 
     <div id="nav">
       <div class="wrapper">
@@ -41,17 +41,17 @@
 
 <script>
 import HeaderBar from "@/components/header/HeaderBar.vue"
-import {name} from "@/utils/constants.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { name } from "@/utils/constants.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
    name: "settings",
    components: {
-      HeaderBar,
+      HeaderBar
    },
    computed: {
-      ...mapState(useMainStore, ["loading", "perms"]),
+      ...mapState(useMainStore, ["loading", "perms"])
 
    },
    methods: {
@@ -59,14 +59,23 @@ export default {
    },
    mounted() {
       document.title = this.$t("settings.settingsName") + " - " + name
-      document.body.classList.add("enable-scroll");
+      document.body.classList.add("enable-scroll")
    },
    unmounted() {
-      document.body.classList.remove("enable-scroll");
+      document.body.classList.remove("enable-scroll")
    },
    created() {
       this.setDisabledCreation(true)
-   },
+   }
 
 }
 </script>
+<style scoped>
+.wrapper {
+ overflow-x: scroll;
+ -webkit-overflow-scrolling: touch;
+ -ms-overflow-style: none;
+ scrollbar-width: none;
+}
+
+</style>

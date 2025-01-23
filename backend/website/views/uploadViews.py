@@ -7,20 +7,20 @@ from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Fragment, UserSettings, Thumbnail
+from ..models import File, Fragment, UserSettings, Thumbnail, Webhook
 from ..utilities.Discord import discord
 from ..utilities.Permissions import CreatePerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file
+from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, get_webhook
 from ..utilities.throttle import MyUserRateThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-@handle_common_errors
+# @handle_common_errors
 def create_file(request):
     if request.method == "POST":
         files = request.data['files']
@@ -123,6 +123,9 @@ def create_file(request):
             attachment_id = file['attachment_id']
             fragment_size = file['fragment_size']
             frontend_id = file['frontend_id']
+            webhook_id = file['webhook']
+
+            webhook = get_webhook(request, webhook_id)
 
             file_obj = get_file(file_id)
             check_resource_perms(request, file_obj, checkReady=False)
@@ -133,6 +136,8 @@ def create_file(request):
                 size=fragment_size,
                 attachment_id=attachment_id,
                 message_id=message_id,
+                webhook=webhook,
+
             )
             fragment_obj.save()
             file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, 'ready': False}
@@ -160,7 +165,7 @@ def create_file(request):
         fragments = Fragment.objects.filter(file=file_obj)
 
         if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
-            raise BadRequestError("You cannot edit a file larger than 25Mb!")
+            raise BadRequestError("You cannot edit a file larger than 10Mb!")
         if len(fragments) > 1:
             raise BadRequestError("Fragments > 1")
 
@@ -232,9 +237,10 @@ def create_thumbnail(request):
         size = thumbnail['size']
         iv = thumbnail.get('iv')
         # key = thumbnail.get('key') todo
+        webhook_id = thumbnail['webhook']
 
+        webhook = get_webhook(request, webhook_id)
         file_obj = get_file(file_id)
-
         if file_obj.is_encrypted() and (not iv):  # or not key
             raise BadRequestError("Encryption key and iv not provided")
 
@@ -257,6 +263,7 @@ def create_thumbnail(request):
             attachment_id=attachment_id,
             size=size,
             iv=iv,
+            webhook=webhook,
         )
         thumbnail_obj.save()
 

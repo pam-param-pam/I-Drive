@@ -11,7 +11,7 @@ const toast = useToast()
 const cancelTokenMap = new Map()
 
 //todo handle backends 429 policy lel
-export const backend_instance = axios.create({
+export const backendInstance = axios.create({
    baseURL: baseURL,
    timeout: 20000,
    headers: {
@@ -19,7 +19,7 @@ export const backend_instance = axios.create({
    },
 })
 
-export const discord_instance = axios.create({
+export const discordInstance = axios.create({
    headers: {
       "Content-Type": "application/json",
    },
@@ -31,7 +31,7 @@ export const discord_instance = axios.create({
 
 
 // Add a response interceptor
-discord_instance.interceptors.response.use(
+discordInstance.interceptors.response.use(
    function (response) {
       const uploadStore = useUploadStore()
       uploadStore.isInternet = true
@@ -50,7 +50,7 @@ discord_instance.interceptors.response.use(
             // Wait for the specified time before retrying the request
             return new Promise(function (resolve) {
                setTimeout(function () {
-                  resolve(discord_instance(error.config))
+                  resolve(discordInstance(error.config))
                }, waitTime)
             })
          }
@@ -63,7 +63,7 @@ discord_instance.interceptors.response.use(
          function retry() {
             let delay = 5000 // waiting for 5 seconds cuz, I felt like it.
             console.log(`Retrying request after ${delay} milliseconds`)
-            return new Promise(resolve => setTimeout(resolve, delay)).then(() => discord_instance(error.config))
+            return new Promise(resolve => setTimeout(resolve, delay)).then(() => discordInstance(error.config))
          }
 
          return retry()
@@ -74,7 +74,7 @@ discord_instance.interceptors.response.use(
    }
 )
 
-backend_instance.interceptors.request.use(
+backendInstance.interceptors.request.use(
    function (config) {
 
       if (config.__cancelSignature !== undefined && cancelTokenMap.has(config.__cancelSignature)) {
@@ -103,7 +103,7 @@ backend_instance.interceptors.request.use(
    }
 )
 
-backend_instance.interceptors.response.use(
+backendInstance.interceptors.response.use(
    function (response) {
       //store.commit("setLoading", false)
       const uploadStore = useUploadStore()
@@ -126,7 +126,7 @@ backend_instance.interceptors.response.use(
          function retry() {
             let delay = 5000 // waiting for 5 seconds cuz, I felt like it.
             console.log(`Retrying request after ${delay} milliseconds`)
-            return new Promise(resolve => setTimeout(resolve, delay)).then(() => discord_instance(error.config))
+            return new Promise(resolve => setTimeout(resolve, delay)).then(() => discordInstance(error.config))
          }
 
          return retry()
@@ -183,7 +183,7 @@ backend_instance.interceptors.response.use(
 
                }
                // Retry the request
-               backend_instance(config)
+               backendInstance(config)
                   .then(resolve) // Resolve the outer promise with the response
                   .catch(reject) // Reject the outer promise with the error
             })

@@ -84,7 +84,8 @@
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { mapActions, mapState } from "pinia"
 import {useUploadStore} from "@/stores/uploadStore.js";
-import { chunkSize, uploadStatus } from "@/utils/constants.js"
+import { uploadStatus } from "@/utils/constants.js"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
    components: {ProgressBar},
@@ -107,15 +108,16 @@ export default {
       },
 
       ...mapState(useUploadStore, ['isInternet']),
+      ...mapState(useMainStore, ['user']),
       showPauseButton() {
          return (this.file.status === uploadStatus.uploading ||
             this.file.status === uploadStatus.resuming ||
             this.file.status === uploadStatus.pausing ||
             this.file.status === uploadStatus.paused) &&
-            this.isInternet && this.file.size > chunkSize
+            this.isInternet && this.file.size > this.user.maxDiscordMessageSize
       },
       showCancelButton() {
-         return this.file.status === uploadStatus.uploading && this.isInternet && this.file.size > chunkSize
+         return this.file.status === uploadStatus.uploading && this.isInternet && this.file.size > this.user.maxDiscordMessageSize
       }
    },
    methods: {

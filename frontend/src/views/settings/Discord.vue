@@ -13,7 +13,7 @@
                 <tr>
                   <th>#</th>
                   <th>{{ $t("settings.name") }}</th>
-                  <th class="expiry-column">{{ $t("settings.createdAt") }}</th>
+                  <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
                   <th></th>
                 </tr>
 
@@ -28,7 +28,7 @@
                   <td class="small">
                     <button
                       class="action"
-                      @click="removeWebhook(webhook.discord_id)"
+                      @click="deleteWebhook(webhook.discord_id)"
                       :aria-label="$t('buttons.delete')"
                       :title="$t('buttons.delete')"
                     >
@@ -114,28 +114,44 @@
               <tr>
                 <th>#</th>
                 <th>{{ $t("settings.name") }}</th>
-                <th class="expiry-column">{{ $t("settings.createdAt") }}</th>
+                <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
                 <th></th>
               </tr>
 
-              <tr v-for="(bot, index) in bots" :key="bot.discord_id">
+              <tr v-for="(bot, index) in bots" :key="bot.discord_id" :class="{ disabled: bot.disabled }">
+
                 <td>{{ index + 1 }}</td>
-                <td class="share-name-column">
+                <td v-if="bot.disabled" class="share-name-column" v-tooltip="$t('settings.botDisabledNoPerms')">
+                  <a>{{ bot.name }}</a>
+                </td>
+                <td v-else class="share-name-column">
                   <a>{{ bot.name }}</a>
                 </td>
                 <td class="expiry-column">
                   <a>{{ bot.created_at }}</a>
                 </td>
+                <td v-if="bot.disabled" class="small">
+                  <button
+                    class="action"
+                    @click="enableBot(bot.discord_id)"
+                    :aria-label="$t('buttons.retry')"
+                    :title="$t('buttons.retry')"
+                  >
+                    <i class="material-icons">sync</i>
+                  </button>
+                </td>
+                <td v-else class="small" />
                 <td class="small">
                   <button
                     class="action"
-                    @click="removeBot(bot.discord_id)"
+                    @click="deleteBot(bot.discord_id)"
                     :aria-label="$t('buttons.delete')"
                     :title="$t('buttons.delete')"
                   >
                     <i class="material-icons">delete</i>
                   </button>
                 </td>
+
               </tr>
             </table>
           </div>
@@ -171,16 +187,22 @@
 </template>
 
 <script>
-import { addDiscordBot, addDiscordWebhook, deleteDiscordBot, deleteDiscordWebhook, getDiscordSettings, updateDiscordSettings } from "@/api/user.js"
+import {
+   addDiscordBot,
+   addDiscordWebhook,
+   deleteDiscordBot,
+   deleteDiscordWebhook,
+   enableDiscordBot,
+   getDiscordSettings,
+   updateDiscordSettings
+} from "@/api/user.js"
 import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
-
 export default {
    data() {
       return {
-         webhooks: [],
          bots: [],
          showWebhookInput: false,
          webhookUrl: "",
@@ -191,11 +213,12 @@ export default {
          canAddBotsOrWebhooks: false
       }
    },
-   computed: mapState(useMainStore, ["loading", "error"]),
+   computed: mapState(useMainStore, ["loading", "error", "webhooks"]),
    async created() {
       this.setLoading(true)
       let res = await getDiscordSettings()
-      this.webhooks = res.webhooks
+      this.setWebhooks(res.webhooks)
+
       this.bots = res.bots
       this.channelId = res.channel_id
       this.guildId = res.guild_id
@@ -204,23 +227,25 @@ export default {
 
    },
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "showHover"]),
+      ...mapActions(useMainStore, ["setLoading", "showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
 
-      addWebhook: throttle(async function(event) {
+      addWebhook: throttle(async function() {
          if (this.webhookUrl === "") {
             this.showWebhookInput = true
             return
          }
          let res = await addDiscordWebhook({ webhook_url: this.webhookUrl })
+
          this.webhookUrl = ""
-         this.webhooks.push(res)
+
+         this.addToWebhooks(res)
          this.showWebhookInput = false
          this.$toast.success(this.$t("toasts.webhookAdded"))
+         // https://discord.com/api/webhooks/1328179752019820646/CsUBAbwiCxsbckoqmAaabRH4UCePXG0vkc7J6GMR1cX1mEes48oZpqhcRu3GowkPyof7
 
       }, 1000),
 
-
-      addBot: throttle(async function(event) {
+      addBot: throttle(async function() {
          if (this.botToken === "") {
             this.showBotInput = true
             return
@@ -230,31 +255,38 @@ export default {
          this.bots.push(res)
          this.showBotInput = false
          this.$toast.success(this.$t("toasts.botAdded"))
-
       }, 1000),
 
-      async removeWebhook(discord_id) {
+      deleteWebhook: throttle(async function(discord_id) {
          await deleteDiscordWebhook({ "discord_id": discord_id })
-         this.webhooks = this.webhooks.filter(webhook => webhook.discord_id !== discord_id)
+         this.removeWebhook(discord_id)
          this.$toast.success(this.$t("toasts.webhookDeleted"))
+      }, 1000),
 
-      },
+      enableBot: throttle(async function(discord_id) {
+         await enableDiscordBot({ "discord_id": discord_id })
+         let bot = this.bots.find(bot => bot.discord_id === discord_id)
+         if (bot) {
+            bot.disabled = false
+         }
+         this.$toast.success(this.$t("toasts.botEnabled"))
+      }, 1000),
 
-      async removeBot(discord_id) {
+      deleteBot: throttle(async function(discord_id) {
          await deleteDiscordBot({ "discord_id": discord_id })
          this.bots = this.bots.filter(webhook => webhook.discord_id !== discord_id)
          this.$toast.success(this.$t("toasts.botDeleted"))
-      },
+      }, 1000),
 
-      async saveUploadDestination() {
+      saveUploadDestination: throttle(async function() {
          this.showHover({
             prompt: "UploadDestinationWarning",
             confirm: async () => {
-               await updateDiscordSettings({"channel_id": this.channel_id, "guild_id": this.guild_id})
+               await updateDiscordSettings({ "channel_id": this.channel_id, "guild_id": this.guild_id })
                this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
-            },
+            }
          })
-      }
+      }, 1000)
 
    }
 }
@@ -287,4 +319,10 @@ export default {
 .cards-wrapper {
  width: 100%;
 }
+
+.disabled {
+ color: gray;
+}
+
+
 </style>

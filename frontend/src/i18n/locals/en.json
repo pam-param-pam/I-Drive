@@ -228,6 +228,8 @@
   "settings": {
     "webhooks": "Webhooks",
     "bots": "Bots",
+    "botDisabledNoPerms": "This bot lacks required permission.",
+    "addedAt": "Added at",
     "uploadDestination": "Upload destination",
     "guildId": "Guild ID",
     "channelId": "Channel ID",
@@ -235,7 +237,7 @@
     "newBotPlaceholder": "Enter bot token",
     "webhookInfo": "Add webhooks to upload files. All webhooks must use the same channel and guild.",
     "webhookAdvice": "It is advised not to use more than 3 webhooks.",
-    "botInfo": "Add bots to upload files. All bots require READ, WRITE, MANAGE permissions",
+    "botInfo": "Add bots to upload files. All bots require VIEW, READ HISTORY, WRITE, MANAGE permissions",
     "botAdvice": "It is advised to use at least 5 bots.",
     "discordSettings": "Discord settings",
     "AES_CTR": "AES CTR",
@@ -296,6 +298,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "botRemovedForInsufficientPerms": "Bot: {name} was removed due to lack of required permission.",
     "botAdded": "Bot added!",
     "botDeleted": "Bot deleted!",
     "webhookAdded": "Webhook added!",

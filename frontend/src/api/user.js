@@ -1,10 +1,10 @@
-import {backend_instance} from "@/utils/networker.js"
+import {backendInstance} from "@/utils/networker.js"
 
 export async function getUser(token) {
    if (!token) return
 
    let url = "/user/me"
-   let response = await backend_instance.get(url, {
+   let response = await backendInstance.get(url, {
       headers: {
          "Authorization": `Token ${token}`,
       }
@@ -14,7 +14,7 @@ export async function getUser(token) {
 }
 export async function registerUser(data) {
    let url = "/auth/register"
-   let response = await backend_instance.post(url, data,{
+   let response = await backendInstance.post(url, data,{
       headers: {
          "Authorization": false,
       },
@@ -25,7 +25,7 @@ export async function registerUser(data) {
 
 export async function logoutUser(token) {
    let url = "/auth/token/logout"
-   let response = await backend_instance.post(url, {}, {
+   let response = await backendInstance.post(url, {}, {
       headers: {
          "Authorization": "token " + token,
       }
@@ -35,7 +35,7 @@ export async function logoutUser(token) {
 
 export async function changePassword(data) {
    let url = `/user/changepassword`
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 
 
@@ -43,13 +43,13 @@ export async function changePassword(data) {
 
 export async function updateSettings(data) {
    let url = `/user/updatesettings`
-   await backend_instance.post(url, data)
+   await backendInstance.post(url, data)
 
 }
 
 export async function getTrash() {
    let url = `/trash`
-   let response = await backend_instance.get(url, {
+   let response = await backendInstance.get(url, {
       __cancelSignature: 'getItems',
 
    })
@@ -59,37 +59,42 @@ export async function getTrash() {
 
 export async function getDiscordSettings() {
    let url = `/user/discordSettings`
-   let response = await backend_instance.get(url)
+   let response = await backendInstance.get(url)
    return response.data
 }
 
 export async function addDiscordWebhook(data) {
    let url = `/user/discordSettings/webhook/add`
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 }
 
 export async function deleteDiscordWebhook(data) {
    let url = `/user/discordSettings/webhook/delete`
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 }
 
 export async function addDiscordBot(data) {
    let url = `/user/discordSettings/bot/add`
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 }
 
 export async function deleteDiscordBot(data) {
    let url = `/user/discordSettings/bot/delete`
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 }
 
 export async function updateDiscordSettings(data) {
    let url = `/user/updateDiscordSettings`
-   let response = await backend_instance.put(url, data)
+   let response = await backendInstance.put(url, data)
    return response.data
 }
 
+export async function enableDiscordBot(data) {
+   let url = `/user/discordSettings/bot/enable`
+   let response = await backendInstance.post(url, data)
+   return response.data
+}

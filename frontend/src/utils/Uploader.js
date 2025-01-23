@@ -8,16 +8,15 @@ import { prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload
 export class Uploader {
    constructor() {
       this.fileProcessorWorker = new Worker(new URL('../workers/fileProcessorWorker.js', import.meta.url), { type: 'module' });
-      // this.requestGeneratorWorker = new Worker(new URL('../workers/requestGeneratorWorker.js.js', import.meta.url), { type: 'module' });
+      this.requestGeneratorWorker = new Worker(new URL('../workers/requestGeneratorWorker.js', import.meta.url), { type: 'module' });
 
       this.estimator = new UploadEstimator()
 
       this.requestBuffer = []
-      this.requestGenerator = prepareRequests()
-
 
       this.mainStore = useMainStore()
       this.uploadStore = useUploadStore()
+      this.requestGenerator = prepareRequests()
 
       this.fileProcessorWorker.onmessage = (event) => {
          this.uploadStore.queue.push(...event.data)
@@ -25,10 +24,10 @@ export class Uploader {
          this.uploadStore.processUploads()
       };
 
-      // this.requestGeneratorWorker.onmessage = (event) => {
-      //
-      //    console.log(event)
-      // };
+      this.requestGeneratorWorker.onmessage = (event) => {
+
+         console.log(event)
+      };
    }
 
    processNewFiles(typeOfUpload, folderContext, filesList) {
@@ -40,6 +39,16 @@ export class Uploader {
       let encryptionMethod = this.mainStore.settings.encryptionMethod
 
       this.fileProcessorWorker.postMessage({typeOfUpload, folderContext, filesList, uploadId, encryptionMethod});
+
+
+   }
+
+   generate() {
+      console.log("UPLOADER GENERATE")
+      const uploadStore = useUploadStore(); // Get the necessary data from your Vue store or elsewhere
+      const mainStore = useMainStore();
+      this.requestGeneratorWorker.postMessage({uploadStore, mainStore});
+
 
 
    }

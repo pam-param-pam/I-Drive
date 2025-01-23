@@ -66,6 +66,8 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | fix teleporting back to top after move                                          | ❌  Coming prob never |
 | fix tasks                                                                       | ❌  Coming prob never |
 | fix possible access to locked items via websocket send event                    | ❌  Coming prob never |
+| file upload progress percentage overflow                                        | ❌  Coming prob never |
+| fix upload speed when theres a lot of simultaneous requests                     | ❌  Coming prob never |
 
 
 

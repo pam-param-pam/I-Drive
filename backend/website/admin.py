@@ -10,6 +10,7 @@ from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings
 from .tasks import smart_delete
+from .utilities.Discord import discord
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
 from .utilities.other import sign_resource_id_with_expiry
 
@@ -22,7 +23,7 @@ admin.site.register(VideoPosition)
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size')
+    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size', 'fragment_url')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
@@ -48,6 +49,11 @@ class FragmentAdmin(SimpleHistoryAdmin):
         if len(file_name) < 100:
             return file_name
         return "*File name to long to display*"
+
+    def fragment_url(self, obj: Fragment):
+
+        url = discord.get_file_url(obj.file.owner, obj.message_id, obj.attachment_id)
+        return format_html(f'<a href="{url}" target="_blank">{url}</a><br>')
 
     owner.admin_order_field = "file__owner__username"
     folder.admin_order_field = "file__parent__name"

@@ -527,11 +527,11 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, item: Union[Fi
 
 
 def create_webhook_dict(webhook: Webhook):
-    return {"name": webhook.name, "created_at": formatDate(webhook.created_at), "discord_id": webhook.discord_id}
+    return {"name": webhook.name, "created_at": formatDate(webhook.created_at), "discord_id": webhook.discord_id, "url": webhook.url}
 
 
 def create_bot_dict(bot: Bot):
-    return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id}
+    return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id, "disabled": bot.disabled, "reason": bot.reason}
 
 def check_webhook(request, webhook: dict):
     settings = DiscordSettings.objects.get(user=request.user)
@@ -548,4 +548,10 @@ def check_webhook(request, webhook: dict):
         raise BadRequestError("Channel ID or Guild ID is not the same!")
 
     return guild_id, channel_id, discord_id, name
+
+def get_webhook(request, discord_id: str):
+    try:
+        return Webhook.objects.get(discord_id=discord_id, owner=request.user)
+    except Webhook.DoesNotExist:
+        raise BadRequestError(f"Could not find webhook with id: {discord_id}")
 

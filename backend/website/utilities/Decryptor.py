@@ -27,11 +27,7 @@ class Decryptor:
     def _increment_iv(self, bytes_to_skip):
         blocks_to_skip = bytes_to_skip // 16
         counter_int = int.from_bytes(self.iv, byteorder='big')
-        print("counter_int")
-        print(counter_int)
         counter_int += blocks_to_skip
-        print("counter_int2222")
-        print(counter_int)
 
         new_iv = counter_int.to_bytes(len(self.iv), byteorder='big')
         self.iv = new_iv

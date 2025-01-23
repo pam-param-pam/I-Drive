@@ -7,11 +7,11 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 DISCORD_BASE_URL = "https://discord.com/api/v10"
 
-# Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 25Mb
-MAX_DISCORD_MESSAGE_SIZE = 25 * 1023 * 1024
+# Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 10Mb
+MAX_DISCORD_MESSAGE_SIZE = 10 * 1023 * 1024
 
-# Max size of a file that we allow to be previewable in bytes: 100Mb
-MAX_SIZE_OF_PREVIEWABLE_FILE = 100 * 1024 * 1024
+# Max size of a file that we allow to be previewable in bytes: 50Mb
+MAX_SIZE_OF_PREVIEWABLE_FILE = 50 * 1024 * 1024
 
 # Max age of media cache in seconds: 1 month
 MAX_MEDIA_CACHE_AGE = 2628000
@@ -31,8 +31,9 @@ class EventCode(Enum):
     ITEM_CREATE = 1
     ITEM_DELETE = 2
     ITEM_UPDATE = 3
-    MESSAGE_SENT = 4
+    MESSAGE_UPDATE = 4
     ITEM_MOVED = 5
+    MESSAGE_SENT = 6
     FORCE_FOLDER_NAVIGATION = 7
     FOLDER_LOCK_STATUS_CHANGE = 8
     ITEM_MOVE_TO_TRASH = 9

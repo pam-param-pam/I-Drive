@@ -1,5 +1,7 @@
 import JSChaCha20 from "js-chacha20"
-import { attachmentType, chunkSize, encryptionMethod } from "@/utils/constants.js"
+import { attachmentType, encryptionMethod } from "@/utils/constants.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
+import { useMainStore } from "@/stores/mainStore.js"
 
 function base64ToUint8Array(base64) {
    let binaryString = window.atob(base64)
@@ -94,6 +96,8 @@ function calculateCounter(bytesToSkip) {
 }
 
 export async function encrypt(attachment) {
+   const mainStore = useMainStore()
+   let chunkSize = mainStore.user.maxDiscordMessageSize
    let fileObj = attachment.fileObj
    let encrypMethod = fileObj.encryptionMethod
 

@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import Folder, UserZIP
+from ..models import UserZIP
 from ..utilities.Permissions import DownloadPerms
 from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import handle_common_errors

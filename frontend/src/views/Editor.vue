@@ -42,7 +42,7 @@ import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
 
 import CodeEditor from "@/components/SimpleCodeEditor/CodeEditor.vue"
-import {discord_instance} from "@/utils/networker.js";
+import {discordInstance} from "@/utils/networker.js";
 import {isMobile} from "@/utils/common.js";
 import throttle from "lodash.throttle"
 
@@ -246,7 +246,7 @@ export default {
 
             formData.append('file', blob, `chunk_${1}`)
 
-            let response = await discord_instance.post(webhook, formData, {
+            let response = await discordInstance.post(webhook, formData, {
                headers: {
                   'Content-Type': 'multipart/form-data'
                },

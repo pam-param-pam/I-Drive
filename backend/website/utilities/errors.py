@@ -16,6 +16,8 @@ class ResourcePermissionError(IDriveException):
 class BadRequestError(IDriveException):
     """Raised when user's request has some bad/missing data in it"""
 
+class NoBotsError(IDriveException):
+    """Raised when user's has no bots and tries to fetch files"""
 
 class RootPermissionError(IDriveException):
     """Raised when user tries to manage 'root' folder"""

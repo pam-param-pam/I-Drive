@@ -4,7 +4,7 @@ import traceback
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
-from .models import  UserPerms
+from .models import UserPerms
 from .utilities.CommandLine.ArgumentException import IncorrectArgumentError
 from .utilities.CommandLine.CommandParser import CommandParser
 from .utilities.errors import IDriveException
@@ -29,9 +29,13 @@ class UserConsumer(WebsocketConsumer):
     def send_message(self, event):
 
         if self.scope['user'].id == event['user_id']:
-            self.send(json.dumps({"op_code": event['op_code'], "message": event["message"], "args": event.get('args'), "error": event["error"],
-                                  "finished": event["finished"],
-                                  "task_id": event["request_id"]}))
+            message = {"op_code": event['op_code'], "message": event["message"], "args": event.get('args'), "error": event["error"],
+                       "finished": event["finished"]}
+            task_id = event.get("request_id")
+            if task_id:
+                message['task_id'] = task_id
+
+            self.send(json.dumps(message))
 
     def send_event(self, event):
         if self.scope['user'].id == event['user_id']:

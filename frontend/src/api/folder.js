@@ -1,5 +1,5 @@
 import {useMainStore} from "@/stores/mainStore.js"
-import {backend_instance} from "@/utils/networker.js"
+import {backendInstance} from "@/utils/networker.js"
 
 export async function getItems(folder_id, lockFrom) {
    const store = useMainStore()
@@ -7,7 +7,7 @@ export async function getItems(folder_id, lockFrom) {
    let url = "/folder/" + folder_id
    let password = store.getFolderPassword(lockFrom)
 
-   let response = await backend_instance.get(url, {
+   let response = await backendInstance.get(url, {
       __cancelSignature: 'getItems',
       headers: {
          "x-resource-password": password
@@ -20,7 +20,7 @@ export async function getItems(folder_id, lockFrom) {
 export async function getDirs(folder_id) {
    let url = "/folder/dirs/" + folder_id
 
-   let response = await backend_instance.get(url)
+   let response = await backendInstance.get(url)
    return response.data
 
 }
@@ -40,7 +40,7 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
       password = null
    }
    let data = {"new_password": password}
-   let response = await backend_instance.post(url, data, {
+   let response = await backendInstance.post(url, data, {
       headers: headers,
       __manage469: false,
    })
@@ -50,7 +50,7 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
 
 export async function create(data) {
    let url = "/folder/create"
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 
 }
@@ -61,7 +61,7 @@ export async function getUsage(folderId, lockFrom) {
    let password = store.getFolderPassword(lockFrom)
 
    let url = `/folder/usage/${folderId}`
-   let response = await backend_instance.get(url, {
+   let response = await backendInstance.get(url, {
       headers: {
          "x-resource-password": password
       }
@@ -75,7 +75,7 @@ export async function resetPassword(folderId, accountPassword, newPassword) {
 
 
    let data = {"accountPassword": accountPassword, "folderPassword": newPassword}
-   let response = await backend_instance.post(url, data)
+   let response = await backendInstance.post(url, data)
    return response.data
 
 }
@@ -83,7 +83,7 @@ export async function resetPassword(folderId, accountPassword, newPassword) {
 export async function fetchAdditionalInfo(folderId) {
 
    let url = `/folder/moreinfo/${folderId}`
-   let response = await backend_instance.get(url)
+   let response = await backendInstance.get(url)
    return response.data
 
 }

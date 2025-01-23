@@ -102,7 +102,8 @@ export const useUploadStore = defineStore("upload2", {
       // },
       async processUploads() {
          const mainStore = useMainStore()
-
+         console.log("this.concurrentRequests")
+         console.log(this.concurrentRequests)
          let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests
          if (!canProcess) return
 
@@ -124,18 +125,9 @@ export const useUploadStore = defineStore("upload2", {
          console.log(request)
          console.log(request.totalSize)
 
-
-         let doPreUploadRequestNow = request.attachments?.some(
-            attachment => attachment.type === attachmentType.chunked
-         )
-
-         console.log("doPreUploadRequestNow")
-         console.log(doPreUploadRequestNow)
          request = await preUploadRequest(request)
 
-         // if (doPreUploadRequestNow) request = await preUploadRequest(request) // TODO this is causing network races in async with folder creation
-
-         uploadRequest(request, false) //todo else do it in here
+         uploadRequest(request)
 
          this.processUploads()
 
@@ -194,7 +186,7 @@ export const useUploadStore = defineStore("upload2", {
 
             if (attachment.type === attachmentType.entireFile) {
                let progress = progressEvent.progress
-               let percentage = Math.round(progress * 100)
+               let percentage = Math.floor(progress * 100)
                this.setProgress(frontendId, percentage)
             } else if (attachment.type === attachmentType.chunked) {
                let loadedBytes = progressEvent.bytes
@@ -208,7 +200,7 @@ export const useUploadStore = defineStore("upload2", {
                   this.progressMap.set(frontendId, 0)
                }
                let totalLoadedBytes = this.progressMap.get(frontendId)
-               let percentage = Math.round(totalLoadedBytes / attachment.fileObj.size * 100)
+               let percentage = Math.floor(totalLoadedBytes / attachment.fileObj.size * 100)
                this.setProgress(attachment.fileObj.frontendId, percentage)
             }
          }
@@ -218,13 +210,16 @@ export const useUploadStore = defineStore("upload2", {
          console.log(requestId)
          buttons.success("upload")
 
-         this.concurrentRequests--
+         // this.concurrentRequests--
          this.uploadSpeedMap.delete(requestId)
          //this.etaMap.delete(requestId)
 
          this.processUploads()
       },
+      decrementRequests() {
+         this.concurrentRequests--
 
+      },
       abortAll() {
 
       },

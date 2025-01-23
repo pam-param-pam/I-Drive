@@ -228,6 +228,8 @@
   "settings": {
     "webhooks": "Webhooki",
     "bots": "Boty",
+    "botDisabledNoPerms": "Ten bot jest wyłączony z powodu braku wymaganych permisji.",
+    "addedAt": "Dodane",
     "createdAt": "Utworzone",
     "guildId": "ID serwera",
     "channelId": "ID kanału",
@@ -236,7 +238,7 @@
     "newBotPlaceholder": "Wpisz token bota",
     "webhookInfo": "Dodaj webhooki by przesyłać pliki. Wszystkie webhooki muszą być przypisane do tego samego serwera i kanału.",
     "webhookAdvice": "Zalecane jest nie używać więcej niż 3 webhooki.",
-    "botInfo": "Dodaj boty by przesyłać pliki. Wszystkie boty muszą mieć READ, WRITE, MANAGE permisje.",
+    "botInfo": "Dodaj boty by przesyłać pliki. Wszystkie boty muszą mieć VIEW, READ HISTORY, WRITE, MANAGE permisje.",
     "botAdvice": "Zalecane jest używanie conajmniej 5 botów.",
     "discordSettings": "Ustawienia discorda",
     "AES_CTR": "AES CTR",
@@ -297,6 +299,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "botRemovedForInsufficientPerms": "Bot: {name} został usunięty z powodu braku wymaganych permisji.",
     "botAdded": "Dodano bot!",
     "botDeleted": "Usunięto bot!",
     "webhookAdded": "Dodano webhook!",

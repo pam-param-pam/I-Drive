@@ -351,7 +351,7 @@ class Fragment(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return f"Fragment[file={self.file.name}, sequence={self.sequence}, owner={self.file.owner.username}"
+        return f"Fragment[file={self.file.name}, sequence={self.sequence}, size={self.size}, owner={self.file.owner.username}]"
 
 
 class ShareableLink(models.Model):
@@ -397,6 +397,8 @@ class Thumbnail(models.Model):
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
     history = HistoricalRecords()
+
+    webhook = models.ForeignKey('Webhook', on_delete=models.PROTECT)
 
     def delete(self, *args, **kwargs):
         cache.delete(f"thumbnail:{self.file.id}")
@@ -501,6 +503,9 @@ class Bot(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     discord_id = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
+    disabled = models.BooleanField(default=False)
+    reason = models.CharField(max_length=100, unique=False, blank=True)
+
     history = HistoricalRecords()
 
     def __str__(self):

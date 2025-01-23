@@ -8,6 +8,7 @@ from asgiref.sync import async_to_sync
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
+from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .celery import app
@@ -34,7 +35,7 @@ def send_message(message, args, finished, user_id, request_id, isError=False):
         'user',
         {
             'type': 'send_message',
-            'op_code': EventCode.MESSAGE_SENT.value,
+            'op_code': EventCode.MESSAGE_UPDATE.value,
             'user_id': user_id,
             'message': message,
             'args': args,
@@ -52,6 +53,7 @@ def smart_delete(user_id, request_id, ids):
 
     send_message("toasts.deleting", {"percentage": 0}, False, user_id, request_id)
 
+    user = User.objects.get(id=user_id)
     files = File.objects.filter(id__in=ids).prefetch_related("parent", "thumbnail", "preview")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
 
@@ -81,6 +83,7 @@ def smart_delete(user_id, request_id, ids):
         for file in all_files:
             file.ready = False
             file.save()
+
             fragments = Fragment.objects.filter(file=file)
             for fragment in fragments:
                 message_structure[fragment.message_id].append(fragment.attachment_id)
@@ -99,19 +102,20 @@ def smart_delete(user_id, request_id, ids):
             except Thumbnail.DoesNotExist:
                 pass
 
-        settings = UserSettings.objects.get(user_id=user_id)
-        webhook = settings.discord_webhook
         length = len(message_structure)
 
         last_percentage = 0
         for index, key in enumerate(message_structure.keys()):
 
             try:
+                # querying database to look for files saved in the same discord message,
+                # we ignore previews as they are always in a different message
                 fragments = Fragment.objects.filter(message_id=key)
                 thumbnails = Thumbnail.objects.filter(message_id=key)
 
+                # if only 1 found, we found only the file we want to delete, there's nothing to be saved, we can just delete the entire discord message
                 if len(fragments) + len(thumbnails) == 1:
-                    discord.remove_message(key)
+                    discord.remove_message(user, key)
                 else:
                     attachment_ids = []
                     for fragment in fragments:
@@ -127,12 +131,24 @@ def smart_delete(user_id, request_id, ids):
                     print("all_attachment_ids")
                     print(all_attachment_ids)
 
+                    # Since we are operating here on a single discord message, we can just query anything file to find the upload webhook
+                    if fragments:
+                        webhook = fragments[0].webhook
+                    elif thumbnails:
+                        webhook = thumbnails[0].webhook
+                    else:
+                        print(f"===========UNEXPECTED WARNING===========")
+                        print("this shouldnt happen")
+                        print("message ID")
+                        print(key)
+                        continue
+
                     # Get the difference
                     attachment_ids_to_keep = list(all_attachment_ids - attachment_ids_to_remove)
                     if len(attachment_ids_to_keep) > 0:
                         discord.edit_attachments(webhook, key, attachment_ids_to_keep)
                     else:
-                        discord.remove_message(key)
+                        discord.remove_message(user, key)
             except DiscordError as e:
                 print(f"===========DISCORD ERROR===========\n{e}")
                 send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)

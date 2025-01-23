@@ -113,10 +113,10 @@ export default function onEvent(message) {
 
    }
 
-   if (jsonObject.op_code === 4) { // message event, for example, when deleting items
+   if (jsonObject.op_code === 4) { // message update event, for example, when deleting items
       let timeout = 0
       let type = "info"
-      //console.log(jsonObject.task_id)
+
       if (jsonObject.finished) {
          timeout = 3000
 
@@ -133,6 +133,27 @@ export default function onEvent(message) {
          content: i18n.global.t(jsonObject.message, jsonObject.args),
 
          options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
+
+      })
+   }
+   if (jsonObject.op_code === 6) { // message update event, for example, when deleting items
+      let timeout = 0
+      let type = "info"
+      console.log(jsonObject)
+      if (jsonObject.finished) {
+         timeout = 3000
+         type = "success"
+      }
+
+      if (jsonObject.error) {
+         console.log("UGA BUGA")
+
+         timeout = 0
+         type = "error"
+      }
+      console.log("UGA BUGA")
+      toast(i18n.global.t(jsonObject.message, jsonObject.args), {
+         timeout: timeout, type: type, draggable: true, closeOnClick: true
 
       })
    }

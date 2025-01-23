@@ -21,6 +21,7 @@ export async function validateLogin() { //this isn't really validate login - mor
    store.setUser(body.user)
    store.setSettings(body.settings)
    store.setPerms(body.perms)
+   store.setWebhooks(body.webhooks)
    store.setToken(token)
    store.setTheme(body.settings.theme)
 

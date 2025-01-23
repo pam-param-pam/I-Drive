@@ -1,8 +1,8 @@
-import {backend_instance} from "@/utils/networker.js";
+import {backendInstance} from "@/utils/networker.js";
 
 export async function isPasswordCorrect(folder_id, password) {
    let url = `/resource/password/${folder_id}`
-   let response = await backend_instance.get(url, {
+   let response = await backendInstance.get(url, {
       headers: {
          "Content-Type": "application/json",
          "X-resource-Password": password

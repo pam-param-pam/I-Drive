@@ -3,11 +3,20 @@ import { createFile, createThumbnail, patchFile } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, discordFileName, uploadStatus } from "@/utils/constants.js"
-import { detectExtension, detectType, generateThumbnailIv, getFileId, getOrCreateFolder, getVideoCover, isVideoFile } from "@/utils/uploadHelper.js"
+import {
+   detectExtension,
+   detectType,
+   generateThumbnailIv,
+   getFileId,
+   getOrCreateFolder, getVideoCover, getWebhook,
+   isVideoFile
+} from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
-import { discord_instance } from "@/utils/networker.js"
+import { discordInstance } from "@/utils/networker.js"
 import { v4 as uuidv4 } from "uuid"
+import { useToast } from "vue-toastification"
 
+const toast = useToast()
 
 export async function* prepareRequests() {
    /**
@@ -20,7 +29,7 @@ export async function* prepareRequests() {
 
    let totalSize = 0
    let attachments = []
-
+   let webhook = mainStore.webhooks[0]
    let queueFile
    while ((queueFile = uploadStore.getFileFromQueue())) {
 
@@ -28,9 +37,10 @@ export async function* prepareRequests() {
       if (queueFile.fileObj.size > chunkSize) {
          //CASE 1.1, attachments already created, we yield the already created attachments in a request
          if (attachments.length !== 0) {
-            let request = { "totalSize": totalSize, "attachments": attachments }
+            let request = {"webhook": webhook, "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
+            webhook = getWebhook(webhook)
             yield request
          }
 
@@ -45,9 +55,10 @@ export async function* prepareRequests() {
 
             //CASE 1.2.1 chunk size is already 25mb, so we yield it in a request
             if (totalSize === chunkSize) {
-               let request = { "totalSize": totalSize, "attachments": attachments }
+               let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
                totalSize = 0
                attachments = []
+               webhook = getWebhook(webhook)
                yield request
             }
             i++
@@ -58,9 +69,10 @@ export async function* prepareRequests() {
          //CASE 2.1 file is <25 mb but totalSize including fileObj.size is > 25mb or attachments.length == 10
          //we need to yield the already created attachments in a request
          if (totalSize + queueFile.systemFile.size > chunkSize || attachments.length === 10) {
-            let request = { "totalSize": totalSize, "attachments": attachments }
+            let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
+            webhook = getWebhook(webhook)
             yield request
          }
 
@@ -72,27 +84,33 @@ export async function* prepareRequests() {
 
       //We now need to generate a thumbnail if needed.
       if (isVideoFile(queueFile)) {
-         let thumbnail = await getVideoCover(queueFile)
+         try {
+            let thumbnail = await getVideoCover(queueFile)
 
-         //CASE 1, totalSize including thumbnail.size is > 25mb or attachments.length == 10
-         if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
-            let request = { "totalSize": totalSize, "attachments": attachments }
-            totalSize = 0
-            attachments = []
-            yield request
+            //CASE 1, totalSize including thumbnail.size is > 25mb or attachments.length == 10
+            if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
+               let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+               totalSize = 0
+               attachments = []
+               webhook = getWebhook(webhook)
+               yield request
+            }
+
+
+            let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail}
+            attachments.push(attachment)
+            totalSize = totalSize + thumbnail.size
+         }
+         catch (e) {
+            toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
          }
 
-         //we have to generate a new iv to not reuse the file one
-         let iv = generateThumbnailIv(queueFile.fileObj)
-         let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail, "iv": iv}
-         attachments.push(attachment)
-         totalSize = totalSize + thumbnail.size
       }
 
    }
    //we need to handle the already created attachments after break
    if (attachments.length > 0) {
-      let request = { "totalSize": totalSize, "attachments": attachments, "id": uuidv4() }
+      let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments, "id": uuidv4() }
       yield request
    }
 
@@ -152,20 +170,19 @@ export async function preUploadRequest(request) {
 
 }
 
-export async function uploadRequest(request, preUploadRequestDone) {
-   let uploadStore = useUploadStore()
-   let mainStore = useMainStore()
-
-   // if (!preUploadRequestDone) request = await preUploadRequest(request)
-
-   let abortController = new AbortController()
-
-   uploadStore.axiosRequests.set("blabla", abortController) // Store it with key "blabla"
+export async function uploadRequest(request) {
+   const uploadStore = useUploadStore()
 
    let attachmentJson = []
    let fileFormList = new FormData()
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]
+
+      //we have to generate a new iv to not reuse the file one
+      if (attachment.type === attachmentType.thumbnail) {
+         attachment.iv = generateThumbnailIv(attachment.fileObj)
+      }
+
       let encryptedBlob = await encrypt(attachment)
       uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.uploading)
 
@@ -176,27 +193,31 @@ export async function uploadRequest(request, preUploadRequestDone) {
       })
    }
 
-   let webhook = mainStore.settings.webhook
    fileFormList.append("json_payload", JSON.stringify({ "attachments": attachmentJson }))
 
-   let discord_response = await discord_instance.post(webhook, fileFormList, {
+   let discordResponse = await discordInstance.post(request.webhook.url, fileFormList, {
       headers: {
          "Content-Type": "multipart/form-data"
       },
       onUploadProgress: function(progressEvent) {
          uploadStore.onUploadProgress(request, progressEvent)
       },
-      signal: abortController.signal
 
    })
+   await afterUploadRequest(request, discordResponse)
 
+
+}
+export async function afterUploadRequest(request, discordResponse) {
+   const uploadStore = useUploadStore()
+
+   uploadStore.decrementRequests()
    let filesData = []
    let thumbnailData = []
 
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]
-      console.log("saving")
-      console.log(attachment)
+
       if (attachment.type === attachmentType.entireFile || attachment.type === attachmentType.chunked) {
          if (attachment.type === attachmentType.entireFile) {
             //set status to finishing
@@ -208,8 +229,9 @@ export async function uploadRequest(request, preUploadRequestDone) {
             "file_id": attachment.fileObj.fileId,
             "fragment_sequence": attachment.fragmentSequence,
             "fragment_size": attachment.rawBlob.size,
-            "message_id": discord_response.data.id,
-            "attachment_id": discord_response.data.attachments[i].id
+            "message_id": discordResponse.data.id,
+            "attachment_id": discordResponse.data.attachments[i].id,
+            "webhook": request.webhook.discord_id,
          }
          filesData.push(file_data)
 
@@ -217,9 +239,11 @@ export async function uploadRequest(request, preUploadRequestDone) {
          let thumbnail_data = {
             "file_id": attachment.fileObj.fileId,
             "size": attachment.rawBlob.size,
-            "message_id": discord_response.data.id,
-            "attachment_id": discord_response.data.attachments[i].id,
+            "message_id": discordResponse.data.id,
+            "attachment_id": discordResponse.data.attachments[i].id,
             "iv": attachment.iv,
+            "webhook": request.webhook.discord_id,
+
          }
          thumbnailData.push(thumbnail_data)
 
@@ -240,7 +264,6 @@ export async function uploadRequest(request, preUploadRequestDone) {
    }
 
    uploadStore.finishRequest(request.id)
-
 }
 
 

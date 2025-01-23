@@ -1,6 +1,7 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -91,7 +92,7 @@ function processFile(fileEntry) {
             path = ""
          }
 
-         resolve({file, path})
+         resolve({ file, path })
       }, reject)
    })
 }
@@ -103,14 +104,15 @@ export function detectExtension(filename) {
    return "." + arry[arry.length - 1]
 
 }
+
 export function detectType(fileObj) {
    let extension = detectExtension(fileObj.name)
    const RAW_IMAGE_EXTENSIONS = [
-      '.IIQ', '.3FR', '.DCR', '.K25', '.KDC',
-      '.CRW', '.CR2', '.CR3', '.ERF', '.MEF',
-      '.MOS', '.NEF', '.NRW', '.ORF', '.PEF',
-      '.RW2', '.ARW', '.SRF', '.SR2'
-   ];
+      ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",
+      ".CRW", ".CR2", ".CR3", ".ERF", ".MEF",
+      ".MOS", ".NEF", ".NRW", ".ORF", ".PEF",
+      ".RW2", ".ARW", ".SRF", ".SR2"
+   ]
    if (RAW_IMAGE_EXTENSIONS.includes(extension.toUpperCase())) {
       return "image/raw"
    }
@@ -118,6 +120,7 @@ export function detectType(fileObj) {
    return fileObj.type
 
 }
+
 export function isVideoFile(file) {
    // List of common video MIME types
    const videoMimeTypes = [
@@ -136,64 +139,83 @@ export function isVideoFile(file) {
    return videoMimeTypes.includes(file.fileObj.type)
 }
 
-export function getVideoCover(file) {
+export function getWebhook(currentWebhook = null) {
+   //todo revert
+   const mainStore = useMainStore()
+
+   let webhooks = mainStore.webhooks
+   // let currentWebhookIndex = webhooks.findIndex(webhook => webhook.discord_id === currentWebhook.discord_id)
+   // currentWebhookIndex = (currentWebhookIndex + 1) % webhooks.length
+   //
+   // return webhooks[currentWebhookIndex]
+   return webhooks[0]
+}
+
+export function getVideoCover(file, seekTo=-2) {
    console.log("getting video cover for file: ", file.fileObj.name)
+
    return new Promise((resolve, reject) => {
-      // load the file to a video player
       let videoPlayer = document.createElement("video")
-      videoPlayer.setAttribute("src", URL.createObjectURL(file.systemFile))
-      videoPlayer.load()
+      videoPlayer.src = URL.createObjectURL(file.systemFile)
+
+      // Error handling
       videoPlayer.addEventListener("error", (ex) => {
-         reject("error when loading video file", ex)
+         reject("Error when loading video file", ex)
       })
-      // load metadata of the video to get video duration and dimensions
+
+      // Load metadata and get video thumbnail
       videoPlayer.addEventListener("loadedmetadata", () => {
 
-         let seekTo
-         // seek to defined timestamp (in seconds) if possible
-         if (videoPlayer.duration >= 60) {
-            seekTo = 30
-         } else if (videoPlayer.duration >= 40) {
-            seekTo = 20
-         } else if (videoPlayer.duration >= 20) {
-            seekTo = 10
-         } else if (videoPlayer.duration >= 15) {
-            seekTo = 5
-         } else if (videoPlayer.duration >= 5) {
-            seekTo = 2
-         }  else {
-            seekTo = 0
-         }
-
-         // delay seeking or else 'seeked' event won't fire on Safari
+         // Seek video after a short delay
          setTimeout(() => {
             videoPlayer.currentTime = seekTo
-         }, 25)
-         // extract video thumbnail once seeking is complete
+         }, 100)
+
+         // Extract thumbnail when seeking is complete
          videoPlayer.addEventListener("seeked", () => {
-            console.log("video is now paused at %ss.", seekTo)
-            // define a canvas to have the same dimension as the video
+            console.log("Video is now paused at " + seekTo + "s.")
+
+            // Create canvas with video dimensions
             const canvas = document.createElement("canvas")
             canvas.width = videoPlayer.videoWidth
             canvas.height = videoPlayer.videoHeight
-            // draw the video frame to canvas
+
+            // Draw video frame to canvas
             const ctx = canvas.getContext("2d")
             ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
-            // return the canvas image as a blob
+
+            // Convert canvas to blob and resolve promise
             ctx.canvas.toBlob(
-               blob => {
-                  resolve(blob)
+               (blob) => {
+                  
+                  // checking if the thumbnail is not pitch black
+                  ctx.canvas.width=ctx.canvas.height = 1;
+                  ctx.drawImage(videoPlayer,0,0,1,1);
+                  let result = ctx.getImageData(0,0,1,1);
+                  result = result.data[0]+result.data[1]+result.data[2]+result.data[3]
+                  if (result===255) {
+                     resolve(getVideoCover(file, seekTo+3))
+                  }
+                  else {
+                     resolve(blob)
+                  }
+
                },
                "image/jpeg",
                0.75
             )
-         })
-      })
-      URL.revokeObjectURL(file)  // Free memory once done
 
+
+            videoPlayer.pause()
+            URL.revokeObjectURL(videoPlayer.src)
+            console.log("FINISHED GETTING COVER")
+         })
+
+      })
+
+      videoPlayer.load()
    })
 }
-
 
 export function getFileId(fileObj) {
    let uploadStore = useUploadStore()

@@ -6,8 +6,6 @@ export const signup = true
 export const version = "0.6.9 BETA"
 export const logoURL = `/img/logo.jpg`
 export const theme = ""
-export const chunkSize = 25 * 1023 * 1024 // <25MB in bytes
-
 export const githubUrl = 'https://github.com/pam-param-pam/I-Drive'
 export const encryptionMethods = {0: "settings.notEncrypted", 1: "settings.AES_CTR", 2: "settings.ChaCha20"}
 export const encryptionMethod = {NotEncrypted: 0, AesCtr: 1, ChaCha20: 2}

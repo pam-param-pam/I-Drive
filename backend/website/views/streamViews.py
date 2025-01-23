@@ -8,6 +8,7 @@ import exifread
 import imageio
 import rawpy
 import requests
+from asgiref.sync import sync_to_async
 from cryptography.fernet import Fernet
 from django.db.utils import IntegrityError
 from django.http import JsonResponse
@@ -18,13 +19,13 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
-from ..models import File, UserZIP
+from ..models import File, UserZIP, Bot
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
-from ..utilities.errors import DiscordError, BadRequestError
+from ..utilities.errors import DiscordError, BadRequestError, NoBotsError
 from ..utilities.other import get_flattened_children, create_zip_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
@@ -39,7 +40,7 @@ from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
 def get_preview(request, file_obj: File):
     try:
         preview = Preview.objects.get(file=file_obj)
-        url = discord.get_file_url(preview.message_id, preview.attachment_id)
+        url = discord.get_file_url(file_obj.owner, preview.message_id, preview.attachment_id)
 
         res = requests.get(url, timeout=20)
         if not res.ok:
@@ -71,7 +72,7 @@ def get_preview(request, file_obj: File):
 
     file_content = b''
     for fragment in fragments:
-        url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
+        url = discord.get_file_url(file_obj.owner, fragment.message_id, fragment.attachment_id)
         response = requests.get(url, timeout=20)
         if not response.ok:
             raise DiscordError(response.text, response.status_code)
@@ -112,7 +113,7 @@ def get_preview(request, file_obj: File):
 
     files = {'file': ('Kocham Alternatywki', encrypted_data)}
 
-    response = discord.send_file(files)
+    response = discord.send_file(request.user, files)
 
     message = response.json()
     size = data.getbuffer().nbytes
@@ -157,7 +158,7 @@ def get_thumbnail(request, file_obj: File):
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=thumbnail.iv)
 
         # todo potential security risk, without stream its possible to overload the server
-        url = discord.get_file_url(thumbnail.message_id, thumbnail.attachment_id)
+        url = discord.get_file_url(file_obj.owner, thumbnail.message_id, thumbnail.attachment_id)
         discord_response = requests.get(url)
         if discord_response.ok:
             thumbnail_content = discord_response.content
@@ -187,6 +188,10 @@ def stream_file(request, file_obj: File):
     isInline = request.GET.get('inline', False)
 
     fragments = file_obj.fragments.all().order_by('sequence')
+    user = file_obj.owner
+
+    if not Bot.objects.filter(owner=user, disabled=False).exists():
+        raise NoBotsError()
 
     filename_ascii = quote(smart_str(file_obj.name))
     # Encode the filename using RFC 5987
@@ -206,7 +211,7 @@ def stream_file(request, file_obj: File):
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
-                url = discord.get_file_url(fragments[index].message_id, fragments[index].attachment_id)
+                url = await sync_to_async(discord.get_file_url)(user, fragments[index].message_id, fragments[index].attachment_id)
 
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
@@ -290,6 +295,8 @@ def stream_file(request, file_obj: File):
 
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
+        # response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
+        pass
         response['Accept-Ranges'] = 'bytes'
 
         response['Content-Length'] = real_end_byte - real_start_byte
@@ -301,13 +308,16 @@ def stream_file(request, file_obj: File):
 @throttle_classes([MyUserRateThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):
+    user_zip = UserZIP.objects.get(token=token)
+    user = user_zip.owner
+
     async def stream_file(file_obj, fragments, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted():
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
             async for fragment in fragments:
-                url = discord.get_file_url(fragment.message_id, fragment.attachment_id)
+                url = await sync_to_async(discord.get_file_url)(user, fragment.message_id, fragment.attachment_id)
 
                 async with session.get(url) as response:
                     response.raise_for_status()
@@ -323,7 +333,6 @@ def stream_zip_files(request, token):
             if file_obj.is_encrypted():
                 yield decryptor.finalize()
 
-    user_zip = UserZIP.objects.get(token=token)
     files = user_zip.files.filter(ready=True, inTrash=False)
     folders = user_zip.folders.all()
     dict_files = []
@@ -382,4 +391,3 @@ def stream_zip_files(request, token):
 #     response['Content-Disposition'] = 'attachment; filename="testfile.bin"'
 #     response['Content-Length'] = str(200 * 1024 * 1024)  # 200 MB
 #     return response
-
