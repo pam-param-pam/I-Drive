@@ -286,12 +286,11 @@ def enable_bot(request):
 
     settings = DiscordSettings.objects.get(user=request.user)
     helper = DiscordHelper(bot.token, settings.guild_id, settings.channel_id)
-    helper.check_bot_and_its_perms()
+    bot_id, bot_name = helper.check_bot_and_its_perms()
 
     bot.disabled = False
     bot.reason = ""
-
-    print(bot.owner)
+    bot.name = bot_name
 
     bot.save()
     discord.remove_user_state(request.user)

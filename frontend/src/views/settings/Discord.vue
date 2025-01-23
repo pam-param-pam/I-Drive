@@ -11,16 +11,14 @@
             <div v-if="webhooks.length > 0" class="table-wrapper">
               <table>
                 <tr>
-                  <th>#</th>
-                  <th>{{ $t("settings.name") }}</th>
+                  <th>{{ '# &#8205; &#8205; &#8205; &#8205;' + $t("settings.name") }}</th>
                   <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
                   <th></th>
                 </tr>
 
                 <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id">
-                  <td>{{ index + 1 }}</td>
                   <td class="share-name-column">
-                    <a>{{ webhook.name }}</a>
+                    <a>{{index+1+ ' &#8205; &#8205; &#8205; &#8205;' + webhook.name }}</a>
                   </td>
                   <td class="expiry-column">
                     <a>{{ webhook.created_at }}</a>
@@ -118,20 +116,17 @@
           <div v-if="bots.length > 0" class="table-wrapper">
             <table>
               <tr>
-                <th>#</th>
-                <th>{{ $t("settings.name") }}</th>
+                <th>{{ '# &#8205; &#8205; &#8205; &#8205;' + $t("settings.name") }}</th>
                 <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
                 <th></th>
               </tr>
 
               <tr v-for="(bot, index) in bots" :key="bot.discord_id" :class="{ disabled: bot.disabled }">
-
-                <td>{{ index + 1 }}</td>
                 <td v-if="bot.disabled" class="share-name-column" v-tooltip="$t('settings.botDisabledNoPerms')">
-                  <a>{{ bot.name }}</a>
+                  <a>{{ index+1 + ' &#8205; &#8205; &#8205; &#8205;' + bot.name }}</a>
                 </td>
                 <td v-else class="share-name-column">
-                  <a>{{ bot.name }}</a>
+                  <a>{{ index+1 + ' &#8205; &#8205; &#8205; &#8205;' + bot.name }}</a>
                 </td>
                 <td class="expiry-column">
                   <a>{{ bot.created_at }}</a>

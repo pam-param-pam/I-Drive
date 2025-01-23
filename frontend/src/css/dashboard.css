@@ -484,7 +484,7 @@ body.rtl .card .card-title>*:first-child {
 
 .share-name-column {
   padding-right: 1em;
-  max-width: 200px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -51,7 +51,7 @@ discordInstance.interceptors.response.use(
             })
          }
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
+      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502 || error.code === 429 || error.code === 500) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
@@ -115,7 +115,7 @@ backendInstance.interceptors.response.use(
          return Promise.reject(error)
 
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502) {
+      if ((!error.response && error.code === "ERR_NETWORK") || error.code === 502 || error.code === 429 || error.code === 500) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
