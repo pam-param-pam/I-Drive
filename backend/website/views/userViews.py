@@ -8,7 +8,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, UserPerms, DiscordSettings, Webhook, Bot, Fragment
+from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragment
 from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
