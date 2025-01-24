@@ -93,8 +93,6 @@ export const useUploadStore = defineStore("upload2", {
 
       async processUploads() {
          const mainStore = useMainStore()
-         console.log("this.concurrentRequests")
-         console.log(this.concurrentRequests)
          let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests
          if (!canProcess) return
 
@@ -112,10 +110,6 @@ export const useUploadStore = defineStore("upload2", {
          let request = generated.value
          this.concurrentRequests++
 
-         console.log("request")
-         console.log(request)
-         console.log(request.totalSize)
-
          request = await preUploadRequest(request)
 
          uploadRequest(request)
@@ -124,7 +118,6 @@ export const useUploadStore = defineStore("upload2", {
 
       },
       getFileFromQueue() {
-         console.info("GETING FILE FROM QUEUE: ")
 
          if (this.queue.length === 0) {
             console.warn("getFileFromQueue is empty, yet it was called idk why")
@@ -199,10 +192,6 @@ export const useUploadStore = defineStore("upload2", {
          }
       },
       finishRequest(requestId) {
-         console.log("finishRequest")
-         console.log(requestId)
-         buttons.success("upload")
-
          // this.concurrentRequests--
          this.uploadSpeedMap.delete(requestId)
          //this.etaMap.delete(requestId)
@@ -241,7 +230,7 @@ export const useUploadStore = defineStore("upload2", {
       cancelFile(frontendId) {
          let abortController = this.axiosRequests.get("blabla")
          if (abortController) {
-            abortController.abort() // Cancel the request
+            abortController.abort()
             console.log("Upload request canceled by user.")
          }
       },

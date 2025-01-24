@@ -5,7 +5,6 @@ export async function getUser(token) {
    if (!token) return
 
    let url = "/user/me"
-   console.log("making a call")
    let response = await backendInstance.get(url, {
       headers: {
          "Authorization": `Token ${token}`,

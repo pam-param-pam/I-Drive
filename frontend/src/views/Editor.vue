@@ -105,15 +105,9 @@ export default {
    beforeUnmount() {
       window.removeEventListener("keydown", this.keyEvent)
    },
-   async mounted() {
-      console.log("mounted")
-
-   },
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setItems", "addSelected", "showHover", "setLastItem"]),
       guessLanguage() {
-         console.log("guessLanguage")
-
          let extensionMap = {
             "js": "javascript",
             "vue": "vue",
@@ -168,10 +162,7 @@ export default {
          if (this.isInShareContext) {
             let res = await getShare(this.token, this.folderId)
             this.shareObj = res
-            console.log(res)
-
             this.setItems(res.share)
-            console.log(this.items)
             this.folderList = res.breadcrumbs
 
             for (let i = 0; i < this.items.length; i++) {
@@ -179,7 +170,6 @@ export default {
                   this.file = this.items[i]
                }
             }
-
          }
          // if It's opened from Files, hence we know the user
          else {
@@ -191,7 +181,6 @@ export default {
                }
             }
             if (!this.file) {
-               console.log("FILEID: " + this.fileId)
                this.file = await getFile(this.fileId)
             }
             this.folderList = await breadcrumbs(this.file.parent_id)
@@ -200,10 +189,8 @@ export default {
 
          this.addSelected(this.file)
 
-         console.log("STARTED FETCHING")
          //todo show a progress bar
          let res = await fetch(this.file.download_url, {})
-         console.log("STOPPED FETCHING")
          this.setLoading(false)
 
          this.raw = await res.text()
@@ -234,7 +221,6 @@ export default {
 
             let formData = new FormData()
             let content = this.raw
-            console.log(this.file)
             if (this.file.encryption_method !== encryptionMethod.NotEncrypted) {
                let secrets = await getEncryptionSecrets(this.file.id)
                // Ensure content is a Blob before encrypting

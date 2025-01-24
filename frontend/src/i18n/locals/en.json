@@ -50,6 +50,7 @@
     "upload": "Upload"
   },
   "errors": {
+    "notAllowedToUpload": "You are not allowed to upload yet, first fill discord settings.",
     "goBack": "Go back",
     "retry": "Try again",
     "unknownError": "Unknown error has occurred. Status code: {code}, response: {response}",

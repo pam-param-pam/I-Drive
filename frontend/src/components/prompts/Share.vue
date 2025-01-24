@@ -135,10 +135,6 @@ export default {
       ...mapState(useMainStore, ["selected", "settings"]),
    },
 
-   unmounted() {
-      console.log("DESTROYED")
-   },
-
    async mounted() {
       this.clip = new Clipboard(".copy-clipboard")
       this.clip.on("success", () => {
@@ -173,8 +169,6 @@ export default {
             "value": this.time,
             "unit": this.unit
          })
-         console.log(res)
-         console.log("1111111111111111111 throttle")
          this.links.push(res)
          this.sort()
 

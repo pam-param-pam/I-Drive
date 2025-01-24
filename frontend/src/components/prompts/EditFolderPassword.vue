@@ -81,9 +81,6 @@ export default {
 
       submit: throttle(async function (event) {
          if (!(this.password === "" && this.oldPassword === "")) {
-            console.log("OLD PASSWORD")
-            console.log(this.oldPassword)
-            // console.log(this.password)
 
             let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
             let message = this.$t('toasts.passwordIsBeingUpdated')

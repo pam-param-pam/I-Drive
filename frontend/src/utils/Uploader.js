@@ -43,7 +43,6 @@ export class Uploader {
    }
 
    generate() {
-      console.log("UPLOADER GENERATE")
       const uploadStore = useUploadStore() // Get the necessary data from your Vue store or elsewhere
       const mainStore = useMainStore()
       this.requestGeneratorWorker.postMessage({ uploadStore, mainStore })

@@ -55,7 +55,6 @@ export default {
    created() {
       this.setDisabledCreation(true)
       this.fetchFolder()
-      console.log(this.headerButtons)
    },
    watch: {
       $route: "fetchFolder",

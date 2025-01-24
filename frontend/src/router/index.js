@@ -183,7 +183,6 @@ router.beforeResolve(async (to, from, next) => {
       if (!store.isLogged) {
          next({
             path: "/login",
-            query: {redirect: to.fullPath},
          })
 
          return

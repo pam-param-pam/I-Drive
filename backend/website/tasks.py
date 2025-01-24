@@ -1,4 +1,5 @@
 import random
+import time
 import traceback
 from collections import defaultdict
 from datetime import timedelta
@@ -71,18 +72,18 @@ def smart_delete(user_id, request_id, ids):
 
     try:
         all_files = []
-        for item in items:
-            if isinstance(item, File):
-                all_files.append(item)
+        for folder in folders:
+            files = folder.get_all_files()
+            all_files += files
 
-            elif isinstance(item, Folder):
-                files = item.get_all_files()
-                all_files += files
+        primary_keys = [instance.pk for instance in all_files]
+        queryset = File.objects.filter(pk__in=primary_keys)
+        queryset.update(ready=False)
+
+        all_files.extend(files)
 
         message_structure = defaultdict(list)
         for file in all_files:
-            file.ready = False
-            file.save()
 
             fragments = Fragment.objects.filter(file=file)
             for fragment in fragments:
@@ -126,10 +127,6 @@ def smart_delete(user_id, request_id, ids):
 
                     all_attachment_ids = set(attachment_ids)
                     attachment_ids_to_remove = set(message_structure[key])
-                    print("attachment_ids_to_remove")
-                    print(attachment_ids_to_remove)
-                    print("all_attachment_ids")
-                    print(all_attachment_ids)
 
                     # Since we are operating here on a single discord message, we can just query anything file to find the upload webhook
                     if fragments:
@@ -149,6 +146,8 @@ def smart_delete(user_id, request_id, ids):
                         discord.edit_attachments(user, webhook.url, key, attachment_ids_to_keep)
                     else:
                         discord.remove_message(user, key)
+                    print("===sleeping===")
+                    time.sleep(1)
             except DiscordError as e:
                 print(f"===========DISCORD ERROR===========\n{e}")
                 send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)

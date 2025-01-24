@@ -65,7 +65,7 @@ class Discord:
             else:
                 print("===Missing ratelimit headers====")
 
-    def _make_request(self, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+    def _make_request(self, user, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         response = self.client.request(method, url, headers=headers, json=json, files=files, timeout=timeout)
         if not headers:
             headers = {}
@@ -76,9 +76,11 @@ class Discord:
 
             retry_after = response.json().get("retry_after")
             if not retry_after:  # retry_after is missing if discord blocked us
-                raise DiscordBlockError("Discord is stupid :(")
+                token = headers['Authorization'].replace("Bot ", "")
+                self.users[user.id]["tokens"][token]['requests_remaining'] += 1
+                raise DiscordBlockError(message="Discord is stupid :(", retry_after=response.headers['retry-after'])
 
-            return self._make_request(method, url, headers, json, files, timeout)
+            return self._make_request(user, method, url, headers, json, files, timeout)
 
         return response
 
@@ -89,7 +91,7 @@ class Discord:
         headers['Authorization'] = f'Bot {token}'
         print(f"Making bot request with token: {token}")
 
-        response = self._make_request(method, url, headers=headers, json=json, files=files, timeout=timeout)
+        response = self._make_request(user, method, url, headers=headers, json=json, files=files, timeout=timeout)
         self.update_token(user, token, response.headers)
 
         if not response.is_success:
@@ -114,7 +116,7 @@ class Discord:
 
         print(f"Making webhook request with: {url}")
 
-        response = self._make_request(method, url, headers=headers, json=json, files=files, timeout=timeout)
+        response = self._make_request(user, method, url, headers=headers, json=json, files=files, timeout=timeout)
         # todo implement ratelimit for webhooks
 
         if not response.is_success:
@@ -237,11 +239,6 @@ class Discord:
         settings = DiscordSettings.objects.get(user=user)
         bots = Bot.objects.filter(owner=user, disabled=False).order_by('created_at')
         return settings, bots
-
-    def get_webhook(self, webhook_url):
-        # todo this call uses bots token auth
-        response = self._make_request('GET', webhook_url)
-        return response.json()
 
 
 discord = Discord()

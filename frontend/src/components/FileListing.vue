@@ -537,7 +537,6 @@ export default {
             y: posY
          }
 
-         console.log(this.contextMenuPos)
          this.isContextMenuVisible = true
       },
       hideContextMenu() {
@@ -728,7 +727,6 @@ export default {
       },
 
       scrollToLastItem() {
-         console.log("SCROLLING TO LAST ITEM")
          if (!this.lastItem) return
 
          let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles

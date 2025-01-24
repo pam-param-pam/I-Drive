@@ -4,7 +4,6 @@ import { attachmentType } from "@/utils/constants.js"
 import { v4 as uuidv4 } from "uuid"
 
 self.onmessage = async (event) => {
-      console.log("OMG HEY")
       const uploadStore = event.uploadStore
       const mainStore = event.mainStore
       let chunkSize = mainStore.user.maxDiscordMessageSize

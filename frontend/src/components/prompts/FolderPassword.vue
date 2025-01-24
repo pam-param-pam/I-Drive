@@ -97,7 +97,6 @@ export default {
       },
 
       finishAndShowAnotherPrompt() {
-         console.log("finishAndShowAnotherPrompt")
 
          let requiredFolderPasswordsCopy = [...this.requiredFolderPasswords]
          requiredFolderPasswordsCopy.shift()
@@ -123,13 +122,9 @@ export default {
       },
 
       onPasswordReset() {
-         console.log("onPasswordReset")
          this.finishAndShowAnotherPrompt()
-
       },
-
       forgotPassword() {
-         console.log("forgotPassword")
 
          this.showHover({
             prompt: "ResetFolderPassword",

@@ -189,7 +189,6 @@ class File(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        print("================SAVE MODEL================")
         if len(self.name) > MAX_RESOURCE_NAME_LENGTH:
             # Find the last occurrence of '.' to handle possibility of no extension
             last_dot_index = self.name.rfind('.')
@@ -295,7 +294,7 @@ class UserSettings(models.Model):
     subfolders_in_shares = models.BooleanField(default=False)
     encryption_method = models.SmallIntegerField(default=1)
     keep_creation_timestamp = models.BooleanField(default=False)
-    theme = models.CharField(default="light", max_length=20)
+    theme = models.CharField(default="dark", max_length=20)
     history = HistoricalRecords()
 
     def __str__(self):

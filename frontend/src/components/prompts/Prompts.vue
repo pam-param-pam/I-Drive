@@ -76,7 +76,6 @@ export default {
             event.preventDefault()
 
             let promptComponent = this.$refs[this.currentPromptName][0]
-            console.log(promptComponent)
             if (promptComponent && typeof promptComponent.submit === 'function') {
                promptComponent.submit()
 

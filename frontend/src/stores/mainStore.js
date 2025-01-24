@@ -93,7 +93,6 @@ export const useMainStore = defineStore("main", {
 
       },
       setItems(value) {
-         console.log("setting items")
          if (!value) value = []
          this.items = value
       },
@@ -148,8 +147,6 @@ export const useMainStore = defineStore("main", {
          })
       },
       setLoading(value) {
-         console.log("setting loading")
-         console.log(value)
          this.loading = value
       },
       setToken(value) {
@@ -169,7 +166,6 @@ export const useMainStore = defineStore("main", {
          this.selected = items
       },
       addSelected(value) {
-         console.log("addSelected")
          if (typeof value !== "object") return
 
          // Check if an object with the same 'file_id' already exists

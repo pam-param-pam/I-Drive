@@ -50,6 +50,7 @@
     "upload": "Prześlij"
   },
   "errors": {
+    "notAllowedToUpload": "Nie możesz wysyłać plików, uzupełnij ustawienia discorda najpierw",
     "goBack": "Zabierz mnie stąd",
     "retry": "Spróbuj ponownie",
     "unknownError": "Wystąpił nieznany błąd. Kod: {code}, Odpowiedż: {response}",

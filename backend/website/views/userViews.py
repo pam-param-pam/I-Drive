@@ -14,8 +14,8 @@ from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
-from ..utilities.errors import ResourcePermissionError, BadRequestError, DiscordError
-from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, check_webhook, get_webhook
+from ..utilities.errors import ResourcePermissionError, BadRequestError
+from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook
 from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle
 
 
@@ -190,12 +190,7 @@ def add_webhook(request):
     if Webhook.objects.filter(url=url, owner=request.user).exists():
         raise BadRequestError("Webhook with this URL already exists!")
 
-    try:
-        webhook = discord.get_webhook(url)
-    except DiscordError:
-        raise BadRequestError("Webhook URL is invalid")
-
-    guild_id, channel_id, discord_id, name = check_webhook(request, webhook)
+    guild_id, channel_id, discord_id, name = get_and_check_webhook(request, url)
 
     webhook = Webhook(
         url=url,
@@ -306,12 +301,14 @@ def update_upload_destination(request):
     guild_id = request.data['guild_id']
     channel_id = request.data['channel_id']
     attachment_name = request.data['attachment_name']
+    try:
+        if int(guild_id) < 18 or len(guild_id) > 19 or int(channel_id) < 18 or len(channel_id) > 19:
+            raise BadRequestError("Invalid discord IDS")
 
-    if int(guild_id) < 18 or len(guild_id) > 19 or int(channel_id) < 18 or len(channel_id) > 19:
+        if len(attachment_name) > 20:
+            raise BadRequestError("Attachment name length cannot be > 20")
+    except ValueError:
         raise BadRequestError("Invalid discord IDS")
-
-    if len(attachment_name) > 20:
-        raise BadRequestError("Attachment name length cannot be > 20")
 
     settings = DiscordSettings.objects.get(user=request.user)
 

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Union, List, Dict
 from urllib.parse import unquote
 
+import requests
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.utils import timezone
 
@@ -533,11 +534,18 @@ def create_webhook_dict(webhook: Webhook):
 def create_bot_dict(bot: Bot):
     return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id, "disabled": bot.disabled, "reason": bot.reason}
 
-def check_webhook(request, webhook: dict):
+def get_and_check_webhook(request, webhook_url: str):
+
+    res = requests.get(webhook_url)
+    if not res.ok:
+        raise BadRequestError("Webhook URL is invalid")
+
     settings = DiscordSettings.objects.get(user=request.user)
 
     if not settings.guild_id or not settings.channel_id:
         raise BadRequestError("First specify Channel ID and Guild ID.")
+
+    webhook = res.json()
 
     guild_id = webhook['guild_id']
     channel_id = webhook['channel_id']

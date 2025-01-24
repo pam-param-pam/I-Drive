@@ -153,7 +153,6 @@ export default {
                this.setCurrentFolderData(res)
 
             } catch (error) {
-               console.log(error)
                if (error.code === "ERR_CANCELED") return
                this.setError(error)
             } finally {
@@ -199,7 +198,6 @@ export default {
 
       },
       async download() {
-         console.log(this.selectedCount)
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
             window.open(this.selected[0].download_url, "_blank")
             let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })

@@ -150,8 +150,6 @@ export function getWebhook(currentWebhook) {
 }
 
 export function getVideoCover(file, seekTo = -2) {
-   console.log("getting video cover for file: ", file.fileObj.name)
-
    return new Promise((resolve, reject) => {
       let videoPlayer = document.createElement("video")
       videoPlayer.src = URL.createObjectURL(file.systemFile)
@@ -171,7 +169,6 @@ export function getVideoCover(file, seekTo = -2) {
 
          // Extract thumbnail when seeking is complete
          videoPlayer.addEventListener("seeked", () => {
-            console.log("Video is now paused at " + seekTo + "s.")
 
             // Create canvas with video dimensions
             const canvas = document.createElement("canvas")
@@ -205,7 +202,6 @@ export function getVideoCover(file, seekTo = -2) {
 
             videoPlayer.pause()
             URL.revokeObjectURL(videoPlayer.src)
-            console.log("FINISHED GETTING COVER")
          })
 
       })

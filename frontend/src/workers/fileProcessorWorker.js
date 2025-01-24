@@ -44,8 +44,6 @@ self.onmessage = async (event) => {
       files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt }, "systemFile": file })
    }
 
-      console.log("files")
-      console.log(files)
       self.postMessage(files)
 
 

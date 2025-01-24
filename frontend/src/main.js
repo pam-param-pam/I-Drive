@@ -16,7 +16,6 @@ import "floating-vue/dist/style.css"
 FloatingVue.options.themes.tooltip.placement = "top-start"
 
 const app = createApp(App)
-console.log("validate login")
 app.use(router)
 app.use(i18n)
 app.use(Vue3TouchEvents)

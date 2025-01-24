@@ -57,7 +57,6 @@ export default {
             dirs.unshift(folderBack)
          }
 
-         console.log(this.selected)
          this.dirs = dirs.filter(folder => this.selected[0].id !== folder.id)
          this.nav = {name: res.name, id: res.id, folder_path: res.folder_path}
          this.$emit("update:current", this.nav)

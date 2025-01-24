@@ -95,7 +95,6 @@ export default {
    },
    watch: {
       tagName(newVal) {
-         console.log(newVal)
          if (newVal.includes(" ")) {
             this.submit()
          }

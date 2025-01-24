@@ -156,8 +156,6 @@ export async function preUploadRequest(request) {
          }
       })
    }
-   console.log("preUploadRequest")
-   console.log(request)
    return request
 
 }

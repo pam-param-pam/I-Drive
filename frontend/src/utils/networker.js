@@ -74,9 +74,6 @@ backendInstance.interceptors.request.use(
       cancelTokenMap.set(config.__cancelSignature, cancelSource)
 
       let token = localStorage.getItem("token")
-      console.log("aaaaaaaaaaaa")
-      console.log(token)
-      console.log(config.headers["Authorization"])
       if (token && !config.headers["Authorization"]) {
          config.headers["Authorization"] = `Token ${token}`
       }

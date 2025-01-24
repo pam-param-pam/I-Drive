@@ -31,12 +31,7 @@ export default {
       UploadFiles
    },
 
-   renderTriggered({ key, target, type }) {
-      console.log(`Render triggered on component 'Layout'`, { key, target, type })
-   },
    created() {
-      console.log("IS logged")
-      console.log(this.isLogged)
       if (!this.isLogged) {
 
          this.setAnonState()

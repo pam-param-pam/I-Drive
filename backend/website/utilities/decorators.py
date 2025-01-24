@@ -141,6 +141,8 @@ def handle_common_errors(view_func):
             return JsonResponse(build_http_error_response(code=503, error="errors.unexpectedDiscordResponse", details=str(e)), status=503)
 
         except DiscordBlockError as e:
-            return JsonResponse(build_http_error_response(code=503, error="errors.discordBlocked", details=str(e)), status=503)
+            res = build_http_error_response(code=503, error="errors.discordBlocked", details=str(e))
+            res['retry_after'] = e.retry_after
+            return JsonResponse(res, status=503)
 
     return wrapper
