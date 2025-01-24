@@ -237,6 +237,10 @@ def stream_file(request, file_obj: File):
                     print(f"Fragment index: {fragments[index].sequence}")
                     print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
+                # if we are returning a partial request we only want to stream 1 chunk
+                if status == 206:
+                    break
+
                 index += 1
             if file_obj.is_encrypted():
                 yield decryptor.finalize()

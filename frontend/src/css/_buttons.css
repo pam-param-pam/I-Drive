@@ -10,7 +10,7 @@
   transition: .1s ease all;
 }
 
-.button:not(:disabled):hover {
+.button:hover {
   background-color: var(--dark-blue);
 }
 

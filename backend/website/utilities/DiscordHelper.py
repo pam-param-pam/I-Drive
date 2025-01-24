@@ -1,6 +1,5 @@
 import requests
 
-from ..models import Bot
 from ..utilities.constants import DISCORD_BASE_URL
 from ..utilities.errors import BadRequestError
 
@@ -20,6 +19,7 @@ class DiscordHelper:
         self.MANAGE_MESSAGES = 0x0000000000002000
         self.ADMINISTRATOR = 0x0000000000000008
         self.READ_MESSAGE_HISTORY = 0x0000000000010000
+        self.ATTACH_FILES = 0x0000000000008000
 
     def _get_bot_info(self):
 
@@ -86,8 +86,8 @@ class DiscordHelper:
             had_read_history_permission = bool(permissions & self.READ_MESSAGE_HISTORY)
             has_write_permission = bool(permissions & self.SEND_MESSAGES)
             has_delete_permission = bool(permissions & self.MANAGE_MESSAGES)
-
-            return had_admin_perms, has_view_permission, had_read_history_permission, has_write_permission, has_delete_permission
+            has_attach_files_permission = bool(permissions & self.ATTACH_FILES)
+            return had_admin_perms, has_view_permission, had_read_history_permission, has_write_permission, has_delete_permission, has_attach_files_permission
 
     def check_bot_and_its_perms(self):
         bot_info = self._get_bot_info()
@@ -98,8 +98,8 @@ class DiscordHelper:
         bot_roles = self._get_bot_roles(bot_id)
         all_roles = self._get_roles()
 
-        has_admin_perms, has_view, had_read_history, has_write, has_delete = self._calculate_permissions(bot_roles, all_roles, permission_overwrites)
-        if has_admin_perms or (has_view and has_write and has_delete and had_read_history):
+        has_admin_perms, has_view, had_read_history, has_write, has_delete, has_attach_files = self._calculate_permissions(bot_roles, all_roles, permission_overwrites)
+        if has_admin_perms or (has_view and has_write and has_delete and had_read_history and has_attach_files):
             return bot_id, bot_name
 
         else:
@@ -108,6 +108,7 @@ class DiscordHelper:
                 "WRITE": has_write,
                 "MANAGE": has_delete,
                 "READ HISTORY": had_read_history,
+                "ATTACH FILES": has_attach_files,
             }
             missing_permissions = [perm for perm, has_perm in permissions.items() if not has_perm]
             raise BadRequestError(f"{', '.join(missing_permissions)} permissions are missing.")

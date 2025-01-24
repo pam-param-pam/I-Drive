@@ -1,7 +1,6 @@
 import base64
 import math
 from datetime import datetime
-from random import random
 
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
