@@ -31,11 +31,15 @@ class Discord:
 
         while slept < 5:  # wait max for 5 seconds, then return service unavailable
             current_time = datetime.now(timezone.utc).timestamp()
-            token_dict = self.users[user.id]["tokens"]
-            for token, data in token_dict.items():
-                with self.lock:
+            with self.lock:
+                token_dict = self.users[user.id]["tokens"]
+                for token, data in token_dict.items():
+                    if token_dict[token]['locked']:
+                        continue
+
                     if data['requests_remaining'] > 2:  # I have no clue why but when its 0, we still hi 429? probably race conditions or some other shit, cannot care less
                         token_dict[token]['requests_remaining'] -= 1
+                        token_dict[token]['locked'] = True
                         return token
 
                     if data['reset_time']:
@@ -44,6 +48,8 @@ class Discord:
 
                         if current_time >= reset_time:
                             token_dict[token]['requests_remaining'] = 1
+                            token_dict[token]['locked'] = True
+
                             return token
 
             time.sleep(0.5)
@@ -56,12 +62,14 @@ class Discord:
         print(f"update token: {token}")
         reset_time = headers.get('X-RateLimit-Reset')
         requests_remaining = headers.get('X-RateLimit-remaining')
-        token_dict = self.users[user.id]["tokens"]
 
         with self.lock:  # Ensure thread safety when updating token_dict
+            token_dict = self.users[user.id]["tokens"]
             if requests_remaining and reset_time:
                 token_dict[token]['reset_time'] = reset_time
                 token_dict[token]['requests_remaining'] = int(requests_remaining)
+                token_dict[token]['locked'] = False
+
             else:
                 print("===Missing ratelimit headers====")
 
@@ -77,7 +85,10 @@ class Discord:
             retry_after = response.json().get("retry_after")
             if not retry_after:  # retry_after is missing if discord blocked us
                 token = headers['Authorization'].replace("Bot ", "")
-                self.users[user.id]["tokens"][token]['requests_remaining'] += 1
+                with self.lock:
+                    self.users[user.id]["tokens"][token]['requests_remaining'] += 1
+                    # TODO retry_after block the service entirely for tha duration to prevent 429
+                    # todo handle 429
                 raise DiscordBlockError(message="Discord is stupid :(", retry_after=response.headers['retry-after'])
 
             return self._make_request(user, method, url, headers, json, files, timeout)
@@ -225,6 +236,7 @@ class Discord:
                 bot.token: {
                     'requests_remaining': 4,  # Default discord remaining
                     'reset_time': None,
+                    'locked': False,
                     'name': bot.name,
                 }
                 for bot in bots

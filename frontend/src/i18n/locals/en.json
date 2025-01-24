@@ -300,6 +300,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "botEnabled": "Bot enabled!",
     "uploadDestinationUpdated": "Saved!",
     "botRemovedForInsufficientPerms": "Bot: {name} was removed due to lack of required permission.",
     "botAdded": "Bot added!",

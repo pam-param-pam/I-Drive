@@ -301,6 +301,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "botEnabled": "Włączono bota!",
     "uploadDestinationUpdated": "Zapisano!",
     "botRemovedForInsufficientPerms": "Bot: {name} został usunięty z powodu braku wymaganych permisji.",
     "botAdded": "Dodano bot!",
