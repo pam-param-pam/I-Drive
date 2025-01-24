@@ -76,13 +76,6 @@ export async function logout() {
       await logoutUser(token)
    }
 
-   // store.setUser(null)
-   // store.setSettings(null)
-   // store.setCurrentFolder(null)
-   // store.setItems(null)
-   // store.setPerms(null)
-   // store.resetFolderPassword()
-
    await router.push({path: "/login"})
    router.go(0) // make sure every state is removed just in case
 }

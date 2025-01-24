@@ -38,6 +38,7 @@ class EventCode(Enum):
     FOLDER_LOCK_STATUS_CHANGE = 8
     ITEM_MOVE_TO_TRASH = 9
     ITEM_RESTORE_FROM_TRASH = 10
+    FORCE_LOGOUT = 11
 
 class EncryptionMethod(Enum):
     Not_Encrypted = 0

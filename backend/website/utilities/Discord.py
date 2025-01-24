@@ -34,8 +34,8 @@ class Discord:
             with self.lock:
                 token_dict = self.users[user.id]["tokens"]
                 for token, data in token_dict.items():
-                    if token_dict[token]['locked']:
-                        continue
+                    # if token_dict[token]['locked']:
+                    #     continue #todo
 
                     if data['requests_remaining'] > 2:  # I have no clue why but when its 0, we still hi 429? probably race conditions or some other shit, cannot care less
                         token_dict[token]['requests_remaining'] -= 1

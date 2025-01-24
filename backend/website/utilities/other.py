@@ -50,6 +50,7 @@ def formatDate(date: datetime) -> str:
 
 
 def logout_and_close_websockets(user_id: int) -> None:
+    send_event(user_id, EventCode.FORCE_LOGOUT, 0, {})
     queue_ws_event.delay(
         'user',
         {

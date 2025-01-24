@@ -512,7 +512,7 @@ export default {
          this.$emit("uploadInput", event)
       },
       showContextMenu(event, item) {
-         this.resetSelected()
+         this.resetSelected() //todo make this work the same way listinItem click does
          this.addSelected(item)
 
          let max_x_size = 200

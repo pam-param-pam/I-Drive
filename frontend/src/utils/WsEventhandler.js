@@ -1,6 +1,7 @@
 import i18n from "@/i18n/index.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {useToast} from "vue-toastification"
+import { logout } from "@/utils/auth.js"
 
 const toast = useToast()
 
@@ -152,6 +153,11 @@ export default function onEvent(message) {
          timeout: timeout, type: type, draggable: true, closeOnClick: true
 
       })
+   }
+   if (jsonObject.op_code === 11) { // force logout
+      if (store.isLogged) {
+         logout()
+      }
    }
 
 }
