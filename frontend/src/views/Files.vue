@@ -192,9 +192,7 @@ export default {
          if (this.source) {
             this.source.cancel("Cancelled previous request")
          }
-
          await this.fetchFolder()
-         //todo this breaks shit up with locateItem. possibly race condition, this call  finishes after locateItem
 
       },
       async download() {

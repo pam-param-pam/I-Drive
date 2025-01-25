@@ -50,7 +50,7 @@ class ApplyRateLimitHeadersMiddleware:
 
         return response
 
-class RequestIdMiddleware(object): #todo base class is object??
+class RequestIdMiddleware:
     def __init__(self, get_response=None):
         self.get_response = get_response
 

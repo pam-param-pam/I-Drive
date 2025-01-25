@@ -127,8 +127,7 @@ export default function onEvent(message) {
          timeout = 0
          type = "error"
       }
-      console.warn("UPDATE")
-      console.log(jsonObject)
+
       toast.update(jsonObject.task_id, {
 
          content: i18n.global.t(jsonObject.message, jsonObject.args),

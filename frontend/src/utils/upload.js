@@ -16,6 +16,7 @@ export async function* prepareRequests() {
     this is a generator function!
     */
 
+
    const uploadStore = useUploadStore()
    const mainStore = useMainStore()
    let chunkSize = mainStore.user.maxDiscordMessageSize

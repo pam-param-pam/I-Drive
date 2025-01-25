@@ -1,7 +1,6 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
-import { useMainStore } from "@/stores/mainStore.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -149,7 +148,7 @@ export function getWebhook(currentWebhook) {
    return webhooks[currentWebhookIndex]
 }
 
-export function getVideoCover(file, seekTo = -2) {
+export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    return new Promise((resolve, reject) => {
       let videoPlayer = document.createElement("video")
       videoPlayer.src = URL.createObjectURL(file.systemFile)
@@ -182,14 +181,18 @@ export function getVideoCover(file, seekTo = -2) {
             // Convert canvas to blob and resolve promise
             ctx.canvas.toBlob(
                (blob) => {
-
                   // checking if the thumbnail is not pitch black
                   ctx.canvas.width = ctx.canvas.height = 1
                   ctx.drawImage(videoPlayer, 0, 0, 1, 1)
                   let result = ctx.getImageData(0, 0, 1, 1)
-                  result = result.data[0] + result.data[1] + result.data[2] + result.data[3]
-                  if (result === 255) {
-                     resolve(getVideoCover(file, seekTo + 3))
+                  let totalColor = result.data[0] + result.data[1] + result.data[2] + result.data[3]
+                  if (totalColor === 255 && retryTimes <= 5) {
+                     if (seekTo < 0) {
+                        seekTo = 0
+                     } else {
+                        seekTo *= videoPlayer.duration
+                     }
+                     resolve(getVideoCover(file, seekTo, retryTimes + 1))
                   } else {
                      resolve(blob)
                   }
@@ -239,7 +242,7 @@ export async function getOrCreateFolder(fileObj) {
          let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
 
          let folder = await create({ "parent_id": parentFolder, "name": folderName }, {
-            __retry500: true,
+            __retry500: true
          })
          parentFolder = folder.id
          uploadStore.createdFolders[path_key] = folder.id

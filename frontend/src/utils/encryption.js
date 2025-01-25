@@ -1,6 +1,5 @@
 import JSChaCha20 from "js-chacha20"
 import { attachmentType, encryptionMethod } from "@/utils/constants.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 
 function base64ToUint8Array(base64) {

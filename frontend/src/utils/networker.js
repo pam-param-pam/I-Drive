@@ -41,7 +41,7 @@ discordInstance.interceptors.response.use(
 
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {
-         let retryAfter = error.response.headers["retry-after"]
+         let retryAfter = error.response.headers["x-ratelimit-reset-after"]
          if (retryAfter) {
             let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
             console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
