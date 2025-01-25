@@ -204,8 +204,9 @@ REST_FRAMEWORK = {
         'password_change': '10/m',
         'search': '60/m',
         'register': '20/h',
+        'discord_settings': '1/2s',
 
-},
+    },
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),

@@ -10,7 +10,8 @@ from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosit
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
-from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, MalformedDatabaseRecord
+from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, MalformedDatabaseRecord, \
+    NoBotsError
 
 signer = TimestampSigner()
 
@@ -556,7 +557,7 @@ def get_and_check_webhook(request, webhook_url: str):
     name = webhook['name']
 
     if settings.guild_id != guild_id or settings.channel_id != channel_id:
-        raise BadRequestError("Channel ID or Guild ID is not the same!")
+        raise BadRequestError("Webhook's channel is not the same as in upload destination!")
 
     return guild_id, channel_id, discord_id, name
 
@@ -566,3 +567,7 @@ def get_webhook(request, discord_id: str):
     except Webhook.DoesNotExist:
         raise BadRequestError(f"Could not find webhook with id: {discord_id}")
 
+
+def check_if_bots_exists(user):
+    if not Bot.objects.filter(owner=user, disabled=False).exists():
+        raise NoBotsError()

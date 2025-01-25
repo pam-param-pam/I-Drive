@@ -129,7 +129,7 @@ class Discord:
                 queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id,
                                               'message': "toasts.botRemovedForInsufficientPerms",
                                               'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
-                del token_dict
+            self.remove_user_state(user)
 
         raise DiscordError(response.text, response.status_code)
 

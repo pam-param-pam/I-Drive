@@ -25,8 +25,8 @@ from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
-from ..utilities.errors import DiscordError, BadRequestError, NoBotsError
-from ..utilities.other import get_flattened_children, create_zip_file_dict
+from ..utilities.errors import DiscordError, BadRequestError
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
 
@@ -68,6 +68,7 @@ def get_preview(request, file_obj: File):
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
         raise BadRequestError("File too big: size > 100mb")
 
+    check_if_bots_exists(file_obj.owner)
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
     file_content = b''
@@ -153,6 +154,8 @@ def get_preview(request, file_obj: File):
 def get_thumbnail(request, file_obj: File):
     thumbnail_content = cache.get(f"thumbnail:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
     if not thumbnail_content:
+        check_if_bots_exists(file_obj.owner)
+
         thumbnail = file_obj.thumbnail
         if file_obj.is_encrypted():
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=thumbnail.iv)
@@ -190,8 +193,7 @@ def stream_file(request, file_obj: File):
     fragments = file_obj.fragments.all().order_by('sequence')
     user = file_obj.owner
 
-    if not Bot.objects.filter(owner=user, disabled=False).exists():
-        raise NoBotsError()
+    check_if_bots_exists(user)
 
     filename_ascii = quote(smart_str(file_obj.name))
     # Encode the filename using RFC 5987
@@ -314,6 +316,7 @@ def stream_file(request, file_obj: File):
 def stream_zip_files(request, token):
     user_zip = UserZIP.objects.get(token=token)
     user = user_zip.owner
+    check_if_bots_exists(user)
 
     async def stream_file(file_obj, fragments, chunk_size=8192):
         async with aiohttp.ClientSession() as session:

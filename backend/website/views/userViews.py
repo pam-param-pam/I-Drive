@@ -16,7 +16,7 @@ from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook
-from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle
+from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle, DiscordSettingsThrottle
 
 
 @api_view(['POST'])
@@ -180,7 +180,7 @@ def get_discord_settings(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def add_webhook(request):
@@ -208,7 +208,7 @@ def add_webhook(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def delete_webhook(request):
@@ -226,7 +226,7 @@ def delete_webhook(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def add_bot(request):
@@ -253,14 +253,15 @@ def add_bot(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def delete_bot(request):
     discord_id = request.data.get('discord_id')
 
-    bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
-    if not bot:
+    try:
+        bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
+    except Bot.DoesNotExist:
         raise BadRequestError("Bot with this token doesn't exists!")
 
     bot.delete()
@@ -270,14 +271,15 @@ def delete_bot(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def enable_bot(request):
     discord_id = request.data.get('discord_id')
 
-    bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
-    if not bot:
+    try:
+        bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
+    except Bot.DoesNotExist:
         raise BadRequestError("Bot with this token doesn't exists!")
 
     settings = DiscordSettings.objects.get(user=request.user)
@@ -295,7 +297,7 @@ def enable_bot(request):
 
 
 @api_view(['PUT'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 @handle_common_errors
 def update_upload_destination(request):

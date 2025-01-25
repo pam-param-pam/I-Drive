@@ -13,7 +13,7 @@ from ..utilities.Permissions import CreatePerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, get_webhook
+from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, get_webhook, check_if_bots_exists
 from ..utilities.throttle import MyUserRateThrottle
 
 
@@ -162,6 +162,7 @@ def create_file(request):
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)
+        check_if_bots_exists(request.user)
 
         if not file_obj.ready:
             raise BadRequestError("You cannot edit a 'not ready' file!")

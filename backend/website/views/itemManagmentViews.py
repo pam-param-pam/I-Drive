@@ -10,7 +10,7 @@ from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockP
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file
+from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists
 from ..utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
 
 
@@ -182,6 +182,8 @@ def delete(request):
         raise BadRequestError("'ids' length cannot be 0.")
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
+
+    check_if_bots_exists(request.user)
 
     files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")

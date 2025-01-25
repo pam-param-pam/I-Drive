@@ -109,3 +109,7 @@ class PasswordChangeThrottle(MyUserRateThrottleBase):
 class RegisterThrottle(MyUserRateThrottleBase):
     scope = 'register'
     bucket = "FdHakamxf"
+
+class DiscordSettingsThrottle(MyUserRateThrottleBase):
+    scope = 'discord_settings'
+    bucket = "YWJob2rcw"
