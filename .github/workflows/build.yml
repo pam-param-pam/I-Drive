@@ -54,4 +54,4 @@ jobs:
     # 6. Build and push Docker images with caching
     - name: Build and push Docker images
       run: |
-        docker buildx bake --file docker-bake.hcl --push
+          docker buildx bake --file docker-bake.hcl --push --build-arg repository_owner=${{ github.repository_owner }}

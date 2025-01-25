@@ -7,7 +7,7 @@ target "frontend" {
   dockerfile = "frontend/Dockerfile"
   cache-from = ["type=local,src=/tmp/.buildx-cache"]
   cache-to = ["type=local,dest=/tmp/.buildx-cache,mode=max"]
-  tags = ["ghcr.io/${github.repository_owner}/idrive-frontend:latest"]
+  tags = ["ghcr.io/${build_arg.repository_owner}/idrive-frontend:latest"]
   output = ["type=registry"]
 }
 
@@ -16,6 +16,6 @@ target "backend" {
   dockerfile = "backend/Dockerfile"
   cache-from = ["type=local,src=/tmp/.buildx-cache"]
   cache-to = ["type=local,dest=/tmp/.buildx-cache,mode=max"]
-  tags = ["ghcr.io/${github.repository_owner}/idrive-backend:latest"]
+  tags = ["ghcr.io/${build_arg.repository_owner}/idrive-backend:latest"]
   output = ["type=registry"]
 }
