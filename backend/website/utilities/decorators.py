@@ -101,14 +101,14 @@ def handle_common_errors(view_func):
         except NotImplementedError as e:
             return JsonResponse(build_http_error_response(code=400, error="error.notImplemented", details=str(e)), status=400)
 
-        except KeyError:
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
-
-        except (ValueError, TypeError):
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
-
-        except OverflowError:
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
+        # except KeyError:
+        #     return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
+        #
+        # except (ValueError, TypeError):
+        #     return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
+        #
+        # except OverflowError:
+        #     return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
 
         # 403 REQUEST FORBIDDEN
         except ResourcePermissionError as e:

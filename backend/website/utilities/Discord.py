@@ -36,7 +36,7 @@ class Discord:
                 tokens_dict = user_state["tokens"]
                 for token, data in tokens_dict.items():
 
-                    if data['requests_remaining'] > data['concurrent_requests']:
+                    if data['requests_remaining'] > 0 and data['requests_remaining'] > data['concurrent_requests']:
                         tokens_dict[token]['concurrent_requests'] += 1
                         tokens_dict[token]['requests_remaining'] -= 1
                         return token
@@ -62,7 +62,7 @@ class Discord:
 
         with self.lock:
             token_dict = self._get_user_state(user)["tokens"][token]
-            token_dict[token]['concurrent_requests'] -= 1
+            token_dict['concurrent_requests'] -= 1
 
             if requests_remaining and reset_time:
                 token_dict['reset_time'] = reset_time
