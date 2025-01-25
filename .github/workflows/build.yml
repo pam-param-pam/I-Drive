@@ -63,8 +63,4 @@ jobs:
           # 5. Build and push Docker images with caching
           - name: Build and push Docker images
             run: |
-              docker buildx bake \
-                --file docker-compose.yml \
-                --cache-from=type=local,src=/tmp/.buildx-cache \
-                --cache-to=type=local,dest=/tmp/.buildx-cache \
-                --push
+              docker buildx bake --file docker-bake.hcl --push
