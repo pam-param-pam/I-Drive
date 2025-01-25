@@ -55,12 +55,14 @@ jobs:
     - name: Build and push Docker images
       run: |
         apt-get update && apt-get install -y --no-install-recommends build-essential
-        docker compose build 
+        docker compose build \
+          --progress=plain \
+          --cache-from=type=local,src=/tmp/.buildx-cache \
+          --cache-to=type=local,dest=/tmp/.buildx-cache
 
     # 8. Tag and push Backend to GitHub Container Registry
     - name: Tag and push Backend to GitHub Container Registry
       run: |
-        docker images -a
         docker push ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
 
     # 9. Tag and push Nginx to GitHub Container Registry

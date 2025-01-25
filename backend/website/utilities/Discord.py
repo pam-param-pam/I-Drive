@@ -35,10 +35,15 @@ class Discord:
                 user_state = self._get_user_state(user)
                 tokens_dict = user_state["tokens"]
                 for token, data in tokens_dict.items():
+                    if tokens_dict[token]['locked1'] and tokens_dict[token]['locked2']:
+                        continue
 
-                    if data['requests_remaining'] > 0 and data['requests_remaining'] > data['concurrent_requests']:
-                        tokens_dict[token]['concurrent_requests'] += 1
+                    if data['requests_remaining'] > 2:
                         tokens_dict[token]['requests_remaining'] -= 1
+                        if tokens_dict[token]['locked1']:
+                            tokens_dict[token]['locked2'] = True
+                        else:
+                            tokens_dict[token]['locked1'] = True
                         return token
 
                     if data['reset_time']:
@@ -46,7 +51,10 @@ class Discord:
 
                         if current_time >= reset_time:
                             tokens_dict[token]['requests_remaining'] = 1
-                            tokens_dict[token]['concurrent_requests'] += 1
+                            if tokens_dict[token]['locked1']:
+                                tokens_dict[token]['locked2'] = True
+                            else:
+                                tokens_dict[token]['locked1'] = True
                             return token
 
             time.sleep(0.5)
@@ -62,7 +70,10 @@ class Discord:
 
         with self.lock:
             token_dict = self._get_user_state(user)["tokens"][token]
-            token_dict['concurrent_requests'] -= 1
+            if token_dict['locked1']:
+                token_dict['locked1'] = False
+            else:
+                token_dict['locked2'] = False
 
             if requests_remaining and reset_time:
                 token_dict['reset_time'] = reset_time
@@ -237,8 +248,8 @@ class Discord:
                 bot.token: {
                     'requests_remaining': 4,  # Default discord remaining
                     'reset_time': None,
-                    'locked': False,
-                    'concurrent_requests': 0,
+                    'locked1': False,
+                    'locked2': False,
                     'name': bot.name,
                 }
                 for bot in bots
