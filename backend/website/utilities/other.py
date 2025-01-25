@@ -86,6 +86,8 @@ def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
 
     while folder_obj.parent:
         if folder_obj.id in visited_ids:
+            #todo add this to other while
+
             # Detected a circular reference, break to prevent infinite recursion, this should never happen, but the guard exists to prevent denial of service
             raise MalformedDatabaseRecord("Circular reference detected in folder hierarchy in breadcrumbs")
 

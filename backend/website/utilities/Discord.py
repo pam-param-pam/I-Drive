@@ -33,24 +33,20 @@ class Discord:
             current_time = datetime.now(timezone.utc).timestamp()
             with self.lock:
                 user_state = self._get_user_state(user)
-                token_dict = user_state["tokens"]
-                for token, data in token_dict.items():
-                    if token_dict[token]['locked']:
-                        continue
+                tokens_dict = user_state["tokens"]
+                for token, data in tokens_dict.items():
 
-                    if data['requests_remaining'] > 2:  # I have no clue why but when its 0, we still hi 429? probably race conditions or some other shit, cannot care less
-                        token_dict[token]['requests_remaining'] -= 1
-                        token_dict[token]['locked'] = True
+                    if data['requests_remaining'] > data['concurrent_requests']:
+                        tokens_dict[token]['concurrent_requests'] += 1
+                        tokens_dict[token]['requests_remaining'] -= 1
                         return token
 
                     if data['reset_time']:
-
                         reset_time = float(data['reset_time'])
 
                         if current_time >= reset_time:
-                            token_dict[token]['requests_remaining'] = 1
-                            token_dict[token]['locked'] = True
-
+                            tokens_dict[token]['requests_remaining'] = 1
+                            tokens_dict[token]['concurrent_requests'] += 1
                             return token
 
             time.sleep(0.5)
@@ -65,12 +61,12 @@ class Discord:
         requests_remaining = headers.get('X-RateLimit-remaining')
 
         with self.lock:
-            token_dict = self._get_user_state(user)["tokens"]
-            token_dict[token]['locked'] = False
+            token_dict = self._get_user_state(user)["tokens"][token]
+            token_dict[token]['concurrent_requests'] -= 1
 
             if requests_remaining and reset_time:
-                token_dict[token]['reset_time'] = reset_time
-                token_dict[token]['requests_remaining'] = int(requests_remaining)
+                token_dict['reset_time'] = reset_time
+                token_dict['requests_remaining'] = int(requests_remaining)
 
             else:
                 print("===Missing ratelimit headers====")
@@ -242,6 +238,7 @@ class Discord:
                     'requests_remaining': 4,  # Default discord remaining
                     'reset_time': None,
                     'locked': False,
+                    'concurrent_requests': 0,
                     'name': bot.name,
                 }
                 for bot in bots
@@ -265,7 +262,6 @@ class Discord:
             state['retry_timestamp'] = retry_timestamp
 
             raise DiscordBlockError(message="Discord is stupid :(", retry_after=retry_after)
-
 
 
 discord = Discord()

@@ -237,7 +237,7 @@ def stream_file(request, file_obj: File):
                     print(f"Fragment index: {fragments[index].sequence}")
                     print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
-                # if we are returning a partial request we only want to stream 1 chunk
+                # if we are returning a partial request we only want to stream 1 fragment
                 if status == 206:
                     break
 

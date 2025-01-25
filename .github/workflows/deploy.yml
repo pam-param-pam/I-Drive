@@ -24,14 +24,13 @@ jobs:
           
           echo "Logging in to GitHub Container Registry..."
           echo "${{ secrets.MY_GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-          
-          
         
           echo "navigating to idrive"
 
           mkdir -p idrive
           cd idrive
-          
+          echo "setting env variables"
+
           echo "IS_DEV_ENV=False" >> .env 
           echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
           

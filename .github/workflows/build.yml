@@ -34,13 +34,7 @@ jobs:
         echo "VITE_BACKEND_BASE_WS=wss://${{ secrets.DEPLOYMENT_HOST }}/api" > .env
         echo "VITE_BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
 
-      # 4. Set env file for Backend
-    - name: Set env file for Backend
-      run: |
-        
-        echo "I_DRIVE_BACKEND_STORAGE_DIR=/app/data" >> .env
-
-    # 5. Logs to GitHub Container Registry
+    # 5. Login to GitHub Container Registry
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v2
       with:
@@ -48,19 +42,28 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.MY_GITHUB_TOKEN }} # GitHub Token for authentication
 
-      # 6. Build and push the Docker images using docker-compose
+    # 6. Cache Docker layers
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-docker-${{ hashFiles('**/frontend/Dockerfile', '**/backend/Dockerfile', '**/frontend/package-lock.json', '**/backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-docker-
+
+    # 7. Build and push the Docker images using docker-compose
     - name: Build and push Docker images
       run: |
         apt-get update && apt-get install -y --no-install-recommends build-essential
         docker compose build 
 
-      # 7. Tag and push Backend to GitHub Container Registry
+    # 8. Tag and push Backend to GitHub Container Registry
     - name: Tag and push Backend to GitHub Container Registry
       run: |
         docker images -a
         docker push ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
 
-    # 8. Tag and push Nginx to GitHub Container Registry
+    # 9. Tag and push Nginx to GitHub Container Registry
     - name: Tag and push Nginx to GitHub Container Registry
       run: |
         docker push ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest

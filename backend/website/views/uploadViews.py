@@ -80,10 +80,9 @@ def create_file(request):
                 try:
                     timestamp_in_seconds = int(created_at) / 1000
                     created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
-                    print(created_at)
+                    file_obj.created_at = created_at
                 except (ValueError, OverflowError):
                     raise BadRequestError("Invalid 'created_at' timestamp format.")
-                file_obj.created_at = created_at
             #  apply lock if needed
             if parent.is_locked:
                 file_obj.applyLock(parent.lockFrom, parent.password)
