@@ -53,9 +53,9 @@ jobs:
         password: ${{ secrets.MY_GITHUB_TOKEN }} # GitHub Token for authentication
 
     - name: build docker image
-      run: >
-        docker buildx build --file docker-compose.yml --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache"
-        
+      run: |
+        docker compose build --buildx --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache"
+
 
       # 7. Tag and push Backend to GitHub Container Registry
     - name: Tag and push Backend to GitHub Container Registry
