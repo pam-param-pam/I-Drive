@@ -373,25 +373,6 @@ def stream_zip_files(request, token):
     response['Content-Length'] = zipFly.calculate_archive_size()
 
     response['Content-Disposition'] = f'attachment; filename="{zip_name}.zip"'
-
+    user_zip.delete()
     return response
-#
-#
-# def download_large_file(request):
-#     """Stream a 200MB file to test download speed."""
-#
-#     def generate_large_file(size_mb):
-#         """Generate chunks of data to simulate a large file."""
-#         chunk_size = 1024 * 1024  # 1MB per chunk
-#         total_chunks = size_mb  # Number of 1MB chunks
-#
-#         for _ in range(total_chunks):
-#             yield b'0' * chunk_size
-#
-#     response = StreamingHttpResponse(
-#         generate_large_file(200),
-#         content_type='application/octet-stream'
-#     )
-#     response['Content-Disposition'] = 'attachment; filename="testfile.bin"'
-#     response['Content-Length'] = str(200 * 1024 * 1024)  # 200 MB
-#     return response
+

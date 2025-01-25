@@ -20,15 +20,18 @@ from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
+@handle_common_errors
 def get_shares(request):
     shares = ShareableLink.objects.filter(owner=request.user)
     items = []
 
     for share in shares:
         if not share.is_expired():
-            item = create_share_dict(share)
-
-            items.append(item)
+            try:
+                item = create_share_dict(share)
+                items.append(item)
+            except ResourceNotFoundError:
+                pass
 
     return JsonResponse(items, status=200, safe=False)
 

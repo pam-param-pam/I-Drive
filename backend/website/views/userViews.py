@@ -60,7 +60,7 @@ def register_user(request):
 @api_view(['GET'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated])
-# @handle_common_errors
+@handle_common_errors
 def can_upload(request):
     discordSettings = request.user.discordsettings
     webhooks = Webhook.objects.filter(owner=request.user)
@@ -173,9 +173,10 @@ def get_discord_settings(request):
     for bot in bots:
         bots_dicts.append(create_bot_dict(bot))
 
+    upload_destination_locked = bool(Fragment.objects.filter(file__owner=request.user).exists())
     can_add_bots_or_webhooks = bool(settings.guild_id and settings.channel_id)
     return JsonResponse({"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id,
-                         "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks})
+                         "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked})
 
 
 @api_view(['POST'])

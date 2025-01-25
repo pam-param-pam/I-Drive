@@ -73,14 +73,14 @@
             <input
               class="input"
               type="text"
-              :disabled="canAddBotsOrWebhooks"
+              :disabled="uploadDestinationLocked"
               v-model="guildId"
             />
 
             <h3>{{ $t("settings.channelId") }}</h3>
             <input
               class="input"
-              :disabled="canAddBotsOrWebhooks"
+              :disabled="uploadDestinationLocked"
               type="text"
               v-model="channelId"
             />
@@ -214,6 +214,7 @@ export default {
          botToken: "",
          attachmentName: "",
          canAddBotsOrWebhooks: false,
+         canChangeUploadDestination: false,
 
          res: null,
       }
@@ -233,6 +234,7 @@ export default {
       this.guildId = res.guild_id
       this.attachmentName = res.attachment_name
       this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
+      this.uploadDestinationLocked = res.upload_destination_locked
       this.setLoading(false)
       this.res = res
 
@@ -342,6 +344,8 @@ export default {
 .disabled {
  color: gray;
 }
-
+.expiry-column {
+ max-width: 50px;
+}
 
 </style>

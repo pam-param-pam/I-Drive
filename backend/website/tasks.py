@@ -13,7 +13,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .celery import app
-from .models import File, Fragment, Folder, UserSettings, Preview, ShareableLink, UserZIP, Thumbnail
+from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail
 from .utilities.Discord import discord
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError
