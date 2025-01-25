@@ -54,10 +54,7 @@ jobs:
 
     - name: build docker image
       run: >
-        docker buildx build 
-        --file docker-compose.yml
-        --cache-from "type=local,src=$GITHUB_WORKSPACE/cache"
-        --cache-to "type=local,dest=$GITHUB_WORKSPACE/cache"
+        docker buildx build --file docker-compose.yml --cache-from "type=local,src=/tmp/.buildx-cache" --cache-to "type=local,dest=/tmp/.buildx-cache"
         
 
       # 7. Tag and push Backend to GitHub Container Registry
