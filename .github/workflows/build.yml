@@ -51,16 +51,7 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.MY_GITHUB_TOKEN }} # GitHub Token for authentication
 
-    # 6. Cache Docker layers
-    - name: Cache Docker layers
-      uses: actions/cache@v2
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-docker-${{ hashFiles('**/frontend/Dockerfile', '**/backend/Dockerfile', '**/frontend/package-lock.json', '**/backend/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-docker-
-          
-          # 5. Build and push Docker images with caching
-          - name: Build and push Docker images
-            run: |
-              docker buildx bake --file docker-bake.hcl --push
+    # 6. Build and push Docker images with caching
+    - name: Build and push Docker images
+      run: |
+        docker buildx bake --file docker-bake.hcl --push
