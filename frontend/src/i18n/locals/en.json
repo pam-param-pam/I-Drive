@@ -131,6 +131,7 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "duration": "duration",
     "uploadDestination": "Upload destination",
     "uploadDestinationWarning": "Are you sure these values are correct? You will not be able to change this until ALL files are deleted.",
     "enterExtension": "mp4",

@@ -174,6 +174,7 @@ class File(models.Model):
     key = models.BinaryField()
     iv = models.BinaryField(null=True)
     encryption_method = models.SmallIntegerField()
+    duration = models.IntegerField(null=True, blank=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     history = HistoricalRecords()
 

@@ -45,6 +45,7 @@ def create_file(request):
             frontend_id = file['frontend_id']
             encryption_method = file['encryption_method']
 
+            duration = file.get('duration')
             created_at = file.get('created_at')
 
             _ = EncryptionMethod(encryption_method)  # validate encryption_method if its wrong it will raise KeyError which will be caught
@@ -60,10 +61,6 @@ def create_file(request):
             check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
 
             file_type = mimetype.split("/")[0]
-            if extension == ".mov":
-                file_type = "video"
-            if extension == ".mod":
-                file_type = "text"
 
             file_obj = File(
                 extension=extension,
@@ -89,6 +86,8 @@ def create_file(request):
 
             if file_size == 0:
                 file_obj.ready = True
+            if duration:
+                file_obj.duration = duration
 
             file_obj.save()
 
@@ -188,7 +187,6 @@ def create_file(request):
                     if fragment != old_fragment:
                         attachment_ids.append(fragment.attachment_id)
 
-
                 discord.edit_attachments(old_fragment.webhook.url, old_message_id, attachment_ids)
             else:
                 # single file in 1 message
@@ -238,18 +236,18 @@ def create_thumbnail(request):
         attachment_id = thumbnail['attachment_id']
         size = thumbnail['size']
         iv = thumbnail.get('iv')
-        # key = thumbnail.get('key') todo
+        key = thumbnail.get('key')
         webhook_id = thumbnail['webhook']
 
         webhook = get_webhook(request, webhook_id)
         file_obj = get_file(file_id)
-        if file_obj.is_encrypted() and (not iv):  # or not key
-            raise BadRequestError("Encryption key and iv not provided")
+        if file_obj.is_encrypted() and (not iv or not key):  # or not key
+            raise BadRequestError("Encryption key and/or iv not provided")
 
         if iv:
             iv = base64.b64decode(iv)
-        # if key:
-        #     key = base64.b64decode(key)
+        if key:
+            key = base64.b64decode(key)
 
         check_resource_perms(request, file_obj, checkReady=False)
 
@@ -265,6 +263,7 @@ def create_thumbnail(request):
             attachment_id=attachment_id,
             size=size,
             iv=iv,
+            key=key,
             webhook=webhook,
         )
         thumbnail_obj.save()

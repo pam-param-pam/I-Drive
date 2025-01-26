@@ -59,11 +59,16 @@ export const useMainStore = defineStore("main", {
       sortedItems() {
          if (!this.items) return
          let fieldName = this.settings.sortingBy
-
+         let hideLocked = this.settings.hideLockedFolders
          let orderFactor = this.settings.sortByAsc ? 1 : -1
+         let filteredItems
+         if (hideLocked) {
+            filteredItems = this.items.filter(item => !item.isLocked)
+         } else {
+            filteredItems = this.items.slice()
+         }
 
-         return this.items
-            .slice()
+         return filteredItems
             .sort((a, b) => {
                // 1. Folders First
                if (a.isDir !== b.isDir) {

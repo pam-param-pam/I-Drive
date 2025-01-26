@@ -50,7 +50,9 @@
         <strong>{{ $t("prompts.resolution") }}:</strong>
         {{ resolution.width }} x {{ resolution.height }}
       </div>
-
+      <div v-if="duration">
+        <strong>{{ $t("prompts.duration") }}:</strong> {{ formatSeconds(duration) }}
+      </div>
       <p v-if="created">
         <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime(created) }}
       </p>
@@ -122,6 +124,7 @@ import {fetchAdditionalInfo} from "@/api/folder.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
 import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
+import { formatSeconds } from "@/utils/common.js"
 
 
 export default {
@@ -279,6 +282,12 @@ export default {
          return null
 
       },
+      duration() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].duration
+         }
+         return null
+      },
       owner() {
          if (this.selectedCount === 0) {
             return this.currentFolder.owner
@@ -303,6 +312,7 @@ export default {
 
    },
    methods: {
+      formatSeconds,
       ...mapActions(useMainStore, ["closeHover"]),
       async fetchAdditionalInfo() {
          // we want to fetch data only once

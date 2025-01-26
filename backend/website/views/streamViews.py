@@ -158,7 +158,7 @@ def get_thumbnail(request, file_obj: File):
 
         thumbnail = file_obj.thumbnail
         if file_obj.is_encrypted():
-            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=thumbnail.iv)
+            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
 
         # todo potential security risk, without stream its possible to overload the server
         url = discord.get_file_url(file_obj.owner, thumbnail.message_id, thumbnail.attachment_id)

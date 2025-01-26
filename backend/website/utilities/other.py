@@ -141,6 +141,8 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
 
     if file_obj.inTrashSince:
         file_dict["in_trash_since"] = formatDate(file_obj.inTrashSince)
+    if file_obj.duration:
+        file_dict['duration'] = file_obj.duration
 
     try:
         file_dict["iso"] = file_obj.preview.iso

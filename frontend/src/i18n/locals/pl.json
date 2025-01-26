@@ -131,6 +131,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "duration": "Długość",
     "uploadDestination": "Miejsce przesyłania pików",
     "uploadDestinationWarning": "Czy jesteś pewien że ID kanału oraz ID serwera są poprawne? Nie będziesz wstanie zmienić tego pózniej, chyba że usuniesz wszystkie pliki.",
     "enterExtension": "mp4",

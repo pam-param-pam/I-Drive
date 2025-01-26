@@ -270,15 +270,11 @@ export default {
       }
    },
    created() {
-
       this.fetchData()
-
    },
 
    async mounted() {
-
       window.addEventListener("keydown", this.key)
-
 
    },
    beforeUnmount() {

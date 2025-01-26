@@ -110,14 +110,16 @@ export async function encrypt(attachment) {
    }
 
    let iv = fileObj.encryptionIv
+   let key = fileObj.encryptionKey
    if (attachment.type === attachmentType.thumbnail) {
       iv = attachment.iv
+      key = attachment.key
    }
    if (encrypMethod === encryptionMethod.ChaCha20) {
-      return await encryptWithChaCha20(fileObj.encryptionKey, iv, attachment.rawBlob, bytesToSkip)
+      return await encryptWithChaCha20(key, iv, attachment.rawBlob, bytesToSkip)
 
    } else if (encrypMethod === encryptionMethod.AesCtr) {
-      return await encryptWithAesCtr(fileObj.encryptionKey, iv, attachment.rawBlob, bytesToSkip)
+      return await encryptWithAesCtr(key, iv, attachment.rawBlob, bytesToSkip)
 
    } else {
       console.warn("encrypt: invalid encryptionMethod: " + encrypMethod)

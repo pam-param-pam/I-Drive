@@ -1,6 +1,7 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
+import { detectExtension } from "@/utils/common.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -96,32 +97,30 @@ function processFile(fileEntry) {
    })
 }
 
-export function detectExtension(filename) {
-   let arry = filename.split(".")
 
-   if (arry.length === 1) return ".txt" //missing extension defaults to .txt
-   return "." + arry[arry.length - 1]
-
-}
 
 export function detectType(fileObj) {
-   let extension = detectExtension(fileObj.name)
    const RAW_IMAGE_EXTENSIONS = [
       ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",
       ".CRW", ".CR2", ".CR3", ".ERF", ".MEF",
       ".MOS", ".NEF", ".NRW", ".ORF", ".PEF",
       ".RW2", ".ARW", ".SRF", ".SR2"
    ]
-   if (RAW_IMAGE_EXTENSIONS.includes(extension.toUpperCase())) {
+   if (RAW_IMAGE_EXTENSIONS.includes(fileObj.extension.toUpperCase())) {
       return "image/raw"
    }
-
+   if (fileObj.extension === ".mov") {
+      return "video/mov"
+   }
+   if (fileObj.extension === ".mod") {
+      return "text/plain"
+   }
    return fileObj.type
 
 }
 
 export function isVideoFile(file) {
-   // List of common video MIME types
+   if (file.fileObj.extension === ".mov") return true
    const videoMimeTypes = [
       "video/mp4",
       "video/mpeg",
@@ -186,15 +185,28 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
                   ctx.drawImage(videoPlayer, 0, 0, 1, 1)
                   let result = ctx.getImageData(0, 0, 1, 1)
                   let totalColor = result.data[0] + result.data[1] + result.data[2] + result.data[3]
-                  if (totalColor === 255 && retryTimes <= 5) {
+                  if (totalColor === 255 && retryTimes <= 10) {
                      if (seekTo < 0) {
                         seekTo = 0
-                     } else {
+                     }
+                     else if (seekTo === 0) {
+                        seekTo = 0.2
+                     }
+                     else if (seekTo === 0.1) {
+                        seekTo = 2
+                     }
+                     else if (seekTo > 0) {
                         seekTo *= videoPlayer.duration
+                     }
+                     if (seekTo > videoPlayer.duration) {
+                        seekTo = videoPlayer.duration
                      }
                      resolve(getVideoCover(file, seekTo, retryTimes + 1))
                   } else {
-                     resolve(blob)
+                     resolve({
+                        thumbnail: blob,
+                        duration: videoPlayer.duration
+                     })
                   }
 
                },
@@ -268,7 +280,11 @@ export function generateThumbnailIv(fileObj) {
    if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
       let iv = crypto.getRandomValues(new Uint8Array(12))
       return ivToBase64(iv)
-
    }
+}
+
+export function generateThumbnailKey() {
+   let key = crypto.getRandomValues(new Uint8Array(32))
+   return ivToBase64(key)
 
 }

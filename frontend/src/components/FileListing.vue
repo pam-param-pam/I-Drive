@@ -732,6 +732,7 @@ export default {
          let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
          let filesScroller = this.$refs.filesScroller
          let lastItemId = this.lastItem.id
+         this.setLastItem(null)
 
          setTimeout(() => {
             filesScroller.scrollToItem(index)
