@@ -31,29 +31,28 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Virtual lists to render tens of thousand of files in a single folder | ✅       |
 
 
-| TODO List                                                                       | Status               |
-|---------------------------------------------------------------------------------|----------------------|
-| Error handling in upload process                                                | ⚠️  Only partial     |
-| Proper handling of 429                                                          | ❌  Coming one day    |
-| Proper frontend networking & handling of errors                                 | ❌  Coming one day    |
-| Stop, pause, abort uploads                                                      | ❌  Coming one day    |
-| Auto scroll when dragging                                                       | ❌  Coming one day    |
-| Virtual list view                                                               | ❌  Coming prob never |
-| Editor support for large files                                                  | ❌  Coming prob never |
-| fix __prependStaticUrl                                                          | ❌  Coming prob never |
-| fix folder upload getting doubled cuz race conditions                           | ❌  Coming prob never |
-| fix enable-scroll css cuz it's cursed                                           | ❌  Coming prob never |
-| cached docker build                                                             | ❌  Coming prob never |
-| fix scrollbar in shares prompt                                                  | ❌  Coming prob never |
-| fix 401 in locked folders in shares                                             | ❌  Coming prob never |
-| fix upload, add multiple files in 1 attachment support                          | ❌  Coming prob never |
-| fix tasks                                                                       | ❌  Coming prob never |
-| fix possible access to locked items via websocket send event                    | ❌  Coming prob never |
-| file upload progress percentage overflow                                        | ❌  Coming prob never |
-| fix upload speed when theres a lot of simultaneous requests                     | ❌  Coming prob never |
-| fix upload percentage after no internet                                         | ❌  Coming prob never |
-| events in search context like file move                                         | ❌  Coming prob never |
-| search by size and duration                                                     | ❌  Coming prob never |
+| TODO List                                                    | Status               |
+|--------------------------------------------------------------|----------------------|
+| fix possible access to locked items via websocket send event | ☠️  ASAP             |
+| file upload progress percentage overflow                     | 🛠️  in progress     |
+| fix upload speed when theres a lot of simultaneous requests  | 🛠️  in progress     |
+| fix upload percentage after no internet                      | 🛠️  in progress     |
+| events in search context like file move                      | 🛠️  in progress     |
+| search by size and duration                                  | 🛠️  in progress     |
+| fix 401 in locked folders in shares                          | 🛠️  in progress     |
+| Error handling in upload process                             | ⚠️  Only partial     |
+| Proper frontend networking & handling of errors              | ⚠️  Only partial     |
+| Auto scroll when dragging                                    | ❌  Coming one day    |
+| fix enable-scroll css cuz it's cursed                        | ❌  Coming one day    |
+| cached docker build                                          | ❌  Coming one day    |
+| fix scrollbar in shares prompt                               | ❌  Coming one day    |
+| fix tasks                                                    | ❌  Coming one day    |
+| Virtual list view                                            | ⛔  Coming prob never |
+| Stop, pause, abort uploads                                   | ⛔  Coming prob never |
+| Editor support for large files                               | ⛔  Coming prob never |
+| fix __prependStaticUrl                                       | ⛔  Coming prob never |
+| multiple files in 1 discord attachment support               | ⛔  Coming prob never |
+
 
 
 
@@ -141,4 +140,7 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 # Deployment
 todo
+
+# PS
+Dear discord, please don't sue me 👉👈
 
