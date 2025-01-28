@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes
 
-from ..models import Folder
+from ..models import Folder, Fragment, Preview, Thumbnail
 from ..utilities.Discord import discord
 from ..utilities.other import is_subitem
 from ..utilities.throttle import MediaRateThrottle
@@ -27,7 +27,6 @@ def get_folder_password(request):
         remaining_time = None
 
     for token in state['tokens'].values():
-
         bots_dict.append(token)
 
     return JsonResponse({"locked": state['locked'], "retry_after": remaining_time, "bots": bots_dict}, safe=False)
@@ -36,14 +35,7 @@ def get_folder_password(request):
 @api_view(['GET'])
 @throttle_classes([MediaRateThrottle])
 # @handle_common_errors
-def folders_play(request, folder_id):
-
-    folder = Folder.objects.get(id=folder_id)
-    print(folder.get_all_subfolders())
-    files = folder.get_all_files()
-    print(len(files))
-    print(is_subitem(files[100], folder))
+def folders_play(request):
 
 
     return HttpResponse(200)
-

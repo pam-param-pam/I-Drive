@@ -84,7 +84,7 @@ urlpatterns = [
     path('admin', admin.site.urls),
 
     path('test', get_folder_password),
-    path('folders_play/<folder_id>', folders_play),
+    path('test2', folders_play),
 
     # path('download-test/', download_large_file, name='download_test'),
 

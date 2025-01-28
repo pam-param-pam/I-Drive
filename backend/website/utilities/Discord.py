@@ -38,7 +38,7 @@ class Discord:
                     if tokens_dict[token]['locked1'] and tokens_dict[token]['locked2']:
                         continue
 
-                    if data['requests_remaining'] > 2:
+                    if data['requests_remaining'] > 3:
                         tokens_dict[token]['requests_remaining'] -= 1
                         if tokens_dict[token]['locked1']:
                             tokens_dict[token]['locked2'] = True
@@ -82,14 +82,14 @@ class Discord:
             else:
                 print("===Missing ratelimit headers====")
 
-    def _make_request(self, user, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
-        response = self.client.request(method, url, headers=headers, json=json, files=files, timeout=timeout)
+    def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+        response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         if not headers:
             headers = {}
         headers['Content-Type'] = 'application/json'
         return response
 
-    def _make_bot_request(self, user, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+    def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         if self._get_user_state(user)['locked']:
             remaining_time = self._get_user_state(user)['retry_timestamp'] - time.time()
             if remaining_time > 0:
@@ -103,7 +103,7 @@ class Discord:
         print(f"Making bot request with token: {token}")
 
         print("hit discord api")
-        response = self._make_request(user, method, url, headers=headers, json=json, files=files, timeout=timeout)
+        response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         self.update_token(user, token, response.headers)
 
         if response.is_success:
@@ -115,7 +115,7 @@ class Discord:
             if not retry_after:  # retry_after is missing if discord blocked us
                 self._handle_discord_block(user, response)
 
-            return self._make_bot_request(user, method, url, headers, json, files, timeout)
+            return self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
         if response.status_code in (403, 401):
             from ..tasks import queue_ws_event
@@ -133,11 +133,11 @@ class Discord:
 
         raise DiscordError(response.text, response.status_code)
 
-    def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+    def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
 
         print(f"Making webhook request with: {url}")
 
-        response = self._make_request(user, method, url, headers=headers, json=json, files=files, timeout=timeout)
+        response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         # todo implement ratelimit for webhooks
 
         if not response.is_success:
@@ -273,6 +273,20 @@ class Discord:
             state['retry_timestamp'] = retry_timestamp
 
             raise DiscordBlockError(message="Discord is stupid :(", retry_after=retry_after)
+
+    def fetch_messages(self, user):
+        channel_id = self._get_channel_id(user)
+        url = f"{DISCORD_BASE_URL}/channels/{channel_id}/messages"
+        params = {"limit": 100}
+        while True:
+            res = self._make_bot_request(user, "GET", url, params=params)
+
+            batch = res.json()
+            if not batch:
+                break
+
+            yield batch
+            params["before"] = batch[-1]["id"]
 
 
 discord = Discord()

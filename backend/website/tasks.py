@@ -2,7 +2,8 @@ import random
 import time
 import traceback
 from collections import defaultdict
-from datetime import timedelta
+from datetime import timezone, timedelta
+
 from typing import Union
 
 from asgiref.sync import async_to_sync
@@ -301,13 +302,58 @@ def delete_unready_files():
     for file in files:
         elapsed_time = current_datetime - file.created_at
 
-        # if at least one day has elapsed
+        # if at least one hour has elapsed
         # then remove the file
-        if elapsed_time >= timedelta(days=1):
+        if elapsed_time >= timedelta(hours=1):
             smart_delete.delay(file.owner.id, request_id, [file.id])
 
-    # todo delete unready folders and their content
+@app.task
+def delete_dangling_discord_files():
+    print("delete_dangling_discord_files")
+    users = User.objects.filter().all()
+    for user in users:
+        for batch in discord.fetch_messages(user):
+            for message in batch:
+                attachments_to_keep = []
+                attachments_to_remove = []
+                webhook = None
 
+                if message['id'] == "1333871550486548521":
+                    print("MESSAGE FOUND!")
+                # # skip fresh messages to not break upload
+                # timestamp = datetime.fromisoformat(message['timestamp'])
+                # now = datetime.now(timezone.utc)
+                # one_hour_ago = now - timedelta(hours=6)
+                # if timestamp > one_hour_ago:
+                #     continue
+
+                for attachment in message['attachments']:
+                    fragment = Fragment.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
+                    preview = Preview.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
+                    thumbnail = Thumbnail.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
+
+                    if fragment.exists() or preview.exists() or thumbnail.exists():
+                        if not webhook:
+                            if fragment.exists():
+                                webhook = fragment.first().webhook
+                            if preview.exists():
+                                webhook = preview.first().webhook
+                            if thumbnail.exists():
+                                webhook = thumbnail.first().webhook
+
+                        attachments_to_keep.append(attachment['id'])
+                    else:
+                        attachments_to_remove.append(attachment['id'])
+
+                if not attachments_to_remove:
+                    if not attachments_to_keep:
+                        discord.remove_message(user, message['id'])
+                    continue
+
+                if len(attachments_to_keep) > 0:
+                    discord.edit_attachments(user, webhook.url, message['id'], attachments_to_keep)
+                else:
+                    discord.remove_message(user, message['id'])
 
 @app.task
 def delete_files_from_trash():
