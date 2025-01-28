@@ -2,7 +2,7 @@ import random
 import time
 import traceback
 from collections import defaultdict
-from datetime import timezone, timedelta
+from datetime import timezone, timedelta, datetime
 
 from typing import Union
 
@@ -320,12 +320,12 @@ def delete_dangling_discord_files():
 
                 if message['id'] == "1333871550486548521":
                     print("MESSAGE FOUND!")
-                # # skip fresh messages to not break upload
-                # timestamp = datetime.fromisoformat(message['timestamp'])
-                # now = datetime.now(timezone.utc)
-                # one_hour_ago = now - timedelta(hours=6)
-                # if timestamp > one_hour_ago:
-                #     continue
+                # skip fresh messages to not break upload
+                timestamp = datetime.fromisoformat(message['timestamp'])
+                now = datetime.now(timezone.utc)
+                one_hour_ago = now - timedelta(hours=6)
+                if timestamp > one_hour_ago:
+                    continue
 
                 for attachment in message['attachments']:
                     fragment = Fragment.objects.filter(message_id=message['id'], attachment_id=attachment['id'])

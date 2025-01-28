@@ -1,3 +1,7 @@
+
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)
+<img src="https://img.shields.io/badge/build-passing-g" alt="Build Status"/>
 # I Drive
 
 I Drive is a cloud storage system & online web browser that stores files on Discord
@@ -5,41 +9,26 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 
 # Features
 
-| Feature                                                   | Support |
-|-----------------------------------------------------------|---------|
-| Login system                                              | ✅       |
-| Full File encryption                                      | ✅       |
-| Permission system                                         | ✅       |
-| Stream audio/video/images online without downloading      | ✅       |
-| Upload files & folders                                    | ✅       |
-| Websockets to show changes live   🎥                      | ✅       |
-| Create folders                                            | ✅       |
-| UI error handling                                         | ✅       |
-| Lock folders with password                                | ✅       |
-| Download files & folders                                  | ✅       |
-| Bulk zip download                                         | ✅       |
-| Share files & folders                                     | ✅       |
-| Delete files & folders                                    | ✅       |
-| Rename                                                    | ✅       |
-| Show folder                                               | ✅       |
-| Search                                                    | ✅       |
-| Wastebasket                                               | ✅       |
-| Supports Polish & English languages                       | ✅       |
-| Video thumbnails                                          | ✅       |
-| Caching support                                           | ✅       |
-| Move                                                      | ✅       |
-| Code editor with highlighting                             | ✅       |
-| Raw image previewer                                       | ✅       |
-| Right-click context menu                                  | ✅       |
-| Mobile support                                            | ✅       |
-| Supports uploading < 10 files in a single discord request | ✅       |
-| Backend rate limiting                                     | ✅       |
-| Custom ZIP64 Library to zip & stream files on the fly     | ✅       |
-| Docker support                                            | ✅       |
-| Drag and drop support                                     | ✅       |
-| Dark theme                                                | ✅       |
-| Virtual list                                              | ✅       |
-| File tags                                                 | ✅       |
+| Feature                                                              | Support |
+|----------------------------------------------------------------------|---------|
+| Login & Permission system                                            | ✅       |
+| Full File encryption                                                 | ✅       |
+| Online streaming and viewing of files without downloading            | ✅       |
+| Support for file/upload/drag and drop uploads                        | ✅       |
+| Locked folders                                                       | ✅       |
+| Bulk zip download                                                    | ✅       |
+| Mobile support                                                       | ✅       |
+| Websockets to show changes live   🎥                                 | ✅       |
+| Share files & folders                                                | ✅       |
+| Delete/move/rename files & folders                                   | ✅       |
+| Search                                                               | ✅       |
+| Wastebasket                                                          | ✅       |
+| Supports Polish & English languages                                  | ✅       |
+| Code editor with highlighting                                        | ✅       |
+| Raw image previewer                                                  | ✅       |
+| Docker support                                                       | ✅       |
+| Dark theme                                                           | ✅       |
+| Virtual lists to render tens of thousand of files in a single folder | ✅       |
 
 
 | TODO List                                                                       | Status               |
@@ -48,22 +37,16 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Proper handling of 429                                                          | ❌  Coming one day    |
 | Proper frontend networking & handling of errors                                 | ❌  Coming one day    |
 | Stop, pause, abort uploads                                                      | ❌  Coming one day    |
-| Where should iv and keys be generated?                                          | ❌  Coming one day    |
-| Fix are u sure dialog being skipped after folder password input                 | ❌  Coming one day    |
 | Auto scroll when dragging                                                       | ❌  Coming one day    |
-| celery + Unable to process this request at the moment                           | ❌  Coming one day    |
 | Virtual list view                                                               | ❌  Coming prob never |
 | Editor support for large files                                                  | ❌  Coming prob never |
 | fix __prependStaticUrl                                                          | ❌  Coming prob never |
-| possible denial of service by infinite recursive folder fetch malformed parents | ❌  Coming prob never |
 | fix folder upload getting doubled cuz race conditions                           | ❌  Coming prob never |
 | fix enable-scroll css cuz it's cursed                                           | ❌  Coming prob never |
 | cached docker build                                                             | ❌  Coming prob never |
 | fix scrollbar in shares prompt                                                  | ❌  Coming prob never |
 | fix 401 in locked folders in shares                                             | ❌  Coming prob never |
-| upload in locked folders, speed it up                                           | ❌  Coming prob never |
 | fix upload, add multiple files in 1 attachment support                          | ❌  Coming prob never |
-| fix teleporting back to top after move                                          | ❌  Coming prob never |
 | fix tasks                                                                       | ❌  Coming prob never |
 | fix possible access to locked items via websocket send event                    | ❌  Coming prob never |
 | file upload progress percentage overflow                                        | ❌  Coming prob never |
@@ -76,10 +59,9 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 
 # How it works
 
-In essence, **I Drive** simply takes your upload files, and splits them to fit in Discord's (25MB) file size limit.
-It then stores metadata about the file like the file name, size, extension, parent folder, time of creations and lots more 
-in a separate central database.
-This allows for a simple way to manage your files and download them back as one File.
+In essence, **I Drive** simply takes your upload files, and splits them into chunks to fit in Discord's (10Mb) file size limit. 
+They are then encrypted and uploaded to discord. After the upload is done, file's metadata is sent to backend and stored into a central database.
+This allows for a simple way of viewing, managing, and downloading of your files
 
 # Technical Details
 
@@ -122,15 +104,41 @@ Fast in memory database for caching and message broker for celery.
 ### Celery
 Asynchronous task queue for delegating long tasks like file deletion outside of HTTP call lifecycle.
 
-# Other
 
-### Webhooks
+## Solving discord's rate limit problems
+    
+On average discord allows a single bot to make 1 request a second, that's way to little! 
+That's why, for **iDrive** to work, a single user needs at least few bots, 
+this way backend can switch between tokens and bypass discord's ratelimits. 
 
-**I Drive**, when uploading files, uploads them directly to Discord itself. The files never go tru **I Drive** backends. 
-Instead, only metadata is passed to Backend. 
-This introduces another challenge: How to securely upload files client side?
-There are 2 main ways to do this.
-- Using bots: More permissions, less secure, more cumbersome.
-- Using webhooks: More secure, simpler, less permissions.
+Discord issues cloudflare bans if you make more than 10k 4xx requests in 10 minutes. 
+**iDrive** tries to avoid this as much as possible, including throwing 502 errors when it can't handle more requests
 
-**I Drive** uses webhooks.
+The same concept applies to webhooks.
+
+## Why use both webhooks and discord bots? 
+Why are webhooks needed? Why not use discord bots to upload files?
+
+Discord bots are in my opinion too powerful to send tokens back and forth in the browser. 
+In an unlikely situation, a third party could steal bot's token and access all 
+files stored(encrypted or not) on a discord server. 
+Discord bots if given too many permissions would also allow for easy raiding and greefing.
+
+Webhooks on the other hand can only send messages, and delete/modify their own.
+
+## Why is this/that so slow!
+It's written is python, what do you expect. Rewrite it in rust!
+
+
+## Docker support
+I drive is fully dockerized! Yay. There are 3 containers managed by `docker compose`: 
+
+* Backend, containing a backend server and celery
+* Nginx, it's responsible for reverse proxy, cache, and serving the static frontend files.
+* Redis
+
+
+
+# Deployment
+todo
+

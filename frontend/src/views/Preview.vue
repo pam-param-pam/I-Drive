@@ -327,6 +327,7 @@ export default {
             }
          }
          this.addSelected(this.file)
+         await this.prefetch()
 
 
          if (this.file.type === "video" && this.$refs.video) {
@@ -337,8 +338,6 @@ export default {
          this.bookLocation = localStorage.getItem("book-progress-" + this.file.id)
          let fontsize = localStorage.getItem("font-size")
          this.fontSize = (fontsize < 600) ? fontsize : 100
-
-
       },
       moveToTrash() {
          this.showHover({
@@ -390,6 +389,9 @@ export default {
 
             }
          }
+      },
+      async prefetch() {
+        //todo
       },
       key(event) {
 

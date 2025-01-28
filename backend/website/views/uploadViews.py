@@ -80,7 +80,6 @@ def create_file(request):
                 parent=parent,
                 key=key,
                 iv=iv,
-                ready=True,
                 encryption_method=encryption_method,
             )
 
@@ -94,6 +93,9 @@ def create_file(request):
 
             if duration:
                 file_obj.duration = duration
+
+            if math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE) == len(attachments):
+                file_obj.ready = True
 
             file_obj.save()
 

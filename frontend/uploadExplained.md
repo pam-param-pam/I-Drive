@@ -1,17 +1,15 @@
 # How does i drive upload works?
 
-1) First iDrive takes file input from a browser. This array of objects will vary depending on:
- - Files upload
- - Folder upload
- - Drag and drop files upload
- - Drag and drop folder upload
+1) First iDrive takes file input from a browser. This array of objects will vary depending on which of upload method was used:
+   - Files upload
+   - Folder upload
+   - Drag and drop files upload
+   - Drag and drop folder upload
 
-2) Show toast about upload start
-
-2) If its a drag and drop, it scans the `dataTransfer` object for all files.
+2) If it's a drag and drop, it has to scan `dataTransfer` object for files/folders and their relative path.
 
 
-3) iDrive has to convert all these different data inputs so that they can be 
+4) iDrive has to convert all these different data inputs so that they can be 
 represented by the same data structure. The structure looks like this:
  
    ``` 
@@ -21,15 +19,16 @@ represented by the same data structure. The structure looks like this:
             lastModified, name, size, type, fullPath*, webkitRelativePath*
          }, 
          fileObj: {
-            path, uploadFolder, encryptionMethod, 
-            isEncrypted, uploadId, folderContext, 
-            size, name, type, frontendId
+           folderContext, uploadId, path, encryptionMethod, 
+           size, type, name, frontendId, createdAt, 
+           extension, parentPassword
          }
       }
    ]
    ```
 
-   `*` means the variable may or may not exist depending on some factors, either way, only path from fileObj should be used.
+   `*` means the variable may or may not exist depending on if upload method is drag and drop. Either way only path from fileObj should be used.
+    This processing is done inside a web worker to not freeze the UI.
 
 
 5) Once the same data structure is obtained, iDrive can start processing
@@ -38,35 +37,23 @@ represented by the same data structure. The structure looks like this:
 5) Processed 'files' are added to queue, the queue is sorted; then processUpload is called
 
 
-6) processUpload calls `prepareRequests` which is a generator function. It loops over queue and yields requests
- - request format
+6) processUpload calls `prepareRequests` which is an async generator function. It loops over queue and yields requests
+   
+   **request format:**
     ```
    {
       totalSize: int, type: str, requestId: str, attachments: [
          {
-          type, rawBlob, fileObj, fragmentSequence
+          type, rawBlob, fileObj, fragmentSequence, iv, key
          },
       ]
    }
     ```
    
-   rawBlob is either systemFile or a blob depending on whatever its a file or a thumbnail
-
-7) preUploadRequest is called. It unpacks the request, and checks if a file/underlying folders has already been created
-if not, it creates them, else grabs from dictionary. parentId and fileId are appended to the fileObj property.
+   rawBlob is either systemFile or a blob depending on whatever it's a file or a thumbnail.
+   `prepareRequests` is also responsible for generating thumbnails, and folders if needed.
 
 
-8) uploadRequest is called, it uploads the request with onUploadProgress callbacks.
+7) `processUpload` checks concurrentRequests and it can it calls `uploadRequest`. This function generates data structure about files that discord can understand and uploads a single request. `onUploadProgress` callback is used to monitor upload progress and display it in UI.
+8) After each request is completed the data about it is appended using `fillAttachmentsInfo` method. if 10 files are fully uploaded it then calls the backend and saves these files into a database.
 
-
-9) this is all out dated, lets start from scratch!
-
-
-Optimizations:
-
-- move everything to workers
-- get thumbnail inside an upload worker not in request generator
-
-fixes:
-- figure out how to remove bottleneck from request generator having to create dirs
-- advanced error handling, handling both rate limits and internet being off
