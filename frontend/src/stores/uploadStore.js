@@ -1,11 +1,14 @@
 import { defineStore } from "pinia"
-import { prepareRequests, preUploadRequest, uploadRequest } from "@/utils/upload.js"
+import { prepareRequests, uploadRequest } from "@/utils/upload.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, uploadStatus } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
 import { Uploader } from "@/utils/Uploader.js"
 import { canUpload } from "@/api/user.js"
+import { detectType } from "@/utils/uploadHelper.js"
+import { createFile } from "@/api/files.js"
+import i18n from "@/i18n/index.js"
 
 const toast = useToast()
 
@@ -16,13 +19,12 @@ export const useUploadStore = defineStore("upload2", {
       filesUploading: [],
 
       createdFolders: new Map(),
-      createdFiles: new Map(),
 
       //UI
       uploadSpeedMap: new Map(),
       progressMap: new Map(),
 
-      //experimental
+      //never finished
       axiosRequests: new Map(),
       pausedFiles: [],
 
@@ -34,10 +36,26 @@ export const useUploadStore = defineStore("upload2", {
       attachmentName: "",
       webhooks: [],
 
-      bufferedRequests: [],
+      //experimental
+      backendState: new Map(),
+      finishedFiles: [],
+
+      finished: false
    }),
 
    getters: {
+      isUploadFinished() {
+        if (this.filesUploading.length > 20) {
+           return false
+        }
+        let flag = true
+        for (let file of this.filesUploading) {
+           if (file.status !== uploadStatus.uploaded || file.status !== uploadStatus.failed) {
+              flag = false
+           }
+        }
+        return this.queue.length === 0 && !this.requestGenerator && this.concurrentRequests === 0 // && flag
+      },
       uploadSpeed() {
          let uploadSpeed = Array.from(this.uploadSpeedMap.values()).reduce((sum, value) => sum + value, 0)
          if (isNaN(uploadSpeed)) {
@@ -79,25 +97,31 @@ export const useUploadStore = defineStore("upload2", {
 
    actions: {
       async startUpload(type, folderContext, filesList) {
-         let res = await canUpload()
+
+         let res = await canUpload(folderContext)
          if (!res.can_upload) {
-            toast.error(this.$t('toasts.notAllowedToUpload'))
+            toast.error(i18n.global.t('errors.notAllowedToUpload'))
             return
          }
+         console.log("folderContext")
+         console.log(folderContext)
 
-
-         this.uploader.processNewFiles(type, folderContext, filesList)
+         this.uploader.processNewFiles(type, folderContext, filesList, res.lockFrom)
          //todo NotOptimizedForSmallFiles
 
       },
 
       async processUploads() {
+         console.log("called proccess Uploads")
          const mainStore = useMainStore()
          let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests
+
          if (!canProcess) return
 
          if (!this.requestGenerator) {
             this.requestGenerator = prepareRequests()
+            this.finished = false
+
          }
          let generated = await this.requestGenerator.next()
 
@@ -105,12 +129,11 @@ export const useUploadStore = defineStore("upload2", {
          if (generated.done) {
             console.info("The request generator is finished.")
             this.requestGenerator = null
+            this.finished = true
             return
          }
          let request = generated.value
          this.concurrentRequests++
-
-         request = await preUploadRequest(request)
 
          uploadRequest(request)
 
@@ -149,7 +172,7 @@ export const useUploadStore = defineStore("upload2", {
             //remove file from filesUploading
             this.filesUploading = this.filesUploading.filter(item => item.frontendId !== frontendId)
 
-         }, 2500)
+         }, 2000)
 
       },
       setProgress(frontendId, percentage) {
@@ -211,7 +234,6 @@ export const useUploadStore = defineStore("upload2", {
          this.filesUploading = []
          this.pausedFiles = []
          this.axiosRequests = new Map()
-         this.createdFiles = new Map()
          this.createdFolders = new Map()
          this.uploadSpeedMap = new Map()
          this.progressMap = new Map()
@@ -246,6 +268,66 @@ export const useUploadStore = defineStore("upload2", {
       setAttachmentName(value) {
          this.attachmentName = value
       },
+
+      //experimental
+      fillAttachmentInfo(attachment, request, discordResponse, discordAttachment) {
+         let fileObj = attachment.fileObj
+
+         if (!this.backendState.has(fileObj.frontendId)) {
+
+            let file_data = {
+               "name": fileObj.name,
+               "parent_id": fileObj.folderId,
+               "mimetype": detectType(fileObj),
+               "extension": fileObj.extension,
+               "size": fileObj.size,
+               "frontend_id": fileObj.frontendId,
+               "encryption_method": parseInt(fileObj.encryptionMethod),
+               "created_at": fileObj.createdAt,
+               "duration": fileObj.duration,
+               "iv": fileObj.iv,
+               "key": fileObj.key,
+               "attachments": []
+            }
+            this.backendState.set(fileObj.frontendId, file_data)
+         }
+         let state = this.backendState.get(fileObj.frontendId)
+         if (attachment.type === attachmentType.chunked || attachment.type === attachmentType.entireFile) {
+            let attachment_data = {
+               "fragment_sequence": attachment.fragmentSequence,
+               "fragment_size": attachment.rawBlob.size,
+               "message_id": discordResponse.data.id,
+               "attachment_id": discordAttachment.id,
+               "webhook": request.webhook.discord_id
+            }
+            state.attachments.push(attachment_data)
+         }
+         else if (attachment.type === attachmentType.thumbnail) {
+            state.thumbnail = {
+               "size": attachment.rawBlob.size,
+               "message_id": discordResponse.data.id,
+               "attachment_id": discordAttachment.id,
+               "iv": attachment.iv,
+               "key": attachment.key,
+               "webhook": request.webhook.discord_id
+            }
+         }
+         this.backendState.set(fileObj.frontendId, state)
+
+         if (state.attachments.length === fileObj.totalChunks && ((fileObj.thumbnail && state.thumbnail) || !fileObj.thumbnail)) {
+            this.finishedFiles.push(state)
+            this.finishFileUpload(fileObj.frontendId)
+         }
+         if (this.finishedFiles.length > 10 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
+            console.log("fileObj.password")
+            console.log(fileObj.parentPassword)
+            createFile({"files": this.finishedFiles}, fileObj.parentPassword)
+            this.finishedFiles = []
+         }
+         
+      }
+
+
    }
 })
 const beforeUnload = (event) => {

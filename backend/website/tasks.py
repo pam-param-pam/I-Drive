@@ -183,6 +183,7 @@ def move_task(user_id, request_id, ids, new_parent_id):
     from .utilities.other import create_file_dict, send_event, create_folder_dict, get_folder  # circular error aah
 
     files = File.objects.filter(id__in=ids).prefetch_related("parent")
+
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
     items: list[Union[File, Folder]] = list(files) + list(folders)
 
@@ -190,7 +191,7 @@ def move_task(user_id, request_id, ids, new_parent_id):
 
     new_parent = get_folder(new_parent_id)
     # invalidate any cache
-    cache.delete(new_parent.id)
+    new_parent.remove_cache()
 
     item_dicts_batch = []
     last_percentage = 0
@@ -204,28 +205,11 @@ def move_task(user_id, request_id, ids, new_parent_id):
 
         item.parent = new_parent
         item.last_modified_at = timezone.now()
-
-        # apply lock if needed
-        # this will overwrite any previous locks - yes this is a conscious decision
-        if new_parent.is_locked:
-            item.applyLock(new_parent.lockFrom, new_parent.password)
-
-        # if the folder was previously locked but is now moved to an "unlocked" folder, The folder for security reasons should stay locked
-        # And we need to update lockFrom to point to itself now, instead of the old parent before move operation
-        #
-        # if it's instead a file we remove the lock
-        else:
-            if item.is_locked:
-                if isinstance(item, File):
-                    item.removeLock()
-                else:
-                    item.applyLock(item.lockFrom, item.password)
-
         item.save()
 
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:
-            send_message(message="toasts.movingItems", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            send_message(message="toasts.itemsAreBeingMoved", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
             last_percentage = percentage
 
         if len(item_dicts_batch) == 50:
@@ -250,8 +234,7 @@ def move_to_trash_task(user_id, request_id, ids):
         files.update(inTrash=True, inTrashSince=timezone.now())
 
     for file in files:
-        cache.delete(file.id)
-        cache.delete(file.parent.id)
+        file.remove_cache()
 
     total_length = len(folders)
     last_percentage = 0
@@ -261,7 +244,7 @@ def move_to_trash_task(user_id, request_id, ids):
         folder.moveToTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:
-            send_message(message="toasts.movingToTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
             last_percentage = percentage
 
     send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
@@ -280,8 +263,7 @@ def restore_from_trash_task(user_id, request_id, ids):
         files.update(inTrash=False, inTrashSince=None)
 
     for file in files:
-        cache.delete(file.id)
-        cache.delete(file.parent.id)
+        file.remove_cache()
 
     total_length = len(folders)
     last_percentage = 0
@@ -291,7 +273,7 @@ def restore_from_trash_task(user_id, request_id, ids):
         folder.restoreFromTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:
-            send_message(message="toasts.restoringFromTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
             last_percentage = percentage
 
     send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
@@ -307,7 +289,7 @@ def lock_folder(user_id, request_id, folder_id, password):
 @app.task
 def unlock_folder(user_id, request_id, folder_id):
     folder = Folder.objects.get(id=folder_id)
-    folder.removeLock(folder.password)
+    folder.removeLock()
     send_message("toasts.passwordUpdated", args=None, finished=True, user_id=user_id, request_id=request_id)
 
 

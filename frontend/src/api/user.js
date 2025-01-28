@@ -99,8 +99,8 @@ export async function enableDiscordBot(data) {
    let response = await backendInstance.post(url, data)
    return response.data
 }
-export async function canUpload() {
-   let url = `/user/canUpload`
+export async function canUpload(folderContext) {
+   let url = `/user/canUpload/${folderContext}`
    let response = await backendInstance.get(url)
    if (response.data.can_upload) {
       let uploadStore = useUploadStore()

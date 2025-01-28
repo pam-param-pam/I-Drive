@@ -11,7 +11,7 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
-from .views.testViews import get_folder_password
+from .views.testViews import get_folder_password, folders_play
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
     update_upload_destination, enable_bot, can_upload
@@ -43,7 +43,7 @@ urlpatterns = [
     path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
 
     path('user/me', users_me, name="get current user"),
-    path('user/canUpload', can_upload, name="check if user is allowed to upload"),
+    path('user/canUpload/<folder_id>', can_upload, name="check if user is allowed to upload"),
     path("user/changepassword", change_password, name="change password"),
     path("user/updatesettings", update_settings, name="update settings"),
     path("user/discordSettings", get_discord_settings, name="get discord settings"),
@@ -84,6 +84,8 @@ urlpatterns = [
     path('admin', admin.site.urls),
 
     path('test', get_folder_password),
+    path('folders_play/<folder_id>', folders_play),
+
     # path('download-test/', download_large_file, name='download_test'),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),

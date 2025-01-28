@@ -13,9 +13,9 @@ from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
-from ..utilities.decorators import handle_common_errors
+from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook
+from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms
 from ..utilities.throttle import PasswordChangeThrottle, MyUserRateThrottle, RegisterThrottle, DiscordSettingsThrottle
 
 
@@ -61,16 +61,19 @@ def register_user(request):
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([IsAuthenticated])
 @handle_common_errors
-def can_upload(request):
+def can_upload(request, folder_id: str):
     discordSettings = request.user.discordsettings
     webhooks = Webhook.objects.filter(owner=request.user)
     webhook_dicts = []
 
+    folder_obj = get_folder(folder_id)
+    check_resource_perms(request, folder_obj, checkRoot=False)
+
     for webhook in webhooks:
         webhook_dicts.append(create_webhook_dict(webhook))
 
-    can_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0)
-    return JsonResponse({"can_upload": can_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name})
+    allowed_to_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0)
+    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id})
 
 
 @api_view(['GET'])
@@ -318,7 +321,7 @@ def update_upload_destination(request):
     if Fragment.objects.filter(file__owner=request.user).exists() and (guild_id != settings.guild_id or channel_id != settings.channel_id):
         raise BadRequestError("Cannot change upload destination. Remove all files first")
 
-    # validate
+    # todo validate
 
     settings.guild_id = guild_id
     settings.channel_id = channel_id
@@ -326,5 +329,7 @@ def update_upload_destination(request):
 
     settings.save()
     discord.remove_user_state(request.user)
+    upload_destination_locked = bool(Fragment.objects.filter(file__owner=request.user).exists())
+    can_add_bots_or_webhooks = bool(settings.guild_id and settings.channel_id)
 
-    return HttpResponse(status=204)
+    return JsonResponse({"can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked}, status=200)

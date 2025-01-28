@@ -42,7 +42,6 @@ def get_folder_info(request, folder_obj):
         cache.set(folder_obj.id, folder_content)
 
     breadcrumbs = create_breadcrumbs(folder_obj)
-
     return JsonResponse({"folder": folder_content, "breadcrumbs": breadcrumbs})
 
 
@@ -172,7 +171,7 @@ def search(request):
     # Start with a base queryset
     #todo do this only if include_files:
     files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__lockFrom__isnull=True).select_related(
-            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at")
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at")
     folders = Folder.objects.filter(owner_id=user.id, parent__lockFrom__isnull=True, inTrash=False, parent__isnull=False).select_related("parent").order_by("-created_at")
     if not (query or file_type or extension or tags or include_files or include_folders):
         raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension', 'tags']")
@@ -198,8 +197,8 @@ def search(request):
 
     # include locked files from "current" folder
     if lockFrom and password and include_files:
-        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password, tags__name__in=tags).select_related(
-            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by("-created_at")
+        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, parent__lockFrom=lockFrom, password=password, tags__name__in=tags).select_related(
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by("-created_at")
         files = list(chain(lockedFiles, files))
 
     # include locked files from "current" folder
@@ -229,7 +228,7 @@ def search(request):
 @handle_common_errors
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
-            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags")
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
     folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
 
     trash_items = []

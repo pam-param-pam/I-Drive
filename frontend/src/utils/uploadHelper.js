@@ -1,7 +1,6 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
-import { detectExtension } from "@/utils/common.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -98,7 +97,6 @@ function processFile(fileEntry) {
 }
 
 
-
 export function detectType(fileObj) {
    const RAW_IMAGE_EXTENSIONS = [
       ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",
@@ -163,7 +161,7 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
          // Seek video after a short delay
          setTimeout(() => {
             videoPlayer.currentTime = seekTo
-         }, 100)
+         }, 20)
 
          // Extract thumbnail when seeking is complete
          videoPlayer.addEventListener("seeked", () => {
@@ -188,14 +186,11 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
                   if (totalColor === 255 && retryTimes <= 10) {
                      if (seekTo < 0) {
                         seekTo = 0
-                     }
-                     else if (seekTo === 0) {
+                     } else if (seekTo === 0) {
                         seekTo = 0.2
-                     }
-                     else if (seekTo === 0.1) {
+                     } else if (seekTo === 0.1) {
                         seekTo = 2
-                     }
-                     else if (seekTo > 0) {
+                     } else if (seekTo > 0) {
                         seekTo *= videoPlayer.duration
                      }
                      if (seekTo > videoPlayer.duration) {
@@ -225,11 +220,6 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    })
 }
 
-export function getFileId(fileObj) {
-   let uploadStore = useUploadStore()
-   return uploadStore.createdFiles[fileObj.frontendId]
-
-}
 
 export async function getOrCreateFolder(fileObj) {
    let uploadStore = useUploadStore()
@@ -247,7 +237,7 @@ export async function getOrCreateFolder(fileObj) {
       // to najpierw bedziemy mieli a1
       // potem a1, b2
       // potem a1, b2, c3
-      let path_key = pathParts.slice(0, i).join("/")
+      let path_key = fileObj.uploadId + pathParts.slice(0, i).join("/")
       if (uploadStore.createdFolders[path_key]) {
          parentFolder = uploadStore.createdFolders[path_key]
       } else {
@@ -272,18 +262,23 @@ export function ivToBase64(iv) {
    return btoa(binary)
 }
 
-export function generateThumbnailIv(fileObj) {
+export function generateIv(fileObj) {
+   let iv
    if (fileObj.encryptionMethod === encryptionMethod.AesCtr) {
-      let iv = crypto.getRandomValues(new Uint8Array(16))
-      return ivToBase64(iv)
+      iv = crypto.getRandomValues(new Uint8Array(16))
    }
-   if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
-      let iv = crypto.getRandomValues(new Uint8Array(12))
-      return ivToBase64(iv)
+   else if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
+      iv = crypto.getRandomValues(new Uint8Array(12))
    }
+   else {
+      throw Error("unable to match encryptionMethod")
+   }
+   return ivToBase64(iv)
+
+
 }
 
-export function generateThumbnailKey() {
+export function generateKey() {
    let key = crypto.getRandomValues(new Uint8Array(32))
    return ivToBase64(key)
 

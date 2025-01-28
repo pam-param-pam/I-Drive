@@ -109,8 +109,8 @@ export async function encrypt(attachment) {
       bytesToSkip = chunkSize * (attachment.fragmentSequence - 1)
    }
 
-   let iv = fileObj.encryptionIv
-   let key = fileObj.encryptionKey
+   let iv = fileObj.iv
+   let key = fileObj.key
    if (attachment.type === attachmentType.thumbnail) {
       iv = attachment.iv
       key = attachment.key

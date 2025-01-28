@@ -134,7 +134,7 @@ export default function onEvent(message) {
 
          options: {timeout: timeout, type: type, draggable: true, closeOnClick: true}
 
-      })
+      }, true)
    }
    if (jsonObject.op_code === 6) { // message update event, for example, when deleting items
       let timeout = 0

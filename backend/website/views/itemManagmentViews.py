@@ -60,7 +60,7 @@ def move(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).prefetch_related("parent")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
     items: list[Union[File, Folder]] = list(files) + list(folders)
 
@@ -76,7 +76,7 @@ def move(request):
                 required_folder_passwords.append(item.lockFrom)
 
         if item == new_parent or item.parent == new_parent:
-            raise BadRequestError("Invalid move destination.")
+            raise BadRequestError("errors.InvalidMove")
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
@@ -100,7 +100,7 @@ def move_to_trash(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).prefetch_related("parent")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
@@ -143,7 +143,7 @@ def restore_from_trash(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).prefetch_related("parent")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
@@ -185,7 +185,7 @@ def delete(request):
 
     check_if_bots_exists(request.user)
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).prefetch_related("parent")
     folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk

@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'simple_history',
     'django.contrib.admin',
     'website',
+    'mptt',
     'corsheaders',
     'daphne',
     'django_celery_beat',

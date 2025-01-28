@@ -228,6 +228,7 @@
     "video": "Video"
   },
   "settings": {
+    "changePassword": "Change password",
     "attachmentName": "Discord's attachment name",
     "webhooks": "Webhooks",
     "bots": "Bots",
@@ -308,7 +309,8 @@
     "botDeleted": "Bot deleted!",
     "webhookAdded": "Webhook added!",
     "webhookDeleted": "Webhook deleted!",
-    "movingItems": "Moving items {percentage}%...",
+    "itemsAreBeingMoved": "Moving items {percentage}%...",
+    "movingItems": "Moving items...",
     "linkCopied": "Link copied!",
     "locating": "Locating item...",
     "uploadNotAllowedHere": "Upload is not allowed here",

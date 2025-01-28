@@ -296,8 +296,12 @@ export default {
             this.showHover({
                prompt: "UploadDestinationWarning",
                confirm: async () => {
-                  await updateDiscordSettings({ "channel_id": this.channelId, "guild_id": this.guildId, "attachment_name": this.attachmentName })
+                  let res = await updateDiscordSettings({ "channel_id": this.channelId, "guild_id": this.guildId, "attachment_name": this.attachmentName })
                   this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
+                  this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
+                  this.uploadDestinationLocked = res.upload_destination_locked
+                  console.log(this.uploadDestinationLocked)
+                  console.log(this.canAddBotsOrWebhooks)
 
                }
             })

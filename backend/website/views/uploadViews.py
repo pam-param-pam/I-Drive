@@ -22,7 +22,6 @@ from ..utilities.throttle import MyUserRateThrottle
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_file(request):
-
     if request.method == "POST":
         files = request.data['files']
         if not isinstance(files, list):
@@ -44,11 +43,21 @@ def create_file(request):
             file_size = file['size']
             frontend_id = file['frontend_id']
             encryption_method = file['encryption_method']
+            attachments = file['attachments']
 
+            thumbnail = file.get('thumbnail')
             duration = file.get('duration')
             created_at = file.get('created_at')
+            key = file.get('key')
+            iv = file.get('iv')
 
-            _ = EncryptionMethod(encryption_method)  # validate encryption_method if its wrong it will raise KeyError which will be caught
+            if EncryptionMethod(encryption_method)  != EncryptionMethod.Not_Encrypted and (not iv or not key):
+                raise BadRequestError("Encryption key and/or iv not provided")
+
+            if iv:
+                iv = base64.b64decode(iv)
+            if key:
+                key = base64.b64decode(key)
 
             if mimetype == "":
                 mimetype = "text/plain"
@@ -56,11 +65,10 @@ def create_file(request):
             if file_name == "" or not file_name:
                 raise BadRequestError("'name' cannot be empty")
 
-            parent = get_folder(parent_id)
-
-            check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
-
             file_type = mimetype.split("/")[0]
+
+            parent = get_folder(parent_id)
+            check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
 
             file_obj = File(
                 extension=extension,
@@ -70,6 +78,9 @@ def create_file(request):
                 type=file_type,
                 owner_id=request.user.id,
                 parent=parent,
+                key=key,
+                iv=iv,
+                ready=True,
                 encryption_method=encryption_method,
             )
 
@@ -80,24 +91,72 @@ def create_file(request):
                     file_obj.created_at = created_at
                 except (ValueError, OverflowError):
                     raise BadRequestError("Invalid 'created_at' timestamp format.")
-            #  apply lock if needed
-            if parent.is_locked:
-                file_obj.applyLock(parent.lockFrom, parent.password)
 
-            if file_size == 0:
-                file_obj.ready = True
             if duration:
                 file_obj.duration = duration
 
             file_obj.save()
 
+            for attachment in attachments:
+                fragment_sequence = attachment['fragment_sequence']
+                message_id = attachment['message_id']
+                attachment_id = attachment['attachment_id']
+                fragment_size = attachment['fragment_size']
+                webhook_id = attachment['webhook']
+
+                webhook = get_webhook(request, webhook_id)
+
+                check_resource_perms(request, file_obj, checkReady=False)
+
+                fragment_obj = Fragment(
+                    sequence=fragment_sequence,
+                    file=file_obj,
+                    size=fragment_size,
+                    attachment_id=attachment_id,
+                    message_id=message_id,
+                    webhook=webhook,
+
+                )
+                fragment_obj.save()
+
+            if thumbnail:
+                message_id = thumbnail['message_id']
+                attachment_id = thumbnail['attachment_id']
+                size = thumbnail['size']
+                iv = thumbnail.get('iv')
+                key = thumbnail.get('key')
+                webhook_id = thumbnail['webhook']
+
+                webhook = get_webhook(request, webhook_id)
+                if file_obj.is_encrypted() and (not iv or not key):  # or not key
+                    raise BadRequestError("Encryption key and/or iv not provided")
+
+                if iv:
+                    iv = base64.b64decode(iv)
+                if key:
+                    key = base64.b64decode(key)
+
+                check_resource_perms(request, file_obj, checkReady=False)
+
+                try:
+                    if file_obj.thumbnail:
+                        raise BadRequestError("A thumbnail already exists for this file.")
+                except File.thumbnail.RelatedObjectDoesNotExist:
+                    pass
+
+                thumbnail_obj = Thumbnail(
+                    file=file_obj,
+                    message_id=message_id,
+                    attachment_id=attachment_id,
+                    size=size,
+                    iv=iv,
+                    key=key,
+                    webhook=webhook,
+                )
+                thumbnail_obj.save()
+
             file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
                                   "type": file_type, "encryption_method": file_obj.encryption_method}
-
-            if file_obj.is_encrypted():
-                file_response_dict['key'] = file_obj.get_base64_key()
-                file_response_dict['iv'] = file_obj.get_base64_iv()
-
             response_json.append(file_response_dict)
 
         return JsonResponse(response_json, safe=False, status=200)

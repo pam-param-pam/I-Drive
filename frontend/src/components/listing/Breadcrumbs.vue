@@ -98,10 +98,13 @@ export default {
          if (!this.canDrop(folder_id) || this.selectedCount === 0) return
 
          let listOfIds = this.selected.map((obj) => obj.id)
-         await move({ ids: listOfIds, new_parent_id: folder_id })
+         let res = await move({ "ids": listOfIds, "new_parent_id": folder_id })
 
-         let message = this.$t("toasts.movedItems")
-         this.$toast.success(message)
+         let message = this.$t("toasts.movingItems")
+         this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id
+         })
          this.dragLeave()
       },
 

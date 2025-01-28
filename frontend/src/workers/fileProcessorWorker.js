@@ -4,7 +4,7 @@ import { detectExtension } from "@/utils/common.js"
 
 self.onmessage = async (event) => {
 
-   let { typeOfUpload, folderContext, filesList, uploadId, encryptionMethod } = event.data
+   let { typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword } = event.data
 
 
    let files = []
@@ -38,7 +38,7 @@ self.onmessage = async (event) => {
          path = path.slice(0, -file.name.length - 1)
       }
 
-      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt, extension }, "systemFile": file })
+      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt, extension, parentPassword }, "systemFile": file })
    }
 
    self.postMessage(files)

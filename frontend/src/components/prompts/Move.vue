@@ -71,7 +71,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "addSelected", "showHover"]),
+      ...mapActions(useMainStore, ["closeHover", "addSelected", "showHover", "resetSelected"]),
       createDir() {
          this.showHover({
             prompt: "newDir",

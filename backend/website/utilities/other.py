@@ -10,8 +10,7 @@ from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosit
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
-from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, MalformedDatabaseRecord, \
-    NoBotsError
+from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
 signer = TimestampSigner()
 
@@ -83,39 +82,32 @@ def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[Li
 
 def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
     folder_path = []
-    visited_ids = set()
 
-    while folder_obj.parent:
-        if folder_obj.id in visited_ids:
-            #todo add this to other while
+    subfolders = folder_obj.get_ancestors(include_self=True)
 
-            # Detected a circular reference, break to prevent infinite recursion, this should never happen, but the guard exists to prevent denial of service
-            raise MalformedDatabaseRecord("Circular reference detected in folder hierarchy in breadcrumbs")
-
-        visited_ids.add(folder_obj.id)
-        data = {"name": folder_obj.name, "id": folder_obj.id}
+    for subfolder in subfolders:
+        if not subfolder.parent:
+            continue
+        data = {"name": subfolder.name, "id": subfolder.id}
         folder_path.append(data)
-        folder_obj = get_folder(folder_obj.parent.id)
 
-    folder_path.reverse()
     return folder_path
 
 
 def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> List[Breadcrumbs]:
     folder_path = []
 
-    while folder_obj:
-        data = {"name": folder_obj.name, "id": folder_obj.id}
-        if folder_obj != obj_in_share:
+    subfolders = folder_obj.get_ancestors(include_self=True, ascending=True)
+    for subfolder in subfolders:
+        data = {"name": subfolder.name, "id": subfolder.id}
+
+        if subfolder != obj_in_share:
             folder_path.append(data)
-        if folder_obj == obj_in_share:
+
+        if subfolder == obj_in_share:
             if isFolderId:
                 folder_path.append(data)
             break
-        if not folder_obj.parent:
-            break
-
-        folder_obj = get_folder(folder_obj.parent.id)
 
     folder_path.reverse()
     return folder_path
@@ -137,7 +129,7 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
 
     }
     if file_obj.is_locked:
-        file_dict['lockFrom'] = file_obj.lockFrom.id if file_obj.lockFrom else file_obj.id
+        file_dict['lockFrom'] = file_obj.lockFrom.id
 
     if file_obj.inTrashSince:
         file_dict["in_trash_since"] = formatDate(file_obj.inTrashSince)
@@ -283,7 +275,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     file_children = []
     if include_files:
         file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
-            "parent", "videoposition", "lockFrom", "thumbnail", "preview").prefetch_related("tags")
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
 
     folder_children = []
     if include_folders:
@@ -464,54 +456,18 @@ def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     """:return: True if the item is a subfile/subfolder of parent_folder, otherwise False."""
 
     if isinstance(item, File):
-        # Check if the file belongs directly to the folder
-        if item.parent == parent_folder:
-            return True
-
-        # If not directly in the folder, check recursively in subfolders
-        for subfolder in parent_folder.subfolders.all():
-            if is_subitem(item, subfolder):
-                return True
-
-        return False
+        return item in parent_folder.get_all_files()
 
     elif isinstance(item, Folder):
-        # Traverse up the folder hierarchy to check if parent_folder is an ancestor
-        current_folder = item.parent
-        while current_folder:
-            if current_folder == parent_folder:
-                return True
-            current_folder = current_folder.parent
+        return item in parent_folder.get_all_subfolders()
 
     return False
 
 
 def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
     if isinstance(item, Folder):
-        # Checking if the folder is already present in the zip model
-        if user_zip.folders.filter(id=item.id).exists():
-            raise BadRequestError(f"Folder({item.name}) is already in the ZIP")
-
-        # goofy checking if folder isn't a subfolder of a folder already in zip
-        re_item = item
-        while re_item:
-            if user_zip.folders.filter(id=re_item.id).exists():
-                raise BadRequestError(f"Folder({re_item.name}) is already a subfolder in the ZIP(1)")
-            re_item = re_item.parent
-
-        for re_folder in user_zip.folders.all():
-            while re_folder:
-                if re_folder == item:
-                    raise BadRequestError(f"Folder({re_folder.name}) is already a subfolder in the ZIP(2)")
-                re_folder = re_folder.parent
-
         user_zip.folders.add(item)
-
     else:
-        # Checking if the file is already present in the zip model
-        if user_zip.files.filter(id=item.id).exists():
-            raise BadRequestError(f"File({item.name}) is already in the ZIP")
-
         user_zip.files.add(item)
 
 
@@ -533,14 +489,14 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, item: Union[Fi
                 raise ResourceNotFoundError()
 
 
-def create_webhook_dict(webhook: Webhook):
+def create_webhook_dict(webhook: Webhook) -> dict:
     return {"name": webhook.name, "created_at": formatDate(webhook.created_at), "discord_id": webhook.discord_id, "url": webhook.url}
 
 
-def create_bot_dict(bot: Bot):
+def create_bot_dict(bot: Bot) -> dict:
     return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id, "disabled": bot.disabled, "reason": bot.reason}
 
-def get_and_check_webhook(request, webhook_url: str):
+def get_and_check_webhook(request, webhook_url: str) -> tuple[str, str, str, str]:
 
     res = requests.get(webhook_url)
     if not res.ok:
@@ -563,13 +519,16 @@ def get_and_check_webhook(request, webhook_url: str):
 
     return guild_id, channel_id, discord_id, name
 
-def get_webhook(request, discord_id: str):
+def get_webhook(request, discord_id: str) -> Webhook:
     try:
         return Webhook.objects.get(discord_id=discord_id, owner=request.user)
     except Webhook.DoesNotExist:
         raise BadRequestError(f"Could not find webhook with id: {discord_id}")
 
 
-def check_if_bots_exists(user):
+def check_if_bots_exists(user) -> None:
     if not Bot.objects.filter(owner=user, disabled=False).exists():
         raise NoBotsError()
+
+
+

@@ -6,6 +6,7 @@ from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from django.utils.html import format_html
+from mptt.admin import MPTTModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings
@@ -62,7 +63,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
 
 
 @admin.register(Folder)
-class FolderAdmin(SimpleHistoryAdmin):
+class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]

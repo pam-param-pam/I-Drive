@@ -11,27 +11,33 @@ from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from mptt.fields import TreeForeignKey
+from mptt.models import MPTTModel
+from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
 from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
 from .utilities.errors import BadRequestError
+from .utilities.helpers import chop_long_file_name
 
 
-class Folder(models.Model):
+class Folder(MPTTModel):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.TextField(max_length=255, null=False)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now_add=True)
     inTrash = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     inTrashSince = models.DateTimeField(null=True, blank=True)
+    ready = models.BooleanField(default=True)
     password = models.CharField(max_length=255, null=True, blank=True)
     autoLock = models.BooleanField(default=False)
-    ready = models.BooleanField(default=True)
     lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
-    history = HistoricalRecords()
+
+    class MPTTMeta:
+        order_insertion_by = ['-created_at']
 
     def __str__(self):
         return self.name
@@ -41,7 +47,6 @@ class Folder(models.Model):
             return True
         return False
 
-    _is_locked.boolean = True
     is_locked = property(_is_locked)
 
     def clean(self):
@@ -60,7 +65,7 @@ class Folder(models.Model):
         self.last_modified_at = timezone.now()
 
         # invalidate any cache
-        self._remove_cache()
+        self.remove_cache()
 
         # invalidate also cache of 'old' parent if the parent was changed
         # we make a db lookup to get the old parent
@@ -73,35 +78,44 @@ class Folder(models.Model):
         except Folder.DoesNotExist:
             pass
 
-        if self.parent == self or is_subitem(self.parent, self):
-            raise BadRequestError("Invalid parent, recursion detected.")
-
         super(Folder, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        self._remove_cache()
+        self.remove_cache()
 
         super(Folder, self).delete()
 
     def moveToTrash(self):
         self.inTrash = True
+        self.inTrashSince = timezone.now()
         self.save()
 
-        for file in self.files.all():
-            file.moveToTrash()
+        subfolders = self.get_all_subfolders()
+        for folder in subfolders:
+            folder.inTrash = True
+            folder.inTrashSince = timezone.now()
+            folder.save()
 
-        for folder in self.subfolders.all():
-            folder.moveToTrash()
+        for file in self.get_all_files().filter(inTrash=True):
+            file.inTrash = False
+            file.inTrashSince = None
+            file.save()
 
     def restoreFromTrash(self):
         self.inTrash = False
+        self.inTrashSince = None
         self.save()
 
-        for file in self.files.all():
-            file.restoreFromTrash()
+        subfolders = self.get_all_subfolders()
+        for folder in subfolders:
+            folder.inTrash = False
+            folder.inTrashSince = None
+            folder.save()
 
-        for folder in self.subfolders.all():
-            folder.restoreFromTrash()
+        for file in self.get_all_files().filter(inTrash=True):
+            file.inTrash = False
+            file.inTrashSince = None
+            file.save()
 
     def applyLock(self, lockFrom, password):
         if self == lockFrom:
@@ -113,42 +127,39 @@ class Folder(models.Model):
         self.lockFrom = lockFrom
         self.save()
 
-        for file in self.files.all():
-            file.applyLock(lockFrom, password)
+        subfolders = self.get_all_subfolders()
+        for folder in subfolders:
+            folder.password = password
+            folder.lockFrom = lockFrom
+            folder.autoLock = True
+            folder.save()
 
-        for folder in self.subfolders.all():
-            if not folder.is_locked:
-                folder.applyLock(lockFrom, password)
-
-    def removeLock(self, password):
+    def removeLock(self):
         self.autoLock = False
         self.lockFrom = None
         self.password = None
         self.save()
 
-        for file in self.files.all():
-            file.removeLock()
+        subfolders = self.get_all_subfolders()
+        for folder in subfolders:
+            if folder.lockFrom == self:
+                folder.password = None
+                folder.lockFrom = None
+                folder.autoLock = False
+                folder.save()
 
-        for folder in self.subfolders.all():
-            if folder.autoLock and folder.password == password:
-                folder.removeLock(password)
+    def get_all_subfolders(self) -> TreeQuerySet:
+        return self.get_descendants()
 
-    def get_all_files(self):
-        children = []
-
-        for file in self.files.all():
-            children.append(file)
-
-        for folder in self.subfolders.all():
-            children += folder.get_all_files()
-
-        return children
+    def get_all_files(self) -> TreeQuerySet:
+        queryset = self.get_all_subfolders()
+        return File.objects.filter(parent__in=queryset)
 
     def force_delete(self):
-        self._remove_cache()
+        self.remove_cache()
         self.delete()
 
-    def _remove_cache(self):
+    def remove_cache(self):
         cache.delete(self.id)
         if self.parent:
             cache.delete(self.parent.id)
@@ -168,9 +179,6 @@ class File(models.Model):
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     inTrashSince = models.DateTimeField(null=True, blank=True)
-    autoLock = models.BooleanField(default=False)
-    password = models.CharField(max_length=255, null=True, blank=True)
-    lockFrom = models.ForeignKey(Folder, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     key = models.BinaryField()
     iv = models.BinaryField(null=True)
     encryption_method = models.SmallIntegerField()
@@ -179,40 +187,25 @@ class File(models.Model):
     history = HistoricalRecords()
 
     def _is_locked(self):
-        if self.password:
+        if self.parent._is_locked():
             return True
         return False
 
-    _is_locked.boolean = True
-    is_locked = property(_is_locked)
+    def _lockFrom(self):
+        return self.parent.lockFrom
 
-    def __str__(self):
-        return self.name
+    def _password(self):
+        return self.parent.password
+
+    is_locked = property(_is_locked)
+    password = property(_password)
+    lockFrom = property(_lockFrom)
 
     def save(self, *args, **kwargs):
-        if len(self.name) > MAX_RESOURCE_NAME_LENGTH:
-            # Find the last occurrence of '.' to handle possibility of no extension
-            last_dot_index = self.name.rfind('.')
-
-            # Extracting the extension if it exists
-            if last_dot_index != -1:
-                file_extension = self.name[last_dot_index + 1:]
-                file_name_without_extension = self.name[:last_dot_index]
-            else:
-                file_extension = ""
-                file_name_without_extension = self.name
-
-            # Keeping only the first 'max_name_length' characters
-            shortened_file_name = file_name_without_extension[:MAX_RESOURCE_NAME_LENGTH]
-
-            # Adding the extension back if it exists
-            if file_extension:
-                shortened_file_name += "." + file_extension
-            self.name = shortened_file_name
+        self.name = chop_long_file_name(self.name)
 
         # invalidate any cache
-        cache.delete(self.id)
-        cache.delete(self.parent.id)
+        self.remove_cache()
         # invalidate also cache of 'old' parent if the parent was changed
         # we make a db lookup to get the old parent
         # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
@@ -223,21 +216,12 @@ class File(models.Model):
             pass
 
         self.last_modified_at = timezone.now()
-        if not self.key:
-            self.key = secrets.token_bytes(32)
-
-        if not self.iv:
-            encryption_method = self.get_encryption_method()
-            if encryption_method == EncryptionMethod.AES_CTR:
-                self.iv = secrets.token_bytes(16)
-            elif encryption_method == EncryptionMethod.CHA_CHA_20:
-                self.iv = secrets.token_bytes(12)
-            elif encryption_method == EncryptionMethod.Not_Encrypted:
-                pass
-            else:
-                raise ValueError(f"Encryption Method is invalid: {self.encryption_method}")
 
         super(File, self).save(*args, **kwargs)
+
+    def remove_cache(self):
+        cache.delete(self.id)
+        cache.delete(self.parent.id)
 
     def get_encryption_method(self):
         return EncryptionMethod(self.encryption_method)
@@ -253,35 +237,31 @@ class File(models.Model):
 
     def delete(self, *args, **kwargs):
         # invalidate any cache
-        cache.delete(self.id)
-        cache.delete(self.parent.id)
+        self.remove_cache()
         super(File, self).delete()
 
     def moveToTrash(self):
-        self.inTrash = True
-        self.save()
+        if not self.parent.inTrash:
+            self.inTrash = True
+            self.inTrashSince = timezone.now()
+
+            self.save()
 
     def restoreFromTrash(self):
+        if self.parent.inTrash:
+            raise ValidationError("Cannot restore from trash! Folder parent is in trash, restore it first.")
         self.inTrash = False
         self.save()
 
-    def applyLock(self, lock_from, password):
-        self.autoLock = True
-        self.lockFrom = lock_from
-        self.password = password
-        self.save()
-
-    def removeLock(self):
-        self.autoLock = False
-        self.lockFrom = None
-        self.password = None
-        self.save()
-
     def force_delete(self):
-        cache.delete(self.id)
-        cache.delete(self.parent.id)
+        self.remove_cache()
         self.delete()
 
+    def is_in_trash(self):
+        return self.inTrash or self.parent.inTrash
+
+    def __str__(self):
+        return self.name
 
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)

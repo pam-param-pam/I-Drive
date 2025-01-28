@@ -15,31 +15,19 @@ export async function getFile(file_id, lockFrom) {
 
 }
 
-export async function createThumbnail(data) {
-   let url = `/file/thumbnail/create`
-   let response = await backendInstance.post(url, data, {
-      __retry500: true,
-   })
-   return response.data
 
-}
-
-export async function createFile(data) {
+export async function createFile(data, password) {
    let url = `/file/create`
    let response = await backendInstance.post(url, data, {
+      headers: {
+         "x-resource-password": password
+      },
       __retry500: true,
    })
    return response.data
 
 }
 
-export async function patchFile(data) {
-   let url = `/file/create`
-   let response = await backendInstance.patch(url, data, {
-      __retry500: true,
-   })
-   return response.data
-}
 export async function getEncryptionSecrets(file_id) {
    let url = `/file/secrets/${file_id}`
    let response = await backendInstance.get(url)
