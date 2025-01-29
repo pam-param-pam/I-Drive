@@ -4,12 +4,13 @@ from urllib.parse import unquote
 
 import requests
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from django.db.models.aggregates import Sum
 from django.utils import timezone
 
-from ..models import File, Folder, Preview, ShareableLink, Thumbnail, VideoPosition, UserSettings, UserZIP, Webhook, Bot, DiscordSettings
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings
 from ..tasks import queue_ws_event
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode
+from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
 signer = TimestampSigner()
@@ -46,7 +47,8 @@ def verify_signed_resource_id(signed_file_id: str, expiry_seconds: int = SIGNED_
 
 
 def formatDate(date: datetime) -> str:
-    return timezone.localtime(date).strftime('%Y-%m-%d %H:%M')
+    localized_date = timezone.localtime(date)
+    return f"{localized_date.year}-{localized_date.month:02d}-{localized_date.day:02d} {localized_date.hour:02d}:{localized_date.minute:02d}"
 
 
 def logout_and_close_websockets(user_id: int) -> None:
@@ -136,21 +138,18 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
     if file_obj.duration:
         file_dict['duration'] = file_obj.duration
 
-    try:
-        file_dict["iso"] = file_obj.preview.iso
-        file_dict["model_name"] = file_obj.preview.model_name
-        file_dict["aperture"] = file_obj.preview.aperture
-        file_dict["exposure_time"] = file_obj.preview.exposure_time
-        file_dict["focal_length"] = file_obj.preview.focal_length
-
-    except Preview.DoesNotExist:
-        pass
+    preview = getattr(file_obj, "preview", None)
+    if preview:
+        file_dict["iso"] = preview.iso
+        file_dict["model_name"] = preview.model_name
+        file_dict["aperture"] = preview.aperture
+        file_dict["exposure_time"] = preview.exposure_time
+        file_dict["focal_length"] = preview.focal_length
 
     if not hide and not (file_obj.is_locked and file_obj.inTrash):
         signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
-        if file_obj.extension in (
-                '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
+        if preview:
             file_dict['preview_url'] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
 
         download_url = f"{API_BASE_URL}/stream/{signed_file_id}"
@@ -163,19 +162,16 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         except Thumbnail.DoesNotExist:
             pass
 
-        if file_obj.type == "video":
-            position = 0
-            try:
-                position = file_obj.videoposition.timestamp
-            except VideoPosition.DoesNotExist:
-                pass
-            file_dict['video_position'] = position
+        videoposition = getattr(file_obj, "videoposition", None)
+        if videoposition:
+            file_dict['video_position'] = videoposition.timestamp
 
         tags = []
         for tag in file_obj.tags.all():
             tags.append(tag.name)
 
-        file_dict["tags"] = tags
+        if tags:
+            file_dict["tags"] = tags
     return file_dict
 
 
@@ -370,36 +366,18 @@ def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
 
 def calculate_size(folder: Folder) -> int:
     """
-    Function to recursively calculate size of a folder
+    Function to calculate size of a folder
     """
-    size = 0
-    for file_in_folder in folder.files.filter(ready=True, inTrash=False):
-        size += file_in_folder.size
-
-    # Recursively calculate size for subfolders
-    for subfolder in folder.subfolders.filter(inTrash=False):
-        size += calculate_size(subfolder)
-    return size
+    size_result = folder.get_all_files().filter(ready=True, inTrash=False).aggregate(Sum('size'))
+    return size_result['size__sum'] or 0
 
 
 def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     """
-    Function to recursively calculate entire file & folder count of a given folder
+    Function to calculate entire file & folder count of a given folder
     """
-    folder_count = 0
-    file_count = 0
-
-    file_count += len(folder.files.filter(ready=True, inTrash=False))
-
-    # Recursively calculate size for subfolders
-    subfolders = folder.subfolders.filter(inTrash=False)
-    folder_count += len(subfolders)
-
-    for subfolder in subfolders:
-        folders, files = calculate_file_and_folder_count(subfolder)
-        folder_count += folders
-        file_count += files
-
+    file_count = folder.get_all_files().filter(ready=True, inTrash=False).count()
+    folder_count = folder.get_all_subfolders().filter(ready=True, inTrash=False).count()
     return folder_count, file_count
 
 

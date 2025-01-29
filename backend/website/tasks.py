@@ -380,6 +380,15 @@ def delete_files_from_trash():
 
     # todo delete better using with 1 call to task with list of ids
 
+@app.task
+def prefetch_next_fragments(fragment_id):
+    fragment = Fragment.objects.get(id=fragment_id)
+    fragments = Fragment.objects.filter(file=fragment.file)
+
+    filtered_fragments = fragments.filter(sequence__gt=fragment.sequence).order_by('sequence')[:2]
+
+    for fragment in filtered_fragments:
+        discord.get_file_url(user=fragment.file.owner, message_id=fragment.message_id, attachment_id=fragment.attachment_id)
 
 @app.task
 def delete_expired_shares():

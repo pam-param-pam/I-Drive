@@ -19,7 +19,8 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
-from ..models import File, UserZIP, Bot
+from ..tasks import prefetch_next_fragments
+from ..models import File, UserZIP
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
@@ -214,7 +215,7 @@ def stream_file(request, file_obj: File):
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_file_url)(user, fragments[index].message_id, fragments[index].attachment_id)
-
+                prefetch_next_fragments.delay(fragments[index].id)
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
                 async with session.get(url, headers=headers) as response:
@@ -325,6 +326,7 @@ def stream_zip_files(request, token):
 
             async for fragment in fragments:
                 url = await sync_to_async(discord.get_file_url)(user, fragment.message_id, fragment.attachment_id)
+                prefetch_next_fragments.delay(fragment.id)
 
                 async with session.get(url) as response:
                     response.raise_for_status()

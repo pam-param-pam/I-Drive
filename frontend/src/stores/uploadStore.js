@@ -318,7 +318,11 @@ export const useUploadStore = defineStore("upload2", {
             this.finishedFiles.push(state)
             this.finishFileUpload(fileObj.frontendId)
          }
-         if (this.finishedFiles.length > 10 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
+         let totalSize = 0
+         for (let finishedFile of this.finishedFiles) {
+            totalSize += finishedFile.size
+         }
+         if (this.finishedFiles.length > 10 || totalSize > 100 * 1024 * 1024 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
             console.log("fileObj.password")
             console.log(fileObj.parentPassword)
             createFile({"files": this.finishedFiles}, fileObj.parentPassword)

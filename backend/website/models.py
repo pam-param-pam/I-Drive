@@ -148,11 +148,11 @@ class Folder(MPTTModel):
                 folder.autoLock = False
                 folder.save()
 
-    def get_all_subfolders(self) -> TreeQuerySet:
-        return self.get_descendants()
+    def get_all_subfolders(self, include_self=False) -> TreeQuerySet:
+        return self.get_descendants(include_self=include_self)
 
     def get_all_files(self) -> TreeQuerySet:
-        queryset = self.get_all_subfolders()
+        queryset = self.get_all_subfolders(include_self=True)
         return File.objects.filter(parent__in=queryset)
 
     def force_delete(self):

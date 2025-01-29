@@ -27,13 +27,14 @@ def create_file(request):
         if not isinstance(files, list):
             raise BadRequestError("'files' must be a list.")
 
-        if len(files) > 100:
+        if len(files) > 25:
             raise BadRequestError("'files' cannot be larger than 100")
 
         if len(files) == 0:
             raise BadRequestError("'files' length cannot be 0.")
 
         response_json = []
+        ws_json = []
 
         for file in files:
             file_name = file['name']
@@ -51,7 +52,7 @@ def create_file(request):
             key = file.get('key')
             iv = file.get('iv')
 
-            if EncryptionMethod(encryption_method)  != EncryptionMethod.Not_Encrypted and (not iv or not key):
+            if EncryptionMethod(encryption_method) != EncryptionMethod.Not_Encrypted and (not iv or not key):
                 raise BadRequestError("Encryption key and/or iv not provided")
 
             if iv:
@@ -96,8 +97,7 @@ def create_file(request):
 
             if math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE) == len(attachments):
                 file_obj.ready = True
-
-            file_obj.save()
+                file_obj.save()
 
             for attachment in attachments:
                 fragment_sequence = attachment['fragment_sequence']
@@ -157,61 +157,15 @@ def create_file(request):
                 )
                 thumbnail_obj.save()
 
-            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
-                                  "type": file_type, "encryption_method": file_obj.encryption_method}
-            response_json.append(file_response_dict)
+            if file_obj.ready:
+                file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
+                                      "type": file_type, "encryption_method": file_obj.encryption_method}
+                ws_json.append(create_file_dict(file_obj))
+                response_json.append(file_response_dict)
+        if ws_json:
+            send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, ws_json)
 
-        return JsonResponse(response_json, safe=False, status=200)
-
-    if request.method == "PATCH":
-        files = request.data['files']
-        if not isinstance(files, list):
-            raise BadRequestError("'ids' must be a list.")
-
-        if len(files) > 100:
-            raise BadRequestError("'ids' cannot be larger than 100")
-
-        if len(files) == 0:
-            raise BadRequestError("'ids' length cannot be 0.")
-
-        response_json = []
-        for file in files:
-
-            file_id = file['file_id']
-            fragment_sequence = file['fragment_sequence']
-            message_id = file['message_id']
-            attachment_id = file['attachment_id']
-            fragment_size = file['fragment_size']
-            frontend_id = file['frontend_id']
-            webhook_id = file['webhook']
-
-            webhook = get_webhook(request, webhook_id)
-
-            file_obj = get_file(file_id)
-            check_resource_perms(request, file_obj, checkReady=False)
-
-            fragment_obj = Fragment(
-                sequence=fragment_sequence,
-                file=file_obj,
-                size=fragment_size,
-                attachment_id=attachment_id,
-                message_id=message_id,
-                webhook=webhook,
-
-            )
-            fragment_obj.save()
-            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, 'ready': False}
-            total_fragments = math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE)
-            if len(file_obj.fragments.all()) == total_fragments:
-                file_obj.ready = True
-                file_obj.save()
-
-                send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [create_file_dict(file_obj)])
-
-                file_response_dict['ready'] = True
-
-            response_json.append(file_response_dict)
-        return JsonResponse(response_json, safe=False, status=200)
+        return JsonResponse(response_json, status=200)
 
     if request.method == "PUT":
         file_id = request.data['file_id']
@@ -275,60 +229,3 @@ def create_file(request):
 
         return HttpResponse(status=204)
 
-
-@api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
-@permission_classes([IsAuthenticated & CreatePerms])
-@handle_common_errors
-def create_thumbnail(request):
-    thumbnails = request.data['thumbnails']
-    if not isinstance(thumbnails, list):
-        raise BadRequestError("'thumbnails' must be a list.")
-
-    if len(thumbnails) > 100:
-        raise BadRequestError("'thumbnails' cannot be larger than 100")
-
-    if len(thumbnails) == 0:
-        raise BadRequestError("'thumbnails' length cannot be 0.")
-
-    for thumbnail in thumbnails:
-        file_id = thumbnail['file_id']
-        message_id = thumbnail['message_id']
-        attachment_id = thumbnail['attachment_id']
-        size = thumbnail['size']
-        iv = thumbnail.get('iv')
-        key = thumbnail.get('key')
-        webhook_id = thumbnail['webhook']
-
-        webhook = get_webhook(request, webhook_id)
-        file_obj = get_file(file_id)
-        if file_obj.is_encrypted() and (not iv or not key):  # or not key
-            raise BadRequestError("Encryption key and/or iv not provided")
-
-        if iv:
-            iv = base64.b64decode(iv)
-        if key:
-            key = base64.b64decode(key)
-
-        check_resource_perms(request, file_obj, checkReady=False)
-
-        try:
-            if file_obj.thumbnail:
-                raise BadRequestError("A thumbnail already exists for this file.")
-        except File.thumbnail.RelatedObjectDoesNotExist:
-            pass
-
-        thumbnail_obj = Thumbnail(
-            file=file_obj,
-            message_id=message_id,
-            attachment_id=attachment_id,
-            size=size,
-            iv=iv,
-            key=key,
-            webhook=webhook,
-        )
-        thumbnail_obj.save()
-
-        send_event(request.user.id, EventCode.ITEM_UPDATE, request.request_id, create_file_dict(file_obj))
-
-    return HttpResponse(status=204)

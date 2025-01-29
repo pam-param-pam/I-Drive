@@ -1,5 +1,6 @@
 from itertools import chain
 
+from django.db.models.aggregates import Sum
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag
@@ -82,17 +83,15 @@ def get_file_info(request, file_obj):
 @handle_common_errors
 @check_folder_and_permissions
 def get_usage(request, folder_obj):
-    total_used_size = 0
-    all_user_files = cache.get(f"ALL_FILES:{request.user}")
-    if not all_user_files:
-        all_user_files = File.objects.filter(owner=request.user, inTrash=False, ready=True).select_related("parent")
-        cache.set(f"ALL_FILES:{request.user}", all_user_files, 60)
+    total_used_size = cache.get(f"TOTAL_USED_SIZE:{request.user}")
+    if not total_used_size:
+        total_used_size = File.objects.filter(owner=request.user, inTrash=False, ready=True).aggregate(Sum('size'))['size__sum']
+        cache.set(f"TOTAL_USED_SIZE:{request.user}", total_used_size, 60)
+    if folder_obj.parent:
+        folder_used_size = calculate_size(folder_obj)
+    else:
+        folder_used_size = total_used_size
 
-    for file in all_user_files:
-        if not file.inTrash and file.ready:
-            total_used_size += file.size
-
-    folder_used_size = calculate_size(folder_obj)
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
 

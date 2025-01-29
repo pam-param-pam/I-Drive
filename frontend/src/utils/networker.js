@@ -9,12 +9,21 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 const toast = useToast()
 
 const cancelTokenMap = new Map()
-function retry(error, delay) {
-   console.log(`Retrying request after ${delay} milliseconds`)
-   return new Promise(resolve => setTimeout(resolve, delay)).then(() => discordInstance(error.config))
+function retry(error, delay, retries = 0, maxRetries = 5) {
+   if (retries >= maxRetries) {
+      console.error(`Max retries reached: ${maxRetries}. Aborting.`);
+      return Promise.reject(error);
+   }
+
+   console.log(`Retrying request after ${delay} milliseconds. Attempt #${retries + 1} of ${maxRetries}`);
+   return new Promise(resolve => setTimeout(resolve, delay))
+      .then(() => discordInstance(error.config))
+      .catch(err => {
+         console.error(`Retry attempt #${retries + 1} failed with error: ${err.message}`);
+         return retry(error, delay, retries + 1, maxRetries);
+      });
 }
 
-//todo handle backends 429 policy lel
 export const backendInstance = axios.create({
    baseURL: baseURL,
    timeout: 20000,
