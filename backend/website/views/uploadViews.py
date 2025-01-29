@@ -165,7 +165,7 @@ def create_file(request):
         if ws_json:
             send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, ws_json)
 
-        return JsonResponse(response_json, status=200)
+        return JsonResponse(response_json, safe=False, status=200)
 
     if request.method == "PUT":
         file_id = request.data['file_id']
