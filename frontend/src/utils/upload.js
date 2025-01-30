@@ -1,18 +1,9 @@
-
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { attachmentType, uploadStatus } from "@/utils/constants.js"
-import {
-   generateKey,
-   generateIv,
-   getOrCreateFolder,
-   getVideoCover,
-   getWebhook,
-   isVideoFile
-} from "@/utils/uploadHelper.js"
+import { attachmentType, encryptionMethod, uploadStatus } from "@/utils/constants.js"
+import { generateIv, generateKey, getOrCreateFolder, getVideoCover, getWebhook, isVideoFile, roundUpTo64 } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discordInstance } from "@/utils/networker.js"
-import { v4 as uuidv4 } from "uuid"
 import { useToast } from "vue-toastification"
 
 const toast = useToast()
@@ -21,20 +12,21 @@ export async function* prepareRequests() {
    /**
     this is a generator function!
     */
-
    const uploadStore = useUploadStore()
    const mainStore = useMainStore()
-   let chunkSize = mainStore.user.maxDiscordMessageSize
+   let maxChunkSize = mainStore.user.maxDiscordMessageSize
 
    let totalSize = 0
    let attachments = []
    let webhook = uploadStore.webhooks[0]
    let queueFile
    while ((queueFile = uploadStore.getFileFromQueue())) {
+      //creating folder if needed and getting it's backend ID
       queueFile.fileObj.folderId = await getOrCreateFolder(queueFile.fileObj)
-      queueFile.fileObj.totalChunks = Math.ceil(queueFile.fileObj.size / chunkSize)
-      queueFile.fileObj.iv = generateIv(queueFile.fileObj)
-      queueFile.fileObj.key = generateKey()
+      if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
+         queueFile.fileObj.iv = generateIv(queueFile.fileObj)
+         queueFile.fileObj.key = generateKey()
+      }
 
       //generating a thumbnail if needed.
       if (isVideoFile(queueFile)) {
@@ -45,7 +37,7 @@ export async function* prepareRequests() {
             queueFile.fileObj.thumbnail = true
 
             //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
-            if (totalSize + thumbnail.size > chunkSize || attachments.length === 10) {
+            if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
                let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
                totalSize = 0
                attachments = []
@@ -54,71 +46,70 @@ export async function* prepareRequests() {
             }
 
             let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail }
-            attachment.iv = generateIv(queueFile.fileObj)
-            attachment.key = generateKey()
+            if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
+               attachment.iv = generateIv(queueFile.fileObj)
+               attachment.key = generateKey()
+            }
 
             attachments.push(attachment)
-            totalSize = totalSize + thumbnail.size
+            totalSize += roundUpTo64(thumbnail.size)
          } catch (e) {
             console.log(e)
             toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
          }
+      }
+      //round to 64
+      totalSize = roundUpTo64(totalSize)
 
+
+      if (totalSize > maxChunkSize/2 || attachments.length === 10) {
+         let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+         totalSize = 0
+         attachments = []
+         webhook = getWebhook(webhook)
+         yield request
       }
 
-      //CASE 1, file is > 10Mb
-      if (queueFile.fileObj.size > chunkSize) {
-         //CASE 1.1, attachments already created, we yield the already created attachments in a request
-         if (attachments.length !== 0) {
-            let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
-            totalSize = 0
-            attachments = []
-            webhook = getWebhook(webhook)
-            yield request
+
+      //CASE 1.2 attachments are not created, we create chunked requests from the big file
+      let i = 0
+      let fileSize = queueFile.fileObj.size
+      let offset = 0
+      while (offset < fileSize) {
+
+         let remainingSpace = maxChunkSize - totalSize
+         let remainingFileSize = fileSize - offset
+         let chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
+
+         let chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
+
+         let attachment = {
+            "type": attachmentType.file,
+            "fileObj": queueFile.fileObj,
+            "rawBlob": chunk,
+            "fragmentSequence": i + 1,
+            "offset": offset
          }
 
-         //CASE 1.2 attachments are not created, we create chunked requests from the big file
-         let i = 0
-         for (let j = 0; j < queueFile.fileObj.size; j += chunkSize) {
-            let chunk = queueFile.systemFile.slice(j, j + chunkSize)
-
-            let attachment = { "type": attachmentType.chunked, "fileObj": queueFile.fileObj, "rawBlob": chunk, "fragmentSequence": i + 1 } //todo fragments shouldn't start at 1
-            attachments.push(attachment)
-            totalSize = totalSize + chunk.size
-
-            //CASE 1.2.1 chunk size is already 10Mb, so we yield it in a request
-            if (totalSize === chunkSize) {
-               let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
-               totalSize = 0
-               attachments = []
-               webhook = getWebhook(webhook)
-               yield request
-            }
-            i++
-         }
-      }
-      //CASE 2. file is < 10Mb
-      else {
-         //CASE 2.1 file is <10Mb but totalSize including fileObj.size is > 10Mb or attachments.length == 10
-         //we need to yield the already created attachments in a request
-         if (totalSize + queueFile.systemFile.size > chunkSize || attachments.length === 10) {
-            let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
-            totalSize = 0
-            attachments = []
-            webhook = getWebhook(webhook)
-            yield request
-         }
-
-         //CASE 2.2 file is < 10Mb and attachments length < 10, and we can safely add it to attachments
-         let attachment = { "type": attachmentType.entireFile, "fileObj": queueFile.fileObj, "rawBlob": queueFile.systemFile, "fragmentSequence": 1 }
          attachments.push(attachment)
-         totalSize = totalSize + queueFile.systemFile.size
-      }
+         totalSize += roundUpTo64(chunk.size)
+         offset += chunk.size
+         i++
 
+         // we have to yield
+         if (totalSize >= maxChunkSize || attachments.length >= 9) {
+            yield { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+            totalSize = 0
+            attachments = []
+            webhook = getWebhook(webhook)
+         }
+      }
+      //we need to inform about totalChunks of a file
+      queueFile.fileObj.totalChunks = i
    }
    //we need to handle the already created attachments after break
    if (attachments.length > 0) {
-      let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments, "id": uuidv4() }
+      let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
       yield request
    }
 

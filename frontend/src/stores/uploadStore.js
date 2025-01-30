@@ -39,22 +39,14 @@ export const useUploadStore = defineStore("upload2", {
       //experimental
       backendState: new Map(),
       finishedFiles: [],
-
       finished: false
+
+
    }),
 
    getters: {
       isUploadFinished() {
-        if (this.filesUploading.length > 20) {
-           return false
-        }
-        let flag = true
-        for (let file of this.filesUploading) {
-           if (file.status !== uploadStatus.uploaded || file.status !== uploadStatus.failed) {
-              flag = false
-           }
-        }
-        return this.queue.length === 0 && !this.requestGenerator && this.concurrentRequests === 0 // && flag
+         return this.queue.length === 0 && this.uploadSpeedMap.size <= 1 && this.concurrentRequests === 0 // && flag
       },
       uploadSpeed() {
          let uploadSpeed = Array.from(this.uploadSpeedMap.values()).reduce((sum, value) => sum + value, 0)
@@ -100,7 +92,7 @@ export const useUploadStore = defineStore("upload2", {
 
          let res = await canUpload(folderContext)
          if (!res.can_upload) {
-            toast.error(i18n.global.t('errors.notAllowedToUpload'))
+            toast.error(i18n.global.t("errors.notAllowedToUpload"))
             return
          }
          console.log("folderContext")
@@ -185,32 +177,32 @@ export const useUploadStore = defineStore("upload2", {
       },
       onUploadProgress(request, progressEvent) {
          this.isInternet = true
-
+         console.log(request.attachments)
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
          this.uploader.estimator.updateSpeed(this.uploadSpeed)
          this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)
 
+         let uploadedSoFar = progressEvent.bytes
+         let totalSize = request.totalSize
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId
 
-            if (attachment.type === attachmentType.entireFile) {
-               let progress = progressEvent.progress
-               let percentage = Math.floor(progress * 100)
-               this.setProgress(frontendId, percentage)
-            } else if (attachment.type === attachmentType.chunked) {
-               let loadedBytes = progressEvent.bytes
+            if (attachment.type === attachmentType.file) {
 
+               let attachmentSize = attachment.rawBlob.size
+               let estimatedUploaded = Math.floor((attachmentSize / totalSize) * uploadedSoFar)
+               // Track uploaded bytes per attachment
                if (this.progressMap.has(frontendId)) {
-                  // Key exists, update the value
                   let currentValue = this.progressMap.get(frontendId)
-                  this.progressMap.set(frontendId, currentValue + loadedBytes)
+                  this.progressMap.set(frontendId, currentValue + estimatedUploaded)
                } else {
-                  // Key does not exist, create it and set to 0
-                  this.progressMap.set(frontendId, 0)
+                  this.progressMap.set(frontendId, estimatedUploaded)
                }
+
+               // Convert to percentage
                let totalLoadedBytes = this.progressMap.get(frontendId)
-               let percentage = Math.floor(totalLoadedBytes / attachment.fileObj.size * 100)
-               this.setProgress(attachment.fileObj.frontendId, percentage)
+               let percentage = Math.floor((totalLoadedBytes / attachment.fileObj.size) * 100)
+               this.setProgress(frontendId, percentage)
             }
          }
       },
@@ -292,17 +284,17 @@ export const useUploadStore = defineStore("upload2", {
             this.backendState.set(fileObj.frontendId, file_data)
          }
          let state = this.backendState.get(fileObj.frontendId)
-         if (attachment.type === attachmentType.chunked || attachment.type === attachmentType.entireFile) {
+         if (attachment.type === attachmentType.file) {
             let attachment_data = {
                "fragment_sequence": attachment.fragmentSequence,
                "fragment_size": attachment.rawBlob.size,
                "message_id": discordResponse.data.id,
                "attachment_id": discordAttachment.id,
-               "webhook": request.webhook.discord_id
+               "webhook": request.webhook.discord_id,
+               "offset": attachment.offset
             }
             state.attachments.push(attachment_data)
-         }
-         else if (attachment.type === attachmentType.thumbnail) {
+         } else if (attachment.type === attachmentType.thumbnail) {
             state.thumbnail = {
                "size": attachment.rawBlob.size,
                "message_id": discordResponse.data.id,
@@ -313,7 +305,6 @@ export const useUploadStore = defineStore("upload2", {
             }
          }
          this.backendState.set(fileObj.frontendId, state)
-
          if (state.attachments.length === fileObj.totalChunks && ((fileObj.thumbnail && state.thumbnail) || !fileObj.thumbnail)) {
             this.finishedFiles.push(state)
             this.finishFileUpload(fileObj.frontendId)
@@ -322,13 +313,11 @@ export const useUploadStore = defineStore("upload2", {
          for (let finishedFile of this.finishedFiles) {
             totalSize += finishedFile.size
          }
-         if (this.finishedFiles.length > 10 || totalSize > 100 * 1024 * 1024 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
-            console.log("fileObj.password")
-            console.log(fileObj.parentPassword)
-            createFile({"files": this.finishedFiles}, fileObj.parentPassword)
+         if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
+            createFile({ "files": this.finishedFiles }, fileObj.parentPassword)
             this.finishedFiles = []
          }
-         
+
       }
 
 

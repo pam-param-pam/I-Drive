@@ -1,6 +1,5 @@
 import JSChaCha20 from "js-chacha20"
 import { attachmentType, encryptionMethod } from "@/utils/constants.js"
-import { useMainStore } from "@/stores/mainStore.js"
 
 function base64ToUint8Array(base64) {
    let binaryString = window.atob(base64)
@@ -30,7 +29,7 @@ export async function encryptWithAesCtr(base64Key, base64IV, file, bytesToSkip) 
 
    let arrayBuffer = await file.arrayBuffer()
    let encryptedArrayBuffer = await crypto.subtle.encrypt(
-      { name: "AES-CTR", counter: iv, length: 64 },
+      algorithm,
       cryptoKey,
       arrayBuffer
    )
@@ -89,14 +88,12 @@ function calculateCounter(bytesToSkip) {
    if (bytesToSkip === 0) {
       return 0
    }
-   let blocksToSkip = Math.floor(bytesToSkip / 64) // ChaCha20 block size is 64 bytes
-   return blocksToSkip
+    // ChaCha20 block size is 64 bytes
+   return Math.floor(bytesToSkip / 64)
 
 }
 
 export async function encrypt(attachment) {
-   const mainStore = useMainStore()
-   let chunkSize = mainStore.user.maxDiscordMessageSize
    let fileObj = attachment.fileObj
    let encrypMethod = fileObj.encryptionMethod
 
@@ -104,11 +101,9 @@ export async function encrypt(attachment) {
       return attachment.rawBlob
    }
    let bytesToSkip = 0
-
    if (attachment.type === attachmentType.chunked) {
-      bytesToSkip = chunkSize * (attachment.fragmentSequence - 1)
+      bytesToSkip = attachment.offset
    }
-
    let iv = fileObj.iv
    let key = fileObj.key
    if (attachment.type === attachmentType.thumbnail) {

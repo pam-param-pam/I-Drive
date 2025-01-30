@@ -8,9 +8,9 @@ from django.db.models.aggregates import Sum
 from django.utils import timezone
 
 from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings
-from ..tasks import queue_ws_event
+from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
+from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, MAX_DISCORD_MESSAGE_SIZE
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
 signer = TimestampSigner()
@@ -508,5 +508,8 @@ def check_if_bots_exists(user) -> None:
     if not Bot.objects.filter(owner=user, disabled=False).exists():
         raise NoBotsError()
 
+def auto_prefetch(file_obj: File, fragment_id: str) -> None:
+    if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
+        prefetch_next_fragments.delay(fragment_id)
 
 

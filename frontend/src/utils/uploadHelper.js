@@ -277,7 +277,9 @@ export function generateIv(fileObj) {
 
 
 }
-
+export function roundUpTo64(size) {
+   return Math.ceil(size / 64) * 64;
+}
 export function generateKey() {
    let key = crypto.getRandomValues(new Uint8Array(32))
    return ivToBase64(key)

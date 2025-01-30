@@ -728,11 +728,9 @@ export default {
 
       scrollToLastItem() {
          if (!this.lastItem) return
-
-         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
          let filesScroller = this.$refs.filesScroller
+         let index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
          let lastItemId = this.lastItem.id
-         this.setLastItem(null)
 
          setTimeout(() => {
             filesScroller.scrollToItem(index)
@@ -745,6 +743,7 @@ export default {
                   // Remove the animation class after 5 seconds
                   setTimeout(() => {
                      itemElement.$el.classList.remove("pulse-animation")
+                     this.setLastItem(null)
                   }, 3500) // 5 seconds
                }
             }, 100);

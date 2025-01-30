@@ -2,6 +2,7 @@ import base64
 import math
 from datetime import datetime
 
+from django.db.utils import IntegrityError
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
@@ -81,6 +82,7 @@ def create_file(request):
                 parent=parent,
                 key=key,
                 iv=iv,
+                frontend_id=frontend_id,
                 encryption_method=encryption_method,
             )
 
@@ -95,9 +97,13 @@ def create_file(request):
             if duration:
                 file_obj.duration = duration
 
-            if math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE) == len(attachments):
-                file_obj.ready = True
+            # if math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE) == len(attachments):
+            file_obj.ready = True
+
+            try:
                 file_obj.save()
+            except IntegrityError:
+                raise BadRequestError("This file already exists!")
 
             for attachment in attachments:
                 fragment_sequence = attachment['fragment_sequence']
@@ -105,6 +111,7 @@ def create_file(request):
                 attachment_id = attachment['attachment_id']
                 fragment_size = attachment['fragment_size']
                 webhook_id = attachment['webhook']
+                offset = attachment['offset']
 
                 webhook = get_webhook(request, webhook_id)
 
@@ -117,7 +124,7 @@ def create_file(request):
                     attachment_id=attachment_id,
                     message_id=message_id,
                     webhook=webhook,
-
+                    offset=offset,
                 )
                 fragment_obj.save()
 

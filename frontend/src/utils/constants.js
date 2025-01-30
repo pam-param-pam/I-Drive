@@ -27,8 +27,7 @@ export const uploadType = {
 
 export const attachmentType = {
       thumbnail: "thumbnail",
-      chunked: "chunked",
-      entireFile: "entireFile",
+      file: "file",
 }
 export const uploadStatus = {
       preparing: "preparing",

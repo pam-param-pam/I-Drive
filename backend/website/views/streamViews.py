@@ -19,7 +19,6 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
-from ..tasks import prefetch_next_fragments
 from ..models import File, UserZIP
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
@@ -27,7 +26,7 @@ from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
 from ..utilities.errors import DiscordError, BadRequestError
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
 
@@ -209,13 +208,14 @@ def stream_file(request, file_obj: File):
         return response
 
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192):
+        print(real_start_byte)
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted():
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_file_url)(user, fragments[index].message_id, fragments[index].attachment_id)
-                prefetch_next_fragments.delay(fragments[index].id)
+                auto_prefetch(file_obj, fragments[index].id)
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
                 async with session.get(url, headers=headers) as response:
@@ -318,7 +318,6 @@ def stream_zip_files(request, token):
     user_zip = UserZIP.objects.get(token=token)
     user = user_zip.owner
     check_if_bots_exists(user)
-
     async def stream_file(file_obj, fragments, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted():
@@ -326,7 +325,7 @@ def stream_zip_files(request, token):
 
             async for fragment in fragments:
                 url = await sync_to_async(discord.get_file_url)(user, fragment.message_id, fragment.attachment_id)
-                prefetch_next_fragments.delay(fragment.id)
+                auto_prefetch(file_obj, fragment.id)
 
                 async with session.get(url) as response:
                     response.raise_for_status()

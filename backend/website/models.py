@@ -18,7 +18,6 @@ from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
 from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
-from .utilities.errors import BadRequestError
 from .utilities.helpers import chop_long_file_name
 
 
@@ -58,7 +57,6 @@ class Folder(MPTTModel):
             folder, created = Folder.objects.get_or_create(owner=instance, name="root")
 
     def save(self, *args, **kwargs):
-        from .utilities.other import is_subitem
 
         self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
 
@@ -179,12 +177,13 @@ class File(models.Model):
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     inTrashSince = models.DateTimeField(null=True, blank=True)
-    key = models.BinaryField()
+    key = models.BinaryField(null=True)
     iv = models.BinaryField(null=True)
     encryption_method = models.SmallIntegerField()
     duration = models.IntegerField(null=True, blank=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     history = HistoricalRecords()
+    frontend_id = models.CharField(max_length=20, unique=True)
 
     def _is_locked(self):
         if self.parent._is_locked():
@@ -324,7 +323,7 @@ class Fragment(models.Model):
     size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     attachment_id = models.CharField(max_length=255, null=True)
-
+    offset = models.IntegerField()
     webhook = models.ForeignKey('Webhook', on_delete=models.PROTECT)
 
     history = HistoricalRecords()

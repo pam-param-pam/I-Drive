@@ -6,7 +6,6 @@ from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from django.utils.html import format_html
-from mptt.admin import MPTTModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings
@@ -24,17 +23,11 @@ admin.site.register(VideoPosition)
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'sequence', 'readable_size', 'file', 'message_id', 'attachment_id', 'size', 'fragment_url')
+    readonly_fields = ('id', 'webhook', 'sequence', 'offset', 'readable_size', 'file', 'message_id', 'attachment_id', 'created_at', 'size', 'fragment_url')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
     search_fields = ["file__name"]
-
-    """
-    def has_delete_permission(self, request, obj=None):
-        # Disable delete
-        return False
-    """
 
     def owner(self, obj: Fragment):
         return obj.file.owner
@@ -52,7 +45,6 @@ class FragmentAdmin(SimpleHistoryAdmin):
         return "*File name to long to display*"
 
     def fragment_url(self, obj: Fragment):
-
         url = discord.get_file_url(obj.file.owner, obj.message_id, obj.attachment_id)
         return format_html(f'<a href="{url}" target="_blank">{url}</a><br>')
 
