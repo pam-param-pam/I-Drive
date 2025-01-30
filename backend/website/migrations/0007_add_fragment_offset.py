@@ -20,6 +20,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="historicalfragment",
             name="offset",
-            field=models.IntegerField(db_index=True),
+            field=models.IntegerField(db_index=True, default=0),
         ),
     ]

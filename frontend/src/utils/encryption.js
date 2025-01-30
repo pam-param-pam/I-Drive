@@ -101,7 +101,7 @@ export async function encrypt(attachment) {
       return attachment.rawBlob
    }
    let bytesToSkip = 0
-   if (attachment.type === attachmentType.chunked) {
+   if (attachment.type === attachmentType.file) {
       bytesToSkip = attachment.offset
    }
    let iv = fileObj.iv

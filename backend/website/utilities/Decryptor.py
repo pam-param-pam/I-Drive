@@ -1,5 +1,3 @@
-import math
-
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -25,7 +23,7 @@ class Decryptor:
 
     # Function to increment the IV/counter for AES_CTR
     def _increment_iv(self, bytes_to_skip):
-        blocks_to_skip = math.floor(bytes_to_skip / 16)
+        blocks_to_skip = bytes_to_skip // 16
         counter_int = int.from_bytes(self.iv, byteorder='big')
         counter_int += blocks_to_skip
 
@@ -34,7 +32,7 @@ class Decryptor:
 
     # Function to manually increment nonce by a specified number of bytes
     def _calculate_nonce(self, bytes_to_skip: int):
-        blocks_to_skip = math.floor(bytes_to_skip / 64)
+        blocks_to_skip = bytes_to_skip // 64
         incremented_counter = blocks_to_skip.to_bytes(4, 'little')
         new_nonce = incremented_counter + self.iv
         return new_nonce

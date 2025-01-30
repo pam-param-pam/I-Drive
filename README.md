@@ -34,8 +34,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | TODO List                                                    | Status               |
 |--------------------------------------------------------------|----------------------|
 | fix possible access to locked items via websocket send event | ☠️  ASAP             |
-| file upload progress percentage overflow                     | 🛠️  in progress     |
-| fix upload speed when theres a lot of simultaneous requests  | 🛠️  in progress     |
 | fix upload percentage after no internet                      | 🛠️  in progress     |
 | events in search context like file move                      | 🛠️  in progress     |
 | search by size and duration                                  | 🛠️  in progress     |

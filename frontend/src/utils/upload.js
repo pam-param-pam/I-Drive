@@ -58,8 +58,6 @@ export async function* prepareRequests() {
             toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
          }
       }
-      //round to 64
-      totalSize = roundUpTo64(totalSize)
 
 
       if (totalSize > maxChunkSize/2 || attachments.length === 10) {

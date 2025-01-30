@@ -9,6 +9,7 @@ import { canUpload } from "@/api/user.js"
 import { detectType } from "@/utils/uploadHelper.js"
 import { createFile } from "@/api/files.js"
 import i18n from "@/i18n/index.js"
+import { v4 as uuidv4 } from "uuid"
 
 const toast = useToast()
 
@@ -125,6 +126,7 @@ export const useUploadStore = defineStore("upload2", {
             return
          }
          let request = generated.value
+         request.id = uuidv4()
          this.concurrentRequests++
 
          uploadRequest(request)
@@ -177,7 +179,7 @@ export const useUploadStore = defineStore("upload2", {
       },
       onUploadProgress(request, progressEvent) {
          this.isInternet = true
-         console.log(request.attachments)
+         console.log(request.id)
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
          this.uploader.estimator.updateSpeed(this.uploadSpeed)
          this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)
