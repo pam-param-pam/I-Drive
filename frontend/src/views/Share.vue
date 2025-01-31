@@ -133,6 +133,7 @@ export default {
       },
       async fetchShare() {
          this.setLoading(true)
+         this.setError(null)
          try {
             let res = await getShare(this.token, this.folderId)
 

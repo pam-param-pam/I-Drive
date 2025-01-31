@@ -131,6 +131,12 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "orderBy": "Order by",
+    "orderByName": "name",
+    "orderByCreatedAt": "time of creation",
+    "orderBySize": "size",
+    "orderByDuration": "duration",
+    "ascending": "Ascending",
     "duration": "duration",
     "uploadDestination": "Upload destination",
     "uploadDestinationWarning": "Are you sure these values are correct? You will not be able to change this until ALL files are deleted.",

@@ -184,17 +184,14 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
                   let result = ctx.getImageData(0, 0, 1, 1)
                   let totalColor = result.data[0] + result.data[1] + result.data[2] + result.data[3]
                   if (totalColor === 255 && retryTimes <= 10) {
+                     console.log(seekTo)
                      if (seekTo < 0) {
                         seekTo = 0
-                     } else if (seekTo === 0) {
-                        seekTo = 0.2
-                     } else if (seekTo === 0.1) {
-                        seekTo = 2
-                     } else if (seekTo > 0) {
-                        seekTo *= videoPlayer.duration
+                     } else if (seekTo >= 0) {
+                        seekTo +=2
                      }
                      if (seekTo > videoPlayer.duration) {
-                        seekTo = videoPlayer.duration
+                        seekTo = videoPlayer.duration/2
                      }
                      resolve(getVideoCover(file, seekTo, retryTimes + 1))
                   } else {

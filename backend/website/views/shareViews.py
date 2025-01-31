@@ -129,7 +129,6 @@ def view_share(request, token, folder_id=None):
     return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": formatDate(share.expiration_time), "id": share.id}, status=200)
 
 
-
 @api_view(['POST'])
 @throttle_classes([MyUserRateThrottle])
 @permission_classes([AllowAny])

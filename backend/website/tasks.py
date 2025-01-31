@@ -197,25 +197,31 @@ def move_task(user_id, request_id, ids, new_parent_id):
     item_dicts_batch = []
     last_percentage = 0
     for index, item in enumerate(items):
-        if isinstance(item, Folder):
-            item_dict = create_folder_dict(item)
-        else:
-            item_dict = create_file_dict(item)
+        try:
+            if isinstance(item, Folder):
+                item_dict = create_folder_dict(item)
+            else:
+                item_dict = create_file_dict(item)
 
-        item_dicts_batch.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
+            item_dicts_batch.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
 
-        item.parent = new_parent
-        item.last_modified_at = timezone.now()
-        item.save()
+            item.parent = new_parent
+            item.last_modified_at = timezone.now()
+            item.save()
 
-        percentage = round((index + 1) / total_length * 100)
-        if percentage != last_percentage:
-            send_message(message="toasts.itemsAreBeingMoved", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
-            last_percentage = percentage
+            percentage = round((index + 1) / total_length * 100)
+            if percentage != last_percentage:
+                send_message(message="toasts.itemsAreBeingMoved", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+                last_percentage = percentage
 
-        if len(item_dicts_batch) == 50:
-            send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
-            item_dicts_batch = []
+            if len(item_dicts_batch) == 50:
+                send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
+                item_dicts_batch = []
+        except Exception as e:
+            print("UNKNOWN ERROR")
+            traceback.print_exc()
+            send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
+            return
 
     if item_dicts_batch:
         send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)

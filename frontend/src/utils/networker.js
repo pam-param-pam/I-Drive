@@ -47,6 +47,7 @@ discordInstance.interceptors.response.use(
       return response
    },
    function(error) {
+      if (error.config.onErrorCallback) error.config.onErrorCallback()
 
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {

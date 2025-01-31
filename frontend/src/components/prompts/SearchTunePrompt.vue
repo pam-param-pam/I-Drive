@@ -8,10 +8,7 @@
 
       <div>
         <label>{{ $t("prompts.fileType") }}</label>
-        <select
-          class="input input--block styled-select"
-          v-model="fileType"
-        >
+        <select class="input input--block styled-select" v-model="fileType">
           <option value="all">{{ $t("prompts.all") }}</option>
           <option v-for="type in fileTypes" :key="type" :value="type">{{ type }}</option>
         </select>
@@ -30,20 +27,14 @@
 
       <div class="checkbox-group">
         <label>
-          <input
-            type="checkbox"
-            v-model="includeFiles"
-          />
+          <input type="checkbox" v-model="includeFiles" />
           {{ $t("prompts.includeFiles") }}
         </label>
       </div>
 
       <div class="checkbox-group">
         <label>
-          <input
-            type="checkbox"
-            v-model="includeFolders"
-          />
+          <input type="checkbox" v-model="includeFolders" />
           {{ $t("prompts.includeFolders") }}
         </label>
       </div>
@@ -55,10 +46,24 @@
           type="number"
           v-model.number="resultLimit"
           :placeholder="$t('prompts.enterResultLimit')"
-
         />
       </div>
-
+      <!-- Order By Field -->
+      <div>
+        <label>{{ $t("prompts.orderBy") }}</label>
+        <select class="input input--block styled-select" v-model="orderBy">
+          <option value="created_at">{{ $t("prompts.orderByCreatedAt") }}</option>
+          <option value="duration">{{ $t("prompts.orderByDuration") }}</option>
+          <option value="size">{{ $t("prompts.orderBySize") }}</option>
+          <option value="name">{{ $t("prompts.orderByName") }}</option>
+        </select>
+      </div>
+      <div class="checkbox-group">
+        <label>
+          <input type="checkbox" v-model="ascending" />
+          {{ $t("prompts.ascending") }}
+        </label>
+      </div>
       <div>
         <label>{{ $t("prompts.tags") }}</label>
         <input
@@ -68,7 +73,6 @@
           :placeholder="$t('prompts.enterTags')"
         />
       </div>
-
     </div>
 
     <div class="card-action">
@@ -95,8 +99,8 @@
 
 <script>
 
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
    name: "filterFiles",
@@ -109,11 +113,12 @@ export default {
          resultLimit: null,
          fileTypes: ["application", "audio", "document", "image", "video", "text"],
          tags: null,
-
+         orderBy: null,
+         ascending: null
       }
    },
    computed: {
-      ...mapState(useMainStore, ["searchFilters", "currentPrompt"]),
+      ...mapState(useMainStore, ["searchFilters", "currentPrompt"])
    },
    created() {
       this.fileType = this.searchFilters.type || "all"
@@ -122,11 +127,15 @@ export default {
       this.includeFolders = this.searchFilters.folders
       this.resultLimit = this.searchFilters.resultLimit || 25
       this.tags = this.searchFilters.tags || ""
+      this.orderBy = this.searchFilters.orderBy || "created_at"
+      this.ascending = this.searchFilters.ascending || false
    },
    methods: {
-      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover"]),
+      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc"]),
 
       async submit() {
+
+
          this.setDisabledCreation(true)
          this.resetSelected()
 
@@ -138,7 +147,9 @@ export default {
             files: this.includeFiles,
             folders: this.includeFolders,
             resultLimit: this.resultLimit,
-            tags: this.tags
+            tags: this.tags,
+            orderBy: this.orderBy,
+            ascending: this.ascending
          }
 
          if (this.fileType !== null) searchFilterDict.type = this.fileType
@@ -146,14 +157,16 @@ export default {
 
          this.setSearchFilters(searchFilterDict)
          try {
-
             this.currentPrompt.confirm()
          } finally {
             this.closeHover()
          }
 
-      },
-   },
+         this.setSortByAsc(!this.ascending)
+         this.setSortingBy(this.orderBy)
+
+      }
+   }
 }
 </script>
 

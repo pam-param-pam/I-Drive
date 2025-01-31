@@ -140,29 +140,25 @@ def search(request):
     query = request.GET.get('query', None)
     file_type = request.GET.get('type', None)
     extension = request.GET.get('extension', None)
-    resultLimit = int(request.GET.get('resultLimit', 25))
 
     lockFrom = request.GET.get('lockFrom', None)
     password = request.headers.get("X-resource-Password")
 
     tags = request.GET.get('tags', None)
 
+    order_by = request.GET.get('orderBy', None)
+    if order_by not in ('size', 'duration', 'created_at'):
+        order_by = 'created_at'
+
+    resultLimit = int(request.GET.get('resultLimit', 25))
     if resultLimit > 10_000:
         resultLimit = 10_000
 
-    # goofy ah
-    include_files = request.GET.get('files', 'True')
-    if include_files.lower() == "false":
-        include_files = False
-    else:
-        include_files = True
+    include_files = request.GET.get('files', 'True').lower() != "false"
 
-    # goofy ah
-    include_folders = request.GET.get('folders', 'True')
-    if include_folders.lower() == "false":
-        include_folders = False
-    else:
-        include_folders = True
+    include_folders = request.GET.get('folders', 'True').lower() != "false"
+
+    ascending = "-" if request.GET.get("ascending", 'True').lower() == "false" else ""
 
     if tags:
         tags = [tag.strip() for tag in tags.split(" ")]
@@ -170,7 +166,7 @@ def search(request):
     # Start with a base queryset
     #todo do this only if include_files:
     files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__inTrash=False, parent__lockFrom__isnull=True).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at")
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by(ascending + order_by)
     folders = Folder.objects.filter(owner_id=user.id, parent__lockFrom__isnull=True, inTrash=False, parent__isnull=False).select_related("parent").order_by("-created_at")
     if not (query or file_type or extension or tags or include_files or include_folders):
         raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension', 'tags']")
@@ -197,7 +193,7 @@ def search(request):
     # include locked files from "current" folder
     if lockFrom and password and include_files:
         lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__inTrash=False, name__icontains=query, parent__lockFrom=lockFrom, password=password, tags__name__in=tags).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by("-created_at")
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by(ascending + order_by)
         files = list(chain(lockedFiles, files))
 
     # include locked files from "current" folder

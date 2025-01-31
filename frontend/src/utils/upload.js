@@ -60,7 +60,7 @@ export async function* prepareRequests() {
       }
 
 
-      if (totalSize > maxChunkSize/2 || attachments.length === 10) {
+      if (totalSize > maxChunkSize / 2 || attachments.length === 10) {
          let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
          totalSize = 0
          attachments = []
@@ -139,8 +139,12 @@ export async function uploadRequest(request) {
       },
       onUploadProgress: function(progressEvent) {
          uploadStore.onUploadProgress(request, progressEvent)
+      },
+      onErrorCallback: () => {
+         uploadStore.onUploadError(request)
       }
    })
+
    await afterUploadRequest(request, discordResponse)
 }
 

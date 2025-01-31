@@ -177,6 +177,13 @@ export const useUploadStore = defineStore("upload2", {
             console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
       },
+      onUploadError(request) {
+         this.uploadSpeedMap.delete(request.id)
+         for (let attachment of request.attachments) {
+            let frontendId = attachment.fileObj.frontendId
+            this.progressMap.delete(frontendId)
+         }
+      },
       onUploadProgress(request, progressEvent) {
          this.isInternet = true
          console.log(request.id)

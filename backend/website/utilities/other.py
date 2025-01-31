@@ -449,19 +449,22 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
         user_zip.files.add(item)
 
 
-def check_if_item_belongs_to_share(request, share: ShareableLink, item: Union[File, Folder]) -> None:
-    check_resource_perms(request, item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:
+    check_resource_perms(request, requested_item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
     obj_in_share = get_resource(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
 
-    if item != obj_in_share:
+    if requested_item != obj_in_share:
+        if obj_in_share.lockFrom != requested_item.lockFrom:
+            raise ResourcePermissionError("This resource is locked. Ask the owner of this resource to share it separately")
+
         if not settings.subfolders_in_shares:
-            if isinstance(obj_in_share, Folder) and item not in obj_in_share.files.all():
+            if isinstance(obj_in_share, Folder) and requested_item not in obj_in_share.files.all():
                 raise ResourceNotFoundError()
 
         else:
             if isinstance(obj_in_share, Folder):
-                if not is_subitem(item, obj_in_share):
+                if not is_subitem(requested_item, obj_in_share):
                     raise ResourceNotFoundError()
             else:
                 raise ResourceNotFoundError()
