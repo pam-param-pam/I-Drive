@@ -13,30 +13,30 @@ def setup_periodic_tasks(sender, **kwargs):
     from .tasks import delete_unready_files, delete_expired_zips, delete_files_from_trash, delete_expired_shares, delete_dangling_discord_files  # fix for circular import error
     # Executes every day at 1 AM.
     sender.add_periodic_task(
-        crontab(hour="1"),
+        crontab(hour="1", minute="0"),
         delete_unready_files,
     )
 
     # Executes every day at 1 AM.
     sender.add_periodic_task(
-        crontab(hour="1"),
+        crontab(hour="1", minute="0"),
         delete_expired_zips,
     )
 
     # Executes every day at 1 AM.
     sender.add_periodic_task(
-        crontab(hour="1"),
+        crontab(hour="1", minute="0"),
         delete_files_from_trash,
     )
 
     # Executes every day at 1 AM.
     sender.add_periodic_task(
-        crontab(hour="1"),
+        crontab(hour="1", minute="0"),
         delete_expired_shares,
     )
 
     # Executes every day at 1 AM.
     sender.add_periodic_task(
-        crontab(hour="1"),
+        crontab(hour="1", minute="0"),
         delete_dangling_discord_files,
     )
