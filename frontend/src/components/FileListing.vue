@@ -516,7 +516,7 @@ export default {
          this.addSelected(item)
 
          let max_x_size = 200
-         let max_y_size = 370
+         let max_y_size = 400
 
          let posX = event.clientX + 30
          let posY = event.clientY - 40

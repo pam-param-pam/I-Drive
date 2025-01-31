@@ -125,9 +125,9 @@ export default {
       this.extension = this.searchFilters.extension || null
       this.includeFiles = this.searchFilters.files
       this.includeFolders = this.searchFilters.folders
-      this.resultLimit = this.searchFilters.resultLimit || 25
+      this.resultLimit = this.searchFilters.resultLimit || 100
       this.tags = this.searchFilters.tags || ""
-      this.orderBy = this.searchFilters.orderBy || "created_at"
+      this.orderBy = this.searchFilters.orderBy || "size"
       this.ascending = this.searchFilters.ascending || false
    },
    methods: {
@@ -164,6 +164,7 @@ export default {
 
          this.setSortByAsc(!this.ascending)
          this.setSortingBy(this.orderBy)
+         this.setError(null)
 
       }
    }

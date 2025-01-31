@@ -129,7 +129,6 @@ class Folder(MPTTModel):
         for folder in subfolders:
             if folder.is_locked and not folder.autoLock:
                 continue
-            print(folder.name)
             folder.password = password
             folder.lockFrom = lockFrom
             folder.autoLock = True

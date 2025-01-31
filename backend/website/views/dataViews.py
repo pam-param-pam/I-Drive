@@ -1,6 +1,5 @@
-from itertools import chain
-
 from django.db.models.aggregates import Sum
+from django.db.models.query_utils import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag
@@ -12,7 +11,7 @@ from ..models import File, Folder, ShareableLink
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
-from ..utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
     calculate_size, calculate_file_and_folder_count
 from ..utilities.throttle import SearchRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
@@ -141,18 +140,15 @@ def search(request):
     file_type = request.GET.get('type', None)
     extension = request.GET.get('extension', None)
 
-    lockFrom = request.GET.get('lockFrom', None)
-    password = request.headers.get("X-resource-Password")
-
+    lock_from = request.GET.get('lockFrom', None)
+    password = request.headers.get("X-resource-Password", None)
     tags = request.GET.get('tags', None)
 
     order_by = request.GET.get('orderBy', None)
     if order_by not in ('size', 'duration', 'created_at'):
         order_by = 'created_at'
 
-    resultLimit = int(request.GET.get('resultLimit', 25))
-    if resultLimit > 10_000:
-        resultLimit = 10_000
+    result_limit = min(int(request.GET.get('resultLimit', 100)), 10000)
 
     include_files = request.GET.get('files', 'True').lower() != "false"
 
@@ -163,56 +159,59 @@ def search(request):
     if tags:
         tags = [tag.strip() for tag in tags.split(" ")]
 
-    # Start with a base queryset
-    #todo do this only if include_files:
-    files = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__inTrash=False, parent__lockFrom__isnull=True).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by(ascending + order_by)
-    folders = Folder.objects.filter(owner_id=user.id, parent__lockFrom__isnull=True, inTrash=False, parent__isnull=False).select_related("parent").order_by("-created_at")
     if not (query or file_type or extension or tags or include_files or include_folders):
-        raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension', 'tags']")
+        return JsonResponse({'error': "Please specify at least one search parameter"}, status=400)
 
     if order_by == "duration":
-        files.filter(type="video")
+        file_type = "video"
 
+    # Initialize query filters
+    file_filters = Q(owner=user, ready=True, inTrash=False, parent__inTrash=False)
+    folder_filters = Q(owner=user, ready=True, inTrash=False, parent__isnull=False)
+
+    # Handle lockFrom and password logic
+    if lock_from and password:
+        file_filters &= Q(parent__lockFrom__isnull=True, parent__password__isnull=True) | Q(parent__lockFrom=lock_from, parent__password=password)
+        folder_filters &= Q(lockFrom__isnull=True, password__isnull=True) | Q(lockFrom=lock_from, password=password) | Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
+    else:
+        file_filters &= Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
+        folder_filters &= Q(lockFrom__isnull=True, password__isnull=True) | Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
+
+    # Apply search filtering
     if query:
-        if include_files:
-            files = files.filter(name__icontains=query)
-        if include_folders:
-            folders = folders.filter(name__icontains=query)
+        file_filters &= Q(name__icontains=query)
+        folder_filters &= Q(name__icontains=query)
 
     if file_type:
-        if include_files:
-            files = files.filter(type=file_type)
+        file_filters &= Q(type=file_type)
+
     if extension:
-        if include_files:
-            files = files.filter(extension="." + extension)
+        file_filters &= Q(extension="." + extension)
 
     if tags:
-        if include_files:
-            files = files.filter(tags__name__in=tags, password=None).distinct()
+        file_filters &= Q(tags__name__in=tags)
 
-        folders = []
+    files = []
+    folders = []
 
-    # include locked files from "current" folder
-    if lockFrom and password and include_files:
-        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__inTrash=False, name__icontains=query, parent__lockFrom=lockFrom, parent__password=password, tags__name__in=tags).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by(ascending + order_by)
+    if include_files:
+        files = File.objects.filter(file_filters) \
+            .select_related("parent", "videoposition", "thumbnail", "preview") \
+            .prefetch_related("tags") \
+            .order_by(ascending + order_by)[:result_limit]
 
-        if order_by == "duration":
-            lockedFiles.filter(type="video")
+    if include_folders:
+        folders = Folder.objects.filter(folder_filters) \
+              .select_related("parent") \
+              .order_by("-created_at")[:result_limit]
 
-        files = list(chain(lockedFiles, files))
+        if order_by == 'size':
+            # Sort folders by calculated size
+            folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
 
-    # include locked files from "current" folder
-    if lockFrom and password and include_folders:
-        lockedFolders = Folder.objects.filter(owner_id=user.id, ready=True, inTrash=False, name__icontains=query, lockFrom=lockFrom, password=password).select_related("parent").order_by("-created_at")
-        folders = list(chain(lockedFolders, folders))
-
-    files = files[:resultLimit]
-    folders = folders[:resultLimit]
     folder_dicts = []
     file_dicts = []
-    if include_folders and query and not file_type and not extension:
+    if include_folders and not (extension or file_type):
         for folder in folders:
             folder_dict = create_folder_dict(folder)
             folder_dicts.append(folder_dict)
@@ -230,7 +229,7 @@ def search(request):
 @handle_common_errors
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
+        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
     folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
 
     trash_items = []
