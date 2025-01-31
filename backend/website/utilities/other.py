@@ -253,15 +253,14 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
     children = []
-    children.extend(folder_obj.files.filter(ready=True, inTrash=False))
+    file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
+            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
+    children.extend(file_children)
     if include_folders:
-        children.extend(folder_obj.subfolders.filter(inTrash=False))
+        folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
+        children.extend(folder_children)
 
-    children_dicts = []
-    for item in children:
-        file_dict = create_share_resource_dict(share, item)
-        children_dicts.append(file_dict)
-
+    children_dicts = [create_share_resource_dict(share, file) for file in children]
     folder_dict = create_share_resource_dict(share, folder_obj)
     folder_dict["children"] = children_dicts
     return folder_dict

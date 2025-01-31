@@ -57,6 +57,7 @@ export default {
          return this.error?.response?.status
       },
       info() {
+         // if (!this.errorCode)
          return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]
       },
       shouldRetry() {

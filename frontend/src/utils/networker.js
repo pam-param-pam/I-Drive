@@ -122,7 +122,7 @@ backendInstance.interceptors.response.use(
             return retry(error, waitTime)
          }
       }
-      if ((!response && error.code === "ERR_NETWORK") || response && response.status === 502) {
+      if (((!response && error.code === "ERR_NETWORK") || response && response.status === 502) && config.__retry500) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false

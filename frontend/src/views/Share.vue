@@ -33,11 +33,13 @@ import { mapActions, mapState } from "pinia"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
+import loadingSpinner from "@/components/loadingSpinner.vue"
 
 
 export default {
    name: "files",
    components: {
+      loadingSpinner,
       Errors,
       FileListing,
       Breadcrumbs
@@ -132,9 +134,9 @@ export default {
          navigator.clipboard.writeText(url)
       },
       async fetchShare() {
-         this.setLoading(true)
          this.setError(null)
          try {
+            this.setLoading(true)
             let res = await getShare(this.token, this.folderId)
 
             this.shareObj = res

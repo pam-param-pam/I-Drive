@@ -131,7 +131,7 @@ export default {
       this.ascending = this.searchFilters.ascending || false
    },
    methods: {
-      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc"]),
+      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc", "setError"]),
 
       async submit() {
 

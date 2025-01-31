@@ -148,7 +148,7 @@ def search(request):
     if order_by not in ('size', 'duration', 'created_at'):
         order_by = 'created_at'
 
-    result_limit = min(int(request.GET.get('resultLimit', 100)), 10000)
+    result_limit = min(int(request.GET.get('resultLimit', 100)), 1000)
 
     include_files = request.GET.get('files', 'True').lower() != "false"
 
