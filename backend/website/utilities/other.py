@@ -512,7 +512,9 @@ def check_if_bots_exists(user) -> None:
         raise NoBotsError()
 
 def auto_prefetch(file_obj: File, fragment_id: str) -> None:
-    if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
+    if not file_obj.duration or file_obj.duration <= 0:
+        return
+    if file_obj.type == "video" and file_obj.size / file_obj.duration > 2 * 1024 * 1024:
         prefetch_next_fragments.delay(fragment_id)
 
 

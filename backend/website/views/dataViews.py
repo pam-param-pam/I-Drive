@@ -171,6 +171,9 @@ def search(request):
     if not (query or file_type or extension or tags or include_files or include_folders):
         raise BadRequestError("Please specify at least one: ['query', 'file_type', 'extension', 'tags']")
 
+    if order_by == "duration":
+        files.filter(type="video")
+
     if query:
         if include_files:
             files = files.filter(name__icontains=query)
@@ -192,8 +195,12 @@ def search(request):
 
     # include locked files from "current" folder
     if lockFrom and password and include_files:
-        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__inTrash=False, name__icontains=query, parent__lockFrom=lockFrom, password=password, tags__name__in=tags).select_related(
+        lockedFiles = File.objects.filter(owner_id=user.id, ready=True, inTrash=False, parent__inTrash=False, name__icontains=query, parent__lockFrom=lockFrom, parent__password=password, tags__name__in=tags).select_related(
             "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").order_by("-created_at").distinct().order_by(ascending + order_by)
+
+        if order_by == "duration":
+            lockedFiles.filter(type="video")
+
         files = list(chain(lockedFiles, files))
 
     # include locked files from "current" folder
