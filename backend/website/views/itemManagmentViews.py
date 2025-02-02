@@ -265,7 +265,6 @@ def folder_password(request, folder_obj):
 @throttle_classes([FolderPasswordRateThrottle])
 @permission_classes([IsAuthenticated & ResetLockPerms])
 @handle_common_errors
-@check_folder_and_permissions
 def reset_folder_password(request, folder_id):
     account_password = request.data['accountPassword']
     new_folder_password = request.data['folderPassword']

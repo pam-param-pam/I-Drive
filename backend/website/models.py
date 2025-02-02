@@ -306,7 +306,7 @@ class UserPerms(models.Model):
     discord_modify = models.BooleanField(default=True)
 
     change_password = models.BooleanField(default=True)
-    reset_lock = models.BooleanField(default=True)
+    reset_lock = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):

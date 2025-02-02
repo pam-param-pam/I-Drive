@@ -136,7 +136,6 @@ export const useMainStore = defineStore("main", {
             this.prompts.push({
                prompt: value,
                confirm: null,
-               action: null,
                props: null,
                cancel: null
             })
@@ -146,7 +145,6 @@ export const useMainStore = defineStore("main", {
          this.prompts.push({
             prompt: value.prompt,
             confirm: value?.confirm,
-            action: value?.action,
             props: value?.props,
             cancel: value?.cancel
          })

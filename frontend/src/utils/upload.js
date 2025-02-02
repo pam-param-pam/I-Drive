@@ -133,15 +133,18 @@ export async function uploadRequest(request) {
    }
    fileFormList.append("json_payload", JSON.stringify({ "attachments": attachmentJson }))
 
+
+   let bytesUploaded = 0
    let discordResponse = await discordInstance.post(request.webhook.url, fileFormList, {
       headers: {
          "Content-Type": "multipart/form-data"
       },
       onUploadProgress: function(progressEvent) {
+         bytesUploaded = progressEvent.loaded
          uploadStore.onUploadProgress(request, progressEvent)
       },
       onErrorCallback: () => {
-         uploadStore.onUploadError(request)
+         uploadStore.onUploadError(request, bytesUploaded)
       }
    })
 

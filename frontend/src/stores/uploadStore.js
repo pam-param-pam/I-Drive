@@ -177,11 +177,14 @@ export const useUploadStore = defineStore("upload2", {
             console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
       },
-      onUploadError(request) {
+      onUploadError(request, bytesUploaded) {
          this.uploadSpeedMap.delete(request.id)
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId
-            this.progressMap.delete(frontendId)
+            if (this.progressMap.has(frontendId)) {
+               let currentValue = this.progressMap.get(frontendId)
+               this.progressMap.set(frontendId, currentValue - bytesUploaded)
+            }
          }
       },
       onUploadProgress(request, progressEvent) {

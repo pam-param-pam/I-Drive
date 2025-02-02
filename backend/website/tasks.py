@@ -391,7 +391,7 @@ def prefetch_next_fragments(fragment_id):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)
 
-    filtered_fragments = fragments.filter(sequence__gt=fragment.sequence).order_by('sequence')[:3]
+    filtered_fragments = fragments.filter(sequence__gt=fragment.sequence).order_by('sequence')[:5]
 
     for fragment in filtered_fragments:
         discord.get_file_url(user=fragment.file.owner, message_id=fragment.message_id, attachment_id=fragment.attachment_id)

@@ -349,7 +349,12 @@ export default {
 
       },
       rename() {
-         this.showHover("rename")
+         this.showHover({
+            prompt: "rename",
+            confirm: (name) => {
+               this.file.name = name
+            },
+         })
 
       },
       prev() {

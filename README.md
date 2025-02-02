@@ -38,6 +38,7 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | events in search context like file move                      | 🛠️  in progress     |
 | fix 401 in locked folders in shares                          | 🛠️  in progress     |
 | Error handling in upload process                             | ⚠️  Only partial     |
+| Optimize shares                                              | ❌  Coming one day    |
 | Auto scroll when dragging                                    | ❌  Coming one day    |
 | fix enable-scroll css cuz it's cursed                        | ❌  Coming one day    |
 | cached docker build                                          | ❌  Coming one day    |

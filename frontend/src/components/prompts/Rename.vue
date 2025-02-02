@@ -56,7 +56,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["selected"]),
+      ...mapState(useMainStore, ["selected", "currentPrompt"]),
       canSubmit() {
          return this.name !== this.selected[0].name
       }
@@ -78,6 +78,9 @@ export default {
 
             let message = this.$t('toasts.itemRenamed')
             this.$toast.success(message)
+
+            if (this.currentPrompt.confirm) this.currentPrompt.confirm(new_name)
+
             this.closeHover()
 
          }
