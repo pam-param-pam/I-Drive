@@ -7,7 +7,7 @@ from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.db.models.aggregates import Sum
 from django.utils import timezone
 
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, MAX_DISCORD_MESSAGE_SIZE
@@ -138,18 +138,20 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
     if file_obj.duration:
         file_dict['duration'] = file_obj.duration
 
-    preview = getattr(file_obj, "preview", None)
-    if preview:
-        file_dict["iso"] = preview.iso
-        file_dict["model_name"] = preview.model_name
-        file_dict["aperture"] = preview.aperture
-        file_dict["exposure_time"] = preview.exposure_time
-        file_dict["focal_length"] = preview.focal_length
+    try:
+        file_dict["iso"] = file_obj.preview.iso
+        file_dict["model_name"] = file_obj.preview.model_name
+        file_dict["aperture"] = file_obj.preview.aperture
+        file_dict["exposure_time"] = file_obj.preview.exposure_time
+        file_dict["focal_length"] = file_obj.preview.focal_length
+
+    except Preview.DoesNotExist:
+        pass
 
     if not hide and not (file_obj.is_locked and file_obj.inTrash):
         signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
-        if preview:
+        if file_obj.extension in RAW_IMAGE_EXTENSIONS:
             file_dict['preview_url'] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
 
         download_url = f"{API_BASE_URL}/stream/{signed_file_id}"

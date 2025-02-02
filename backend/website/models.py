@@ -394,7 +394,7 @@ class Preview(models.Model):
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
     attachment_id = models.CharField(max_length=255, null=True)
-    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
+    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True, related_name="preview")
     message_id = models.CharField(max_length=255)
     key = models.BinaryField()
     iso = models.CharField(max_length=50, null=True)

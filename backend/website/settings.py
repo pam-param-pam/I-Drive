@@ -73,33 +73,17 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 prefix = 'http://' if is_env else 'https://'
 CORS_ALLOWED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-    'http://127.0.0.1:5173',  # frontend
-    'http://127.0.0.1:8080',  # frontend on nginx
-    'http://localhost:8080',  # frontend on nginx
-    'http://192.168.1.17:8001',  # backend on rpi without nginx
-    'http://192.168.1.17:8001',  # backend on rpi without nginx
-    'http://192.168.1.14:5173',  # backend on comp
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^http:\/\/localhost:\d+$',
+    r'^http:\/\/127.0.0.1:\d+$',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-    'http://127.0.0.1:5173',  # frontend
-    'http://127.0.0.1:8080',  # frontend on nginx
-    'http://localhost:8080',  # frontend on nginx
-    'http://192.168.1.17:8001',  # backend on rpi without nginx
-    'http://192.168.1.17:8001',  # backend on rpi without nginx
-    'http://192.168.1.14:5173',  # backend on comp
-
 ]
 CSRF_ALLOWED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-    'http://127.0.0.1:5173',  # frontend
-    'http://127.0.0.1:8080',  # frontend on nginx
-    'http://localhost:8080',  # frontend on nginx
-    'http://192.168.1.17:8001',  # backend on rpi without nginx
-    'http://192.168.1.17:8001',  # backend on rpi without nginx
-    'http://192.168.1.14:5173',  # backend on comp
-
 ]
 CORS_EXPOSE_HEADERS = (
     "retry-after",

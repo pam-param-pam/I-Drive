@@ -114,7 +114,7 @@ def get_preview(request, file_obj: File):
 
     files = {'file': ('Kocham Alternatywki', encrypted_data)}
 
-    response = discord.send_file(request.user, files)
+    response = discord.send_file(file_obj.owner, files)
 
     message = response.json()
     size = data.getbuffer().nbytes
