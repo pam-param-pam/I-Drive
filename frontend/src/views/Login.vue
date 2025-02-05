@@ -1,5 +1,10 @@
 <template>
-  <div id="login" :class="loginClass">
+  <div id="popup">
+    <div class="header">Warning</div>
+    <div class="message">Something went wrong. Please check your system!</div>
+    <button class="close-btn" onclick="document.getElementById('popup').style.display = 'none';">Close</button>
+  </div>
+  <div id="login" :class="'mobile'">
     <form @submit.prevent.stop="submit">
       <h1>&#8205;{{ text }}</h1>
       <div v-if="error !== ''" class="wrong">{{ error }}</div>
@@ -54,9 +59,9 @@ export default {
       logoURL: () => logoURL,
       loginClass() {
          let _ = this.refreshKey1
-         if (this.isMobile()) return 'mobile'
-         return 'desktop'
-      },
+         if (this.isMobile()) return "mobile"
+         return "desktop"
+      }
    },
    data() {
       return {
@@ -66,15 +71,15 @@ export default {
          password: "",
          passwordConfirm: "",
          refreshKey1: 0,
-         text: 'I Drive',
+         text: "I Drive",
          sentences: [
-            ['You look lonely', 2000, 0],  // [sentence, erase delay, next sentence delay]
-            ['I can fix that~', 2000, 0],
-            ['I Drive', 10000, 0],
+            ["You look lonely", 5000, 0],  // [sentence, erase delay, next sentence delay]
+            ["I can fix that", 5000, 0],
+            ["I Drive", 20000, 0]
          ],
          currentSentenceIndex: 0,
-         typingDelay: 125,  // Delay between typing characters (ms)
-         erasingDelay: 40,  // Delay between erasing characters (ms)
+         typingDelay: 100,  // Delay between typing characters (ms)
+         erasingDelay: 40  // Delay between erasing characters (ms)
       }
    },
    watch: {
@@ -94,8 +99,8 @@ export default {
       this.throttledResizeHandler = throttle(this.setBackgroundImage, 100)
       window.addEventListener("resize", this.throttledResizeHandler)
       setTimeout(() => {
-         this.typeAndErase();
-      }, 10)
+         this.typeAndErase()
+      }, 10000)
 
    },
    unmounted() {
@@ -107,75 +112,75 @@ export default {
          this.createMode = !this.createMode
       },
       typeAndErase() {
-         const currentSentenceData = this.sentences[this.currentSentenceIndex];
-         this.typeSentence(currentSentenceData[0], currentSentenceData[1], currentSentenceData[2]);
+         const currentSentenceData = this.sentences[this.currentSentenceIndex]
+         this.typeSentence(currentSentenceData[0], currentSentenceData[1], currentSentenceData[2])
       },
 
       // Method to type a sentence
       typeSentence(sentence, eraseDelay, nextSentenceDelay) {
-         let index = 0;
-         let typedText = '';
+         let index = 0
+         let typedText = ""
 
          let minus = 0
 
          const typeInterval = setInterval(() => {
             // If the current character is a space, set the delay to 0
-            if (sentence[index] === ' ') {
-               typedText += ' ';
-               this.text = typedText;
-               index++;
+            if (sentence[index] === " ") {
+               typedText += " "
+               this.text = typedText
+               index++
                minus = this.typingDelay
-               return; // Skip the delay for spaces
+               return // Skip the delay for spaces
             }
             minus = 0
 
             // Otherwise, type the character with a delay
-            typedText += sentence[index];
-            this.text = typedText;
-            index++;
+            typedText += sentence[index]
+            this.text = typedText
+            index++
 
             // When the sentence is fully typed, stop typing and start erasing
             if (index === sentence.length) {
-               clearInterval(typeInterval);
+               clearInterval(typeInterval)
                setTimeout(() => {
-                  this.eraseSentence(eraseDelay, nextSentenceDelay);
-               }, eraseDelay);
+                  this.eraseSentence(eraseDelay, nextSentenceDelay)
+               }, eraseDelay)
             }
-         }, this.typingDelay - minus);
+         }, this.typingDelay - minus)
       },
 
       // Method to erase the current sentence
       eraseSentence(eraseDelay, nextSentenceDelay) {
-         let currentText = this.text;
-         const sentenceToErase = this.sentences[this.currentSentenceIndex][0];
+         let currentText = this.text
+         const sentenceToErase = this.sentences[this.currentSentenceIndex][0]
 
          const eraseInterval = setInterval(() => {
-            currentText = currentText.slice(0, -1);
-            this.text = currentText;
+            currentText = currentText.slice(0, -1)
+            this.text = currentText
 
             // When the sentence is fully erased, move to the next sentence
-            if (currentText === '') {
-               clearInterval(eraseInterval);
-               this.moveToNextSentence(nextSentenceDelay);
+            if (currentText === "") {
+               clearInterval(eraseInterval)
+               this.moveToNextSentence(nextSentenceDelay)
             }
-         }, this.erasingDelay);
+         }, this.erasingDelay)
       },
 
       // Method to move to the next sentence
       moveToNextSentence(nextSentenceDelay) {
-         this.currentSentenceIndex = (this.currentSentenceIndex + 1) % this.sentences.length; // Loop through the sentences
+         this.currentSentenceIndex = (this.currentSentenceIndex + 1) % this.sentences.length // Loop through the sentences
          setTimeout(() => {
-            this.typeAndErase();
-         }, nextSentenceDelay); // Wait for the next sentence delay before starting the next cycle
+            this.typeAndErase()
+         }, nextSentenceDelay) // Wait for the next sentence delay before starting the next cycle
       },
 
       setBackgroundImage() {
-         this.refreshKey1 ++
+         this.refreshKey1++
          let element = document.querySelector("#login")
          if (isMobile()) {
             element.style.backgroundImage = "url('/img/wallpaper2.jpg')"
          } else {
-            element.style.backgroundImage = "url('/img/wallpaper10.jpg')"
+            element.style.backgroundImage = "url('/img/wallpaper13.jpg')"
 
          }
       },
@@ -232,7 +237,7 @@ export default {
 }
 
 #login .wrong {
- background: var(--red);
+ background: radial-gradient(circle, rgba(255, 0, 0, 0.6) 30%, rgba(255, 0, 0, 0.3) 60%, rgba(255, 0, 0, 0) 100%);
  color: #fff;
  padding: .5em;
  text-align: center;
@@ -277,19 +282,16 @@ export default {
 }
 
 #login input::placeholder {
- color: white; /* Set the placeholder text color to white */
+ color: white;
 }
 
 #login input {
  width: 100%;
  padding: 0.7em;
- border: none;
- outline: none;
+ color: white;
  border-radius: 5px;
  background: rgba(0, 0, 0, 0.1);
 }
-
-
 
 /* =========== */
 /* 📱  MOBILE   */
@@ -361,8 +363,8 @@ select:-webkit-autofill:hover,
 select:-webkit-autofill:focus {
  -webkit-text-fill-color: white;
  transition: background-color 50000s ease-in-out 0s;
- box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-}
+ -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 
+}
 
 </style>

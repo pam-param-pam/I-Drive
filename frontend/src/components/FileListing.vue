@@ -754,9 +754,15 @@ export default {
 }
 </script>
 <style scoped>
+
+.message img {
+ width: 60%;
+}
+
 .wrapper {
  padding-bottom: 0.5em;
 }
+
 .wrapper,
 .list,
 .grid {
