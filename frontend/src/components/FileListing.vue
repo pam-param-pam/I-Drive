@@ -822,14 +822,4 @@ export default {
  color: inherit;
 }
 
-
-
-
-
-
-
-
-
-
-
 </style>

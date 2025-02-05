@@ -119,7 +119,7 @@
     "loginInstead": "Already have an account",
     "notAllowed": "You are not allowed to register",
     "password": "Password",
-    "passwordConfirm": "Password Confirmation",
+    "passwordConfirm": "Confirm password",
     "passwordsDontMatch": "Passwords don't match",
     "signup": "Register",
     "submit": "Login",

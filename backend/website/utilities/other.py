@@ -515,7 +515,16 @@ def check_if_bots_exists(user) -> None:
 def auto_prefetch(file_obj: File, fragment_id: str) -> None:
     if not file_obj.duration or file_obj.duration <= 0:
         return
-    if file_obj.type == "video" and file_obj.size / file_obj.duration > 2 * 1024 * 1024:
-        prefetch_next_fragments.delay(fragment_id)
+    if file_obj.type == "video":
+        mb_per_second = round((file_obj.size / file_obj.duration) / (1024 * 1024), 1)
+        fragments_to_prefetch = mb_per_second
+        if mb_per_second <= 1:
+            fragments_to_prefetch = 1
+        elif mb_per_second > 5:
+            fragments_to_prefetch = 5
+    else:
+        fragments_to_prefetch = 1
+
+    prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
 
 

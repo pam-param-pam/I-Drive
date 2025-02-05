@@ -318,6 +318,7 @@ def stream_zip_files(request, token):
     user_zip = UserZIP.objects.get(token=token)
     user = user_zip.owner
     check_if_bots_exists(user)
+
     async def stream_file(file_obj, fragments, chunk_size=8192):
         async with aiohttp.ClientSession() as session:
             if file_obj.is_encrypted():
@@ -379,4 +380,3 @@ def stream_zip_files(request, token):
     response['Content-Disposition'] = f'attachment; filename="{zip_name}.zip"'
     user_zip.delete()
     return response
-
