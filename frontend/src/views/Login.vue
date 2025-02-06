@@ -1,12 +1,7 @@
 <template>
-  <div id="popup">
-    <div class="header">Warning</div>
-    <div class="message">Something went wrong. Please check your system!</div>
-    <button class="close-btn" onclick="document.getElementById('popup').style.display = 'none';">Close</button>
-  </div>
   <div id="login" :class="'mobile'">
     <form @submit.prevent.stop="submit">
-      <h1>&#8205;{{ text }}</h1>
+      <h1>&#8205;{{ text }}&#8205;</h1>
       <div v-if="error !== ''" class="wrong">{{ error }}</div>
 
       <input
@@ -124,13 +119,13 @@ export default {
          let minus = 0
 
          const typeInterval = setInterval(() => {
-            // If the current character is a space, set the delay to 0
+            // If the current character is a space, set the delay to -this.typingDelay
             if (sentence[index] === " ") {
                typedText += " "
                this.text = typedText
                index++
                minus = this.typingDelay
-               return // Skip the delay for spaces
+               return
             }
             minus = 0
 
@@ -152,8 +147,6 @@ export default {
       // Method to erase the current sentence
       eraseSentence(eraseDelay, nextSentenceDelay) {
          let currentText = this.text
-         const sentenceToErase = this.sentences[this.currentSentenceIndex][0]
-
          const eraseInterval = setInterval(() => {
             currentText = currentText.slice(0, -1)
             this.text = currentText
@@ -171,16 +164,16 @@ export default {
          this.currentSentenceIndex = (this.currentSentenceIndex + 1) % this.sentences.length // Loop through the sentences
          setTimeout(() => {
             this.typeAndErase()
-         }, nextSentenceDelay) // Wait for the next sentence delay before starting the next cycle
+         }, nextSentenceDelay)
       },
 
       setBackgroundImage() {
          this.refreshKey1++
          let element = document.querySelector("#login")
          if (isMobile()) {
-            element.style.backgroundImage = "url('/img/wallpaper2.jpg')"
+            element.style.backgroundImage = "url('/img/loginMobile.jpg)"
          } else {
-            element.style.backgroundImage = "url('/img/wallpaper13.jpg')"
+            element.style.backgroundImage = "url('/img/loginDesktop.jpg')"
 
          }
       },
