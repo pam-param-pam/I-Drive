@@ -1,5 +1,5 @@
 <template>
-  <div id="login" :class="'mobile'">
+  <div id="login" class="mobile">
     <form @submit.prevent.stop="submit">
       <h1>&#8205;{{ text }}&#8205;</h1>
       <div v-if="error !== ''" class="wrong">{{ error }}</div>
@@ -51,12 +51,7 @@ export default {
       ...mapState(useMainStore, ["user"]),
       signup: () => signup,
       name: () => name,
-      logoURL: () => logoURL,
-      loginClass() {
-         let _ = this.refreshKey1
-         if (this.isMobile()) return "mobile"
-         return "desktop"
-      }
+      logoURL: () => logoURL
    },
    data() {
       return {
@@ -102,7 +97,6 @@ export default {
       window.removeEventListener("resize", this.throttledResizeHandler)
    },
    methods: {
-      isMobile,
       toggleMode() {
          this.createMode = !this.createMode
       },
@@ -170,12 +164,19 @@ export default {
       setBackgroundImage() {
          this.refreshKey1++
          let element = document.querySelector("#login")
+         const img = new Image()
+         let src
          if (isMobile()) {
-            element.style.backgroundImage = "url('/img/loginMobile.jpg)"
+            src = "img/loginMobile.jpg"
          } else {
-            element.style.backgroundImage = "url('/img/loginDesktop.jpg')"
-
+            src = "/img/loginDesktop.jpg"
          }
+         img.src = src
+         img.onload = () => {
+            element.style.backgroundImage = "none"
+            element.style.backgroundImage = `url('${img.src}')`
+         }
+
       },
       submit: throttle(async function(event) {
 
@@ -221,6 +222,12 @@ export default {
 }
 </script>
 <style scoped>
+#login {
+ background: url('/img/loginPreview.jpg');
+
+
+}
+
 #login form {
  position: fixed;
  left: 50%;
@@ -355,9 +362,8 @@ select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus {
  -webkit-text-fill-color: white;
- transition: background-color 50000s ease-in-out 0s;
+ transition: background-color 900000s ease-in-out 0s;
  -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-
 }
 
 </style>

@@ -60,7 +60,6 @@ const router = createRouter({
                meta: {
                   requiresAuth: true,
                },
-
             },
             {
                path: "/editor/:folderId?/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3

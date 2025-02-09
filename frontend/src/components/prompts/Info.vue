@@ -79,7 +79,7 @@
       <div v-if="isDir" class="expandable-section">
         <div
           class="expandable-header"
-          @click="isExpanded = !isExpanded"
+          @click="fetchAdditionalInfo"
         >
           <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
           <i :class="{ 'expanded': isExpanded }" class="material-icons expand-icon">
@@ -93,8 +93,7 @@
           <p>
             <strong>{{ $t("prompts.size") }}: </strong>
             <code>
-              <a v-if="!isMoreDataFetched" @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
-              <a v-else @click="changeView($event, 'folderSize')">{{ humanSize(folderSize) }}</a>
+              <a  @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
             </code>
           </p>
         </div>
@@ -136,13 +135,6 @@ export default {
          folderSize: "Loading...",
          isExpanded: false,
 
-      }
-   },
-   watch: {
-      isExpanded(newVal) {
-         if (newVal) {
-            this.fetchAdditionalInfo()
-         }
       }
    },
    computed: {
@@ -316,7 +308,10 @@ export default {
       ...mapActions(useMainStore, ["closeHover"]),
       async fetchAdditionalInfo() {
          // we want to fetch data only once
-         if (this.isMoreDataFetched) return
+         if (this.isMoreDataFetched) {
+            this.isExpanded = !this.isExpanded
+            return
+         }
 
          let folder
          if (this.selectedCount === 0) folder = this.currentFolder
@@ -327,7 +322,7 @@ export default {
             this.folderSize = res.folder_size
             this.numberDirs = res.folder_count
             this.numberFiles = res.file_count
-
+            this.isExpanded = !this.isExpanded
          }
 
       },

@@ -153,9 +153,9 @@
 
   }
   .message img {
-    max-width: 100%;
+    width: 100% !important;
     padding-left: 0.75em;
-    max-height: 100%
+    height: 100% !important;
   }
   .scroller {
     padding-bottom: 0.5em !important;
@@ -172,4 +172,5 @@
   .scroller {
     padding-bottom: 0.5em !important;
   }
+
 }
