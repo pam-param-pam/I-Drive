@@ -10,10 +10,6 @@
   transition: .1s ease all;
 }
 
-.button:hover {
-  background-color: var(--dark-blue);
-}
-
 .button:disabled {
   cursor: not-allowed !important;
 }

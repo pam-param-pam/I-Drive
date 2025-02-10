@@ -223,15 +223,19 @@ backendInstance.interceptors.response.use(
             }
          }
       }
-      let errorMessage = response.data.error
-      let errorDetails = response.data.details
+      let errorMessage = response?.data?.error
+      let errorDetails = response?.data?.details
       if (!errorMessage && errorMessage !== "") errorMessage = "Unexpected error"
       if (!errorDetails && errorDetails !== "") errorDetails = "Report this"
-      if (response.status === 401) {
+      if (response?.status === 401) {
          await logout()
 
          errorMessage = i18n.global.t("toasts.unauthorized")
          errorDetails = i18n.global.t("toasts.sessionExpired")
+      }
+      if (error.code === "ERR_NETWORK") {
+         errorMessage = i18n.global.t("errors.noConnection")
+         errorDetails = i18n.global.t("errors.noConnectionDetails")
       }
       if (config.__displayErrorToast !== false) {
          toast.error(`${i18n.global.t(errorMessage)}\n${i18n.global.t(errorDetails)}`, {

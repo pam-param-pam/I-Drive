@@ -57,7 +57,9 @@ export default {
          return this.error?.response?.status
       },
       info() {
-         // if (!this.errorCode)
+         if (this.error.code === "ERR_NETWORK") {
+            return errors[0]
+         }
          return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]
       },
       shouldRetry() {

@@ -112,7 +112,8 @@ def get_preview(request, file_obj: File):
     fernet = Fernet(key)
     encrypted_data = fernet.encrypt(data.getvalue())
 
-    files = {'file': ('Kocham Alternatywki', encrypted_data)}
+    attachment_name = request.user.discordsettings.attachment_name
+    files = {'file': (attachment_name, encrypted_data)}
 
     response = discord.send_file(file_obj.owner, files)
 

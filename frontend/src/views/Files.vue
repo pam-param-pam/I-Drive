@@ -56,7 +56,7 @@ export default {
          type: String,
          required: true
       },
-      lockFrom: {
+      lockFromProp: {
          type: String
       }
 
@@ -69,6 +69,7 @@ export default {
          source: null,
          dragCounter: 0,
          isActive: true,
+         lockFrom: null
       }
    },
    computed: {
@@ -108,7 +109,7 @@ export default {
       async onSearchQuery(query) {
          this.setLoading(true)
 
-         let realLockFrom = this.lockFrom || this.folderId
+         let realLockFrom = this.lockFrom
          let password = this.getFolderPassword(realLockFrom)
          try {
             this.items = await search(query, realLockFrom, password)
@@ -121,8 +122,13 @@ export default {
             this.setError(error)
          } finally {
             this.setLoading(false)
-
          }
+      },
+      async onSearchClosed() {
+         if (this.source) {
+            this.source.cancel("Cancelled previous request")
+         }
+         await this.fetchFolder()
 
       },
       upload() {
@@ -149,9 +155,9 @@ export default {
          } else {
             try {
                this.setLoading(true)
-               let res = await getItems(this.folderId, this.lockFrom)
+               let res = await getItems(this.folderId, this.lockFromProp)
+               this.lockFrom = res.folder.lockFrom
                this.setCurrentFolderData(res)
-
             } catch (error) {
                if (error.code === "ERR_CANCELED") return
                this.setError(error)
@@ -188,13 +194,7 @@ export default {
             this.resetOpacity()
          }
       },
-      async onSearchClosed() {
-         if (this.source) {
-            this.source.cancel("Cancelled previous request")
-         }
-         await this.fetchFolder()
 
-      },
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
             window.open(this.selected[0].download_url, "_blank")

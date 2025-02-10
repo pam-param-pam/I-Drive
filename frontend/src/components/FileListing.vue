@@ -420,6 +420,11 @@ export default {
    beforeUnmount() {
       this.resetSelected()
 
+      if (this.scrollToAnimationTimeout) {
+         clearTimeout(this.scrollToAnimationTimeout)
+         this.scrollToAnimationTimeout = null
+      }
+
       // Remove event listeners before destroying this page.
       window.removeEventListener("keydown", this.keyEvent)
       window.removeEventListener("scroll", this.scrollEvent)
@@ -665,7 +670,7 @@ export default {
          await this.$refs.search.exit()
 
          this.setLastItem(item)
-         await this.$router.push({ name: "Settings"})
+         await this.$router.push({ name: "Settings" })
          this.$router.push({ name: "Files", params: { "folderId": parent_id } })
 
          this.hideContextMenu()
@@ -740,16 +745,17 @@ export default {
                if (itemElement) {
                   itemElement.$el.classList.add("pulse-animation")
 
-                  // Remove the animation class after 5 seconds
-                  setTimeout(() => {
+                  // Remove the animation class after 3.5 seconds
+                  this.scrollToAnimationTimeout = setTimeout(() => {
                      itemElement.$el.classList.remove("pulse-animation")
                      this.setLastItem(null)
-                  }, 3500) // 5 seconds
+                     this.scrollToAnimationTimeout = null
+                  }, 3500)
                }
-            }, 100);
+            }, 100)
 
          }, 50)
-      },
+      }
    }
 }
 </script>

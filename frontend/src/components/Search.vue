@@ -40,6 +40,7 @@ export default {
       return {
          selected: {},
          query: '',
+         exited: false,
       }
    },
 
@@ -71,6 +72,7 @@ export default {
          this.setDisabledCreation(false)
          this.resetSelected()
          this.$emit('exit')
+         this.exited = true
          this.query = ''
       },
 
@@ -78,6 +80,10 @@ export default {
    watch: {
       query() {
          if (this.query === '') {
+            if (this.exited) {
+               this.exited = false
+               return
+            }
             this.exit()
          } else {
             this.setDisabledCreation(true)

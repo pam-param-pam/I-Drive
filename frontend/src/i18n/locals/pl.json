@@ -73,7 +73,9 @@
     "resourceNotReady": "Zasób jeszcze nie jest gotowy",
     "rootFolderNoAccess": "Brak uprawnień do 'root' foldera",
     "serviceUnavailable": "Serwis niedostępny",
-    "unexpectedDiscordResponse": "Discord wysłał błędną odpowiedż"
+    "unexpectedDiscordResponse": "Discord wysłał błędną odpowiedż",
+    "noConnectionDetails": "Nie udało sie polączyć z serwerem, sprawdź swoje polączenie.",
+    "noConnection": "Brak internetu"
   },
   "files": {
     "clear": "Wyczyść",
@@ -105,7 +107,7 @@
     "del": "usuń zaznaczone",
     "doubleClick": "otwórz plik lub folder",
     "esc": "wyczyść zaznaczenie i/lub zamknij okno",
-    "f1": "ta informacja",
+    "f1": "więcej informacji",
     "f2": "zmień nazwę pliku/folderu",
     "help": "Pomoc"
   },

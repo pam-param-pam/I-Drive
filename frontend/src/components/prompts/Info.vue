@@ -7,7 +7,7 @@
     <div class="card-content">
 
       <p v-if="selected.length > 1">
-        {{ $t("prompts.itemsSelected", {count: selected.length}) }}
+        {{ $t("prompts.itemsSelected", { count: selected.length }) }}
       </p>
 
       <p v-if="name" class="break-word">
@@ -91,10 +91,12 @@
           <p><strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}</p>
           <p><strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}</p>
           <p>
-            <strong>{{ $t("prompts.size") }}: </strong>
-            <code>
-              <a  @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
-            </code>
+            <strong>{{ $t("prompts.size") }}:
+              <code>
+                <a v-if="!isMoreDataFetched" @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
+                <a v-else @dblclick="changeView($event, 'folderSize')">{{ humanSize(folderSize) }}</a>
+              </code>
+            </strong>
           </p>
         </div>
       </div>
@@ -117,11 +119,11 @@
 </template>
 
 <script>
-import {filesize} from "@/utils"
+import { filesize } from "@/utils"
 import moment from "moment/min/moment-with-locales.js"
-import {fetchAdditionalInfo} from "@/api/folder.js"
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
+import { fetchAdditionalInfo } from "@/api/folder.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
 import { formatSeconds } from "@/utils/common.js"
 
@@ -133,7 +135,7 @@ export default {
          numberDirs: "Loading...",
          numberFiles: "Loading...",
          folderSize: "Loading...",
-         isExpanded: false,
+         isExpanded: false
 
       }
    },
@@ -299,7 +301,7 @@ export default {
 
          return false
 
-      },
+      }
 
 
    },
@@ -338,7 +340,7 @@ export default {
 
          moment.locale(locale)
          // Parse the target date
-         return moment(date, "YYYY-MM-DD HH:mm").endOf('second').fromNow()
+         return moment(date, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
 
       },
 
@@ -357,8 +359,8 @@ export default {
             }
          }
 
-      },
-   },
+      }
+   }
 }
 </script>
 <style lang="css" scoped>

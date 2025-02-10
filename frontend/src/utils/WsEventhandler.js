@@ -32,7 +32,6 @@ export default function onEvent(message) {
    }
    if (jsonObject.op_code === 3) { // item updated event
       let item = jsonObject.data
-      if (item.parent_id !== currentFolder?.id) return
       store.updateItem(item)
 
    }

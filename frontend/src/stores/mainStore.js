@@ -1,6 +1,7 @@
 import { defineStore } from "pinia"
 import moment from "moment"
 import i18n from "@/i18n/index.js"
+import v from "vue-reader"
 
 export const useMainStore = defineStore("main", {
    state: () => ({
@@ -150,6 +151,8 @@ export const useMainStore = defineStore("main", {
          })
       },
       setLoading(value) {
+         console.log("set loadint to")
+         console.log(value)
          this.loading = value
       },
       setToken(value) {

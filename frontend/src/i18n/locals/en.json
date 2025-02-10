@@ -73,7 +73,9 @@
     "resourceNotReady": "Resource is not ready yet",
     "rootFolderNoAccess": "Access denied to 'root' folder",
     "serviceUnavailable": "Service Unavailable",
-    "unexpectedDiscordResponse": "Unexpected discord response"
+    "unexpectedDiscordResponse": "Unexpected discord response",
+    "noConnectionDetails": "Couldn't connect to the server, check your internet connection.",
+    "noConnection": "No internet connection"
   },
   "files": {
     "clear": "Clear",
@@ -105,7 +107,7 @@
     "del": "delete selected items",
     "doubleClick": "open a file or directory",
     "esc": "clear selection and/or close the prompt",
-    "f1": "this information",
+    "f1": "more item information",
     "f2": "rename file",
     "help": "Help"
   },

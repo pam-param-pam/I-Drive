@@ -327,6 +327,7 @@ export default {
             }
          }
          this.addSelected(this.file)
+         this.setLastItem(this.file)
          await this.prefetch()
 
 
@@ -433,7 +434,6 @@ export default {
          }, 1500)
       }, 500),
       close() {
-         this.setLastItem(this.file)
 
          try {
             let parent_id = this.file?.parent_id

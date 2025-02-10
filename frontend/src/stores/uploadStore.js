@@ -197,7 +197,8 @@ export const useUploadStore = defineStore("upload2", {
          let uploadedSoFar = progressEvent.bytes
          let totalSize = request.totalSize
          for (let attachment of request.attachments) {
-            let frontendId = attachment.fileObj.frontendId
+            let fileObj = attachment.fileObj
+            let frontendId = fileObj.frontendId
 
             if (attachment.type === attachmentType.file) {
 
@@ -213,7 +214,11 @@ export const useUploadStore = defineStore("upload2", {
 
                // Convert to percentage
                let totalLoadedBytes = this.progressMap.get(frontendId)
-               let percentage = Math.floor((totalLoadedBytes / attachment.fileObj.size) * 100)
+               let percentage = Math.floor((totalLoadedBytes / fileObj.size) * 100)
+               if (percentage > 100) {
+                  console.warn(`Percentage overflow(${percentage}%) in upload for file: ${fileObj.name}, size=${fileObj.size}, reportedSize=${totalLoadedBytes}`)
+                  percentage = 100
+               }
                this.setProgress(frontendId, percentage)
             }
          }

@@ -3,7 +3,7 @@
   <div id="editor-container">
 
     <CodeEditor
-      v-if="currentlanguage"
+      v-if="currentLanguage"
       v-model="raw"
       :line-nums="true"
       width="100%"
@@ -14,7 +14,7 @@
       :header="true"
       :font-size="fontSize"
       :isSaveBtnLoading="isSaveBtnLoading"
-      :languages="currentlanguage"
+      :languages="currentLanguage"
       @close="onClose()"
       @saveFile="onSave()"
       :read-only="isInShareContext"
@@ -78,7 +78,7 @@ export default {
          editor: null,
          folderList: [],
          isSaveBtnLoading: false,
-         currentlanguage: null
+         currentLanguage: null
       }
    },
 
@@ -195,8 +195,8 @@ export default {
 
          this.raw = await res.text()
          this.copyRaw = this.raw
-
-         this.currentlanguage = this.guessLanguage()
+         this.currentLanguage = this.guessLanguage()
+         this.setLastItem(this.file)
 
       },
 
@@ -218,7 +218,7 @@ export default {
 
          if (this.raw !== this.copyRaw) {
             let webhook = this.webhooks[0]
-
+            //todo generate new IV instead if reusing old ones
             let formData = new FormData()
             let content = this.raw
             if (this.file.encryption_method !== encryptionMethod.NotEncrypted) {
@@ -251,7 +251,6 @@ export default {
                "fragment_size": blob.size, "message_id": json.id, "attachment_id": json.attachments[0].id, "webhook": webhook.discord_id
             }
 
-
             await editFile(file_data)
             this.copyRaw = this.raw
          }
@@ -267,8 +266,6 @@ export default {
       }, 1000),
 
       onClose() {
-         this.setLastItem(this.file)
-
          try {
             if (this.isInShareContext) {
                this.$router.push({ name: "Share", params: { "token": this.token, "folderId": this.folderId } })
@@ -280,7 +277,6 @@ export default {
                   prompt: "discardEditorChanges",
                   confirm: () => {
                      this.$router.push(uri)
-
                   }
                })
                return
@@ -288,14 +284,11 @@ export default {
 
             this.$router.push(uri)
          }
-            // catch every error so user can always close...
+         // catch every error so user can always close...
          catch (e) {
             console.error(e)
             this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
-
          }
-
-
       }
 
    }
