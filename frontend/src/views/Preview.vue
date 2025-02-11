@@ -213,12 +213,11 @@ export default {
          rendition: null,
          toc: [],
          fontSize: 100,
-         lastSentVideoPosition: 0
-
+         lastSentVideoPosition: 0,
       }
    },
    computed: {
-      ...mapState(useMainStore, ["items", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged", "sortedItems"]),
+      ...mapState(useMainStore, ["sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
       isEpub() {
          if (!this.file) return false
          return this.file.extension === ".epub"
@@ -291,10 +290,10 @@ export default {
          // Ensure file is updated in the DOM
          this.file = null
          await this.$nextTick() //this is very important
-         if (this.items) {
-            for (let i = 0; i < this.items.length; i++) {
-               if (this.items[i].id === this.fileId) {
-                  this.file = this.items[i]
+         if (this.sortedItems) {
+            for (let i = 0; i < this.sortedItems.length; i++) {
+               if (this.sortedItems[i].id === this.fileId) {
+                  this.file = this.sortedItems[i]
                   break
                }
             }
@@ -434,7 +433,6 @@ export default {
          }, 1500)
       }, 500),
       close() {
-
          try {
             let parent_id = this.file?.parent_id
 
@@ -443,13 +441,9 @@ export default {
                return
             }
             if (parent_id) {
-
                this.$router.push({ name: `Files`, params: { "folderId": parent_id } })
-
             } else {
-               this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
-
-
+               this.$router.push({ name: `Files`, params: { "folderId": this.user.root } })
             }
 
             // catch every error so user can always close...

@@ -1,7 +1,6 @@
 import { defineStore } from "pinia"
 import moment from "moment"
 import i18n from "@/i18n/index.js"
-import v from "vue-reader"
 
 export const useMainStore = defineStore("main", {
    state: () => ({
@@ -21,10 +20,11 @@ export const useMainStore = defineStore("main", {
       folderPasswords: {},
       searchFilters: { "files": true, "folders": true },
       lastItem: null,
-
+      searchActive: false,
+      searchItems: [],
       breadcrumbs: [],
       currentFolder: null,
-      items: []
+      items: [],
 
    }),
 
@@ -58,15 +58,23 @@ export const useMainStore = defineStore("main", {
          return this.previousPrompt?.prompt
       },
       sortedItems() {
-         if (!this.items) return
+         let items
+         if (this.searchActive) {
+            items = this.searchItems
+         }
+         else {
+            items = this.items
+         }
+         if (!items) return
+
          let fieldName = this.settings.sortingBy
          let hideLocked = this.settings.hideLockedFolders
          let orderFactor = this.settings.sortByAsc ? 1 : -1
          let filteredItems
          if (hideLocked) {
-            filteredItems = this.items.filter(item => !item.isLocked)
+            filteredItems = items.filter(item => !item.isLocked)
          } else {
-            filteredItems = this.items.slice()
+            filteredItems = items.slice()
          }
 
          return filteredItems
@@ -91,7 +99,13 @@ export const useMainStore = defineStore("main", {
    },
 
    actions: {
-
+      setSearchItems(items) {
+         if (!items) items = []
+         this.searchItems = items
+      },
+      setSearchActive(value) {
+         this.searchActive = value
+      },
       setCurrentFolderData(value) {
          this.setItems(value.folder.children)
          this.setBreadcrumbs(value.breadcrumbs)

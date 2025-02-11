@@ -220,7 +220,16 @@
     "unlockFolder": "Unlock Folder",
     "upload": "Upload",
     "uploadFiles": "Uploading {amount} files...",
-    "uploadMessage": "Please pick upload method"
+    "uploadMessage": "Please pick upload method",
+    "advanced": "Advanced",
+    "limitToFolders": "Only from folders",
+    "excludeFolders": "Excluded Folders",
+    "property": "Property",
+    "range": "Range",
+    "enterLimitToFolders": "Enter folder's ids, separate with ,",
+    "enterExcludeFolders": "Enter folder's ids, separate with ,",
+    "enterProperty": "e.g duration, size",
+    "enterRange": "> 50, 10 - 15, < 200"
   },
   "search": {
     "close": "Close",

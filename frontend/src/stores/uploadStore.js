@@ -96,8 +96,7 @@ export const useUploadStore = defineStore("upload2", {
             toast.error(i18n.global.t("errors.notAllowedToUpload"))
             return
          }
-         console.log("folderContext")
-         console.log(folderContext)
+
 
          this.uploader.processNewFiles(type, folderContext, filesList, res.lockFrom)
          //todo NotOptimizedForSmallFiles

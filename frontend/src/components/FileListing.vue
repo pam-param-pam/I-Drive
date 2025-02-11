@@ -1,6 +1,7 @@
 <template>
   <div class="wrapper">
     <header-bar>
+
       <Search
         ref="search"
         v-if="headerButtons.search"
@@ -80,7 +81,7 @@
         />
         <action
           v-if="headerButtons.upload"
-          :disabled="isSearchActive && !selectedCount > 0 "
+          :disabled="searchActive && !selectedCount > 0 "
           icon="file_upload"
           id="upload-button"
           :label="$t('buttons.upload')"
@@ -100,7 +101,7 @@
         <action
           v-if="headerButtons.info"
           icon="info"
-          :disabled="isSearchActive && !selectedCount > 0"
+          :disabled="searchActive && !selectedCount > 0"
           :label="$t('buttons.info')"
           show="info"
         />
@@ -359,7 +360,6 @@ export default {
    },
 
    props: {
-      isSearchActive: Boolean,
       readonly: Boolean,
       headerButtons: {}
    },
@@ -441,7 +441,7 @@ export default {
 
    },
    computed: {
-      ...mapState(useMainStore, ["sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt"]),
+      ...mapState(useMainStore, ["sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "searchActive"]),
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
          return "grid"
@@ -584,7 +584,7 @@ export default {
          }
 
          // Ctrl is pressed
-         if ((event.ctrlKey || event.metaKey) && !this.isSearchActive) {
+         if ((event.ctrlKey || event.metaKey) && !this.searchActive) {
 
             let key = String.fromCharCode(event.which).toLowerCase()
 
@@ -608,9 +608,10 @@ export default {
       },
 
       async drop(event) {
-         if (!this.currentFolder) {
+         if (!this.currentFolder || this.isSearchActive) {
             event.preventDefault()
             this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
+            this.$emit("dragLeave")
             return
          }
 

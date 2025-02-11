@@ -91,12 +91,11 @@
           <p><strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}</p>
           <p><strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}</p>
           <p>
-            <strong>{{ $t("prompts.size") }}:
-              <code>
-                <a v-if="!isMoreDataFetched" @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
-                <a v-else @dblclick="changeView($event, 'folderSize')">{{ humanSize(folderSize) }}</a>
-              </code>
-            </strong>
+            <strong>{{ $t("prompts.size") }}: </strong>
+            <code>
+              <a v-if="!isMoreDataFetched" @dblclick="changeView($event, 'folderSize')">{{ humanSize(0) }}</a>
+              <a v-else @dblclick="changeView($event, 'folderSize')">{{ humanSize(folderSize) }}</a>
+            </code>
           </p>
         </div>
       </div>
@@ -364,32 +363,6 @@ export default {
 }
 </script>
 <style lang="css" scoped>
-.expandable-section {
- margin-top: 20px;
- border-top: 1px solid #ccc;
- padding-top: 10px;
-}
-
-.expandable-header {
- cursor: pointer;
- display: flex;
- justify-content: space-between;
- align-items: center;
-}
-
-.expand-icon {
- transition: transform 0.3s ease;
-}
-
-.expand-icon.expanded {
- transform: rotate(180deg);
-}
-
-.expandable-content {
- margin-top: 10px;
- padding-left: 10px;
- border-left: 2px solid #3498db;
-}
 
 .checkmark-true:after {
  content: "\002705";

@@ -11,7 +11,7 @@
         :title="$t('search.search')"
         :placeholder="$t('search.search')"
       />
-      <i v-if="disabledCreation" class="material-icons"
+      <i v-if="searchActive" class="material-icons"
          @click="exit"
          :aria-label="$t('search.close')"
          :title="$t('search.close')"
@@ -45,17 +45,22 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["searchFilters", "disabledCreation"]),
+      ...mapState(useMainStore, ["searchFilters", "searchActive"]),
    },
     //TODO FIX THIS SHIT
-
+   //todo make query be persistent, fix race condition causing search not to be exited when query is ''
+   async mounted() {
+      // this.exited = true
+      // this.query = '' || this.searchFilters.query
+   },
    methods: {
-      ...mapActions(useMainStore, ["setLastItem", "showHover", "setDisabledCreation", "resetSelected"]),
+      ...mapActions(useMainStore, ["setLastItem", "showHover", "setSearchActive", "resetSelected", "setSearchFilters"]),
       search: throttle(async function (event) {
          this.setLastItem(null)
          //copying to not mutate vuex store state
          let searchDict = {...this.searchFilters}
          searchDict["query"] = this.query
+         this.setSearchFilters(searchDict)
          this.$emit('onSearchQuery', searchDict)
 
       }, 500),
@@ -69,24 +74,26 @@ export default {
       },
 
       async exit() {
-         this.setDisabledCreation(false)
+         this.setSearchActive(false)
          this.resetSelected()
          this.$emit('exit')
          this.exited = true
          this.query = ''
+         this.exited = false
+
       },
 
    },
    watch: {
       query() {
+         if (this.exited) {
+            this.exited = false
+            return
+         }
          if (this.query === '') {
-            if (this.exited) {
-               this.exited = false
-               return
-            }
             this.exit()
          } else {
-            this.setDisabledCreation(true)
+            this.setSearchActive(true)
             this.resetSelected()
             this.search()
          }

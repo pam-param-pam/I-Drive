@@ -11,7 +11,7 @@ from ..models import File, Folder, ShareableLink
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
-from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError
+from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
     calculate_size, calculate_file_and_folder_count
 from ..utilities.throttle import SearchRateThrottle, FolderPasswordRateThrottle, MyUserRateThrottle
@@ -144,6 +144,11 @@ def search(request):
     password = request.headers.get("X-resource-Password", None)
     tags = request.GET.get('tags', None)
 
+    attribute = request.GET.get('property', None)
+    attribute_range = request.GET.get('range', "").replace(" ", "")
+    exclude_folders = request.GET.get('excludeFolders', "").replace(" ", "")
+    limit_to_folders = request.GET.get('limitToFolders', "").replace(" ", "")
+
     order_by = request.GET.get('orderBy', None)
     if order_by not in ('size', 'duration', 'created_at'):
         order_by = 'created_at'
@@ -160,10 +165,14 @@ def search(request):
         tags = [tag.strip() for tag in tags.split(" ")]
 
     if not (query or file_type or extension or tags or include_files or include_folders):
-        return JsonResponse({'error': "Please specify at least one search parameter"}, status=400)
+        return BadRequestError("Please specify at least one search parameter")
 
-    if order_by == "duration":
+    if order_by == "duration" or attribute == "duration":
         file_type = "video"
+        include_folders = False
+
+    if attribute == "size":
+        include_folders = False
 
     # Initialize query filters
     file_filters = Q(owner=user, ready=True, inTrash=False, parent__inTrash=False)
@@ -190,6 +199,33 @@ def search(request):
 
     if tags:
         file_filters &= Q(tags__name__in=tags)
+
+    # Apply attributeRange filtering
+
+    if attribute_range:
+        if '>' in attribute_range:
+            value = attribute_range.lstrip('>')
+            file_filters &= Q(**{f"{attribute}__gt": value})
+        elif '<' in attribute_range:
+            value = attribute_range.lstrip('<')
+            file_filters &= Q(**{f"{attribute}__lt": value})
+        elif '-' in attribute_range:
+            start, end = attribute_range.split('-')
+            file_filters &= Q(**{f"{attribute}__range": (start, end)})
+        else:
+            return BadRequestError("Unsupported range")
+
+    # Apply excludeFolders filtering (exclude files from these folder IDs)
+    if exclude_folders:
+        exclude_folder_ids = [folder_id.strip() for folder_id in exclude_folders.split(',')]
+        file_filters &= ~Q(parent__id__in=exclude_folder_ids)
+        folder_filters &= ~Q(id__in=exclude_folder_ids)
+
+    # Apply limitToFolders filtering (only include files from these folder IDs)
+    if limit_to_folders:
+        limit_folder_ids = [folder_id.strip() for folder_id in limit_to_folders.split(',')]
+        file_filters &= Q(parent__id__in=limit_folder_ids)
+        folder_filters &= Q(id__in=limit_folder_ids)
 
     files = []
     folders = []

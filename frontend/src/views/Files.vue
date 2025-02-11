@@ -1,15 +1,14 @@
 <template>
   <div style="height: 100%">
-    <breadcrumbs v-if="!isSearchActive"
+    <breadcrumbs v-if="!searchActive"
                  base="/files"
                  :folderList="breadcrumbs"
     />
     <errors v-if="error" :error="error" />
 
-    <h4 v-if="!error && isSearchActive && !loading">{{ $t("files.searchItemsFound", { amount: this.items.length }) }}</h4>
+    <h4 v-if="!error && searchActive && !loading">{{ $t("files.searchItemsFound", { amount: searchItems.length }) }}</h4>
     <FileListing
       ref="listing"
-      :isSearchActive="isSearchActive"
       :headerButtons="headerButtons"
       @onOpen="onOpen"
       @dragEnter="onDragEnter"
@@ -42,6 +41,7 @@ import { name } from "@/utils/constants"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
+import { cancelTokenMap } from "@/utils/networker.js"
 
 export default {
    name: "files",
@@ -58,22 +58,19 @@ export default {
       },
       lockFromProp: {
          type: String
-      }
+      },
 
    },
    data() {
       return {
-         items: [],
-         isSearchActive: false,
          folderList: [],
-         source: null,
          dragCounter: 0,
          isActive: true,
          lockFrom: null
       }
    },
    computed: {
-      ...mapState(useMainStore, ["breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount"]),
+      ...mapState(useMainStore, ["searchItems", "breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
       headerButtons() {
          return {
             info: !this.disabledCreation,
@@ -85,7 +82,7 @@ export default {
             move: this.selectedCount >= 1 && this.perms.modify,
             share: this.selectedCount === 1 && this.perms.share,
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
-            locate: this.selectedCount === 1 && this.isSearchActive,
+            locate: this.selectedCount === 1 && this.searchActive,
             search: true,
             openInNewWindow: true,
             tag: this.selectedCount === 1 && !this.selected[0].isDir,
@@ -94,6 +91,9 @@ export default {
    },
    created() {
       this.setDisabledCreation(false)
+      if (this.searchActive) {
+         return
+      }
       this.fetchFolder()
    },
    unmounted() {
@@ -103,7 +103,7 @@ export default {
       $route: "fetchFolder"
    },
    methods: {
-      ...mapActions(useMainStore, ["setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover"]),
+      ...mapActions(useMainStore, ["setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
       ...mapActions(useUploadStore, ["startUpload"]),
 
       async onSearchQuery(query) {
@@ -112,10 +112,9 @@ export default {
          let realLockFrom = this.lockFrom
          let password = this.getFolderPassword(realLockFrom)
          try {
-            this.items = await search(query, realLockFrom, password)
-            this.isSearchActive = true
-            this.setCurrentFolder(null)
-            this.setItems(this.items)
+            let items = await search(query, realLockFrom, password)
+            this.setSearchActive(true)
+            this.setSearchItems(items)
 
          } catch (error) {
             if (error.code === "ERR_CANCELED") return
@@ -125,10 +124,13 @@ export default {
          }
       },
       async onSearchClosed() {
-         if (this.source) {
-            this.source.cancel("Cancelled previous request")
+         this.setSearchItems(null)
+         this.setSearchActive(false)
+         this.setError(null)
+         let searchRequest = cancelTokenMap.get("getItems")
+         if (searchRequest) {
+            searchRequest.cancel(`Request cancelled due to a new request with the same cancel signature .`)
          }
-         await this.fetchFolder()
 
       },
       upload() {
@@ -144,10 +146,7 @@ export default {
       },
 
       async fetchFolder() {
-         this.isSearchActive = false
-         this.setError(null)
-
-         this.searchItemsFound = null
+         await this.onSearchClosed()
 
          if (this.currentFolder?.id === this.folderId) {
             this.folderList = this.currentFolder.breadcrumbs

@@ -403,3 +403,29 @@ body.rtl .breadcrumbs .chevron {
   margin-left: 0.5rem;
 }
 
+.expandable-section {
+  margin-top: 20px;
+  border-top: 1px solid #ccc;
+  padding-top: 10px;
+}
+
+.expandable-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.expand-icon {
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.expandable-content {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 2px solid #3498db;
+}

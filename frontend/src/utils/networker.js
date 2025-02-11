@@ -8,7 +8,7 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 
 const toast = useToast()
 
-const cancelTokenMap = new Map()
+export const cancelTokenMap = new Map()
 function retry(error, delay, retries = 0, maxRetries = 5) {
    if (retries >= maxRetries) {
       console.error(`Max retries reached: ${maxRetries}. Aborting.`);
