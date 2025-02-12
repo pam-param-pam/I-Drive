@@ -123,16 +123,18 @@ export default {
             this.setLoading(false)
          }
       },
+
       async onSearchClosed() {
          this.setSearchItems(null)
          this.setSearchActive(false)
+         this.setDisabledCreation(false)
          this.setError(null)
          let searchRequest = cancelTokenMap.get("getItems")
          if (searchRequest) {
             searchRequest.cancel(`Request cancelled due to a new request with the same cancel signature .`)
          }
-
       },
+
       upload() {
 
          if (

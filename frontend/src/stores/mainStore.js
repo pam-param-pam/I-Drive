@@ -24,7 +24,7 @@ export const useMainStore = defineStore("main", {
       searchItems: [],
       breadcrumbs: [],
       currentFolder: null,
-      items: [],
+      items: []
 
    }),
 
@@ -61,8 +61,7 @@ export const useMainStore = defineStore("main", {
          let items
          if (this.searchActive) {
             items = this.searchItems
-         }
-         else {
+         } else {
             items = this.items
          }
          if (!items) return
@@ -110,7 +109,6 @@ export const useMainStore = defineStore("main", {
          this.setItems(value.folder.children)
          this.setBreadcrumbs(value.breadcrumbs)
          this.setCurrentFolder(value.folder)
-
       },
       setItems(value) {
          if (!value) value = []
@@ -165,8 +163,6 @@ export const useMainStore = defineStore("main", {
          })
       },
       setLoading(value) {
-         console.log("set loadint to")
-         console.log(value)
          this.loading = value
       },
       setToken(value) {
@@ -246,7 +242,6 @@ export const useMainStore = defineStore("main", {
          this.settings.sortByAsc = value
       },
       setSettings(value) {
-
          let locale = value?.locale
          if (locale === "") {
             locale = i18n.detectLocale()

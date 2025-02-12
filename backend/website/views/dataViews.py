@@ -163,9 +163,10 @@ def search(request):
 
     if tags:
         tags = [tag.strip() for tag in tags.split(" ")]
+        include_folders = False
 
     if not (query or file_type or extension or tags or include_files or include_folders):
-        return BadRequestError("Please specify at least one search parameter")
+        raise BadRequestError("Please specify at least one search parameter")
 
     if order_by == "duration" or attribute == "duration":
         file_type = "video"
@@ -173,6 +174,9 @@ def search(request):
 
     if attribute == "size":
         include_folders = False
+
+    if bool(attribute) != bool(attribute_range):
+        raise BadRequestError("Both property and rage must be specified, not just one.")
 
     # Initialize query filters
     file_filters = Q(owner=user, ready=True, inTrash=False, parent__inTrash=False)
@@ -213,7 +217,7 @@ def search(request):
             start, end = attribute_range.split('-')
             file_filters &= Q(**{f"{attribute}__range": (start, end)})
         else:
-            return BadRequestError("Unsupported range")
+            raise BadRequestError("Unsupported range")
 
     # Apply excludeFolders filtering (exclude files from these folder IDs)
     if exclude_folders:

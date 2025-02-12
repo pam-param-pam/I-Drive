@@ -113,7 +113,7 @@ export default {
 
          await addTag({ "tag_name": tagName, "file_id": this.selected[0].id })
          let file = this.selected[0]
-         file.tags = [...file.tags, tagName];
+         file.tags = [...file.tags || [], tagName]
 
          this.updateItem(file)
       },
@@ -162,13 +162,16 @@ export default {
 .remove-tag-button:hover {
  color: red;
 }
+
 .close-icon {
  font-size: 10px;
 }
+
 .remove-tag-button i {
  padding-bottom: 0;
  padding-top: 4px;
 }
+
 .tag-icon {
  font-size: 16px;
  margin-right: 6px;

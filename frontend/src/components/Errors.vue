@@ -3,6 +3,8 @@
     <h2 class="message">
       <i class="material-icons">{{ info.icon }}</i>
       <span>{{ $t(info.message, { "code": errorCode, "response": error?.response?.data }) }}</span>
+      <br>
+      <span v-if="errorDetails" class="details">{{ errorDetails }}</span>
     </h2>
     <button v-if="shouldRetry" @click="retry" class="message error-action-button">
       {{ $t("errors.retry") }}
@@ -17,22 +19,25 @@
 import router from "@/router/index.js"
 
 const errors = {
-
    0: {
       icon: "cloud_off",
       message: "errors.connection"
+   },
+   400: {
+      icon: "error_outline",
+      message: "errors.badRequest"
    },
    403: {
       icon: "error",
       message: "errors.forbidden"
    },
-   429: {
-      icon: "block",
-      message: "errors.rateLimit"
-   },
    404: {
       icon: "gps_off",
       message: "errors.notFound"
+   },
+   429: {
+      icon: "block",
+      message: "errors.rateLimit"
    },
    469: {
       icon: "block",
@@ -64,6 +69,10 @@ export default {
       },
       shouldRetry() {
          return this.errorCode !== 404 && this.errorCode !== 401 && this.errorCode !== 403
+      },
+      errorDetails() {
+         console.log(this.error.response)
+         return this.error?.response?.data?.details
       }
    },
    methods: {
@@ -78,6 +87,10 @@ export default {
 </script>
 <style scoped>
 
+.details {
+ font-size: 17px !important;
+ color: var(--textSecondary);
+}
 
 .error-action-button {
  margin-top: 10px;

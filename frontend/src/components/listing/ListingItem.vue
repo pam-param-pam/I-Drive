@@ -138,7 +138,7 @@ export default {
          return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
       },
 
-      dragStart() {
+      dragStart(event) {
          if (this.selectedCount === 0) {
             this.addSelected(this.item)
             return
@@ -151,6 +151,8 @@ export default {
       },
 
       dragOver(event) {
+         event.preventDefault()
+
          if (!this.canDrop) return
 
          let el = event.target

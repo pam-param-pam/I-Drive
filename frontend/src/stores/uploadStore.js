@@ -182,13 +182,13 @@ export const useUploadStore = defineStore("upload2", {
             let frontendId = attachment.fileObj.frontendId
             if (this.progressMap.has(frontendId)) {
                let currentValue = this.progressMap.get(frontendId)
-               this.progressMap.set(frontendId, currentValue - bytesUploaded)
+               let newValue = Math.max(0, currentValue - bytesUploaded)
+               this.progressMap.set(frontendId, newValue)
             }
          }
       },
       onUploadProgress(request, progressEvent) {
          this.isInternet = true
-         console.log(request.id)
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
          this.uploader.estimator.updateSpeed(this.uploadSpeed)
          this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)

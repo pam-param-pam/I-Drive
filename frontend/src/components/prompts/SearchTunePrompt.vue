@@ -193,9 +193,9 @@ export default {
 
    },
    methods: {
-      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc", "setError"]),
+      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc", "setError", "setLoading"]),
 
-      async submit() {
+      submit() {
          this.setDisabledCreation(true)
          this.resetSelected()
 
@@ -229,6 +229,7 @@ export default {
          this.setSortByAsc(!this.ascending)
          this.setSortingBy(this.orderBy)
          this.setError(null)
+         this.setLoading(true)
 
       }
    }
