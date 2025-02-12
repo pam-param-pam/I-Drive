@@ -197,7 +197,6 @@
             :grid-items="gridItems"
             :prerender="400"
             :item-secondary-size="tileWidth"
-
             v-slot="{ item }"
           >
             <item
@@ -379,7 +378,9 @@ export default {
          tileHeight: 75,
          imageHeight: 100,
          imageWidth: 100,
-         numberOfTiles: 4
+         numberOfTiles: 4,
+
+         scrollInterval: null
       }
    },
    watch: {
@@ -405,8 +406,6 @@ export default {
 
       // Add the needed event listeners to the window and document.
       window.addEventListener("keydown", this.keyEvent)
-      window.addEventListener("scroll", this.scrollEvent)
-      window.addEventListener("resize", this.windowsResize)
 
       if (!this.perms?.create) return
       document.addEventListener("dragover", this.preventDefault)
@@ -414,6 +413,7 @@ export default {
       document.addEventListener("dragleave", this.dragLeave)
       document.addEventListener("drop", this.drop)
       document.addEventListener("drag", this.autoScroll)
+      document.addEventListener("dragend", this.stopAutoScroll)
 
 
    },
@@ -427,8 +427,6 @@ export default {
 
       // Remove event listeners before destroying this page.
       window.removeEventListener("keydown", this.keyEvent)
-      window.removeEventListener("scroll", this.scrollEvent)
-      window.removeEventListener("resize", this.windowsResize)
       window.addEventListener("resize", this.calculateGridLayoutWrapper)
 
       if (!this.user || !this.perms?.create) return
@@ -437,6 +435,7 @@ export default {
       document.removeEventListener("dragleave", this.dragLeave)
       document.removeEventListener("drop", this.drop)
       document.removeEventListener("drag", this.autoScroll)
+      document.removeEventListener("dragend", this.stopAutoScroll)
 
 
    },
@@ -619,23 +618,46 @@ export default {
 
       },
       autoScroll(event) {
-         console.log("autoScroll")
-         //todo
-         // make it work with new vritual scroller
-         // event.preventDefault()
-         // let scrollSpeed = 500
-         //
-         // let mouseY = event.clientY
-         //
-         // // // Scroll up
-         // if (mouseY < 100) {
-         //    window.scrollBy({ "top": -scrollSpeed, behavior: "smooth" })
-         // }
-         // if (mouseY + 50 > window.innerHeight) {
-         //    window.scrollBy({ "top": scrollSpeed, behavior: "smooth" })
-         // }
+         event.preventDefault()
+
+         let filesScroller = this.$refs.filesScroller
+         if (!filesScroller) return
+
+         if (filesScroller.$el) {
+            filesScroller = filesScroller.$el
+         }
+
+         let bounding = filesScroller.getBoundingClientRect()
+         let cursorY = event.clientY
+         let scrollSpeed = 0
+
+         let topDistance = cursorY - bounding.top
+         let bottomDistance = bounding.bottom - cursorY
+
+         let maxSpeed = 1000
+         let triggerZone = 200
+
+         if (topDistance < triggerZone) {
+            scrollSpeed = -Math.max(maxSpeed * (1 - topDistance / triggerZone), 5)
+         } else if (bottomDistance < triggerZone) {
+            scrollSpeed = Math.max(maxSpeed * (1 - bottomDistance / triggerZone), 5)
+         } else {
+            this.stopAutoScroll()
+            return
+         }
+         if (!this.scrollInterval) {
+            this.scrollInterval = setInterval(() => {
+               filesScroller.scrollBy({ top: scrollSpeed})
+            }, 30)
+         }
       },
 
+      stopAutoScroll() {
+         if (this.scrollInterval) {
+            clearInterval(this.scrollInterval)
+            this.scrollInterval = null
+         }
+      },
       async sort(by) {
          let asc = false
 

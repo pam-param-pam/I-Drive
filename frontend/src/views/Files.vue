@@ -56,7 +56,7 @@ export default {
          type: String,
          required: true
       },
-      lockFromProp: {
+      lockFrom: {
          type: String
       },
 
@@ -66,7 +66,6 @@ export default {
          folderList: [],
          dragCounter: 0,
          isActive: true,
-         lockFrom: null
       }
    },
    computed: {
@@ -108,17 +107,12 @@ export default {
 
       async onSearchQuery(query) {
          this.setLoading(true)
-
-         let realLockFrom = this.lockFrom
-         let password = this.getFolderPassword(realLockFrom)
+         let lockFrom = this.currentFolder.lockFrom
+         let password = this.getFolderPassword(lockFrom)
          try {
-            let items = await search(query, realLockFrom, password)
+            let items = await search(query, lockFrom, password)
             this.setSearchActive(true)
             this.setSearchItems(items)
-
-         } catch (error) {
-            if (error.code === "ERR_CANCELED") return
-            this.setError(error)
          } finally {
             this.setLoading(false)
          }
@@ -136,7 +130,6 @@ export default {
       },
 
       upload() {
-
          if (
             typeof window.DataTransferItem !== "undefined" &&
             typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
@@ -157,7 +150,6 @@ export default {
             try {
                this.setLoading(true)
                let res = await getItems(this.folderId, this.lockFromProp)
-               this.lockFrom = res.folder.lockFrom
                this.setCurrentFolderData(res)
             } catch (error) {
                if (error.code === "ERR_CANCELED") return
@@ -190,7 +182,6 @@ export default {
       onDragLeave() {
 
          this.dragCounter--
-
          if (this.dragCounter === 0) {
             this.resetOpacity()
          }

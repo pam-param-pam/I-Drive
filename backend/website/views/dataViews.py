@@ -1,3 +1,4 @@
+from django.core.exceptions import FieldError
 from django.db.models.aggregates import Sum
 from django.db.models.query_utils import Q
 from django.http import JsonResponse, HttpResponse
@@ -218,7 +219,6 @@ def search(request):
             file_filters &= Q(**{f"{attribute}__range": (start, end)})
         else:
             raise BadRequestError("Unsupported range")
-
     # Apply excludeFolders filtering (exclude files from these folder IDs)
     if exclude_folders:
         exclude_folder_ids = [folder_id.strip() for folder_id in exclude_folders.split(',')]
@@ -233,21 +233,23 @@ def search(request):
 
     files = []
     folders = []
+    try:
+        if include_files:
+            files = File.objects.filter(file_filters) \
+                .select_related("parent", "videoposition", "thumbnail", "preview") \
+                .prefetch_related("tags") \
+                .order_by(ascending + order_by)[:result_limit]
 
-    if include_files:
-        files = File.objects.filter(file_filters) \
-            .select_related("parent", "videoposition", "thumbnail", "preview") \
-            .prefetch_related("tags") \
-            .order_by(ascending + order_by)[:result_limit]
+        if include_folders:
+            folders = Folder.objects.filter(folder_filters) \
+                  .select_related("parent") \
+                  .order_by("-created_at")[:result_limit]
 
-    if include_folders:
-        folders = Folder.objects.filter(folder_filters) \
-              .select_related("parent") \
-              .order_by("-created_at")[:result_limit]
-
-        if order_by == 'size':
-            # Sort folders by calculated size
-            folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
+            if order_by == 'size':
+                # Sort folders by calculated size
+                folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
+    except FieldError:
+        raise BadRequestError("Invalid property")
 
     folder_dicts = []
     file_dicts = []
