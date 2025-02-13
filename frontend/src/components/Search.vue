@@ -54,7 +54,7 @@ export default {
       // this.query = '' || this.searchFilters.query
    },
    methods: {
-      ...mapActions(useMainStore, ["setLastItem", "showHover", "setSearchActive", "resetSelected", "setSearchFilters"]),
+      ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters"]),
       search: throttle(async function (event) {
          this.setLastItem(null)
          //copying to not mutate vuex store state
@@ -74,7 +74,6 @@ export default {
       },
 
       async exit() {
-         this.setSearchActive(false)
          this.resetSelected()
          this.$emit('exit')
          this.exited = true
@@ -93,7 +92,6 @@ export default {
          if (this.query === '') {
             this.exit()
          } else {
-            this.setSearchActive(true)
             this.resetSelected()
             this.search()
          }

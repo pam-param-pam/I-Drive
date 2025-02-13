@@ -38,7 +38,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["error", "items", "selected", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount"]),
+      ...mapState(useMainStore, ["error", "items", "selected", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount", "setSearchActive", "setSearchItems"]),
       headerButtons() {
          return {
             shell: this.perms.execute,
@@ -47,14 +47,9 @@ export default {
             delete: this.selectedCount > 0 && this.perms.delete,
          }
       },
-
    },
    unmounted() {
       this.isActive = false
-   },
-   created() {
-      this.setDisabledCreation(true)
-      this.fetchFolder()
    },
    watch: {
       $route: "fetchFolder",
@@ -62,7 +57,10 @@ export default {
    mounted() {
       this.setItems(null)
       this.setCurrentFolder(null)
-
+      this.setDisabledCreation(true)
+      this.setSearchActive(false)
+      this.setSearchItems(null)
+      this.fetchFolder()
    },
 
    methods: {
@@ -88,7 +86,6 @@ export default {
             if (this.isActive) this.setLoading(false)
 
          }
-
       },
 
       onOpen(item) {

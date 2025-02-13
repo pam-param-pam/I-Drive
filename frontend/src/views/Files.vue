@@ -89,10 +89,10 @@ export default {
       }
    },
    created() {
-      this.setDisabledCreation(false)
       if (this.searchActive) {
          return
       }
+      this.setDisabledCreation(false)
       this.fetchFolder()
    },
    unmounted() {
@@ -112,6 +112,7 @@ export default {
          try {
             let items = await search(query, lockFrom, password)
             this.setSearchActive(true)
+            this.setDisabledCreation(true)
             this.setSearchItems(items)
          } finally {
             this.setLoading(false)

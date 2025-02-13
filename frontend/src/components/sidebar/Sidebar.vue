@@ -82,7 +82,7 @@
     </template>
 
     <div
-      v-if="$route.name === 'Files' && !disabledCreation"
+      v-if="$route.name === 'Files' && (!disabledCreation || searchActive)"
       class="credits"
       style="width: 80%; margin: 2em 2.5em 3em 2.5em"
     >
@@ -134,7 +134,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading"]),
+      ...mapState(useMainStore, ["user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading", "searchActive", "searchItems"]),
       active() {
          return this.currentPrompt?.prompt === "sidebar"
       },
@@ -148,18 +148,31 @@ export default {
    watch: {
       async currentFolder() {
          await this.fetchUsage()
+      },
+      async searchItems() {
+         console.log("AAAAAAAAAAAAAAAAAAAAAAAAA")
+         await this.fetchUsage()
       }
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover", "showHover"]),
       async fetchUsage() {
          if (this.currentFolder && this.$route.name === "Files") {
-
-            let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
-            this.usage = {
-               used: filesize(usage.used),
-               total: filesize(usage.total),
-               usedPercentage: Math.round((usage.used / usage.total) * 100)
+            if (!this.searchActive) {
+               let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
+               this.usage = {
+                  totalBytes: usage.total,
+                  used: filesize(usage.used),
+                  total: filesize(usage.total),
+                  usedPercentage: Math.round((usage.used / usage.total) * 100)
+               }
+            } else {
+               let used = (this.searchItems || []).reduce((total, item) => {
+                  let size = Number(item.size) || 0
+                  return total + size
+               }, 0)
+               this.usage.usedPercentage = Math.round((used / this.usage.totalBytes) * 100)
+               this.usage.used = filesize(used)
             }
          }
       },
