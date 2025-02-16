@@ -48,7 +48,7 @@ def verify_signed_resource_id(signed_file_id: str, expiry_seconds: int = SIGNED_
 
 def formatDate(date: datetime) -> str:
     localized_date = timezone.localtime(date)
-    return f"{localized_date.year}-{localized_date.month:02d}-{localized_date.day:02d} {localized_date.hour:02d}:{localized_date.minute:02d}"
+    return f"{localized_date.year}-{localized_date.month:02d}-{localized_date.day:02d} {localized_date.hour:02d}:{localized_date.minute:02d}:{localized_date.second:02d}"
 
 
 def logout_and_close_websockets(user_id: int) -> None:

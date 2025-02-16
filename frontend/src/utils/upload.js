@@ -1,7 +1,17 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, encryptionMethod, uploadStatus } from "@/utils/constants.js"
-import { generateIv, generateKey, getOrCreateFolder, getVideoCover, getWebhook, isVideoFile, roundUpTo64 } from "@/utils/uploadHelper.js"
+import {
+   generateIv,
+   generateKey,
+   getAudioCover,
+   getOrCreateFolder,
+   getVideoCover,
+   getWebhook,
+   isAudioFile,
+   isVideoFile,
+   roundUpTo64
+} from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import { discordInstance } from "@/utils/networker.js"
 import { useToast } from "vue-toastification"
@@ -28,37 +38,58 @@ export async function* prepareRequests() {
          queueFile.fileObj.key = generateKey()
       }
 
+      let thumbnail
+      //extracting cover if needed
+      if (isAudioFile(queueFile)) {
+         try {
+            thumbnail = await getAudioCover(queueFile)
+         }
+         catch (e) {
+            toast.warning("Couldn't get cover for: " + queueFile.fileObj.name)
+            console.warn(e)
+         }
+      }
       //generating a thumbnail if needed.
       if (isVideoFile(queueFile)) {
          try {
-            let { thumbnail, duration } = await getVideoCover(queueFile)
-
+            let data = await getVideoCover(queueFile)
+            let duration  = data.duration
+            thumbnail = data.thumbnail
             queueFile.fileObj.duration = Math.round(duration)
-            queueFile.fileObj.thumbnail = true
 
-            //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
-            if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
-               let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
-               totalSize = 0
-               attachments = []
-               webhook = getWebhook(webhook)
-               yield request
-            }
-
-            let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail }
-            if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
-               attachment.iv = generateIv(queueFile.fileObj)
-               attachment.key = generateKey()
-            }
-
-            attachments.push(attachment)
-            totalSize += roundUpTo64(thumbnail.size)
          } catch (e) {
             console.log(e)
             toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
          }
       }
 
+      //if cover/thumbnail exist(they can never exist both at the same time) we generate a request with them
+      if (thumbnail) {
+         queueFile.fileObj.thumbnail = true
+
+         //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
+         if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
+            let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+            totalSize = 0
+            attachments = []
+            webhook = getWebhook(webhook)
+            yield request
+         }
+
+         //else we add it
+         let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail }
+         if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
+            attachment.iv = generateIv(queueFile.fileObj)
+            attachment.key = generateKey()
+         }
+
+         attachments.push(attachment)
+         //rounding to 64 as padding for encryption
+         totalSize += roundUpTo64(thumbnail.size)
+      }
+
+      //If theres to little space left in the request, we yield to prevent for example the beginning of a video having 0.5mb which would cause multiple messages
+      // that have to be loaded before playback starts
 
       if (totalSize > maxChunkSize / 2 || attachments.length === 10) {
          let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }

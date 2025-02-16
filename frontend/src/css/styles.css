@@ -205,8 +205,25 @@ main .spinner .bounce2 {
   overflow: auto;
 }
 #previewer .preview audio{
-  height: 95%;
-  width: 95%;
+  position: fixed;
+  bottom: 45px;
+  padding-left: 45px;
+  padding-right: 45px;
+  right: 0;
+  width: 100%;
+  background-color: transparent;
+
+}
+
+#previewer .preview .cover {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-height: 200px;
+  min-width: 200px;
+  object-fit: cover;
+
 }
 
 #previewer .preview pre,

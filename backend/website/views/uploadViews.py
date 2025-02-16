@@ -72,6 +72,9 @@ def create_file(request):
             parent = get_folder(parent_id)
             check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
 
+            if File.objects.filter(frontend_id=frontend_id).exists():
+                continue
+
             file_obj = File(
                 extension=extension,
                 name=file_name,
@@ -97,7 +100,6 @@ def create_file(request):
             if duration:
                 file_obj.duration = duration
 
-            # if math.ceil(file_obj.size / MAX_DISCORD_MESSAGE_SIZE) == len(attachments):
             file_obj.ready = True
 
             try:

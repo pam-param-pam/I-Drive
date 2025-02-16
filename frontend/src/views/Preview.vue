@@ -97,14 +97,16 @@
         </div>
 
         <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl" />
-        <audio
-          v-else-if="file?.type === 'audio' && file?.size > 0"
-          ref="player"
-          :src="fileSrcUrl"
-          controls
-          :autoplay="autoPlay"
-          @play="autoPlay = true"
-        ></audio>
+        <div v-else-if="file?.type === 'audio' && file?.size > 0" style="height: 100%">
+          <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover"/>
+          <audio
+            ref="player"
+            :src="fileSrcUrl"
+            controls
+            :autoplay="autoPlay"
+            @play="autoPlay = true"
+          ></audio>
+        </div>
 
         <object
           v-else-if="file?.extension === '.pdf' && file?.size > 0"

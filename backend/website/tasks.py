@@ -305,17 +305,21 @@ def delete_unready_files():
     files = File.objects.filter(ready=False)
     current_datetime = timezone.now()
     request_id = str(random.randint(0, 100000))
-    for file in files:
-        elapsed_time = current_datetime - file.created_at
 
-        # if at least one hour has elapsed
-        # then remove the file
-        if elapsed_time >= timedelta(hours=1):
-            smart_delete.delay(file.owner.id, request_id, [file.id])
+    # Group files by owner
+    owner_files_map = defaultdict(list)
+
+    for file in files:
+        if current_datetime - file.created_at >= timedelta(hours=6):  # delta of six hours to prevent files in upload from being deleted
+            owner_files_map[file.owner.id].append(file.id)
+
+    for owner_id, file_ids in owner_files_map.items():
+        smart_delete.delay(owner_id, request_id, file_ids)
+
 
 @app.task
 def delete_dangling_discord_files():
-    print("delete_dangling_discord_files")
+    deleted_attachments = 0
     users = User.objects.filter().all()
     for user in users:
         for batch in discord.fetch_messages(user):
@@ -324,8 +328,6 @@ def delete_dangling_discord_files():
                 attachments_to_remove = []
                 webhook = None
 
-                if message['id'] == "1333871550486548521":
-                    print("MESSAGE FOUND!")
                 # skip fresh messages to not break upload
                 timestamp = datetime.fromisoformat(message['timestamp'])
                 now = datetime.now(timezone.utc)
@@ -360,6 +362,10 @@ def delete_dangling_discord_files():
                     discord.edit_attachments(user, webhook.url, message['id'], attachments_to_keep)
                 else:
                     discord.remove_message(user, message['id'])
+
+                deleted_attachments += len(attachments_to_remove)
+
+    discord.send_message(f"Deleted {deleted_attachments} attachments.")
 
 @app.task
 def delete_files_from_trash():

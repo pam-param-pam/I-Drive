@@ -57,7 +57,7 @@ export default {
             let filteredItems = this.items.filter(item => !ids.includes(item.id))
             this.setItems(filteredItems)
 
-            this.currentPrompt?.confirm()
+            if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
          } finally {
             this.closeHover()

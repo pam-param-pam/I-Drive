@@ -1,6 +1,7 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
 import { encryptionMethod } from "@/utils/constants.js"
+import jsmediatags from "jsmediatags"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -117,6 +118,10 @@ export function detectType(fileObj) {
 
 }
 
+export function isAudioFile(file) {
+   return file.fileObj.type.includes("audio/")
+}
+
 export function isVideoFile(file) {
    if (file.fileObj.extension === ".mov") return true
    const videoMimeTypes = [
@@ -144,6 +149,29 @@ export function getWebhook(currentWebhook) {
 
    return webhooks[currentWebhookIndex]
 }
+
+export async function getAudioCover(file) {
+   return new Promise((resolve, reject) => {
+      jsmediatags.read(file.systemFile, {
+         onSuccess: (tag) => {
+            const picture = tag.tags.picture
+            if (picture) {
+               const { data, format } = picture
+               const byteArray = new Uint8Array(data)
+               const blob = new Blob([byteArray], { type: format })
+               resolve(blob)
+            } else {
+               reject(new Error("No picture found in audio file"))
+            }
+         },
+         onError: (error) => {
+            console.error("Error reading file:", error.type, error.info)
+            reject(new Error("Failed to read audio file"))
+         }
+      })
+   })
+}
+
 
 export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    return new Promise((resolve, reject) => {
@@ -184,14 +212,13 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
                   let result = ctx.getImageData(0, 0, 1, 1)
                   let totalColor = result.data[0] + result.data[1] + result.data[2] + result.data[3]
                   if (totalColor === 255 && retryTimes <= 10) {
-                     console.log(seekTo)
                      if (seekTo < 0) {
                         seekTo = 0
                      } else if (seekTo >= 0) {
-                        seekTo +=2
+                        seekTo += 2
                      }
                      if (seekTo > videoPlayer.duration) {
-                        seekTo = videoPlayer.duration/2
+                        seekTo = videoPlayer.duration / 2
                      }
                      resolve(getVideoCover(file, seekTo, retryTimes + 1))
                   } else {
@@ -263,20 +290,20 @@ export function generateIv(fileObj) {
    let iv
    if (fileObj.encryptionMethod === encryptionMethod.AesCtr) {
       iv = crypto.getRandomValues(new Uint8Array(16))
-   }
-   else if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
+   } else if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
       iv = crypto.getRandomValues(new Uint8Array(12))
-   }
-   else {
+   } else {
       throw Error("unable to match encryptionMethod")
    }
    return ivToBase64(iv)
 
 
 }
+
 export function roundUpTo64(size) {
    return Math.ceil(size / 64) * 64
 }
+
 export function generateKey() {
    let key = crypto.getRandomValues(new Uint8Array(32))
    return ivToBase64(key)
