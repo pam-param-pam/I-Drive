@@ -114,9 +114,10 @@ def smart_delete(user_id, request_id, ids):
                 # we ignore previews as they are always in a different message
                 fragments = Fragment.objects.filter(message_id=key)
                 thumbnails = Thumbnail.objects.filter(message_id=key)
+                previews = Preview.objects.filter(message_id=key)
 
                 # if only 1 found, we found only the file we want to delete, there's nothing to be saved, we can just delete the entire discord message
-                if len(fragments) + len(thumbnails) == 1:
+                if len(fragments) + len(thumbnails) + len(previews) == 1:
                     discord.remove_message(user, key)
                 else:
                     attachment_ids = []
@@ -319,23 +320,33 @@ def delete_unready_files():
 
 @app.task
 def delete_dangling_discord_files():
-    deleted_attachments = 0
+    deleted_attachments = defaultdict(int)
     users = User.objects.filter().all()
     for user in users:
         for batch in discord.fetch_messages(user):
             for message in batch:
+                attachments = message['attachments']
+                if not attachments:
+                    discord.remove_message(user, message['id'])
+
                 attachments_to_keep = []
                 attachments_to_remove = []
                 webhook = None
 
-                # skip fresh messages to not break upload
                 timestamp = datetime.fromisoformat(message['timestamp'])
                 now = datetime.now(timezone.utc)
+
+                # skip fresh messages to not break upload
                 one_hour_ago = now - timedelta(hours=6)
                 if timestamp > one_hour_ago:
                     continue
 
-                for attachment in message['attachments']:
+                # Break when messages found are older than 2 days
+                two_days_ago = datetime.now(timezone.utc) - timedelta(days=2)
+                if timestamp < two_days_ago:
+                    break
+
+                for attachment in attachments:
                     fragment = Fragment.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
                     preview = Preview.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
                     thumbnail = Thumbnail.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
@@ -344,8 +355,6 @@ def delete_dangling_discord_files():
                         if not webhook:
                             if fragment.exists():
                                 webhook = fragment.first().webhook
-                            if preview.exists():
-                                webhook = preview.first().webhook
                             if thumbnail.exists():
                                 webhook = thumbnail.first().webhook
 
@@ -363,9 +372,9 @@ def delete_dangling_discord_files():
                 else:
                     discord.remove_message(user, message['id'])
 
-                deleted_attachments += len(attachments_to_remove)
+                deleted_attachments[user] += len(attachments_to_remove)
 
-    discord.send_message(f"Deleted {deleted_attachments} attachments.")
+        discord.send_message(user, f"Deleted {deleted_attachments[user]} attachments for user: {user}.")
 
 @app.task
 def delete_files_from_trash():
