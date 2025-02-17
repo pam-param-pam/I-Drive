@@ -1,12 +1,32 @@
 import { v4 as uuidv4 } from "uuid"
 import { uploadType } from "@/utils/constants.js"
 import { detectExtension } from "@/utils/common.js"
+export function detectType(type, extension) {
+   const RAW_IMAGE_EXTENSIONS = [
+      ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",
+      ".CRW", ".CR2", ".CR3", ".ERF", ".MEF",
+      ".MOS", ".NEF", ".NRW", ".ORF", ".PEF",
+      ".RW2", ".ARW", ".SRF", ".SR2"
+   ]
+   if (RAW_IMAGE_EXTENSIONS.includes(extension.toUpperCase())) {
+      return "image/raw"
+   }
+   else if (extension === ".mov") {
+      return "video/mov"
+   }
+   else if (extension === ".mkv") {
+      return "video/mkv"
+   }
+   else if (extension === ".mod") {
+      return "text/plain"
+   }
+   return type
+
+}
 
 self.onmessage = async (event) => {
 
    let { typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword } = event.data
-
-
    let files = []
 
    for (let i = 0; i < filesList.length; i++) {
@@ -30,9 +50,9 @@ self.onmessage = async (event) => {
 
       size = file.size
       name = file.name
-      type = file.type
       createdAt = file.lastModified
       let extension = detectExtension(file.name)
+      type = detectType(file.type, extension)
       // Remove filename from path if it exists at the end
       if (path && path.endsWith(file.name)) {
          path = path.slice(0, -file.name.length - 1)

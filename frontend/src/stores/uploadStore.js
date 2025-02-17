@@ -6,7 +6,6 @@ import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
 import { Uploader } from "@/utils/Uploader.js"
 import { canUpload } from "@/api/user.js"
-import { detectType } from "@/utils/uploadHelper.js"
 import { createFile } from "@/api/files.js"
 import i18n from "@/i18n/index.js"
 import { v4 as uuidv4 } from "uuid"
@@ -286,7 +285,7 @@ export const useUploadStore = defineStore("upload2", {
             let file_data = {
                "name": fileObj.name,
                "parent_id": fileObj.folderId,
-               "mimetype": detectType(fileObj),
+               "mimetype": fileObj.type,
                "extension": fileObj.extension,
                "size": fileObj.size,
                "frontend_id": fileObj.frontendId,

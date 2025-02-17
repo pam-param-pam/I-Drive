@@ -98,49 +98,14 @@ function processFile(fileEntry) {
 }
 
 
-export function detectType(fileObj) {
-   const RAW_IMAGE_EXTENSIONS = [
-      ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",
-      ".CRW", ".CR2", ".CR3", ".ERF", ".MEF",
-      ".MOS", ".NEF", ".NRW", ".ORF", ".PEF",
-      ".RW2", ".ARW", ".SRF", ".SR2"
-   ]
-   if (RAW_IMAGE_EXTENSIONS.includes(fileObj.extension.toUpperCase())) {
-      return "image/raw"
-   }
-   else if (fileObj.extension === ".mov") {
-      return "video/mov"
-   }
-   else if (fileObj.extension === ".mkv") {
-      return "video/mkv"
-   }
-   else if (fileObj.extension === ".mod") {
-      return "text/plain"
-   }
-   return fileObj.type
 
-}
 
 export function isAudioFile(file) {
    return file.fileObj.type.includes("audio/")
 }
 
 export function isVideoFile(file) {
-   if (file.fileObj.extension === ".mov") return true
-   const videoMimeTypes = [
-      "video/mp4",
-      "video/mpeg",
-      "video/ogg",
-      "video/webm",
-      "video/quicktime",
-      "video/x-msvideo",
-      "video/x-ms-wmv",
-      "video/x-flv",
-      "video/3gpp",
-      "video/3gpp2"
-   ]
-
-   return videoMimeTypes.includes(file.fileObj.type)
+   return file.fileObj.type.includes("video/")
 }
 
 export function getWebhook(currentWebhook) {
