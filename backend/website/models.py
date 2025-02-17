@@ -185,7 +185,7 @@ class File(models.Model):
     duration = models.IntegerField(null=True, blank=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     history = HistoricalRecords()
-    frontend_id = models.CharField(max_length=20, unique=True)
+    frontend_id = models.CharField(max_length=40, unique=True)
 
     def _is_locked(self):
         if self.parent._is_locked():

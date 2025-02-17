@@ -47,15 +47,10 @@ export default {
    computed: {
       ...mapState(useMainStore, ["searchFilters", "searchActive"]),
    },
-    //TODO FIX THIS SHIT
-   //todo make query be persistent, fix race condition causing search not to be exited when query is ''
-   async mounted() {
-      // this.exited = true
-      // this.query = '' || this.searchFilters.query
-   },
    methods: {
       ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters"]),
       search: throttle(async function (event) {
+         if (!this.query) return
          this.setLastItem(null)
          //copying to not mutate vuex store state
          let searchDict = {...this.searchFilters}
@@ -74,8 +69,10 @@ export default {
       },
 
       async exit() {
+         console.log("exiting search")
          this.resetSelected()
          this.$emit('exit')
+
          this.exited = true
          this.query = ''
          this.exited = false

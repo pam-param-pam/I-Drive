@@ -49,7 +49,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Editor support for large files                               | ⛔  Coming prob never |
 | fix __prependStaticUrl                                       | ⛔  Coming prob never |
 | multiple files in 1 discord attachment support               | ⛔  Coming prob never |
-| fix race condiction in search                                | ⛔  Coming prob never |
 
 
 

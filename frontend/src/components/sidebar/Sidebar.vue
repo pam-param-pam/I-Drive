@@ -150,7 +150,6 @@ export default {
          await this.fetchUsage()
       },
       async searchItems() {
-         console.log("AAAAAAAAAAAAAAAAAAAAAAAAA")
          await this.fetchUsage()
       }
    },

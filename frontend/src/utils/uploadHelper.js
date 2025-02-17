@@ -108,10 +108,13 @@ export function detectType(fileObj) {
    if (RAW_IMAGE_EXTENSIONS.includes(fileObj.extension.toUpperCase())) {
       return "image/raw"
    }
-   if (fileObj.extension === ".mov") {
+   else if (fileObj.extension === ".mov") {
       return "video/mov"
    }
-   if (fileObj.extension === ".mod") {
+   else if (fileObj.extension === ".mkv") {
+      return "video/mkv"
+   }
+   else if (fileObj.extension === ".mod") {
       return "text/plain"
    }
    return fileObj.type
