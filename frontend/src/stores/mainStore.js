@@ -7,7 +7,6 @@ export const useMainStore = defineStore("main", {
       user: null,
       perms: null,
       settings: null,
-      webhooks: [],
       progress: 0,
       token: "",
       loading: false,
@@ -203,13 +202,15 @@ export const useMainStore = defineStore("main", {
       updateItems(value) {
          this.items.push(value)
       },
-
       updateItem(newItem) {
          let index1 = this.items.findIndex(item => item.id === newItem.id)
          let index2 = this.selected.findIndex(item => item.id === newItem.id)
 
          if (index1 !== -1) {
             this.items[index1] = newItem
+         }
+         else {
+            console.warn(`Not found for id ${newItem.id}`)
          }
          if (index2 !== -1) {
             this.selected[index2] = newItem

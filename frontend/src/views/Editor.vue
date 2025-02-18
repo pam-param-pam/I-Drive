@@ -48,6 +48,8 @@ import throttle from "lodash.throttle"
 import { encryptWithAesCtr, encryptWithChaCha20 } from "@/utils/encryption.js"
 import { encryptionMethod } from "@/utils/constants.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
+import { canUpload } from "@/api/user.js"
+import i18n from "@/i18n/index.js"
 
 
 export default {
@@ -215,9 +217,14 @@ export default {
 
       onSave: throttle(async function(event) {
          document.querySelector("#save-button").classList.add("loading")
-
+         let res = await canUpload(this.file.parent_id)
+         if (!res.can_upload) {
+            this.$toast.error(i18n.global.t("errors.notAllowedToUpload"))
+            return
+         }
          if (this.raw !== this.copyRaw) {
             let webhook = this.webhooks[0]
+            //todo handle errors and display then lol
             //todo generate new IV instead if reusing old ones
             let formData = new FormData()
             let content = this.raw

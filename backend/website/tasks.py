@@ -17,7 +17,7 @@ from .celery import app
 from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail
 from .utilities.Discord import discord
 from .utilities.constants import EventCode, cache
-from .utilities.errors import DiscordError
+from .utilities.errors import DiscordError, NoBotsError
 
 logger = get_task_logger(__name__)
 
@@ -320,9 +320,16 @@ def delete_unready_files():
 
 @app.task
 def delete_dangling_discord_files():
+    from .utilities.other import check_if_bots_exists
+
     deleted_attachments = defaultdict(int)
     users = User.objects.filter().all()
     for user in users:
+        try:
+            check_if_bots_exists(user)
+        except NoBotsError:
+            continue
+
         for batch in discord.fetch_messages(user):
             for message in batch:
                 attachments = message['attachments']

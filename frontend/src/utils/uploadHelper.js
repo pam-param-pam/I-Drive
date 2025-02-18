@@ -261,7 +261,7 @@ export function generateIv(fileObj) {
    } else if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
       iv = crypto.getRandomValues(new Uint8Array(12))
    } else {
-      throw Error("unable to match encryptionMethod")
+      throw Error(`unable to match encryptionMethod: ${fileObj.encryptionMethod}`)
    }
    return ivToBase64(iv)
 

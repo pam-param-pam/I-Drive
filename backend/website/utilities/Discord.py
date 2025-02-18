@@ -158,12 +158,12 @@ class Discord:
         response = self._make_bot_request(user, 'POST', url, headers=headers, json=payload)
         return response
 
-    def send_file(self, user, files: dict) -> httpx.Response:
+    def send_file(self, user, files: dict, json=None) -> httpx.Response:
         channel_id = self._get_channel_id(user)
 
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
 
-        response = self._make_bot_request(user, 'POST', url, files=files, timeout=None)
+        response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
 
         message = response.json()
         expiry = self._calculate_expiry(message)

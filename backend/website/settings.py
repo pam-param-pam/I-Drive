@@ -14,10 +14,10 @@ STATIC_URL = 'static/'
 SECRET_KEY = os.environ['I_DRIVE_BACKEND_SECRET_KEY']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTOCOL', 'https')
 
-is_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
+is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = is_env
+DEBUG = is_dev_env
 
 ALLOWED_HOSTS = ['*']  # todo
 
@@ -70,7 +70,7 @@ MIDDLEWARE = [
 CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
 
-prefix = 'http://' if is_env else 'https://'
+prefix = 'http://' if is_dev_env else 'https://'
 CORS_ALLOWED_ORIGINS = [
     f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
 ]

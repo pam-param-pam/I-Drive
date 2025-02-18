@@ -520,8 +520,8 @@ def auto_prefetch(file_obj: File, fragment_id: str) -> None:
         fragments_to_prefetch = mb_per_second
         if mb_per_second <= 1:
             fragments_to_prefetch = 1
-        elif mb_per_second > 5:
-            fragments_to_prefetch = 5
+        elif mb_per_second > 20:
+            fragments_to_prefetch = 20
     else:
         fragments_to_prefetch = 1
 

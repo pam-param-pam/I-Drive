@@ -11,12 +11,13 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files
-from .views.testViews import get_folder_password, folders_play
-from .views.uploadViews import create_file
+from .views.testViews import get_folder_password, folders_play, proxy_discord
+from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
     update_upload_destination, enable_bot, can_upload
 
 urlpatterns = [
+    path("proxy/discord", proxy_discord, name="discord_proxy"),
 
     path("zip", create_zip_model, name="create zip model"),
     path('stream/<signed_file_id>', stream_file, name="stream file"),
@@ -28,6 +29,7 @@ urlpatterns = [
     path("file/<file_id>", get_file_info, name="get file by file id"),
     path("file/preview/<signed_file_id>", get_preview, name="get preview by file id"),
 
+    path("file/thumbnail/create", create_thumbnail, name="create a thumbnail"),
     path("file/thumbnail/<signed_file_id>", get_thumbnail, name="get thumbnail by file id"),
     path("file/secrets/<file_id>", get_secrets, name="gets encryption key and iv"),
     path("file/video/position", update_video_position, name="update video position"),

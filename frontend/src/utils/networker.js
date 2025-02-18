@@ -47,7 +47,6 @@ discordInstance.interceptors.response.use(
       return response
    },
    function(error) {
-      if (error.config.onErrorCallback) error.config.onErrorCallback()
 
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {
@@ -58,10 +57,14 @@ discordInstance.interceptors.response.use(
             return retry(error, waitTime)
          }
       }
-      if ((!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502) {
+      else if ((!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false
+         return retry(error, 5000)
+      }
+      //handle discord fucking itself up
+      else if (error.response && error.response.status >= 500) {
          return retry(error, 5000)
       }
 

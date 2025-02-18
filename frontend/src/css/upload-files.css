@@ -6,13 +6,21 @@
   bottom: 0;
   transform: none;
   max-height: 55%;
+  max-width: 27em;
 }
 
+.upload-files .upload-info {
+  padding-right: 1em;
+  max-height: 12em;
+
+}
 .upload-files {
   position: relative; /* Ensure the z-index takes effect */
   z-index: 9995; /* Set this lower than the Toasts */
 }
-
+.upload-files h2{
+  padding-right: 1em;
+}
 .upload-files .file {
   margin-bottom: 8px;
 }
@@ -46,23 +54,32 @@
   padding: 0 1em 1em 1em;
 }
 
-.upload-files .card .card-title {
+.upload-files .card-title {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between; /* Ensures buttons stick to the right */
   font-size: 0.8em;
-  padding: 1em 1em 0;
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: var(--background); /* Ensure background color matches the rest of the card */
+  background-color: var(--background);
   box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+  padding: 1em 1em 0.2em !important;
+}
 
+.upload-files .action-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.upload-files.closed .card.floating {
+  border-radius: 10px 10px 0 0;
 }
 
 .upload-files.closed .card-title {
   font-size: 0.7em;
   padding: 0.5em 1em;
+  background-color: var(--surfacePrimary);
 }
 
 @media (max-width: 450px) {

@@ -237,8 +237,8 @@
       </div>
 
       <context-menu
-        :show="isContextMenuVisible"
-        :pos="contextMenuPos"
+        :show="contextMenuState.visible"
+        :pos="contextMenuState.pos"
         @hide="hideContextMenu"
       >
         <action
@@ -319,11 +319,18 @@
           @action="$emit('copyFileShareUrl')"
         />
         <action
-          v-if="headerButtons.tag"
+          v-show="headerButtons.tag && contextMenuState.advanced"
           id="tag"
           icon="sell"
           :label="$t('buttons.editTags')"
           show="EditTags"
+        />
+        <action
+          v-show="headerButtons.tag && contextMenuState.advanced && this.selected[0].type === 'video'"
+          id="thumbnail"
+          icon="image"
+          :label="$t('buttons.editThumbnail')"
+          show="EditThumbnail"
         />
       </context-menu>
 
@@ -370,8 +377,7 @@ export default {
          dragCounter: 0,
          itemWeight: 0,
          searchItemsFound: null,
-         contextMenuPos: {},
-         isContextMenuVisible: false,
+         contextMenuState: {"visible": false},
 
          //experimental
          tileWidth: 40,
@@ -516,14 +522,17 @@ export default {
          this.$emit("uploadInput", event)
       },
       showContextMenu(event, item) {
-         this.resetSelected() //todo make this work the same way listinItem click does
+         this.resetSelected()
          this.addSelected(item)
+         let advanced = event.ctrlKey || event.shiftKey
 
          let max_x_size = 200
          let max_y_size = 400
 
          let posX = event.clientX + 30
          let posY = event.clientY - 40
+
+         if (advanced) max_y_size = 450
 
          const viewportWidth = window.innerWidth
          const viewportHeight = window.innerHeight
@@ -536,15 +545,18 @@ export default {
             posY = viewportHeight - max_y_size
          }
 
-         this.contextMenuPos = {
+         this.contextMenuState.pos = {
             x: posX,
             y: posY
          }
 
-         this.isContextMenuVisible = true
+         this.contextMenuState.visible = true
+         this.contextMenuState.advanced = advanced
+
       },
       hideContextMenu() {
-         this.isContextMenuVisible = false
+         this.contextMenuState.visible = false
+         this.contextMenuState.advanced = false
       },
       keyEvent(event) {
          // If prompts are shown return

@@ -8,7 +8,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragment
+from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragment, UserPerms
 from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
@@ -82,8 +82,8 @@ def can_upload(request, folder_id: str):
 @handle_common_errors
 def users_me(request):
     user = request.user
-    settings = user.usersettings
-    perms = user.userperms
+    settings: UserSettings = user.usersettings
+    perms: UserPerms = user.userperms
     root = Folder.objects.get(owner=user, parent=None)
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
@@ -96,8 +96,8 @@ def users_me(request):
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
-                             "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp
-                             },
+                             "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp, "useProxy": settings.use_proxy
+                             }
                 }
 
     return JsonResponse(response, safe=False, status=200)
@@ -119,6 +119,7 @@ def update_settings(request):
     encryptionMethod = request.data.get('encryptionMethod')
     keepCreationTimestamp = request.data.get('keepCreationTimestamp')
     theme = request.data.get('theme')
+    useProxy = request.data.get('useProxy')
 
     settings = UserSettings.objects.get(user=request.user)
     if locale in ["pl", "en", "uwu"]:
@@ -144,6 +145,8 @@ def update_settings(request):
         settings.encryption_method = encryptionMethod
     if theme in ["dark", "light"]:
         settings.theme = theme
+    if isinstance(useProxy, bool):
+        settings.use_proxy = useProxy
 
     settings.save()
     return HttpResponse(status=204)

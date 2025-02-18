@@ -1,6 +1,6 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { attachmentType, encryptionMethod, uploadStatus } from "@/utils/constants.js"
+import { attachmentType, encryptionMethod, fileUploadStatus, uploadState } from "@/utils/constants.js"
 import {
    generateIv,
    generateKey,
@@ -13,8 +13,9 @@ import {
    roundUpTo64
 } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
-import { discordInstance } from "@/utils/networker.js"
+import { backendInstance, discordInstance } from "@/utils/networker.js"
 import { useToast } from "vue-toastification"
+import axios from "axios"
 
 const toast = useToast()
 
@@ -43,8 +44,7 @@ export async function* prepareRequests() {
       if (isAudioFile(queueFile)) {
          try {
             thumbnail = await getAudioCover(queueFile)
-         }
-         catch (e) {
+         } catch (e) {
             toast.warning("Couldn't get cover for: " + queueFile.fileObj.name)
             console.warn(e)
          }
@@ -53,7 +53,7 @@ export async function* prepareRequests() {
       if (isVideoFile(queueFile)) {
          try {
             let data = await getVideoCover(queueFile)
-            let duration  = data.duration
+            let duration = data.duration
             thumbnail = data.thumbnail
             queueFile.fileObj.duration = Math.round(duration)
 
@@ -146,7 +146,15 @@ export async function* prepareRequests() {
 
 export async function uploadRequest(request) {
    const uploadStore = useUploadStore()
+   let mainStore = useMainStore()
+
    let attachmentName = uploadStore.attachmentName
+
+   if (uploadStore.state === uploadState.paused) {
+      uploadStore.addPausedRequest(request)
+      return
+   }
+   let cancelTokenSource = axios.CancelToken.source()
 
    let attachmentJson = []
    let fileFormList = new FormData()
@@ -154,7 +162,7 @@ export async function uploadRequest(request) {
       let attachment = request.attachments[i]
 
       let encryptedBlob = await encrypt(attachment)
-      uploadStore.setStatus(attachment.fileObj.frontendId, uploadStatus.uploading)
+      uploadStore.setStatus(attachment.fileObj.frontendId, fileUploadStatus.uploading)
 
       fileFormList.append(`files[${i}]`, encryptedBlob, attachmentName)
       attachmentJson.push({
@@ -166,19 +174,45 @@ export async function uploadRequest(request) {
 
 
    let bytesUploaded = 0
-   let discordResponse = await discordInstance.post(request.webhook.url, fileFormList, {
+   let startTime = Date.now()
+
+   uploadStore.addCancelToken(request.id, cancelTokenSource)
+   let instance
+   let url
+   if (mainStore.settings.useProxy) {
+      url = "proxy/discord"
+      instance = backendInstance
+   }
+   else {
+      url = request.webhook.url
+      instance = discordInstance
+   }
+
+   let discordResponse = await instance.post(url, fileFormList, {
       headers: {
          "Content-Type": "multipart/form-data"
       },
       onUploadProgress: function(progressEvent) {
          bytesUploaded = progressEvent.loaded
+
+         if (!progressEvent.rate) {
+            let elapsedTime = (Date.now() - startTime) / 1000
+            progressEvent.rate = bytesUploaded / elapsedTime / 20 //todo fix this
+         }
          uploadStore.onUploadProgress(request, progressEvent)
       },
-      onErrorCallback: () => {
-         uploadStore.onUploadError(request, bytesUploaded)
-      }
-   })
 
+      cancelToken: cancelTokenSource.token
+
+   }).catch(err => {
+      if(axios.isCancel(err)) {
+         uploadStore.addPausedRequest(request)
+         uploadStore.decrementRequests()
+
+      }
+      uploadStore.onUploadError(request, bytesUploaded)
+      throw err
+   })
    await afterUploadRequest(request, discordResponse)
 }
 

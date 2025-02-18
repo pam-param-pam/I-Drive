@@ -1,7 +1,7 @@
 import { defineStore } from "pinia"
 import { prepareRequests, uploadRequest } from "@/utils/upload.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { attachmentType, uploadStatus } from "@/utils/constants.js"
+import { attachmentType, fileUploadStatus, uploadState } from "@/utils/constants.js"
 import buttons from "@/utils/buttons.js"
 import { useToast } from "vue-toastification"
 import { Uploader } from "@/utils/Uploader.js"
@@ -25,7 +25,7 @@ export const useUploadStore = defineStore("upload2", {
       progressMap: new Map(),
 
       //never finished
-      axiosRequests: new Map(),
+      axiosCancelMap: new Map(),
       pausedFiles: [],
 
       //simply dumb
@@ -39,8 +39,11 @@ export const useUploadStore = defineStore("upload2", {
       //experimental
       backendState: new Map(),
       finishedFiles: [],
-      finished: false
+      finished: false,
 
+      pausedRequests: [],
+
+      state: uploadState.idle
 
    }),
 
@@ -57,7 +60,7 @@ export const useUploadStore = defineStore("upload2", {
          return uploadSpeed
       },
       filesInUpload() {
-
+         // return [{"name": "name", "status": "uploading"}]
          return this.filesUploading
             .sort((a, b) => b.progress - a.progress)
             .slice(0, 10)
@@ -75,6 +78,7 @@ export const useUploadStore = defineStore("upload2", {
          return totalQueueSize + remainingUploadSize
       },
       filesInUploadCount() {
+         // return 1
          let queue = this.queue.length
          let filesUploading = this.filesUploading.length
 
@@ -82,13 +86,16 @@ export const useUploadStore = defineStore("upload2", {
 
       },
       progress() {
-         return 50
+         return 0
       }
 
    },
 
    actions: {
       async startUpload(type, folderContext, filesList) {
+         // window.addEventListener("beforeunload", beforeUnload)
+
+         this.state = uploadState.uploading
 
          let res = await canUpload(folderContext)
          if (!res.can_upload) {
@@ -96,16 +103,15 @@ export const useUploadStore = defineStore("upload2", {
             return
          }
 
-
          this.uploader.processNewFiles(type, folderContext, filesList, res.lockFrom)
          //todo NotOptimizedForSmallFiles
 
       },
 
       async processUploads() {
-         console.log("called proccess Uploads")
          const mainStore = useMainStore()
-         let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests
+         let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests &&
+            (this.state === uploadState.uploading || this.state === uploadState.idle)
 
          if (!canProcess) return
 
@@ -114,17 +120,22 @@ export const useUploadStore = defineStore("upload2", {
             this.finished = false
 
          }
-         let generated = await this.requestGenerator.next()
-
-
-         if (generated.done) {
-            console.info("The request generator is finished.")
-            this.requestGenerator = null
-            this.finished = true
-            return
+         let request
+         if (this.pausedRequests.length > 0) {
+            request = this.pausedRequests[0]
+            this.pausedRequests.shift() // Remove the request
+         } else {
+            let generated = await this.requestGenerator.next()
+            if (generated.done) {
+               console.info("The request generator is finished.")
+               this.requestGenerator = null
+               this.finished = true
+               return
+            }
+            request = generated.value
+            request.id = uuidv4()
          }
-         let request = generated.value
-         request.id = uuidv4()
+
          this.concurrentRequests++
 
          uploadRequest(request)
@@ -142,7 +153,7 @@ export const useUploadStore = defineStore("upload2", {
          let file = this.queue[0]
 
          let fileObj = file.fileObj
-         fileObj.status = uploadStatus.preparing
+         fileObj.status = fileUploadStatus.preparing
          fileObj.progress = 0
 
          this.filesUploading.push(fileObj)
@@ -153,13 +164,14 @@ export const useUploadStore = defineStore("upload2", {
       setStatus(frontendId, status) {
          let file = this.filesUploading.find(item => item.frontendId === frontendId)
          if (file) {
+            if (status === fileUploadStatus.uploaded && this.state === uploadState.paused) return
             file.status = status
          } else {
             console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
       },
       finishFileUpload(frontendId) {
-         this.setStatus(frontendId, uploadStatus.uploaded)
+         this.setStatus(frontendId, fileUploadStatus.uploaded)
          setTimeout(() => {
             //remove file from filesUploading
             this.filesUploading = this.filesUploading.filter(item => item.frontendId !== frontendId)
@@ -230,17 +242,49 @@ export const useUploadStore = defineStore("upload2", {
       },
       decrementRequests() {
          this.concurrentRequests--
-
       },
       abortAll() {
 
+      },
+      abortFile(frontendId) {
+
+      },
+      pauseAll() {
+         this.state = uploadState.paused
+         this.filesUploading.forEach(file => file.status = fileUploadStatus.paused)
+         for (let sourceList of this.axiosCancelMap.values()) {
+            for (let source of sourceList) {
+               source.cancel()
+            }
+         }
+      },
+      resumeAll() {
+         this.state = uploadState.uploading
+         this.processUploads()
+
+      },
+      addPausedRequest(request) {
+         const requestExists = this.pausedRequests.some(req => req.id === request.id)
+
+         if (!requestExists) {
+            this.pausedRequests.push(request) // Add the request if it doesn't exist
+         } else {
+            console.warn("Request with this ID already exists.")
+         }
+      },
+      addCancelToken(frontendId, cancelToken) {
+         if (!this.axiosCancelMap.has(frontendId)) {
+            this.axiosCancelMap.set(frontendId, [])
+         }
+         console.log(cancelToken)
+         this.axiosCancelMap.get(frontendId).push(cancelToken)
       },
       finishUpload() {
          this.requestGenerator = null
          this.queue = []
          this.filesUploading = []
-         this.pausedFiles = []
-         this.axiosRequests = new Map()
+         this.pausedRequests = []
+         this.axiosCancelMap = new Map()
          this.createdFolders = new Map()
          this.uploadSpeedMap = new Map()
          this.progressMap = new Map()
@@ -257,11 +301,7 @@ export const useUploadStore = defineStore("upload2", {
          toast.info("errors.notImplemented")
       },
       cancelFile(frontendId) {
-         let abortController = this.axiosRequests.get("blabla")
-         if (abortController) {
-            abortController.abort()
-            console.log("Upload request canceled by user.")
-         }
+
       },
       addToWebhooks(webhook) {
          this.webhooks.push(webhook)

@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "chooseFile": "Kliknij by wybrać nowy plik",
     "imSure": "Jestem pewien, chcę kontynować",
     "removeTag": "Usuń tag",
     "addTag": "Dodaj tag",
@@ -47,7 +48,9 @@
     "toggleSidebar": "Pokaż/ukryj panel boczny",
     "unlock": "Odblokuj",
     "update": "Aktualizuj",
-    "upload": "Prześlij"
+    "upload": "Prześlij",
+    "editThumbnail": "Zmień podgląd"
+
   },
   "errors": {
     "notAllowedToUpload": "Nie możesz wysyłać plików, uzupełnij ustawienia discorda najpierw",
@@ -75,7 +78,9 @@
     "serviceUnavailable": "Serwis niedostępny",
     "unexpectedDiscordResponse": "Discord wysłał błędną odpowiedż",
     "noConnectionDetails": "Nie udało sie polączyć z serwerem, sprawdź swoje polączenie.",
-    "noConnection": "Brak internetu"
+    "noConnection": "Brak internetu",
+    "badGateway": "Serwer nie odpowiada"
+
   },
   "files": {
     "clear": "Wyczyść",
@@ -133,6 +138,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "editThumbnail": "Zmień podgląd",
     "orderBy": "Sortuj po",
     "orderByName": "Nazwie",
     "orderByCreatedAt": "Datcie utworzenia",
@@ -220,7 +226,9 @@
     "unlockFolder": "Odblokuj Folder",
     "upload": "Prześlij",
     "uploadFiles": "Przesyłanie {amount} plików...",
-    "uploadMessage": "Proszę wybrać metodę przesyłania"
+    "uploadMessage": "Proszę wybrać metodę przesyłania",
+    "thumbnailUploadFailed": "Nie udało sie przesłać nowego podglądu"
+
   },
   "search": {
     "close": "Zamknij",
@@ -236,6 +244,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "useProxy": "Używaj proxy do przesyłania plików",
     "attachmentName": "Nazwa plików na discordzie",
     "webhooks": "Webhooki",
     "bots": "Boty",

@@ -277,6 +277,8 @@ class UserSettings(models.Model):
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
     theme = models.CharField(default="dark", max_length=20)
+    use_proxy = models.BooleanField(default=False)
+
     history = HistoricalRecords()
 
     def __str__(self):

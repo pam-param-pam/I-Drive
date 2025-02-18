@@ -20,7 +20,7 @@ import router from "@/router/index.js"
 
 const errors = {
    0: {
-      icon: "cloud_off",
+      icon: "wifi_off",
       message: "errors.connection"
    },
    400: {
@@ -46,6 +46,10 @@ const errors = {
    500: {
       icon: "error_outline",
       message: "errors.internal"
+   },
+   502: {
+      icon: "cloud_alert",
+      message: "errors.badGateway"
    },
    1000: {
       icon: "error_outline",

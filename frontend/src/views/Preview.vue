@@ -98,7 +98,7 @@
 
         <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl" />
         <div v-else-if="file?.type === 'audio' && file?.size > 0" style="height: 100%">
-          <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover"/>
+          <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
           <audio
             ref="player"
             :src="fileSrcUrl"
@@ -215,7 +215,7 @@ export default {
          rendition: null,
          toc: [],
          fontSize: 100,
-         lastSentVideoPosition: 0,
+         lastSentVideoPosition: 0
       }
    },
    computed: {
@@ -303,36 +303,38 @@ export default {
 
          if (!this.file) {
             try {
-              if (this.isInShareContext) {
-                    let res = await getShare(this.token, this.folderId)
-                    this.shareObj = res
-                    this.setItems(res.share)
+               if (this.isInShareContext) {
+                  let res = await getShare(this.token, this.folderId)
+                  this.shareObj = res
+                  let items = res.share
+                  for (let i = 0; i < items.length; i++) {
+                     if (items[i].id === this.fileId) {
+                        this.file = items[i]
+                     }
+                  }
+                  this.setItems(res.share)
 
-                    for (let i = 0; i < this.items.length; i++) {
-                       if (this.items[i].id === this.fileId) {
-                          this.file = this.items[i]
-                       }
-                    }
-              } else {
+               } else {
                   this.file = await getFile(this.fileId, this.lockFrom)
                   if (!this.currentFolder) {
                      let res = await getItems(this.file.parent_id, this.file.lockFrom)
                      this.setCurrentFolderData(res)
                   }
-              }
+               }
             } catch (error) {
-                  if (error.code === "ERR_CANCELED") return
-                  this.setError(error)
+               if (error.code === "ERR_CANCELED") return
+               this.setError(error)
             } finally {
-              this.setLoading(false)
+               this.setLoading(false)
             }
          }
+         console.log(this.file)
          this.addSelected(this.file)
          this.setLastItem(this.file)
          await this.prefetch()
 
 
-         if (this.file.type === "video" && this.$refs.video) {
+         if (this.file?.type === "video" && this.$refs.video) {
             this.$refs.video.currentTime = this.file.video_position
          }
 
@@ -355,7 +357,7 @@ export default {
             prompt: "rename",
             confirm: (name) => {
                this.file.name = name
-            },
+            }
          })
 
       },
@@ -398,7 +400,7 @@ export default {
          }
       },
       async prefetch() {
-        //todo
+         //todo
       },
       key(event) {
 

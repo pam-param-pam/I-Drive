@@ -1,3 +1,5 @@
+import os
+import traceback
 from functools import wraps
 
 from django.core.exceptions import ValidationError
@@ -11,6 +13,9 @@ from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
 from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
+
+is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
+
 
 def check_signed_url(view_func):
     @wraps(view_func)
@@ -106,9 +111,13 @@ def handle_common_errors(view_func):
             return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="Invalid parent, recursion detected."), status=400)
 
         except KeyError:
+            if is_dev_env:
+                traceback.print_exc()
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
 
         except (ValueError, TypeError):
+            if is_dev_env:
+                traceback.print_exc()
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
 
         except OverflowError:

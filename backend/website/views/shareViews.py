@@ -166,7 +166,7 @@ def share_view_stream(request, token: str, file_id: str):
     signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
     # Extremely hacky way,
-    # we do this instead of redirects to make this view is not accessible immediately after the share has been deleted
+    # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
     # request is changed into rest's framework's request with the decorators,
     # so wee need to access the django's request using _request
     request = request._request

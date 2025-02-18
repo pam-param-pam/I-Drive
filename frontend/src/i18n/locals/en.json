@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "chooseFile": "Click to choose a new file",
     "imSure": "I'm sure and want to continue",
     "removeTag": "Remove tag",
     "addTag": "Add tag",
@@ -47,7 +48,8 @@
     "toggleSidebar": "Toggle sidebar",
     "unlock": "Unlock",
     "update": "Update",
-    "upload": "Upload"
+    "upload": "Upload",
+    "editThumbnail": "Edit thumbnail"
   },
   "errors": {
     "notAllowedToUpload": "You are not allowed to upload yet, first fill discord settings.",
@@ -75,7 +77,8 @@
     "serviceUnavailable": "Service Unavailable",
     "unexpectedDiscordResponse": "Unexpected discord response",
     "noConnectionDetails": "Couldn't connect to the server, check your internet connection.",
-    "noConnection": "No internet connection"
+    "noConnection": "No internet connection",
+    "badGateway": "Bad gateway, server doesn't respond"
   },
   "files": {
     "clear": "Clear",
@@ -133,6 +136,10 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "pausedFilesUpload": "Paused upload of {amount} files",
+    "pausingFilesUpload": "Pausing upload of {amount} files",
+    "editThumbnail": "Edit Thumbnail",
+    "selectThumbnail": "Select a new thumbnail",
     "orderBy": "Order by",
     "orderByName": "name",
     "orderByCreatedAt": "time of creation",
@@ -229,7 +236,8 @@
     "enterLimitToFolders": "Enter folder's ids, separate with ,",
     "enterExcludeFolders": "Enter folder's ids, separate with ,",
     "enterProperty": "e.g duration, size",
-    "enterRange": "> 50, 10 - 15, < 200"
+    "enterRange": "> 50, 10 - 15, < 200",
+    "thumbnailUploadFailed": "Failed to upload a new thumbnail"
   },
   "search": {
     "close": "Close",
@@ -245,6 +253,7 @@
     "video": "Video"
   },
   "settings": {
+    "useProxy": "Use proxy for upload",
     "changePassword": "Change password",
     "attachmentName": "Discord's attachment name",
     "webhooks": "Webhooks",
@@ -319,6 +328,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "thumbnailFileTooBig": "File must be smaller than {max}",
+    "thumbnailInvalid": "Not a valid image file",
     "botEnabled": "Bot enabled!",
     "uploadDestinationUpdated": "Saved!",
     "botRemovedForInsufficientPerms": "Bot: {name} was removed due to lack of required permission.",
@@ -367,6 +378,7 @@
     "trashName": "Trash"
   },
   "uploadFile": {
+    "pause": "Pause",
     "abortAll": "Abort all",
     "creating": "Creating...",
     "encrypting": "encrypting...",

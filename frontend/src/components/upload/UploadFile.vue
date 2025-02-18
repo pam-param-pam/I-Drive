@@ -4,7 +4,7 @@
     :class="{
       'failed-border': file.status === uploadStatus.failed,
       'success-border': file.status === uploadStatus.uploaded,
-      'paused-border': file.status === uploadStatus.paused,
+      'paused-border': file.status === uploadStatus.paused || file.status === uploadStatus.pausing,
       'uploading-border': file.status === uploadStatus.uploading,
       'shake-animation': isShaking,
     }"
@@ -18,23 +18,23 @@
       </div>
 
       <span class="file-name">{{ file.name }}</span>
-      <div class="button-group">
-        <button
-          v-if="showPauseButton"
-          class="pause-button"
-          @click="togglePause">
-          <i class="material-icons">{{ file.status === 'paused' ? 'play_arrow' : 'pause' }}</i>
-        </button>
-        <button
-          v-if="showCancelButton"
-          class="cancel-button"
-          @mouseover="startShake"
-          @mouseleave="stopShake"
-          @click="cancel"
-        >
-          <i class="material-icons">close</i>
-        </button>
-      </div>
+<!--      <div class="button-group">-->
+<!--        <button-->
+<!--          v-if="showPauseButton"-->
+<!--          class="pause-button"-->
+<!--          @click="togglePause">-->
+<!--          <i class="material-icons">{{ file.status === 'paused' ? 'play_arrow' : 'pause' }}</i>-->
+<!--        </button>-->
+<!--        <button-->
+<!--          v-if="showCancelButton"-->
+<!--          class="cancel-button"-->
+<!--          @mouseover="startShake"-->
+<!--          @mouseleave="stopShake"-->
+<!--          @click="cancel"-->
+<!--        >-->
+<!--          <i class="material-icons">close</i>-->
+<!--        </button>-->
+<!--      </div>-->
     </div>
 
     <!-- Lower -->
@@ -60,10 +60,7 @@
       <span v-if="file.status === uploadStatus.paused">
         <b class="paused">{{ $t('uploadFile.paused') }}</b>
       </span>
-      <span v-if="file.status === uploadStatus.pausing">
-        <b class="pausing">{{ $t('uploadFile.pausing') }}</b>
-      </span>
-      <div class="fileitem-progress" v-if="file.status === uploadStatus.uploading">
+      <div class="fileitem-progress" v-if="file.status === uploadStatus.uploading || file.status === uploadStatus.pausing">
         <ProgressBar
           :progress="file.progress"
         />
@@ -84,7 +81,7 @@
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { mapActions, mapState } from "pinia"
 import {useUploadStore} from "@/stores/uploadStore.js";
-import { uploadStatus } from "@/utils/constants.js"
+import { fileUploadStatus } from "@/utils/constants.js"
 import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
@@ -104,34 +101,34 @@ export default {
          return "audio"
       },
       uploadStatus() {
-         return uploadStatus
+         return fileUploadStatus
       },
 
       ...mapState(useUploadStore, ['isInternet']),
       ...mapState(useMainStore, ['user']),
       showPauseButton() {
-         return (this.file.status === uploadStatus.uploading ||
-            this.file.status === uploadStatus.resuming ||
-            this.file.status === uploadStatus.pausing ||
-            this.file.status === uploadStatus.paused) &&
+         return (this.file.status === fileUploadStatus.uploading ||
+            this.file.status === fileUploadStatus.resuming ||
+            this.file.status === fileUploadStatus.pausing ||
+            this.file.status === fileUploadStatus.paused) &&
             this.isInternet && this.file.size > this.user.maxDiscordMessageSize
       },
       showCancelButton() {
-         return this.file.status === uploadStatus.uploading && this.isInternet && this.file.size > this.user.maxDiscordMessageSize
+         return this.file.status === fileUploadStatus.uploading && this.isInternet && this.file.size > this.user.maxDiscordMessageSize
       }
    },
    methods: {
       ...mapActions(useUploadStore, ['pauseFile', 'resumeFile', 'cancelFile']),
 
       togglePause() {
-         if (this.file.status === uploadStatus.paused) {
+         if (this.file.status === fileUploadStatus.paused) {
             this.resumeFile(this.file.frontendId)
-         } else if (this.file.status === uploadStatus.uploading) {
+         } else if (this.file.status === fileUploadStatus.uploading) {
             this.pauseFile(this.file.frontendId)
          }
       },
       cancel() {
-         if (!(this.file.status === uploadStatus.uploading)) return
+         if (!(this.file.status === fileUploadStatus.uploading)) return
          this.cancelFile(this.file.frontendId)
 
       },

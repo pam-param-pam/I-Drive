@@ -37,6 +37,7 @@ import {useMainStore} from "@/stores/mainStore.js"
 import Sidebar from "@/components/sidebar/Sidebar.vue"
 import EditTags from "@/components/prompts/EditTags.vue"
 import UploadDestinationWarning from "@/components/prompts/UploadDestinationWarning.vue"
+import EditThumbnail from "@/components/prompts/EditThumbnail.vue"
 
 export default {
    name: "prompts",
@@ -61,6 +62,7 @@ export default {
       ResetFolderPassword,
       EditTags,
       UploadDestinationWarning,
+      EditThumbnail,
    },
    created() {
       window.addEventListener("keydown", (event) => {

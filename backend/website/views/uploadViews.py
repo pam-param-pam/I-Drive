@@ -1,5 +1,4 @@
 import base64
-import math
 from datetime import datetime
 
 from django.db.utils import IntegrityError
@@ -237,4 +236,50 @@ def create_file(request):
         file_obj.save()
 
         return HttpResponse(status=204)
+
+
+@api_view(['POST'])
+@throttle_classes([MyUserRateThrottle])
+@permission_classes([IsAuthenticated & CreatePerms])
+@handle_common_errors
+def create_thumbnail(request):
+    file_id = request.data['file_id']
+    message_id = request.data['message_id']
+    attachment_id = request.data['attachment_id']
+    size = request.data['size']
+    webhook_id = request.data['webhook']
+
+    iv = request.data.get('iv')
+    key = request.data.get('key')
+
+    if iv:
+        iv = base64.b64decode(iv)
+    if key:
+        key = base64.b64decode(key)
+
+    file_obj = get_file(file_id)
+    check_resource_perms(request, file_obj)
+
+    webhook = get_webhook(request, webhook_id)
+
+    if file_obj.thumbnail:
+        file_obj.thumbnail.delete()
+
+    thumbnail_obj = Thumbnail(
+        file=file_obj,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        size=size,
+        key=key,
+        iv=iv,
+        webhook=webhook
+
+    )
+    thumbnail_obj.save()
+    file_obj.remove_cache()
+
+    file_dict = create_file_dict(file_obj)
+    send_event(file_obj.owner.id, EventCode.ITEM_UPDATE, request.request_id, file_dict)
+
+    return HttpResponse(status=204)
 

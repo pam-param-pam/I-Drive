@@ -14,7 +14,11 @@ export async function getFile(file_id, lockFrom) {
    return response.data
 
 }
-
+export async function createThumbnail(data) {
+   let url = `/file/thumbnail/create`
+   let response = await backendInstance.post(url, data)
+   return response.data
+}
 
 export async function createFile(data, password) {
    let url = `/file/create`

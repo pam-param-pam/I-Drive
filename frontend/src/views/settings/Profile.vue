@@ -24,6 +24,10 @@
             <input type="checkbox" v-model="keepCreationTimestamp"/>
             {{ $t("settings.keepCreationTimestamp") }}
           </p>
+          <p>
+            <input type="checkbox" v-model="useProxy"/>
+            {{ $t("settings.useProxy") }}
+          </p>
           <div>
             <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
             <input
@@ -126,7 +130,8 @@ export default {
          locale: "",
          concurrentUploadRequests: 4,
          encryptionMethod: null,
-         keepCreationTimestamp: false
+         keepCreationTimestamp: false,
+         useProxy: false,
 
       }
    },
@@ -155,6 +160,7 @@ export default {
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
       this.encryptionMethod = this.settings.encryptionMethod
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
+      this.useProxy = this.settings.useProxy
 
    },
    methods: {
@@ -179,7 +185,7 @@ export default {
       }, 1000),
 
       saveSettings: throttle(async function (event) {
-         const data = {
+         let data = {
             locale: this.locale,
             subfoldersInShares: this.subfoldersInShares,
             hideLockedFolders: this.hideLockedFolders,
@@ -187,7 +193,7 @@ export default {
             concurrentUploadRequests: this.concurrentUploadRequests,
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
-
+            useProxy: this.useProxy,
          }
 
          await updateSettings(data)
