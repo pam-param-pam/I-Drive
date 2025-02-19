@@ -12,10 +12,6 @@
   align-items: flex-start;
 }
 
-body.rtl .dashboard .row {
-  margin-right: 16em;
-}
-
 .dashboard .row .column {
   display: flex;
   width: 50%;
@@ -67,10 +63,6 @@ p code {
   display: flex;
   flex-grow: 1;
   border-bottom: 2px solid rgba(0, 0, 0, 0.05);
-}
-
-body.rtl #nav .wrapper {
-  margin-right: 16em;
 }
 
 .dashboard #nav ul {
@@ -190,11 +182,6 @@ table tr>*:last-child {
 
 .card .card-title>*:first-child {
   margin-right: auto;
-}
-
-body.rtl .card .card-title>*:first-child {
-  margin-right: 0;
-  text-align: right;
 }
 
 .card>div {

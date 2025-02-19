@@ -9,19 +9,20 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 const toast = useToast()
 
 export const cancelTokenMap = new Map()
+
 function retry(error, delay, retries = 0, maxRetries = 5) {
    if (retries >= maxRetries) {
-      console.error(`Max retries reached: ${maxRetries}. Aborting.`);
-      return Promise.reject(error);
+      console.error(`Max retries reached: ${maxRetries}. Aborting.`)
+      return Promise.reject(error)
    }
 
-   console.log(`Retrying request after ${delay} milliseconds. Attempt #${retries + 1} of ${maxRetries}`);
+   console.log(`Retrying request after ${delay} milliseconds. Attempt #${retries + 1} of ${maxRetries}`)
    return new Promise(resolve => setTimeout(resolve, delay))
-      .then(() => discordInstance(error.config))
+      .then(() => uploadInstance(error.config))
       .catch(err => {
-         console.error(`Retry attempt #${retries + 1} failed with error: ${err.message}`);
-         return retry(error, delay, retries + 1, maxRetries);
-      });
+         console.error(`Retry attempt #${retries + 1} failed with error: ${err.message}`)
+         return retry(error, delay, retries + 1, maxRetries)
+      })
 }
 
 export const backendInstance = axios.create({
@@ -32,15 +33,14 @@ export const backendInstance = axios.create({
    }
 })
 
-export const discordInstance = axios.create({
-   headers: {
-      "Content-Type": "application/json"
-   }
+export const uploadInstance = axios.create({
+   timeout: null,
+   headers: { "Content-Type": "multipart/form-data" }
 })
 
 
 // Add a response interceptor
-discordInstance.interceptors.response.use(
+uploadInstance.interceptors.response.use(
    function(response) {
       const uploadStore = useUploadStore()
       uploadStore.isInternet = true
@@ -56,8 +56,7 @@ discordInstance.interceptors.response.use(
             console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
             return retry(error, waitTime)
          }
-      }
-      else if ((!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502) {
+      } else if ((!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502) {
          // no internet!
          const uploadStore = useUploadStore()
          uploadStore.isInternet = false

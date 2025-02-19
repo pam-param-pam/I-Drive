@@ -66,7 +66,6 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["settings", "currentPromptName"]),
-
    },
    methods: {
       ...mapActions(useMainStore, ["showHover", "closeHover"]),

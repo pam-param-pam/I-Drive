@@ -1,50 +1,51 @@
 <template>
-  <div class="breadcrumbs">
-    <component
-      :is="element"
-      :to="base || ''"
-      :aria-label="$t('files.home')"
-      :title="$t('files.home')"
-      draggable="false"
-      @drop="drop(user?.root)"
-      @dragenter="dragEnter(user?.root)"
-      @dragleave="dragLeave"
-      @dragover.prevent
-      :class="breadcrumbClass(user?.root)"
-    >
-      <i class="material-icons">home</i>
-    </component>
-
-    <span v-for="folder in breadcrumbs" :key="folder.id">
-      <span class="chevron">
-        <i class="material-icons">keyboard_arrow_right</i>
-      </span>
+   <div class="breadcrumbs">
       <component
-        draggable="false"
-        :is="element"
-        :ref="folder.id"
-        :to="base + `/` + folder.id"
-        @drop="drop(folder.id)"
-        @dragenter="dragEnter(folder.id)"
-        @dragleave="dragLeave"
-        @dragover.prevent
-        :class="breadcrumbClass(folder.id)"
+         :is="element"
+         :aria-label="$t('files.home')"
+         :class="breadcrumbClass(user?.root)"
+         :title="$t('files.home')"
+         :to="base || ''"
+         draggable="false"
+         @dragenter="dragEnter(user?.root)"
+         @dragleave="dragLeave"
+         @drop="drop(user?.root)"
+         @dragover.prevent
       >
-        {{ folder.name }}
+         <i class="material-icons">home</i>
       </component>
-    </span>
-  </div>
+
+      <span v-for="folder in breadcrumbs" :key="folder.id">
+         <span class="chevron">
+            <i class="material-icons">keyboard_arrow_right</i>
+         </span>
+         <component
+            :is="element"
+            :ref="folder.id"
+            :class="breadcrumbClass(folder.id)"
+            :to="base + `/` + folder.id"
+            draggable="false"
+            @dragenter="dragEnter(folder.id)"
+            @dragleave="dragLeave"
+            @drop="drop(folder.id)"
+            @dragover.prevent
+         >
+            {{ folder.name }}
+         </component>
+      </span>
+   </div>
 </template>
 
 <script>
-import { isMobile } from "@/utils/common.js"
-import { useMainStore } from "@/stores/mainStore.js"
-import { mapState } from "pinia"
-import { move } from "@/api/item.js"
+import { isMobile } from '@/utils/common.js'
+import { useMainStore } from '@/stores/mainStore.js'
+import { mapState } from 'pinia'
+import { move } from '@/api/item.js'
 
 export default {
-   name: "breadcrumbs",
-   props: ["base", "folderList"],
+   name: 'breadcrumbs',
+
+   props: ['base', 'folderList'],
 
    data() {
       return {
@@ -53,10 +54,10 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["selected", "user"]),
+      ...mapState(useMainStore, ['selected', 'user']),
 
       element() {
-         return "router-link"
+         return 'router-link'
       },
 
       maxBreadcrumbs() {
@@ -69,7 +70,7 @@ export default {
             while (folders.length !== this.maxBreadcrumbs) {
                folders.shift()
             }
-            folders[0].name = "..."
+            folders[0].name = '...'
          }
          return folders
       },
@@ -91,16 +92,16 @@ export default {
       },
 
       canDrop(folder_id) {
-         return this.selected[0]?.parent_id !== folder_id && this.$route.name === "Files"
+         return this.selected[0]?.parent_id !== folder_id && this.$route.name === 'Files'
       },
 
       async drop(folder_id) {
          if (!this.canDrop(folder_id) || this.selectedCount === 0) return
 
          let listOfIds = this.selected.map((obj) => obj.id)
-         let res = await move({ "ids": listOfIds, "new_parent_id": folder_id })
+         let res = await move({ ids: listOfIds, new_parent_id: folder_id })
 
-         let message = this.$t("toasts.movingItems")
+         let message = this.$t('toasts.movingItems')
          this.$toast.info(message, {
             timeout: null,
             id: res.task_id
@@ -110,9 +111,8 @@ export default {
 
       breadcrumbClass(folderId) {
          return {
-            "breadcrumb-hovered": this.draggedOverFolderId === folderId,
-            "breadcrumb-faded":
-               this.draggedOverFolderId && this.draggedOverFolderId !== folderId
+            'breadcrumb-hovered': this.draggedOverFolderId === folderId,
+            'breadcrumb-faded': this.draggedOverFolderId && this.draggedOverFolderId !== folderId
          }
       }
    }
@@ -120,18 +120,18 @@ export default {
 </script>
 <style scoped>
 .breadcrumb-hovered {
- font-weight: bold;
- opacity: 1;
- transition: all 0.2s ease-in-out;
+   font-weight: bold;
+   opacity: 1;
+   transition: all 0.2s ease-in-out;
 }
 
 .breadcrumb-hovered i.material-icons {
- font-size: 32px;
- text-shadow: 0 0 2px black;
+   font-size: 32px;
+   text-shadow: 0 0 2px black;
 }
 
 .breadcrumb-faded {
- opacity: 0.5;
- transition: opacity 0.2s ease-in-out;
+   opacity: 0.5;
+   transition: opacity 0.2s ease-in-out;
 }
 </style>

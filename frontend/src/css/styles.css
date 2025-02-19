@@ -343,11 +343,6 @@ main .spinner .bounce2 {
   padding: 0 1em;
 }
 
-/*** RTL - flip and position arrow of path ***/
-body.rtl .breadcrumbs .chevron {
-  transform: scaleX(-1) translateX(16em);
-}
-
 #editor-container .breadcrumbs span {
   font-size: 0.75rem;
 }

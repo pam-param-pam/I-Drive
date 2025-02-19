@@ -171,6 +171,18 @@ class Discord:
 
         return response
 
+    def send_webhook_file(self, user, webhook, files: dict, json=None) -> httpx.Response:
+        channel_id = self._get_channel_id(user)
+        url = f'{webhook}/channels/{channel_id}/messages'
+
+        response = self._make_webhook_request(user, 'POST', url, files=files, json=json, timeout=None)
+
+        message = response.json()
+        expiry = self._calculate_expiry(message)
+        cache.set(message["id"], response, timeout=expiry)
+
+        return response
+
     def get_file_url(self, user, message_id: str, attachment_id: str) -> str:
         message = self.get_message(user, message_id).json()
         for attachment in message["attachments"]:

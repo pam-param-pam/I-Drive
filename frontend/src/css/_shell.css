@@ -61,10 +61,6 @@
   background-color: rgba(0, 0, 0, 0.05);
 }
 
-body.rtl .shell-content {
-  direction: ltr;
-}
-
 .shell__result {
   display: flex;
   padding: 0.5em;

@@ -1,85 +1,94 @@
 <template>
-  <div id="search">
-    <div id="input">
-      <input
-        type="text"
-        autocomplete="off"
-
-        v-model="query"
-        ref="input"
-        :aria-label="$t('search.search')"
-        :title="$t('search.search')"
-        :placeholder="$t('search.search')"
-      />
-      <i v-if="searchActive" class="material-icons"
-         @click="exit"
-         :aria-label="$t('search.close')"
-         :title="$t('search.close')"
-      >close</i>
-      <i class="material-icons"
-         @click="onTuneClick"
-         :aria-label="$t('search.tuneSearch')"
-         :title="$t('search.tuneSearch')"
-      >tune</i>
-    </div>
-  </div>
+   <div id="search">
+      <div id="input">
+         <input
+            ref="input"
+            v-model="query"
+            :aria-label="$t('search.search')"
+            :placeholder="$t('search.search')"
+            :title="$t('search.search')"
+            autocomplete="off"
+            type="text"
+         />
+         <i
+            v-if="searchActive"
+            :aria-label="$t('search.close')"
+            :title="$t('search.close')"
+            class="material-icons"
+            @click="exit"
+            >close</i
+         >
+         <i
+            :aria-label="$t('search.tuneSearch')"
+            :title="$t('search.tuneSearch')"
+            class="material-icons"
+            @click="onTuneClick"
+            >tune</i
+         >
+      </div>
+   </div>
 </template>
 
-
 <script>
-
-import {useMainStore} from "@/stores/mainStore.js"
-import {mapActions, mapState} from "pinia"
-import throttle from "lodash.throttle"
+import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from 'pinia'
+import throttle from 'lodash.throttle'
 
 export default {
-   name: "search",
+   name: 'search',
+
    emits: ['onSearchQuery', 'exit'],
 
    data() {
       return {
          selected: {},
          query: '',
-         exited: false,
+         exited: false
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ["searchFilters", "searchActive"]),
+      ...mapState(useMainStore, ['searchFilters', 'searchActive'])
    },
+
    methods: {
-      ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters"]),
+      ...mapActions(useMainStore, [
+         'setLastItem',
+         'showHover',
+         'resetSelected',
+         'setSearchFilters'
+      ]),
+
       search: throttle(async function (event) {
          if (!this.query) return
          this.setLastItem(null)
          //copying to not mutate vuex store state
-         let searchDict = {...this.searchFilters}
-         searchDict["query"] = this.query
+         let searchDict = { ...this.searchFilters }
+         searchDict['query'] = this.query
          this.setSearchFilters(searchDict)
          this.$emit('onSearchQuery', searchDict)
-
       }, 500),
+
       onTuneClick() {
          this.showHover({
-            prompt: "SearchTunePrompt",
+            prompt: 'SearchTunePrompt',
             confirm: () => {
                this.search()
-            },
+            }
          })
       },
 
       async exit() {
-         console.log("exiting search")
+         console.log('exiting search')
          this.resetSelected()
          this.$emit('exit')
 
          this.exited = true
          this.query = ''
          this.exited = false
-
-      },
-
+      }
    },
+
    watch: {
       query() {
          if (this.exited) {
@@ -97,17 +106,19 @@ export default {
 }
 </script>
 <style scoped>
-
 .material-icons {
- cursor: pointer;
- transition: color 0.3s, transform 0.3s;
+   cursor: pointer;
+   transition:
+      color 0.3s,
+      transform 0.3s;
 }
 
 .material-icons:hover {
- color: #007BFF;
- transform: scale(1.1);
+   color: #007bff;
+   transform: scale(1.1);
 }
+
 #search input {
- color: var(--color-text);
+   color: var(--color-text);
 }
 </style>

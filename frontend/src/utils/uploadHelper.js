@@ -1,7 +1,9 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { create } from "@/api/folder.js"
-import { encryptionMethod } from "@/utils/constants.js"
+import { baseURL, encryptionMethod } from "@/utils/constants.js"
 import jsmediatags from "jsmediatags"
+import { uploadInstance } from "@/utils/networker.js"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -96,8 +98,6 @@ function processFile(fileEntry) {
       }, reject)
    })
 }
-
-
 
 
 export function isAudioFile(file) {
@@ -254,14 +254,14 @@ export function ivToBase64(iv) {
    return btoa(binary)
 }
 
-export function generateIv(fileObj) {
+export function generateIv(method) {
    let iv
-   if (fileObj.encryptionMethod === encryptionMethod.AesCtr) {
+   if (method === encryptionMethod.AesCtr) {
       iv = crypto.getRandomValues(new Uint8Array(16))
-   } else if (fileObj.encryptionMethod === encryptionMethod.ChaCha20) {
+   } else if (method === encryptionMethod.ChaCha20) {
       iv = crypto.getRandomValues(new Uint8Array(12))
    } else {
-      throw Error(`unable to match encryptionMethod: ${fileObj.encryptionMethod}`)
+      throw Error(`unable to match encryptionMethod: ${method}`)
    }
    return ivToBase64(iv)
 
@@ -276,4 +276,27 @@ export function generateKey() {
    let key = crypto.getRandomValues(new Uint8Array(32))
    return ivToBase64(key)
 
+}
+
+export async function upload(fileFormList, config, webhookUrl = null) {
+   let mainStore = useMainStore()
+
+   let url
+   let headers = {}
+   if (mainStore.settings.useProxy) {
+      url = baseURL + "/proxy/discord"
+      let token = localStorage.getItem("token")
+      headers["Authorization"] = `Token ${token}`
+   } else {
+      if (!webhookUrl) {
+         console.error("WebhookURL cannot be null")
+         return
+      }
+      url = webhookUrl
+   }
+   config.headers = {
+      ...config.headers,
+      ...headers
+   }
+   return await uploadInstance.post(url, fileFormList, config)
 }

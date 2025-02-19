@@ -10,7 +10,6 @@
 .file-icons [data-type=image] i::before { content: 'image' }
 .file-icons [data-type=pdf] i::before { content: 'description' }
 .file-icons [data-type=text] i::before { content: 'description' }
-.file-icons [data-type=ebook] i::before { content: 'menu_book' }
 .file-icons [data-type=video] i::before { content: 'movie' }
 .file-icons [data-type=invalid_link] i::before { content: 'link_off' }
 
@@ -121,9 +120,13 @@
 { content: 'font_download' }
 
 /* E-Books */
-.file-icons [aria-label$=".mobi"] i,
-.file-icons [aria-label$=".epub"] i
-{ content: 'font_download' }
+.file-icons [aria-label$=".mobi"] i:before,
+.file-icons [aria-label$=".epub"] i:before
+{ content: 'menu_book' }
+
+/* Torrents */
+.file-icons [aria-label$=".torrent"] i:before
+{ content: 'token' }
 
 /* Colors */
 

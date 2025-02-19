@@ -1,16 +1,14 @@
 <template>
-
-  <router-view></router-view>
-
+   <router-view></router-view>
 </template>
 
 <script>
-
 export default {
-   name: "app",
+   name: 'app',
+
    mounted() {
-      const loading = document.getElementById("loading")
-      loading.classList.add("done")
+      const loading = document.getElementById('loading')
+      loading.classList.add('done')
 
       setTimeout(() => {
          loading.parentNode.removeChild(loading)
@@ -20,22 +18,20 @@ export default {
 </script>
 
 <style>
-@import "./css/styles.css";
+@import './css/styles.css';
 
 html,
 body,
 #app {
- box-sizing: border-box;
- height: 100%;
+   height: 100%;
 }
 
 body {
- overflow: hidden;
+   overflow: hidden;
 }
-body.enable-scroll {
- overflow: auto !important;
-}
+
+body.enable-scroll,
 #app.enable-scroll {
- overflow: auto !important;
+   overflow: auto !important;
 }
 </style>

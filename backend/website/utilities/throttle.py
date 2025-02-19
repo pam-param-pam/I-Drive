@@ -82,23 +82,23 @@ class MyUserRateThrottleBase(UserRateThrottle):
         return self.num_requests - len(self.history)
 
 
-class MyAnonRateThrottle(MyUserRateThrottleBase):
+class defaultAnonUserThrottle(MyUserRateThrottleBase):
     scope = 'anon'
     bucket = "aBcDeFgHiJ"
 
-class MyUserRateThrottle(MyUserRateThrottleBase):
+class defaultAuthUserThrottle(MyUserRateThrottleBase):
     scope = 'user'
     bucket = "RpQwXsEfGt"
 
-class FolderPasswordRateThrottle(MyUserRateThrottleBase):
+class FolderPasswordThrottle(MyUserRateThrottleBase):
     scope = 'folder_password'
     bucket = "zYxWvUtSrQ"
 
-class MediaRateThrottle(MyUserRateThrottleBase):
+class MediaThrottle(MyUserRateThrottleBase):
     scope = 'media'
     bucket = "lMnOpQrStU"
 
-class SearchRateThrottle(MyUserRateThrottleBase):
+class SearchThrottle(MyUserRateThrottleBase):
     scope = 'search'
     bucket = "VwXyZaBcDe"
 
@@ -113,3 +113,7 @@ class RegisterThrottle(MyUserRateThrottleBase):
 class DiscordSettingsThrottle(MyUserRateThrottleBase):
     scope = 'discord_settings'
     bucket = "YWJob2rcw"
+
+class ProxyRateThrottle(MyUserRateThrottleBase):
+    scope = 'proxy'
+    bucket = "2ADdw3qsw"

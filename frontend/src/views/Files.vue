@@ -1,50 +1,46 @@
 <template>
-  <div style="height: 100%">
-    <breadcrumbs v-if="!searchActive"
-                 base="/files"
-                 :folderList="breadcrumbs"
-    />
-    <errors v-if="error" :error="error" />
+   <div style="height: 100%">
+      <breadcrumbs v-if="!searchActive" :folderList="breadcrumbs" base="/files" />
+      <errors v-if="error" :error="error" />
 
-    <h4 v-if="!error && searchActive && !loading">{{ $t("files.searchItemsFound", { amount: searchItems.length }) }}</h4>
-    <FileListing
-      ref="listing"
-      :headerButtons="headerButtons"
-      @onOpen="onOpen"
-      @dragEnter="onDragEnter"
-      @dragLeave="onDragLeave"
-      @uploadInput="onUploadInput"
-      @onSearchClosed="onSearchClosed"
-      @onSearchQuery="onSearchQuery"
-      @upload="upload"
-      @download="download"
-      @dropUpload="onDropUpload"
-      @openInNewWindow="openInNewWindow"
-
-    ></FileListing>
-  </div>
+      <h4 v-if="!error && searchActive && !loading">
+         {{ $t('files.searchItemsFound', { amount: searchItems.length }) }}
+      </h4>
+      <FileListing
+         ref="listing"
+         :headerButtons="headerButtons"
+         @download="download"
+         @dragEnter="onDragEnter"
+         @dragLeave="onDragLeave"
+         @dropUpload="onDropUpload"
+         @onOpen="onOpen"
+         @onSearchClosed="onSearchClosed"
+         @onSearchQuery="onSearchQuery"
+         @openInNewWindow="openInNewWindow"
+         @upload="upload"
+         @uploadInput="onUploadInput"
+      ></FileListing>
+   </div>
 </template>
 
 <script>
-
-
-
-import { getItems } from "@/api/folder.js"
-import { search } from "@/api/search.js"
-import { createZIP } from "@/api/item.js"
-import { useMainStore } from "@/stores/mainStore.js"
-import { mapActions, mapState } from "pinia"
-import { useUploadStore } from "@/stores/uploadStore.js"
-import { scanDataTransfer } from "@/utils/uploadHelper.js"
-import { uploadType } from "@/utils/constants.js"
-import { name } from "@/utils/constants"
-import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
-import Errors from "@/components/Errors.vue"
-import FileListing from "@/components/FileListing.vue"
-import { cancelTokenMap } from "@/utils/networker.js"
+import { getItems } from '@/api/folder.js'
+import { search } from '@/api/search.js'
+import { createZIP } from '@/api/item.js'
+import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from 'pinia'
+import { useUploadStore } from '@/stores/uploadStore.js'
+import { scanDataTransfer } from '@/utils/uploadHelper.js'
+import { uploadType } from '@/utils/constants.js'
+import { name } from '@/utils/constants'
+import Breadcrumbs from '@/components/listing/Breadcrumbs.vue'
+import Errors from '@/components/Errors.vue'
+import FileListing from '@/components/FileListing.vue'
+import { cancelTokenMap } from '@/utils/networker.js'
 
 export default {
-   name: "files",
+   name: 'files',
+
    components: {
       Breadcrumbs,
       Errors,
@@ -58,18 +54,34 @@ export default {
       },
       lockFrom: {
          type: String
-      },
-
+      }
    },
+
    data() {
       return {
          folderList: [],
          dragCounter: 0,
-         isActive: true,
+         isActive: true
       }
    },
+
    computed: {
-      ...mapState(useMainStore, ["searchItems", "breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
+      ...mapState(useMainStore, [
+         'searchItems',
+         'breadcrumbs',
+         'error',
+         'user',
+         'settings',
+         'loading',
+         'selected',
+         'perms',
+         'selected',
+         'currentFolder',
+         'disabledCreation',
+         'getFolderPassword',
+         'selectedCount',
+         'searchActive'
+      ]),
       headerButtons() {
          return {
             info: !this.disabledCreation,
@@ -84,10 +96,11 @@ export default {
             locate: this.selectedCount === 1 && this.searchActive,
             search: true,
             openInNewWindow: true,
-            tag: this.selectedCount === 1 && !this.selected[0].isDir,
+            tag: this.selectedCount === 1 && !this.selected[0].isDir
          }
       }
    },
+
    created() {
       if (this.searchActive) {
          return
@@ -95,15 +108,30 @@ export default {
       this.setDisabledCreation(false)
       this.fetchFolder()
    },
+
    unmounted() {
       this.isActive = false
    },
+
    watch: {
-      $route: "fetchFolder"
+      $route: 'fetchFolder'
    },
+
    methods: {
-      ...mapActions(useMainStore, ["setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
-      ...mapActions(useUploadStore, ["startUpload"]),
+      ...mapActions(useMainStore, [
+         'setSearchItems',
+         'setCurrentFolderData',
+         'setLoading',
+         'setError',
+         'setDisabledCreation',
+         'setItems',
+         'setCurrentFolder',
+         'closeHover',
+         'showHover',
+         'setSearchActive'
+      ]),
+
+      ...mapActions(useUploadStore, ['startUpload']),
 
       async onSearchQuery(searchParams) {
          this.setLoading(true)
@@ -117,8 +145,7 @@ export default {
          } catch (e) {
             console.warn(e)
             //ignore canceled errors
-         }
-         finally {
+         } finally {
             this.setLoading(false)
          }
       },
@@ -128,20 +155,22 @@ export default {
          this.setSearchActive(false)
          this.setDisabledCreation(false)
          this.setError(null)
-         let searchRequest = cancelTokenMap.get("getItems")
+         let searchRequest = cancelTokenMap.get('getItems')
          if (searchRequest) {
-            searchRequest.cancel(`Request cancelled due to a new request with the same cancel signature .`)
+            searchRequest.cancel(
+               `Request cancelled due to a new request with the same cancel signature .`
+            )
          }
       },
 
       upload() {
          if (
-            typeof window.DataTransferItem !== "undefined" &&
-            typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
+            typeof window.DataTransferItem !== 'undefined' &&
+            typeof DataTransferItem.prototype.webkitGetAsEntry !== 'undefined'
          ) {
-            this.showHover("upload")
+            this.showHover('upload')
          } else {
-            document.getElementById("upload-input").click()
+            document.getElementById('upload-input').click()
          }
       },
 
@@ -150,42 +179,39 @@ export default {
 
          if (this.currentFolder?.id === this.folderId) {
             this.folderList = this.currentFolder.breadcrumbs
-
          } else {
             try {
                this.setLoading(true)
                let res = await getItems(this.folderId, this.lockFromProp)
                this.setCurrentFolderData(res)
             } catch (error) {
-               if (error.code === "ERR_CANCELED") return
+               if (error.code === 'ERR_CANCELED') return
                this.setError(error)
             } finally {
                if (this.isActive) this.setLoading(false)
-
             }
          }
-         if (this.currentFolder.parent_id) { //only set title if its not root folder
+         if (this.currentFolder.parent_id) {
+            //only set title if its not root folder
             document.title = `${this.currentFolder.name} - ` + name
-         }
-         else {
+         } else {
             document.title = name
          }
-
-
       },
+
       onDragEnter() {
          this.dragCounter++
 
          // When the user starts dragging an item, put every
          // file on the listing with 50% opacity.
-         let items = document.getElementsByClassName("item")
+         let items = document.getElementsByClassName('item')
 
          Array.from(items).forEach((file) => {
             file.style.opacity = 0.5
          })
       },
-      onDragLeave() {
 
+      onDragLeave() {
          this.dragCounter--
          if (this.dragCounter === 0) {
             this.resetOpacity()
@@ -194,34 +220,32 @@ export default {
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            window.open(this.selected[0].download_url, "_blank")
-            let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
+            window.open(this.selected[0].download_url, '_blank')
+            let message = this.$t('toasts.downloadingSingle', { name: this.selected[0].name })
             this.$toast.success(message)
-
          } else {
-            const ids = this.selected.map(obj => obj.id)
-            let res = await createZIP({ "ids": ids })
-            window.open(res.download_url, "_blank")
+            const ids = this.selected.map((obj) => obj.id)
+            let res = await createZIP({ ids: ids })
+            window.open(res.download_url, '_blank')
 
-            let message = this.$t("toasts.downloadingZIP")
+            let message = this.$t('toasts.downloadingZIP')
             this.$toast.success(message)
-
-
          }
       },
+
       resetOpacity() {
-         let items = document.getElementsByClassName("item")
+         let items = document.getElementsByClassName('item')
 
          Array.from(items).forEach((file) => {
             file.style.opacity = 1
          })
       },
+
       async onDropUpload(event) {
          event.preventDefault()
 
          this.dragCounter = 0
          this.resetOpacity()
-
 
          let dt = event.dataTransfer
          let el = event.target
@@ -232,18 +256,16 @@ export default {
 
          //obtaining parent folder id
          for (let i = 0; i < 5; i++) {
-            if (el !== null && !el.classList.contains("item")) {
+            if (el !== null && !el.classList.contains('item')) {
                el = el.parentElement
             }
          }
-         if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
+         if (el !== null && el.classList.contains('item') && el.dataset.dir === 'true') {
             folderContextId = el.dataset.id
          }
          let files = await scanDataTransfer(dt)
 
          await this.startUpload(uploadType.dragAndDropInput, folderContextId, files)
-
-
       },
 
       async onUploadInput(event) {
@@ -252,26 +274,26 @@ export default {
          let files = event.currentTarget.files
          let folderContextId = this.currentFolder.id
          await this.startUpload(uploadType.browserInput, folderContextId, files)
-
-
       },
+
       getNewRoute(item) {
          if (item.isDir) {
-            return { name: "Files", params: { "folderId": item.id, "lockFrom": item.lockFrom } }
+            return { name: 'Files', params: { folderId: item.id, lockFrom: item.lockFrom } }
          } else {
-            if (item.type === "text" && item.size < 1024 * 1024) {
-               return { name: "Editor", params: { "fileId": item.id, "lockFrom": item.lockFrom } }
+            if (item.type === 'text' && item.size < 1024 * 1024) {
+               return { name: 'Editor', params: { fileId: item.id, lockFrom: item.lockFrom } }
             } else {
-               return { name: "Preview", params: { "fileId": item.id, "lockFrom": item.lockFrom } }
+               return { name: 'Preview', params: { fileId: item.id, lockFrom: item.lockFrom } }
             }
          }
       },
+
       openInNewWindow(item) {
          let route = this.getNewRoute(item)
          let url = this.$router.resolve(route).href
-         window.open(url, "_blank")
-
+         window.open(url, '_blank')
       },
+
       onOpen(item) {
          this.$refs.listing.hideContextMenu()
          let route = this.getNewRoute(item)
@@ -280,9 +302,9 @@ export default {
                let password = this.getFolderPassword(item.lockFrom)
                if (!password) {
                   this.showHover({
-                     prompt: "FolderPassword",
+                     prompt: 'FolderPassword',
 
-                     props: { requiredFolderPasswords: [{ "id": item.lockFrom, "name": item.name }] },
+                     props: { requiredFolderPasswords: [{ id: item.lockFrom, name: item.name }] },
                      confirm: () => {
                         this.$router.push(route)
                      }
@@ -298,6 +320,6 @@ export default {
 </script>
 <style>
 h4 {
- padding-left: 1em;
+   padding-left: 1em;
 }
 </style>

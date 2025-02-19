@@ -11,7 +11,7 @@ function base64ToUint8Array(base64) {
    return bytes
 }
 
-export async function encryptWithAesCtr(base64Key, base64IV, file, bytesToSkip) {
+export async function encryptWithAesCtr(file, base64Key, base64IV, bytesToSkip) {
 
    let key = base64ToUint8Array(base64Key)
    let iv = base64ToUint8Array(base64IV)
@@ -37,7 +37,7 @@ export async function encryptWithAesCtr(base64Key, base64IV, file, bytesToSkip) 
    return new Blob([new Uint8Array(encryptedArrayBuffer)], { type: file.type })
 }
 
-export async function encryptWithChaCha20(base64Key, base64IV, file, bytesToSkip) {
+export async function encryptWithChaCha20(file, base64Key, base64IV, bytesToSkip) {
 
    let key = base64ToUint8Array(base64Key)
    let iv = base64ToUint8Array(base64IV)
@@ -93,31 +93,42 @@ function calculateCounter(bytesToSkip) {
 
 }
 
-export async function encrypt(attachment) {
+export async function encryptAttachment(attachment) {
    let fileObj = attachment.fileObj
-   let encrypMethod = fileObj.encryptionMethod
 
-   if (encrypMethod === encryptionMethod.NotEncrypted) {
-      return attachment.rawBlob
-   }
    let bytesToSkip = 0
    if (attachment.type === attachmentType.file) {
       bytesToSkip = attachment.offset
    }
    let iv = fileObj.iv
    let key = fileObj.key
+
    if (attachment.type === attachmentType.thumbnail) {
       iv = attachment.iv
       key = attachment.key
    }
-   if (encrypMethod === encryptionMethod.ChaCha20) {
-      return await encryptWithChaCha20(key, iv, attachment.rawBlob, bytesToSkip)
+   return await encrypt(attachment.rawBlob, fileObj.encryptionMethod, key, iv, bytesToSkip)
 
-   } else if (encrypMethod === encryptionMethod.AesCtr) {
-      return await encryptWithAesCtr(key, iv, attachment.rawBlob, bytesToSkip)
+}
+
+export async function encrypt(rawBlob, method, key, iv, bytesToSkip) {
+   if (typeof rawBlob === "string") {
+      rawBlob = new Blob([rawBlob])
+   }
+
+   if (method === encryptionMethod.NotEncrypted) {
+      return rawBlob
+   }
+
+   if (method === encryptionMethod.ChaCha20) {
+      return await encryptWithChaCha20(rawBlob, key, iv, bytesToSkip)
+
+   } else if (method === encryptionMethod.AesCtr) {
+      return await encryptWithAesCtr(rawBlob, key, iv, bytesToSkip)
 
    } else {
-      console.warn("encrypt: invalid encryptionMethod: " + encrypMethod)
+      console.warn("encrypt: invalid encryptionMethod: " + method)
    }
+
 
 }

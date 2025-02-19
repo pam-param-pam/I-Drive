@@ -57,7 +57,7 @@
 .upload-files .card-title {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Ensures buttons stick to the right */
+  justify-content: space-between;
   font-size: 0.8em;
   position: sticky;
   top: 0;

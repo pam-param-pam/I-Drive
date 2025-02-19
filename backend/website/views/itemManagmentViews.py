@@ -11,11 +11,11 @@ from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists
-from ..utilities.throttle import FolderPasswordRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_folder(request):
@@ -43,7 +43,7 @@ def create_folder(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move(request):
@@ -87,7 +87,7 @@ def move(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move_to_trash(request):
@@ -130,7 +130,7 @@ def move_to_trash(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def restore_from_trash(request):
@@ -170,7 +170,7 @@ def restore_from_trash(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & DeletePerms])
 @handle_common_errors
 def delete(request):
@@ -214,7 +214,7 @@ def delete(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def rename(request):
@@ -240,7 +240,7 @@ def rename(request):
 
 
 @api_view(['POST'])
-@throttle_classes([FolderPasswordRateThrottle])
+@throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & LockPerms])
 @handle_common_errors
 @check_folder_and_permissions
@@ -262,7 +262,7 @@ def folder_password(request, folder_obj):
 
 
 @api_view(['POST'])
-@throttle_classes([FolderPasswordRateThrottle])
+@throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ResetLockPerms])
 @handle_common_errors
 def reset_folder_password(request, folder_id):
@@ -292,7 +292,7 @@ def reset_folder_password(request, folder_id):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def update_video_position(request):
@@ -314,7 +314,7 @@ def update_video_position(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def add_tag(request):
@@ -346,7 +346,7 @@ def add_tag(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def remove_tag(request):

@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime
 
+from django.core.files.uploadhandler import FileUploadHandler
 from django.db.utils import IntegrityError
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -14,11 +15,11 @@ from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode, En
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
 from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, get_webhook, check_if_bots_exists
-from ..utilities.throttle import MyUserRateThrottle
+from ..utilities.throttle import defaultAuthUserThrottle, MediaThrottle, ProxyRateThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_file(request):
@@ -181,6 +182,7 @@ def create_file(request):
         message_id = request.data['message_id']
         attachment_id = request.data['attachment_id']
         webhook_id = request.data['webhook']
+        offset = request.data['offset']
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)
@@ -227,7 +229,8 @@ def create_file(request):
             size=fragment_size,
             attachment_id=attachment_id,
             message_id=message_id,
-            webhook=webhook
+            webhook=webhook,
+            offset=offset,
         )
         fragment_obj.save()
         file_obj.size = fragment_size
@@ -239,7 +242,7 @@ def create_file(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_thumbnail(request):
@@ -283,3 +286,19 @@ def create_thumbnail(request):
 
     return HttpResponse(status=204)
 
+@api_view(["POST"])
+@throttle_classes([ProxyRateThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
+def proxy_discord(request):
+    # todo secure to prevent denial of service
+    json_payload = request.data.get("json_payload")
+
+    files = request.FILES
+
+    if not json_payload:
+        raise BadRequestError("Missing json_payload")
+
+    res = discord.send_file(request.user, json=json_payload, files=files)
+
+    return JsonResponse(res.json(), status=res.status_code, safe=False)

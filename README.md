@@ -39,7 +39,6 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | fix 401 in locked folders in shares                          | 🛠️  in progress     |
 | Error handling in upload process                             | ⚠️  Only partial     |
 | Optimize shares                                              | ❌  Coming one day    |
-| Auto scroll when dragging                                    | ❌  Coming one day    |
 | fix enable-scroll css cuz it's cursed                        | ❌  Coming one day    |
 | cached docker build                                          | ❌  Coming one day    |
 | fix scrollbar in shares prompt                               | ❌  Coming one day    |
@@ -136,7 +135,12 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 
 # Deployment
-todo
+1) Create a file called docker-compose.yml and paste [this](https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml) content
+2) Run `docker compose up`
+3) Run `docker exec -t idrive-backend bash`
+4) Run `python manage.py migrate` to setup a database
+5) Run `python manage.py createsuperuser` to create admin user
+6) Go to browser and type `localhost:5173`
 
 # PS
 Dear discord, please don't sue me 👉👈

@@ -8,11 +8,11 @@ from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import check_resource_perms, get_resource, validate_and_add_to_zip
-from ..utilities.throttle import MyUserRateThrottle
+from ..utilities.throttle import defaultAuthUserThrottle
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & DownloadPerms])
 @handle_common_errors
 def create_zip_model(request):

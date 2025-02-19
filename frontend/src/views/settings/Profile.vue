@@ -1,146 +1,130 @@
 <template>
-  <div class="row">
-    <div class="column">
-      <form class="card" @submit.prevent="saveSettings">
-        <div class="card-title">
-          <h2>{{ $t("settings.profileSettings") }}</h2>
-        </div>
+   <div class="row">
+      <div class="column">
+         <form class="card" @submit.prevent="saveSettings">
+            <div class="card-title">
+               <h2>{{ $t('settings.profileSettings') }}</h2>
+            </div>
 
-        <div class="card-content">
-          <p>
-            <input type="checkbox" v-model="hideLockedFolders"/>
-            {{ $t("settings.hideLockedFolders") }}
+            <div class="card-content">
+               <p>
+                  <input v-model="hideLockedFolders" type="checkbox" />
+                  {{ $t('settings.hideLockedFolders') }}
+               </p>
+               <p>
+                  <input v-model="subfoldersInShares" type="checkbox" />
+                  {{ $t('settings.subfoldersInShares') }}
+               </p>
+               <p>
+                  <input v-model="dateFormat" type="checkbox" />
+                  {{ $t('settings.setDateFormat') }}
+               </p>
+               <p>
+                  <input v-model="keepCreationTimestamp" type="checkbox" />
+                  {{ $t('settings.keepCreationTimestamp') }}
+               </p>
+               <p>
+                  <input v-model="useProxy" type="checkbox" />
+                  {{ $t('settings.useProxy') }}
+               </p>
+               <div>
+                  <h3>{{ $t('settings.concurrentUploadRequests') }}</h3>
+                  <input v-model="concurrentUploadRequests" class="input" type="number" />
+               </div>
 
-          </p>
-          <p>
-            <input type="checkbox" v-model="subfoldersInShares"/>
-            {{ $t("settings.subfoldersInShares") }}
-          </p>
-          <p>
-            <input type="checkbox" v-model="dateFormat"/>
-            {{ $t("settings.setDateFormat") }}
-          </p>
-          <p>
-            <input type="checkbox" v-model="keepCreationTimestamp"/>
-            {{ $t("settings.keepCreationTimestamp") }}
-          </p>
-          <p>
-            <input type="checkbox" v-model="useProxy"/>
-            {{ $t("settings.useProxy") }}
-          </p>
-          <div>
-            <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
-            <input
-              class="input"
-              type="number"
-              v-model="concurrentUploadRequests"
-            />
-          </div>
+               <h3>{{ $t('settings.encryptionMethod') }}</h3>
+               <EncryptionMethod
+                  v-model:encryptionMethod="encryptionMethod"
+                  class="input input--block"
+               ></EncryptionMethod>
 
-          <h3>{{ $t("settings.encryptionMethod") }}</h3>
-          <EncryptionMethod
-            class="input input--block"
-            v-model:encryptionMethod="encryptionMethod"
-          ></EncryptionMethod>
+               <h3>{{ $t('settings.language') }}</h3>
+               <languages v-model:locale="locale" class="input input--block"></languages>
+            </div>
 
-          <h3>{{ $t("settings.language") }}</h3>
-          <languages
-            class="input input--block"
-            v-model:locale="locale"
-          ></languages>
+            <div class="card-action">
+               <input :value="$t('buttons.update')" class="button button--flat" type="submit" />
+            </div>
+         </form>
+      </div>
 
-        </div>
+      <div class="column">
+         <form class="card" @submit.prevent="savePassword">
+            <div class="card-title">
+               <h2>{{ $t('settings.changePassword') }}</h2>
+            </div>
 
-        <div class="card-action">
-          <input
-            class="button button--flat"
-            type="submit"
-            :value="$t('buttons.update')"
-          />
-        </div>
-      </form>
-    </div>
+            <div class="card-content">
+               <input
+                  v-model="currentPassword"
+                  :placeholder="$t('settings.currentPassword')"
+                  class="input input--block"
+                  name="password"
+                  type="password"
+               />
+               <input
+                  v-model="password"
+                  :class="passwordClass"
+                  :placeholder="$t('settings.newPassword')"
+                  name="password"
+                  type="password"
+               />
+               <input
+                  v-model="passwordConf"
+                  :class="passwordClass"
+                  :placeholder="$t('settings.newPasswordConfirm')"
+                  name="password"
+                  type="password"
+               />
+            </div>
 
-    <div class="column">
-      <form class="card" @submit.prevent="savePassword">
-        <div class="card-title">
-          <h2>{{ $t("settings.changePassword") }}</h2>
-        </div>
-
-        <div class="card-content">
-          <input
-            class="input input--block"
-            type="password"
-            :placeholder="$t('settings.currentPassword')"
-            v-model="currentPassword"
-            name="password"
-          />
-          <input
-            :class="passwordClass"
-            type="password"
-            :placeholder="$t('settings.newPassword')"
-            v-model="password"
-            name="password"
-          />
-          <input
-            :class="passwordClass"
-            type="password"
-            :placeholder="$t('settings.newPasswordConfirm')"
-            v-model="passwordConf"
-            name="password"
-          />
-        </div>
-
-        <div class="card-action">
-          <input
-            class="button button--flat"
-            type="submit"
-            :value="$t('buttons.update')"
-          />
-        </div>
-      </form>
-    </div>
-  </div>
+            <div class="card-action">
+               <input :value="$t('buttons.update')" class="button button--flat" type="submit" />
+            </div>
+         </form>
+      </div>
+   </div>
 </template>
 
 <script>
-import Languages from "@/components/settings/Languages.vue"
-import {changePassword, updateSettings} from "@/api/user.js"
-import router from "@/router/index.js"
-import throttle from "lodash.throttle"
-import {mapActions, mapState} from "pinia"
-import {useMainStore} from "@/stores/mainStore.js"
-import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
-
+import Languages from '@/components/settings/Languages.vue'
+import { changePassword, updateSettings } from '@/api/user.js'
+import router from '@/router/index.js'
+import throttle from 'lodash.throttle'
+import { mapActions, mapState } from 'pinia'
+import { useMainStore } from '@/stores/mainStore.js'
+import EncryptionMethod from '@/components/settings/EncryptionMethod.vue'
 
 export default {
-   name: "profileSettings",
+   name: 'profileSettings',
+
    components: {
       Languages,
-      EncryptionMethod,
+      EncryptionMethod
    },
+
    data() {
       return {
-         password: "",
-         currentPassword: "",
-         passwordConf: "",
+         password: '',
+         currentPassword: '',
+         passwordConf: '',
          hideLockedFolders: false,
          subfoldersInShares: false,
          dateFormat: false,
-         locale: "",
+         locale: '',
          concurrentUploadRequests: 4,
          encryptionMethod: null,
          keepCreationTimestamp: false,
-         useProxy: false,
-
+         useProxy: false
       }
    },
-   computed: {
-      ...mapState(useMainStore, ["user", "settings"]),
-      passwordClass() {
-         const baseClass = "input input--block"
 
-         if (this.password === "" && this.passwordConf === "") {
+   computed: {
+      ...mapState(useMainStore, ['user', 'settings']),
+      passwordClass() {
+         const baseClass = 'input input--block'
+
+         if (this.password === '' && this.passwordConf === '') {
             return baseClass
          }
 
@@ -149,8 +133,9 @@ export default {
          }
 
          return `${baseClass} input--red`
-      },
+      }
    },
+
    created() {
       this.setLoading(false)
       this.locale = this.settings.locale
@@ -161,27 +146,26 @@ export default {
       this.encryptionMethod = this.settings.encryptionMethod
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
       this.useProxy = this.settings.useProxy
-
    },
+
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings"]),
+      ...mapActions(useMainStore, ['setLoading', 'setToken', 'updateSettings']),
 
       savePassword: throttle(async function (event) {
-         if (this.password !== this.passwordConf || this.password === "") {
+         if (this.password !== this.passwordConf || this.password === '') {
             return
          }
 
-         let data = {current_password: this.currentPassword, new_password: this.password}
+         let data = { current_password: this.currentPassword, new_password: this.password }
 
          let res = await changePassword(data)
 
-         localStorage.setItem("token", res.auth_token)
+         localStorage.setItem('token', res.auth_token)
          this.setToken(res.auth_token)
-         this.$toast.success(this.$t("settings.passwordUpdated"))
+         this.$toast.success(this.$t('settings.passwordUpdated'))
          setTimeout(() => {
             router.go(0)
          }, 2000)
-
       }, 1000),
 
       saveSettings: throttle(async function (event) {
@@ -193,16 +177,14 @@ export default {
             concurrentUploadRequests: this.concurrentUploadRequests,
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
-            useProxy: this.useProxy,
+            useProxy: this.useProxy
          }
 
          await updateSettings(data)
          this.updateSettings(data)
 
-         this.$toast.success(this.$t("settings.settingsUpdated"))
-
-      }, 1000),
-
-   },
+         this.$toast.success(this.$t('settings.settingsUpdated'))
+      }, 1000)
+   }
 }
 </script>

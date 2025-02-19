@@ -1,181 +1,172 @@
 <template>
-  <div class="card floating">
-    <div class="card-title">
-      <h2>{{ $t("prompts.editTags") }}</h2>
-    </div>
-
-    <div class="card-content">
-      <p>
-        {{ $t("prompts.editTagsDescription") }}
-      </p>
-
-      <div class="tags-container">
-        <span
-          v-for="(tag, index) in selected[0].tags"
-          :key="index"
-          class="tag"
-        >
-          <i class="material-icons tag-icon">sell</i>
-
-          {{ tag }}
-          <button
-            class="remove-tag-button"
-            @click="removeTag(tag)"
-            :aria-label="$t('buttons.removeTag', { tag })"
-          >
-            <i class="material-icons close-icon">close</i>
-
-          </button>
-
-        </span>
+   <div class="card floating">
+      <div class="card-title">
+         <h2>{{ $t('prompts.editTags') }}</h2>
       </div>
 
-      <div class="tag-input-container">
-        <input
-          class="input input--block"
-          v-focus
-          type="text"
-          v-model="tagName"
-          :placeholder="$t('prompts.enterTagName')"
-        />
-      </div>
-    </div>
+      <div class="card-content">
+         <p>
+            {{ $t('prompts.editTagsDescription') }}
+         </p>
 
-    <div class="card-action">
-      <button
-        class="button button--flat button--grey"
-        @click="closeHover()"
-        :aria-label="$t('buttons.cancel')"
-        :title="$t('buttons.cancel')"
-      >
-        {{ $t("buttons.cancel") }}
-      </button>
-      <button
-        v-if="tagName!==''"
-        @click="submit()"
-        class="button button--flat"
-        type="submit"
-        :aria-label="$t('buttons.addTag')"
-        :title="$t('buttons.addTag')"
-      >
-        {{ $t("buttons.addTag") }}
-      </button>
-      <button
-        v-else
-        @click="submit()"
-        class="button button--flat"
-        type="submit"
-        :aria-label="$t('buttons.ok')"
-        :title="$t('buttons.ok')"
-      >
-        {{ $t("buttons.ok") }}
-      </button>
-    </div>
-  </div>
+         <div class="tags-container">
+            <span v-for="(tag, index) in selected[0].tags" :key="index" class="tag">
+               <i class="material-icons tag-icon">sell</i>
+
+               {{ tag }}
+               <button
+                  :aria-label="$t('buttons.removeTag', { tag })"
+                  class="remove-tag-button"
+                  @click="removeTag(tag)"
+               >
+                  <i class="material-icons close-icon">close</i>
+               </button>
+            </span>
+         </div>
+
+         <div class="tag-input-container">
+            <input
+               v-model="tagName"
+               v-focus
+               :placeholder="$t('prompts.enterTagName')"
+               class="input input--block"
+               type="text"
+            />
+         </div>
+      </div>
+
+      <div class="card-action">
+         <button
+            :aria-label="$t('buttons.cancel')"
+            :title="$t('buttons.cancel')"
+            class="button button--flat button--grey"
+            @click="closeHover()"
+         >
+            {{ $t('buttons.cancel') }}
+         </button>
+         <button
+            v-if="tagName !== ''"
+            :aria-label="$t('buttons.addTag')"
+            :title="$t('buttons.addTag')"
+            class="button button--flat"
+            type="submit"
+            @click="submit()"
+         >
+            {{ $t('buttons.addTag') }}
+         </button>
+         <button
+            v-else
+            :aria-label="$t('buttons.ok')"
+            :title="$t('buttons.ok')"
+            class="button button--flat"
+            type="submit"
+            @click="submit()"
+         >
+            {{ $t('buttons.ok') }}
+         </button>
+      </div>
+   </div>
 </template>
 
 <script>
-import { useMainStore } from "@/stores/mainStore.js"
-import { mapActions, mapState } from "pinia"
-import { addTag, removeTag } from "@/api/files.js"
-
+import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from 'pinia'
+import { addTag, removeTag } from '@/api/files.js'
 
 export default {
-   name: "EditTags",
+   name: 'EditTags',
 
    data() {
       return {
-         tagName: ""
+         tagName: ''
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ["selected"])
-
+      ...mapState(useMainStore, ['selected'])
    },
+
    watch: {
       tagName(newVal) {
-         if (newVal.includes(" ")) {
+         if (newVal.includes(' ')) {
             this.submit()
          }
       }
    },
+
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "resetSelected", "updateItem"]),
+      ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'updateItem']),
 
       async submit() {
-         if (this.tagName === "") {
+         if (this.tagName === '') {
             this.closeHover()
             return
          }
          let tagName = this.tagName.trim()
-         this.tagName = ""
+         this.tagName = ''
 
-         await addTag({ "tag_name": tagName, "file_id": this.selected[0].id })
+         await addTag({ tag_name: tagName, file_id: this.selected[0].id })
          let file = this.selected[0]
-         file.tags = [...file.tags || [], tagName]
+         file.tags = [...(file.tags || []), tagName]
 
          this.updateItem(file)
       },
+
       async removeTag(tagName) {
-         await removeTag({ "tag_name": tagName, "file_id": this.selected[0].id })
+         await removeTag({ tag_name: tagName, file_id: this.selected[0].id })
 
          let file = this.selected[0]
-         file.tags = file.tags.filter(tag => tag !== tagName)
+         file.tags = file.tags.filter((tag) => tag !== tagName)
          this.updateItem(file)
       }
-
    }
 }
 </script>
 
 <style scoped>
-
 .tags-container {
- display: flex;
- flex-wrap: wrap;
- gap: 8px;
- margin-bottom: 16px;
+   display: flex;
+   flex-wrap: wrap;
+   gap: 8px;
+   margin-bottom: 16px;
 }
 
 .tag {
- display: inline-flex;
- align-items: center;
- padding-left: 10px;
- padding-bottom: 4px;
- padding-top: 4px;
- background-color: var(--background);
- border-radius: 16px;
- font-size: 14px;
+   display: inline-flex;
+   align-items: center;
+   padding-left: 10px;
+   padding-bottom: 4px;
+   padding-top: 4px;
+   background-color: var(--background);
+   border-radius: 16px;
+   font-size: 14px;
 }
 
 .remove-tag-button {
- margin-left: 2px;
- margin-right: 2px;
- background: none;
- border: none;
- cursor: pointer;
- font-size: 16px;
- color: var(--color-text);
+   margin-left: 2px;
+   margin-right: 2px;
+   background: none;
+   border: none;
+   cursor: pointer;
+   font-size: 16px;
+   color: var(--color-text);
 }
 
 .remove-tag-button:hover {
- color: red;
+   color: red;
 }
 
 .close-icon {
- font-size: 10px;
+   font-size: 10px;
 }
 
 .remove-tag-button i {
- padding-bottom: 0;
- padding-top: 4px;
+   padding-bottom: 0;
+   padding-top: 4px;
 }
 
 .tag-icon {
- font-size: 16px;
- margin-right: 6px;
+   font-size: 16px;
+   margin-right: 6px;
 }
-
-
 </style>

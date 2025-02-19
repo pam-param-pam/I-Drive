@@ -28,12 +28,12 @@ from ..utilities.decorators import handle_common_errors, check_file, check_signe
 from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch
 from ..utilities.other import send_event
-from ..utilities.throttle import MediaRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
 
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
+@throttle_classes([MediaThrottle])
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -148,7 +148,7 @@ def get_preview(request, file_obj: File):
 
 
 @api_view(['GET'])
-@throttle_classes([MediaRateThrottle])
+@throttle_classes([MediaThrottle])
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -182,7 +182,7 @@ def get_thumbnail(request, file_obj: File):
 
 # todo  handle >416 Requested Range Not Satisfiable<
 @api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -313,7 +313,7 @@ def stream_file(request, file_obj: File):
 
 
 @api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):
     user_zip = UserZIP.objects.get(token=token)

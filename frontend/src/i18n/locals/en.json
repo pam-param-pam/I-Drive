@@ -136,6 +136,7 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "thumbnailChanged": "Thumbnail changed!",
     "pausedFilesUpload": "Paused upload of {amount} files",
     "pausingFilesUpload": "Pausing upload of {amount} files",
     "editThumbnail": "Edit Thumbnail",

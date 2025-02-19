@@ -138,6 +138,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "thumbnailChanged": "Podgląd zmieniono!",
     "editThumbnail": "Zmień podgląd",
     "orderBy": "Sortuj po",
     "orderByName": "Nazwie",

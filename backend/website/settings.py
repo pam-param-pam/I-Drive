@@ -21,6 +21,7 @@ DEBUG = is_dev_env
 
 ALLOWED_HOSTS = ['*']  # todo
 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10 mb
 # USE_X_FORWARDED_HOST = True  # todo fix admin
 
 # CSRF_COOKIE_SECURE = True # todo fix
@@ -190,6 +191,7 @@ REST_FRAMEWORK = {
         'search': '60/m',
         'register': '20/h',
         'discord_settings': '1/2s',
+        'proxy': '5/s'
 
     },
     'DEFAULT_RENDERER_CLASSES': (

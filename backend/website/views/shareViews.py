@@ -14,11 +14,11 @@ from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_dict, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, \
     build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, get_file
-from ..utilities.throttle import MyAnonRateThrottle, MyUserRateThrottle
+from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle
 
 
 @api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors
 def get_shares(request):
@@ -37,7 +37,7 @@ def get_shares(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors
 def delete_share(request):
@@ -52,7 +52,7 @@ def delete_share(request):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
 @handle_common_errors
 def create_share(request):
@@ -92,7 +92,7 @@ def create_share(request):
 
 
 @api_view(['GET'])
-@throttle_classes([MyAnonRateThrottle])
+@throttle_classes([defaultAnonUserThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
 def view_share(request, token, folder_id=None):
@@ -130,7 +130,7 @@ def view_share(request, token, folder_id=None):
 
 
 @api_view(['POST'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
 def create_share_zip_model(request, token):
@@ -153,7 +153,7 @@ def create_share_zip_model(request, token):
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
 
 @api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
 def share_view_stream(request, token: str, file_id: str):
@@ -175,7 +175,7 @@ def share_view_stream(request, token: str, file_id: str):
     return stream_file(request, signed_file_id)
 
 @api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
 def share_view_thumbnail(request, token: str, file_id: str):
@@ -189,7 +189,7 @@ def share_view_thumbnail(request, token: str, file_id: str):
     return get_thumbnail(request._request, signed_file_id)
 
 @api_view(['GET'])
-@throttle_classes([MyUserRateThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 @handle_common_errors
 def share_view_preview(request, token: str, file_id: str):

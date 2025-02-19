@@ -1,78 +1,79 @@
 <template>
-  <errors v-if="error" :error="error" />
-  <div class="row" v-else-if="!loading">
-    <div class="column">
-      <div class="card">
-        <div class="card-title">
-          <h2>{{ $t("settings.shareManagement") }}</h2>
-        </div>
+   <errors v-if="error" :error="error" />
+   <div v-else-if="!loading" class="row">
+      <div class="column">
+         <div class="card">
+            <div class="card-title">
+               <h2>{{ $t('settings.shareManagement') }}</h2>
+            </div>
 
-        <div class="card-content full" v-if="shares.length > 0">
-          <table>
-            <tr>
-              <th>{{ $t("settings.name") }}</th>
-              <th class="expiry-column">{{ $t("settings.shareExpiry") }}</th>
-              <th></th>
-              <th></th>
-            </tr>
+            <div v-if="shares.length > 0" class="card-content full">
+               <table>
+                  <tr>
+                     <th>{{ $t('settings.name') }}</th>
+                     <th class="expiry-column">{{ $t('settings.shareExpiry') }}</th>
+                     <th></th>
+                     <th></th>
+                  </tr>
 
-            <tr v-for="share in shares" :key="share.token">
-              <td class="share-name-column">
-                <a :href="buildLink(share)" target="_blank">{{ share.name }}</a>
-              </td>
-              <td class="expiry-column">
-                <template v-if="share.expire !== 0">{{
-                    humanTime(share.expire)
-                  }}
-                </template>
-                <template v-else>{{ $t("permanent") }}</template>
-              </td>
-              <td class="small">
-                <button
-                  class="action"
-                  @click="deleteLink($event, share)"
-                  :aria-label="$t('buttons.delete')"
-                  :title="$t('buttons.delete')"
-                >
-                  <i class="material-icons">delete</i>
-                </button>
-              </td>
-              <td class="small">
-                <button
-                  class="action copy-clipboard"
-                  :data-clipboard-text="buildLink(share)"
-                  :aria-label="$t('buttons.copyToClipboard')"
-                  :title="$t('buttons.copyToClipboard')"
-                >
-                  <i class="material-icons">content_paste</i>
-                </button>
-              </td>
-            </tr>
-          </table>
-        </div>
-        <h2 class="message" v-else>
-          <i class="material-icons">sentiment_dissatisfied</i>
-          <span>{{ $t("files.lonely") }}</span>
-        </h2>
+                  <tr v-for="share in shares" :key="share.token">
+                     <td class="share-name-column">
+                        <a :href="buildLink(share)" target="_blank">{{ share.name }}</a>
+                     </td>
+                     <td class="expiry-column">
+                        <template v-if="share.expire !== 0"
+                           >{{ humanTime(share.expire) }}
+                        </template>
+                        <template v-else>{{ $t('permanent') }}</template>
+                     </td>
+                     <td class="small">
+                        <button
+                           :aria-label="$t('buttons.delete')"
+                           :title="$t('buttons.delete')"
+                           class="action"
+                           @click="deleteLink($event, share)"
+                        >
+                           <i class="material-icons">delete</i>
+                        </button>
+                     </td>
+                     <td class="small">
+                        <button
+                           :aria-label="$t('buttons.copyToClipboard')"
+                           :data-clipboard-text="buildLink(share)"
+                           :title="$t('buttons.copyToClipboard')"
+                           class="action copy-clipboard"
+                        >
+                           <i class="material-icons">content_paste</i>
+                        </button>
+                     </td>
+                  </tr>
+               </table>
+            </div>
+            <h2 v-else class="message">
+               <i class="material-icons">sentiment_dissatisfied</i>
+               <span>{{ $t('files.lonely') }}</span>
+            </h2>
+         </div>
       </div>
-    </div>
-  </div>
+   </div>
 </template>
 
 <script>
-import moment from "moment/min/moment-with-locales.js"
-import Clipboard from "clipboard"
-import { getAllShares, removeShare } from "@/api/share.js"
-import { useMainStore } from "@/stores/mainStore.js"
-import { mapActions, mapState } from "pinia"
-import Errors from "@/components/Errors.vue"
+import moment from 'moment/min/moment-with-locales.js'
+import Clipboard from 'clipboard'
+import { getAllShares, removeShare } from '@/api/share.js'
+import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from 'pinia'
+import Errors from '@/components/Errors.vue'
 
 export default {
-   name: "shares",
+   name: 'shares',
+
    components: {
       Errors
    },
-   computed: mapState(useMainStore, ["settings", "loading", "error"]),
+
+   computed: mapState(useMainStore, ['settings', 'loading', 'error']),
 
    data() {
       return {
@@ -81,8 +82,8 @@ export default {
          clip: null
       }
    },
-   async created() {
 
+   async created() {
       this.setLoading(true)
       try {
          this.shares = await getAllShares()
@@ -92,13 +93,12 @@ export default {
       } finally {
          this.setLoading(false)
       }
-
    },
 
    mounted() {
-      this.clip = new Clipboard(".copy-clipboard")
-      this.clip.on("success", () => {
-         this.$toast.success(this.$t("toasts.linkCopied"))
+      this.clip = new Clipboard('.copy-clipboard')
+      this.clip.on('success', () => {
+         this.$toast.success(this.$t('toasts.linkCopied'))
       })
    },
 
@@ -107,34 +107,33 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "closeHover", "showHover", "setError"]),
+      ...mapActions(useMainStore, ['setLoading', 'closeHover', 'showHover', 'setError']),
 
       async deleteLink(event, share) {
          event.preventDefault()
 
          this.showHover({
-            prompt: "share-delete",
+            prompt: 'share-delete',
             confirm: () => {
                this.closeHover()
-               removeShare({ "token": share.token })
+               removeShare({ token: share.token })
                this.shares = this.shares.filter((item) => item.token !== share.token)
-               this.$toast.success(this.$t("toasts.shareDeleted"))
-
+               this.$toast.success(this.$t('toasts.shareDeleted'))
             }
          })
       },
 
       humanTime(time) {
          //todo czm globalny local nie dzIała?
-         let locale = this.settings?.locale || "en"
+         let locale = this.settings?.locale || 'en'
 
          moment.locale(locale)
          // Parse the target date
-         return moment(time, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
+         return moment(time, 'YYYY-MM-DD HH:mm').endOf('second').fromNow()
       },
 
       buildLink(share) {
-         let route = this.$router.resolve({ name: "Share", params: { "token": share.token } })
+         let route = this.$router.resolve({ name: 'Share', params: { token: share.token } })
          return new URL(route.href, window.location.origin).href
       }
    }
