@@ -34,12 +34,7 @@ jobs:
           echo "IS_DEV_ENV=False" >> .env 
           echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
           echo "I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}" >> .env
-          echo "CORS_FRONTEND=frontend" >> .env
-          echo "CORS_FRONTEND_PORT=5173" >> .env
-          echo "I_DRIVE_REDIS_ADDRESS=redis" >> .env
-          echo "I_DRIVE_REDIS_PORT=6379" >> .env
           echo "BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api" >> .env
-          echo "I_DRIVE_BACKEND_STORAGE_DIR=/app/data" >> .env
           
           echo "Pulling docker-compose.yml..."
           

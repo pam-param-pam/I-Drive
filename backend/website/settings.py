@@ -71,21 +71,11 @@ MIDDLEWARE = [
 CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
 
-prefix = 'http://' if is_dev_env else 'https://'
-CORS_ALLOWED_ORIGINS = [
-    f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http:\/\/localhost:\d+$',
     r'^http:\/\/127.0.0.1:\d+$',
 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-]
-CSRF_ALLOWED_ORIGINS = [
-    f'{prefix}{os.environ["CORS_FRONTEND"]}:{os.environ["CORS_FRONTEND_PORT"]}',
-]
 CORS_EXPOSE_HEADERS = (
     "retry-after",
     "X-RateLimit-Remaining",
