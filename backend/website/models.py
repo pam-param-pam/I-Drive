@@ -1,5 +1,6 @@
 import base64
 import secrets
+from typing import Union
 
 import shortuuid
 from django.contrib.auth import user_logged_out, user_logged_in
@@ -272,12 +273,12 @@ class UserSettings(models.Model):
     view_mode = models.CharField(max_length=20, null=False, default="width grid")
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
-    concurrent_upload_requests = models.SmallIntegerField(default=4)
+    concurrent_upload_requests = models.SmallIntegerField(default=2)
     subfolders_in_shares = models.BooleanField(default=False)
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
     theme = models.CharField(default="dark", max_length=20)
-    use_proxy = models.BooleanField(default=False)
+    use_proxy = models.BooleanField(default=True)
 
     history = HistoricalRecords()
 
@@ -323,18 +324,42 @@ class Fragment(models.Model):
     sequence = models.SmallIntegerField()
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
-    message_id = models.CharField(max_length=255)
     size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
-    attachment_id = models.CharField(max_length=255, null=True)
     offset = models.IntegerField()
-    webhook = models.ForeignKey('Webhook', on_delete=models.PROTECT)
+
+    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.PROTECT)
 
     history = HistoricalRecords()
 
     def __str__(self):
         return f"Fragment[file={self.file.name}, sequence={self.sequence}, size={self.size}, owner={self.file.owner.username}]"
 
+
+class DiscordAttachment(models.Model):
+    message_id = models.CharField(max_length=255)
+    attachment_id = models.CharField(max_length=255, null=True, unique=True)
+
+    # GenericForeignKey to point to either Bot or Webhook
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={'model__in': ('bot', 'webhook')}
+    )
+    object_id = models.PositiveIntegerField()
+    author = GenericForeignKey('content_type', 'object_id')
+
+    def __str__(self):
+        return f"type={self.content_type.name}, attachment=[message_id={self.message_id}, attachment_id={self.attachment_id}]"
+
+    def get_author(self) -> Union['Bot', 'Webhook']:
+        try:
+            return Bot.objects.get(discord_id=self.object_id)
+        except Webhook.DoesNotExist:
+            try:
+                return Webhook.objects.get(discord_id=self.object_id)
+            except Webhook.DoesNotExist:
+                raise KeyError(f"Wrong discord author ID")
 
 class ShareableLink(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -351,7 +376,6 @@ class ShareableLink(models.Model):
         limit_choices_to={'model__in': ('folder', 'file')}
     )
     object_id = models.CharField(max_length=22)
-
     resource = GenericForeignKey('content_type', 'object_id')
 
     def __str__(self):
@@ -373,14 +397,12 @@ class Thumbnail(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
-    attachment_id = models.CharField(max_length=255)
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
-    message_id = models.CharField(max_length=255)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
     history = HistoricalRecords()
 
-    webhook = models.ForeignKey('Webhook', on_delete=models.PROTECT)
+    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.PROTECT)
 
     def delete(self, *args, **kwargs):
         cache.delete(f"thumbnail:{self.file.id}")
@@ -395,15 +417,16 @@ class Preview(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
-    attachment_id = models.CharField(max_length=255, null=True)
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True, related_name="preview")
-    message_id = models.CharField(max_length=255)
     key = models.BinaryField()
     iso = models.CharField(max_length=50, null=True)
     aperture = models.CharField(max_length=50, null=True)
     exposure_time = models.CharField(max_length=50, null=True)
     model_name = models.CharField(max_length=50, null=True)
     focal_length = models.CharField(max_length=50, null=True)
+
+    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.PROTECT)
+
     history = HistoricalRecords()
 
     def __str__(self):
@@ -476,7 +499,7 @@ class Webhook(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return self.url
+        return f"Webhook[name={self.name}]"
 
 
 class Bot(models.Model):
@@ -491,7 +514,7 @@ class Bot(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return self.token
+        return f"Bot[name={self.name}]"
 
 
 class DiscordSettings(models.Model):

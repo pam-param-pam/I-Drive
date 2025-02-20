@@ -32,7 +32,6 @@
             <CopyCode v-if="copyCode" @click="copy"></CopyCode>
             <saveButton
                v-if="saveFile"
-               :isSaveBtnLoading="isSaveBtnLoading"
                @click="$emit('saveFile')"
             ></saveButton>
             <closeButton @click="$emit('close')"></closeButton>

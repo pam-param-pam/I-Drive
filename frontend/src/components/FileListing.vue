@@ -586,7 +586,7 @@ export default {
          }
 
          // Ctrl is pressed
-         if ((event.ctrlKey || event.metaKey) && !this.searchActive) {
+         if ((event.ctrlKey || event.metaKey)) {
             let key = String.fromCharCode(event.which).toLowerCase()
 
             if (key === 'a') {

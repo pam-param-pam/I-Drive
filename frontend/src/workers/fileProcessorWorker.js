@@ -20,6 +20,7 @@ export function detectType(type, extension) {
    else if (extension === ".mod") {
       return "text/plain"
    }
+   if(!type) return "text/plain"
    return type
 
 }

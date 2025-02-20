@@ -6,7 +6,7 @@ from urllib.parse import urlparse, parse_qs
 
 import httpx
 
-from ..models import DiscordSettings, Bot, Webhook
+from ..models import DiscordSettings, Bot, Webhook, DiscordAttachment
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
 
@@ -96,12 +96,17 @@ class Discord:
                 raise DiscordBlockError(message="This view is protected, discord blocked you, try again later", retry_after=remaining_time)
             self.remove_user_state(user)
 
-        token = self.get_token(user)
         if not headers:
             headers = {}
-        headers['Authorization'] = f'Bot {token}'
-        print(f"Making bot request with token: {token}")
 
+        token = headers.get('Authorization')
+        if token:
+            token = token.replace("Bot ", "")
+        if not token:
+            token = self.get_token(user)
+            headers['Authorization'] = f'Bot {token}'
+
+        print(f"Making bot request with token: {token}")
         print("hit discord api")
         response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         self.update_token(user, token, response.headers)
@@ -149,6 +154,8 @@ class Discord:
 
             raise DiscordError(response.text, response.status_code)
 
+        return response
+
     def send_message(self, user, message: str) -> httpx.Response:
         channel_id = self._get_channel_id(user)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
@@ -169,19 +176,10 @@ class Discord:
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
 
-        return response
+        return message
 
-    def send_webhook_file(self, user, webhook, files: dict, json=None) -> httpx.Response:
-        channel_id = self._get_channel_id(user)
-        url = f'{webhook}/channels/{channel_id}/messages'
-
-        response = self._make_webhook_request(user, 'POST', url, files=files, json=json, timeout=None)
-
-        message = response.json()
-        expiry = self._calculate_expiry(message)
-        cache.set(message["id"], response, timeout=expiry)
-
-        return response
+    def get_attachment_url(self, user, attachment: DiscordAttachment) -> str:
+        return self.get_file_url(user, attachment.message_id, attachment.attachment_id)
 
     def get_file_url(self, user, message_id: str, attachment_id: str) -> str:
         message = self.get_message(user, message_id).json()
@@ -213,13 +211,24 @@ class Discord:
         response = self._make_bot_request(user, 'DELETE', url)
         return response
 
-    def edit_attachments(self, user, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
-        # todo
+    def edit_webhook_attachments(self, user, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
         attachments_to_keep = []
         for attachment_id in attachment_ids_to_keep:
             attachments_to_keep.append({"id": attachment_id})
         url = f"{webhook}/messages/{message_id}"
         response = self._make_webhook_request(user, 'PATCH', url, json={"attachments": attachments_to_keep})
+        return response
+
+    def edit_attachments(self, user, token, message_id, attachment_ids_to_keep) -> httpx.Response:
+        channel_id = self._get_channel_id(user)
+        url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
+
+        attachments_to_keep = []
+        for attachment_id in attachment_ids_to_keep:
+            attachments_to_keep.append({"id": attachment_id})
+
+        headers = {'Authorization': f'Bot {token}'}
+        response = self._make_bot_request(user, 'PATCH', url, json={"attachments": attachments_to_keep}, headers=headers)
         return response
 
     def _calculate_expiry(self, message: dict) -> float:

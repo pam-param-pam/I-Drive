@@ -48,6 +48,9 @@ I Drive is a cloud storage system & online web browser that stores files on Disc
 | Editor support for large files                               | ⛔  Coming prob never |
 | fix __prependStaticUrl                                       | ⛔  Coming prob never |
 | multiple files in 1 discord attachment support               | ⛔  Coming prob never |
+| fix mobile number download info frontend                     | ⛔  Coming prob never |
+| add deselect                                                 | ⛔  Coming prob never |
+| prefetch related vs select related                           | ⛔  Coming prob never |
 
 
 
@@ -136,7 +139,18 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 # Deployment
 1) Create a file called docker-compose.yml and paste [this](https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml) content
-2) Run `docker compose up`
+2) Create .env file and add these values:
+```IS_DEV_ENV=True        # Having this in production is a security risk
+   DEPLOYMENT_HOST=localhost         # The hostname or IP address used to connect to the backend server
+   I_DRIVE_BACKEND_SECRET_KEY=<django_secret_key>
+   CORS_FRONTEND=frontend
+   CORS_FRONTEND_PORT=5173
+   I_DRIVE_REDIS_ADDRESS=redis
+   I_DRIVE_REDIS_PORT=6379
+   BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api
+   I_DRIVE_BACKEND_STORAGE_DIR=/app/data
+```
+3) Run `docker compose up`
 3) Run `docker exec -t idrive-backend bash`
 4) Run `python manage.py migrate` to setup a database
 5) Run `python manage.py createsuperuser` to create admin user

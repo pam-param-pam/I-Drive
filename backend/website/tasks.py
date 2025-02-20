@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .celery import app
-from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail
+from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, DiscordAttachment, Webhook
 from .utilities.Discord import discord
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
@@ -84,68 +84,64 @@ def smart_delete(user_id, request_id, ids):
         all_files.extend(files)
 
         message_structure = defaultdict(list)
+
+        # We find all attachments we want to remove
+
+        database_attachment_ids = []
         for file in all_files:
 
             fragments = Fragment.objects.filter(file=file)
             for fragment in fragments:
-                message_structure[fragment.message_id].append(fragment.attachment_id)
+                attachment = fragment.attachment
+                message_structure[attachment.message_id].append(attachment.attachment_id)
+                database_attachment_ids.append(attachment.id)
 
-            # deleting file preview if it exists
+            # adding preview attachment if it exists
             try:
-                preview = file.preview
-                message_structure[preview.message_id].append(preview.attachment_id)
+                attachment = file.preview.attachment
+                message_structure[attachment.message_id].append(attachment.attachment_id)
+                database_attachment_ids.append(attachment.id)
             except Preview.DoesNotExist:
                 pass
 
-            # deleting file thumbnail if it exists
+            # adding thumbnail attachment if it exists
             try:
-                thumbnail = file.thumbnail
-                message_structure[thumbnail.message_id].append(thumbnail.attachment_id)
+                attachment = file.thumbnail.attachment
+                message_structure[attachment.message_id].append(attachment.attachment_id)
+                database_attachment_ids.append(attachment.id)
+
             except Thumbnail.DoesNotExist:
                 pass
 
         length = len(message_structure)
-
         last_percentage = 0
         for index, key in enumerate(message_structure.keys()):
 
             try:
                 # querying database to look for files saved in the same discord message,
-                # we ignore previews as they are always in a different message
-                fragments = Fragment.objects.filter(message_id=key)
-                thumbnails = Thumbnail.objects.filter(message_id=key)
-                previews = Preview.objects.filter(message_id=key)
+                discord_attachments = DiscordAttachment.objects.filter(message_id=key)
 
                 # if only 1 found, we found only the file we want to delete, there's nothing to be saved, we can just delete the entire discord message
-                if len(fragments) + len(thumbnails) + len(previews) == 1:
+                if len(discord_attachments) == 1:
                     discord.remove_message(user, key)
                 else:
-                    attachment_ids = []
-                    for fragment in fragments:
-                        attachment_ids.append(fragment.attachment_id)
+                    all_attachment_ids = []
 
-                    for thumbnail in thumbnails:
-                        attachment_ids.append(thumbnail.attachment_id)
+                    for discord_attachment in discord_attachments:
+                        all_attachment_ids.append(discord_attachment.attachment_id)
 
-                    all_attachment_ids = set(attachment_ids)
                     attachment_ids_to_remove = set(message_structure[key])
-
-                    # Since we are operating here on a single discord message, we can just query anything file to find the upload webhook
-                    if fragments:
-                        webhook = fragments[0].webhook
-                    elif thumbnails:
-                        webhook = thumbnails[0].webhook
-                    else:
-                        print(f"===========UNEXPECTED WARNING===========")
-                        print("this shouldnt happen")
-                        print("message ID")
-                        print(key)
-                        continue
+                    all_attachment_ids = set(all_attachment_ids)
 
                     # Get the difference
                     attachment_ids_to_keep = list(all_attachment_ids - attachment_ids_to_remove)
                     if len(attachment_ids_to_keep) > 0:
-                        discord.edit_attachments(user, webhook.url, key, attachment_ids_to_keep)
+                        # we find message author
+                        author = discord_attachments[0].get_author()
+                        if isinstance(author, Webhook):
+                            discord.edit_webhook_attachments(user, author.url, key, attachment_ids_to_keep)
+                        else:
+                            discord.edit_attachments(user, author.token, key, attachment_ids_to_keep)
                     else:
                         discord.remove_message(user, key)
                     print("===sleeping===")
@@ -166,6 +162,9 @@ def smart_delete(user_id, request_id, ids):
 
         for item in items:
             item.delete()
+
+        queryset = DiscordAttachment.objects.filter(id__in=database_attachment_ids)
+        queryset.delete()
 
         send_message(message="toasts.itemsDeleted", args=None, finished=True, user_id=user_id, request_id=request_id)
 
@@ -331,16 +330,16 @@ def delete_dangling_discord_files():
             continue
 
         for batch in discord.fetch_messages(user):
-            for message in batch:
-                attachments = message['attachments']
-                if not attachments:
-                    discord.remove_message(user, message['id'])
+            for discord_message in batch:
+                discord_attachments = discord_message['attachments']
+                if not discord_attachments:
+                    discord.remove_message(user, discord_message['id'])
 
                 attachments_to_keep = []
                 attachments_to_remove = []
                 webhook = None
 
-                timestamp = datetime.fromisoformat(message['timestamp'])
+                timestamp = datetime.fromisoformat(discord_message['timestamp'])
                 now = datetime.now(timezone.utc)
 
                 # skip fresh messages to not break upload
@@ -353,31 +352,26 @@ def delete_dangling_discord_files():
                 if timestamp < two_days_ago:
                     break
 
-                for attachment in attachments:
-                    fragment = Fragment.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
-                    preview = Preview.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
-                    thumbnail = Thumbnail.objects.filter(message_id=message['id'], attachment_id=attachment['id'])
+                for discord_attachment in discord_attachments:
 
-                    if fragment.exists() or preview.exists() or thumbnail.exists():
-                        if not webhook:
-                            if fragment.exists():
-                                webhook = fragment.first().webhook
-                            if thumbnail.exists():
-                                webhook = thumbnail.first().webhook
+                    database_attachments = DiscordAttachment.objects.filter(message_id=discord_message['id'], attachment_id=discord_attachment['id'])
 
-                        attachments_to_keep.append(attachment['id'])
+                    if database_attachments.exists():
+                        attachments_to_keep.append(discord_attachment['id'])
                     else:
-                        attachments_to_remove.append(attachment['id'])
+                        attachments_to_remove.append(discord_attachment['id'])
 
                 if not attachments_to_remove:
                     if not attachments_to_keep:
-                        discord.remove_message(user, message['id'])
+                        discord.remove_message(user, discord_message['id'])
                     continue
 
-                if len(attachments_to_keep) > 0:
-                    discord.edit_attachments(user, webhook.url, message['id'], attachments_to_keep)
+                # we find message author
+                author = discord_attachments[0].get_author()
+                if isinstance(author, Webhook):
+                    discord.edit_webhook_attachments(user, author.url, discord_message['id'], attachments_to_keep)
                 else:
-                    discord.remove_message(user, message['id'])
+                    discord.edit_attachments(user, author.token, discord_message['id'], attachments_to_keep)
 
                 deleted_attachments[user] += len(attachments_to_remove)
 
@@ -416,7 +410,7 @@ def prefetch_next_fragments(fragment_id, number_to_prefetch):
     filtered_fragments = fragments.filter(sequence__gt=fragment.sequence).order_by('sequence')[:number_to_prefetch]
 
     for fragment in filtered_fragments:
-        discord.get_file_url(user=fragment.file.owner, message_id=fragment.message_id, attachment_id=fragment.attachment_id)
+        discord.get_attachment_url(user=fragment.file.owner, attachment=fragment.attachment)
 
 @app.task
 def delete_expired_shares():

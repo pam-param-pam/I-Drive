@@ -249,6 +249,14 @@ export const useUploadStore = defineStore("upload2", {
       abortFile(frontendId) {
 
       },
+      forceUnstuck() {
+         //todo
+         this.concurrentRequests = 0
+         this.uploadSpeedMap = new Map()
+         this.progressMap = new Map()
+         this.filesUploading = []
+         this.processUploads()
+      },
       pauseAll() {
          this.state = uploadState.paused
          this.filesUploading.forEach(file => file.status = fileUploadStatus.paused)
@@ -319,7 +327,7 @@ export const useUploadStore = defineStore("upload2", {
       //experimental
       fillAttachmentInfo(attachment, request, discordResponse, discordAttachment) {
          let fileObj = attachment.fileObj
-
+         console.log(discordResponse)
          if (!this.backendState.has(fileObj.frontendId)) {
 
             let file_data = {
@@ -345,7 +353,7 @@ export const useUploadStore = defineStore("upload2", {
                "fragment_size": attachment.rawBlob.size,
                "message_id": discordResponse.data.id,
                "attachment_id": discordAttachment.id,
-               "webhook": request.webhook.discord_id,
+               "message_author_id": discordResponse.data.author.id,
                "offset": attachment.offset
             }
             state.attachments.push(attachment_data)
@@ -356,7 +364,7 @@ export const useUploadStore = defineStore("upload2", {
                "attachment_id": discordAttachment.id,
                "iv": attachment.iv,
                "key": attachment.key,
-               "webhook": request.webhook.discord_id
+               "message_author_id": discordResponse.data.author.id,
             }
          }
          this.backendState.set(fileObj.frontendId, state)

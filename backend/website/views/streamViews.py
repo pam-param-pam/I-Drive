@@ -10,6 +10,8 @@ import rawpy
 import requests
 from asgiref.sync import sync_to_async
 from cryptography.fernet import Fernet
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.db.utils import IntegrityError
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse, HttpResponse
@@ -19,14 +21,14 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
-from ..models import File, UserZIP
+from ..models import File, UserZIP, DiscordAttachment
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
 from ..utilities.errors import DiscordError, BadRequestError
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
@@ -40,7 +42,7 @@ from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 def get_preview(request, file_obj: File):
     try:
         preview = Preview.objects.get(file=file_obj)
-        url = discord.get_file_url(file_obj.owner, preview.message_id, preview.attachment_id)
+        url = discord.get_attachment_url(file_obj.owner, preview.attachment)
 
         res = requests.get(url, timeout=20)
         if not res.ok:
@@ -73,7 +75,7 @@ def get_preview(request, file_obj: File):
 
     file_content = b''
     for fragment in fragments:
-        url = discord.get_file_url(file_obj.owner, fragment.message_id, fragment.attachment_id)
+        url = discord.get_attachment_url(file_obj.owner, fragment.attachment)
         response = requests.get(url, timeout=20)
         if not response.ok:
             raise DiscordError(response.text, response.status_code)
@@ -115,27 +117,34 @@ def get_preview(request, file_obj: File):
     attachment_name = user.discordsettings.attachment_name
     files = {'file': (attachment_name, encrypted_data)}
 
-    response = discord.send_file(user, files)
+    message = discord.send_file(user, files)
 
-    message = response.json()
     size = data.getbuffer().nbytes
     encrypted_size = encrypted_data.__sizeof__()
 
-    preview = Preview(
-        file=file_obj,
-        size=size,
-        attachment_id=message["attachments"][0]["id"],
-        encrypted_size=encrypted_size,
-        message_id=message["id"],
-        key=key,
-        model_name=model_name,
-        focal_length=focal_length,
-        aperture=aperture,
-        iso=iso,
-        exposure_time=exposure_time,
-    )
+    author = get_discord_author(request, message['author']['id'])
+
     try:
-        preview.save()
+        with transaction.atomic():
+            discord_attachment = DiscordAttachment.objects.create(
+                message_id=message["id"],
+                attachment_id=message["attachments"][0]["id"],
+                content_type=ContentType.objects.get_for_model(author),
+                object_id=author.discord_id
+            )
+            preview = Preview.objects.create(
+                file=file_obj,
+                size=size,
+                encrypted_size=encrypted_size,
+                key=key,
+                model_name=model_name,
+                focal_length=focal_length,
+                aperture=aperture,
+                iso=iso,
+                exposure_time=exposure_time,
+                attachment=discord_attachment,
+            )
+
         file_dict = {"parent_id": file_obj.parent.id, "id": file_obj.id, "iso": preview.iso,
                      "model_name": preview.model_name,
                      "aperture": preview.aperture, "exposure_time": preview.exposure_time,
@@ -162,7 +171,7 @@ def get_thumbnail(request, file_obj: File):
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
 
         # todo potential security risk, without stream its possible to overload the server
-        url = discord.get_file_url(file_obj.owner, thumbnail.message_id, thumbnail.attachment_id)
+        url = discord.get_attachment_url(file_obj.owner, thumbnail.attachment)
         discord_response = requests.get(url)
         if discord_response.ok:
             thumbnail_content = discord_response.content
@@ -191,7 +200,7 @@ def stream_file(request, file_obj: File):
 
     isInline = request.GET.get('inline', False)
 
-    fragments = file_obj.fragments.all().order_by('sequence')
+    fragments = file_obj.fragments.all().order_by('sequence').prefetch_related("attachment")
     user = file_obj.owner
 
     check_if_bots_exists(user)
@@ -215,7 +224,7 @@ def stream_file(request, file_obj: File):
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
-                url = await sync_to_async(discord.get_file_url)(user, fragments[index].message_id, fragments[index].attachment_id)
+                url = await sync_to_async(discord.get_attachment_url)(user, fragments[index].attachment)
                 auto_prefetch(file_obj, fragments[index].id)
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
@@ -326,7 +335,7 @@ def stream_zip_files(request, token):
                 decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
             async for fragment in fragments:
-                url = await sync_to_async(discord.get_file_url)(user, fragment.message_id, fragment.attachment_id)
+                url = await sync_to_async(discord.get_attachment_url)(user, fragment.attachment)
                 auto_prefetch(file_obj, fragment.id)
 
                 async with session.get(url) as response:
@@ -365,7 +374,7 @@ def stream_zip_files(request, token):
     files = []
     for file in dict_files:
         if not file["isDir"]:
-            fragments = file['fileObj'].fragments.all().order_by("sequence")
+            fragments = file['fileObj'].fragments.all().order_by("sequence").prefetch_related("attachment")
             file = GenFile(name=file['name'], generator=stream_file(file["fileObj"], fragments), size=file["fileObj"].size)
             files.append(file)
 

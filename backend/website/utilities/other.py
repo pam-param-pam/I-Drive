@@ -7,10 +7,11 @@ from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.db.models.aggregates import Sum
 from django.utils import timezone
 
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview
+from .Discord import discord
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, DiscordAttachment
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, MAX_DISCORD_MESSAGE_SIZE
+from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
 signer = TimestampSigner()
@@ -256,7 +257,7 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
     children = []
     file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
+        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
     children.extend(file_children)
     if include_folders:
         folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
@@ -478,8 +479,8 @@ def create_webhook_dict(webhook: Webhook) -> dict:
 def create_bot_dict(bot: Bot) -> dict:
     return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id, "disabled": bot.disabled, "reason": bot.reason}
 
-def get_and_check_webhook(request, webhook_url: str) -> tuple[str, str, str, str]:
 
+def get_and_check_webhook(request, webhook_url: str) -> tuple[str, str, str, str]:
     res = requests.get(webhook_url)
     if not res.ok:
         raise BadRequestError("Webhook URL is invalid")
@@ -501,6 +502,7 @@ def get_and_check_webhook(request, webhook_url: str) -> tuple[str, str, str, str
 
     return guild_id, channel_id, discord_id, name
 
+
 def get_webhook(request, discord_id: str) -> Webhook:
     try:
         return Webhook.objects.get(discord_id=discord_id, owner=request.user)
@@ -508,9 +510,20 @@ def get_webhook(request, discord_id: str) -> Webhook:
         raise BadRequestError(f"Could not find webhook with id: {discord_id}")
 
 
+def get_discord_author(request, message_author_id: int) -> Webhook:
+    try:
+        return Bot.objects.get(discord_id=message_author_id, owner=request.user)
+    except Webhook.DoesNotExist:
+        try:
+            return Webhook.objects.get(discord_id=message_author_id, owner=request.user)
+        except Webhook.DoesNotExist:
+            raise BadRequestError(f"Wrong discord author ID")
+
+
 def check_if_bots_exists(user) -> None:
     if not Bot.objects.filter(owner=user, disabled=False).exists():
         raise NoBotsError()
+
 
 def auto_prefetch(file_obj: File, fragment_id: str) -> None:
     if not file_obj.duration or file_obj.duration <= 0:
@@ -527,4 +540,26 @@ def auto_prefetch(file_obj: File, fragment_id: str) -> None:
 
     prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
 
+def delete_single_attachments(user, attachment: DiscordAttachment) -> None:
+    database_attachments = DiscordAttachment.objects.filter(message_id=attachment.message_id)
 
+    all_attachments_ids = set()
+    for attachment in database_attachments:
+        all_attachments_ids.add(attachment.attachment_id)
+
+    attachment_ids_to_remove = set()
+    attachment_ids_to_remove.add(attachment.attachment_id)
+
+    # Get the difference
+    attachment_ids_to_keep = list(all_attachments_ids - attachment_ids_to_remove)
+    if len(attachment_ids_to_keep) > 0:
+        # we find message author
+        author = attachment.get_author()
+        if isinstance(author, Webhook):
+            discord.edit_webhook_attachments(user, author.url, attachment.message_id, attachment_ids_to_keep)
+        else:
+            discord.edit_attachments(user, author.token, attachment.message_id, attachment_ids_to_keep)
+    else:
+        discord.remove_message(user, attachment.message_id)
+
+    attachment.delete()

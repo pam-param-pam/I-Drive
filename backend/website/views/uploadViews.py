@@ -1,21 +1,22 @@
 import base64
 from datetime import datetime
 
-from django.core.files.uploadhandler import FileUploadHandler
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.db.utils import IntegrityError
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Fragment, Thumbnail
+from ..models import File, Fragment, Thumbnail, DiscordAttachment
 from ..utilities.Discord import discord
 from ..utilities.Permissions import CreatePerms
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, cache, EventCode, EncryptionMethod
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, get_webhook, check_if_bots_exists
-from ..utilities.throttle import defaultAuthUserThrottle, MediaThrottle, ProxyRateThrottle
+from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_attachments
+from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])
@@ -61,10 +62,10 @@ def create_file(request):
             if key:
                 key = base64.b64decode(key)
 
-            if mimetype == "":
-                mimetype = "text/plain"
+            if not mimetype:
+                raise BadRequestError("'mimetype' cannot be empty")
 
-            if file_name == "" or not file_name:
+            if not file_name:
                 raise BadRequestError("'name' cannot be empty")
 
             file_type = mimetype.split("/")[0]
@@ -74,6 +75,15 @@ def create_file(request):
 
             if File.objects.filter(frontend_id=frontend_id).exists():
                 continue
+
+            if created_at:
+                try:
+                    timestamp_in_seconds = int(created_at) / 1000
+                    created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
+                except (ValueError, OverflowError):
+                    raise BadRequestError("Invalid 'created_at' timestamp format.")
+
+            # with transaction.atomic():
 
             file_obj = File(
                 extension=extension,
@@ -87,15 +97,8 @@ def create_file(request):
                 iv=iv,
                 frontend_id=frontend_id,
                 encryption_method=encryption_method,
+                created_at=created_at,
             )
-
-            if created_at:
-                try:
-                    timestamp_in_seconds = int(created_at) / 1000
-                    created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
-                    file_obj.created_at = created_at
-                except (ValueError, OverflowError):
-                    raise BadRequestError("Invalid 'created_at' timestamp format.")
 
             if duration:
                 file_obj.duration = duration
@@ -112,34 +115,36 @@ def create_file(request):
                 message_id = attachment['message_id']
                 attachment_id = attachment['attachment_id']
                 fragment_size = attachment['fragment_size']
-                webhook_id = attachment['webhook']
                 offset = attachment['offset']
+                message_author_id = attachment['message_author_id']
 
-                webhook = get_webhook(request, webhook_id)
+                author = get_discord_author(request, message_author_id)
 
-                check_resource_perms(request, file_obj, checkReady=False)
-
-                fragment_obj = Fragment(
+                discord_attachment = DiscordAttachment.objects.create(
+                    message_id=message_id,
+                    attachment_id=attachment_id,
+                    content_type=ContentType.objects.get_for_model(author),
+                    object_id=author.discord_id
+                )
+                Fragment.objects.create(
                     sequence=fragment_sequence,
                     file=file_obj,
                     size=fragment_size,
-                    attachment_id=attachment_id,
-                    message_id=message_id,
-                    webhook=webhook,
+                    attachment=discord_attachment,
                     offset=offset,
                 )
-                fragment_obj.save()
 
             if thumbnail:
                 message_id = thumbnail['message_id']
                 attachment_id = thumbnail['attachment_id']
                 size = thumbnail['size']
+                message_author_id = thumbnail['message_author_id']
                 iv = thumbnail.get('iv')
                 key = thumbnail.get('key')
-                webhook_id = thumbnail['webhook']
 
-                webhook = get_webhook(request, webhook_id)
-                if file_obj.is_encrypted() and (not iv or not key):  # or not key
+                author = get_discord_author(request, message_author_id)
+
+                if file_obj.is_encrypted() and not (iv and key):
                     raise BadRequestError("Encryption key and/or iv not provided")
 
                 if iv:
@@ -147,24 +152,25 @@ def create_file(request):
                 if key:
                     key = base64.b64decode(key)
 
-                check_resource_perms(request, file_obj, checkReady=False)
-
                 try:
                     if file_obj.thumbnail:
                         raise BadRequestError("A thumbnail already exists for this file.")
                 except File.thumbnail.RelatedObjectDoesNotExist:
                     pass
 
-                thumbnail_obj = Thumbnail(
-                    file=file_obj,
+                discord_attachment = DiscordAttachment.objects.create(
                     message_id=message_id,
                     attachment_id=attachment_id,
+                    content_type=ContentType.objects.get_for_model(author),
+                    object_id=author.discord_id
+                )
+                Thumbnail.objects.create(
+                    file=file_obj,
                     size=size,
                     iv=iv,
                     key=key,
-                    webhook=webhook,
+                    attachment=discord_attachment,
                 )
-                thumbnail_obj.save()
 
             if file_obj.ready:
                 file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
@@ -181,8 +187,10 @@ def create_file(request):
         fragment_size = request.data['fragment_size']
         message_id = request.data['message_id']
         attachment_id = request.data['attachment_id']
-        webhook_id = request.data['webhook']
         offset = request.data['offset']
+        message_author_id = request.data['message_author_id']
+
+        author = get_discord_author(request, message_author_id)
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)
@@ -198,41 +206,25 @@ def create_file(request):
         if len(fragments) > 1:
             raise BadRequestError("Fragments > 1")
 
-        webhook = get_webhook(request, webhook_id)
+        fragment = fragments[0]
+        delete_single_attachments(request.user, fragment.attachment)
+        fragment.delete()
 
-        # if file is not empty
-        if len(fragments) > 0:
-            old_fragment = fragments[0]
-            old_message_id = old_fragment.message_id
-            fragments = Fragment.objects.filter(message_id=old_message_id)
-            # multi file in 1 message
-            if len(fragments) > 1:
-                attachment_ids = []
-                for fragment in fragments:
-                    if fragment != old_fragment:
-                        attachment_ids.append(fragment.attachment_id)
+        with transaction.atomic():
+            discord_attachment = DiscordAttachment.objects.create(
+                message_id=message_id,
+                attachment_id=attachment_id,
+                content_type=ContentType.objects.get_for_model(author),
+                object_id=author.discord_id
+            )
+            Fragment.objects.create(
+                sequence=1,
+                file=file_obj,
+                size=fragment_size,
+                attachment=discord_attachment,
+                offset=offset,
+            )
 
-                discord.edit_attachments(old_fragment.webhook.url, old_message_id, attachment_ids)
-            else:
-                # single file in 1 message
-
-                discord.remove_message(request.user, old_message_id)
-            old_message_id = old_fragment.message_id
-
-            old_fragment.delete()
-            # important invalidate caches!
-            cache.delete(old_message_id)
-
-        fragment_obj = Fragment(
-            sequence=1,
-            file=file_obj,
-            size=fragment_size,
-            attachment_id=attachment_id,
-            message_id=message_id,
-            webhook=webhook,
-            offset=offset,
-        )
-        fragment_obj.save()
         file_obj.size = fragment_size
         file_obj.last_modified_at = timezone.now()
 
@@ -250,7 +242,8 @@ def create_thumbnail(request):
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     size = request.data['size']
-    webhook_id = request.data['webhook']
+    message_author_id = request.data['message_author_id']
+    author = get_discord_author(request, message_author_id)
 
     iv = request.data.get('iv')
     key = request.data.get('key')
@@ -263,22 +256,25 @@ def create_thumbnail(request):
     file_obj = get_file(file_id)
     check_resource_perms(request, file_obj)
 
-    webhook = get_webhook(request, webhook_id)
-
     if file_obj.thumbnail:
+        delete_single_attachments(request.user, file_obj.thumbnail.attachment)
         file_obj.thumbnail.delete()
 
-    thumbnail_obj = Thumbnail(
-        file=file_obj,
-        message_id=message_id,
-        attachment_id=attachment_id,
-        size=size,
-        key=key,
-        iv=iv,
-        webhook=webhook
+    with transaction.atomic():
+        discord_attachment = DiscordAttachment.objects.create(
+            message_id=message_id,
+            attachment_id=attachment_id,
+            content_type=ContentType.objects.get_for_model(author),
+            object_id=author.discord_id
+        )
+        Thumbnail.objects.create(
+            file=file_obj,
+            size=size,
+            key=key,
+            iv=iv,
+            attachment=discord_attachment
+        )
 
-    )
-    thumbnail_obj.save()
     file_obj.remove_cache()
 
     file_dict = create_file_dict(file_obj)
@@ -296,9 +292,5 @@ def proxy_discord(request):
 
     files = request.FILES
 
-    if not json_payload:
-        raise BadRequestError("Missing json_payload")
-
-    res = discord.send_file(request.user, json=json_payload, files=files)
-
-    return JsonResponse(res.json(), status=res.status_code, safe=False)
+    message = discord.send_file(request.user, json=json_payload, files=files)
+    return JsonResponse(message, status=200, safe=False)

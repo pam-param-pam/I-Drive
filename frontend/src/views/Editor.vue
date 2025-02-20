@@ -5,7 +5,6 @@
          v-model="raw"
          :font-size="fontSize"
          :header="true"
-         :isSaveBtnLoading="isSaveBtnLoading"
          :languages="currentLanguage"
          :line-nums="true"
          :read-only="isInShareContext"
@@ -53,6 +52,7 @@ import { encrypt } from '@/utils/encryption.js'
 import { useUploadStore } from '@/stores/uploadStore.js'
 import { canUpload } from '@/api/user.js'
 import i18n from '@/i18n/index.js'
+import { upload } from "@/utils/uploadHelper.js"
 
 export default {
    name: 'editor',
@@ -81,8 +81,8 @@ export default {
          raw: '',
          editor: null,
          folderList: [],
-         isSaveBtnLoading: false,
-         currentLanguage: null
+         currentLanguage: null,
+         savingFile: false,
       }
    },
 
@@ -109,13 +109,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'setLoading',
-         'setItems',
-         'addSelected',
-         'showHover',
-         'setLastItem'
-      ]),
+      ...mapActions(useMainStore, ['setLoading', 'setItems', 'addSelected', 'showHover', 'setLastItem']),
 
       guessLanguage() {
          let extensionMap = {
@@ -221,7 +215,9 @@ export default {
       },
 
       onSave: throttle(async function (event) {
+         if (this.savingFile) return
          try {
+            this.savingFile = true
             document.querySelector('#save-button').classList.add('loading')
 
             let res = await canUpload(this.file.parent_id)
@@ -236,32 +232,21 @@ export default {
                let formData = new FormData()
                let secrets = await getEncryptionSecrets(this.file.id)
 
-               let encryptedBlob = await encrypt(
-                  this.raw,
-                  this.file.encryption_method,
-                  secrets.key,
-                  secrets.iv,
-                  0
-               )
+               let encryptedBlob = await encrypt(this.raw, this.file.encryption_method, secrets.key, secrets.iv, 0)
 
                formData.append('file', encryptedBlob, this.attachmentName)
 
-               let response = await uploadInstance.post(webhook.url, formData, {
-                  headers: {
-                     'Content-Type': 'multipart/form-data'
-                  }
-               })
+               let uploadResponse = await upload(formData, {}, webhook)
 
-               let json = response.data
                let file_data = {
                   file_id: this.file.id,
                   fragment_sequence: 1,
                   total_fragments: 1,
                   offset: 0,
                   fragment_size: encryptedBlob.size,
-                  message_id: json.id,
-                  attachment_id: json.attachments[0].id,
-                  webhook: webhook.discord_id
+                  message_id: uploadResponse.data.id,
+                  attachment_id: uploadResponse.data.attachments[0].id,
+                  message_author_id: uploadResponse.data.author.id,
                }
 
                await editFile(file_data)
@@ -280,6 +265,8 @@ export default {
             document.querySelector('#save-button').classList.remove('loading')
             console.error(e)
             this.$toast.error(e.toString())
+         } finally {
+            this.savingFile = false
          }
       }, 1000),
 

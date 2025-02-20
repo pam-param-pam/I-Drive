@@ -21,6 +21,7 @@ export async function checkFilesSizes(files) {
    return false
 }
 
+
 export async function scanDataTransfer(dataTransfer) {
    let files = []
    let items = dataTransfer.items
@@ -50,6 +51,7 @@ export async function scanDataTransfer(dataTransfer) {
 
    return files
 }
+
 
 // Recursively process directories and collect files with their full paths
 async function processDirectory(directoryEntry) {
@@ -83,6 +85,7 @@ async function processDirectory(directoryEntry) {
    return files // Return all files with their full paths
 }
 
+
 function processFile(fileEntry) {
    return new Promise((resolve, reject) => {
       fileEntry.file(function(file) {
@@ -104,19 +107,24 @@ export function isAudioFile(file) {
    return file.fileObj.type.includes("audio/")
 }
 
+
 export function isVideoFile(file) {
    return file.fileObj.type.includes("video/")
 }
 
-export function getWebhook(currentWebhook) {
-   const uploadStore = useUploadStore()
 
+let currentWebhookIndex = 0
+export function getWebhook() {
+   let uploadStore = useUploadStore()
    let webhooks = uploadStore.webhooks
-   let currentWebhookIndex = webhooks.findIndex(webhook => webhook.discord_id === currentWebhook.discord_id)
+
+   let webhook = webhooks[currentWebhookIndex]
+
    currentWebhookIndex = (currentWebhookIndex + 1) % webhooks.length
 
-   return webhooks[currentWebhookIndex]
+   return webhook
 }
+
 
 export async function getAudioCover(file) {
    return new Promise((resolve, reject) => {
@@ -245,6 +253,7 @@ export async function getOrCreateFolder(fileObj) {
    return parentFolder
 }
 
+
 export function ivToBase64(iv) {
    // First, convert the Uint8Array to a regular binary string
    let binary = ""
@@ -253,6 +262,7 @@ export function ivToBase64(iv) {
    // Then, encode the binary string in Base64
    return btoa(binary)
 }
+
 
 export function generateIv(method) {
    let iv
@@ -268,9 +278,11 @@ export function generateIv(method) {
 
 }
 
+
 export function roundUpTo64(size) {
    return Math.ceil(size / 64) * 64
 }
+
 
 export function generateKey() {
    let key = crypto.getRandomValues(new Uint8Array(32))
@@ -278,7 +290,8 @@ export function generateKey() {
 
 }
 
-export async function upload(fileFormList, config, webhookUrl = null) {
+
+export async function upload(formData, config) {
    let mainStore = useMainStore()
 
    let url
@@ -287,16 +300,14 @@ export async function upload(fileFormList, config, webhookUrl = null) {
       url = baseURL + "/proxy/discord"
       let token = localStorage.getItem("token")
       headers["Authorization"] = `Token ${token}`
+
    } else {
-      if (!webhookUrl) {
-         console.error("WebhookURL cannot be null")
-         return
-      }
-      url = webhookUrl
+      url = getWebhook()
+
    }
    config.headers = {
       ...config.headers,
       ...headers
    }
-   return await uploadInstance.post(url, fileFormList, config)
+   return await uploadInstance.post(url, formData, config)
 }

@@ -1,19 +1,8 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, encryptionMethod, fileUploadStatus, uploadState } from "@/utils/constants.js"
-import {
-   generateIv,
-   generateKey,
-   getAudioCover,
-   getOrCreateFolder,
-   getVideoCover,
-   getWebhook,
-   isAudioFile,
-   isVideoFile,
-   roundUpTo64, upload
-} from "@/utils/uploadHelper.js"
-import { encrypt, encryptAttachment } from "@/utils/encryption.js"
-import { backendInstance, uploadInstance } from "@/utils/networker.js"
+import { generateIv, generateKey, getAudioCover, getOrCreateFolder, getVideoCover, getWebhook, isAudioFile, isVideoFile, roundUpTo64, upload } from "@/utils/uploadHelper.js"
+import { encryptAttachment } from "@/utils/encryption.js"
 import { useToast } from "vue-toastification"
 import axios from "axios"
 
@@ -29,7 +18,6 @@ export async function* prepareRequests() {
 
    let totalSize = 0
    let attachments = []
-   let webhook = uploadStore.webhooks[0]
    let queueFile
    while ((queueFile = uploadStore.getFileFromQueue())) {
       //creating folder if needed and getting it's backend ID
@@ -69,10 +57,9 @@ export async function* prepareRequests() {
 
          //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
          if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
-            let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+            let request = { "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
-            webhook = getWebhook(webhook)
             yield request
          }
 
@@ -92,10 +79,9 @@ export async function* prepareRequests() {
       // that have to be loaded before playback starts
 
       if (totalSize > maxChunkSize / 2 || attachments.length === 10) {
-         let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+         let request = { "totalSize": totalSize, "attachments": attachments }
          totalSize = 0
          attachments = []
-         webhook = getWebhook(webhook)
          yield request
       }
 
@@ -127,10 +113,9 @@ export async function* prepareRequests() {
 
          // we have to yield
          if (totalSize >= maxChunkSize || attachments.length >= 9) {
-            yield { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+            yield {"totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
-            webhook = getWebhook(webhook)
          }
       }
       //we need to inform about totalChunks of a file
@@ -138,7 +123,7 @@ export async function* prepareRequests() {
    }
    //we need to handle the already created attachments after break
    if (attachments.length > 0) {
-      let request = { "webhook": webhook, "totalSize": totalSize, "attachments": attachments }
+      let request = {"totalSize": totalSize, "attachments": attachments }
       yield request
    }
 
@@ -156,20 +141,20 @@ export async function uploadRequest(request) {
    let cancelTokenSource = axios.CancelToken.source()
 
    let attachmentJson = []
-   let fileFormList = new FormData()
+   let formData = new FormData()
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]
 
       let encryptedBlob = await encryptAttachment(attachment)
       uploadStore.setStatus(attachment.fileObj.frontendId, fileUploadStatus.uploading)
 
-      fileFormList.append(`files[${i}]`, encryptedBlob, attachmentName)
+      formData.append(`files[${i}]`, encryptedBlob, attachmentName)
       attachmentJson.push({
          "id": i,
          "filename": attachmentName
       })
    }
-   fileFormList.append("json_payload", JSON.stringify({ "attachments": attachmentJson }))
+   formData.append("json_payload", JSON.stringify({ "attachments": attachmentJson }))
 
 
    let bytesUploaded = 0
@@ -190,7 +175,7 @@ export async function uploadRequest(request) {
       cancelToken: cancelTokenSource.token
 
    }
-   let uploadResponse = await upload(fileFormList, config, request.webhook.url).catch(err => {
+   let uploadResponse = await upload(formData, config).catch(err => {
       if(axios.isCancel(err)) {
          uploadStore.addPausedRequest(request)
          uploadStore.decrementRequests()

@@ -19,7 +19,7 @@
                   :aria-label="$t('uploadFile.pause')"
                   :title="$t('uploadFile.pause')"
                   class="action"
-                  @click="pause()"
+                  @click="pause"
                >
                   <i class="material-icons">pause</i>
                </button>
@@ -28,7 +28,7 @@
                   :aria-label="$t('uploadFile.pause')"
                   :title="$t('uploadFile.pause')"
                   class="action"
-                  @click="resume()"
+                  @click="resume"
                >
                   <i class="material-icons">play_arrow</i>
                </button>
@@ -36,7 +36,7 @@
                   :aria-label="$t('uploadFile.toggleUploadList')"
                   :title="$t('uploadFile.toggleUploadList')"
                   class="action"
-                  @click="toggle()"
+                  @click="toggle"
                >
                   <i class="material-icons">{{
                      open ? 'keyboard_arrow_down' : 'keyboard_arrow_up'
@@ -104,7 +104,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useUploadStore, ['abortAll', 'pauseAll', 'resumeAll']),
+      ...mapActions(useUploadStore, ['abortAll', 'pauseAll', 'resumeAll', 'forceUnstuck']),
 
       filesize,
 
@@ -116,7 +116,11 @@ export default {
          this.pauseAll()
       },
 
-      resume() {
+      resume(event) {
+         if (event.ctrlKey && event.shiftKey) {
+            this.forceUnstuck()
+            return
+         }
          this.resumeAll()
       }
    }

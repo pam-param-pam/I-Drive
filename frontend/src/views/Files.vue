@@ -118,18 +118,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'setSearchItems',
-         'setCurrentFolderData',
-         'setLoading',
-         'setError',
-         'setDisabledCreation',
-         'setItems',
-         'setCurrentFolder',
-         'closeHover',
-         'showHover',
-         'setSearchActive'
-      ]),
+      ...mapActions(useMainStore, ['setSearchItems', 'setCurrentFolderData', 'setLoading', 'setError', 'setDisabledCreation', 'setItems', 'setCurrentFolder', 'closeHover', 'showHover', 'setSearchActive']),
 
       ...mapActions(useUploadStore, ['startUpload']),
 

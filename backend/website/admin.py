@@ -8,7 +8,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, \
+    DiscordAttachment
 from .tasks import smart_delete
 from .utilities.Discord import discord
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
@@ -23,7 +24,7 @@ admin.site.register(VideoPosition)
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'webhook', 'sequence', 'offset', 'readable_size', 'file', 'message_id', 'attachment_id', 'created_at', 'size', 'fragment_url')
+    readonly_fields = ('id', 'attachment', 'sequence', 'offset', 'readable_size', 'file', 'created_at', 'size', 'fragment_url')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
@@ -45,7 +46,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
         return "*File name to long to display*"
 
     def fragment_url(self, obj: Fragment):
-        url = discord.get_file_url(obj.file.owner, obj.message_id, obj.attachment_id)
+        url = discord.get_attachment_url(obj.file.owner, obj.attachment)
         return format_html(f'<a href="{url}" target="_blank">{url}</a><br>')
 
     owner.admin_order_field = "file__owner__username"
@@ -229,6 +230,8 @@ class PreviewAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "readable_encrypted_size", "created_at"]
 
+    readonly_fields = ["created_at", "size", "file", "attachment"]
+
     def file_name(self, obj: Preview):
         return obj.file.name
 
@@ -246,7 +249,7 @@ class PreviewAdmin(SimpleHistoryAdmin):
 class ThumbnailAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ["file_name", "owner", "readable_size", "created_at"]
-    readonly_fields = ["thumbnail_media"]
+    readonly_fields = ["created_at", "size", "file", "attachment", "thumbnail_media"]
 
     def file_name(self, obj: Thumbnail):
         return obj.file.name
@@ -313,8 +316,36 @@ class TagAdmin(SimpleHistoryAdmin):
 
 @admin.register(Webhook)
 class WebhookAdmin(admin.ModelAdmin):
+    search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
 
 @admin.register(Bot)
 class BotAdmin(admin.ModelAdmin):
+    search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
+
+
+@admin.register(DiscordAttachment)
+class DiscordAttachmentAdmin(admin.ModelAdmin):
+    search_fields = ('discord_id', 'parent_resource.owner')
+    list_display = ['author', 'owner', 'message_id', 'attachment_id']
+    exclude = ("content_type",)
+
+    readonly_fields = ('message_id', 'attachment_id', 'clickable_author')
+
+    def owner(self, obj: DiscordAttachment):
+        return obj.get_author().owner
+
+    def author(self, obj: DiscordAttachment):
+        return obj.get_author()
+
+    def clickable_author(self, obj: DiscordAttachment):
+        author_obj = obj.get_author()
+        if not author_obj:
+            return "-"
+
+        url = f"/admin{author_obj._meta.app_label}/{author_obj._meta.model_name}/{author_obj.pk}/change/"
+        return format_html('<a href="{}">{}</a>', url, author_obj)
+
+    clickable_author.short_description = "Author"
+    clickable_author.admin_order_field = "object_id"
