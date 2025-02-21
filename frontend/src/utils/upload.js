@@ -110,8 +110,6 @@ export async function* prepareRequests() {
          attachments.push(attachment)
          totalSize += roundUpTo64(chunk.size)
          offset += chunk.size
-         console.log("CRC32.buf(chunk, queueFile.fileObj.crc)")
-         console.log(CRC32.buf(chunk, queueFile.fileObj.crc))
          queueFile.fileObj.crc = CRC32.buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc);
 
          i++
@@ -176,17 +174,24 @@ export async function uploadRequest(request) {
          }
          uploadStore.onUploadProgress(request, progressEvent)
       },
-
+      onErrorCallback: () => {
+         uploadStore.onUploadError(request, bytesUploaded)
+      },
       cancelToken: cancelTokenSource.token
 
    }
    let uploadResponse = await upload(formData, config).catch(err => {
       if(axios.isCancel(err)) {
          uploadStore.addPausedRequest(request)
-         uploadStore.decrementRequests()
-
+         uploadStore.onUploadError(request, bytesUploaded)
       }
-      uploadStore.onUploadError(request, bytesUploaded)
+      else {
+         for (let attachments of request.attachments) {
+            uploadStore.setStatus(attachments.fileObj.frontendId, fileUploadStatus.failed)
+         }
+      }
+      uploadStore.decrementRequests()
+
       throw err
    })
    await afterUploadRequest(request, uploadResponse)

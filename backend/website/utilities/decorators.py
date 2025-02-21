@@ -3,6 +3,7 @@ import os
 import traceback
 from functools import wraps
 
+import httpx
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from httpx import ConnectError
@@ -155,6 +156,9 @@ def handle_common_errors(view_func):
             res = build_http_error_response(code=503, error="errors.discordBlocked", details=str(e))
             res['retry_after'] = e.retry_after
             return JsonResponse(res, status=503)
+
+        except httpx.ConnectError as e:
+            return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(e)), status=503)
 
         # DYNAMIC STATUS CODE
         except DiscordError as e:

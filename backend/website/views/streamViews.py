@@ -46,7 +46,7 @@ def get_preview(request, file_obj: File):
 
         res = requests.get(url, timeout=20)
         if not res.ok:
-            raise DiscordError(response.json(), res.status_code)
+            raise DiscordError(res.text, res.status_code)
 
         file_content = res.content
         fernet = Fernet(preview.key)
@@ -78,7 +78,7 @@ def get_preview(request, file_obj: File):
         url = discord.get_attachment_url(file_obj.owner, fragment)
         response = requests.get(url, timeout=20)
         if not response.ok:
-            raise DiscordError(response.json(), response.status_code)
+            raise DiscordError(response.text, response.status_code)
 
         decrypted_data = decryptor.decrypt(response.content)
         file_content += decrypted_data

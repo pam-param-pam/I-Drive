@@ -10,7 +10,11 @@ const toast = useToast()
 
 export const cancelTokenMap = new Map()
 
-function retry(error, delay, retries = 0, maxRetries = 5) {
+function retry(error, delay, maxRetries = 5) {
+   if (!error.config.__retryCount) {
+      error.config.__retryCount = 0
+   }
+   let retries = error.config.__retryCount
    if (retries >= maxRetries) {
       console.error(`Max retries reached: ${maxRetries}. Aborting.`)
       return Promise.reject(error)
@@ -18,11 +22,11 @@ function retry(error, delay, retries = 0, maxRetries = 5) {
 
    console.log(`Retrying request after ${delay} milliseconds. Attempt #${retries + 1} of ${maxRetries}`)
    return new Promise(resolve => setTimeout(resolve, delay))
-      .then(() => uploadInstance(error.config))
-      .catch(err => {
-         console.error(`Retry attempt #${retries + 1} failed with error: ${err.message}`)
-         return retry(error, delay, retries + 1, maxRetries)
+      .then(() => {
+         error.config.__retryCount +=1
+         return uploadInstance(error.config)
       })
+
 }
 
 export const backendInstance = axios.create({
@@ -47,6 +51,7 @@ uploadInstance.interceptors.response.use(
       return response
    },
    function(error) {
+      if (error?.config?.onErrorCallback) error.config.onErrorCallback()
 
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {

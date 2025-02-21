@@ -102,41 +102,49 @@ class Discord:
         token = headers.get('Authorization')
         if token:
             token = token.replace("Bot ", "")
+
         if not token:
             token = self.get_token(user)
             headers['Authorization'] = f'Bot {token}'
 
         print(f"Making bot request with token: {token}")
         print("hit discord api")
-        response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
-        self.update_token(user, token, response.headers)
+        try:
+            response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
-        if response.is_success:
-            return response
+            if response.is_success:
+                return response
 
-        if response.status_code == 429:
-            print("hit 429 !!!!!!!!!!!!!!!")
-            retry_after = response.json().get("retry_after")
-            if not retry_after:  # retry_after is missing if discord blocked us
-                self._handle_discord_block(user, response)
+            if response.status_code == 429:
+                print("hit 429 !!!!!!!!!!!!!!!")
+                retry_after = response.json().get("retry_after")
+                if not retry_after:  # retry_after is missing if discord blocked us
+                    self._handle_discord_block(user, response)
 
-            return self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
+                return self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
-        if response.status_code in (403, 401):
-            from ..tasks import queue_ws_event
-            with self.lock:
-                token_dict = self._get_user_state(user)["tokens"][token]
+            if response.status_code in (403, 401):
+                from ..tasks import queue_ws_event
+                with self.lock:
+                    token_dict = self._get_user_state(user)["tokens"][token]
 
-                bot = Bot.objects.get(owner=user, token=token)
-                bot.disabled = True
-                bot.reason = "errors.LackOfRequiredPerms"
-                bot.save()
-                queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id,
-                                              'message': "toasts.botRemovedForInsufficientPerms",
-                                              'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
-            self.remove_user_state(user)
+                    bot = Bot.objects.get(owner=user, token=token)
+                    bot.disabled = True
+                    bot.reason = "errors.LackOfRequiredPerms"
+                    bot.save()
+                    queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id,
+                                                  'message': "toasts.botRemovedForInsufficientPerms",
+                                                  'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
+                self.remove_user_state(user)
 
-        raise DiscordError(response.json(), response.status_code)
+            raise DiscordError(response.text, response.status_code)
+        finally:
+            try:
+                self.update_token(user, token, response.headers)
+            except:
+                self.remove_user_state(user)
+
+
 
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
 
@@ -152,7 +160,7 @@ class Discord:
                 queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id, 'message': "toasts.webhook403",
                                               'args': {"name": webhook.name}, 'finished': True, 'error': True})
 
-            raise DiscordError(response.json(), response.status_code)
+            raise DiscordError(response.text, response.status_code)
 
         return response
 
@@ -171,7 +179,6 @@ class Discord:
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
 
         response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
-
         message = response.json()
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
@@ -293,7 +300,7 @@ class Discord:
             retry_timestamp = current_time + retry_after
             state['retry_timestamp'] = retry_timestamp
 
-            raise DiscordBlockError(message="Discord is stupid :(", retry_after=retry_after)
+        raise DiscordBlockError(message="Discord is stupid :(", retry_after=retry_after)
 
     def fetch_messages(self, user):
         channel_id = self._get_channel_id(user)
