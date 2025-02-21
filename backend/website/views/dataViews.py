@@ -111,19 +111,6 @@ def fetch_additional_info(request, folder_obj):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
-@check_file_and_permissions
-def get_secrets(request, file_obj: File):
-    return JsonResponse({
-        "encryption_method": file_obj.encryption_method,
-        "key": file_obj.get_base64_key(),
-        "iv": file_obj.get_base64_iv()
-    }, status=200)
-
-
-@api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@handle_common_errors
 @check_folder_and_permissions
 def get_breadcrumbs(request, folder_obj):
     breadcrumbs = create_breadcrumbs(folder_obj)

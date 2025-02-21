@@ -32,12 +32,6 @@ export async function createFile(data, password) {
 
 }
 
-export async function getEncryptionSecrets(file_id) {
-   let url = `/file/secrets/${file_id}`
-   let response = await backendInstance.get(url)
-   return response.data
-
-}
 export async function editFile(data) {
    let url = `/file/create`
    let response = await backendInstance.put(url, data)

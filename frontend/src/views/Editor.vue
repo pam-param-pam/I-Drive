@@ -38,21 +38,20 @@
 </template>
 
 <script>
-import { editFile, getEncryptionSecrets, getFile } from '@/api/files.js'
+import { editFile, getFile } from '@/api/files.js'
 import { breadcrumbs } from '@/api/item.js'
 import { getShare } from '@/api/share.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 
 import CodeEditor from '@/components/SimpleCodeEditor/CodeEditor.vue'
-import { uploadInstance } from '@/utils/networker.js'
 import { isMobile } from '@/utils/common.js'
 import throttle from 'lodash.throttle'
 import { encrypt } from '@/utils/encryption.js'
 import { useUploadStore } from '@/stores/uploadStore.js'
 import { canUpload } from '@/api/user.js'
 import i18n from '@/i18n/index.js'
-import { upload } from "@/utils/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
 
 export default {
    name: 'editor',
@@ -226,27 +225,26 @@ export default {
                return
             }
             if (this.raw !== this.copyRaw) {
-               let webhook = this.webhooks[0]
-               //todo handle errors and display then lol
-               //todo generate new IV instead if reusing old ones
-               let formData = new FormData()
-               let secrets = await getEncryptionSecrets(this.file.id)
 
-               let encryptedBlob = await encrypt(this.raw, this.file.encryption_method, secrets.key, secrets.iv, 0)
+               let iv = generateIv(this.file.encryption_method)
+               let key = generateKey()
+
+               let formData = new FormData()
+               let encryptedBlob = await encrypt(this.raw, this.file.encryption_method, key, iv, 0)
 
                formData.append('file', encryptedBlob, this.attachmentName)
 
-               let uploadResponse = await upload(formData, {}, webhook)
+               let uploadResponse = await upload(formData, {})
 
                let file_data = {
                   file_id: this.file.id,
-                  fragment_sequence: 1,
-                  total_fragments: 1,
                   offset: 0,
                   fragment_size: encryptedBlob.size,
                   message_id: uploadResponse.data.id,
                   attachment_id: uploadResponse.data.attachments[0].id,
                   message_author_id: uploadResponse.data.author.id,
+                  iv: iv,
+                  key: key,
                }
 
                await editFile(file_data)

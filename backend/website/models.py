@@ -328,7 +328,7 @@ class Fragment(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     offset = models.IntegerField()
 
-    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.PROTECT)
+    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.CASCADE)
 
     history = HistoricalRecords()
 
@@ -402,7 +402,7 @@ class Thumbnail(models.Model):
     key = models.BinaryField(null=True)
     history = HistoricalRecords()
 
-    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.PROTECT)
+    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.CASCADE)
 
     def delete(self, *args, **kwargs):
         cache.delete(f"thumbnail:{self.file.id}")
@@ -425,7 +425,7 @@ class Preview(models.Model):
     model_name = models.CharField(max_length=50, null=True)
     focal_length = models.CharField(max_length=50, null=True)
 
-    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.PROTECT)
+    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.CASCADE)
 
     history = HistoricalRecords()
 

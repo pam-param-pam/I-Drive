@@ -34,7 +34,7 @@
             <span>{{ $t('sidebar.trash') }}</span>
          </button>
 
-         <div class="bottom-buttons(TODO)">
+         <div>
             <button
                :aria-label="$t('sidebar.settings')"
                :title="$t('sidebar.settings')"

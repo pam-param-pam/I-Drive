@@ -153,7 +153,6 @@ def smart_delete(user_id, request_id, ids):
                 print("UNKNOWN ERROR")
                 traceback.print_exc()
                 send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
-                return
 
             percentage = round((index + 1) / length * 100)
             if percentage != last_percentage:

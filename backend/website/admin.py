@@ -87,13 +87,10 @@ class FolderAdmin(admin.ModelAdmin):
             real_obj.force_delete()
 
     def move_to_trash(self, request, queryset: QuerySet[Folder]):
-        # TODO
         for folder in queryset:
             folder.moveToTrash()
 
     def restore_from_trash(self, request, queryset: QuerySet[Folder]):
-        # TODO
-
         for folder in queryset:
             folder.restoreFromTrash()
 

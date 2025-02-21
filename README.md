@@ -140,10 +140,9 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 # Deployment
 1) Create a file called docker-compose.yml and paste [this](https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml) content
 2) Create .env file and add these values:
-3) 
-   `DEPLOYMENT_HOST=<your_host>`
-
-   `I_DRIVE_BACKEND_SECRET_KEY=<django_secret_key>`
+ * `DEPLOYMENT_HOST=<your_host>`
+ * `I_DRIVE_BACKEND_SECRET_KEY=<django_secret_key>`
+ * `BACKEND_BASE_URL=https://<your_host>/api`
 
 
 
@@ -153,14 +152,36 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 4) Run `python manage.py createsuperuser` to create admin user
 5) Go to browser and type `localhost`
 
+
+# Building from source
+
+1) Clone this repository
+2) Navigate to frontend dir and create .env file and put these values:
+* `VITE_BACKEND_BASE_URL=http://localhost:8000`
+* `VITE_BACKEND_BASE_WS=ws://localhost:8000`
+
+3) Then run these commands:
+* `npm install`
+* `npm run dev -- --host`
+
+3) Navigate to backend dir and create .env file and put these values:
+* `I_DRIVE_BACKEND_SECRET_KEY`=<your_secret_key>
+
+4) Then run these commands:
+* `pip install -r requirements.txt`
+* `python manage.py runserver 0.0.0.0:8000`
+
+5) Everything should work now, head over to `localhost` to see the website
+
+
 ### All .env variables:
 
 | Name                            | default                | required | description |
 |---------------------------------|------------------------|----------|-------------|
-| IS_DEV_ENV                      | True                   | No       | todo        |
-| DEPLOYMENT_HOST                 | localhost              | No       | todo        |
 | I_DRIVE_BACKEND_SECRET_KEY      |                        | Yes      | todo        |
+| DEPLOYMENT_HOST                 | localhost              | No       | todo        |
 | BACKEND_BASE_URL                | http://localhost:8000  | No       | todo        |
+| IS_DEV_ENV                      | True                   | No       | todo        |
 | NGINX_PORT                      | 80                     | No       | todo        |
 | I_DRIVE_REDIS_ADDRESS           | redis                  | No       | todo        |
 | I_DRIVE_REDIS_PORT              | 6379                   | No       | todo        |

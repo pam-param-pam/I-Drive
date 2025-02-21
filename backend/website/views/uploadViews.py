@@ -24,6 +24,8 @@ from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 @permission_classes([IsAuthenticated & CreatePerms])
 @handle_common_errors
 def create_file(request):
+    check_if_bots_exists(request.user)
+
     if request.method == "POST":
         files = request.data['files']
         if not isinstance(files, list):
@@ -189,12 +191,18 @@ def create_file(request):
         attachment_id = request.data['attachment_id']
         offset = request.data['offset']
         message_author_id = request.data['message_author_id']
+        iv = request.data.get('iv')
+        key = request.data.get('key')
+
+        if iv:
+            iv = base64.b64decode(iv)
+        if key:
+            key = base64.b64decode(key)
 
         author = get_discord_author(request, message_author_id)
 
         file_obj = get_file(file_id)
         check_resource_perms(request, file_obj, checkReady=False)
-        check_if_bots_exists(request.user)
 
         if not file_obj.ready:
             raise BadRequestError("You cannot edit a 'not ready' file!")
@@ -225,6 +233,8 @@ def create_file(request):
                 offset=offset,
             )
 
+        file_obj.key = key
+        file_obj.iv = iv
         file_obj.size = fragment_size
         file_obj.last_modified_at = timezone.now()
 
@@ -287,6 +297,8 @@ def create_thumbnail(request):
 @permission_classes([IsAuthenticated])
 @handle_common_errors
 def proxy_discord(request):
+    check_if_bots_exists(request.user)
+
     # todo secure to prevent denial of service
     json_payload = request.data.get("json_payload")
 

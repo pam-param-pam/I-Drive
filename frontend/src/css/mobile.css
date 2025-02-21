@@ -5,7 +5,6 @@
   /* Mobile Only fix div hidden by bottom navigation bar of mobile browser when using height: 100vh */
   #previewer .preview {
     height: calc(100% - 2em) !important;
-    /*todo*/
 
   }
 }
@@ -28,10 +27,6 @@
     margin: 1em 1em 0.5em !important;
   }
 
-  body {
-    /*todo*/
-    /*padding-bottom: 5em;*/
-  }
   #listing.list .item .size {
     display: none;
   }

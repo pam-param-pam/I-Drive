@@ -324,8 +324,6 @@ def update_upload_destination(request):
     if Fragment.objects.filter(file__owner=request.user).exists() and (guild_id != settings.guild_id or channel_id != settings.channel_id):
         raise BadRequestError("Cannot change upload destination. Remove all files first")
 
-    # todo validate
-
     settings.guild_id = guild_id
     settings.channel_id = channel_id
     settings.attachment_name = attachment_name

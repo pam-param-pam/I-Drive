@@ -199,8 +199,20 @@ export const useMainStore = defineStore("main", {
       resetSelected() {
          this.selected = []
       },
-      updateItems(value) {
-         this.items.push(value)
+      updateItems(newItem) {
+         //ensures watch is triggered
+         if (this.items.length === 0) {
+            this.items = [newItem]
+            return
+         }
+
+         let exists = this.items.some(item => item.id === newItem.id)
+
+         if (exists) {
+            console.warn(`Item with ID ${newItem.id} already exists!`)
+            return
+         }
+         this.items.push(newItem)
       },
       updateItem(newItem) {
          let index1 = this.items.findIndex(item => item.id === newItem.id)
