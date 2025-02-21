@@ -15,7 +15,7 @@ from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, Discord
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms
+from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms, query_attachments
 from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle
 
 
@@ -222,7 +222,7 @@ def delete_webhook(request):
 
     webhook = get_webhook(request, discord_id)
 
-    if Fragment.objects.filter(webhook=webhook, file__owner=request.user).exists():
+    if query_attachments(author_id=webhook.discord_id, owner=request.user).exists():
         raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
 
     webhook.delete()
@@ -269,6 +269,9 @@ def delete_bot(request):
         bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
     except Bot.DoesNotExist:
         raise BadRequestError("Bot with this token doesn't exists!")
+
+    if query_attachments(author_id=bot.discord_id, owner=request.user).exists():
+        raise BadRequestError("Cannot remove bot. There are files associated with this bot")
 
     bot.delete()
     discord.remove_user_state(request.user)

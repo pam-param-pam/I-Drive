@@ -165,11 +165,11 @@ class Folder(MPTTModel):
         if self.parent:
             cache.delete(self.parent.id)
 
+
 class File(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)
     name = models.TextField(max_length=255, null=False, blank=False)
     extension = models.CharField(max_length=10, null=False, blank=False)
-    streamable = models.BooleanField(default=False)
     size = models.PositiveBigIntegerField()
     mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
     type = models.CharField(max_length=15, null=False, blank=False, default="text")
@@ -187,6 +187,7 @@ class File(models.Model):
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     history = HistoricalRecords()
     frontend_id = models.CharField(max_length=40, unique=True)
+    crc = models.BigIntegerField()
 
     def _is_locked(self):
         if self.parent._is_locked():
@@ -265,6 +266,75 @@ class File(models.Model):
     def __str__(self):
         return self.name
 
+class DiscordAttachmentMixin(models.Model):
+    message_id = models.CharField(max_length=32)
+    attachment_id = models.CharField(max_length=32, null=True, unique=True)
+
+    # GenericForeignKey to point to either Bot or Webhook
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={'model__in': ('bot', 'webhook')}
+    )
+    object_id = models.PositiveIntegerField()
+    author = GenericForeignKey('content_type', 'object_id')
+
+    class Meta:
+        abstract = True
+
+    def get_author(self) -> Union['Bot', 'Webhook']:
+        try:
+            return Bot.objects.get(discord_id=self.object_id)
+        except Webhook.DoesNotExist:
+            try:
+                return Webhook.objects.get(discord_id=self.object_id)
+            except Webhook.DoesNotExist:
+                raise KeyError(f"Wrong discord author ID")
+
+class Fragment(DiscordAttachmentMixin):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    sequence = models.SmallIntegerField()
+    file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
+    size = models.PositiveBigIntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
+    offset = models.IntegerField()
+
+    def __str__(self):
+        return f"Fragment[file={self.file.name}, sequence={self.sequence}, size={self.size}, owner={self.file.owner.username}]"
+
+class Thumbnail(DiscordAttachmentMixin):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    size = models.PositiveBigIntegerField()
+    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
+    iv = models.BinaryField(null=True)
+    key = models.BinaryField(null=True)
+    history = HistoricalRecords()
+
+    def delete(self, *args, **kwargs):
+        cache.delete(f"thumbnail:{self.file.id}")
+        super(Thumbnail, self).delete()
+
+    def __str__(self):
+        return f"Thumbnail=[{self.file.name}]"
+
+
+class Preview(DiscordAttachmentMixin):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    size = models.PositiveBigIntegerField()
+    encrypted_size = models.PositiveBigIntegerField()
+    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True, related_name="preview")
+    key = models.BinaryField()
+    iso = models.CharField(max_length=50, null=True)
+    aperture = models.CharField(max_length=50, null=True)
+    exposure_time = models.CharField(max_length=50, null=True)
+    model_name = models.CharField(max_length=50, null=True)
+    focal_length = models.CharField(max_length=50, null=True)
+
+    def __str__(self):
+        return f"Preview=[{self.file.name}]"
+
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
     sorting_by = models.CharField(max_length=50, null=False, default="name")
@@ -320,46 +390,6 @@ class UserPerms(models.Model):
             profile, created = UserPerms.objects.get_or_create(user=instance)
 
 
-class Fragment(models.Model):
-    sequence = models.SmallIntegerField()
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
-    size = models.PositiveBigIntegerField()
-    created_at = models.DateTimeField(default=timezone.now)
-    offset = models.IntegerField()
-
-    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.CASCADE)
-
-    history = HistoricalRecords()
-
-    def __str__(self):
-        return f"Fragment[file={self.file.name}, sequence={self.sequence}, size={self.size}, owner={self.file.owner.username}]"
-
-
-class DiscordAttachment(models.Model):
-    message_id = models.CharField(max_length=255)
-    attachment_id = models.CharField(max_length=255, null=True, unique=True)
-
-    # GenericForeignKey to point to either Bot or Webhook
-    content_type = models.ForeignKey(
-        ContentType,
-        on_delete=models.CASCADE,
-        limit_choices_to={'model__in': ('bot', 'webhook')}
-    )
-    object_id = models.PositiveIntegerField()
-    author = GenericForeignKey('content_type', 'object_id')
-
-    def __str__(self):
-        return f"type={self.content_type.name}, attachment=[message_id={self.message_id}, attachment_id={self.attachment_id}]"
-
-    def get_author(self) -> Union['Bot', 'Webhook']:
-        try:
-            return Bot.objects.get(discord_id=self.object_id)
-        except Webhook.DoesNotExist:
-            try:
-                return Webhook.objects.get(discord_id=self.object_id)
-            except Webhook.DoesNotExist:
-                raise KeyError(f"Wrong discord author ID")
 
 class ShareableLink(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -392,45 +422,6 @@ class ShareableLink(models.Model):
     def is_locked(self):
         return self.password
 
-
-class Thumbnail(models.Model):
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    size = models.PositiveBigIntegerField()
-    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
-    iv = models.BinaryField(null=True)
-    key = models.BinaryField(null=True)
-    history = HistoricalRecords()
-
-    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.CASCADE)
-
-    def delete(self, *args, **kwargs):
-        cache.delete(f"thumbnail:{self.file.id}")
-        super(Thumbnail, self).delete()
-
-    def __str__(self):
-        return self.file.name
-
-
-class Preview(models.Model):
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    size = models.PositiveBigIntegerField()
-    encrypted_size = models.PositiveBigIntegerField()
-    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True, related_name="preview")
-    key = models.BinaryField()
-    iso = models.CharField(max_length=50, null=True)
-    aperture = models.CharField(max_length=50, null=True)
-    exposure_time = models.CharField(max_length=50, null=True)
-    model_name = models.CharField(max_length=50, null=True)
-    focal_length = models.CharField(max_length=50, null=True)
-
-    attachment = models.ForeignKey('DiscordAttachment', on_delete=models.CASCADE)
-
-    history = HistoricalRecords()
-
-    def __str__(self):
-        return self.file.name
 
 class UserZIP(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)

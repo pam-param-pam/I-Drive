@@ -6,7 +6,7 @@ from urllib.parse import urlparse, parse_qs
 
 import httpx
 
-from ..models import DiscordSettings, Bot, Webhook, DiscordAttachment
+from ..models import DiscordSettings, Bot, Webhook
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
 
@@ -136,7 +136,7 @@ class Discord:
                                               'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
             self.remove_user_state(user)
 
-        raise DiscordError(response.text, response.status_code)
+        raise DiscordError(response.json(), response.status_code)
 
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
 
@@ -152,7 +152,7 @@ class Discord:
                 queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id, 'message': "toasts.webhook403",
                                               'args': {"name": webhook.name}, 'finished': True, 'error': True})
 
-            raise DiscordError(response.text, response.status_code)
+            raise DiscordError(response.json(), response.status_code)
 
         return response
 
@@ -178,8 +178,8 @@ class Discord:
 
         return message
 
-    def get_attachment_url(self, user, attachment: DiscordAttachment) -> str:
-        return self.get_file_url(user, attachment.message_id, attachment.attachment_id)
+    def get_attachment_url(self, user, resource: Union['Fragment', 'Thumbnail', 'Preview']) -> str:
+        return self.get_file_url(user, resource.message_id, resource.attachment_id)
 
     def get_file_url(self, user, message_id: str, attachment_id: str) -> str:
         message = self.get_message(user, message_id).json()

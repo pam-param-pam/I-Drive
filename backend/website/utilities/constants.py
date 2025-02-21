@@ -3,6 +3,16 @@ from enum import Enum
 
 from django.core.cache import caches
 
+# Env defaults
+DEFAULT_DEPLOYMENT_HOST = "localhost"
+DEFAULT_BACKEND_BASE_URL = "http://localhost:8000"
+DEFAULT_IS_DEV_ENV = True
+DEFAULT_NGINX_PORT = 80
+DEFAULT_I_DRIVE_REDIS_ADDRESS = "redis"
+DEFAULT_I_DRIVE_REDIS_PORT = "6379"
+DEFAULT_I_DRIVE_BACKEND_STORAGE_DIR = "app/data"
+
+
 API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 DISCORD_BASE_URL = "https://discord.com/api/v10"
@@ -49,4 +59,6 @@ class EncryptionMethod(Enum):
 class AuditAction(Enum):
     USER_LOGGED_IN = 1
     USER_LOGGED_OUT = 2
+
+
 

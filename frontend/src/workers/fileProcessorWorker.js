@@ -59,7 +59,8 @@ self.onmessage = async (event) => {
          path = path.slice(0, -file.name.length - 1)
       }
 
-      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt, extension, parentPassword }, "systemFile": file })
+      let crc = 0
+      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt, extension, parentPassword, crc }, "systemFile": file })
    }
 
    self.postMessage(files)

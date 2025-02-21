@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .celery import app
-from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, DiscordAttachment, Webhook
+from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook
 from .utilities.Discord import discord
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
@@ -50,14 +50,15 @@ def send_message(message, args, finished, user_id, request_id, isError=False):
 
 @app.task
 def smart_delete(user_id, request_id, ids):
-    from .utilities.other import send_event  # circular error aah
+    from .utilities.other import send_event, query_attachments  # circular error aah
+
     send_event(user_id, EventCode.ITEM_DELETE, request_id, ids)
 
     send_message("toasts.deleting", {"percentage": 0}, False, user_id, request_id)
 
     user = User.objects.get(id=user_id)
-    files = File.objects.filter(id__in=ids).prefetch_related("parent", "thumbnail", "preview")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+    files = File.objects.filter(id__in=ids).select_related("parent", "thumbnail", "preview")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
         files.update(ready=False)
@@ -87,29 +88,21 @@ def smart_delete(user_id, request_id, ids):
 
         # We find all attachments we want to remove
 
-        database_attachment_ids = []
         for file in all_files:
 
             fragments = Fragment.objects.filter(file=file)
             for fragment in fragments:
-                attachment = fragment.attachment
-                message_structure[attachment.message_id].append(attachment.attachment_id)
-                database_attachment_ids.append(attachment.id)
+                message_structure[fragment.message_id].append(fragment.attachment_id)
 
             # adding preview attachment if it exists
             try:
-                attachment = file.preview.attachment
-                message_structure[attachment.message_id].append(attachment.attachment_id)
-                database_attachment_ids.append(attachment.id)
+                message_structure[file.preview.message_id].append(file.preview.attachment_id)
             except Preview.DoesNotExist:
                 pass
 
             # adding thumbnail attachment if it exists
             try:
-                attachment = file.thumbnail.attachment
-                message_structure[attachment.message_id].append(attachment.attachment_id)
-                database_attachment_ids.append(attachment.id)
-
+                message_structure[file.thumbnail.message_id].append(file.thumbnail.attachment_id)
             except Thumbnail.DoesNotExist:
                 pass
 
@@ -119,7 +112,7 @@ def smart_delete(user_id, request_id, ids):
 
             try:
                 # querying database to look for files saved in the same discord message,
-                discord_attachments = DiscordAttachment.objects.filter(message_id=key)
+                discord_attachments = query_attachments(message_id=key)
 
                 # if only 1 found, we found only the file we want to delete, there's nothing to be saved, we can just delete the entire discord message
                 if len(discord_attachments) == 1:
@@ -162,9 +155,6 @@ def smart_delete(user_id, request_id, ids):
         for item in items:
             item.delete()
 
-        queryset = DiscordAttachment.objects.filter(id__in=database_attachment_ids)
-        queryset.delete()
-
         send_message(message="toasts.itemsDeleted", args=None, finished=True, user_id=user_id, request_id=request_id)
 
     except Exception as e:
@@ -182,9 +172,9 @@ def prefetch_discord_message(message_id, attachment_id):
 def move_task(user_id, request_id, ids, new_parent_id):
     from .utilities.other import create_file_dict, send_event, create_folder_dict, get_folder  # circular error aah
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
+    files = File.objects.filter(id__in=ids).select_related("parent")
 
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent")
     items: list[Union[File, Folder]] = list(files) + list(folders)
 
     total_length = len(items)
@@ -231,8 +221,8 @@ def move_task(user_id, request_id, ids, new_parent_id):
 def move_to_trash_task(user_id, request_id, ids):
     from .utilities.other import create_file_dict, send_event, create_folder_dict  # circular error aah
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+    files = File.objects.filter(id__in=ids).select_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
         file_dicts = [create_file_dict(file) for file in files]
@@ -260,8 +250,8 @@ def move_to_trash_task(user_id, request_id, ids):
 def restore_from_trash_task(user_id, request_id, ids):
     from .utilities.other import create_file_dict, send_event, create_folder_dict  # circular error aah
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent")
+    files = File.objects.filter(id__in=ids).select_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
         file_dicts = [create_file_dict(file) for file in files]
@@ -318,7 +308,7 @@ def delete_unready_files():
 
 @app.task
 def delete_dangling_discord_files():
-    from .utilities.other import check_if_bots_exists
+    from .utilities.other import check_if_bots_exists, query_attachments
 
     deleted_attachments = defaultdict(int)
     users = User.objects.filter().all()
@@ -353,9 +343,9 @@ def delete_dangling_discord_files():
 
                 for discord_attachment in discord_attachments:
 
-                    database_attachments = DiscordAttachment.objects.filter(message_id=discord_message['id'], attachment_id=discord_attachment['id'])
+                    database_attachments = query_attachments(message_id=discord_message['id'], attachment_id=discord_attachment['id'])
 
-                    if database_attachments.exists():
+                    if database_attachments:
                         attachments_to_keep.append(discord_attachment['id'])
                     else:
                         attachments_to_remove.append(discord_attachment['id'])
@@ -409,7 +399,7 @@ def prefetch_next_fragments(fragment_id, number_to_prefetch):
     filtered_fragments = fragments.filter(sequence__gt=fragment.sequence).order_by('sequence')[:number_to_prefetch]
 
     for fragment in filtered_fragments:
-        discord.get_attachment_url(user=fragment.file.owner, attachment=fragment.attachment)
+        discord.get_attachment_url(user=fragment.file.owner, resource=fragment)
 
 @app.task
 def delete_expired_shares():

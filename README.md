@@ -138,6 +138,8 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 
 # Deployment
+*THIS IS NOT FINISHED*
+
 1) Create a file called docker-compose.yml and paste [this](https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml) content
 2) Create .env file and add these values:
  * `DEPLOYMENT_HOST=<your_host>`
@@ -154,6 +156,7 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 
 # Building from source
+*THIS IS NOT FINISHED*
 
 1) Clone this repository
 2) Navigate to frontend dir and create .env file and put these values:
@@ -175,17 +178,18 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 
 ### All .env variables:
+*THIS IS NOT FINISHED*
 
-| Name                            | default                | required | description |
-|---------------------------------|------------------------|----------|-------------|
-| I_DRIVE_BACKEND_SECRET_KEY      |                        | Yes      | todo        |
-| DEPLOYMENT_HOST                 | localhost              | No       | todo        |
-| BACKEND_BASE_URL                | http://localhost:8000  | No       | todo        |
-| IS_DEV_ENV                      | True                   | No       | todo        |
-| NGINX_PORT                      | 80                     | No       | todo        |
-| I_DRIVE_REDIS_ADDRESS           | redis                  | No       | todo        |
-| I_DRIVE_REDIS_PORT              | 6379                   | No       | todo        |
-| I_DRIVE_BACKEND_STORAGE_DIR     | app/data               | No       | todo        |
+| Name                            | default               | required | description |
+|---------------------------------|-----------------------|----------|-------------|
+| I_DRIVE_BACKEND_SECRET_KEY      | -                     | Yes      | todo        |
+| IS_DEV_ENV                      | -                     | Yes      | todo        |
+| DEPLOYMENT_HOST                 | localhost             | No       | todo        |
+| BACKEND_BASE_URL                | http://localhost:8000 | No       | todo        |
+| NGINX_PORT                      | 80                    | No       | todo        |
+| I_DRIVE_REDIS_ADDRESS           | redis                 | No       | todo        |
+| I_DRIVE_REDIS_PORT              | 6379                  | No       | todo        |
+| I_DRIVE_BACKEND_STORAGE_DIR     | app/data              | No       | todo        |
 
 
 # PS

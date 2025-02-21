@@ -52,6 +52,7 @@ import { useUploadStore } from '@/stores/uploadStore.js'
 import { canUpload } from '@/api/user.js'
 import i18n from '@/i18n/index.js'
 import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
+import * as CRC32 from "crc-32"
 
 export default {
    name: 'editor',
@@ -230,10 +231,12 @@ export default {
                let key = generateKey()
 
                let formData = new FormData()
-               let encryptedBlob = await encrypt(this.raw, this.file.encryption_method, key, iv, 0)
+               let blob = new Blob([this.raw])
+               let encryptedBlob = await encrypt(blob, this.file.encryption_method, key, iv, 0)
 
                formData.append('file', encryptedBlob, this.attachmentName)
 
+               let crc = CRC32.buf(new Uint8Array(await blob.arrayBuffer()), 0)
                let uploadResponse = await upload(formData, {})
 
                let file_data = {
@@ -245,6 +248,7 @@ export default {
                   message_author_id: uploadResponse.data.author.id,
                   iv: iv,
                   key: key,
+                  crc: crc,
                }
 
                await editFile(file_data)

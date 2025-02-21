@@ -9,13 +9,13 @@ from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Fragment, Thumbnail, DiscordAttachment
+from ..models import File, Fragment, Thumbnail
 from ..utilities.Discord import discord
 from ..utilities.Permissions import CreatePerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_attachments
+from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment
 from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 
 
@@ -48,6 +48,7 @@ def create_file(request):
             file_size = file['size']
             frontend_id = file['frontend_id']
             encryption_method = file['encryption_method']
+            crc = file['crc']
             attachments = file['attachments']
 
             thumbnail = file.get('thumbnail')
@@ -100,6 +101,7 @@ def create_file(request):
                 frontend_id=frontend_id,
                 encryption_method=encryption_method,
                 created_at=created_at,
+                crc=crc,
             )
 
             if duration:
@@ -122,18 +124,15 @@ def create_file(request):
 
                 author = get_discord_author(request, message_author_id)
 
-                discord_attachment = DiscordAttachment.objects.create(
-                    message_id=message_id,
-                    attachment_id=attachment_id,
-                    content_type=ContentType.objects.get_for_model(author),
-                    object_id=author.discord_id
-                )
                 Fragment.objects.create(
                     sequence=fragment_sequence,
                     file=file_obj,
                     size=fragment_size,
-                    attachment=discord_attachment,
                     offset=offset,
+                    message_id=message_id,
+                    attachment_id=attachment_id,
+                    content_type=ContentType.objects.get_for_model(author),
+                    object_id=author.discord_id
                 )
 
             if thumbnail:
@@ -154,24 +153,15 @@ def create_file(request):
                 if key:
                     key = base64.b64decode(key)
 
-                try:
-                    if file_obj.thumbnail:
-                        raise BadRequestError("A thumbnail already exists for this file.")
-                except File.thumbnail.RelatedObjectDoesNotExist:
-                    pass
-
-                discord_attachment = DiscordAttachment.objects.create(
-                    message_id=message_id,
-                    attachment_id=attachment_id,
-                    content_type=ContentType.objects.get_for_model(author),
-                    object_id=author.discord_id
-                )
                 Thumbnail.objects.create(
                     file=file_obj,
                     size=size,
                     iv=iv,
                     key=key,
-                    attachment=discord_attachment,
+                    message_id=message_id,
+                    attachment_id=attachment_id,
+                    content_type=ContentType.objects.get_for_model(author),
+                    object_id=author.discord_id,
                 )
 
             if file_obj.ready:
@@ -191,6 +181,7 @@ def create_file(request):
         attachment_id = request.data['attachment_id']
         offset = request.data['offset']
         message_author_id = request.data['message_author_id']
+        crc = request.data['crc']
         iv = request.data.get('iv')
         key = request.data.get('key')
 
@@ -215,29 +206,25 @@ def create_file(request):
             raise BadRequestError("Fragments > 1")
 
         fragment = fragments[0]
-        delete_single_attachments(request.user, fragment.attachment)
+        delete_single_discord_attachment(request.user, fragment.attachment)
         fragment.delete()
 
-        with transaction.atomic():
-            discord_attachment = DiscordAttachment.objects.create(
-                message_id=message_id,
-                attachment_id=attachment_id,
-                content_type=ContentType.objects.get_for_model(author),
-                object_id=author.discord_id
-            )
-            Fragment.objects.create(
-                sequence=1,
-                file=file_obj,
-                size=fragment_size,
-                attachment=discord_attachment,
-                offset=offset,
-            )
+        Fragment.objects.create(
+            sequence=1,
+            file=file_obj,
+            size=fragment_size,
+            offset=offset,
+            message_id=message_id,
+            attachment_id=attachment_id,
+            content_type=ContentType.objects.get_for_model(author),
+            object_id=author.discord_id
+        )
 
         file_obj.key = key
         file_obj.iv = iv
         file_obj.size = fragment_size
         file_obj.last_modified_at = timezone.now()
-
+        file_obj.crc = crc
         file_obj.save()
 
         return HttpResponse(status=204)
@@ -265,25 +252,22 @@ def create_thumbnail(request):
 
     file_obj = get_file(file_id)
     check_resource_perms(request, file_obj)
-
-    if file_obj.thumbnail:
-        delete_single_attachments(request.user, file_obj.thumbnail.attachment)
+    try:
+        delete_single_discord_attachment(request.user, file_obj.thumbnail)
         file_obj.thumbnail.delete()
+    except Thumbnail.DoesNotExist:
+        pass
 
-    with transaction.atomic():
-        discord_attachment = DiscordAttachment.objects.create(
-            message_id=message_id,
-            attachment_id=attachment_id,
-            content_type=ContentType.objects.get_for_model(author),
-            object_id=author.discord_id
-        )
-        Thumbnail.objects.create(
-            file=file_obj,
-            size=size,
-            key=key,
-            iv=iv,
-            attachment=discord_attachment
-        )
+    Thumbnail.objects.create(
+        file=file_obj,
+        size=size,
+        key=key,
+        iv=iv,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        content_type=ContentType.objects.get_for_model(author),
+        object_id=author.discord_id
+    )
 
     file_obj.remove_cache()
 

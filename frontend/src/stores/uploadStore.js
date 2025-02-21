@@ -327,9 +327,7 @@ export const useUploadStore = defineStore("upload2", {
       //experimental
       fillAttachmentInfo(attachment, request, discordResponse, discordAttachment) {
          let fileObj = attachment.fileObj
-         console.log(discordResponse)
          if (!this.backendState.has(fileObj.frontendId)) {
-
             let file_data = {
                "name": fileObj.name,
                "parent_id": fileObj.folderId,
@@ -342,6 +340,7 @@ export const useUploadStore = defineStore("upload2", {
                "duration": fileObj.duration,
                "iv": fileObj.iv,
                "key": fileObj.key,
+               "crc": fileObj.crc,
                "attachments": []
             }
             this.backendState.set(fileObj.frontendId, file_data)

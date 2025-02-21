@@ -60,8 +60,8 @@ def move(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).select_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
     items: list[Union[File, Folder]] = list(files) + list(folders)
 
     required_folder_passwords = []
@@ -100,8 +100,8 @@ def move_to_trash(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).select_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
     items: list[Union[File, Folder]] = list(files) + list(folders)
@@ -143,8 +143,8 @@ def restore_from_trash(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).select_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
     items: list[Union[File, Folder]] = list(files) + list(folders)
@@ -185,8 +185,8 @@ def delete(request):
 
     check_if_bots_exists(request.user)
 
-    files = File.objects.filter(id__in=ids).prefetch_related("parent")
-    folders = Folder.objects.filter(id__in=ids).prefetch_related("parent", "lockFrom")
+    files = File.objects.filter(id__in=ids).select_related("parent")
+    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
 
     # Combine and check permissions in bulk
     items: list[Union[File, Folder]] = list(files) + list(folders)

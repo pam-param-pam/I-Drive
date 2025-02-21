@@ -5,6 +5,7 @@ import { generateIv, generateKey, getAudioCover, getOrCreateFolder, getVideoCove
 import { encryptAttachment } from "@/utils/encryption.js"
 import { useToast } from "vue-toastification"
 import axios from "axios"
+import * as CRC32 from "crc-32"
 
 const toast = useToast()
 
@@ -109,6 +110,10 @@ export async function* prepareRequests() {
          attachments.push(attachment)
          totalSize += roundUpTo64(chunk.size)
          offset += chunk.size
+         console.log("CRC32.buf(chunk, queueFile.fileObj.crc)")
+         console.log(CRC32.buf(chunk, queueFile.fileObj.crc))
+         queueFile.fileObj.crc = CRC32.buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc);
+
          i++
 
          // we have to yield

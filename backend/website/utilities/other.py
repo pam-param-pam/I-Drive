@@ -4,11 +4,12 @@ from urllib.parse import unquote
 
 import requests
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from django.db.models import Q, QuerySet
 from django.db.models.aggregates import Sum
 from django.utils import timezone
 
 from .Discord import discord
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, DiscordAttachment
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
@@ -298,7 +299,7 @@ def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:
 
 def get_file(file_id: str) -> File:
     try:
-        file = File.objects.get(id=file_id)
+        file = File.objects.select_related("owner", "parent").get(id=file_id)
     except File.DoesNotExist:
         raise ResourceNotFoundError()
     return file
@@ -306,7 +307,7 @@ def get_file(file_id: str) -> File:
 
 def get_folder(folder_id: str) -> Folder:
     try:
-        folder = Folder.objects.get(id=folder_id)
+        folder = Folder.objects.select_related("owner", "parent").get(id=folder_id)
     except Folder.DoesNotExist:
         raise ResourceNotFoundError()
     return folder
@@ -540,26 +541,50 @@ def auto_prefetch(file_obj: File, fragment_id: str) -> None:
 
     prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
 
-def delete_single_attachments(user, attachment: DiscordAttachment) -> None:
-    database_attachments = DiscordAttachment.objects.filter(message_id=attachment.message_id)
+
+def query_attachments(message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview]:
+    # Create a Q object to build the query
+    query = Q()
+
+    # Add conditions based on provided arguments
+    if message_id:
+        query &= Q(message_id=message_id)
+    if attachment_id:
+        query &= Q(attachment_id=attachment_id)
+    if author_id:
+        query &= Q(object_id=author_id)
+    if owner:
+        query &= Q(file__owner=owner)
+
+    # Query each model and filter based on the query
+    fragments = Fragment.objects.filter(query)
+    thumbnails = Thumbnail.objects.filter(query)
+    previews = Preview.objects.filter(query)
+
+    # Combine all the QuerySets using union()
+    combined_results = list(fragments) + list(thumbnails) + list(previews)
+
+    return combined_results
+
+
+def delete_single_discord_attachment(user, resource: Union[Fragment, Thumbnail, Preview]) -> None:
+    database_attachments = query_attachments(message_id=resource.message_id)
 
     all_attachments_ids = set()
     for attachment in database_attachments:
         all_attachments_ids.add(attachment.attachment_id)
 
     attachment_ids_to_remove = set()
-    attachment_ids_to_remove.add(attachment.attachment_id)
+    attachment_ids_to_remove.add(resource.attachment_id)
 
     # Get the difference
     attachment_ids_to_keep = list(all_attachments_ids - attachment_ids_to_remove)
     if len(attachment_ids_to_keep) > 0:
         # we find message author
-        author = attachment.get_author()
+        author = resource.get_author()
         if isinstance(author, Webhook):
-            discord.edit_webhook_attachments(user, author.url, attachment.message_id, attachment_ids_to_keep)
+            discord.edit_webhook_attachments(user, author.url, resource.message_id, attachment_ids_to_keep)
         else:
-            discord.edit_attachments(user, author.token, attachment.message_id, attachment_ids_to_keep)
+            discord.edit_attachments(user, author.token, resource.message_id, attachment_ids_to_keep)
     else:
-        discord.remove_message(user, attachment.message_id)
-
-    attachment.delete()
+        discord.remove_message(user, resource.message_id)
