@@ -314,15 +314,20 @@ def stream_file(request, file_obj: File):
 
     return response
 
-
-
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):
-
     print(request.headers)
-
+    range_header = request.headers.get('Range')
+    if range_header:
+        range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
+        if range_match:
+            start_byte = int(range_match.group(1))
+        else:
+            return HttpResponse(status=400)
+    else:
+        start_byte = 0
 
     user_zip = UserZIP.objects.get(token=token)
     user = user_zip.owner
@@ -374,18 +379,27 @@ def stream_zip_files(request, token):
     for file in dict_files:
         if not file["isDir"]:
             fragments = file['fileObj'].fragments.all().order_by("sequence")
-            file = GenFile(name=file['name'], generator=stream_file(file["fileObj"], fragments), size=file["fileObj"].size)
-            files.append(file)
+            genFile = GenFile(name=file['name'], generator=stream_file(file["fileObj"], fragments), size=file["fileObj"].size, crc=file["fileObj"].crc)
+            files.append(genFile)
 
     zipFly = ZipFly(files)
+    if range_header:
+        status = 206
+    else:
+        status = 200
 
     # streamed response
     response = StreamingHttpResponse(
-        zipFly.async_stream(),
-        content_type="application/zip")
+        zipFly.async_stream(start_byte),
+        content_type="application/zip", status=status)
 
-    response['Content-Length'] = zipFly.calculate_archive_size()
+    file_size = zipFly.calculate_archive_size()
+    response['Content-Length'] = file_size
     response['Accept-Ranges'] = 'bytes'
     response["ETag"] = user_zip.id
+    if range_header:
+        response['Content-Range'] = 'bytes %s-%s/%s' % (start_byte, file_size-1, file_size)
+        response['Content-Length'] = file_size - start_byte
+
     response['Content-Disposition'] = f'attachment; filename="{zip_name}.zip"'
     return response
