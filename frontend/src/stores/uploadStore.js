@@ -43,7 +43,8 @@ export const useUploadStore = defineStore("upload2", {
 
       pausedRequests: [],
 
-      state: uploadState.idle
+      state: uploadState.idle,
+      uploadSpeedList: [],
 
    }),
 
@@ -60,25 +61,25 @@ export const useUploadStore = defineStore("upload2", {
          return uploadSpeed
       },
       filesInUpload() {
-         // return [{"name": "name", "status": "uploading"}]
          return this.filesUploading
             .sort((a, b) => b.progress - a.progress)
             .slice(0, 10)
+            .map(file => file.fileObj)
+
       },
       remainingBytes() {
          let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
 
          let remainingUploadSize = this.filesUploading.reduce((total, item) => {
 
-            let uploadedSize = item.size * (item.progress / 100)
-            let remainingSize = item.size - uploadedSize
+            let uploadedSize = item.fileObj.size * (item.fileObj.progress / 100)
+            let remainingSize = item.fileObj.size - uploadedSize
             return total + remainingSize
          }, 0)
 
          return totalQueueSize + remainingUploadSize
       },
       filesInUploadCount() {
-         // return 1
          let queue = this.queue.length
          let filesUploading = this.filesUploading.length
 
@@ -152,20 +153,19 @@ export const useUploadStore = defineStore("upload2", {
 
          let file = this.queue[0]
 
-         let fileObj = file.fileObj
-         fileObj.status = fileUploadStatus.preparing
-         fileObj.progress = 0
+         file.fileObj.status = fileUploadStatus.preparing
+         file.fileObj.progress = 0
 
-         this.filesUploading.push(fileObj)
+         this.filesUploading.push(file)
 
          this.queue.shift() // Remove the file from the queue
          return file
       },
       setStatus(frontendId, status) {
-         let file = this.filesUploading.find(item => item.frontendId === frontendId)
+         let file = this.filesUploading.find(item => item.fileObj.frontendId === frontendId)
          if (file) {
             if (status === fileUploadStatus.uploaded && this.state === uploadState.paused) return
-            file.status = status
+            file.fileObj.status = status
          } else {
             console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
@@ -174,15 +174,15 @@ export const useUploadStore = defineStore("upload2", {
          this.setStatus(frontendId, fileUploadStatus.uploaded)
          setTimeout(() => {
             //remove file from filesUploading
-            this.filesUploading = this.filesUploading.filter(item => item.frontendId !== frontendId)
+            this.filesUploading = this.filesUploading.filter(item => item.fileObj.frontendId !== frontendId)
 
          }, 2000)
 
       },
       setProgress(frontendId, percentage) {
-         let file = this.filesUploading.find(item => item.frontendId === frontendId)
+         let file = this.filesUploading.find(item => item.fileObj.frontendId === frontendId)
          if (file) {
-            file.progress = percentage
+            file.fileObj.progress = percentage
          } else {
             console.warn(`File with frontedId ${frontendId} not found in the queue.`)
          }
@@ -200,6 +200,8 @@ export const useUploadStore = defineStore("upload2", {
       },
       onUploadProgress(request, progressEvent) {
          this.isInternet = true
+         console.log("onUploadProgress")
+         console.log(progressEvent.rate)
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
          this.uploader.estimator.updateSpeed(this.uploadSpeed)
          this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)
@@ -249,6 +251,18 @@ export const useUploadStore = defineStore("upload2", {
       abortFile(frontendId) {
 
       },
+      tryAgain(frontendId) {
+         let index = this.filesUploading.findIndex(file => file.fileObj.frontendId === frontendId)
+
+         if (index !== -1) {
+            let file = this.filesUploading[index]
+            console.log(file)
+            this.filesUploading.splice(index, 1)
+
+            this.queue.unshift(file)
+            this.processUploads()
+         }
+      },
       forceUnstuck() {
          //todo
          this.concurrentRequests = 0
@@ -259,7 +273,7 @@ export const useUploadStore = defineStore("upload2", {
       },
       pauseAll() {
          this.state = uploadState.paused
-         this.filesUploading.forEach(file => file.status = fileUploadStatus.paused)
+         this.filesUploading.forEach(file => file.fileObj.status = fileUploadStatus.paused)
          for (let sourceList of this.axiosCancelMap.values()) {
             for (let source of sourceList) {
                source.cancel()
@@ -363,7 +377,7 @@ export const useUploadStore = defineStore("upload2", {
                "attachment_id": discordAttachment.id,
                "iv": attachment.iv,
                "key": attachment.key,
-               "message_author_id": discordResponse.data.author.id,
+               "message_author_id": discordResponse.data.author.id
             }
          }
          this.backendState.set(fileObj.frontendId, state)

@@ -1,5 +1,5 @@
 # Stage 1: Build Node.js application
-FROM node:latest as build
+FROM --platform=$BUILDPLATFORM node:latest as build
 
 # Set working directory
 WORKDIR /app
@@ -11,8 +11,8 @@ COPY package-lock.json .
 # Install dependencies
 RUN npm install
 
-# Install another dependency
-RUN npm install sass-embedded-linux-arm64
+# Install platform-specific dependency for ARM
+RUN if [ "$(uname -m)" = "aarch64" ]; then npm install sass-embedded-linux-arm64; fi
 
 # Copy the rest of the application code
 COPY . .
@@ -21,7 +21,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Setup NGINX to serve the built app
-FROM nginx:latest
+FROM --platform=$TARGETPLATFORM nginx:latest
 
 # Create necessary directory for NGINX
 RUN mkdir -p /var/www/idrive/frontend
@@ -29,6 +29,10 @@ RUN mkdir -p /var/www/idrive/frontend
 # Copy built app from the 'build' stage
 COPY --from=build /app/dist /var/www/idrive/frontend
 
+# Copy the entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
 
 # todo nginx.conf should be moved back to docker, it was commented out for easier development
 # Copy nginx file
@@ -38,4 +42,4 @@ COPY --from=build /app/dist /var/www/idrive/frontend
 EXPOSE 80
 
 # Default command to run when container starts
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["./entrypoint.sh"]

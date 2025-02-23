@@ -25,7 +25,7 @@ services:
   backend:
     container_name: idrive-backend
     image: ghcr.io/pam-param-pam/idrive-backend:${BACKENDTAG-latest}
-    platform: linux/arm64
+#    platform: linux/arm64
     pull_policy: missing
     build:
       context: ./backend
@@ -37,18 +37,22 @@ services:
       interval: 10s
       retries: 10
     environment:
-
-      # GENERAL
-      - IS_DEV_ENV=${IS_DEV_ENV:-true}
-      - DEPLOYMENT_HOST=${DEPLOYMENT_HOST:-localhost}
-
       # DJANGO SECRET KEYS
       - I_DRIVE_BACKEND_SECRET_KEY=${I_DRIVE_BACKEND_SECRET_KEY}
 
-      - I_DRIVE_REDIS_ADDRESS=${I_DRIVE_REDIS_ADDRESS:-redis}
-      - I_DRIVE_REDIS_PORT=${I_DRIVE_REDIS_POR:-6379}
-      - BACKEND_BASE_URL=${BACKEND_BASE_URL:-http://localhost:8000}
-      - I_DRIVE_BACKEND_STORAGE_DIR=${I_DRIVE_BACKEND_STORAGE_DIR:-app/data}
+      # For later
+      - PROTOCOL=${PROTOCOL:-https}
+
+      # GENERAL
+      - IS_DEV_ENV=${IS_DEV_ENV:-false}
+      - DEPLOYMENT_HOST=${DEPLOYMENT_HOST:-localhost}
+      - BACKEND_BASE_URL=${PROTOCOL:-https}://${DEPLOYMENT_HOST:-localhost}/api
+
+      # Other that have to be set
+      - I_DRIVE_REDIS_ADDRESS=redis
+      - I_DRIVE_REDIS_PORT=6379
+      - I_DRIVE_BACKEND_STORAGE_DIR=/app/data
+
     volumes:
       - backend-db:/app/data
     deploy:
@@ -62,12 +66,14 @@ services:
   nginx:
     image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG-latest}
     container_name: idrive-nginx
-    platform: linux/arm64
+#    platforms:
+#      -linux/arm64
+
     build:
       context: ./frontend
     restart: unless-stopped
     ports:
-      - 8080:${NGINX_PORT:-80}
+      - ${PORT:-80}:80
     depends_on:
       backend:
         condition: service_healthy
@@ -75,7 +81,8 @@ services:
       test: [ "CMD-SHELL", "curl http://localhost:80/healthcheck || exit 1" ]
       interval: 10s
       retries: 10
-
+    environment:
+      - VITE_BACKEND_BASE_URL=${PROTOCOL:-https}://${DEPLOYMENT_HOST:-localhost}:${PORT:-80}/api # PORTS may be diffrent
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
 

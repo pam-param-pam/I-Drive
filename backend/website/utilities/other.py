@@ -514,7 +514,7 @@ def get_webhook(request, discord_id: str) -> Webhook:
 def get_discord_author(request, message_author_id: int) -> Webhook:
     try:
         return Bot.objects.get(discord_id=message_author_id, owner=request.user)
-    except Webhook.DoesNotExist:
+    except Bot.DoesNotExist:
         try:
             return Webhook.objects.get(discord_id=message_author_id, owner=request.user)
         except Webhook.DoesNotExist:

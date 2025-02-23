@@ -222,7 +222,7 @@ def delete_webhook(request):
 
     webhook = get_webhook(request, discord_id)
 
-    if query_attachments(author_id=webhook.discord_id, owner=request.user).exists():
+    if query_attachments(author_id=webhook.discord_id, owner=request.user):
         raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
 
     webhook.delete()
@@ -270,7 +270,7 @@ def delete_bot(request):
     except Bot.DoesNotExist:
         raise BadRequestError("Bot with this token doesn't exists!")
 
-    if query_attachments(author_id=bot.discord_id, owner=request.user).exists():
+    if query_attachments(author_id=bot.discord_id, owner=request.user):
         raise BadRequestError("Cannot remove bot. There are files associated with this bot")
 
     bot.delete()

@@ -134,6 +134,7 @@ export async function* prepareRequests() {
 
 export async function uploadRequest(request) {
    const uploadStore = useUploadStore()
+   const mainStore = useMainStore()
 
    let attachmentName = uploadStore.attachmentName
 
@@ -168,11 +169,9 @@ export async function uploadRequest(request) {
       onUploadProgress: function(progressEvent) {
          bytesUploaded = progressEvent.loaded
 
-         if (!progressEvent.rate) {
-            let elapsedTime = (Date.now() - startTime) / 1000
-            progressEvent.rate = bytesUploaded / elapsedTime / 20 //todo fix this
+         if (progressEvent.rate && !mainStore.settings.useProxy) {
+            uploadStore.onUploadProgress(request, progressEvent)
          }
-         uploadStore.onUploadProgress(request, progressEvent)
       },
       onErrorCallback: () => {
          uploadStore.onUploadError(request, bytesUploaded)
@@ -180,6 +179,7 @@ export async function uploadRequest(request) {
       cancelToken: cancelTokenSource.token
 
    }
+
    let uploadResponse = await upload(formData, config).catch(err => {
       if(axios.isCancel(err)) {
          uploadStore.addPausedRequest(request)
@@ -194,6 +194,15 @@ export async function uploadRequest(request) {
 
       throw err
    })
+   if (mainStore.settings.useProxy) {
+      let progressEvent = {}
+      let elapsedTime = (Date.now() - startTime) / 1000
+      progressEvent.rate = Math.round(bytesUploaded / elapsedTime)
+      console.log(progressEvent.rate)
+      progressEvent.bytes = request.totalSize
+      uploadStore.onUploadProgress(request, progressEvent)
+
+   }
    await afterUploadRequest(request, uploadResponse)
 }
 
@@ -201,7 +210,6 @@ export async function afterUploadRequest(request, discordResponse) {
    const uploadStore = useUploadStore()
 
    uploadStore.decrementRequests()
-
 
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]

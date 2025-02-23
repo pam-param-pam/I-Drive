@@ -10,7 +10,6 @@ from ..models import DiscordSettings, Bot, Webhook
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
 
-
 class Discord:
     def __del__(self):
         self.client.close()
@@ -23,7 +22,6 @@ class Discord:
 
         self.file_upload_headers = {}
         self.users = {}
-
         self.lock = Lock()
 
     def get_token(self, user):
@@ -84,9 +82,6 @@ class Discord:
 
     def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
-        if not headers:
-            headers = {}
-        headers['Content-Type'] = 'application/json'
         return response
 
     def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):

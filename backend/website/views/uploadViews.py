@@ -1,8 +1,8 @@
 import base64
+import time
 from datetime import datetime
 
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
 from django.db.utils import IntegrityError
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -287,6 +287,9 @@ def proxy_discord(request):
     json_payload = request.data.get("json_payload")
 
     files = request.FILES
-
+    start_time = time.time()
     message = discord.send_file(request.user, json=json_payload, files=files)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Time taken to send the file: {elapsed_time:.4f} seconds")
     return JsonResponse(message, status=200, safe=False)

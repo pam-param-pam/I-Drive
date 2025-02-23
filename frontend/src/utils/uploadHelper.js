@@ -302,7 +302,7 @@ export async function upload(formData, config) {
       headers["Authorization"] = `Token ${token}`
 
    } else {
-      url = getWebhook()
+      url = getWebhook().url
 
    }
    config.headers = {

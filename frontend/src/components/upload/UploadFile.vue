@@ -17,7 +17,7 @@
          </div>
 
          <span class="file-name">{{ file.name }}</span>
-         <!--      <div class="button-group">-->
+               <div class="button-group">
          <!--        <button-->
          <!--          v-if="showPauseButton"-->
          <!--          class="pause-button"-->
@@ -33,7 +33,14 @@
          <!--        >-->
          <!--          <i class="material-icons">close</i>-->
          <!--        </button>-->
-         <!--      </div>-->
+                 <button
+                   v-if="showTryAgainButton"
+                   class="pause-button"
+                   @click="retry"
+                 >
+                   <i class="material-icons">refresh</i>
+                 </button>
+               </div>
       </div>
 
       <!-- Lower -->
@@ -119,6 +126,9 @@ export default {
             this.file.size > this.user.maxDiscordMessageSize
          )
       },
+      showTryAgainButton() {
+         return (this.file.status === fileUploadStatus.failed)
+      },
       showCancelButton() {
          return (
             this.file.status === fileUploadStatus.uploading &&
@@ -129,7 +139,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useUploadStore, ['pauseFile', 'resumeFile', 'cancelFile']),
+      ...mapActions(useUploadStore, ['pauseFile', 'resumeFile', 'cancelFile', 'tryAgain']),
 
       togglePause() {
          if (this.file.status === fileUploadStatus.paused) {
@@ -137,6 +147,10 @@ export default {
          } else if (this.file.status === fileUploadStatus.uploading) {
             this.pauseFile(this.file.frontendId)
          }
+      },
+
+      retry() {
+         this.tryAgain(this.file.frontendId)
       },
 
       cancel() {
@@ -223,6 +237,13 @@ export default {
 .button-group {
    display: flex;
    gap: 0.5rem;
+   margin-left: 1em;
+   border-radius: 15px
+}
+
+.button-group:hover {
+   background-color: var(--moon-grey);
+
 }
 
 .cancel-button,
@@ -239,12 +260,7 @@ export default {
    transition: background-color 0.3s;
 }
 
-.pause-button:hover {
-   background-color: #eeeeee;
-}
-
 .cancel-button:hover {
-   background-color: #eeeeee;
    color: red;
 }
 
