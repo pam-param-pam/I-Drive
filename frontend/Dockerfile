@@ -1,5 +1,5 @@
 # Stage 1: Build Node.js application
-FROM --platform=$BUILDPLATFORM node:latest as build
+FROM node:latest as build
 
 # Set working directory
 WORKDIR /app
@@ -21,7 +21,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Setup NGINX to serve the built app
-FROM --platform=$TARGETPLATFORM nginx:latest
+FROM nginx:latest
 
 # Create necessary directory for NGINX
 RUN mkdir -p /var/www/idrive/frontend
