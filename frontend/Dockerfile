@@ -12,7 +12,8 @@ COPY package-lock.json .
 RUN npm install
 
 # Install platform-specific dependency for ARM
-RUN if [ "$(uname -m)" = "aarch64" ]; then npm install sass-embedded-linux-arm64; fi
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ]; then npm install sass-embedded-linux-arm64; fi
 
 # Copy the rest of the application code
 COPY . .

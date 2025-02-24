@@ -29,11 +29,17 @@ jobs:
 
           mkdir -p idrive
           cd idrive
-          echo "setting env variables"
+          echo "Removing existing .env file (if any)..."
+          rm -f .env
+        
+          echo "Setting environment variables..."
+          cat <<EOF > .env
+          IS_DEV_ENV=False
+          DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
+          I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
+          PORT=8080
 
-          echo "IS_DEV_ENV=False" >> .env 
-          echo "DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}" >> .env
-          echo "I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}" >> .env
+          EOF
           
           echo "Pulling docker-compose.yml..."
           
