@@ -82,7 +82,7 @@ services:
       interval: 10s
       retries: 10
     environment:
-      - VITE_BACKEND_BASE_URL=${PROTOCOL:-https}://${DEPLOYMENT_HOST:-localhost}:${PORT:-80}/api # PORTS may be diffrent
+      - VITE_BACKEND_BASE_URL=${PROTOCOL:-https}://${DEPLOYMENT_HOST:-localhost}/api # PORTS may be diffrent
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
 
