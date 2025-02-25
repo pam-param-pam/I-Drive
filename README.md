@@ -138,27 +138,30 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 
 # Deployment
-*THIS IS NOT FINISHED*
 
-1) Create a file called docker-compose.yml and paste [this](https://github.com/pam-param-pam/I-Drive/blob/master/docker-compose.yml) content
-2) Create .env file and add these values:
- * `DEPLOYMENT_HOST=<your_host>`
- * `I_DRIVE_BACKEND_SECRET_KEY=<django_secret_key>`
- * `BACKEND_BASE_URL=https://<your_host>/api`
+1) Create a fresh directory and in it
+2) create `docker-compose.yml` file. Copy content from [here ](https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml) to it.
 
+3) create `nginx.conf` file. Copy content from [here ](https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/nginx.conf) to it.
+4) create `.env` file and copy these values:
+```
+IS_DEV_ENV=True     
+I_DRIVE_BACKEND_SECRET_KEY=your secret key
+```
 
-
-1) Run `docker compose up`
-2) Run `docker exec -t idrive-backend bash`
-3) Run `python manage.py migrate` to setup a database
-4) Run `python manage.py createsuperuser` to create admin user
-5) Go to browser and type `localhost`
+5) Run  `docker-compose up`
+6) Run  `docker exec -t idrive-backend bash`
+7) Run `python manage.py migrate` to setup a database
+8) Run `python manage.py createsuperuser` to create admin user
+9) Go to browser and type `localhost`
 
 
 # Building from source
-*THIS IS NOT FINISHED*
 
 1) Clone this repository
+
+2) Start a redis server. The easiest way is to run redis with [docker](https://hub.docker.com/_/redis) 
+
 2) Navigate to frontend dir and create .env file and put these values:
 * `VITE_BACKEND_BASE_URL=http://localhost:8000`
 * `VITE_BACKEND_BASE_WS=ws://localhost:8000`
@@ -169,6 +172,11 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 
 3) Navigate to backend dir and create .env file and put these values:
 * `I_DRIVE_BACKEND_SECRET_KEY`=<your_secret_key>
+* `IS_DEV_ENV=True`
+* `I_DRIVE_REDIS_ADDRESS=localhost`
+* `I_DRIVE_REDIS_PORT=6379`
+* `I_DRIVE_BACKEND_STORAGE_DIR=`
+* `BACKEND_BASE_URL=http://localhost:8000`
 
 4) Then run these commands:
 * `pip install -r requirements.txt`
@@ -180,16 +188,19 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 ### All .env variables:
 *THIS IS NOT FINISHED*
 
-| Name                            | default               | required | description |
-|---------------------------------|-----------------------|----------|-------------|
-| I_DRIVE_BACKEND_SECRET_KEY      | -                     | Yes      | todo        |
-| IS_DEV_ENV                      | -                     | Yes      | todo        |
-| DEPLOYMENT_HOST                 | localhost             | No       | todo        |
-| BACKEND_BASE_URL                | http://localhost:8000 | No       | todo        |
-| NGINX_PORT                      | 80                    | No       | todo        |
-| I_DRIVE_REDIS_ADDRESS           | redis                 | No       | todo        |
-| I_DRIVE_REDIS_PORT              | 6379                  | No       | todo        |
-| I_DRIVE_BACKEND_STORAGE_DIR     | app/data              | No       | todo        |
+| Name                           | default (with docker compose)          | required (with docker compose) | required (building from source) | description |
+|--------------------------------|----------------------------------------|--------------------------------|---------------------------------|-------------|
+| I_DRIVE_BACKEND_SECRET_KEY     | -                                      | Yes                            | yes                             | todo        |
+| IS_DEV_ENV                     | false                                  | No                             | No                              | todo        |
+| DEPLOYMENT_HOST                | localhost                              | No                             | yes                             | todo        |
+| PROTOCOL                       | https                                  | No                             | yes                             | todo        |
+| NGINX_PORT                     | 80                                     | No                             | yes                             | todo        |
+| I_DRIVE_REDIS_ADDRESS          | redis                                  | No                             | yes                             | todo        |
+| I_DRIVE_REDIS_PORT             | 6379                                   | No                             | yes                             | todo        |
+| I_DRIVE_BACKEND_STORAGE_DIR    | /app/data                              | No                             | yes                             | todo        |
+| BACKEND_BASE_URL               | ${PROTOCOL}://${DEPLOYMENT_HOST}/api   | No                             | yes                             | todo        |
+| VITE_BACKEND_BASE_URL          | ${PROTOCOL}://${DEPLOYMENT_HOST}/api   | No                             | yes                             | todo        |
+| VITE_BACKEND_BASE_WS           | ${PROTOCOL}://${DEPLOYMENT_HOST}/api   | No                             | yes                             | todo        |
 
 
 # PS
