@@ -19,7 +19,7 @@
     <action
       v-if="this.$slots.actions"
       id="more"
-      class="hideMobileTap"
+      class="hide-mobile-tap"
       icon="more_vert"
       :label="$t('buttons.more')"
       @action="showHover('more')"

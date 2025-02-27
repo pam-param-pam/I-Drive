@@ -146,7 +146,7 @@ main {
  word-break: break-all;
 }
 
-.hideMobileTap {
+.hide-mobile-tap {
  -webkit-tap-highlight-color: transparent;
 
 }

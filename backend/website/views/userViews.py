@@ -72,7 +72,8 @@ def can_upload(request, folder_id: str):
     for webhook in webhooks:
         webhook_dicts.append(create_webhook_dict(webhook))
 
-    allowed_to_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0)
+    bots = Bot.objects.filter(owner=request.user, disabled=False)
+    allowed_to_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and bots.exists())
     return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id})
 
 

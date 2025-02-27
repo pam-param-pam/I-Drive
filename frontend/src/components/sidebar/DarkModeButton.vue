@@ -4,7 +4,7 @@
          :aria-label="$t('sidebar.toggleDarkMode')"
          :class="settings.theme"
          :title="$t('sidebar.toggleDarkMode')"
-         class="dark-mode-toggle"
+         class="dark-mode-toggle hide-mobile-tap"
          @click="toggleDarkMode"
       >
          <span class="material-icons">{{
@@ -58,11 +58,7 @@ export default {
    border-radius: 50%;
    font-size: 24px;
    cursor: pointer;
-   transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
    outline: none;
-   -webkit-tap-highlight-color: transparent; /* Disable mobile tap highlight */
 }
 
 /* Disable unwanted hover styles for touch devices */
