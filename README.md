@@ -159,6 +159,7 @@ I_DRIVE_BACKEND_SECRET_KEY=your secret key
 # Building from source
 
 1) Clone this repository
+* `git clone https://github.com/pam-param-pam/I-Drive`
 
 2) Start a redis server. The easiest way is to run redis with [docker](https://hub.docker.com/_/redis) 
 

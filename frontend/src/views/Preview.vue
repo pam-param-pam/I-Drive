@@ -341,7 +341,7 @@ export default {
          await this.prefetch()
 
          if (this.file?.type === 'video' && this.$refs.video) {
-            this.$refs.video.currentTime = this.file.video_position
+            this.$refs.video.currentTime = this.file.video_position || 0
          }
 
          if (!this.isEpub) return
@@ -367,8 +367,15 @@ export default {
             }
          })
       },
-
+      isVideoFullScreen() {
+         let videoElement = this.$refs.video
+         return document.fullscreenElement === videoElement ||
+           document.webkitFullscreenElement === videoElement ||
+           document.mozFullScreenElement === videoElement ||
+           document.msFullscreenElement === videoElement;
+      },
       prev() {
+         if (this.isVideoFullScreen()) return
          this.hoverNav = false
          if (this.hasPrevious) {
             let previousFile = this.files[this.currentIndex - 1]
@@ -392,6 +399,7 @@ export default {
       },
 
       next() {
+         if (this.isVideoFullScreen()) return
          this.hoverNav = false
          if (this.hasNext) {
             let nextFile = this.files[this.currentIndex + 1]
@@ -480,17 +488,14 @@ export default {
 
       videoTimeUpdate() {
          if (!this.isLogged) return
-         if (this.$route.name !== 'Files') return
          if (!this.$refs.video) {
             console.warn('this.$refs.video is falsy')
             return
          }
          let position = Math.floor(this.$refs.video.currentTime) // round to seconds
-
-         // To prevent sending too many requests, send only if position has changed significantly
+         // To prevent sending too many requests, send only if the position has changed significantly
          if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
             // Adjust the interval as needed (e.g., every 1 second)
-
             updateVideoPosition({ file_id: this.file.id, position: position })
 
             this.lastSentVideoPosition = position
