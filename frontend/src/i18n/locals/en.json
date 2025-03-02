@@ -372,7 +372,8 @@
     "thumbnailError": "Couldn't generate thumbnail for video: {name}",
     "unauthorized": "Unauthorized",
     "webhookMissing": "Missing webhook URL",
-    "websocketError": "Couldn't connect to websocket, site will not function properly."
+    "websocketError": "Couldn't connect to websocket, site will not function properly.",
+    "copied": "copied"
   },
   "trash": {
     "info": "Items in trash will be deleted after 30 days!",

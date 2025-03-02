@@ -32,13 +32,11 @@ import { mapActions, mapState } from 'pinia'
 import Breadcrumbs from '@/components/listing/Breadcrumbs.vue'
 import Errors from '@/components/Errors.vue'
 import FileListing from '@/components/FileListing.vue'
-import loadingSpinner from '@/components/loadingSpinner.vue'
 
 export default {
    name: 'files',
 
    components: {
-      loadingSpinner,
       Errors,
       FileListing,
       Breadcrumbs
@@ -64,15 +62,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, [
-         'selected',
-         'loading',
-         'error',
-         'disabledCreation',
-         'settings',
-         'selectedCount',
-         'isLogged'
-      ]),
+      ...mapState(useMainStore, ['selected', 'loading', 'error', 'disabledCreation', 'settings', 'selectedCount', 'isLogged']),
 
       headerButtons() {
          return {
@@ -150,8 +140,9 @@ export default {
 
       copyFileShareUrl() {
          let url = this.selected[0].download_url + '?inline=True'
-         this.$toast.success(this.$t('toasts.linkCopied'))
          navigator.clipboard.writeText(url)
+         this.$toast.success(this.$t('toasts.linkCopied'))
+
       },
 
       async fetchShare() {

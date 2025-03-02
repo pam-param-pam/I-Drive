@@ -147,11 +147,12 @@ I drive is fully dockerized! Yay. There are 3 containers managed by `docker comp
 ```
 IS_DEV_ENV=True     
 I_DRIVE_BACKEND_SECRET_KEY=your secret key
+PROTOCOL=http
 ```
 
-5) Run  `docker-compose up`
-6) Run  `docker exec -t idrive-backend bash`
-7) Run `python manage.py migrate` to setup a database
+5) Run `docker-compose up`
+6) Run `docker exec -it idrive-backend bash`
+7) Run `python manage.py migrate website` to setup a database
 8) Run `python manage.py createsuperuser` to create admin user
 9) Go to browser and type `localhost`
 
@@ -181,6 +182,8 @@ I_DRIVE_BACKEND_SECRET_KEY=your secret key
 
 4) Then run these commands:
 * `pip install -r requirements.txt`
+* Run `python manage.py migrate website` to setup a database 
+* Run `python manage.py createsuperuser` to create admin user
 * `python manage.py runserver 0.0.0.0:8000`
 
 5) Everything should work now, head over to `localhost` to see the website

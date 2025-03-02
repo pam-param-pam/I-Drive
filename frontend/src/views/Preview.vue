@@ -40,7 +40,7 @@
                @action="moveToTrash"
             />
             <action
-               v-if="perms?.download"
+               v-if="perms?.download || isInShareContext"
                :disabled="loading"
                :label="$t('buttons.download')"
                icon="file_download"
@@ -211,16 +211,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, [
-         'sortedItems',
-         'user',
-         'selected',
-         'loading',
-         'perms',
-         'currentFolder',
-         'currentPrompt',
-         'isLogged'
-      ]),
+      ...mapState(useMainStore, ['sortedItems', 'user', 'selected', 'loading', 'perms', 'currentFolder', 'currentPrompt', 'isLogged']),
       isEpub() {
          if (!this.file) return false
          return this.file.extension === '.epub'
@@ -335,7 +326,6 @@ export default {
                this.setLoading(false)
             }
          }
-         console.log(this.file)
          this.addSelected(this.file)
          this.setLastItem(this.file)
          await this.prefetch()

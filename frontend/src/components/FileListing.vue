@@ -17,13 +17,6 @@
                   @action="locateItem"
                />
                <action
-                  v-if="headerButtons.tag"
-                  id="tag"
-                  :label="$t('buttons.editTags')"
-                  icon="sell"
-                  show="EditTags"
-               />
-               <action
                   v-if="headerButtons.share"
                   :label="$t('buttons.share')"
                   icon="share"

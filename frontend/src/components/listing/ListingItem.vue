@@ -80,6 +80,9 @@ export default {
       isDraggable() {
          return this.readOnly === false && this.perms?.modify
       },
+      canDrag() {
+         return !this.readOnly
+      },
       canDrop() {
          if (!this.item.isDir || this.readOnly !== false) return false
 
@@ -137,6 +140,10 @@ export default {
       },
 
       dragStart(event) {
+         if (!this.canDrag) {
+            event.preventDefault()
+            return
+         }
          if (this.selectedCount === 0) {
             this.addSelected(this.item)
             return
@@ -151,7 +158,10 @@ export default {
       dragOver(event) {
          event.preventDefault()
 
-         if (!this.canDrop) return
+         if (!this.canDrop) {
+            event.dataTransfer.dropEffect = "not-allowed";
+            return
+         }
 
          let el = event.target
          for (let i = 0; i < 5; i++) {

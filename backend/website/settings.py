@@ -5,7 +5,7 @@ from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+#socksio==1.0.0 add to req
 # jebanie sie z static plikami
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -179,8 +179,8 @@ REST_FRAMEWORK = {
         'password_change': '10/m',
         'search': '60/m',
         'register': '20/h',
-        'discord_settings': '1/2s',
-        'proxy': '5/s'
+        'discord_settings': '2/1s',
+        'proxy': '20/s'
 
     },
     'DEFAULT_RENDERER_CLASSES': (

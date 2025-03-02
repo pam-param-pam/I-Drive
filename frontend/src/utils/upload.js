@@ -10,6 +10,7 @@ import * as CRC32 from "crc-32"
 const toast = useToast()
 
 export async function* prepareRequests() {
+   //todo handle NotReadableError
    /**
     this is a generator function!
     */
@@ -176,7 +177,7 @@ export async function uploadRequest(request) {
       onErrorCallback: () => {
          uploadStore.onUploadError(request, bytesUploaded)
       },
-      cancelToken: cancelTokenSource.token
+      cancelToken: cancelTokenSource.token,
 
    }
 

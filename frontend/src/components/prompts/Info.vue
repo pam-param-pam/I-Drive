@@ -345,6 +345,14 @@ export default {
                event.target.innerHTML = this.folderSize + ' bytes'
             }
          }
+         if (type === 'size') {
+            navigator.clipboard.writeText(this.size)
+         }
+         else if (type === 'folderSize') {
+            navigator.clipboard.writeText(this.folderSize)
+         }
+         this.$toast.success(this.$t('toasts.copied'))
+
       }
    }
 }

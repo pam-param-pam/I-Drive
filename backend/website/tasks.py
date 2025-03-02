@@ -307,7 +307,7 @@ def delete_unready_files():
 
 
 @app.task
-def delete_dangling_discord_files():
+def delete_dangling_discord_files(days=2):
     from .utilities.other import check_if_bots_exists, query_attachments
 
     deleted_attachments = defaultdict(int)
@@ -326,7 +326,6 @@ def delete_dangling_discord_files():
 
                 attachments_to_keep = []
                 attachments_to_remove = []
-                webhook = None
 
                 timestamp = datetime.fromisoformat(discord_message['timestamp'])
                 now = datetime.now(timezone.utc)
@@ -337,15 +336,17 @@ def delete_dangling_discord_files():
                     continue
 
                 # Break when messages found are older than 2 days
-                two_days_ago = datetime.now(timezone.utc) - timedelta(days=2)
+                two_days_ago = datetime.now(timezone.utc) - timedelta(days=days)
                 if timestamp < two_days_ago:
                     break
 
+                author = None
                 for discord_attachment in discord_attachments:
 
                     database_attachments = query_attachments(message_id=discord_message['id'], attachment_id=discord_attachment['id'])
 
                     if database_attachments:
+                        author = database_attachments[0].get_author()
                         attachments_to_keep.append(discord_attachment['id'])
                     else:
                         attachments_to_remove.append(discord_attachment['id'])
@@ -355,16 +356,16 @@ def delete_dangling_discord_files():
                         discord.remove_message(user, discord_message['id'])
                     continue
 
-                # we find message author
-                author = discord_attachments[0].get_author()
-                if isinstance(author, Webhook):
-                    discord.edit_webhook_attachments(user, author.url, discord_message['id'], attachments_to_keep)
-                else:
-                    discord.edit_attachments(user, author.token, discord_message['id'], attachments_to_keep)
+                if attachments_to_remove and attachments_to_keep:
+                    if isinstance(author, Webhook):
+                        discord.edit_webhook_attachments(user, author.url, discord_message['id'], attachments_to_keep)
+                    else:
+                        discord.edit_attachments(user, author.token, discord_message['id'], attachments_to_keep)
 
-                deleted_attachments[user] += len(attachments_to_remove)
+                    deleted_attachments[user] += len(attachments_to_remove)
 
         discord.send_message(user, f"Deleted {deleted_attachments[user]} attachments for user: {user}.")
+
 
 @app.task
 def delete_files_from_trash():
@@ -391,6 +392,7 @@ def delete_files_from_trash():
 
     # todo delete better using with 1 call to task with list of ids
 
+
 @app.task
 def prefetch_next_fragments(fragment_id, number_to_prefetch):
     fragment = Fragment.objects.get(id=fragment_id)
@@ -400,6 +402,7 @@ def prefetch_next_fragments(fragment_id, number_to_prefetch):
 
     for fragment in filtered_fragments:
         discord.get_attachment_url(user=fragment.file.owner, resource=fragment)
+
 
 @app.task
 def delete_expired_shares():

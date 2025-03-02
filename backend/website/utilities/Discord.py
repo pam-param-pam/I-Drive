@@ -1,3 +1,4 @@
+import random
 import time
 from datetime import datetime, timezone
 from threading import Lock
@@ -139,8 +140,6 @@ class Discord:
             except:
                 self.remove_user_state(user)
 
-
-
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
 
         print(f"Making webhook request with: {url}")
@@ -168,12 +167,57 @@ class Discord:
         response = self._make_bot_request(user, 'POST', url, headers=headers, json=payload)
         return response
 
+    # def send_file(self, user, files: dict, json=None) -> httpx.Response:
+    #     channel_id = self._get_channel_id(user)
+    #
+    #     url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
+    #
+    #     response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
+    #     message = response.json()
+    #     expiry = self._calculate_expiry(message)
+    #     cache.set(message["id"], response, timeout=expiry)
+    #
+    #     return message
+
     def send_file(self, user, files: dict, json=None) -> httpx.Response:
         channel_id = self._get_channel_id(user)
 
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
+        proxy_list = [
+            "23.20.81.238",
+            "3.89.104.49",
+            "3.85.213.51",
+            "3.95.9.222",
+            "52.90.148.221",
+            "35.173.248.130",
+            "54.242.162.250",
+            "54.160.241.232",
+            "54.221.170.121",
+            "54.197.195.136",
+            "54.234.223.189",
+            "18.234.112.51",
+            "34.236.153.211",
+            "54.175.242.91",
+            "3.88.202.32",
+            "54.165.194.253",
+            "98.84.113.54",
+            "18.205.245.134",
+            "3.89.118.61",
+            "54.167.86.83",
+        ]
+        headers = {}
+        token = self.get_token(user)
+        headers['Authorization'] = f'Bot {token}'
+        rand_proxy = random.choice(proxy_list)
+        if rand_proxy:
+            print("USING PROXY")
+            client = httpx.Client(timeout=10.0, proxies=f"socks5://{rand_proxy}:46642")
+            response = client.request('POST', url, files=files, json=json, timeout=None, headers=headers)
+            self.update_token(user, token, response.headers)
 
-        response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
+        else:
+            response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
+
         message = response.json()
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)

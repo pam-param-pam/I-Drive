@@ -285,7 +285,7 @@ class DiscordAttachmentMixin(models.Model):
     def get_author(self) -> Union['Bot', 'Webhook']:
         try:
             return Bot.objects.get(discord_id=self.object_id)
-        except Webhook.DoesNotExist:
+        except Bot.DoesNotExist:
             try:
                 return Webhook.objects.get(discord_id=self.object_id)
             except Webhook.DoesNotExist:

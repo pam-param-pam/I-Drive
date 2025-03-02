@@ -16,7 +16,6 @@ from django.http import JsonResponse
 from django.http import StreamingHttpResponse, HttpResponse
 from django.utils.encoding import smart_str
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import etag
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
@@ -25,7 +24,7 @@ from ..models import File, UserZIP
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
-from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache
+from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache, MAX_MEDIA_CACHE_AGE
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
 from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author
@@ -135,10 +134,10 @@ def get_preview(request, file_obj: File):
             aperture=aperture,
             iso=iso,
             exposure_time=exposure_time,
-            message_id = message["id"],
-            attachment_id = message["attachments"][0]["id"],
-            content_type = ContentType.objects.get_for_model(author),
-            object_id = author.discord_id
+            message_id=message["id"],
+            attachment_id=message["attachments"][0]["id"],
+            content_type=ContentType.objects.get_for_model(author),
+            object_id=author.discord_id
         )
 
         file_dict = {"parent_id": file_obj.parent.id, "id": file_obj.id, "iso": preview.iso,
@@ -163,25 +162,23 @@ def get_thumbnail(request, file_obj: File):
         check_if_bots_exists(file_obj.owner)
 
         thumbnail = file_obj.thumbnail
-        if file_obj.is_encrypted():
-            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
+        decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
 
         # todo potential security risk, without stream its possible to overload the server
         url = discord.get_attachment_url(file_obj.owner, thumbnail)
         discord_response = requests.get(url)
         if discord_response.ok:
             thumbnail_content = discord_response.content
-            if file_obj.is_encrypted():
-                thumbnail_content = decryptor.decrypt(thumbnail_content)
-                decryptor.finalize()
+            thumbnail_content = decryptor.decrypt(thumbnail_content)
+            thumbnail_content += decryptor.finalize()
 
         else:
             return JsonResponse(status=discord_response.status_code, data=discord_response.json())
 
-        cache.set(f"thumbnail:{file_obj.id}", thumbnail_content, timeout=2628000)  # 1 month
+        cache.set(f"thumbnail:{file_obj.id}", thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
     response = HttpResponse(thumbnail_content, content_type="image/jpeg")
-    response['Cache-Control'] = f"max-age={2628000}"  # 1 month
+    response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
     return response
 
 
@@ -216,8 +213,7 @@ def stream_file(request, file_obj: File):
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192 * 16):
         print(real_start_byte)
         async with aiohttp.ClientSession() as session:
-            if file_obj.is_encrypted():
-                decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
+            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
@@ -232,17 +228,13 @@ def stream_file(request, file_obj: File):
                     total_bytes = 0
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         # If the file is encrypted, decrypt it asynchronously
-                        if file_obj.is_encrypted():
-                            start_time = time.perf_counter()
-                            decrypted_data = decryptor.decrypt(raw_data)
-                            end_time = time.perf_counter()
-                            total_decryption_time += (end_time - start_time)
-                            total_bytes += len(raw_data)
+                        start_time = time.perf_counter()
+                        decrypted_data = decryptor.decrypt(raw_data)
+                        end_time = time.perf_counter()
+                        total_decryption_time += (end_time - start_time)
+                        total_bytes += len(raw_data)
 
-                            yield decrypted_data
-                        else:
-                            # Yield raw data if not encrypted
-                            yield raw_data
+                        yield decrypted_data
                     print(f"Fragment index: {fragments[index].sequence}")
                     print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
@@ -318,7 +310,6 @@ def stream_file(request, file_obj: File):
 @throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):
-    print(request.headers)
     range_header = request.headers.get('Range')
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
@@ -333,10 +324,9 @@ def stream_zip_files(request, token):
     user = user_zip.owner
     check_if_bots_exists(user)
 
-    async def stream_file(file_obj, fragments, chunk_size=8192):
+    async def stream_file(file_obj, fragments, chunk_size=8192 * 16):
         async with aiohttp.ClientSession() as session:
-            if file_obj.is_encrypted():
-                decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
+            decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
 
             async for fragment in fragments:
                 url = await sync_to_async(discord.get_attachment_url)(user, fragment)
@@ -345,19 +335,12 @@ def stream_zip_files(request, token):
                 async with session.get(url) as response:
                     response.raise_for_status()
                     async for raw_data in response.content.iter_chunked(chunk_size):
-                        # If the file is encrypted, decrypt it asynchronously
-                        if file_obj.is_encrypted():
-                            decrypted_data = decryptor.decrypt(raw_data)
-                            yield decrypted_data
-                        else:
-                            # Yield raw data if not encrypted
-                            yield raw_data
+                        yield decryptor.decrypt(raw_data)
 
-            if file_obj.is_encrypted():
                 yield decryptor.finalize()
 
     files = user_zip.files.filter(ready=True, inTrash=False)
-    folders = user_zip.folders.all()
+    folders = user_zip.folders.all(ready=True, inTrash=False)
     dict_files = []
 
     single_root = False
@@ -398,7 +381,7 @@ def stream_zip_files(request, token):
     response['Accept-Ranges'] = 'bytes'
     response["ETag"] = user_zip.id
     if range_header:
-        response['Content-Range'] = 'bytes %s-%s/%s' % (start_byte, file_size-1, file_size)
+        response['Content-Range'] = 'bytes %s-%s/%s' % (start_byte, file_size - 1, file_size)
         response['Content-Length'] = file_size - start_byte
 
     response['Content-Disposition'] = f'attachment; filename="{zip_name}.zip"'

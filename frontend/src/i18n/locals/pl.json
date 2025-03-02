@@ -361,7 +361,9 @@
     "thumbnailError": "Nie udało sie wygenerować podglądu dla filmu: {name}",
     "unauthorized": "Brak uwierzytelnienia",
     "webhookMissing": "Brak webhook URL",
-    "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie."
+    "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie.",
+    "copied": "skopiowano"
+
   },
   "trash": {
     "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!",
