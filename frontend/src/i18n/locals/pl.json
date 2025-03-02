@@ -53,7 +53,7 @@
 
   },
   "errors": {
-    "notAllowedToUpload": "Nie możesz jeszcze wysyłać plików. Uzupełnij ustawienia discorda najpierw",
+    "notAllowedToUpload": "Nie możesz jeszcze wysyłać plików. Skonfiguruj ustawienia discorda najpierw",
     "goBack": "Zabierz mnie stąd",
     "retry": "Spróbuj ponownie",
     "unknownError": "Wystąpił nieznany błąd. Kod: {code}, Odpowiedż: {response}",

@@ -107,6 +107,7 @@ export async function canUpload(folderContext) {
       uploadStore.setWebhooks(response.data.webhooks)
       uploadStore.setAttachmentName(response.data.attachment_name)
    }
+   this.$toast.error(this.$t("errors.notAllowedToUpload"), {timeout: null})
 
    return response.data
 }

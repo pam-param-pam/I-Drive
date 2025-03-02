@@ -131,7 +131,6 @@ export default {
          try {
             let res = await canUpload(this.file.parent_id)
             if (!res.can_upload) {
-               this.$toast.error(this.$t("errors.notAllowedToUpload"))
                this.uploading = false
                return
             }

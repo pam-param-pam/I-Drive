@@ -52,7 +52,7 @@
     "editThumbnail": "Edit thumbnail"
   },
   "errors": {
-    "notAllowedToUpload": "You are not allowed to upload yet. Frst fill discord settings.",
+    "notAllowedToUpload": "You are not allowed to upload yet. First configure discord settings.",
     "goBack": "Go back",
     "retry": "Try again",
     "unknownError": "Unknown error has occurred. Status code: {code}, response: {response}",

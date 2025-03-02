@@ -100,7 +100,6 @@ export const useUploadStore = defineStore("upload2", {
 
          let res = await canUpload(folderContext)
          if (!res.can_upload) {
-            toast.error(i18n.global.t("errors.notAllowedToUpload"))
             return
          }
 

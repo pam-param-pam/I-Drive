@@ -14,7 +14,7 @@ from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_z
 from .views.testViews import get_folder_password, test_stream_file, hyper_stream_file
 from .views.uploadViews import create_file, create_thumbnail, proxy_discord
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
-    update_upload_destination, enable_bot, can_upload
+    update_upload_destination, enable_bot, can_upload, reset_discord_state
 
 urlpatterns = [
     path('download', test_stream_file, name='stream_file'),
@@ -53,6 +53,7 @@ urlpatterns = [
     path("user/discordSettings/bot/delete", delete_bot, name="delete a bot"),
     path("user/discordSettings/bot/enable", enable_bot, name="enable a bot"),
     path("user/updateDiscordSettings", update_upload_destination, name="update upload destination"),
+    path("user/resetDiscordState", reset_discord_state, name="resets discord state when stuck"),
 
     path("shares", get_shares, name="get user's shares"),
     path("share/delete", delete_share, name="delete share"),

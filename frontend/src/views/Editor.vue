@@ -222,7 +222,6 @@ export default {
 
             let res = await canUpload(this.file.parent_id)
             if (!res.can_upload) {
-               this.$toast.error(i18n.global.t('errors.notAllowedToUpload'))
                return
             }
             if (this.raw !== this.copyRaw) {

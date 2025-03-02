@@ -1,4 +1,3 @@
-import random
 import time
 from datetime import datetime, timezone
 from threading import Lock
@@ -34,15 +33,17 @@ class Discord:
                 user_state = self._get_user_state(user)
                 tokens_dict = user_state["tokens"]
                 for token, data in tokens_dict.items():
-                    if tokens_dict[token]['locked1'] and tokens_dict[token]['locked2']:
+                    if tokens_dict[token]['locked1'] and tokens_dict[token]['locked2'] and tokens_dict[token]['locked3']:
                         continue
 
                     if data['requests_remaining'] > 3:
                         tokens_dict[token]['requests_remaining'] -= 1
-                        if tokens_dict[token]['locked1']:
+                        if not tokens_dict[token]['locked1']:
+                            tokens_dict[token]['locked1'] = True
+                        elif not tokens_dict[token]['locked2']:
                             tokens_dict[token]['locked2'] = True
                         else:
-                            tokens_dict[token]['locked1'] = True
+                            tokens_dict[token]['locked3'] = True
                         return token
 
                     if data['reset_time']:
@@ -50,10 +51,12 @@ class Discord:
 
                         if current_time >= reset_time:
                             tokens_dict[token]['requests_remaining'] = 1
-                            if tokens_dict[token]['locked1']:
+                            if not tokens_dict[token]['locked1']:
+                                tokens_dict[token]['locked1'] = True
+                            elif not tokens_dict[token]['locked2']:
                                 tokens_dict[token]['locked2'] = True
                             else:
-                                tokens_dict[token]['locked1'] = True
+                                tokens_dict[token]['locked3'] = True
                             return token
 
             time.sleep(0.5)
@@ -69,10 +72,12 @@ class Discord:
 
         with self.lock:
             token_dict = self._get_user_state(user)["tokens"][token]
-            if token_dict['locked1']:
-                token_dict['locked1'] = False
+            if not token_dict[token]['locked1']:
+                token_dict[token]['locked1'] = True
+            elif not token_dict[token]['locked2']:
+                token_dict[token]['locked2'] = True
             else:
-                token_dict['locked2'] = False
+                token_dict[token]['locked3'] = True
 
             if requests_remaining and reset_time:
                 token_dict['reset_time'] = reset_time
@@ -181,42 +186,8 @@ class Discord:
 
     def send_file(self, user, files: dict, json=None) -> httpx.Response:
         channel_id = self._get_channel_id(user)
-
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
-        proxy_list = [
-            "23.20.81.238",
-            "3.89.104.49",
-            "3.85.213.51",
-            "3.95.9.222",
-            "52.90.148.221",
-            "35.173.248.130",
-            "54.242.162.250",
-            "54.160.241.232",
-            "54.221.170.121",
-            "54.197.195.136",
-            "54.234.223.189",
-            "18.234.112.51",
-            "34.236.153.211",
-            "54.175.242.91",
-            "3.88.202.32",
-            "54.165.194.253",
-            "98.84.113.54",
-            "18.205.245.134",
-            "3.89.118.61",
-            "54.167.86.83",
-        ]
-        headers = {}
-        token = self.get_token(user)
-        headers['Authorization'] = f'Bot {token}'
-        rand_proxy = random.choice(proxy_list)
-        if rand_proxy:
-            print("USING PROXY")
-            client = httpx.Client(timeout=10.0, proxies=f"socks5://{rand_proxy}:46642")
-            response = client.request('POST', url, files=files, json=json, timeout=None, headers=headers)
-            self.update_token(user, token, response.headers)
-
-        else:
-            response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
+        response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
 
         message = response.json()
         expiry = self._calculate_expiry(message)
@@ -317,6 +288,7 @@ class Discord:
                     'reset_time': None,
                     'locked1': False,
                     'locked2': False,
+                    'locked3': False,
                     'name': bot.name,
                 }
                 for bot in bots

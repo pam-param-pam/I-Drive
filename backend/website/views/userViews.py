@@ -338,3 +338,11 @@ def update_upload_destination(request):
     can_add_bots_or_webhooks = bool(settings.guild_id and settings.channel_id)
 
     return JsonResponse({"can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked}, status=200)
+
+@api_view(['PUT'])
+@throttle_classes([DiscordSettingsThrottle])
+@permission_classes([IsAuthenticated])
+@handle_common_errors
+def reset_discord_state(request):
+    discord.remove_user_state(request.user)
+    return HttpResponse(status=204)
