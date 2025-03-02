@@ -480,7 +480,7 @@ class Tag(models.Model):
 
 
 class Webhook(models.Model):
-    url = models.CharField(max_length=150, unique=True)
+    url = models.CharField(max_length=150)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=100)
@@ -494,7 +494,7 @@ class Webhook(models.Model):
 
 
 class Bot(models.Model):
-    token = models.CharField(max_length=100, unique=True)
+    token = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     discord_id = models.CharField(max_length=100)
