@@ -4,7 +4,12 @@
 <img src="https://img.shields.io/badge/build-passing-g" alt="Build Status"/>
 # I Drive
 
-I Drive is a cloud storage system & online web browser that stores files on Discord
+I Drive is a cloud storage system & online web browser that stores files on Discord.
+
+# Demo
+It's available at `https://idrive.pamparampam.dev`
+
+Credentials: `demo`/`demo`
 
 
 # Features
