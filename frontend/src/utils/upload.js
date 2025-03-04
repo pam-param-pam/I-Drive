@@ -35,7 +35,6 @@ export async function* prepareRequests() {
          try {
             thumbnail = await getAudioCover(queueFile)
          } catch (e) {
-            toast.warning("Couldn't get cover for: " + queueFile.fileObj.name)
             console.warn(e)
          }
       }

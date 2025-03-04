@@ -358,6 +358,7 @@ export default {
          })
       },
       isVideoFullScreen() {
+         if (this.file.type !== "video") return false
          let videoElement = this.$refs.video
          return document.fullscreenElement === videoElement ||
            document.webkitFullscreenElement === videoElement ||
