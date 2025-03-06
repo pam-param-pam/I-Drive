@@ -17,6 +17,9 @@ export function detectType(type, extension) {
    else if (extension === ".mkv") {
       return "video/mkv"
    }
+   else if (extension === ".txt") {
+      return "video/ts"
+   }
    else if (extension === ".mod") {
       return "text/plain"
    }

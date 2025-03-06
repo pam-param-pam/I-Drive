@@ -103,14 +103,14 @@ class Discord:
         token = headers.get('Authorization')
         if token:
             token = token.replace("Bot ", "")
-
-        if not token:
-            token = self.get_token(user)
-            headers['Authorization'] = f'Bot {token}'
-
-        print(f"Making bot request with token: {token}")
-        print("hit discord api")
         try:
+            if not token:
+                token = self.get_token(user)
+                headers['Authorization'] = f'Bot {token}'
+
+            print(f"Making bot request with token: {token}")
+            print("hit discord api")
+
             response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
             if response.is_success:

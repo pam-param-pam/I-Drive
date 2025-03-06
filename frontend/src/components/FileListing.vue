@@ -345,19 +345,7 @@ export default {
       headerButtons: {}
    },
 
-   emits: [
-      'uploadInput',
-      'dropUpload',
-      'upload',
-      'onOpen',
-      'dragEnter',
-      'dragLeave',
-      'onSearchClosed',
-      'onSearchQuery',
-      'download',
-      'openInNewWindow',
-      'copyFileShareUrl'
-   ],
+   emits: ['uploadInput', 'dropUpload', 'upload', 'onOpen', 'dragEnter', 'dragLeave', 'onSearchClosed', 'onSearchQuery', 'download', 'openInNewWindow', 'copyFileShareUrl'],
 
    data() {
       return {
@@ -374,7 +362,8 @@ export default {
          imageWidth: 100,
          numberOfTiles: 4,
 
-         scrollInterval: null
+         scrollInterval: null,
+         scrollToAnimationTimeout: null
       }
    },
 
