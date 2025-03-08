@@ -72,12 +72,12 @@ class Discord:
 
         with self.lock:
             token_dict = self._get_user_state(user)["tokens"][token]
-            if not token_dict[token]['locked1']:
-                token_dict[token]['locked1'] = True
-            elif not token_dict[token]['locked2']:
-                token_dict[token]['locked2'] = True
+            if not token_dict['locked1']:
+                token_dict['locked1'] = True
+            elif not token_dict['locked2']:
+                token_dict['locked2'] = True
             else:
-                token_dict[token]['locked3'] = True
+                token_dict['locked3'] = True
 
             if requests_remaining and reset_time:
                 token_dict['reset_time'] = reset_time
@@ -138,7 +138,7 @@ class Discord:
                                                   'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
                 self.remove_user_state(user)
 
-            raise DiscordError(response.text, response.status_code)
+                raise DiscordError(response.text, response.status_code)
         finally:
             try:
                 self.update_token(user, token, response.headers)
