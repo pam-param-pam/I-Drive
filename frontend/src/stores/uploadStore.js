@@ -7,7 +7,6 @@ import { useToast } from "vue-toastification"
 import { Uploader } from "@/utils/Uploader.js"
 import { canUpload } from "@/api/user.js"
 import { createFile } from "@/api/files.js"
-import i18n from "@/i18n/index.js"
 import { v4 as uuidv4 } from "uuid"
 
 const toast = useToast()
@@ -44,7 +43,7 @@ export const useUploadStore = defineStore("upload2", {
       pausedRequests: [],
 
       state: uploadState.idle,
-      uploadSpeedList: [],
+      uploadSpeedList: []
 
    }),
 
@@ -242,7 +241,9 @@ export const useUploadStore = defineStore("upload2", {
          this.processUploads()
       },
       decrementRequests() {
-         this.concurrentRequests--
+         if (this.concurrentRequests > 0) {
+            this.concurrentRequests--
+         }
       },
       abortAll() {
 

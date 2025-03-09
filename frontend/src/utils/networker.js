@@ -72,7 +72,7 @@ uploadInstance.interceptors.response.use(
          return retry(error, 5000)
       }
 
-      // If not a 429 error or no Retry-After header, just return the error
+      //else just return the error
       return Promise.reject(error)
    }
 )

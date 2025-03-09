@@ -317,15 +317,23 @@ class Discord:
         channel_id = self._get_channel_id(user)
         url = f"{DISCORD_BASE_URL}/channels/{channel_id}/messages"
         params = {"limit": 100}
+        number_of_errors = 0
         while True:
-            res = self._make_bot_request(user, "GET", url, params=params)
+            try:
+                res = self._make_bot_request(user, "GET", url, params=params)
 
-            batch = res.json()
-            if not batch:
-                break
+                batch = res.json()
+                if not batch:
+                    break
 
-            yield batch
-            params["before"] = batch[-1]["id"]
+                yield batch
+                params["before"] = batch[-1]["id"]
+                number_of_errors = 0
+            except CannotProcessDiscordRequestError:
+                if number_of_errors > 10:
+                    raise CannotProcessDiscordRequestError("Unable to fetch more messages")
+                number_of_errors += 1
+                time.sleep(1)
 
 
 discord = Discord()

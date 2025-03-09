@@ -317,54 +317,56 @@ def delete_dangling_discord_files(days=2):
             check_if_bots_exists(user)
         except NoBotsError:
             continue
-
-        for batch in discord.fetch_messages(user):
-            for discord_message in batch:
-                discord_attachments = discord_message['attachments']
-                if not discord_attachments:
-                    discord.remove_message(user, discord_message['id'])
-
-                attachments_to_keep = []
-                attachments_to_remove = []
-
-                timestamp = datetime.fromisoformat(discord_message['timestamp'])
-                now = datetime.now(timezone.utc)
-
-                # skip fresh messages to not break upload
-                one_hour_ago = now - timedelta(hours=6)
-                if timestamp > one_hour_ago:
-                    continue
-
-                # Break when messages found are older than 2 days
-                two_days_ago = datetime.now(timezone.utc) - timedelta(days=days)
-                if timestamp < two_days_ago:
-                    break
-
-                author = None
-                for discord_attachment in discord_attachments:
-
-                    database_attachments = query_attachments(message_id=discord_message['id'], attachment_id=discord_attachment['id'])
-
-                    if database_attachments:
-                        author = database_attachments[0].get_author()
-                        attachments_to_keep.append(discord_attachment['id'])
-                    else:
-                        attachments_to_remove.append(discord_attachment['id'])
-
-                if not attachments_to_remove:
-                    if not attachments_to_keep:
+        try:
+            for batch in discord.fetch_messages(user):
+                for discord_message in batch:
+                    discord_attachments = discord_message['attachments']
+                    if not discord_attachments:
                         discord.remove_message(user, discord_message['id'])
-                    continue
 
-                if attachments_to_remove and attachments_to_keep:
-                    if isinstance(author, Webhook):
-                        discord.edit_webhook_attachments(user, author.url, discord_message['id'], attachments_to_keep)
-                    else:
-                        discord.edit_attachments(user, author.token, discord_message['id'], attachments_to_keep)
+                    attachments_to_keep = []
+                    attachments_to_remove = []
 
-                    deleted_attachments[user] += len(attachments_to_remove)
+                    timestamp = datetime.fromisoformat(discord_message['timestamp'])
+                    now = datetime.now(timezone.utc)
 
-        discord.send_message(user, f"Deleted {deleted_attachments[user]} attachments for user: {user}.")
+                    # skip fresh messages to not break upload
+                    one_hour_ago = now - timedelta(hours=6)
+                    if timestamp > one_hour_ago:
+                        continue
+
+                    # Break when messages found are older than 2 days
+                    two_days_ago = datetime.now(timezone.utc) - timedelta(days=days)
+                    if timestamp < two_days_ago:
+                        break
+
+                    author = None
+                    for discord_attachment in discord_attachments:
+
+                        database_attachments = query_attachments(message_id=discord_message['id'], attachment_id=discord_attachment['id'])
+
+                        if database_attachments:
+                            author = database_attachments[0].get_author()
+                            attachments_to_keep.append(discord_attachment['id'])
+                        else:
+                            attachments_to_remove.append(discord_attachment['id'])
+
+                    if not attachments_to_remove:
+                        if not attachments_to_keep:
+                            discord.remove_message(user, discord_message['id'])
+                        continue
+
+                    if attachments_to_remove and attachments_to_keep:
+                        if isinstance(author, Webhook):
+                            discord.edit_webhook_attachments(user, author.url, discord_message['id'], attachments_to_keep)
+                        else:
+                            discord.edit_attachments(user, author.token, discord_message['id'], attachments_to_keep)
+
+                        deleted_attachments[user] += len(attachments_to_remove)
+
+            discord.send_message(user, f"Deleted {deleted_attachments[user]} attachments for user: {user}.")
+        except Exception as e:
+            discord.send_message(user, f"Failed to delete dangling attachments for user: {user}.\n{str(e)}")
 
 
 @app.task
