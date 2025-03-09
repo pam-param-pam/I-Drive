@@ -231,6 +231,7 @@ export default {
          if (this.files && this.file) {
             return this.files.findIndex((item) => item.id === this.file.id)
          }
+         return -1
       },
 
       files() {
@@ -403,6 +404,7 @@ export default {
       },
 
       async prefetch() {
+        //todo make it better!
          this.prefetchTimeout = setTimeout(() => {
             let url1 = this.files[this.currentIndex + 1]?.thumbnail_url
             let url2 = this.files[this.currentIndex + 2]?.thumbnail_url

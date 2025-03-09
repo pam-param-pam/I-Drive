@@ -20,7 +20,7 @@ from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 # @handle_common_errors
-def get_folder_password(request):
+def get_discord_state(request):
     user = User.objects.get(id=1)
     discord._get_channel_id(user)
 

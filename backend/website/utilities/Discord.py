@@ -72,12 +72,12 @@ class Discord:
 
         with self.lock:
             token_dict = self._get_user_state(user)["tokens"][token]
-            if not token_dict['locked1']:
-                token_dict['locked1'] = True
-            elif not token_dict['locked2']:
-                token_dict['locked2'] = True
+            if token_dict['locked1']:
+                token_dict['locked1'] = False
+            elif token_dict['locked2']:
+                token_dict['locked2'] = False
             else:
-                token_dict['locked3'] = True
+                token_dict['locked3'] = False
 
             if requests_remaining and reset_time:
                 token_dict['reset_time'] = reset_time
