@@ -47,9 +47,9 @@ jobs:
             -o docker-compose.yml \
             -L https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/docker-compose.yml
           
-          docker compose down
           docker compose pull
           docker compose up -d
+          docker compose down --remove-orphans
           
           echo "Docker Compose started successfully."
 

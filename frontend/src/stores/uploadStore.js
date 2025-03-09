@@ -109,8 +109,7 @@ export const useUploadStore = defineStore("upload2", {
 
       async processUploads() {
          const mainStore = useMainStore()
-         let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests &&
-            (this.state === uploadState.uploading || this.state === uploadState.idle)
+         let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests && (this.state === uploadState.uploading || this.state === uploadState.idle)
 
          if (!canProcess) return
 
@@ -134,7 +133,6 @@ export const useUploadStore = defineStore("upload2", {
             request = generated.value
             request.id = uuidv4()
          }
-
          this.concurrentRequests++
 
          uploadRequest(request)
@@ -198,8 +196,6 @@ export const useUploadStore = defineStore("upload2", {
       },
       onUploadProgress(request, progressEvent) {
          this.isInternet = true
-         console.log("onUploadProgress")
-         console.log(progressEvent.rate)
          this.uploadSpeedMap.set(request.id, progressEvent.rate)
          this.uploader.estimator.updateSpeed(this.uploadSpeed)
          this.eta = this.uploader.estimator.estimateRemainingTime(this.remainingBytes)
@@ -243,6 +239,10 @@ export const useUploadStore = defineStore("upload2", {
       decrementRequests() {
          if (this.concurrentRequests > 0) {
             this.concurrentRequests--
+         }
+         else {
+            console.warn("this.concurrentRequests is <= 0")
+            console.warn(this.concurrentRequests)
          }
       },
       abortAll() {
