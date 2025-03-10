@@ -188,6 +188,7 @@ export async function uploadRequest(request) {
       else {
          for (let attachments of request.attachments) {
             uploadStore.setStatus(attachments.fileObj.frontendId, fileUploadStatus.failed)
+            //todo pause upload of this file entirely dropping all ongoing requests
          }
       }
       uploadStore.decrementRequests()

@@ -138,6 +138,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "ALotOF429": "Za dużo 429!",
+    "ALotOF429Explained": "Zmieniam na inny typ uploadu i redukuje liczbe równoległych requestów.",
     "thumbnailChanged": "Podgląd zmieniono!",
     "editThumbnail": "Zmień podgląd",
     "orderBy": "Sortuj po",
@@ -248,6 +250,7 @@
     "useProxy": "Używaj proxy do przesyłania plików",
     "attachmentName": "Nazwa plików na discordzie",
     "webhooks": "Webhooki",
+    "concurrentUploadRequestsIsNegative": "Ilość równoległych requestów z uploadem plików musi być większa od 0",
     "bots": "Boty",
     "botDisabledNoPerms": "Ten bot jest wyłączony z powodu braku wymaganych permisji.",
     "addedAt": "Dodane",

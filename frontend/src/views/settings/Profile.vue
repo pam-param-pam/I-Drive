@@ -169,6 +169,10 @@ export default {
       }, 1000),
 
       saveSettings: throttle(async function (event) {
+         if (this.concurrentUploadRequests <= 0) {
+            this.$toast.error(this.$t('settings.concurrentUploadRequestsIsNegative'))
+            return
+         }
          let data = {
             locale: this.locale,
             subfoldersInShares: this.subfoldersInShares,

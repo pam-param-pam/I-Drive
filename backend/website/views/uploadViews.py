@@ -285,7 +285,7 @@ def proxy_discord(request):
 
     # todo secure to prevent denial of service
     json_payload = request.data.get("json_payload")
-
+    # return HttpResponse(status=429)
     files = request.FILES
     start_time = time.time()
     message = discord.send_file(request.user, json=json_payload, files=files)

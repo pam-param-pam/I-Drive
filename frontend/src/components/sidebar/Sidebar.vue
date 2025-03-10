@@ -101,6 +101,12 @@
          </span>
       </p>
       <dark-mode-button />
+
+      <div v-if="selectedFile && !isMobile() && false" class="selected-file-info">
+         <p><strong>Name:</strong> {{ selectedFile.name }}</p>
+         <p><strong>ID:</strong> {{ selectedFile.id }}</p>
+         <p v-if="selectedFile.size"><strong>Size:</strong> {{ filesize(selectedFile.size) }}</p>
+      </div>
    </nav>
 </template>
 
@@ -114,6 +120,7 @@ import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import DarkModeButton from '@/components/sidebar/DarkModeButton.vue'
 import ProgressBar from '@/components/sidebar/SimpleProgressBar.vue'
+import { isMobile } from "@/utils/common.js"
 
 export default {
    name: 'sidebar',
@@ -133,17 +140,10 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, [
-         'user',
-         'perms',
-         'currentFolder',
-         'disabledCreation',
-         'isLogged',
-         'currentPrompt',
-         'loading',
-         'searchActive',
-         'searchItems'
-      ]),
+      ...mapState(useMainStore, ['user', 'perms', 'currentFolder', 'disabledCreation', 'isLogged', 'currentPrompt', 'loading', 'searchActive', 'searchItems', 'selected']),
+      selectedFile() {
+         return this.selected[0]
+      },
       active() {
          return this.currentPrompt?.prompt === 'sidebar'
       },
@@ -165,6 +165,8 @@ export default {
    },
 
    methods: {
+      isMobile,
+      filesize,
       ...mapActions(useMainStore, ['closeHover', 'showHover']),
 
       async fetchUsage() {
@@ -213,3 +215,30 @@ export default {
    }
 }
 </script>
+<style scoped>
+.selected-file-info {
+   position: fixed;
+   bottom: 1rem;
+   left: 0;
+   width: 100%;
+   background: rgba(0, 0, 0, 0.05);
+   padding: 0.75rem 1rem;
+   font-size: 0.9rem;
+   text-align: left;
+
+}
+
+.selected-file-info h4,
+.selected-file-info p {
+   margin: 0.25rem 0;
+   font-size: 0.85rem;
+   word-wrap: break-word;
+   overflow-wrap: break-word;
+   white-space: normal;
+   max-width: 16em; /* Prevents text from exceeding the container width */
+}
+
+.selected-file-info strong {
+   font-weight: bold;
+}
+</style>

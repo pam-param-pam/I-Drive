@@ -9,13 +9,13 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 const toast = useToast()
 
 export const cancelTokenMap = new Map()
-
+let upload_429_errors = 0
 function retry(error, delay, maxRetries = 5) {
    if (!error.config.__retryCount) {
       error.config.__retryCount = 0
    }
    let retries = error.config.__retryCount
-   if (retries >= maxRetries) {
+   if (retries >= maxRetries && error?.response?.status !== 429) {
       console.error(`Max retries reached: ${maxRetries}. Aborting.`)
       return Promise.reject(error)
    }
@@ -48,14 +48,29 @@ uploadInstance.interceptors.response.use(
    function(response) {
       const uploadStore = useUploadStore()
       uploadStore.isInternet = true
+      upload_429_errors--
       return response
    },
    function(error) {
       if (error?.config?.onErrorCallback) error.config.onErrorCallback()
+      const mainStore = useMainStore()
+
+      if (upload_429_errors > 5) {
+         upload_429_errors = 0
+         toast.warning(`${i18n.global.t('prompts.ALotOF429')}\n${i18n.global.t('prompts.ALotOF429Explained')}`, {
+            timeout: 10000,
+            position: "bottom-right"
+         })
+         mainStore.settings.useProxy = !mainStore.settings.useProxy
+         mainStore.settings.concurrentUploadRequests = 2
+      }
 
       // Check if the error is 429 Too Many Requests errors
       if (error.response && error.response.status === 429) {
+         upload_429_errors++
+         let scope = error.response.headers["x-ratelimit-scope"]
          let retryAfter = error.response.headers["x-ratelimit-reset-after"]
+         if (scope === "shared") retryAfter *= mainStore.settings.concurrentUploadRequests
          if (retryAfter) {
             let waitTime = parseInt(retryAfter) * 1000 // Convert to milliseconds
             console.log(`Received 429, retrying after ${waitTime} milliseconds.`)

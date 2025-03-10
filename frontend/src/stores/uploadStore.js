@@ -43,7 +43,7 @@ export const useUploadStore = defineStore("upload2", {
       pausedRequests: [],
 
       state: uploadState.idle,
-      uploadSpeedList: []
+      uploadSpeedList: [],
 
    }),
 
@@ -110,8 +110,11 @@ export const useUploadStore = defineStore("upload2", {
       async processUploads() {
          const mainStore = useMainStore()
          let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests && (this.state === uploadState.uploading || this.state === uploadState.idle)
-
+         console.log("this.concurrentRequests")
+         console.log(this.concurrentRequests)
+         console.log(canProcess)
          if (!canProcess) return
+         this.concurrentRequests++
 
          if (!this.requestGenerator) {
             this.requestGenerator = prepareRequests()
@@ -128,12 +131,12 @@ export const useUploadStore = defineStore("upload2", {
                console.info("The request generator is finished.")
                this.requestGenerator = null
                this.finished = true
+               this.concurrentRequests--
                return
             }
             request = generated.value
             request.id = uuidv4()
          }
-         this.concurrentRequests++
 
          uploadRequest(request)
 
