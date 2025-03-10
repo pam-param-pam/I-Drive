@@ -340,7 +340,7 @@ def stream_zip_files(request, token):
                 yield decryptor.finalize()
 
     files = user_zip.files.filter(ready=True, inTrash=False)
-    folders = user_zip.folders.all(ready=True, inTrash=False)
+    folders = user_zip.folders.filter(ready=True, inTrash=False)
     dict_files = []
 
     single_root = False
