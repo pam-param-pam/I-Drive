@@ -1,4 +1,5 @@
 <template>
+
   <div
     id="previewer"
     v-touch:swipe.left="next"
@@ -23,6 +24,13 @@
           :label="$t('buttons.increaseFontSize')"
           icon="add"
           @action="increaseFontSize"
+        />
+        <action
+          v-if="file?.type === 'video' && file?.size > 0"
+          :disabled="disabledMoments"
+          :label="$t('buttons.moments')"
+          icon="bookmarks"
+          @action="showMoments"
         />
         <action
           v-if="perms?.modify && !isInShareContext"
@@ -70,6 +78,8 @@
           loop
           @play="autoPlay = true"
           @timeupdate="videoTimeUpdate"
+          @loadedmetadata="onVideoLoaded"
+          crossorigin="anonymous"
         ></video>
 
         <div v-else-if="isEpub" class="epub-reader">
@@ -208,12 +218,16 @@ export default {
          fontSize: 100,
          lastSentVideoPosition: 0,
 
-         prefetchTimeout: null
+         prefetchTimeout: null,
+         videoRef: null,
+
+         disabledMoments: true,
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
+
       isEpub() {
          if (!this.file) return false
          return this.file.extension === ".epub"
@@ -282,7 +296,9 @@ export default {
       async fetchData() {
          this.setLoading(true)
          this.setError(null)
-
+         console.log("clearing ref")
+         this.videoRef = null
+         this.disabledMoments = true
          // Ensure file is updated in the DOM
          this.file = null
          await this.$nextTick() //this is very important
@@ -323,8 +339,10 @@ export default {
          }
          this.addSelected(this.file)
          this.setLastItem(this.file)
-
+         await this.$nextTick() //this is vevy important
          if (this.file?.type === "video" && this.$refs.video) {
+           this.videoRef
+            this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
          }
 
@@ -342,7 +360,21 @@ export default {
             }
          })
       },
+      onVideoLoaded() {
+        this.disabledMoments = false
+      },
+      showMoments() {
+         if(!this.videoRef.readyState || this.videoRef.currentTime === 0) {
+            this.$toast.error("play video first")
+            return
+         }
+         this.videoRef.pause()
 
+         this.showHover({
+            prompt: "moments",
+            props: {video: this.videoRef}
+         })
+      },
       rename() {
          this.showHover({
             prompt: "rename",

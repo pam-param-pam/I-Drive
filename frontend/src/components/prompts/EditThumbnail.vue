@@ -60,7 +60,7 @@ import axios from "axios"
 import { filesize } from "@/utils/index.js"
 
 export default {
-   name: "file-upload-prompt",
+   name: "edit-thumbnail",
 
    components: { ProgressBar },
 

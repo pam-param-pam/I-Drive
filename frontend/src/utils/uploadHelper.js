@@ -148,7 +148,44 @@ export async function getAudioCover(file) {
    })
 }
 
+export function captureVideoFrame(videoPlayer, seekTo) {
+   return new Promise((resolve, reject) => {
 
+      // Seek video after a short delay
+      setTimeout(() => {
+         videoPlayer.currentTime = seekTo
+      }, 20)
+
+      // Extract thumbnail when seeking is complete
+      videoPlayer.addEventListener("seeked", () => {
+         // Create canvas with video dimensions
+         const canvas = document.createElement("canvas")
+         canvas.width = videoPlayer.videoWidth
+         canvas.height = videoPlayer.videoHeight
+
+         // Draw video frame to canvas
+         const ctx = canvas.getContext("2d")
+         ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
+
+         // Convert canvas to blob and resolve promise
+         ctx.canvas.toBlob(
+            (blob) => {
+               resolve({
+                  thumbnail: blob,
+                  duration: videoPlayer.duration
+               })
+            },
+            "image/jpeg",
+            0.75
+         )
+         videoPlayer.pause()
+         URL.revokeObjectURL(videoPlayer.src)
+      })
+   })
+}
+
+
+// getVideoCover.js
 export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    return new Promise((resolve, reject) => {
       let videoPlayer = document.createElement("video")
@@ -161,59 +198,38 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
 
       // Load metadata and get video thumbnail
       videoPlayer.addEventListener("loadedmetadata", () => {
+         // Call captureVideoFrame function to capture a frame
+         captureVideoFrame(videoPlayer, seekTo)
+            .then((result) => {
+               const canvas = document.createElement("canvas")
+               const ctx = canvas.getContext("2d")
 
-         // Seek video after a short delay
-         setTimeout(() => {
-            videoPlayer.currentTime = seekTo
-         }, 20)
+               // Checking if the thumbnail is not pitch black
+               ctx.canvas.width = ctx.canvas.height = 1
+               ctx.drawImage(videoPlayer, 0, 0, 1, 1)
+               let resultData = ctx.getImageData(0, 0, 1, 1)
+               let totalColor = resultData.data[0] + resultData.data[1] + resultData.data[2] + resultData.data[3]
 
-         // Extract thumbnail when seeking is complete
-         videoPlayer.addEventListener("seeked", () => {
-
-            // Create canvas with video dimensions
-            const canvas = document.createElement("canvas")
-            canvas.width = videoPlayer.videoWidth
-            canvas.height = videoPlayer.videoHeight
-
-            // Draw video frame to canvas
-            const ctx = canvas.getContext("2d")
-            ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
-
-            // Convert canvas to blob and resolve promise
-            ctx.canvas.toBlob(
-               (blob) => {
-                  // checking if the thumbnail is not pitch black
-                  ctx.canvas.width = ctx.canvas.height = 1
-                  ctx.drawImage(videoPlayer, 0, 0, 1, 1)
-                  let result = ctx.getImageData(0, 0, 1, 1)
-                  let totalColor = result.data[0] + result.data[1] + result.data[2] + result.data[3]
-                  if (totalColor === 255 && retryTimes <= 10) {
-                     if (seekTo < 0) {
-                        seekTo = 0
-                     } else if (seekTo >= 0) {
-                        seekTo += 2
-                     }
-                     if (seekTo > videoPlayer.duration) {
-                        seekTo = videoPlayer.duration / 2
-                     }
-                     resolve(getVideoCover(file, seekTo, retryTimes + 1))
-                  } else {
-                     resolve({
-                        thumbnail: blob,
-                        duration: videoPlayer.duration
-                     })
+               if (totalColor === 255 && retryTimes <= 10) {
+                  // Retry with a new timestamp if the thumbnail is pitch black
+                  if (seekTo < 0) {
+                     seekTo = 0
+                  } else if (seekTo >= 0) {
+                     seekTo += 2
                   }
 
-               },
-               "image/jpeg",
-               0.75
-            )
+                  if (seekTo > videoPlayer.duration) {
+                     seekTo = videoPlayer.duration / 2
+                  }
 
-
-            videoPlayer.pause()
-            URL.revokeObjectURL(videoPlayer.src)
-         })
-
+                  resolve(getVideoCover(file, seekTo, retryTimes + 1))
+               } else {
+                  resolve(result)
+               }
+            })
+            .catch((error) => {
+               reject(error)
+            })
       })
 
       videoPlayer.load()

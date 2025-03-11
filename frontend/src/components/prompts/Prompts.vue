@@ -1,46 +1,47 @@
 <template>
-   <div>
-      <component
-         :is="prompt.prompt"
-         v-for="(prompt, index) in prompts"
-         v-show="prompt.prompt === currentPromptName"
-         :key="index"
-         :ref="prompt.prompt"
-         v-bind="prompt.props"
-      />
+  <div>
+    <component
+      :is="prompt.prompt"
+      v-for="(prompt, index) in prompts"
+      v-show="prompt.prompt === currentPromptName"
+      :key="index"
+      :ref="prompt.prompt"
+      v-bind="prompt.props"
+    />
 
-      <div v-show="showOverlay" class="overlay" @click="resetPrompts"></div>
-      <div v-show="!showOverlay" @click="resetPrompts"></div>
-   </div>
+    <div v-show="showOverlay" class="overlay" @click="resetPrompts"></div>
+    <div v-show="!showOverlay" @click="resetPrompts"></div>
+  </div>
 </template>
 
 <script>
-import Help from './Help.vue'
-import Info from './Info.vue'
-import Delete from './Delete.vue'
-import Rename from './Rename.vue'
-import Move from './Move.vue'
-import NewDir from './NewDir.vue'
-import DiscardEditorChanges from './DiscardEditorChanges.vue'
-import Share from './Share.vue'
-import Upload from './Upload.vue'
-import ShareDelete from './ShareDelete.vue'
-import FolderPassword from '@/components/prompts/FolderPassword.vue'
-import EditFolderPassword from '@/components/prompts/EditFolderPassword.vue'
-import MoveToTrash from '@/components/prompts/MoveToTrash.vue'
-import RestoreFromTrash from '@/components/prompts/RestoreFromTrash.vue'
-import SearchTunePrompt from '@/components/prompts/SearchTunePrompt.vue'
-import NotOptimizedForSmallFiles from '@/components/prompts/NotOptimizedForSmallFiles.vue'
-import ResetFolderPassword from '@/components/prompts/ResetFolderPassword.vue'
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
-import Sidebar from '@/components/sidebar/Sidebar.vue'
-import EditTags from '@/components/prompts/EditTags.vue'
-import UploadDestinationWarning from '@/components/prompts/UploadDestinationWarning.vue'
-import EditThumbnail from '@/components/prompts/EditThumbnail.vue'
+import Help from "./Help.vue"
+import Info from "./Info.vue"
+import Delete from "./Delete.vue"
+import Rename from "./Rename.vue"
+import Move from "./Move.vue"
+import NewDir from "./NewDir.vue"
+import DiscardEditorChanges from "./DiscardEditorChanges.vue"
+import Share from "./Share.vue"
+import Upload from "./Upload.vue"
+import ShareDelete from "./ShareDelete.vue"
+import FolderPassword from "@/components/prompts/FolderPassword.vue"
+import EditFolderPassword from "@/components/prompts/EditFolderPassword.vue"
+import MoveToTrash from "@/components/prompts/MoveToTrash.vue"
+import RestoreFromTrash from "@/components/prompts/RestoreFromTrash.vue"
+import SearchTunePrompt from "@/components/prompts/SearchTunePrompt.vue"
+import NotOptimizedForSmallFiles from "@/components/prompts/NotOptimizedForSmallFiles.vue"
+import ResetFolderPassword from "@/components/prompts/ResetFolderPassword.vue"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
+import Sidebar from "@/components/sidebar/Sidebar.vue"
+import EditTags from "@/components/prompts/EditTags.vue"
+import UploadDestinationWarning from "@/components/prompts/UploadDestinationWarning.vue"
+import EditThumbnail from "@/components/prompts/EditThumbnail.vue"
+import Moments from "@/components/prompts/Moments.vue"
 
 export default {
-   name: 'prompts',
+   name: "prompts",
 
    components: {
       Info,
@@ -63,24 +64,25 @@ export default {
       ResetFolderPassword,
       EditTags,
       UploadDestinationWarning,
-      EditThumbnail
+      EditThumbnail,
+      Moments
    },
 
    created() {
-      window.addEventListener('keydown', (event) => {
+      window.addEventListener("keydown", (event) => {
          if (this.currentPrompt == null) return
 
          // Esc!
-         if (event.code === 'Escape') {
+         if (event.code === "Escape") {
             event.stopImmediatePropagation()
             this.resetPrompts()
          }
          // Enter!
-         if (event.code === 'Enter') {
+         if (event.code === "Enter") {
             event.preventDefault()
 
             let promptComponent = this.$refs[this.currentPromptName][0]
-            if (promptComponent && typeof promptComponent.submit === 'function') {
+            if (promptComponent && typeof promptComponent.submit === "function") {
                promptComponent.submit()
             } else {
                console.warn("couldn't find submit method for prompt:")
@@ -91,18 +93,25 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['currentPrompt', 'currentPromptName', 'prompts']),
+      ...mapState(useMainStore, ["currentPrompt", "currentPromptName", "prompts"]),
       showOverlay() {
-         return this.currentPrompt !== null && this.currentPromptName !== 'more'
+         return this.currentPrompt !== null && this.currentPromptName !== "more"
       }
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover']),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       resetPrompts() {
-         let promptComponent = this.$refs[this.currentPromptName][0]
-         if (promptComponent && typeof promptComponent.cancel === 'function') {
+         console.log(this.currentPromptName)
+         let promptComponent = this.$refs[this.currentPromptName]
+         if (!promptComponent) {
+            console.error("PROMPT RESET ERROR: Something gone wrong")
+            this.closeHover()
+            return
+         }
+         promptComponent = promptComponent[0]
+         if (promptComponent && typeof promptComponent.cancel === "function") {
             promptComponent.cancel()
          } else {
             console.warn("couldn't find cancel method for prompt:")
