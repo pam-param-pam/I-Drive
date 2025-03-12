@@ -195,7 +195,7 @@ class Discord:
 
         return message
 
-    def get_attachment_url(self, user, resource: Union['Fragment', 'Thumbnail', 'Preview']) -> str:
+    def get_attachment_url(self, user, resource: Union['Fragment', 'Thumbnail', 'Preview', 'Moment']) -> str:
         return self.get_file_url(user, resource.message_id, resource.attachment_id)
 
     def get_file_url(self, user, message_id: str, attachment_id: str) -> str:

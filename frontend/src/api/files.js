@@ -59,3 +59,23 @@ export async function removeTag(data) {
    return response.data
 
 }
+
+export async function addMoment(data) {
+   let url = `/file/moment/add`
+   let response = await backendInstance.post(url, data)
+   return response.data
+
+}
+
+export async function removeMoment(data) {
+   let url = `/file/moment/remove`
+   let response = await backendInstance.post(url, data)
+   return response.data
+
+}
+export async function getMoments(file_id) {
+   let url = `/file/moments/${file_id}`
+   let response = await backendInstance.get(url)
+   return response.data
+
+}

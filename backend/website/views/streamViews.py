@@ -20,7 +20,7 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
-from ..models import File, UserZIP
+from ..models import File, UserZIP, Moment
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
@@ -181,6 +181,29 @@ def get_thumbnail(request, file_obj: File):
     response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
     return response
 
+# @cache_page(60 * 60 * 24 * 30)
+@api_view(['GET'])
+@throttle_classes([MediaThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+def get_moment(request, file_obj: File, timestamp):
+
+    check_if_bots_exists(file_obj.owner)
+
+    moment = Moment.objects.get(file=file_obj, timestamp=timestamp)
+    decryptor = Decryptor(method=file_obj.get_encryption_method(), key=moment.key, iv=moment.iv)
+
+    url = discord.get_attachment_url(file_obj.owner, moment)
+    discord_response = requests.get(url)
+    if discord_response.ok:
+        print(len(discord_response.content))
+        moment_content = decryptor.decrypt(discord_response.content)
+    else:
+        return JsonResponse(status=discord_response.status_code, data=discord_response.json())
+
+    response = HttpResponse(moment_content, content_type="image/jpeg")
+    return response
 
 # todo  handle >416 Requested Range Not Satisfiable<
 @api_view(['GET'])

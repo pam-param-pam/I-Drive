@@ -9,7 +9,7 @@ from django.db.models.aggregates import Sum
 from django.utils import timezone
 
 from .Discord import discord
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
@@ -542,7 +542,7 @@ def auto_prefetch(file_obj: File, fragment_id: str) -> None:
     prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
 
 
-def query_attachments(message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview]:
+def query_attachments(message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview, Moment]:
     # Create a Q object to build the query
     query = Q()
 
@@ -560,14 +560,15 @@ def query_attachments(message_id=None, attachment_id=None, author_id=None, owner
     fragments = Fragment.objects.filter(query)
     thumbnails = Thumbnail.objects.filter(query)
     previews = Preview.objects.filter(query)
+    moments = Moment.objects.filter(query)
 
     # Combine all the QuerySets using union()
-    combined_results = list(fragments) + list(thumbnails) + list(previews)
+    combined_results = list(fragments) + list(thumbnails) + list(previews) + list(moments)
 
     return combined_results
 
 
-def delete_single_discord_attachment(user, resource: Union[Fragment, Thumbnail, Preview]) -> None:
+def delete_single_discord_attachment(user, resource: Union[Fragment, Thumbnail, Preview, Moment]) -> None:
     database_attachments = query_attachments(message_id=resource.message_id)
 
     all_attachments_ids = set()
@@ -588,3 +589,11 @@ def delete_single_discord_attachment(user, resource: Union[Fragment, Thumbnail, 
             discord.edit_attachments(user, author.token, resource.message_id, attachment_ids_to_keep)
     else:
         discord.remove_message(user, resource.message_id)
+
+
+def create_moment_dict(moment: Moment) -> dict:
+    signed_file_id = sign_resource_id_with_expiry(moment.file.id)
+
+    url = f"{API_BASE_URL}/file/moment/{signed_file_id}/{moment.timestamp}"
+
+    return {"file_id": moment.file.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}

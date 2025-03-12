@@ -221,7 +221,7 @@ export default {
          prefetchTimeout: null,
          videoRef: null,
 
-         disabledMoments: true,
+         disabledMoments: true
       }
    },
 
@@ -341,7 +341,7 @@ export default {
          this.setLastItem(this.file)
          await this.$nextTick() //this is vevy important
          if (this.file?.type === "video" && this.$refs.video) {
-           this.videoRef
+            this.videoRef
             this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
          }
@@ -361,10 +361,10 @@ export default {
          })
       },
       onVideoLoaded() {
-        this.disabledMoments = false
+         this.disabledMoments = false
       },
       showMoments() {
-         if(!this.videoRef.readyState || this.videoRef.currentTime === 0) {
+         if (!this.videoRef.readyState || this.videoRef.currentTime === 0) {
             this.$toast.error("play video first")
             return
          }
@@ -372,7 +372,11 @@ export default {
 
          this.showHover({
             prompt: "moments",
-            props: {video: this.videoRef}
+            props: { video: this.videoRef },
+            // confirm: (timestamp) => {
+            //    this.videoRef.play()
+            //    // this.videoRef.currentTime = timestamp
+            // }
          })
       },
       rename() {
@@ -436,7 +440,7 @@ export default {
       },
 
       async prefetch() {
-        //todo make it better!
+         //todo make it better!
          this.prefetchTimeout = setTimeout(() => {
             let url1 = this.files[this.currentIndex + 1]?.thumbnail_url
             let url2 = this.files[this.currentIndex + 2]?.thumbnail_url

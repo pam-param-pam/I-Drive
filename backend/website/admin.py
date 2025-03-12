@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment
 from .tasks import smart_delete
 from .utilities.Discord import discord
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
@@ -319,3 +319,7 @@ class WebhookAdmin(admin.ModelAdmin):
 class BotAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
+
+@admin.register(Moment)
+class MomentAdmin(admin.ModelAdmin):
+    pass

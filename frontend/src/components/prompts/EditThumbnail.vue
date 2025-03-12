@@ -76,7 +76,7 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["user", "selected"]),
-      ...mapState(useUploadStore, ["webhooks", "attachmentName"]),
+      ...mapState(useUploadStore, ["attachmentName"]),
 
       file() {
          return this.selected[0]
@@ -134,7 +134,6 @@ export default {
                this.uploading = false
                return
             }
-            let webhook = this.webhooks[0]
             let fileFormList = new FormData()
 
             let method = this.file.encryption_method
@@ -156,7 +155,7 @@ export default {
                },
                cancelToken: this.cancelTokenSource.token
             }
-            let uploadResponse = await upload(fileFormList, config, webhook)
+            let uploadResponse = await upload(fileFormList, config)
 
             let file_data = {
                file_id: this.file.id,

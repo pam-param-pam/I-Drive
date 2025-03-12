@@ -14,7 +14,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from .celery import app
-from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook
+from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment
 from .utilities.Discord import discord
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
@@ -105,6 +105,11 @@ def smart_delete(user_id, request_id, ids):
                 message_structure[file.thumbnail.message_id].append(file.thumbnail.attachment_id)
             except Thumbnail.DoesNotExist:
                 pass
+
+            # adding moments attachment if it exists
+            moments = Moment.objects.filter(file=file)
+            for moment in moments:
+                message_structure[moment.message_id].append(moment.attachment_id)
 
         length = len(message_structure)
         last_percentage = 0

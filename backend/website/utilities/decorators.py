@@ -11,7 +11,7 @@ from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
 from rest_framework.exceptions import Throttled
 
-from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview
+from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview, Moment
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
 from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
@@ -78,24 +78,12 @@ def handle_common_errors(view_func):
             return view_func(request, *args, **kwargs)
 
         # 404 NOT FOUND
-        except Folder.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
-                                status=404)
-        except File.DoesNotExist:
+        except (Moment.DoesNotExist, UserZIP.DoesNotExist, Preview.DoesNotExist, Thumbnail.DoesNotExist, File.DoesNotExist, Folder.DoesNotExist):
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except ShareableLink.DoesNotExist:
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found or expired"),
                                 status=404)
-        except Thumbnail.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
-                                status=404)
-        except Preview.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
-                                status=404)
-        except UserZIP.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""), status=404)
-
         except ResourceNotFoundError as e:
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(e)), status=404)
 

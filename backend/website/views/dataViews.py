@@ -8,13 +8,13 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, ShareableLink
+from ..models import File, Folder, ShareableLink, Moment
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
-    calculate_size, calculate_file_and_folder_count
+    calculate_size, calculate_file_and_folder_count, create_moment_dict
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -292,3 +292,17 @@ def check_password(request, resource_id):
         return HttpResponse(status=204)
 
     raise ResourcePermissionError("Folder password is incorrect")
+
+
+@api_view(['GET'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+@check_file_and_permissions
+def get_moments(request, file_obj):
+    moments = Moment.objects.filter(file=file_obj)
+    moments_list = []
+    for moment in moments:
+        moments_list.append(create_moment_dict(moment))
+
+    return JsonResponse(moments_list, safe=False)

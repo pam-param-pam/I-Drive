@@ -1,16 +1,19 @@
+import base64
 from typing import Union
 
+from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, VideoPosition, Tag
+from ..models import File, Folder, VideoPosition, Tag, Moment
 from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder, move_task
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists
+from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists, \
+    delete_single_discord_attachment, get_discord_author, create_moment_dict
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -51,7 +54,7 @@ def move(request):
     new_parent_id = request.data['new_parent_id']
 
     new_parent = get_folder(new_parent_id)
-    check_resource_perms(request, new_parent,  checkRoot=False)
+    check_resource_perms(request, new_parent, checkRoot=False)
 
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
@@ -364,5 +367,69 @@ def remove_tag(request):
 
     if len(tag.files.all()) == 0:
         tag.delete()
+
+    return HttpResponse(status=204)
+
+
+@api_view(['POST'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@handle_common_errors
+def add_moment(request):
+    file_id = request.data['file_id']
+    timestamp = request.data['timestamp']
+    message_id = request.data['message_id']
+    attachment_id = request.data['attachment_id']
+    size = request.data['size']
+    message_author_id = request.data['message_author_id']
+    author = get_discord_author(request, message_author_id)
+    iv = request.data.get('iv')
+    key = request.data.get('key')
+
+    if iv:
+        iv = base64.b64decode(iv)
+    if key:
+        key = base64.b64decode(key)
+
+    if timestamp < 0:
+        raise BadRequestError("Timestamp cannot be < 0")
+
+    file_obj = get_file(file_id)
+    check_resource_perms(request, file_obj)
+
+    if timestamp > file_obj.duration:
+        raise BadRequestError("Timestamp cannot be > duration")
+
+    if Moment.objects.filter(timestamp=timestamp, file=file_obj).exists():
+        raise BadRequestError("Moment with this timestamp already exists!")
+
+    moment = Moment.objects.create(
+        timestamp=timestamp,
+        file=file_obj,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        content_type=ContentType.objects.get_for_model(author),
+        object_id=author.discord_id,
+        size=size,
+        key=key,
+        iv=iv
+    )
+    return JsonResponse(create_moment_dict(moment), status=200)
+
+
+@api_view(['POST'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@handle_common_errors
+def remove_moment(request):
+    file_id = request.data['file_id']
+    timestamp = request.data['timestamp']
+
+    file_obj = get_file(file_id)
+    check_resource_perms(request, file_obj)
+
+    moment = Moment.objects.get(file=file_obj, timestamp=timestamp)
+    delete_single_discord_attachment(request.user, moment)
+    moment.delete()
 
     return HttpResponse(status=204)

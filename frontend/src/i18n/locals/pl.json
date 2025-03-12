@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "moments": "Momenty",
     "chooseFile": "Kliknij by wybrać nowy plik",
     "imSure": "Jestem pewien, chcę kontynować",
     "removeTag": "Usuń tag",
@@ -138,6 +139,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "momentsTitle": "Momenty",
+    "momentsTip": "Zapisz momenty które chciałbyś objerzeć na pózniej!",
     "ALotOF429": "Za dużo 429!",
     "ALotOF429Explained": "Zmieniam na inny typ uploadu i redukuje liczbe równoległych requestów.",
     "thumbnailChanged": "Podgląd zmieniono!",
@@ -323,6 +326,9 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "momentAlreadyExists": "Ten moment już istnieje!",
+    "savingMoment": "Zapisuje...",
+    "momentRemoved": "Usunięto!",
     "botEnabled": "Włączono bota!",
     "uploadDestinationUpdated": "Zapisano!",
     "botRemovedForInsufficientPerms": "Bot: {name} został usunięty z powodu braku wymaganych permisji.",

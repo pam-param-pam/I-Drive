@@ -335,6 +335,22 @@ class Preview(DiscordAttachmentMixin):
     def __str__(self):
         return f"Preview=[{self.file.name}]"
 
+class Moment(DiscordAttachmentMixin):
+    file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    timestamp = models.IntegerField(default=0)
+    size = models.PositiveBigIntegerField()
+    iv = models.BinaryField(null=True)
+    key = models.BinaryField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['file', 'timestamp'], name='unique_file_timestamp')
+        ]
+
+    def __str__(self):
+        return f"Moment[File={self.file}, Starts-At={self.timestamp}"
+
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
     sorting_by = models.CharField(max_length=50, null=False, default="name")
@@ -388,8 +404,6 @@ class UserPerms(models.Model):
     def _create_user_perms(sender, instance, created, **kwargs):
         if created:
             profile, created = UserPerms.objects.get_or_create(user=instance)
-
-
 
 class ShareableLink(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -476,7 +490,9 @@ class Tag(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return self.name
+        return f"Tag[Name={self.name}"
+
+
 
 
 class Webhook(models.Model):

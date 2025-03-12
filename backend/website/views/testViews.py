@@ -102,6 +102,7 @@ def hyper_stream_file(request, file_obj: File):
 
     content_disposition = f'{"inline" if is_inline else "attachment"}; filename="{file_obj.name}"'
     BATCH = 2
+
     async def file_iterator():
         # Convert fragments to an ordered list
         fragment_list = [fragment async for fragment in fragments]
