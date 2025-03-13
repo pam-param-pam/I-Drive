@@ -50,6 +50,12 @@ export default {
    computed: {
       ...mapState(useMainStore, ['searchFilters', 'searchActive'])
    },
+   async mounted() {
+      this.exited = true
+      this.query = this.searchFilters.query
+      await this.$nextTick() //this is vevy important
+      this.exited = false
+   },
    created() {
       window.addEventListener('keydown', (event) => {
          // Ctrl is pressed
@@ -66,8 +72,6 @@ export default {
          if (event.code === 'Escape') {
             this.exit()
          }
-
-
       })
    },
    methods: {
@@ -100,10 +104,16 @@ export default {
          this.exited = true
          this.query = ''
          this.exited = false
+         let searchDict = { ...this.searchFilters }
+         searchDict['query'] = ''
+         this.setSearchFilters(searchDict)
       }
    },
 
    watch: {
+      "searchFilters.query"() {
+         if (!this.searchFilters.query) this.query = ''
+      },
       query() {
          if (this.exited) {
             this.exited = false

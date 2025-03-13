@@ -34,7 +34,7 @@
         />
         <action
           v-if="perms?.modify && !isInShareContext"
-          :disabled="loading"
+          :disabled="loading || error404"
           :label="$t('buttons.rename')"
           icon="mode_edit"
           @action="rename()"
@@ -42,19 +42,23 @@
         <action
           v-if="perms?.delete && !isInShareContext"
           id="delete-button"
-          :disabled="loading"
+          :disabled="loading || error404"
           :label="$t('buttons.moveToTrash')"
           icon="delete"
           @action="moveToTrash"
         />
         <action
           v-if="perms?.download || isInShareContext"
-          :disabled="loading"
+          :disabled="loading || error404"
           :label="$t('buttons.download')"
           icon="file_download"
           @action="download"
         />
-        <action :disabled="loading" :label="$t('buttons.info')" icon="info" show="info" />
+        <action
+          :disabled="loading || error404"
+          :label="$t('buttons.info')"
+          icon="info"
+          show="info" />
       </template>
     </header-bar>
 
@@ -67,6 +71,7 @@
     </div>
     <template v-else>
       <div class="preview">
+
         <video
           v-if="file?.type === 'video' && file?.size > 0"
           id="video"
@@ -134,6 +139,19 @@
             <a :href="fileSrcUrl" class="button button--flat" target="_blank">
               <div>
                 <i class="material-icons">open_in_new</i>{{ $t("buttons.openFile") }}
+              </div>
+            </a>
+          </div>
+        </div>
+        <div v-else-if="error404" class="info">
+          <div class="title">
+            <i class="material-icons">feedback</i>
+            {{ $t("errors.resourceNotFound") }}
+          </div>
+          <div>
+            <a class="button button--flat">
+              <div>
+                <i class="material-icons" @click="close">arrow_back</i>{{ $t("errors.goBack") }}
               </div>
             </a>
           </div>
@@ -207,6 +225,7 @@ export default {
          navTimeout: null,
          hoverNav: false,
          autoPlay: true,
+         error404: false,
 
          //epub reader data
          bookLocation: null,
@@ -296,7 +315,7 @@ export default {
       async fetchData() {
          this.setLoading(true)
          this.setError(null)
-         console.log("clearing ref")
+
          this.videoRef = null
          this.disabledMoments = true
          // Ensure file is updated in the DOM
@@ -333,6 +352,9 @@ export default {
             } catch (error) {
                if (error.code === "ERR_CANCELED") return
                this.setError(error)
+               if (error.status === 404) {
+                  this.error404 = true
+               }
             } finally {
                this.setLoading(false)
             }

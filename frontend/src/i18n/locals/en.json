@@ -336,6 +336,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "failedImage": "Failed to load image",
     "playVideoFirst": "Play video first!",
     "momentAlreadyExists": "This moment already exists!",
     "savingMoment": "Saving Moment...",

@@ -327,6 +327,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "failedImage": "Nie udało sie załadować obrazu",
     "playVideoFirst": "Najpierw odpal film!",
     "momentAlreadyExists": "Ten moment już istnieje!",
     "savingMoment": "Zapisuje...",

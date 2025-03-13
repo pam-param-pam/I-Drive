@@ -356,11 +356,11 @@ export default {
          contextMenuState: { visible: false },
 
          //experimental
-         tileWidth: 40,
-         tileHeight: 75,
+         tileWidth: 200,
+         tileHeight: 200,
          imageHeight: 100,
          imageWidth: 100,
-         numberOfTiles: 4,
+         numberOfTiles: 5,
 
          scrollInterval: null,
          scrollToAnimationTimeout: null
@@ -368,7 +368,7 @@ export default {
    },
 
    watch: {
-      items() {
+      sortedItems() {
          // Ensures that the listing is displayed
          this.$nextTick(() => {
             this.calculateGridLayoutWrapper()
@@ -710,6 +710,7 @@ export default {
       },
 
       calculateGridLayout(containerWidth) {
+         console.log("calculateGridLayout")
          if (this.viewMode !== 'grid') return
 
          let maxTileWidth = 225

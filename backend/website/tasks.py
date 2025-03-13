@@ -372,6 +372,8 @@ def delete_dangling_discord_files(days=2):
             discord.send_message(user, f"Deleted {deleted_attachments[user]} attachments for user: {user}.")
         except Exception as e:
             discord.send_message(user, f"Failed to delete dangling attachments for user: {user}.\n{str(e)}")
+            discord.send_message(user, f"```{str(traceback.print_exc())}```")
+
 
 
 @app.task

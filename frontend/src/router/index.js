@@ -147,13 +147,9 @@ const router = createRouter({
             }
 
             if (!store.isLogged) {
-               // If not authenticated, you might want to redirect them to a login page or handle it accordingly
-               // For example, redirect to a login page:
-               return next({name: 'Login'}) // Adjust this to your login route if necessary
+               return next({name: 'Login'})
             }
 
-            // If authenticated, redirect to the Files route with a specific folderId
-            // Replace 'someFolderId' with the appropriate logic to determine the folderId
             return next({name: 'Files', params: {folderId: store.user.root}})
          }
       },

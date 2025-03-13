@@ -66,22 +66,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, [
-         'searchItems',
-         'breadcrumbs',
-         'error',
-         'user',
-         'settings',
-         'loading',
-         'selected',
-         'perms',
-         'selected',
-         'currentFolder',
-         'disabledCreation',
-         'getFolderPassword',
-         'selectedCount',
-         'searchActive'
-      ]),
+      ...mapState(useMainStore, ['searchItems', 'searchFilters', 'breadcrumbs', 'error', 'user', 'settings', 'loading', 'selected', 'perms', 'selected', 'currentFolder', 'disabledCreation', 'getFolderPassword', 'selectedCount', 'searchActive']),
       headerButtons() {
          return {
             info: !this.disabledCreation,
@@ -118,11 +103,14 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setSearchItems', 'setCurrentFolderData', 'setLoading', 'setError', 'setDisabledCreation', 'setItems', 'setCurrentFolder', 'closeHover', 'showHover', 'setSearchActive']),
+      ...mapActions(useMainStore, ['setSearchFilters', 'setSearchItems', 'setCurrentFolderData', 'setLoading', 'setError', 'setDisabledCreation', 'setItems', 'setCurrentFolder', 'closeHover', 'showHover', 'setSearchActive']),
 
       ...mapActions(useUploadStore, ['startUpload']),
 
       async onSearchQuery(searchParams) {
+         if (!this.currentFolder) {
+            this.$refs.listing.calculateGridLayoutWrapper()
+         }
          this.setLoading(true)
          let lockFrom = this.currentFolder.lockFrom
          let password = this.getFolderPassword(lockFrom)
@@ -150,8 +138,10 @@ export default {
                `Request cancelled due to a new request with the same cancel signature .`
             )
          }
+         let searchDict = { ...this.searchFilters }
+         searchDict['query'] = ''
+         this.setSearchFilters(searchDict)
       },
-
       upload() {
          if (
             typeof window.DataTransferItem !== 'undefined' &&
@@ -285,6 +275,10 @@ export default {
 
       onOpen(item) {
          this.$refs.listing.hideContextMenu()
+
+         if (item.id === this.currentFolder.id) {
+            this.onSearchClosed()
+         }
          let route = this.getNewRoute(item)
          if (item.isDir) {
             if (item.isLocked === true) {
