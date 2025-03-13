@@ -1,3 +1,4 @@
+import datetime
 from typing import Union, List
 
 from django.contrib import admin
@@ -106,15 +107,22 @@ class FolderAdmin(admin.ModelAdmin):
     is_locked.admin_order_field = 'password'
     is_locked.boolean = True
 
+
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'formatted_key', 'formatted_iv', 'ready', "created_at", "readable_size", "media_tag")
+    exclude = ('encryption_method', )
+    readonly_fields = ('id', 'size', 'readable_size', 'duration', 'inTrashSince', 'ready', 'created_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
     ordering = ["-created_at"]
-    list_display = ["name", "parent", "readable_size", "owner", "ready",  "created_at",
-                    "inTrash", "is_locked"]
+    list_display = ['name', 'parent', 'readable_size', 'owner', 'ready', 'created_at',
+                    'inTrash', 'is_locked']
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
-    search_fields = ["name", "id"]
+    search_fields = ['name', 'id']
     filter_horizontal = ('tags',)
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
+        form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
+        return form
 
     def media_tag(self, obj: File):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
@@ -163,10 +171,13 @@ class FileAdmin(SimpleHistoryAdmin):
     def formatted_iv(self, obj: File):
         return obj.get_base64_iv()
 
+    def formatted_encryption_method(self, obj: File):
+        return obj.get_encryption_method().name
+
     formatted_key.short_description = "Encryption key (base64)"
     formatted_iv.short_description = "Encryption iv (base64)"
-
     media_tag.short_description = 'PREVIEW MEDIA FILE'
+    formatted_encryption_method.short_description = "Encryption method"
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
         ids = []
@@ -208,17 +219,11 @@ class FileAdmin(SimpleHistoryAdmin):
     def readable_size(self, obj: File):
         return filesizeformat(obj.size)
 
-    readable_size.short_description = 'Size'
-    readable_size.admin_order_field = 'size'
-
     def is_locked(self, obj: File):
         return obj._is_locked()
 
     is_locked.admin_order_field = 'password'
     is_locked.boolean = True
-
-    def save_model(self, request, obj: File, form: ModelForm, change: bool):
-        super().save_model(request, obj, form, change)
 
 
 @admin.register(Preview)
@@ -263,6 +268,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 
     thumbnail_media.short_description = 'PREVIEW THUMBNAIL'
 
+
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
     readonly_fields = ('token',)
@@ -281,6 +287,7 @@ class UserZIPAdmin(admin.ModelAdmin):
 
     def owner_name(self, obj: UserZIP):
         return obj.owner.username
+
 
 @admin.register(AuditEntry)
 class AuditEntryAdmin(admin.ModelAdmin):
@@ -310,16 +317,45 @@ class TagAdmin(SimpleHistoryAdmin):
 
     file_list.short_description = "Files"
 
+
 @admin.register(Webhook)
 class WebhookAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
+    readonly_fields = ('url', 'owner', 'discord_id', 'guild_id', 'channel_id')
+
 
 @admin.register(Bot)
 class BotAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
+    readonly_fields = ('token', 'owner', 'discord_id', 'disabled', 'reason')
+
 
 @admin.register(Moment)
 class MomentAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ('file_name',)
+    list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
+    readonly_fields = ('message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'preview')
+    exclude = ['size', 'timestamp']
+
+    def preview(self, obj: Moment):
+        signed_file_id = sign_resource_id_with_expiry(obj.file.id)
+        url = f"{API_BASE_URL}/file/moment/{signed_file_id}/{obj.timestamp}"
+        return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+
+    def owner(self, obj: Moment):
+        return obj.file.owner
+
+    def formatted_timestamp(self, obj: Moment):
+        a = datetime.timedelta(seconds=obj.timestamp)
+        return str(a)
+
+    def readable_size(self, obj: Moment):
+        return filesizeformat(obj.size)
+
+    readable_size.short_description = 'Size'
+    readable_size.admin_order_field = 'size'
+
+    formatted_timestamp.short_description = 'Timestamp'
+    formatted_timestamp.admin_order_field = 'timestamp'

@@ -4,11 +4,12 @@
       <h2>{{ $t("prompts.momentsTitle") }}</h2>
     </div>
 
-    <div class="card-content" :class="{ 'vertical': isMobile() }">
+    <div class="card-content" :class="{ 'vertical': isMobile }">
 
       <!-- Left Section: Current Video Frame -->
       <div class="left-section">
-        <img :src="currentThumbnailURL" class="current-thumbnail" alt="Current Preview" />
+        <div v-if="!currentThumbnailURL" class="thumbnail-placeholder"></div>
+        <img v-else :src="currentThumbnailURL" class="current-thumbnail"/>
         <span class="current-time">{{ formatTime(currentTimestamp) }}</span>
         <button
           :aria-label="$t('buttons.addMoment')"
@@ -25,7 +26,7 @@
          </span>
       </div>
       <!-- Right Section: List of Moments -->
-      <div v-else class="moments-list" :class="{ 'vertical': isMobile() }">
+      <div v-else class="moments-list" :class="{ 'vertical': isMobile }">
         <div
           v-for="(moment, index) in sortedMoments"
           :key="index"
@@ -37,8 +38,6 @@
             <button
               class="play-button"
               @click="playMoment(moment)"
-              aria-label="Play Moment"
-              title="Play Moment"
             >
               <i class="material-icons">play_arrow</i>
             </button>
@@ -56,6 +55,16 @@
           </button>
         </div>
       </div>
+    </div>
+    <div class="card-action">
+      <button
+        :aria-label="$t('buttons.ok')"
+        :title="$t('buttons.ok')"
+        class="button button--flat button--blue"
+        @click="closeHover()"
+      >
+        {{ $t('buttons.ok') }}
+      </button>
     </div>
   </div>
 </template>
@@ -94,7 +103,9 @@ export default {
    computed: {
       ...mapState(useMainStore, ["selected"]),
       ...mapState(useUploadStore, ["attachmentName"]),
-
+      isMobile() {
+         return window.innerWidth <= 950
+      },
       currentTimestamp() {
          return this.video?.currentTime || 0
       },
@@ -107,9 +118,7 @@ export default {
       }
    },
    methods: {
-      isMobile() {
-         return isMobile()
-      },
+
       ...mapActions(useMainStore, ["closeHover"]),
       async fetchData() {
          this.moments = await getMoments(this.file.id)
@@ -154,7 +163,7 @@ export default {
       async deleteMoment(event, moment) {
          await removeMoment({ "file_id": this.file.id, "timestamp": moment.timestamp })
          this.moments = this.moments.filter(m => m !== moment)
-         this.$toast.info(this.$t("toasts.momentRemoved"))
+         this.$toast.success(this.$t("toasts.momentRemoved"))
 
       },
       formatTime(seconds) {
@@ -167,6 +176,7 @@ export default {
          //don't ask me why u have to call play() twice
          await this.video.play()
          this.cancel()
+
       },
       async getCurrentThumbnail() {
 
@@ -219,6 +229,7 @@ h3 {
  display: flex;
  gap: 20px;
  user-select: none;
+ padding-bottom: 0 !important;
 }
 
 .left-section {
@@ -232,10 +243,42 @@ h3 {
 
 .current-thumbnail {
  width: 250px;
- height: 120px;
+ height: 130px;
  border-radius: 5px;
+
+}
+.thumbnail-placeholder {
+ width: 250px;
+ height: 130px;
+ border-radius: 5px;
+ background: var(--surfaceSecondary);
+ position: relative;
+ overflow: hidden;
 }
 
+/* Skeleton shimmer effect */
+.thumbnail-placeholder::after {
+ content: "";
+ position: absolute;
+ top: 0;
+ left: 0;
+ width: 100%;
+ height: 100%;
+ background: linear-gradient(90deg,
+ rgba(255, 255, 255, 0) 0%,
+ rgba(255, 255, 255, 0.3) 50%,
+ rgba(255, 255, 255, 0) 100%);
+ animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+ 0% {
+  transform: translateX(-100%);
+ }
+ 100% {
+  transform: translateX(100%);
+ }
+}
 .current-time {
  font-size: 16px;
  font-weight: bold;
@@ -247,22 +290,21 @@ h3 {
  overflow-x: auto;
  width: 100%;
  padding-bottom: 10px;
+
 }
 
 .moments-list.vertical {
  flex-direction: column;
  overflow: hidden;
- max-height: 70vh;
 }
 
 .moment-wrapper {
  display: flex;
+ border-radius: 5px;
  flex-direction: column;
  align-items: center;
  cursor: pointer;
- padding-bottom: 1em;
  position: relative;
-
 }
 
 .vertical .action {
@@ -275,9 +317,10 @@ h3 {
 }
 
 .moment-thumbnail {
+ box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
  width: 200px;
- height: 100px;
- min-height: 100px;
+ height: 120px;
+ min-height: 120px;
  min-width: 200px;
  border-radius: 5px;
  background: var(--surfaceSecondary);

@@ -226,7 +226,7 @@ class File(models.Model):
         cache.delete(self.id)
         cache.delete(self.parent.id)
 
-    def get_encryption_method(self):
+    def get_encryption_method(self) -> EncryptionMethod:
         return EncryptionMethod(self.encryption_method)
 
     def get_base64_key(self):

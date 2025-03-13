@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "addMoment": "Add Moment",
     "moments": "Moments",
     "chooseFile": "Click to choose a new file",
     "imSure": "I'm sure and want to continue",
@@ -335,7 +336,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
-    "momentAlreadyExists": "Moment already exists!",
+    "playVideoFirst": "Play video first!",
+    "momentAlreadyExists": "This moment already exists!",
     "savingMoment": "Saving Moment...",
     "momentRemoved": "Moment removed!",
     "thumbnailFileTooBig": "File must be smaller than {max}",

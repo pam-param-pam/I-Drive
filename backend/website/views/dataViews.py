@@ -300,7 +300,7 @@ def check_password(request, resource_id):
 @handle_common_errors
 @check_file_and_permissions
 def get_moments(request, file_obj):
-    moments = Moment.objects.filter(file=file_obj)
+    moments = Moment.objects.filter(file=file_obj).all()
     moments_list = []
     for moment in moments:
         moments_list.append(create_moment_dict(moment))

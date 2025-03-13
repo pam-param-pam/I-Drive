@@ -26,7 +26,7 @@
           @action="increaseFontSize"
         />
         <action
-          v-if="file?.type === 'video' && file?.size > 0"
+          v-if="file?.type === 'video' && file?.size > 0 && !isInShareContext"
           :disabled="disabledMoments"
           :label="$t('buttons.moments')"
           icon="bookmarks"
@@ -364,8 +364,8 @@ export default {
          this.disabledMoments = false
       },
       showMoments() {
-         if (!this.videoRef.readyState || this.videoRef.currentTime === 0) {
-            this.$toast.error("play video first")
+         if (!this.videoRef.readyState) {
+            this.$toast.error(this.$t("toasts.playVideoFirst"))
             return
          }
          this.videoRef.pause()

@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "addMoment": "Dodaj Moment",
     "moments": "Momenty",
     "chooseFile": "Kliknij by wybrać nowy plik",
     "imSure": "Jestem pewien, chcę kontynować",
@@ -326,6 +327,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "playVideoFirst": "Najpierw odpal film!",
     "momentAlreadyExists": "Ten moment już istnieje!",
     "savingMoment": "Zapisuje...",
     "momentRemoved": "Usunięto!",
