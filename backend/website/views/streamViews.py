@@ -360,8 +360,6 @@ def stream_zip_files(request, token):
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         yield decryptor.decrypt(raw_data)
 
-                yield decryptor.finalize()
-
     files = user_zip.files.filter(ready=True, inTrash=False)
     folders = user_zip.folders.filter(ready=True, inTrash=False)
     dict_files = []

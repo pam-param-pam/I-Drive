@@ -374,8 +374,6 @@ def delete_dangling_discord_files(days=2):
             discord.send_message(user, f"Failed to delete dangling attachments for user: {user}.\n{str(e)}")
             discord.send_message(user, f"```{str(traceback.print_exc())}```")
 
-
-
 @app.task
 def delete_files_from_trash():
     files = File.objects.filter(inTrash=True)

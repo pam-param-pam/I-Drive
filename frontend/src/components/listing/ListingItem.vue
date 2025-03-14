@@ -20,15 +20,15 @@
          <div :style="divStyle">
             <img
                v-if="item.preview_url && type === 'image' && item.size > 0"
-               v-lazy="{ src: item.preview_url, error: '/img/imageFailed.png' }"
+               v-lazy="{ src: item.preview_url }"
             />
             <img
                v-else-if="item.download_url && type === 'image' && item.size > 0"
-               v-lazy="{ src: item.download_url, error: '/img/imageFailed.png' }"
+               v-lazy="{ src: item.download_url}"
             />
             <img
                v-else-if="item.thumbnail_url && type === 'video'"
-               v-lazy="{ src: item.thumbnail_url, error: '/img/imageFailed.png' }"
+               v-lazy="{ src: item.thumbnail_url }"
             />
             <i v-else :style="iconStyle" class="material-icons"></i>
          </div>
@@ -115,12 +115,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'setLastItem',
-         'addSelected',
-         'removeSelected',
-         'resetSelected'
-      ]),
+      ...mapActions(useMainStore, ['setLastItem', 'addSelected', 'removeSelected', 'resetSelected']),
 
       humanSize() {
          if (this.item.isDir) return '-'

@@ -1,5 +1,5 @@
 <template>
-   <div id="login" class="mobile">
+   <div id="login">
       <form @submit.prevent.stop="submit">
          <h1>&#8205;{{ text }}&#8205;</h1>
          <div v-if="error !== ''" class="wrong">{{ error }}</div>
@@ -161,7 +161,7 @@ export default {
       setBackgroundImage() {
          this.refreshKey1++
          let element = document.querySelector('#login')
-         const img = new Image()
+         let img = new Image()
          let src
          if (isMobile()) {
             src = 'img/loginMobile.jpg'
@@ -289,14 +289,12 @@ export default {
    background: rgba(0, 0, 0, 0.1);
 }
 
-/* =========== */
-/* 📱  MOBILE   */
-/* =========== */
-#login.mobile form {
+
+#login form {
    top: 65%;
 }
 
-#login.mobile h1 {
+#login h1 {
    color: #fc2f99;
    text-shadow:
       0 0 10px deeppink,
@@ -305,7 +303,7 @@ export default {
    font-weight: bold;
 }
 
-#login.mobile input[type='submit'] {
+#login input[type='submit'] {
    background-color: rgba(255, 105, 180, 0.7);
    border: none;
    color: white;
@@ -318,44 +316,11 @@ export default {
    box-shadow: 0 0 6px rgba(255, 105, 180, 1);
 }
 
-#login.mobile input[type='submit']:hover {
+#login input[type='submit']:hover {
    background-color: rgba(255, 105, 180, 0.8);
    box-shadow: 0 0 8px rgba(255, 105, 180, 0.5);
 }
 
-/* =========== */
-/* 🖥️  MOBILE   */
-/* =========== */
-#login.desktop form {
-   top: 48%;
-}
-
-#login.desktop h1 {
-   color: #351b57ff;
-   text-shadow:
-      0 0 10px #6b4eacff,
-      0 0 20px #776ab7ff,
-      0 0 30px #776ab7ff; /* Different shades of blue */
-   font-weight: bold;
-}
-
-#login.desktop input[type='submit'] {
-   background-color: rgb(111, 128, 180, 0.5);
-   border: none;
-   color: white;
-   padding: 0.7em;
-   font-size: 1em;
-   cursor: pointer;
-   transition:
-      box-shadow 0.3s ease,
-      background-color 0.3s ease;
-   box-shadow: 0 0 6px rgb(111, 128, 180, 1);
-}
-
-#login.desktop input[type='submit']:hover {
-   background-color: rgb(111, 128, 180, 0.8);
-   box-shadow: 0 0 8px rgb(111, 128, 180, 0.5);
-}
 
 /* Change Autocomplete styles in Chrome */
 input:-webkit-autofill,

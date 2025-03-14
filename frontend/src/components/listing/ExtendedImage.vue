@@ -22,6 +22,7 @@
 <script>
 import throttle from "lodash.throttle"
 import UTIF from "utif"
+import { isMobile } from "@/utils/common.js"
 
 export default {
    props: {
@@ -113,7 +114,13 @@ export default {
       },
       onError() {
          this.turnedOFF = true
-         this.$refs.imgex.src = "/img/failed.jpg"
+         this.$refs.imgex.src = "/img/failed.svg"
+         if (isMobile()) {
+            this.$refs.imgex.style.width = "100%"
+         } else {
+            this.$refs.imgex.style.width = "40%"
+
+         }
          this.$toast.error(this.$t("toasts.failedImage"))
       },
       onLoad() {
@@ -153,7 +160,6 @@ export default {
       },
 
       onResize: throttle(function() {
-         if (this.turnedOFF) return
          if (this.imageLoaded) {
             this.setCenter()
             this.doMove(this.position.relative.x, this.position.relative.y)
