@@ -15,7 +15,8 @@ from ..utilities.Permissions import CreatePerms
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment
+from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
+    create_video_metadata
 from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 
 
@@ -56,6 +57,7 @@ def create_file(request):
             created_at = file.get('created_at')
             key = file.get('key')
             iv = file.get('iv')
+            video_metadata = file.get('videoMetadata')
 
             if EncryptionMethod(encryption_method) != EncryptionMethod.Not_Encrypted and (not iv or not key):
                 raise BadRequestError("Encryption key and/or iv not provided")
@@ -85,8 +87,6 @@ def create_file(request):
                     created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
                 except (ValueError, OverflowError):
                     raise BadRequestError("Invalid 'created_at' timestamp format.")
-
-            # with transaction.atomic():
 
             file_obj = File(
                 extension=extension,
@@ -163,6 +163,8 @@ def create_file(request):
                     content_type=ContentType.objects.get_for_model(author),
                     object_id=author.discord_id,
                 )
+            if video_metadata:
+                create_video_metadata(file_obj, video_metadata)
 
             if file_obj.ready:
                 file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
@@ -193,10 +195,10 @@ def create_file(request):
         author = get_discord_author(request, message_author_id)
 
         file_obj = get_file(file_id)
-        check_resource_perms(request, file_obj, checkReady=False)
+        check_resource_perms(request, file_obj)
 
-        if not file_obj.ready:
-            raise BadRequestError("You cannot edit a 'not ready' file!")
+        if file_obj.type != "text":
+            raise BadRequestError("You can only edit text files!")
 
         fragments = Fragment.objects.filter(file=file_obj)
 

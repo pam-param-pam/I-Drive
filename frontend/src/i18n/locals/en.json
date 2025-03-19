@@ -138,6 +138,20 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "videoMetadata": "Video metadata",
+    "bitrate": "Bitrate",
+    "codec": "Codec",
+    "resolution": "Resolution",
+    "fps": "FPS",
+    "sampleRate": "Sample rate",
+    "channelCount": "Channel count",
+    "sampleSize": "Sample size",
+    "language": "Language",
+    "duration": "Duration",
+    "size": "Size",
+    "audioType": "Audio type",
+    "track": "track",
+
     "momentsTitle": "Moments",
     "momentsTip": "Save moments you'd like to rewatch later",
     "ALotOF429": "429 is happening too often!",

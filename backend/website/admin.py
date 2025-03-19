@@ -9,7 +9,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment, \
+    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack
 from .tasks import smart_delete
 from .utilities.Discord import discord
 from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
@@ -18,8 +19,11 @@ from .utilities.other import sign_resource_id_with_expiry
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
 admin.site.register(DiscordSettings, SimpleHistoryAdmin)
-
 admin.site.register(VideoPosition)
+admin.site.register(VideoMetadata)
+admin.site.register(VideoTrack)
+admin.site.register(AudioTrack)
+admin.site.register(SubtitleTrack)
 
 
 @admin.register(Fragment)

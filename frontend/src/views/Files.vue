@@ -108,9 +108,7 @@ export default {
       ...mapActions(useUploadStore, ['startUpload']),
 
       async onSearchQuery(searchParams) {
-         if (!this.currentFolder) {
-            this.$refs.listing.calculateGridLayoutWrapper()
-         }
+
          this.setLoading(true)
          let lockFrom = this.currentFolder.lockFrom
          let password = this.getFolderPassword(lockFrom)
@@ -275,9 +273,11 @@ export default {
 
       onOpen(item) {
          this.$refs.listing.hideContextMenu()
-
-         if (item.id === this.currentFolder.id) {
+         //if we are in search mode and we click to open a folder that we currently are in
+         // routing won't work(as its already in that route, so we need to just quit the search)
+         if (this.searchActive && item.id === this.currentFolder.id) {
             this.onSearchClosed()
+            return
          }
          let route = this.getNewRoute(item)
          if (item.isDir) {

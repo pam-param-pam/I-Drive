@@ -75,4 +75,36 @@ app.directive("focus", {
    }
 })
 router.isReady().then(() => app.mount("#app"))
+
+// // Save original console methods
+// const originalLog = console.log
+// const originalWarn = console.warn
+// const originalError = console.error
+//
+//
+// // Custom logger function
+// function customLogger(type, message) {
+//    const mainStore = useMainStore()
+//    mainStore.pushShellContent({ type: type, text: message })
+// }
+//
+//
+// // Override console.log
+// console.log = function(...args) {
+//    customLogger("log", ...args)
+//    originalLog.apply(console, args)
+// }
+//
+// // Override console.warn
+// console.warn = function(...args) {
+//    customLogger("warn", ...args)
+//    originalWarn.apply(console, args)
+// }
+//
+// // Override console.warn
+// console.error = function(...args) {
+//    customLogger("error", ...args)
+//    originalError.apply(console, args)
+// }
+
 export default app

@@ -77,7 +77,6 @@ export default {
 
    data() {
       return {
-         error: null,
          shares: [],
          clip: null
       }

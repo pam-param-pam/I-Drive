@@ -76,13 +76,13 @@ urlpatterns = [
     path("folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
     path("folder/password/<folder_id>", folder_password, name="create folder"),
     path("folder/password/reset/<folder_id>", reset_folder_password, name="create folder"),
-    path("folder/moreinfo/<folder_id>", fetch_additional_info, name="fetch more info about a folder"),
 
     path("item/move", move, name="move file/folder"),
     path("item/delete", delete, name="delete file/folder"),
     path("item/moveToTrash", move_to_trash, name="move file/folder to trash"),
     path("item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
     path("item/rename", rename, name="rename file/folder"),
+    path("item/moreinfo/<item_id>", fetch_additional_info, name="fetch more info about a folder"),
 
     path("resource/password/<resource_id>", check_password, name="check password"),
 

@@ -23,7 +23,8 @@ export const useMainStore = defineStore("main", {
       searchItems: [],
       breadcrumbs: [],
       currentFolder: null,
-      items: []
+      items: [],
+      shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []}
 
    }),
 
@@ -97,6 +98,19 @@ export const useMainStore = defineStore("main", {
    },
 
    actions: {
+      setShellSettings(value) {
+         if (typeof value !== "object") {
+            console.warn('setShellSettings must be object')
+            return
+         }
+        this.shellSettings = value
+      },
+      clearShellContent() {
+         this.shellSettings.shellContent = []
+      },
+      pushShellContent(result) {
+        this.shellSettings.shellContent.push(result)
+      },
       setSearchItems(items) {
          if (!items) items = []
          this.searchItems = items

@@ -1,11 +1,14 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, encryptionMethod, fileUploadStatus, uploadState } from "@/utils/constants.js"
-import { generateIv, generateKey, getAudioCover, getOrCreateFolder, getVideoCover, getWebhook, isAudioFile, isVideoFile, roundUpTo64, upload } from "@/utils/uploadHelper.js"
+import {appendMp4BoxBuffer, generateIv, generateKey, getAudioCover, getOrCreateFolder,
+    getVideoCover, isAudioFile, isVideoFile, parseVideoMetadata, roundUpTo64, upload
+} from "@/utils/uploadHelper.js"
 import { encryptAttachment } from "@/utils/encryption.js"
 import { useToast } from "vue-toastification"
 import axios from "axios"
 import * as CRC32 from "crc-32"
+import MP4Box from "mp4box"
 
 const toast = useToast()
 
@@ -76,7 +79,8 @@ export async function* prepareRequests() {
          totalSize += roundUpTo64(thumbnail.size)
       }
 
-      //If theres to little space left in the request, we yield to prevent for example the beginning of a video having 0.5mb which would cause multiple messages
+      //If there's to little space left in the request, we yield to prevent, for example,
+      // the beginning of a video having 0.5mb which would cause multiple messages
       // that have to be loaded before playback starts
 
       if (totalSize > maxChunkSize / 2 || attachments.length === 10) {
@@ -91,6 +95,18 @@ export async function* prepareRequests() {
       let i = 0
       let fileSize = queueFile.fileObj.size
       let offset = 0
+      let mp4box = MP4Box.createFile()
+      mp4box.fileObj = queueFile.fileObj; // Keep it referenced
+
+      mp4box.onReady = function(info) {
+         console.log("========mp4box.onReady============= ")
+         let videoMetadata = parseVideoMetadata(info)
+         videoMetadata.type = attachmentType.videoMetadata
+         videoMetadata.fileObj = mp4box.fileObj
+         uploadStore.fillAttachmentInfo(videoMetadata, null, null)
+         queueFile.fileObj.mp4boxFinished = true
+      }
+
       while (offset < fileSize) {
 
          let remainingSpace = maxChunkSize - totalSize
@@ -98,6 +114,10 @@ export async function* prepareRequests() {
          let chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
 
          let chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
+
+         if (!queueFile.fileObj.mp4boxFinished) {
+            appendMp4BoxBuffer(mp4box, chunk, offset)
+         }
 
          let attachment = {
             "type": attachmentType.file,
@@ -123,6 +143,8 @@ export async function* prepareRequests() {
       }
       //we need to inform about totalChunks of a file
       queueFile.fileObj.totalChunks = i
+      queueFile.fileObj.mp4boxFinished = true
+
    }
    //we need to handle the already created attachments after break
    if (attachments.length > 0) {
@@ -215,7 +237,7 @@ export async function afterUploadRequest(request, discordResponse) {
    for (let i = 0; i < request.attachments.length; i++) {
       let attachment = request.attachments[i]
       let discordAttachment = discordResponse.data.attachments[i]
-      await uploadStore.fillAttachmentInfo(attachment, request, discordResponse, discordAttachment)
+      await uploadStore.fillAttachmentInfo(attachment, discordResponse, discordAttachment)
    }
 
    uploadStore.finishRequest(request.id)

@@ -419,11 +419,12 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['sortedItems', 'lastItem', 'items', 'settings', 'perms', 'user', 'selected', 'loading', 'error', 'currentFolder', 'selectedCount', 'isLogged', 'currentPrompt', 'searchActive']),
+      ...mapState(useMainStore, ['showShell', 'sortedItems', 'lastItem', 'items', 'settings', 'perms', 'user', 'selected', 'loading', 'error', 'currentFolder', 'selectedCount', 'isLogged', 'currentPrompt', 'searchActive']),
 
       viewMode() {
          if (this.settings.viewMode === 'list') return 'list'
          return 'grid'
+
       },
       gridItems() {
          if (this.viewMode === 'grid') {
@@ -570,8 +571,7 @@ export default {
          // Ctrl is pressed
          if ((event.ctrlKey || event.metaKey)) {
             let key = event.key.toLowerCase()
-
-            if (key === 'a') {
+            if (key === 'a' && !this.showShell) {
                event.preventDefault()
                this.setSelected(this.sortedItems)
             }

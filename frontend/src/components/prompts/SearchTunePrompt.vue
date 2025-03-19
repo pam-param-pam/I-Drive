@@ -192,16 +192,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'setSearchFilters',
-         'setDisabledCreation',
-         'resetSelected',
-         'closeHover',
-         'setSortingBy',
-         'setSortByAsc',
-         'setError',
-         'setLoading'
-      ]),
+      ...mapActions(useMainStore, ['setSearchFilters', 'setDisabledCreation', 'resetSelected', 'closeHover', 'setSortingBy', 'setSortByAsc', 'setError', 'setLoading']),
 
       submit() {
          this.setDisabledCreation(true)

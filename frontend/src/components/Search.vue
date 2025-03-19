@@ -69,7 +69,7 @@ export default {
             }
          }
          //allow to exit search with ESC
-         if (event.code === 'Escape') {
+         if (event.code === 'Escape' && this.searchActive) {
             this.exit()
          }
       })

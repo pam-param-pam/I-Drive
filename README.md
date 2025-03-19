@@ -56,7 +56,7 @@ Credentials: `demo`/`demo`
 | fix mobile number download info frontend                     | ⛔  Coming prob never |
 | add deselect                                                 | ⛔  Coming prob never |
 | prefetch related vs select related                           | ⛔  Coming prob never |
-
+| FIX RESUMABLE DOWNLOAD                                       | ⛔  Coming prob never |
 
 
 

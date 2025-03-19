@@ -301,7 +301,6 @@ export const useUploadStore = defineStore("upload2", {
          if (!this.axiosCancelMap.has(frontendId)) {
             this.axiosCancelMap.set(frontendId, [])
          }
-         console.log(cancelToken)
          this.axiosCancelMap.get(frontendId).push(cancelToken)
       },
       finishUpload() {
@@ -340,9 +339,12 @@ export const useUploadStore = defineStore("upload2", {
       setAttachmentName(value) {
          this.attachmentName = value
       },
+      fillVideoMetadata(videoMetadata) {
+
+      },
 
       //experimental
-      fillAttachmentInfo(attachment, request, discordResponse, discordAttachment) {
+      fillAttachmentInfo(attachment, discordResponse, discordAttachment) {
          let fileObj = attachment.fileObj
          if (!this.backendState.has(fileObj.frontendId)) {
             let file_data = {
@@ -382,9 +384,21 @@ export const useUploadStore = defineStore("upload2", {
                "key": attachment.key,
                "message_author_id": discordResponse.data.author.id
             }
+         } else if (attachment.type === attachmentType.videoMetadata) {
+            state.videoMetadata = {
+               "mime": attachment.mime,
+               "is_progressive": attachment.is_progressive,
+               "is_fragmented": attachment.is_fragmented,
+               "has_moov": attachment.has_moov,
+               "has_IOD": attachment.has_IOD,
+               "brands": attachment.brands,
+               "video_tracks": attachment.video_tracks,
+               "audio_tracks": attachment.audio_tracks,
+               "subtitle_tracks": attachment.subtitle_tracks
+            }
          }
          this.backendState.set(fileObj.frontendId, state)
-         if (state.attachments.length === fileObj.totalChunks && ((fileObj.thumbnail && state.thumbnail) || !fileObj.thumbnail)) {
+         if (state.attachments.length === fileObj.totalChunks && (!fileObj.thumbnail || state.thumbnail) && (!fileObj.type.includes("video") || state.videoMetadata || fileObj.mp4boxFinished)) {
             this.finishedFiles.push(state)
             this.finishFileUpload(fileObj.frontendId)
          }
@@ -396,12 +410,10 @@ export const useUploadStore = defineStore("upload2", {
             createFile({ "files": this.finishedFiles }, fileObj.parentPassword)
             this.finishedFiles = []
          }
-
       }
-
-
    }
 })
+
 const beforeUnload = (event) => {
    event.preventDefault()
    event.returnValue = ""

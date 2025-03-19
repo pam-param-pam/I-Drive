@@ -1,130 +1,132 @@
 <template>
-   <div
-      :class="{ ['shell--hidden']: !showShell }"
-      :style="{ height: `${this.shellHeight}em` }"
-      class="shell"
-   >
-      <div
-         :style="this.shellDrag ? { background: `${checkTheme()}` } : ''"
-         class="shell__divider"
-         @pointerdown="startDrag()"
-         @pointerup="stopDrag()"
-      ></div>
-      <div ref="scrollable" class="shell__content">
-         <div v-for="(c, index) in content" :key="index" class="shell__result">
-            <div class="shell__prompt">
-               <i class="material-icons">chevron_right</i>
-            </div>
-            <pre class="shell__text">{{ c.text }}</pre>
-         </div>
-
-         <div :class="{ 'shell__result--hidden': !canInput }" class="shell__result">
-            <div class="shell__prompt">
-               <i class="material-icons">chevron_right</i>
-            </div>
-            <pre
-               ref="input"
-               class="shell__text"
-               contenteditable="true"
-               tabindex="0"
-               @keydown.prevent.arrow-up="historyUp"
-               @keydown.prevent.arrow-down="historyDown"
-               @keypress.prevent.enter="submit"
-            />
-         </div>
+  <div
+    :class="{ ['shell--hidden']: !showShell }"
+    :style="{ height: `${this.shellHeight}em` }"
+    class="shell"
+    @click="focusInput"
+  >
+    <div
+      :style="this.shellDrag ? { background: `${checkTheme()}` } : ''"
+      class="shell__divider"
+      @pointerdown="startDrag()"
+      @pointerup="stopDrag()"
+    ></div>
+    <div ref="scrollable" class="shell__content">
+      <div v-for="(c, index) in shellSettings.shellContent" :key="index" class="shell__result">
+        <div class="shell__prompt">
+          <i class="material-icons">chevron_right</i>
+        </div>
+        <pre class="shell__text" :class="getTextColorClass(c.type)">{{ c.text }}</pre>
       </div>
-      <div v-show="this.shellDrag" class="shell__overlay" @pointerup="stopDrag()"></div>
-   </div>
+
+      <div :class="{ 'shell__result': !canInput }" class="shell__result">
+        <div class="shell__prompt">
+          <i class="material-icons">chevron_right</i>
+        </div>
+        <pre
+          ref="input"
+          class="shell__text"
+          contenteditable="true"
+          tabindex="0"
+          @keydown.prevent.up="historyUp"
+          @keydown.prevent.down="historyDown"
+          @keypress.prevent.enter="submit"
+        />
+      </div>
+    </div>
+    <div v-show="this.shellDrag" class="shell__overlay" @pointerup="stopDrag()"></div>
+  </div>
 </template>
 
 <script>
-import { theme } from '@/utils/constants'
-import throttle from 'lodash.throttle'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
+import { theme } from "@/utils/constants"
+import throttle from "lodash.throttle"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
-   name: 'shell',
+   name: "shell",
 
    computed: {
-      ...mapState(useMainStore, ['user', 'showShell', 'isFiles']),
+      ...mapState(useMainStore, ["user", "showShell", "isFiles", "shellSettings", "items"])
+   },
 
-      path() {
-         if (this.isFiles) {
-            return this.$route.path
-         }
-
-         return ''
+   data() {
+      return {
+         websocket: null,
+         history: [],
+         historyPos: 0,
+         canInput: false,
+         shellDrag: false,
+         shellHeight: 25,
+         fontsize: parseFloat(getComputedStyle(document.documentElement).fontSize)
       }
    },
 
-   data: () => ({
-      websocket: null,
-      content: [],
-      history: [],
-      historyPos: 0,
-      canInput: false,
-      shellDrag: false,
-      shellHeight: 25,
-      fontsize: parseFloat(getComputedStyle(document.documentElement).fontSize)
-   }),
+   async mounted() {
+      window.addEventListener("resize", this.resize)
+      this.scroll()
 
-   mounted() {
-      window.addEventListener('resize', this.resize)
-      // let url = `${baseWS}/command`
-      // let token = localStorage.getItem("token")
-      //
-      // this.websocket = new window.WebSocket(url, token)
-      // let current_folder = store.state.currentFolder
-      // this.websocket.onopen = () => this.canInput = true
-      // this.websocket.onmessage = this.onMessage
-      // this.websocket.onclose = this.onClose
-      // // while (this.websocket.readyState !== 1) {
-      // //
-      // // }
-      // this.websocket.send(JSON.stringify({"cmd_name": "test", "args": "Hello World!", working_dir_id: current_folder?.id}))
-      // alert("1111")
    },
 
    beforeUnmount() {
-      window.removeEventListener('resize', this.resize)
+      window.removeEventListener("resize", this.resize)
    },
-
-   methods: {
-      ...mapActions(useMainStore, ['toggleShell']),
-
-      checkTheme() {
-         if (theme === 'dark') {
-            return 'rgba(255, 255, 255, 0.4)'
+   watch: {
+      "shellSettings.shellContent": {
+         async handler(newValue, oldValue) {
+            await this.$nextTick()
+            this.scroll()
+         },
+      },
+      showShell(newValue) {
+         if (newValue) {
+            // Autofocus input when shell is opened
+            this.$nextTick(() => {
+               this.focusInput()
+            });
          }
-         return 'rgba(127, 127, 127, 0.4)'
+      }
+   },
+   methods: {
+      ...mapActions(useMainStore, ["toggleShell", "setShellSettings", "pushShellContent", "clearShellContent", "setItems"]),
+      focusInput() {
+         this.$refs.input?.focus()
+      },
+      checkTheme() {
+         if (theme === "dark") {
+            return "rgba(255, 255, 255, 0.4)"
+         }
+         return "rgba(127, 127, 127, 0.4)"
       },
 
       startDrag() {
-         document.addEventListener('pointermove', this.handleDrag)
+         document.addEventListener("pointermove", this.handleDrag)
          this.shellDrag = true
       },
 
       stopDrag() {
-         document.removeEventListener('pointermove', this.handleDrag)
+         document.removeEventListener("pointermove", this.handleDrag)
          this.shellDrag = false
       },
 
-      handleDrag: throttle(function (event) {
+      handleDrag: throttle(function(event) {
          const top = window.innerHeight / this.fontsize - 4
          const userPos = (window.innerHeight - event.clientY) / this.fontsize
          const bottom =
-            2.25 + document.querySelector('.shell__divider').offsetHeight / this.fontsize
+            2.25 + document.querySelector(".shell__divider").offsetHeight / this.fontsize
 
          if (userPos <= top && userPos >= bottom) {
             this.shellHeight = userPos.toFixed(2)
          }
+         this.scroll()
+
       }, 32),
 
-      resize: throttle(function () {
+      resize: throttle(function() {
          const top = window.innerHeight / this.fontsize - 4
          const bottom =
-            2.25 + document.querySelector('.shell__divider').offsetHeight / this.fontsize
+            2.25 + document.querySelector(".shell__divider").offsetHeight / this.fontsize
 
          if (this.shellHeight > top) {
             this.shellHeight = top
@@ -147,7 +149,14 @@ export default {
             selection.addRange(range)
          })
       },
-
+      getTextColorClass(type) {
+         return {
+            "text-log": type === "log",
+            "text-warn": type === "warn",
+            "text-error": type === "error",
+            "text-success": type === "success"
+         }
+      },
       historyUp() {
          if (this.historyPos > 0) {
             this.$refs.input.innerText = this.history[--this.historyPos]
@@ -161,7 +170,7 @@ export default {
             this.focusToEnd()
          } else {
             this.historyPos = this.history.length
-            this.$refs.input.innerText = ''
+            this.$refs.input.innerText = ""
          }
       },
 
@@ -183,31 +192,78 @@ export default {
       submit(event) {
          let cmd = event.target.innerText.trim()
 
-         if (cmd === '') {
+         if (cmd === "") {
             return
          }
-         if (cmd === 'clear') {
-            this.content = []
-            event.target.innerHTML = ''
+         if (cmd === "clear") {
+            this.clearContent()
+            event.target.innerHTML = ""
             return
          }
-         if (cmd === 'exit') {
-            event.target.innerHTML = ''
+         if (cmd === "exit") {
+            event.target.innerHTML = ""
             this.toggleShell()
             return
          }
+         this.pushContent(cmd)
 
-         this.canInput = false
-         event.target.innerHTML = ''
-
-         let results = {
-            text: `${cmd}\n\n`
+         if (cmd === "set") {
+            let shellSettings = { ...this.shellSettings }
+            shellSettings["showFileInfoInSidebar"] = !shellSettings["showFileInfoInSidebar"]
+            this.setShellSettings(shellSettings)
+            this.pushContent(cmd)
+            this.pushContent("toggled", "success")
+            return
          }
+         if (cmd === "ls") {
+            this.items.forEach((item) => {
+               this.pushContent( item.name)
+            })
+         }
+         if (cmd === "sudo hack obama") {
+            this.pushContent( "Hacking main frame...", "success")
+            this.pushContent( "...", "success")
+            this.pushContent( "ERROR", "warn")
+            this.pushContent( "Incoming missiles", "error")
+         }
+         if (cmd.startsWith("eval")) {
+            try {
+               eval(cmd.replace("eval ", ""));
+            } catch (error) {
+               this.pushContent( `Error: ${error.message}`, "error")
+            }
+         }
+         this.canInput = false
+         event.target.innerHTML = ""
 
          this.history.push(cmd)
          this.historyPos = this.history.length
-         this.content.push(results)
+      },
+      pushContent(cmd, type = "log") {
+         this.pushShellContent({ text: cmd, type: type })
+         this.scroll()
+
+      },
+      clearContent() {
+         this.clearShellContent()
       }
    }
 }
 </script>
+<style scoped>
+.text-error {
+ color: red;
+}
+
+.text-warn {
+ color: orange;
+}
+
+.text-log {
+ color: var(--textPrimary);
+}
+
+.text-success {
+ color: var(--textSecondary);
+}
+</style>

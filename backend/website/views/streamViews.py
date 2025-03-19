@@ -225,6 +225,8 @@ def stream_file(request, file_obj: File):
     # Encode the filename using RFC 5987
     encoded_filename = quote(file_obj.name)
 
+    if_range_header = request.headers.get('if-range')
+
     content_disposition = f'{"inline" if isInline else "attachment"}; filename="{filename_ascii}"; filename*=UTF-8\'\'{encoded_filename}'
     # If file is empty, return no content but still allow it to be downloaded
     if len(fragments) == 0:
@@ -261,8 +263,10 @@ def stream_file(request, file_obj: File):
                     print(f"Fragment index: {fragments[index].sequence}")
                     print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
-                # if we are returning a partial request we only want to stream 1 fragment
-                if status == 206:
+                # if we are returning a partial request we only want to stream 1 fragment.
+                # ⚠️ This does not conform to the protocol specifications.
+                # We are doing this to optimize browser video streaming to be faster
+                if status == 206 and not if_range_header:
                     break
 
                 index += 1
@@ -312,7 +316,6 @@ def stream_file(request, file_obj: File):
         response['X-Frame-Options'] = f'ALLOW-FROM {referer}'
     else:
         response['X-Frame-Options'] = 'DENY'
-
     response['Content-Length'] = file_size
     response['Content-Disposition'] = content_disposition
     response['Accept-Ranges'] = 'bytes'
@@ -325,6 +328,9 @@ def stream_file(request, file_obj: File):
 
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
+
+    # if_range_header exists its likely this is from download resume process in a browser, hence we want to return the entire file and not just 1 fragment
+    if range_header and not if_range_header:
         response['Content-Length'] = real_end_byte - real_start_byte
 
     return response

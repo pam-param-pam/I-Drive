@@ -179,12 +179,10 @@ export default {
 
       },
       async getCurrentThumbnail() {
-
          if (this.video) {
-            let data = await captureVideoFrame(this.video, this.currentTimestamp)
+            let data = await captureVideoFrame(this.video, this.currentTimestamp, 0.5, 1000, 1000)
             this.currentThumbnailData = data.thumbnail
             return URL.createObjectURL(data.thumbnail)
-
          }
       },
       cancel() {
@@ -245,6 +243,7 @@ h3 {
  width: 250px;
  height: 130px;
  border-radius: 5px;
+ object-fit: cover;
 
 }
 .thumbnail-placeholder {

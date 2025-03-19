@@ -102,7 +102,7 @@
       </p>
       <dark-mode-button />
 
-      <div v-if="selectedFile && !isMobile() && false" class="selected-file-info">
+      <div v-if="selectedFile && !isMobile() && shellSettings.showFileInfoInSidebar" class="selected-file-info">
          <p><strong>Name:</strong> {{ selectedFile.name }}</p>
          <p><strong>ID:</strong> {{ selectedFile.id }}</p>
          <p v-if="selectedFile.size"><strong>Size:</strong> {{ filesize(selectedFile.size) }}</p>
@@ -140,7 +140,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['user', 'perms', 'currentFolder', 'disabledCreation', 'isLogged', 'currentPrompt', 'loading', 'searchActive', 'searchItems', 'selected']),
+      ...mapState(useMainStore, ['shellSettings', 'user', 'perms', 'currentFolder', 'disabledCreation', 'isLogged', 'currentPrompt', 'loading', 'searchActive', 'searchItems', 'selected', 'sortedItems']),
       selectedFile() {
          return this.selected[0]
       },
@@ -151,17 +151,11 @@ export default {
       version: () => version
    },
 
-   async mounted() {
-      await this.fetchUsage()
-   },
-
    watch: {
-      async currentFolder() {
+      async sortedItems() {
          await this.fetchUsage()
       },
-      async searchItems() {
-         await this.fetchUsage()
-      }
+
    },
 
    methods: {

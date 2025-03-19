@@ -4,12 +4,13 @@ from urllib.parse import unquote
 
 import requests
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-from django.db.models import Q, QuerySet
+from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.utils import timezone
 
 from .Discord import discord
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment, VideoMetadataTrackMixin, DiscordAttachmentMixin, \
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
@@ -568,7 +569,7 @@ def query_attachments(message_id=None, attachment_id=None, author_id=None, owner
     return combined_results
 
 
-def delete_single_discord_attachment(user, resource: Union[Fragment, Thumbnail, Preview, Moment]) -> None:
+def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> None:
     database_attachments = query_attachments(message_id=resource.message_id)
 
     all_attachments_ids = set()
@@ -597,3 +598,82 @@ def create_moment_dict(moment: Moment) -> dict:
     url = f"{API_BASE_URL}/file/moment/{signed_file_id}/{moment.timestamp}"
 
     return {"file_id": moment.file.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
+
+
+def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
+    return {
+        "bitrate": track.bitrate,
+        "codec": track.codec,
+        "size": track.size,
+        "duration": track.duration,
+        "language": track.language,
+        "number": track.track_number
+    }
+
+def create_video_track_dict(track: VideoTrack) -> dict:
+    track_dict = create_track_dict(track)
+    track_dict["height"] = track.height
+    track_dict["width"] = track.width
+    track_dict["fps"] = track.fps
+    track_dict["type"] = "Video"
+    return track_dict
+
+def create_audio_track_dict(track: AudioTrack) -> dict:
+    track_dict = create_track_dict(track)
+    track_dict["name"] = track.name
+    track_dict["channel_count"] = track.channel_count
+    track_dict["sample_rate"] = track.sample_rate
+    track_dict["sample_size"] = track.sample_size
+    track_dict["type"] = "Audio"
+    return track_dict
+
+def create_subtitle_track_dict(track: SubtitleTrack) -> dict:
+    track_dict = create_track_dict(track)
+    track_dict["name"] = track.name
+    track_dict["type"] = "Subtitle"
+    return track_dict
+
+def create_tracks(metadata, track_type, model_class, video_metadata):
+    for index, track in enumerate(metadata[track_type]):
+        kwargs = {
+            "video_metadata": video_metadata,
+            "bitrate": track["bitrate"],
+            "codec": track["codec"],
+            "size": track["size"],
+            "duration": track["duration"],
+            "language": track["language"],
+            "track_number": index + 1,
+        }
+        if track_type == "video_tracks":
+            kwargs.update({
+                "height": track["height"],
+                "width": track["width"],
+                "fps": track["fps"],
+            })
+        elif track_type == "audio_tracks":
+            kwargs.update({
+                "name": track["name"],
+                "channel_count": track["channel_count"],
+                "sample_rate": track["sample_rate"],
+                "sample_size": track["sample_size"],
+            })
+        elif track_type == "subtitle_tracks":
+            kwargs.update({
+                "name": track["name"],
+            })
+
+        model_class.objects.create(**kwargs)
+
+def create_video_metadata(file: File, metadata: dict) -> None:
+    video_metadata = VideoMetadata.objects.create(
+        file=file,
+        is_fragmented=metadata["is_fragmented"],
+        is_progressive=metadata["is_progressive"],
+        has_moov=metadata["has_moov"],
+        has_IOD=metadata["has_IOD"],
+        brands=metadata["brands"],
+        mime=metadata["mime"],
+    )
+    create_tracks(metadata, "video_tracks", VideoTrack, video_metadata)
+    create_tracks(metadata, "audio_tracks", AudioTrack, video_metadata)
+    create_tracks(metadata, "subtitle_tracks", SubtitleTrack, video_metadata)

@@ -1,3 +1,4 @@
+from django.core import serializers
 from django.core.exceptions import FieldError
 from django.db.models.aggregates import Sum
 from django.db.models.query_utils import Q
@@ -8,13 +9,13 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, ShareableLink, Moment
+from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
-    calculate_size, calculate_file_and_folder_count, create_moment_dict
+    calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -99,13 +100,33 @@ def get_usage(request, folder_obj):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
-@check_folder_and_permissions
-def fetch_additional_info(request, folder_obj):
-    folder_used_size = calculate_size(folder_obj)
-    folder_count, file_count = calculate_file_and_folder_count(folder_obj)
+def fetch_additional_info(request, item_id):
+    item = get_resource(item_id)
+    check_resource_perms(request, item, checkRoot=False)
+    if isinstance(item, Folder):
+        folder_used_size = calculate_size(item)
+        folder_count, file_count = calculate_file_and_folder_count(item)
+        return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
+    else:
+        tracks = []
+        for track in VideoTrack.objects.filter(video_metadata__file=item):
+            tracks.append(create_video_track_dict(track))
 
-    return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
+        for track in AudioTrack.objects.filter(video_metadata__file=item):
+            tracks.append(create_audio_track_dict(track))
 
+        for track in SubtitleTrack.objects.filter(video_metadata__file=item):
+            tracks.append(create_subtitle_track_dict(track))
+        try:
+            metadata = VideoMetadata.objects.get(file=item)
+        except VideoMetadata.DoesNotExist:
+            raise ResourceNotFoundError("No video metadata for this file :(")
+        metadata_dict = {
+            "tracks": tracks, "is_fragmented": metadata.is_fragmented, "is_progressive": metadata.is_progressive,
+            "has_moov": metadata.has_moov, "has_IOD": metadata.has_IOD, "brands": metadata.brands, "mime": metadata.mime,
+        }
+
+        return JsonResponse(metadata_dict, status=200)
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])

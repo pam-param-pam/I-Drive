@@ -269,6 +269,7 @@ class File(models.Model):
 class DiscordAttachmentMixin(models.Model):
     message_id = models.CharField(max_length=32)
     attachment_id = models.CharField(max_length=32, null=True, unique=True)
+    size = models.PositiveBigIntegerField()
 
     # GenericForeignKey to point to either Bot or Webhook
     content_type = models.ForeignKey(
@@ -295,7 +296,6 @@ class Fragment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     sequence = models.SmallIntegerField()
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
-    size = models.PositiveBigIntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     offset = models.IntegerField()
 
@@ -305,7 +305,6 @@ class Fragment(DiscordAttachmentMixin):
 class Thumbnail(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
-    size = models.PositiveBigIntegerField()
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
@@ -322,7 +321,6 @@ class Thumbnail(DiscordAttachmentMixin):
 class Preview(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
-    size = models.PositiveBigIntegerField()
     encrypted_size = models.PositiveBigIntegerField()
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True, related_name="preview")
     key = models.BinaryField()
@@ -339,7 +337,6 @@ class Moment(DiscordAttachmentMixin):
     file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
     created_at = models.DateTimeField(auto_now_add=True)
     timestamp = models.IntegerField(default=0)
-    size = models.PositiveBigIntegerField()
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
 
@@ -493,8 +490,6 @@ class Tag(models.Model):
         return f"Tag[Name={self.name}"
 
 
-
-
 class Webhook(models.Model):
     url = models.CharField(max_length=150)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -538,6 +533,52 @@ class DiscordSettings(models.Model):
     def _create_user_discord_settings(sender, instance, created, **kwargs):
         if created:
             settings, created = DiscordSettings.objects.get_or_create(user=instance)
+
+
+class VideoMetadata(models.Model):
+    file = models.OneToOneField("File", on_delete=models.CASCADE)
+    is_progressive = models.BooleanField()
+    is_fragmented = models.BooleanField()
+    has_moov = models.BooleanField()
+    has_IOD = models.BooleanField()
+    brands = models.CharField(max_length=50)
+    mime = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Metadata for {self.file}"
+
+
+class VideoMetadataTrackMixin(models.Model):
+    video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
+    bitrate = models.IntegerField()
+    codec = models.CharField(max_length=50)
+    size = models.IntegerField()
+    duration = models.IntegerField()
+    language = models.CharField(max_length=50, null=True)
+    track_number = models.IntegerField()
+
+class VideoTrack(VideoMetadataTrackMixin):
+    height = models.IntegerField()
+    width = models.IntegerField()
+    fps = models.IntegerField()
+
+    def __str__(self):
+        return f"Video Track ({self.width}x{self.height}) for {self.video_metadata.file}"
+
+class AudioTrack(VideoMetadataTrackMixin):
+    name = models.CharField(max_length=20)
+    channel_count = models.IntegerField()
+    sample_rate = models.IntegerField()
+    sample_size = models.IntegerField()
+
+    def __str__(self):
+        return f"Audio ({self.language}) for {self.video_metadata.file}"
+
+class SubtitleTrack(VideoMetadataTrackMixin):
+    name = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f"Subtitle ({self.language}) for {self.video_metadata.file}"
 
 
 @receiver(user_logged_in)

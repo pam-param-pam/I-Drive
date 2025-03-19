@@ -102,7 +102,6 @@ function processFile(fileEntry) {
    })
 }
 
-
 export function isAudioFile(file) {
    return file.fileObj.type.includes("audio/")
 }
@@ -148,7 +147,8 @@ export async function getAudioCover(file) {
    })
 }
 
-export function captureVideoFrame(videoPlayer, seekTo) {
+
+export function captureVideoFrame(videoPlayer, seekTo = 0, quality = 0.75, maxWidth = null, maxHeight = null) {
    return new Promise((resolve, reject) => {
 
       // Seek video after a short delay
@@ -160,11 +160,28 @@ export function captureVideoFrame(videoPlayer, seekTo) {
       videoPlayer.addEventListener("seeked", () => {
          // Create canvas with video dimensions
          const canvas = document.createElement("canvas")
-         canvas.width = videoPlayer.videoWidth
-         canvas.height = videoPlayer.videoHeight
 
          // Draw video frame to canvas
          const ctx = canvas.getContext("2d")
+
+         let width = videoPlayer.videoWidth
+         let height = videoPlayer.videoHeight
+         if (maxWidth && maxHeight) {
+            if (width > height) {
+               if (width > maxWidth) {
+                  height *= maxWidth / width
+                  width = maxWidth
+               }
+            } else {
+               if (height > maxHeight) {
+                  width *= maxHeight / height
+                  height = maxHeight
+               }
+            }
+         }
+
+         canvas.width = width
+         canvas.height = height
          ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height)
 
          // Convert canvas to blob and resolve promise
@@ -176,7 +193,7 @@ export function captureVideoFrame(videoPlayer, seekTo) {
                })
             },
             "image/jpeg",
-            0.75
+            quality
          )
          videoPlayer.pause()
          URL.revokeObjectURL(videoPlayer.src)
@@ -184,21 +201,66 @@ export function captureVideoFrame(videoPlayer, seekTo) {
    })
 }
 
+export function parseVideoMetadata(info) {
+   let videoMetadata = {}
+   console.log(info)
+   videoMetadata.video_tracks = []
+   videoMetadata.audio_tracks = []
+   videoMetadata.subtitle_tracks = []
 
-// getVideoCover.js
+   videoMetadata.is_progressive = info.isProgressive
+   videoMetadata.is_fragmented = info.isFragmented
+   videoMetadata.has_moov = info.hasMoov
+   videoMetadata.has_IOD = info.hasIOD
+
+   videoMetadata.mime = info.mime
+   videoMetadata.brands = info.brands.join(', ')
+
+   for (let infoTrack of info.tracks) {
+      let track = {}
+      track.bitrate = parseFloat((infoTrack.bitrate).toFixed(2))
+      track.codec = infoTrack.codec
+      track.size = infoTrack.size
+
+      track.duration =  parseFloat((infoTrack.duration / infoTrack.timescale).toFixed(2))
+      track.language = infoTrack.language === "und" ? null : infoTrack.language
+
+      let trackType = infoTrack.type
+      if (trackType === "video") {
+         track.height = infoTrack.video.height
+         track.width = infoTrack.video.width
+         track.fps = Math.round(infoTrack.timescale * infoTrack.nb_samples / infoTrack.samples_duration)
+         track.track_number = videoMetadata.video_tracks.length + 1
+         videoMetadata.video_tracks.push(track)
+      } else if (trackType === "audio") {
+         track.name = infoTrack.name
+         track.channel_count = infoTrack.audio.channel_count
+         track.sample_rate = infoTrack.audio.sample_rate
+         track.sample_size = infoTrack.audio.sample_size
+         track.track_number = videoMetadata.audio_tracks.length + 1
+         videoMetadata.audio_tracks.push(track)
+      } else if (trackType === "subtitles") {
+         track.name = infoTrack.name
+         track.track_number = videoMetadata.subtitle_tracks.length + 1
+         videoMetadata.subtitle_tracks.push(track)
+
+      }
+   }
+   console.log(videoMetadata)
+   return videoMetadata
+}
+
+
 export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    return new Promise((resolve, reject) => {
       let videoPlayer = document.createElement("video")
       videoPlayer.src = URL.createObjectURL(file.systemFile)
 
-      // Error handling
       videoPlayer.addEventListener("error", (ex) => {
          reject("Error when loading video file", ex)
       })
 
-      // Load metadata and get video thumbnail
       videoPlayer.addEventListener("loadedmetadata", () => {
-         // Call captureVideoFrame function to capture a frame
          captureVideoFrame(videoPlayer, seekTo)
             .then((result) => {
                const canvas = document.createElement("canvas")
@@ -236,6 +298,13 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    })
 }
 
+export function appendMp4BoxBuffer(mp4box, chunk, offset) {
+   chunk.arrayBuffer(offset)
+      .then((buffer) => {
+         buffer.fileStart = offset
+         mp4box.appendBuffer(buffer)
+      })
+}
 
 export async function getOrCreateFolder(fileObj) {
    let uploadStore = useUploadStore()

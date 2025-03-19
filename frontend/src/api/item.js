@@ -42,3 +42,8 @@ export async function createZIP(data) {
    return response.data
 }
 
+export async function fetchAdditionalInfo(itemId) {
+   let url = `/item/moreinfo/${itemId}`
+   let response = await backendInstance.get(url)
+   return response.data
+}
