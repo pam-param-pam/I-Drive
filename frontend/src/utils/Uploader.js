@@ -27,8 +27,6 @@ export class Uploader {
       let uploadId = uuidv4()
       let encryptionMethod = this.mainStore.settings.encryptionMethod
       let parentPassword = this.mainStore.getFolderPassword(lockFrom)
-      console.log("parentPassword")
-      console.log(parentPassword)
       this.fileProcessorWorker.postMessage({ typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword })
 
 

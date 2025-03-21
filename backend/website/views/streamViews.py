@@ -187,7 +187,7 @@ def get_thumbnail(request, file_obj: File):
 @handle_common_errors
 @check_signed_url
 @check_file
-def get_moment(request, file_obj: File, timestamp):
+def stream_moment(request, file_obj: File, timestamp):
 
     check_if_bots_exists(file_obj.owner)
 

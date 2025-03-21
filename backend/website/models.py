@@ -163,7 +163,7 @@ class Folder(MPTTModel):
     def remove_cache(self):
         cache.delete(self.id)
         if self.parent:
-            cache.delete(self.parent.id)
+            cache.delete(self.parent_id)
 
 
 class File(models.Model):
@@ -214,7 +214,7 @@ class File(models.Model):
         # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
         try:
             old_object = File.objects.get(id=self.id)
-            cache.delete(old_object.parent.id)
+            cache.delete(old_object.parent_id)
         except File.DoesNotExist:
             pass
 
@@ -224,7 +224,7 @@ class File(models.Model):
 
     def remove_cache(self):
         cache.delete(self.id)
-        cache.delete(self.parent.id)
+        cache.delete(self.parent_id)
 
     def get_encryption_method(self) -> EncryptionMethod:
         return EncryptionMethod(self.encryption_method)
@@ -265,6 +265,7 @@ class File(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class DiscordAttachmentMixin(models.Model):
     message_id = models.CharField(max_length=32)
@@ -546,7 +547,6 @@ class VideoMetadata(models.Model):
 
     def __str__(self):
         return f"Metadata for {self.file}"
-
 
 class VideoMetadataTrackMixin(models.Model):
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")

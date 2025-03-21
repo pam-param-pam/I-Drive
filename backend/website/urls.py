@@ -6,11 +6,11 @@ from djoser.views import TokenCreateView
 
 from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
-from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, get_moment
+from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment
 from .views.testViews import get_discord_state, test_stream_file, hyper_stream_file
 from .views.uploadViews import create_file, create_thumbnail, proxy_discord
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
@@ -40,7 +40,8 @@ urlpatterns = [
     path("file/moment/add", add_moment, name="add a moment"),
     path("file/moment/remove", remove_moment, name="remove a moment"),
     path("file/moments/<file_id>", get_moments, name="get file moments"),
-    path("file/moment/<signed_file_id>/<timestamp>", get_moment, name="stream moment"),
+    path("file/moment/<signed_file_id>/<timestamp>", stream_moment, name="stream moment"),
+    path("file/tags/<file_id>", get_tags, name="get file moments"),
 
     path("auth/token/login", TokenCreateView.as_view(), name="login"),
     path("auth/register", register_user, name="register"),

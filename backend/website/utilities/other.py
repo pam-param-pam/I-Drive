@@ -118,6 +118,32 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolde
     return folder_path
 
 
+def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
+    file_children = []
+    if include_files:
+        file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
+            "parent", "videoposition", "thumbnail", "preview", "videometadata"
+        ).prefetch_related("tags").values(
+            "id", "name", "extension", "size", "type", "created_at", "last_modified_at",
+            "encryption_method", "inTrashSince", "duration", "parent__id", "parent__password",
+            "parent__lockFrom__id", "preview__iso", "preview__model_name", "preview__aperture",
+            "preview__exposure_time", "preview__focal_length", "thumbnail", "videoposition__timestamp",
+            "videometadata__id"
+        )
+
+    folder_children = []
+    if include_folders:
+        folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
+
+    file_dicts = [optimized_create_file_dict(file) for file in file_children]
+    folder_dicts = [create_folder_dict(folder) for folder in folder_children]
+
+    folder_dict = create_folder_dict(folder_obj)
+    folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
+
+    return folder_dict
+
+
 def create_file_dict(file_obj: File, hide=False) -> FileDict:
     file_dict = {
         'isDir': False,
@@ -151,6 +177,8 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
     except Preview.DoesNotExist:
         pass
 
+    file_dict["isVideoMetadata"] = hasattr(file_obj, "videometadata")
+
     if not hide and not (file_obj.is_locked and file_obj.inTrash):
         signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
@@ -171,12 +199,59 @@ def create_file_dict(file_obj: File, hide=False) -> FileDict:
         if videoposition:
             file_dict['video_position'] = videoposition.timestamp
 
-        tags = []
-        for tag in file_obj.tags.all():
-            tags.append(tag.name)
+    return file_dict
 
-        if tags:
-            file_dict["tags"] = tags
+
+def optimized_create_file_dict(file_values, hide=False) -> FileDict:
+    """Optimized version of create_file_dict that uses dict values instead of ORM objects"""
+
+    file_dict = {
+        "isDir": False,
+        "id": file_values["id"],
+        "name": file_values["name"],
+        "parent_id": file_values["parent__id"],
+        "extension": file_values["extension"],
+        "size": file_values["size"],
+        "type": file_values["type"],
+        "created": formatDate(file_values["created_at"]),
+        "last_modified": formatDate(file_values["last_modified_at"]),
+        "isLocked": True if file_values["parent__password"] else False,
+        "encryption_method": file_values["encryption_method"],
+        "isVideoMetadata": file_values["videometadata__id"] is not None,
+    }
+
+    if file_values["parent__password"]:
+        file_dict["lockFrom"] = file_values["parent__lockFrom__id"]
+
+    if file_values["inTrashSince"]:
+        file_dict["in_trash_since"] = formatDate(file_values["inTrashSince"])
+
+    if file_values["duration"]:
+        file_dict["duration"] = file_values["duration"]
+
+    if file_values["preview__iso"]:
+        file_dict.update({
+            "iso": file_values["preview__iso"],
+            "model_name": file_values["preview__model_name"],
+            "aperture": file_values["preview__aperture"],
+            "exposure_time": file_values["preview__exposure_time"],
+            "focal_length": file_values["preview__focal_length"],
+        })
+
+    if not hide and not (file_values["parent__password"] and file_values["inTrashSince"]):
+        signed_file_id = sign_resource_id_with_expiry(file_values["id"])
+
+        if file_values["extension"] in RAW_IMAGE_EXTENSIONS:
+            file_dict["preview_url"] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
+
+        file_dict["download_url"] = f"{API_BASE_URL}/stream/{signed_file_id}"
+
+        if file_values["thumbnail"]:
+            file_dict["thumbnail_url"] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+
+        if file_values["videoposition__timestamp"]:
+            file_dict["video_position"] = file_values["videoposition__timestamp"]
+
     return file_dict
 
 
@@ -268,25 +343,6 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
     children_dicts = [create_share_resource_dict(share, file) for file in children]
     folder_dict = create_share_resource_dict(share, folder_obj)
     folder_dict["children"] = children_dicts
-    return folder_dict
-
-
-def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
-    file_children = []
-    if include_files:
-        file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
-            "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
-
-    folder_children = []
-    if include_folders:
-        folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
-
-    file_dicts = [create_file_dict(file) for file in file_children]
-    folder_dicts = [create_folder_dict(folder) for folder in folder_children]
-
-    folder_dict = create_folder_dict(folder_obj)
-    folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
-
     return folder_dict
 
 
@@ -610,6 +666,7 @@ def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
         "number": track.track_number
     }
 
+
 def create_video_track_dict(track: VideoTrack) -> dict:
     track_dict = create_track_dict(track)
     track_dict["height"] = track.height
@@ -617,6 +674,7 @@ def create_video_track_dict(track: VideoTrack) -> dict:
     track_dict["fps"] = track.fps
     track_dict["type"] = "Video"
     return track_dict
+
 
 def create_audio_track_dict(track: AudioTrack) -> dict:
     track_dict = create_track_dict(track)
@@ -627,11 +685,13 @@ def create_audio_track_dict(track: AudioTrack) -> dict:
     track_dict["type"] = "Audio"
     return track_dict
 
+
 def create_subtitle_track_dict(track: SubtitleTrack) -> dict:
     track_dict = create_track_dict(track)
     track_dict["name"] = track.name
     track_dict["type"] = "Subtitle"
     return track_dict
+
 
 def create_tracks(metadata, track_type, model_class, video_metadata):
     for index, track in enumerate(metadata[track_type]):
@@ -663,6 +723,7 @@ def create_tracks(metadata, track_type, model_class, video_metadata):
             })
 
         model_class.objects.create(**kwargs)
+
 
 def create_video_metadata(file: File, metadata: dict) -> None:
     video_metadata = VideoMetadata.objects.create(

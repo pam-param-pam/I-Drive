@@ -77,5 +77,10 @@ export async function getMoments(file_id) {
    let url = `/file/moments/${file_id}`
    let response = await backendInstance.get(url)
    return response.data
+}
 
+export async function getTags(file_id) {
+   let url = `/file/tags/${file_id}`
+   let response = await backendInstance.get(url)
+   return response.data
 }

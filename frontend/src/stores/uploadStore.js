@@ -110,9 +110,9 @@ export const useUploadStore = defineStore("upload2", {
       async processUploads() {
          const mainStore = useMainStore()
          let canProcess = this.concurrentRequests < mainStore.settings.concurrentUploadRequests && (this.state === uploadState.uploading || this.state === uploadState.idle)
-         console.log("this.concurrentRequests")
-         console.log(this.concurrentRequests)
-         console.log(canProcess)
+         // console.log("this.concurrentRequests")
+         // console.log(this.concurrentRequests)
+         // console.log(canProcess)
          if (!canProcess) return
          this.concurrentRequests++
 
@@ -385,6 +385,7 @@ export const useUploadStore = defineStore("upload2", {
                "message_author_id": discordResponse.data.author.id
             }
          } else if (attachment.type === attachmentType.videoMetadata) {
+            console.log("=====filling attachment info for file: " + fileObj.name)
             state.videoMetadata = {
                "mime": attachment.mime,
                "is_progressive": attachment.is_progressive,
@@ -400,6 +401,7 @@ export const useUploadStore = defineStore("upload2", {
          this.backendState.set(fileObj.frontendId, state)
          if (state.attachments.length === fileObj.totalChunks && (!fileObj.thumbnail || state.thumbnail) && (!fileObj.type.includes("video") || state.videoMetadata || fileObj.mp4boxFinished)) {
             this.finishedFiles.push(state)
+            if (!state.videoMetadata) console.warn("videoMetadata is missing")
             this.finishFileUpload(fileObj.frontendId)
          }
          let totalSize = 0

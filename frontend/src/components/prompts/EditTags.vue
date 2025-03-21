@@ -10,7 +10,7 @@
          </p>
 
          <div class="tags-container">
-            <span v-for="(tag, index) in selected[0].tags" :key="index" class="tag">
+            <span v-for="(tag, index) in tags" :key="index" class="tag">
                <i class="material-icons tag-icon">sell</i>
 
                {{ tag }}
@@ -71,19 +71,24 @@
 <script>
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
-import { addTag, removeTag } from '@/api/files.js'
+import { addTag, getTags, removeTag } from "@/api/files.js"
 
 export default {
    name: 'EditTags',
 
    data() {
       return {
+         tags: [],
          tagName: ''
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['selected'])
+      ...mapState(useMainStore, ['selected']),
+
+      file() {
+         return this.selected[0]
+      }
    },
 
    watch: {
@@ -92,6 +97,10 @@ export default {
             this.submit()
          }
       }
+   },
+
+   async created() {
+     this.tags = await getTags(this.file.id)
    },
 
    methods: {
@@ -105,19 +114,14 @@ export default {
          let tagName = this.tagName.trim()
          this.tagName = ''
 
-         await addTag({ tag_name: tagName, file_id: this.selected[0].id })
-         let file = this.selected[0]
-         file.tags = [...(file.tags || []), tagName]
-
-         this.updateItem(file)
+         await addTag({ tag_name: tagName, file_id: this.file.id })
+         this.tags.push(tagName)
       },
 
       async removeTag(tagName) {
-         await removeTag({ tag_name: tagName, file_id: this.selected[0].id })
+         await removeTag({ tag_name: tagName, file_id: this.file.id })
 
-         let file = this.selected[0]
-         file.tags = file.tags.filter((tag) => tag !== tagName)
-         this.updateItem(file)
+         this.tags = this.tags.filter((tag) => tag !== tagName)
       }
    }
 }

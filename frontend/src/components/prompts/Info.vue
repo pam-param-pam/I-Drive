@@ -104,7 +104,7 @@
       </div>
     </div>
     <!-- Expandable section for tracks -->
-    <div v-if="!isDir && type==='video'" class="expandable-section card-content">
+    <div v-if="!isDir && type==='video' && isVideoMetadata" class="expandable-section card-content">
       <div class="expandable-header" @click="fetchAdditionalInfo">
         <strong>{{ $t("prompts.videoMetadata") }}</strong>
         <i :class="{ expanded: isFileExpanded }" class="material-icons expand-icon">
@@ -114,33 +114,54 @@
 
       <div v-if="isFileExpanded" class="expandable-content">
         <div v-if="metadata">
-          <p v-if="primaryMetadata?.codec">
-            <strong>{{ $t("prompts.codec") }}:</strong> {{ primaryMetadata.codec }}
-          </p>
-          <p v-if="primaryMetadata?.resolution">
-            <strong>{{ $t("prompts.resolution") }}:</strong> {{ primaryMetadata.resolution }}
-          </p>
-          <p v-if="primaryMetadata?.audioType">
-            <strong>{{ $t("prompts.audioType") }}:</strong> {{ primaryMetadata.audioType }}
-          </p>
-          <p v-if="metadata?.isSubs">
-            <strong>{{ $t("prompts.isSubs") }}:</strong> {{ primaryMetadata.isSubs }}
-          </p>
+          <div v-if="primaryMetadata">
+            <p>
+              <strong>{{ $t("prompts.codec") }}:</strong> {{ primaryMetadata.codec }}
+            </p>
+            <p>
+              <strong>{{ $t("prompts.resolution") }}:</strong> {{ primaryMetadata.resolution }}
+            </p>
+            <p>
+              <strong>{{ $t("prompts.audioType") }}: </strong>
+              <span v-if="primaryMetadata.audioType">
+                 {{ primaryMetadata.audioType }}
+              </span>
+              <span v-else>
+                {{ $t("prompts.noAudio") }}
+              </span>
+            </p>
+            <p>
+              <strong>{{ $t("prompts.isSubs") }}: </strong>
+              <span v-if="primaryMetadata.isSubs">
+                {{ $t("prompts.isSubsYes") }}
+              </span>
+              <span v-else>
+                {{ $t("prompts.isSubsNo") }}
+              </span>
+            </p>
+          </div>
+
           <select v-model="currentTrack" class="input input--block styled-select">
             <option v-for="track in metadata.tracks" :key="track" :value="track">{{ track.number }} - {{ track.type }} {{ $t("prompts.track") }}</option>
           </select>
           <div v-if="currentTrack">
-            <p v-if="currentTrack?.bitrate">
-              <strong>{{ $t("prompts.bitrate") }}:</strong> {{ currentTrack.bitrate }}
-            </p>
             <p v-if="currentTrack?.codec">
               <strong>{{ $t("prompts.codec") }}:</strong> {{ currentTrack.codec }}
+            </p>
+            <p v-if="currentTrack?.bitrate">
+              <strong>{{ $t("prompts.bitrate") }}:</strong> {{ currentTrack.bitrate }}
             </p>
             <p v-if="currentTrack?.height && currentTrack?.width">
               <strong>{{ $t("prompts.resolution") }}:</strong> {{ currentTrack.width }} x {{ currentTrack.height }}
             </p>
             <p v-if="currentTrack?.fps">
               <strong>{{ $t("prompts.fps") }}:</strong> {{ currentTrack.fps }}
+            </p>
+            <p v-if="currentTrack?.duration">
+              <strong>{{ $t("prompts.duration") }}:</strong> {{ formatSeconds(currentTrack.duration) }}
+            </p>
+            <p v-if="currentTrack?.size">
+              <strong>{{ $t("prompts.size") }}:</strong> {{ currentTrack.size }}
             </p>
             <p v-if="currentTrack?.sample_rate">
               <strong>{{ $t("prompts.sampleRate") }}:</strong> {{ currentTrack.sample_rate }}
@@ -153,12 +174,6 @@
             </p>
             <p v-if="currentTrack?.language">
               <strong>{{ $t("prompts.language") }}:</strong> {{ currentTrack.language }}
-            </p>
-            <p v-if="currentTrack?.duration">
-              <strong>{{ $t("prompts.duration") }}:</strong> {{ currentTrack.duration }}
-            </p>
-            <p v-if="currentTrack?.size">
-              <strong>{{ $t("prompts.size") }}:</strong> {{ currentTrack.size }}
             </p>
           </div>
 
@@ -352,6 +367,10 @@ export default {
 
          return false
       },
+      isVideoMetadata() {
+         console.log(this.selected[0])
+         return this.selected[0].isVideoMetadata
+      },
       primaryMetadata() {
          if (!this.metadata) return
          let primary = {}
@@ -372,8 +391,8 @@ export default {
             primary.codec = codecMap[codecPrefix] || `Unknown (${videoTrack?.codec})`
          }
          primary.resolution = videoTrack.width + " x " + videoTrack.height
-         primary.audioType = audioTrack ? (audioTrack.channel_count > 1 ? "Stereo" : "Mono") : "Unknown"
-         primary.isSubs = subsLength > 0 ? "Yes" : "No"
+         primary.audioType = audioTrack ? (audioTrack.channel_count > 1 ? "Stereo" : "Mono") : "No audio"
+         primary.isSubs = subsLength > 0
          return primary
       }
    },

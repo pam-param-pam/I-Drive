@@ -20,7 +20,6 @@ admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
 admin.site.register(DiscordSettings, SimpleHistoryAdmin)
 admin.site.register(VideoPosition)
-admin.site.register(VideoMetadata)
 admin.site.register(VideoTrack)
 admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
@@ -363,3 +362,9 @@ class MomentAdmin(admin.ModelAdmin):
 
     formatted_timestamp.short_description = 'Timestamp'
     formatted_timestamp.admin_order_field = 'timestamp'
+
+
+@admin.register(VideoMetadata)
+class VideoMetadataAdmin(admin.ModelAdmin):
+    search_fields = ('file__name', 'file__id')
+    readonly_fields = ('file', 'is_progressive', 'is_fragmented', 'has_moov', 'has_IOD', 'brands', 'mime')

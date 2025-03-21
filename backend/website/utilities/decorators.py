@@ -11,7 +11,7 @@ from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
 from rest_framework.exceptions import Throttled
 
-from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview, Moment, VideoMetadata
+from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview, Moment, VideoMetadata, Tag
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
 from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
@@ -78,7 +78,7 @@ def handle_common_errors(view_func):
             return view_func(request, *args, **kwargs)
 
         # 404 NOT FOUND
-        except (Moment.DoesNotExist, UserZIP.DoesNotExist, Preview.DoesNotExist, Thumbnail.DoesNotExist, File.DoesNotExist, Folder.DoesNotExist, VideoMetadata.DoesNotExist):
+        except (Moment.DoesNotExist, UserZIP.DoesNotExist, Preview.DoesNotExist, Thumbnail.DoesNotExist, File.DoesNotExist, Folder.DoesNotExist, VideoMetadata.DoesNotExist, Tag.DoesNotExist):
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
                                 status=404)
         except ShareableLink.DoesNotExist:

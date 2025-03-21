@@ -95,16 +95,15 @@ export async function* prepareRequests() {
       let i = 0
       let fileSize = queueFile.fileObj.size
       let offset = 0
-      let mp4box = MP4Box.createFile()
-      mp4box.fileObj = queueFile.fileObj; // Keep it referenced
+      let mp4boxfile  = MP4Box.createFile()
+      mp4boxfile.fileObj = queueFile.fileObj
 
-      mp4box.onReady = function(info) {
-         console.log("========mp4box.onReady============= ")
+      mp4boxfile.onReady = function(info) {
          let videoMetadata = parseVideoMetadata(info)
          videoMetadata.type = attachmentType.videoMetadata
-         videoMetadata.fileObj = mp4box.fileObj
+         videoMetadata.fileObj = mp4boxfile.fileObj
          uploadStore.fillAttachmentInfo(videoMetadata, null, null)
-         queueFile.fileObj.mp4boxFinished = true
+         mp4boxfile.fileObj.mp4boxFinished = true
       }
 
       while (offset < fileSize) {
@@ -115,8 +114,8 @@ export async function* prepareRequests() {
 
          let chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
 
-         if (!queueFile.fileObj.mp4boxFinished) {
-            appendMp4BoxBuffer(mp4box, chunk, offset)
+         if (!mp4boxfile.fileObj.mp4boxFinished) {
+            appendMp4BoxBuffer(mp4boxfile, chunk, offset)
          }
 
          let attachment = {
@@ -144,6 +143,7 @@ export async function* prepareRequests() {
       //we need to inform about totalChunks of a file
       queueFile.fileObj.totalChunks = i
       queueFile.fileObj.mp4boxFinished = true
+      mp4boxfile.flush()
 
    }
    //we need to handle the already created attachments after break
@@ -221,7 +221,6 @@ export async function uploadRequest(request) {
       let progressEvent = {}
       let elapsedTime = (Date.now() - startTime) / 1000
       progressEvent.rate = Math.round(bytesUploaded / elapsedTime)
-      console.log(progressEvent.rate)
       progressEvent.bytes = request.totalSize
       uploadStore.onUploadProgress(request, progressEvent)
 

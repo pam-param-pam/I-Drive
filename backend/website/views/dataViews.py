@@ -9,7 +9,7 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata
+from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Tag
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
@@ -36,7 +36,7 @@ def last_modified_func(request, file_obj, sequence=None):
 @handle_common_errors
 @check_folder_and_permissions
 @etag(etag_func)
-def get_folder_info(request, folder_obj):
+def get_folder_info(request, folder_obj: Folder):
     folder_content = cache.get(folder_obj.id)
     if not folder_content:
         print("=======using uncached version=======")
@@ -52,7 +52,7 @@ def get_folder_info(request, folder_obj):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
-def get_dirs(request, folder_obj):
+def get_dirs(request, folder_obj: Folder):
     folder_content = build_folder_content(folder_obj, include_files=False)
     breadcrumbs = create_breadcrumbs(folder_obj)
 
@@ -70,7 +70,7 @@ def get_dirs(request, folder_obj):
 @handle_common_errors
 @check_file_and_permissions
 # @last_modified(last_modified_func)
-def get_file_info(request, file_obj):
+def get_file_info(request, file_obj: File):
     file_content = create_file_dict(file_obj)
 
     return JsonResponse(file_content)
@@ -83,7 +83,7 @@ def get_file_info(request, file_obj):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
-def get_usage(request, folder_obj):
+def get_usage(request, folder_obj: Folder):
     total_used_size = cache.get(f"TOTAL_USED_SIZE:{request.user}")
     if not total_used_size:
         total_used_size = File.objects.filter(owner=request.user, inTrash=False, ready=True).aggregate(Sum('size'))['size__sum']
@@ -133,7 +133,7 @@ def fetch_additional_info(request, item_id):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_folder_and_permissions
-def get_breadcrumbs(request, folder_obj):
+def get_breadcrumbs(request, folder_obj: Folder):
     breadcrumbs = create_breadcrumbs(folder_obj)
     return JsonResponse(breadcrumbs, safe=False)
 
@@ -320,10 +320,23 @@ def check_password(request, resource_id):
 @permission_classes([IsAuthenticated & ReadPerms])
 @handle_common_errors
 @check_file_and_permissions
-def get_moments(request, file_obj):
+def get_moments(request, file_obj: File):
     moments = Moment.objects.filter(file=file_obj).all()
     moments_list = []
     for moment in moments:
         moments_list.append(create_moment_dict(moment))
 
     return JsonResponse(moments_list, safe=False)
+
+
+@api_view(['GET'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@handle_common_errors
+@check_file_and_permissions
+def get_tags(request, file_obj: File):
+    tags_list = []
+    for tag in file_obj.tags.all():
+        tags_list.append(tag.name)
+
+    return JsonResponse(tags_list, safe=False)
