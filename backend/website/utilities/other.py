@@ -18,6 +18,44 @@ from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, R
 
 signer = TimestampSigner()
 
+_SENTINEL = object()  # Unique object to detect omitted default
+
+
+def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
+    """Helper function to get attribute from either an object or a dictionary.
+    If `default` is not specified and the attribute is missing, raises AttributeError.
+    """
+    # Case 1: When the resource is a dictionary
+    if isinstance(resource, dict):
+        if default is _SENTINEL and attr not in resource:
+            raise AttributeError(f"Attribute '{attr}' not found in dictionary.")
+        return resource.get(attr, default if default is not _SENTINEL else None)
+
+    # Case 2: When the resource is a Django ORM object
+    try:
+        if '__' in attr:
+            attributes = attr.split('__')
+            value = resource
+            for attribute in attributes:
+                value = getattr(value, attribute, _SENTINEL)
+                if value is _SENTINEL or value is None:
+                    if default is _SENTINEL:
+                        raise AttributeError(f"Attribute '{attr}' not found in object.")
+                    return default
+            return value
+        else:
+            # Direct attribute (non-related)
+            value = getattr(resource, attr, _SENTINEL)
+            if value is _SENTINEL:
+                if default is _SENTINEL:
+                    raise AttributeError(f"Attribute '{attr}' not found in object.")
+                return default
+            return value
+    except AttributeError:
+        if default is _SENTINEL:
+            raise AttributeError(f"Attribute '{attr}' not found in object.")
+        return default
+
 
 def format_wait_time(seconds: int) -> str:
     if seconds >= 3600:  # More than or equal to 1 hour
@@ -86,17 +124,18 @@ def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[Li
 
 
 def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
-    folder_path = []
-
-    subfolders = folder_obj.get_ancestors(include_self=True)
-
-    for subfolder in subfolders:
-        if not subfolder.parent:
+    breadcrumbs = []
+    folder_obj.refresh_from_db()
+    ancestors = folder_obj.get_ancestors(include_self=True)
+    print(ancestors)
+    print(folder_obj.parent)
+    for ancestor in ancestors:
+        if not ancestor.parent:
             continue
-        data = {"name": subfolder.name, "id": subfolder.id}
-        folder_path.append(data)
+        data = {"name": ancestor.name, "id": ancestor.id}
+        breadcrumbs.append(data)
 
-    return folder_path
+    return breadcrumbs
 
 
 def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> List[Breadcrumbs]:
@@ -123,19 +162,13 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     if include_files:
         file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
             "parent", "videoposition", "thumbnail", "preview", "videometadata"
-        ).prefetch_related("tags").values(
-            "id", "name", "extension", "size", "type", "created_at", "last_modified_at",
-            "encryption_method", "inTrashSince", "duration", "parent__id", "parent__password",
-            "parent__lockFrom__id", "preview__iso", "preview__model_name", "preview__aperture",
-            "preview__exposure_time", "preview__focal_length", "thumbnail", "videoposition__timestamp",
-            "videometadata__id"
-        )
+        ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
 
     folder_children = []
     if include_folders:
         folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
 
-    file_dicts = [optimized_create_file_dict(file) for file in file_children]
+    file_dicts = [create_file_dict(file) for file in file_children]
     folder_dicts = [create_folder_dict(folder) for folder in folder_children]
 
     folder_dict = create_folder_dict(folder_obj)
@@ -144,113 +177,54 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     return folder_dict
 
 
-def create_file_dict(file_obj: File, hide=False) -> FileDict:
-    file_dict = {
-        'isDir': False,
-        'id': file_obj.id,
-        'name': file_obj.name,
-        'parent_id': file_obj.parent.id,
-        'extension': file_obj.extension,
-        'size': file_obj.size,
-        'type': file_obj.type,
-        'created': formatDate(file_obj.created_at),
-        'last_modified': formatDate(file_obj.last_modified_at),
-        'isLocked': file_obj.is_locked,
-        'encryption_method': file_obj.encryption_method
-
-    }
-    if file_obj.is_locked:
-        file_dict['lockFrom'] = file_obj.lockFrom.id
-
-    if file_obj.inTrashSince:
-        file_dict["in_trash_since"] = formatDate(file_obj.inTrashSince)
-    if file_obj.duration:
-        file_dict['duration'] = file_obj.duration
-
-    try:
-        file_dict["iso"] = file_obj.preview.iso
-        file_dict["model_name"] = file_obj.preview.model_name
-        file_dict["aperture"] = file_obj.preview.aperture
-        file_dict["exposure_time"] = file_obj.preview.exposure_time
-        file_dict["focal_length"] = file_obj.preview.focal_length
-
-    except Preview.DoesNotExist:
-        pass
-
-    file_dict["isVideoMetadata"] = hasattr(file_obj, "videometadata")
-
-    if not hide and not (file_obj.is_locked and file_obj.inTrash):
-        signed_file_id = sign_resource_id_with_expiry(file_obj.id)
-
-        if file_obj.extension in RAW_IMAGE_EXTENSIONS:
-            file_dict['preview_url'] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
-
-        download_url = f"{API_BASE_URL}/stream/{signed_file_id}"
-
-        file_dict['download_url'] = download_url
-
-        try:
-            if file_obj.thumbnail:
-                file_dict['thumbnail_url'] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
-        except Thumbnail.DoesNotExist:
-            pass
-
-        videoposition = getattr(file_obj, "videoposition", None)
-        if videoposition:
-            file_dict['video_position'] = videoposition.timestamp
-
-    return file_dict
-
-
-def optimized_create_file_dict(file_values, hide=False) -> FileDict:
+def create_file_dict(file_values, hide=False) -> FileDict:
     """Optimized version of create_file_dict that uses dict values instead of ORM objects"""
 
     file_dict = {
         "isDir": False,
-        "id": file_values["id"],
-        "name": file_values["name"],
-        "parent_id": file_values["parent__id"],
-        "extension": file_values["extension"],
-        "size": file_values["size"],
-        "type": file_values["type"],
-        "created": formatDate(file_values["created_at"]),
-        "last_modified": formatDate(file_values["last_modified_at"]),
-        "isLocked": True if file_values["parent__password"] else False,
-        "encryption_method": file_values["encryption_method"],
-        "isVideoMetadata": file_values["videometadata__id"] is not None,
+        "id": get_attr(file_values, "id"),
+        "name": get_attr(file_values, "name"),
+        "parent_id": get_attr(file_values, "parent_id"),
+        "extension": get_attr(file_values, "extension"),
+        "size": get_attr(file_values, "size"),
+        "type": get_attr(file_values, "type"),
+        "created": formatDate(get_attr(file_values, "created_at")),
+        "last_modified": formatDate(get_attr(file_values, "last_modified_at")),
+        "isLocked": get_attr(file_values, "is_locked"),
+        "encryption_method": get_attr(file_values, "encryption_method"),
+        "isVideoMetadata": get_attr(file_values, "videometadata__id", None) is not None,
     }
+    if get_attr(file_values, "is_locked"):
+        file_dict["lockFrom"] = get_attr(file_values, "lockFrom_id")
 
-    if file_values["parent__password"]:
-        file_dict["lockFrom"] = file_values["parent__lockFrom__id"]
+    if get_attr(file_values, "inTrashSince", None):
+        file_dict["in_trash_since"] = formatDate(get_attr(file_values, "inTrashSince"))
 
-    if file_values["inTrashSince"]:
-        file_dict["in_trash_since"] = formatDate(file_values["inTrashSince"])
+    if get_attr(file_values, "duration", None):
+        file_dict["duration"] = get_attr(file_values, "duration")
 
-    if file_values["duration"]:
-        file_dict["duration"] = file_values["duration"]
-
-    if file_values["preview__iso"]:
+    if get_attr(file_values, "preview__iso", None):
         file_dict.update({
-            "iso": file_values["preview__iso"],
-            "model_name": file_values["preview__model_name"],
-            "aperture": file_values["preview__aperture"],
-            "exposure_time": file_values["preview__exposure_time"],
-            "focal_length": file_values["preview__focal_length"],
+            "iso": get_attr(file_values, "preview__iso"),
+            "model_name": get_attr(file_values, "preview__model_name"),
+            "aperture": get_attr(file_values, "preview__aperture"),
+            "exposure_time": get_attr(file_values, "preview__exposure_time"),
+            "focal_length": get_attr(file_values, "preview__focal_length"),
         })
 
-    if not hide and not (file_values["parent__password"] and file_values["inTrashSince"]):
-        signed_file_id = sign_resource_id_with_expiry(file_values["id"])
+    if not hide and not (get_attr(file_values, "is_locked") and get_attr(file_values, "inTrash")):
+        signed_file_id = sign_resource_id_with_expiry(get_attr(file_values, "id"))
 
-        if file_values["extension"] in RAW_IMAGE_EXTENSIONS:
+        if get_attr(file_values, "extension") in RAW_IMAGE_EXTENSIONS:
             file_dict["preview_url"] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
 
         file_dict["download_url"] = f"{API_BASE_URL}/stream/{signed_file_id}"
 
-        if file_values["thumbnail"]:
+        if get_attr(file_values, "thumbnail", None):
             file_dict["thumbnail_url"] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
 
-        if file_values["videoposition__timestamp"]:
-            file_dict["video_position"] = file_values["videoposition__timestamp"]
+        if get_attr(file_values, "videoposition__timestamp", None):
+            file_dict["video_position"] = get_attr(file_values, "videoposition__timestamp")
 
     return file_dict
 
@@ -301,9 +275,10 @@ def create_share_dict(share: ShareableLink) -> ShareDict:
 
 
 def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDict, FolderDict]) -> Dict:
-    # hide lockFrom info
+    """hide info from share context and apply lockFrom if share is locked"""
     del resource_dict['isLocked']
     try:
+        del resource_dict['video_position']
         del resource_dict['lockFrom']
     except KeyError:
         pass
@@ -318,24 +293,23 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
     if isinstance(resource_in_share, Folder):
         resource_dict = create_folder_dict(resource_in_share)
     else:
-        resource_dict = create_file_dict(resource_in_share, hide=True)
-        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{resource_in_share.id}"
-        thumbnail = Thumbnail.objects.filter(file=resource_in_share)
+        resource_dict = create_file_dict(resource_in_share)
+        rsc_id = get_attr(resource_in_share, "id")
+        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{rsc_id}"
 
-        if thumbnail.exists():
-            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{resource_in_share.id}"
-        if resource_in_share.extension in (
-                '.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2'):
-            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{resource_in_share.id}"
+        if resource_dict.get("thumbnail_url"):
+            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{rsc_id}"
+
+        if resource_dict.get("preview_url"):
+            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{rsc_id}"
 
     return hide_info_in_share_context(share, resource_dict)
 
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
-    children = []
-    file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
-        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
-    children.extend(file_children)
+    children = list(folder_obj.files.filter(ready=True, inTrash=False).select_related(
+        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
+
     if include_folders:
         folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
         children.extend(folder_children)
@@ -381,41 +355,51 @@ def get_resource(obj_id: str) -> Resource:
     return item
 
 
-def check_resource_perms(request, resource: Resource, checkOwnership=True, checkRoot=True, checkFolderLock=True, checkTrash=False, checkReady=True) -> None:
+def check_resource_perms(request, resource: Union[Resource, dict], checkOwnership=True, checkRoot=True, checkFolderLock=True, checkTrash=False, checkReady=True) -> None:
     if checkOwnership:
-        if resource.owner != request.user:
+        owner_id = get_attr(resource, 'owner_id')
+        if owner_id != request.user.id:
             raise ResourcePermissionError("You have no access to this resource!")
 
     if checkFolderLock:
         check_folder_password(request, resource)
 
     if checkRoot:
-        if isinstance(resource, Folder) and not resource.parent:
+        if get_attr(resource, 'parent_id', None) is None:
             raise RootPermissionError()
 
     if checkTrash:
-        if resource.inTrash:
+        if get_attr(resource, 'inTrash', False):
             raise ResourcePermissionError("Cannot access resource in trash!")
 
     if checkReady:
-        if not resource.ready:
+        if not get_attr(resource, 'ready', True):
             raise ResourceNotFoundError("Resource is not ready")
 
 
-def check_folder_password(request, resource: Resource) -> None:
+def check_folder_password(request, resource: Union[Resource, dict]) -> None:
+    """Check if the correct password is provided for a locked resource."""
     password = request.headers.get("X-Resource-Password")
     if password:
         password = unquote(password)
+
     passwords = request.data.get('resourcePasswords')
-    if resource.is_locked:
+
+    is_locked = get_attr(resource, 'is_locked')
+
+    resource_password = get_attr(resource, 'password', None)
+    lock_from = get_attr(resource, 'lockFrom', None)
+
+    if is_locked:
         if password:
-            if resource.password != password:
-                raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
+            if resource_password != password:
+                raise MissingOrIncorrectResourcePasswordError([lock_from])
         elif passwords:
-            if resource.lockFrom and resource.password != passwords.get(resource.lockFrom.id):
-                raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
+            lock_from_id = get_attr(lock_from, 'id') if isinstance(lock_from, dict) else getattr(lock_from, 'id', None)
+            if lock_from and resource_password != passwords.get(lock_from_id):
+                raise MissingOrIncorrectResourcePasswordError([lock_from])
         else:
-            raise MissingOrIncorrectResourcePasswordError([resource.lockFrom])
+            raise MissingOrIncorrectResourcePasswordError([lock_from])
 
 
 def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:

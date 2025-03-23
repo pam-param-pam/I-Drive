@@ -1,4 +1,3 @@
-from django.core import serializers
 from django.core.exceptions import FieldError
 from django.db.models.aggregates import Sum
 from django.db.models.query_utils import Q
@@ -9,7 +8,7 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Tag
+from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
@@ -279,19 +278,14 @@ def search(request):
 @handle_common_errors
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
-        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags")
+        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
+
     folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
 
-    trash_items = []
-    for file in files:
-        file_dict = create_file_dict(file)
-        trash_items.append(file_dict)
+    file_dicts = [create_file_dict(file) for file in files]
+    folder_dicts = [create_folder_dict(folder) for folder in folders]
 
-    for folder in folders:
-        folder_dict = create_folder_dict(folder)
-        trash_items.append(folder_dict)
-
-    return JsonResponse({"trash": trash_items})
+    return JsonResponse({"trash": file_dicts + folder_dicts})
 
 
 @api_view(['GET'])

@@ -34,7 +34,7 @@
         />
         <action
           v-if="perms?.modify && !isInShareContext"
-          :disabled="loading || error404"
+          :disabled="loading || error"
           :label="$t('buttons.rename')"
           icon="mode_edit"
           @action="rename()"
@@ -42,20 +42,20 @@
         <action
           v-if="perms?.delete && !isInShareContext"
           id="delete-button"
-          :disabled="loading || error404"
+          :disabled="loading || error"
           :label="$t('buttons.moveToTrash')"
           icon="delete"
           @action="moveToTrash"
         />
         <action
           v-if="perms?.download || isInShareContext"
-          :disabled="loading || error404"
+          :disabled="loading || error"
           :label="$t('buttons.download')"
           icon="file_download"
           @action="download"
         />
         <action
-          :disabled="loading || error404"
+          :disabled="loading || error"
           :label="$t('buttons.info')"
           icon="info"
           show="info" />
@@ -143,11 +143,21 @@
             </a>
           </div>
         </div>
-        <div v-else-if="error404" class="info">
-          <div class="title">
+        <div v-else-if="error" class="info">
+
+          <div v-if="error.status === 400" class="title">
             <i class="material-icons">feedback</i>
             {{ $t("errors.resourceNotFound") }}
           </div>
+          <div v-else-if="error.status === 469" class="title">
+            <i class="material-icons">block</i>
+            {{ $t("errors.folderPasswordRequired") }}
+          </div>
+          <div v-else class="title">
+            <i class="material-icons">error_outline</i>
+            {{ $t("errors.unknownError") }}
+          </div>
+          
           <div>
             <a class="button button--flat">
               <div>
@@ -225,7 +235,6 @@ export default {
          navTimeout: null,
          hoverNav: false,
          autoPlay: true,
-         error404: false,
 
          //epub reader data
          bookLocation: null,
@@ -245,7 +254,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
+      ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
 
       isEpub() {
          if (!this.file) return false
@@ -350,11 +359,9 @@ export default {
                   }
                }
             } catch (error) {
+               console.log("ERROR HAPPEND")
                if (error.code === "ERR_CANCELED") return
                this.setError(error)
-               if (error.status === 404) {
-                  this.error404 = true
-               }
             } finally {
                this.setLoading(false)
             }

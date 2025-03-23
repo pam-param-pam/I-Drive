@@ -13,7 +13,7 @@ from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
 from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists, \
-    delete_single_discord_attachment, get_discord_author, create_moment_dict
+    delete_single_discord_attachment, get_discord_author, create_moment_dict, get_attr
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -53,6 +53,7 @@ def move(request):
     ids = request.data['ids']
     new_parent_id = request.data['new_parent_id']
 
+    # Fetch the new parent details
     new_parent = get_folder(new_parent_id)
     check_resource_perms(request, new_parent, checkRoot=False)
 
@@ -63,22 +64,21 @@ def move(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).select_related("parent")
-    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
-    items: list[Union[File, Folder]] = list(files) + list(folders)
+    files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
+    folders_data = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
-    for item in items:
-
+    for item in files_data + folders_data:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
             # check if folder id is in list of tuples
-            if item.lockFrom and item.lockFrom not in required_folder_passwords:
-                required_folder_passwords.append(item.lockFrom)
+            lock_from_id = get_attr(item, 'lockFrom_id', None)
+            if lock_from_id and lock_from_id not in required_folder_passwords:
+                required_folder_passwords.append(lock_from_id)
 
-        if item == new_parent or item.parent == new_parent:
+        if get_attr(item, 'id') == new_parent_id or get_attr(item, 'parent_id') == new_parent_id:
             raise BadRequestError("errors.InvalidMove")
 
     if len(required_folder_passwords) > 0:
@@ -87,7 +87,6 @@ def move(request):
     move_task.delay(request.user.id, request.request_id, ids, new_parent_id)
 
     return JsonResponse(build_response(request.request_id, "Moving items..."))
-
 
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -103,26 +102,22 @@ def move_to_trash(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).select_related("parent")
-    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
+    files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
+    folders_data = list(Folder.objects.filter(id__in=ids))
 
-    # Combine and check permissions in bulk
-    items: list[Union[File, Folder]] = list(files) + list(folders)
     required_folder_passwords = []
-    for item in items:
+    for item in files_data + folders_data:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
             # check if folder id is in list of tuples
-            if item.lockFrom and item.lockFrom not in required_folder_passwords:
-                required_folder_passwords.append(item.lockFrom)
+            lock_from_id = get_attr(item, 'lockFrom_id', None)
+            if lock_from_id and lock_from_id not in required_folder_passwords:
+                required_folder_passwords.append(lock_from_id)
 
-        if item.inTrash:
+        if get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
-
-        if isinstance(item, Folder) and not item.parent:
-            raise RootPermissionError()
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
@@ -146,23 +141,22 @@ def restore_from_trash(request):
     if len(ids) > 10000:
         raise BadRequestError("'ids' length cannot > 10000.")
 
-    files = File.objects.filter(id__in=ids).select_related("parent")
-    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
+    files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
+    folders_data = list(Folder.objects.filter(id__in=ids))
 
-    # Combine and check permissions in bulk
-    items: list[Union[File, Folder]] = list(files) + list(folders)
     required_folder_passwords = []
-    for item in items:
+    for item in files_data + folders_data:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
             # check if folder id is in list of tuples
-            if item.lockFrom and item.lockFrom not in required_folder_passwords:
-                required_folder_passwords.append(item.lockFrom)
+            lock_from_id = get_attr(item, 'lockFrom_id', None)
+            if lock_from_id and lock_from_id not in required_folder_passwords:
+                required_folder_passwords.append(lock_from_id)
 
-        if not item.inTrash:
-            raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
+        if not get_attr(item, 'inTrash'):
+            raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)

@@ -9,6 +9,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Case, Value, BooleanField, When, F
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -188,6 +189,26 @@ class File(models.Model):
     history = HistoricalRecords()
     frontend_id = models.CharField(max_length=40, unique=True)
     crc = models.BigIntegerField()
+
+    STANDARD_VALUES = ("id", "name", "type", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "password", "is_dir")
+
+    DISPLAY_VALUES = STANDARD_VALUES + (
+        "extension", "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
+        "duration", "parent__id", "preview__iso", "preview__model_name",
+        "preview__aperture", "preview__exposure_time", "preview__focal_length",
+        "thumbnail", "videoposition__timestamp", "videometadata__id"
+    )
+
+    LOCK_FROM_ANNOTATE = {
+        "is_locked": Case(
+            When(parent__password__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+        "lockFrom_id": F("parent__lockFrom__id"),
+        "password": F("parent__password"),
+        "is_dir": Value(False, output_field=BooleanField())
+    }
 
     def _is_locked(self):
         if self.parent._is_locked():

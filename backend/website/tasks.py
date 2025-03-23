@@ -4,13 +4,12 @@ import traceback
 from collections import defaultdict
 from datetime import timezone, timedelta, datetime
 
-from typing import Union
-
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.utils import timezone
 
 from .celery import app
@@ -173,52 +172,103 @@ def prefetch_discord_message(message_id, attachment_id):
     discord.get_file_url(message_id, attachment_id)
 
 
+def move_group(grouped_items, new_parent, new_parent_id, user_id, request_id, processed_count, last_percentage, total_length, item_dicts_batch, is_folder):
+    from .utilities.other import create_file_dict, create_folder_dict, send_event  # circular error aah
+
+    if is_folder:
+        model = Folder
+    else:
+        model = File
+
+    BATCH_SIZE = 250
+
+    for parent_id, item_group in grouped_items.items():
+        try:
+            # Perform one normal move on first item to trigger checks & on_save()
+            first_item = item_group.pop(0)
+            first_item.parent = new_parent
+            first_item.save()
+            item_dicts_batch.append({'item': create_folder_dict(first_item) if is_folder else create_file_dict(first_item), 'old_parent_id': parent_id, 'new_parent_id': new_parent_id})
+
+            while item_group:
+                batch = item_group[:BATCH_SIZE]  # Take first batch
+                item_group = item_group[BATCH_SIZE:]  # Remove taken batch
+
+                # Prepare remaining items for bulk update
+                for item in batch:
+                    item.parent = new_parent
+                    item.last_modified_at = timezone.now()
+                    if is_folder:
+                        item.save()
+
+                # Bulk update the batch only if it's a file batch (bulk update messes up MPTT structure I think)
+                if batch and not is_folder:
+                    with transaction.atomic():
+                        model.objects.bulk_update(batch, ['parent', 'last_modified_at'])
+
+                # Create event data & invalidate cache
+                for item in batch:
+                    item_dict = create_folder_dict(item) if is_folder else create_file_dict(item)
+                    item_dicts_batch.append({'item': item_dict, 'old_parent_id': parent_id, 'new_parent_id': new_parent_id})
+
+                # Update progress
+                processed_count += len(batch) + 1  # First item + bulk updated items
+                percentage = round(processed_count / total_length * 100)
+                if percentage != last_percentage:
+                    send_message(message="toasts.itemsAreBeingMoved", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+                    last_percentage = percentage
+
+                # Send batched events
+                send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
+                item_dicts_batch = []
+
+        except Exception as e:
+            print("UNKNOWN ERROR")
+            traceback.print_exc()
+            send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
+            return processed_count, last_percentage
+
+    return processed_count, last_percentage
+
+
 @app.task
 def move_task(user_id, request_id, ids, new_parent_id):
-    from .utilities.other import create_file_dict, send_event, create_folder_dict, get_folder  # circular error aah
+    from .utilities.other import get_folder  # circular error aah
 
     files = File.objects.filter(id__in=ids).select_related("parent")
-
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
-    items: list[Union[File, Folder]] = list(files) + list(folders)
-
-    total_length = len(items)
+    total_length = len(files) + len(folders)
 
     new_parent = get_folder(new_parent_id)
     # invalidate any cache
     new_parent.remove_cache()
 
+    # Group items by their current parent
+    grouped_files = defaultdict(list)
+    grouped_folders = defaultdict(list)
+
+    for file in files:
+        grouped_files[file.parent.id if file.parent else None].append(file)
+
+    for folder in folders:
+        grouped_folders[folder.parent.id if folder.parent else None].append(folder)
+
     item_dicts_batch = []
     last_percentage = 0
-    for index, item in enumerate(items):
-        try:
-            if isinstance(item, Folder):
-                item_dict = create_folder_dict(item)
-            else:
-                item_dict = create_file_dict(item)
+    processed_count = 0
 
-            item_dicts_batch.append({'item': item_dict, 'old_parent_id': item.parent.id, 'new_parent_id': new_parent_id})
+    # Process files
+    processed_count, last_percentage = move_group(
+        grouped_files, new_parent, new_parent_id, user_id, request_id,
+        processed_count, last_percentage, total_length, item_dicts_batch, is_folder=False
+    )
 
-            item.parent = new_parent
-            item.last_modified_at = timezone.now()
-            item.save()
+    # Process folders
+    move_group(
+        grouped_folders, new_parent, new_parent_id, user_id, request_id,
+        processed_count, last_percentage, total_length, item_dicts_batch, is_folder=True
+    )
 
-            percentage = round((index + 1) / total_length * 100)
-            if percentage != last_percentage:
-                send_message(message="toasts.itemsAreBeingMoved", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
-                last_percentage = percentage
-
-            if len(item_dicts_batch) == 50:
-                send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
-                item_dicts_batch = []
-        except Exception as e:
-            print("UNKNOWN ERROR")
-            traceback.print_exc()
-            send_message(message=str(e), args=None, finished=False, user_id=user_id, request_id=request_id, isError=True)
-            return
-
-    if item_dicts_batch:
-        send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
     send_message(message="toasts.movedItems", args=None, finished=True, user_id=user_id, request_id=request_id)
 
 
@@ -373,6 +423,7 @@ def delete_dangling_discord_files(days=2):
         except Exception as e:
             discord.send_message(user, f"Failed to delete dangling attachments for user: {user}.\n{str(e)}")
             discord.send_message(user, f"```{str(traceback.print_exc())}```")
+
 
 @app.task
 def delete_files_from_trash():

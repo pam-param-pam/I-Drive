@@ -237,7 +237,10 @@ backendInstance.interceptors.response.use(
                         retry469Request(config)
                            .then(resolve)
                            .catch(reject)
-                     }
+                     },
+                     cancel: () => {
+                        reject(error)
+                     },
                   })
                })
             } else {

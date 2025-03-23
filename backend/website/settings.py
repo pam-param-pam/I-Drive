@@ -59,12 +59,13 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    "django.middleware.gzip.GZipMiddleware",
 
 ]
 CORS_ALLOW_HEADERS = "*"

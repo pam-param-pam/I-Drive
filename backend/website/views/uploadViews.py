@@ -208,7 +208,7 @@ def create_file(request):
             raise BadRequestError("Fragments > 1")
 
         fragment = fragments[0]
-        delete_single_discord_attachment(request.user, fragment.attachment)
+        delete_single_discord_attachment(request.user, fragment)
         fragment.delete()
 
         Fragment.objects.create(

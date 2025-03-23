@@ -85,8 +85,13 @@ export default {
       }, 1000),
 
       cancel() {
-         if (this.loading) this.setError({ response: { status: 469 } })
+         // if (this.loading) this.setError({ response: { status: 469 } })
          this.$toast.error(this.$t('toasts.passwordIsRequired'))
+
+         // Call the callback supplied during showHover()
+         if (this.currentPrompt && typeof this.currentPrompt.cancel === "function") {
+            this.currentPrompt.cancel()
+         }
 
          this.closeHover()
       },

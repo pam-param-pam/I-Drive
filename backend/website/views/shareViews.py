@@ -102,13 +102,13 @@ def view_share(request, token, folder_id=None):
 
     if share.content_type.name == "folder":
         obj_in_share = get_folder(share.object_id)
-        response_dict = create_share_resource_dict(share, obj_in_share)
         breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
 
     else:
         obj_in_share = get_file(share.object_id)
-        response_dict = create_share_resource_dict(share, obj_in_share)
         breadcrumbs = []
+
+    response_dict = create_share_resource_dict(share, obj_in_share)
 
     # hide parent_id since upper parent is not shared
     del response_dict["parent_id"]
