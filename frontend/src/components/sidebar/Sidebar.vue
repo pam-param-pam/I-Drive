@@ -155,16 +155,14 @@ export default {
       async sortedItems() {
          await this.fetchUsage()
       },
-
    },
-
    methods: {
       isMobile,
       filesize,
       ...mapActions(useMainStore, ['closeHover', 'showHover']),
 
       async fetchUsage() {
-         if (this.currentFolder && this.$route.name === 'Files') {
+         if (this.currentFolder && (this.$route.name === 'Files' || this.$route.name === 'Preview')) {
             if (!this.searchActive) {
                let usage = await getUsage(this.currentFolder?.id, this.currentFolder?.lockFrom)
                this.usage = {

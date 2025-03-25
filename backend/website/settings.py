@@ -65,7 +65,7 @@ MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    "django.middleware.gzip.GZipMiddleware",
+    'django.middleware.gzip.GZipMiddleware',
 
 ]
 CORS_ALLOW_HEADERS = "*"

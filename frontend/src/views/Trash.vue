@@ -35,18 +35,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, [
-         'error',
-         'items',
-         'selected',
-         'perms',
-         'loading',
-         'currentFolder',
-         'disabledCreation',
-         'selectedCount',
-         'setSearchActive',
-         'setSearchItems'
-      ]),
+      ...mapState(useMainStore, ['error', 'items', 'selected', 'perms', 'loading', 'currentFolder', 'disabledCreation', 'selectedCount', 'setSearchActive', 'setSearchItems']),
       headerButtons() {
          return {
             shell: this.perms.execute,
@@ -61,10 +50,6 @@ export default {
       this.isActive = false
    },
 
-   watch: {
-      $route: 'fetchFolder'
-   },
-
    mounted() {
       this.setItems(null)
       this.setCurrentFolder(null)
@@ -75,16 +60,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'addSelected',
-         'resetSelected',
-         'setLoading',
-         'setError',
-         'setDisabledCreation',
-         'setItems',
-         'setCurrentFolder',
-         'showHover'
-      ]),
+      ...mapActions(useMainStore, ['addSelected', 'resetSelected', 'setLoading', 'setError', 'setDisabledCreation', 'setItems', 'setCurrentFolder', 'showHover']),
 
       async fetchFolder() {
          document.title = this.$t('trash.trashName') + ' - ' + name

@@ -1,4 +1,3 @@
-import json
 import os
 import traceback
 from functools import wraps
@@ -17,6 +16,15 @@ from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, B
 from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
+
+def no_gzip(view_func):
+    """Decorator to prevent GZipMiddleware from compressing the response."""
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        request.META["HTTP_ACCEPT_ENCODING"] = "identity"
+        response = view_func(request, *args, **kwargs)
+        return response
+    return wrapped_view
 
 
 def check_signed_url(view_func):

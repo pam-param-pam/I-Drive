@@ -25,12 +25,11 @@ from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache, MAX_MEDIA_CACHE_AGE
-from ..utilities.decorators import handle_common_errors, check_file, check_signed_url
+from ..utilities.decorators import handle_common_errors, check_file, check_signed_url, no_gzip
 from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
-
 
 @cache_page(60 * 60 * 24)
 @api_view(['GET'])
@@ -150,7 +149,6 @@ def get_preview(request, file_obj: File):
         pass
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
-
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @handle_common_errors
@@ -181,7 +179,7 @@ def get_thumbnail(request, file_obj: File):
     response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
     return response
 
-# @cache_page(60 * 60 * 24 * 30)
+@cache_page(60 * 60 * 24 * 30)
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @handle_common_errors
@@ -206,6 +204,7 @@ def stream_moment(request, file_obj: File, timestamp):
     return response
 
 # todo  handle >416 Requested Range Not Satisfiable<
+@no_gzip
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
@@ -236,7 +235,6 @@ def stream_file(request, file_obj: File):
         return response
 
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192 * 16):
-        print(real_start_byte)
         async with aiohttp.ClientSession() as session:
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
 
@@ -335,6 +333,7 @@ def stream_file(request, file_obj: File):
 
     return response
 
+@no_gzip
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
