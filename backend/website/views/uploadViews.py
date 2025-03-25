@@ -26,7 +26,7 @@ from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 @handle_common_errors
 def create_file(request):
     check_if_bots_exists(request.user)
-
+    # return HttpResponse(status=500)
     if request.method == "POST":
         files = request.data['files']
         if not isinstance(files, list):

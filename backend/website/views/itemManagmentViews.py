@@ -11,9 +11,9 @@ from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, l
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
-from ..utilities.errors import BadRequestError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
+from ..utilities.errors import BadRequestError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists, \
-    delete_single_discord_attachment, get_discord_author, create_moment_dict, get_attr
+    delete_single_discord_attachment, get_discord_author, create_moment_dict, get_attr, validate_ids_as_list
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -30,11 +30,8 @@ def create_folder(request):
 
     if name == "":
         raise BadRequestError("Folder name cannot be empty")
-    folder_obj = Folder(
-        name=name,
-        parent=parent,
-        owner=request.user,
-    )
+    folder_obj = Folder(name=name, parent=parent, owner=request.user)
+
     #  apply lock if needed
     if parent.is_locked:
         folder_obj.applyLock(parent.lockFrom, parent.password)
@@ -50,19 +47,15 @@ def create_folder(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move(request):
+    """This view uses values instead of ORM objects for files"""
     ids = request.data['ids']
+    validate_ids_as_list(ids, max_length=10000)
+
     new_parent_id = request.data['new_parent_id']
 
     # Fetch the new parent details
     new_parent = get_folder(new_parent_id)
     check_resource_perms(request, new_parent, checkRoot=False)
-
-    if not isinstance(ids, list):
-        raise BadRequestError("'ids' must be a list.")
-    if len(ids) == 0:
-        raise BadRequestError("'ids' length cannot be 0.")
-    if len(ids) > 10000:
-        raise BadRequestError("'ids' length cannot > 10000.")
 
     files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
     folders_data = list(Folder.objects.filter(id__in=ids))
@@ -73,10 +66,11 @@ def move(request):
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if folder id is in list of tuples
-            lock_from_id = get_attr(item, 'lockFrom_id', None)
-            if lock_from_id and lock_from_id not in required_folder_passwords:
-                required_folder_passwords.append(lock_from_id)
+            # check if lockFrom_id is in list of tuples and add it if needed
+            lockFrom_id = get_attr(item, 'lockFrom_id')
+            lockFrom_name = get_attr(item, 'lockFrom__name')
+            if lockFrom_id not in required_folder_passwords:
+                required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
 
         if get_attr(item, 'id') == new_parent_id or get_attr(item, 'parent_id') == new_parent_id:
             raise BadRequestError("errors.InvalidMove")
@@ -88,33 +82,31 @@ def move(request):
 
     return JsonResponse(build_response(request.request_id, "Moving items..."))
 
+
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def move_to_trash(request):
-    ids = request.data['ids']
+    """This view uses values instead of ORM objects for files"""
 
-    if not isinstance(ids, list):
-        raise BadRequestError("'ids' must be a list.")
-    if len(ids) == 0:
-        raise BadRequestError("'ids' length cannot be 0.")
-    if len(ids) > 10000:
-        raise BadRequestError("'ids' length cannot > 10000.")
+    ids = request.data['ids']
+    validate_ids_as_list(ids, max_length=10000)
 
     files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
-    folders_data = list(Folder.objects.filter(id__in=ids))
+    folders = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
-    for item in files_data + folders_data:
+    for item in files_data + folders:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if folder id is in list of tuples
-            lock_from_id = get_attr(item, 'lockFrom_id', None)
-            if lock_from_id and lock_from_id not in required_folder_passwords:
-                required_folder_passwords.append(lock_from_id)
+            # check if lockFrom_id is in list of tuples and add it if needed
+            lockFrom_id = get_attr(item, 'lockFrom_id')
+            lockFrom_name = get_attr(item, 'lockFrom__name')
+            if lockFrom_id not in required_folder_passwords:
+                required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
 
         if get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
@@ -132,28 +124,25 @@ def move_to_trash(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @handle_common_errors
 def restore_from_trash(request):
-    ids = request.data['ids']
+    """This view uses values instead of ORM objects for files"""
 
-    if not isinstance(ids, list):
-        raise BadRequestError("'ids' must be a list.")
-    if len(ids) == 0:
-        raise BadRequestError("'ids' length cannot be 0.")
-    if len(ids) > 10000:
-        raise BadRequestError("'ids' length cannot > 10000.")
+    ids = request.data['ids']
+    validate_ids_as_list(ids, max_length=10000)
 
     files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
-    folders_data = list(Folder.objects.filter(id__in=ids))
+    folders = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
-    for item in files_data + folders_data:
+    for item in files_data + folders:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if folder id is in list of tuples
-            lock_from_id = get_attr(item, 'lockFrom_id', None)
-            if lock_from_id and lock_from_id not in required_folder_passwords:
-                required_folder_passwords.append(lock_from_id)
+            # check if lockFrom_id is in list of tuples and add it if needed
+            lockFrom_id = get_attr(item, 'lockFrom_id')
+            lockFrom_name = get_attr(item, 'lockFrom__name')
+            if lockFrom_id not in required_folder_passwords:
+                required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
 
         if not get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
@@ -171,35 +160,28 @@ def restore_from_trash(request):
 @permission_classes([IsAuthenticated & DeletePerms])
 @handle_common_errors
 def delete(request):
+    """This view uses values instead of ORM objects for files"""
     ids = request.data['ids']
 
-    if not isinstance(ids, list):
-        raise BadRequestError("'ids' must be a list.")
-    if len(ids) == 0:
-        raise BadRequestError("'ids' length cannot be 0.")
-    if len(ids) > 10000:
-        raise BadRequestError("'ids' length cannot > 10000.")
-
+    validate_ids_as_list(ids, max_length=10000)
     check_if_bots_exists(request.user)
 
-    files = File.objects.filter(id__in=ids).select_related("parent")
-    folders = Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom")
-
-    # Combine and check permissions in bulk
-    items: list[Union[File, Folder]] = list(files) + list(folders)
+    files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
+    folders = list(Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom"))
 
     required_folder_passwords = []
-    for item in items:
-
+    for item in files_data + folders:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if folder id is in list of tuples
-            if item.lockFrom and item.lockFrom not in required_folder_passwords:
-                required_folder_passwords.append(item.lockFrom)
+            # check if lockFrom_id is in list of tuples and add it if needed
+            lockFrom_id = get_attr(item, 'lockFrom_id')
+            lockFrom_name = get_attr(item, 'lockFrom__name')
+            if lockFrom_id not in required_folder_passwords:
+                required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
 
-        if not item.ready:
+        if not get_attr(item, 'ready'):
             raise BadRequestError("Cannot delete. At least one item is not ready.")
 
     if len(required_folder_passwords) > 0:

@@ -13,7 +13,7 @@ from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_dict, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, \
-    build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, get_file
+    build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, get_file, validate_ids_as_list
 from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle
 
 
@@ -136,10 +136,8 @@ def view_share(request, token, folder_id=None):
 def create_share_zip_model(request, token):
     ids = request.data['ids']
 
-    if not isinstance(ids, list):
-        raise BadRequestError("'ids' must be a list.")
-    if len(ids) == 0:
-        raise BadRequestError("'ids' length cannot be 0.")
+    validate_ids_as_list(ids)
+
     user_zip = UserZIP.objects.create(owner=request.user)
 
     share = get_share(request, token)

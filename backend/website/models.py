@@ -190,7 +190,7 @@ class File(models.Model):
     frontend_id = models.CharField(max_length=40, unique=True)
     crc = models.BigIntegerField()
 
-    STANDARD_VALUES = ("id", "name", "type", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "password", "is_dir")
+    STANDARD_VALUES = ("id", "name", "type", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
 
     DISPLAY_VALUES = STANDARD_VALUES + (
         "extension", "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
@@ -206,6 +206,7 @@ class File(models.Model):
             output_field=BooleanField()
         ),
         "lockFrom_id": F("parent__lockFrom__id"),
+        "lockFrom__name": F("parent__lockFrom__name"),
         "password": F("parent__password"),
         "is_dir": Value(False, output_field=BooleanField())
     }
@@ -218,12 +219,20 @@ class File(models.Model):
     def _lockFrom(self):
         return self.parent.lockFrom
 
+    def _lockFrom_id(self):
+        return self.parent.lockFrom.id
+
+    def _lockFrom__name(self):
+        return self.parent.lockFrom.name
+
     def _password(self):
         return self.parent.password
 
     is_locked = property(_is_locked)
     password = property(_password)
     lockFrom = property(_lockFrom)
+    lockFrom_id = property(_lockFrom_id)
+    lockFrom__name = property(_lockFrom__name)
 
     def save(self, *args, **kwargs):
         self.name = chop_long_file_name(self.name)

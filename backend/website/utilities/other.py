@@ -384,22 +384,21 @@ def check_folder_password(request, resource: Union[Resource, dict]) -> None:
         password = unquote(password)
 
     passwords = request.data.get('resourcePasswords')
-
     is_locked = get_attr(resource, 'is_locked')
 
-    resource_password = get_attr(resource, 'password', None)
-    lock_from = get_attr(resource, 'lockFrom', None)
-
     if is_locked:
+        resource_password = get_attr(resource, 'password')
+        lockFrom_id = get_attr(resource, 'lockFrom_id')
+        lockFrom_name = get_attr(resource, 'lockFrom__name')
+
         if password:
             if resource_password != password:
-                raise MissingOrIncorrectResourcePasswordError([lock_from])
+                raise MissingOrIncorrectResourcePasswordError([{"id": lockFrom_id, "name": lockFrom_name}])
         elif passwords:
-            lock_from_id = get_attr(lock_from, 'id') if isinstance(lock_from, dict) else getattr(lock_from, 'id', None)
-            if lock_from and resource_password != passwords.get(lock_from_id):
-                raise MissingOrIncorrectResourcePasswordError([lock_from])
+            if is_locked and resource_password != passwords.get(lockFrom_id):
+                raise MissingOrIncorrectResourcePasswordError([{"id": lockFrom_id, "name": lockFrom_name}])
         else:
-            raise MissingOrIncorrectResourcePasswordError([lock_from])
+            raise MissingOrIncorrectResourcePasswordError([{"id": lockFrom_id, "name": lockFrom_name}])
 
 
 def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
@@ -722,3 +721,12 @@ def create_video_metadata(file: File, metadata: dict) -> None:
     create_tracks(metadata, "video_tracks", VideoTrack, video_metadata)
     create_tracks(metadata, "audio_tracks", AudioTrack, video_metadata)
     create_tracks(metadata, "subtitle_tracks", SubtitleTrack, video_metadata)
+
+
+def validate_ids_as_list(ids, max_length=1000):
+    if not isinstance(ids, list):
+        raise BadRequestError("'ids' must be a list.")
+    if len(ids) == 0:
+        raise BadRequestError("'ids' length cannot be 0.")
+    if len(ids) > max_length:
+        raise BadRequestError("'ids' length cannot > 10000.")

@@ -13,7 +13,7 @@ from rest_framework.exceptions import Throttled
 from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview, Moment, VideoMetadata, Tag
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
-from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder
+from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder, get_attr
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
@@ -135,7 +135,8 @@ def handle_common_errors(view_func):
             json_error = build_http_error_response(code=469, error="errors.missingOrIncorrectResourcePassword", details=str(e))
             list_of_dicts = []
             for folder in e.requiredPasswords:
-                list_of_dicts.append({"id": folder.id, "name": folder.name})
+                print(folder)
+                list_of_dicts.append({"id": get_attr(folder, "id"), "name": get_attr(folder, "name")})
             json_error["requiredFolderPasswords"] = list_of_dicts
 
             return JsonResponse(json_error, status=469)

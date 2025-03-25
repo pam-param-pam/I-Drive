@@ -71,7 +71,6 @@ def get_dirs(request, folder_obj: Folder):
 # @last_modified(last_modified_func)
 def get_file_info(request, file_obj: File):
     file_content = create_file_dict(file_obj)
-
     return JsonResponse(file_content)
 
 

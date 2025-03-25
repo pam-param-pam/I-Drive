@@ -409,8 +409,16 @@ export const useUploadStore = defineStore("upload2", {
             totalSize += finishedFile.size
          }
          if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
-            createFile({ "files": this.finishedFiles }, fileObj.parentPassword)
+            let finishedFiles = this.finishedFiles
             this.finishedFiles = []
+            createFile({ "files": finishedFiles }, fileObj.parentPassword).catch((error) => {
+               // for (let file of finishedFiles) {
+               //    this.filesUploading.push(file.fileObj)
+               //    this.setStatus(file.frontendId, fileUploadStatus.failed)
+               // }
+               //todo HANDLE THIS OMFG
+            })
+
          }
       }
    }

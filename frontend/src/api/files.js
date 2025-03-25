@@ -39,9 +39,17 @@ export async function editFile(data) {
 
 }
 
-export async function updateVideoPosition(data) {
+export async function updateVideoPosition(data, lockFrom) {
    let url = `/file/video/position`
-   let response = await backendInstance.post(url, data)
+
+   const store = useMainStore()
+   let password = store.getFolderPassword(lockFrom)
+
+   let response = await backendInstance.post(url, data, {
+      headers: {
+         "x-resource-password": password
+      }
+   })
    return response.data
 
 }

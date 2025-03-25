@@ -559,7 +559,7 @@ export default {
          // To prevent sending too many requests, send only if the position has changed significantly
          if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
             // Adjust the interval as needed (e.g., every 1 second)
-            updateVideoPosition({ file_id: this.file.id, position: position })
+            updateVideoPosition({ file_id: this.file.id, position: position }, this.file.lockFrom)
 
             this.lastSentVideoPosition = position
          }
