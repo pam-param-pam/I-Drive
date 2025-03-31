@@ -183,8 +183,10 @@ export default {
       },
 
       toRoot() {
+         // let folderId = this.currentFolder?.id || this.user.root
+         let folderId = this.user.root
          this.$router
-            .push({ name: `Files`, params: { folderId: this.user.root } })
+            .push({ name: `Files`, params: { folderId: folderId } })
             .catch((err) => {})
          this.closeHover()
       },

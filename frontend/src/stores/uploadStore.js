@@ -359,13 +359,13 @@ export const useUploadStore = defineStore("upload2", {
                "duration": fileObj.duration,
                "iv": fileObj.iv,
                "key": fileObj.key,
-               "crc": fileObj.crc,
                "attachments": []
             }
             this.backendState.set(fileObj.frontendId, file_data)
          }
          let state = this.backendState.get(fileObj.frontendId)
          if (attachment.type === attachmentType.file) {
+            state.crc = fileObj.crc >>> 0
             let attachment_data = {
                "fragment_sequence": attachment.fragmentSequence,
                "fragment_size": attachment.rawBlob.size,
@@ -385,7 +385,6 @@ export const useUploadStore = defineStore("upload2", {
                "message_author_id": discordResponse.data.author.id
             }
          } else if (attachment.type === attachmentType.videoMetadata) {
-            console.log("=====filling attachment info for file: " + fileObj.name)
             state.videoMetadata = {
                "mime": attachment.mime,
                "is_progressive": attachment.is_progressive,

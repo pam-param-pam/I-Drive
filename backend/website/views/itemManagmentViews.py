@@ -1,5 +1,4 @@
 import base64
-from typing import Union
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
@@ -58,10 +57,10 @@ def move(request):
     check_resource_perms(request, new_parent, checkRoot=False)
 
     files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
-    folders_data = list(Folder.objects.filter(id__in=ids))
+    folders = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
-    for item in files_data + folders_data:
+    for item in files_data + folders:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
@@ -168,9 +167,10 @@ def delete(request):
 
     files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
     folders = list(Folder.objects.filter(id__in=ids).select_related("parent", "lockFrom"))
+    items = list(files_data) + list(folders)
 
     required_folder_passwords = []
-    for item in files_data + folders:
+    for item in items:
         # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
@@ -222,8 +222,11 @@ def rename(request):
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & LockPerms])
 @handle_common_errors
-@check_folder_and_permissions
-def folder_password(request, folder_obj):
+def folder_password(request, folder_id):
+
+    folder_obj = get_folder(folder_id)
+    check_resource_perms(request, folder_obj)
+
     newPassword = request.data['new_password']
     if newPassword:
         lock_folder.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
@@ -407,5 +410,22 @@ def remove_moment(request):
     moment = Moment.objects.get(file=file_obj, timestamp=timestamp)
     delete_single_discord_attachment(request.user, moment)
     moment.delete()
+
+    return HttpResponse(status=204)
+
+
+@api_view(['POST'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@handle_common_errors
+def change_crc(request):
+    file_id = request.data['file_id']
+    crc = int(request.data['crc'])
+
+    file = get_file(file_id)
+    check_resource_perms(request, file)
+
+    file.crc = crc
+    file.save()
 
     return HttpResponse(status=204)

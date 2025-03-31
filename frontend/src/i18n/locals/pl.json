@@ -55,6 +55,7 @@
 
   },
   "errors": {
+    "invalidMove": "Błedne przeniesienie folderu",
     "notAllowedToUpload": "Nie możesz jeszcze wysyłać plików. Skonfiguruj ustawienia discorda najpierw",
     "goBack": "Zabierz mnie stąd",
     "retry": "Spróbuj ponownie",

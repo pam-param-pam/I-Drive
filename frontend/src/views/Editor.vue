@@ -53,6 +53,7 @@ import { canUpload } from '@/api/user.js'
 import i18n from '@/i18n/index.js'
 import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
 import * as CRC32 from "crc-32"
+import { encryptionMethod } from "@/utils/constants.js"
 
 export default {
    name: 'editor',
@@ -225,13 +226,16 @@ export default {
                return
             }
             if (this.raw !== this.copyRaw) {
-
-               let iv = generateIv(this.file.encryption_method)
-               let key = generateKey()
-
+               let method = this.file.encryption_method
+               let iv
+               let key
+               if (method !== encryptionMethod.NotEncrypted) {
+                  iv = generateIv(method)
+                  key = generateKey()
+               }
                let formData = new FormData()
                let blob = new Blob([this.raw])
-               let encryptedBlob = await encrypt(blob, this.file.encryption_method, key, iv, 0)
+               let encryptedBlob = await encrypt(blob, method, key, iv, 0)
 
                formData.append('file', encryptedBlob, this.attachmentName)
 

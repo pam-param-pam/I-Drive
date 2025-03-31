@@ -1,8 +1,18 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, encryptionMethod, fileUploadStatus, uploadState } from "@/utils/constants.js"
-import {appendMp4BoxBuffer, generateIv, generateKey, getAudioCover, getOrCreateFolder,
-    getVideoCover, isAudioFile, isVideoFile, parseVideoMetadata, roundUpTo64, upload
+import {
+   appendMp4BoxBuffer,
+   generateIv,
+   generateKey,
+   getAudioCover,
+   getOrCreateFolder,
+   getVideoCover,
+   isAudioFile,
+   isVideoFile,
+   parseVideoMetadata,
+   roundUpTo64,
+   upload
 } from "@/utils/uploadHelper.js"
 import { encryptAttachment } from "@/utils/encryption.js"
 import { useToast } from "vue-toastification"
@@ -11,6 +21,7 @@ import * as CRC32 from "crc-32"
 import MP4Box from "mp4box"
 
 const toast = useToast()
+
 
 export async function* prepareRequests() {
    //todo handle NotReadableError
@@ -95,7 +106,7 @@ export async function* prepareRequests() {
       let i = 0
       let fileSize = queueFile.fileObj.size
       let offset = 0
-      let mp4boxfile  = MP4Box.createFile()
+      let mp4boxfile = MP4Box.createFile()
       mp4boxfile.fileObj = queueFile.fileObj
 
       mp4boxfile.onReady = function(info) {
@@ -129,13 +140,12 @@ export async function* prepareRequests() {
          attachments.push(attachment)
          totalSize += roundUpTo64(chunk.size)
          offset += chunk.size
-         queueFile.fileObj.crc = CRC32.buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc);
-
+         queueFile.fileObj.crc = CRC32.buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc)
          i++
 
          // we have to yield
          if (totalSize >= maxChunkSize || attachments.length >= 9) {
-            yield {"totalSize": totalSize, "attachments": attachments }
+            yield { "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
          }
@@ -148,11 +158,12 @@ export async function* prepareRequests() {
    }
    //we need to handle the already created attachments after break
    if (attachments.length > 0) {
-      let request = {"totalSize": totalSize, "attachments": attachments }
+      let request = { "totalSize": totalSize, "attachments": attachments }
       yield request
    }
 
 }
+
 
 export async function uploadRequest(request) {
    const uploadStore = useUploadStore()
@@ -198,16 +209,15 @@ export async function uploadRequest(request) {
       onErrorCallback: () => {
          uploadStore.onUploadError(request, bytesUploaded)
       },
-      cancelToken: cancelTokenSource.token,
+      cancelToken: cancelTokenSource.token
 
    }
 
    let uploadResponse = await upload(formData, config).catch(err => {
-      if(axios.isCancel(err)) {
+      if (axios.isCancel(err)) {
          uploadStore.addPausedRequest(request)
          uploadStore.onUploadError(request, bytesUploaded)
-      }
-      else {
+      } else {
          for (let attachments of request.attachments) {
             uploadStore.setStatus(attachments.fileObj.frontendId, fileUploadStatus.failed)
             //todo pause upload of this file entirely dropping all ongoing requests
@@ -227,6 +237,7 @@ export async function uploadRequest(request) {
    }
    await afterUploadRequest(request, uploadResponse)
 }
+
 
 export async function afterUploadRequest(request, discordResponse) {
    const uploadStore = useUploadStore()

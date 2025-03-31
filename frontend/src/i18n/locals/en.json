@@ -54,6 +54,7 @@
     "editThumbnail": "Edit thumbnail"
   },
   "errors": {
+    "invalidMove": "Invalid move",
     "notAllowedToUpload": "You are not allowed to upload yet. First configure discord settings.",
     "goBack": "Go back",
     "retry": "Try again",

@@ -5,6 +5,7 @@ from typing import Union
 from urllib.parse import urlparse, parse_qs
 
 import httpx
+from httpx import Response
 
 from ..models import DiscordSettings, Bot, Webhook
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
@@ -90,7 +91,7 @@ class Discord:
         response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         return response
 
-    def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+    def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3) -> Response:
         if self._get_user_state(user)['locked']:
             remaining_time = self._get_user_state(user)['retry_timestamp'] - time.time()
             if remaining_time > 0:

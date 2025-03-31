@@ -419,7 +419,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['showShell', 'sortedItems', 'lastItem', 'items', 'settings', 'perms', 'user', 'selected', 'loading', 'error', 'currentFolder', 'selectedCount', 'isLogged', 'currentPrompt', 'searchActive']),
+      ...mapState(useMainStore, ['isSearchActive', 'showShell', 'sortedItems', 'lastItem', 'items', 'settings', 'perms', 'user', 'selected', 'loading', 'error', 'currentFolder', 'selectedCount', 'isLogged', 'currentPrompt', 'searchActive']),
 
       viewMode() {
          if (this.settings.viewMode === 'list') return 'list'
@@ -591,8 +591,8 @@ export default {
       },
 
       async drop(event) {
+         event.preventDefault()
          if (!this.currentFolder || this.isSearchActive) {
-            event.preventDefault()
             this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
             this.$emit('dragLeave')
             return

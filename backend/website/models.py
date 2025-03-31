@@ -130,7 +130,8 @@ class Folder(MPTTModel):
         subfolders = self.get_all_subfolders()
         for folder in subfolders:
             if folder.is_locked and not folder.autoLock:
-                continue
+                break
+
             folder.password = password
             folder.lockFrom = lockFrom
             folder.autoLock = True
@@ -194,7 +195,7 @@ class File(models.Model):
 
     DISPLAY_VALUES = STANDARD_VALUES + (
         "extension", "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
-        "duration", "parent__id", "preview__iso", "preview__model_name",
+        "duration", "parent__id", "preview__iso", "preview__model_name", "crc",
         "preview__aperture", "preview__exposure_time", "preview__focal_length",
         "thumbnail", "videoposition__timestamp", "videometadata__id"
     )

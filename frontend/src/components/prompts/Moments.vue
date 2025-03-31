@@ -9,7 +9,7 @@
       <!-- Left Section: Current Video Frame -->
       <div class="left-section">
         <div v-if="!currentThumbnailURL" class="thumbnail-placeholder"></div>
-        <img v-else :src="currentThumbnailURL" class="current-thumbnail"/>
+        <img v-else :src="currentThumbnailURL" class="current-thumbnail" />
         <span class="current-time">{{ formatTime(currentTimestamp) }}</span>
         <button
           :aria-label="$t('buttons.addMoment')"
@@ -63,7 +63,7 @@
         class="button button--flat button--blue"
         @click="closeHover()"
       >
-        {{ $t('buttons.ok') }}
+        {{ $t("buttons.ok") }}
       </button>
     </div>
   </div>
@@ -73,12 +73,12 @@
 import { captureVideoFrame, generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { isMobile } from "@/utils/common.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
 import { canUpload } from "@/api/user.js"
 import { encrypt } from "@/utils/encryption.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import throttle from "lodash.throttle"
+import { encryptionMethod } from "@/utils/constants.js"
 
 export default {
    name: "moments",
@@ -138,8 +138,12 @@ export default {
          let fileFormList = new FormData()
 
          let method = this.file.encryption_method
-         let iv = generateIv(method)
-         let key = generateKey()
+         let iv
+         let key
+         if (method !== encryptionMethod.NotEncrypted) {
+            iv = generateIv(method)
+            key = generateKey()
+         }
          let encryptedBlob = await encrypt(this.currentThumbnailData, method, key, iv, 0)
 
          fileFormList.append("file", encryptedBlob, this.attachmentName)
@@ -246,6 +250,7 @@ h3 {
  object-fit: cover;
 
 }
+
 .thumbnail-placeholder {
  width: 250px;
  height: 130px;
@@ -278,6 +283,7 @@ h3 {
   transform: translateX(100%);
  }
 }
+
 .current-time {
  font-size: 16px;
  font-weight: bold;

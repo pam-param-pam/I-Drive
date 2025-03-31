@@ -178,7 +178,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
 
 
 def create_file_dict(file_values, hide=False) -> FileDict:
-    """Optimized version of create_file_dict that uses dict values instead of ORM objects"""
+    """Optimized version that uses dict values instead of ORM objects"""
 
     file_dict = {
         "isDir": False,
@@ -193,6 +193,7 @@ def create_file_dict(file_values, hide=False) -> FileDict:
         "isLocked": get_attr(file_values, "is_locked"),
         "encryption_method": get_attr(file_values, "encryption_method"),
         "isVideoMetadata": get_attr(file_values, "videometadata__id", None) is not None,
+        "crc": get_attr(file_values, "crc"),
     }
     if get_attr(file_values, "is_locked"):
         file_dict["lockFrom"] = get_attr(file_values, "lockFrom_id")

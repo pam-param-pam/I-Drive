@@ -8,20 +8,18 @@ from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags
 from .views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment
+    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment
-from .views.testViews import get_discord_state, test, test3, test4, test2, test1
+from .views.testViews import get_discord_state, test
 from .views.uploadViews import create_file, create_thumbnail, proxy_discord
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
     update_upload_destination, enable_bot, can_upload, reset_discord_state
 
 urlpatterns = [
     path('test/<file_id>', test, name='stream_file'),
-    path('test1', test1, name='stream_file'),
-    path('test2', test2, name='stream_file'),
-    path('test3', test3, name='stream_file'),
-    path('test4', test4, name='returns_file'),
+
+    path('file/change/crc', change_crc, name='change crc'),
 
     path("proxy/discord", proxy_discord, name="discord_proxy"),
 

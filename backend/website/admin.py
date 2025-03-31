@@ -63,7 +63,7 @@ class FolderAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
-    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model']
+    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock']
     search_fields = ["id", "name"]
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
@@ -96,6 +96,10 @@ class FolderAdmin(admin.ModelAdmin):
     def restore_from_trash(self, request, queryset: QuerySet[Folder]):
         for folder in queryset:
             folder.restoreFromTrash()
+
+    def unlock(self, request, queryset: QuerySet[Folder]):
+        for folder in queryset:
+            folder.removeLock()
 
     def save_model(self, request, obj: Folder, form: ModelForm, change: bool):
         cache.delete(obj.id)
@@ -177,11 +181,6 @@ class FileAdmin(SimpleHistoryAdmin):
     def formatted_encryption_method(self, obj: File):
         return obj.get_encryption_method().name
 
-    formatted_key.short_description = "Encryption key (base64)"
-    formatted_iv.short_description = "Encryption iv (base64)"
-    media_tag.short_description = 'PREVIEW MEDIA FILE'
-    formatted_encryption_method.short_description = "Encryption method"
-
     def delete_queryset(self, request, queryset: QuerySet[File]):
         ids = []
         for real_obj in queryset:
@@ -227,7 +226,11 @@ class FileAdmin(SimpleHistoryAdmin):
 
     is_locked.admin_order_field = 'password'
     is_locked.boolean = True
-
+    formatted_key.short_description = "Encryption key (base64)"
+    formatted_iv.short_description = "Encryption iv (base64)"
+    media_tag.short_description = 'PREVIEW MEDIA FILE'
+    formatted_encryption_method.short_description = "Encryption method"
+    readable_size.admin_order_field = 'size'
 
 @admin.register(Preview)
 class PreviewAdmin(SimpleHistoryAdmin):
