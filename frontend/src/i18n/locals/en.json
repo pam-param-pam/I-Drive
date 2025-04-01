@@ -139,6 +139,7 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "crc32": "crc32",
     "videoMetadata": "Video metadata",
     "bitrate": "Bitrate",
     "codec": "Codec",

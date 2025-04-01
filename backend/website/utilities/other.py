@@ -127,12 +127,11 @@ def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
     breadcrumbs = []
     folder_obj.refresh_from_db()
     ancestors = folder_obj.get_ancestors(include_self=True)
-    print(ancestors)
-    print(folder_obj.parent)
     for ancestor in ancestors:
         if not ancestor.parent:
             continue
-        data = {"name": ancestor.name, "id": ancestor.id}
+        lockFrom = get_attr(ancestor, "lockFrom_id", None)
+        data = {"name": ancestor.name, "id": ancestor.id, "lockFrom": lockFrom}
         breadcrumbs.append(data)
 
     return breadcrumbs
@@ -425,36 +424,36 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     return folder_count, file_count
 
 
-def get_flattened_children(folder: Folder, full_path="", single_root=False) -> List[ZipFileDict]:
+def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> List[ZipFileDict]:
     """
-    Recursively collects all children [folders and files(not in and trash and ready)] of the given folder
-    into a flattened list with file IDs and names including folders.
+    Recursively collects all children [folders and files(not in trash and ready)] of the given folder
+    into a flattened list with file IDs and names including folders, but excluding the root folder name.
 
-    This function is used by zip
+    This function is used by zip.
     """
-
     children = []
+
+    # Track the root folder on the first call
+    if root_folder is None:
+        root_folder = folder
+
     check_resource_perms("dummy request", folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     # Collect all files in the current folder
     files = folder.files.filter(ready=True, inTrash=False)
-    if files:
-        for file in files:
-            file_full_path = f"{full_path}{folder.name}/{file.name}"
+    for file in files:
+        # Exclude root folder name from the path
+        relative_path = full_path[len(root_folder.name) + 1:] if root_folder == folder else full_path
+        file_full_path = f"{relative_path}{file.name}"
 
-            if single_root:
-                file_full_path = f"{full_path}{file.name}"
-
-            file_dict = create_zip_file_dict(file, file_full_path)
-            children.append(file_dict)
-    else:
-        pass
-        # todo handle empty dirs
+        file_dict = create_zip_file_dict(file, file_full_path)
+        children.append(file_dict)
 
     # Recursively collect all subfolders and their children
     for subfolder in folder.subfolders.all():
-        subfolder_full_path = f"{full_path}{folder.name}/"
-        children.extend(get_flattened_children(subfolder, subfolder_full_path))
+        relative_path = full_path[len(root_folder.name) + 1:] if root_folder == folder else full_path
+        subfolder_full_path = f"{relative_path}{subfolder.name}/"
+        children.extend(get_flattened_children(subfolder, subfolder_full_path, root_folder))
 
     return children
 

@@ -23,7 +23,7 @@
             :is="element"
             :ref="folder.id"
             :class="breadcrumbClass(folder.id)"
-            :to="base + `/` + folder.id"
+            :to="base + `/` + folder.id + lockFrom(folder)"
             draggable="false"
             @dragenter="dragEnter(folder.id)"
             @dragleave="dragLeave"
@@ -81,6 +81,13 @@ export default {
    },
 
    methods: {
+      lockFrom(folder) {
+         if (this.base === "/files") {
+            if (folder.lockFrom) return "/" + folder.lockFrom
+         }
+         return ""
+      },
+
       dragEnter(folderId) {
          if (this.canDrop(folderId)) {
             this.draggedOverFolderId = folderId

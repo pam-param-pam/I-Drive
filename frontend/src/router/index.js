@@ -53,7 +53,7 @@ const router = createRouter({
 
             },
             {
-               path: "/files/:folderId",
+               path: "/files/:folderId/:lockFrom?",
                name: "Files",
                component: () => import('../views/Files.vue'),
                props: true,

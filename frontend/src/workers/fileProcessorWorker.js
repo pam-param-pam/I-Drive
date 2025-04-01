@@ -2,28 +2,29 @@ import { v4 as uuidv4 } from "uuid"
 import { uploadType } from "@/utils/constants.js"
 import { detectExtension } from "@/utils/common.js"
 export function detectType(type, extension) {
+   extension = extension.toUpperCase()
    const RAW_IMAGE_EXTENSIONS = [
       ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",
       ".CRW", ".CR2", ".CR3", ".ERF", ".MEF",
       ".MOS", ".NEF", ".NRW", ".ORF", ".PEF",
       ".RW2", ".ARW", ".SRF", ".SR2"
    ]
-   if (RAW_IMAGE_EXTENSIONS.includes(extension.toUpperCase())) {
+   if (RAW_IMAGE_EXTENSIONS.includes(extension)) {
       return "image/raw"
    }
-   else if (extension === ".mov") {
+   else if (extension === ".MOV") {
       return "video/mov"
    }
-   else if (extension === ".mkv") {
+   else if (extension === ".MKV") {
       return "video/mkv"
    }
-   else if (extension === ".ts") {
+   else if (extension === ".TS") {
       return "video/ts"
    }
-   else if (extension === ".avi") {
+   else if (extension === ".AVI") {
       return "video/avi"
    }
-   else if (extension === ".mod") {
+   else if (extension === ".MOD") {
       return "text/plain"
    }
    if(!type) return "text/plain"

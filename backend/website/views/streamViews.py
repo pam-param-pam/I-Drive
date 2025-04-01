@@ -372,7 +372,7 @@ def stream_zip_files(request, token):
     single_root = False
     if len(files) == 0 and len(folders) == 1:
         single_root = True
-        dict_files += get_flattened_children(folders[0], single_root=single_root)
+        dict_files += get_flattened_children(folders[0], root_folder=folders[0])
 
     else:
         for file in files:
@@ -380,10 +380,10 @@ def stream_zip_files(request, token):
             dict_files.append(file_dict)
 
         for folder in folders:
-            folder_tree = get_flattened_children(folder)
+            folder_tree = get_flattened_children(folder, root_folder=folder)
             dict_files += folder_tree
-    zip_name = user_zip.name if not single_root else folders[0].name
 
+    zip_name = user_zip.name if not single_root else folders[0].name
     files = []
     for file in dict_files:
         if not file["isDir"]:

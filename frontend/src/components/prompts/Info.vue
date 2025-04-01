@@ -57,6 +57,9 @@
       <p v-if="last_modified">
         <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime(last_modified) }}
       </p>
+      <p v-if="crc">
+        <strong>{{ $t("prompts.crc32") }}:</strong> {{ crc }}
+      </p>
       <p v-if="iso">
         <strong>{{ $t("prompts.iso") }}:</strong> {{ iso }}
       </p>
@@ -368,8 +371,10 @@ export default {
          return false
       },
       isVideoMetadata() {
-         console.log(this.selected[0])
          return this.selected[0].isVideoMetadata
+      },
+      crc() {
+         return this.selected[0].crc
       },
       primaryMetadata() {
          if (!this.metadata) return

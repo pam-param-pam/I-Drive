@@ -141,6 +141,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "crc32": "crc32",
     "videoMetadata": "Metadane filmu",
     "bitrate": "Przepływność",
     "codec": "Kodek",

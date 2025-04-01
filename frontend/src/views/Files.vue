@@ -1,45 +1,45 @@
 <template>
-   <div style="height: 100%">
-      <breadcrumbs v-if="!searchActive" :folderList="breadcrumbs" base="/files" />
-      <errors v-if="error" :error="error" />
+  <div style="height: 100%">
+    <breadcrumbs v-if="!searchActive" :folderList="breadcrumbs" base="/files" />
+    <errors v-if="error" :error="error" />
 
-      <h4 v-if="!error && searchActive && !loading">
-         {{ $t('files.searchItemsFound', { amount: searchItems.length }) }}
-      </h4>
-      <FileListing
-         ref="listing"
-         :headerButtons="headerButtons"
-         @download="download"
-         @dragEnter="onDragEnter"
-         @dragLeave="onDragLeave"
-         @dropUpload="onDropUpload"
-         @onOpen="onOpen"
-         @onSearchClosed="onSearchClosed"
-         @onSearchQuery="onSearchQuery"
-         @openInNewWindow="openInNewWindow"
-         @upload="upload"
-         @uploadInput="onUploadInput"
-      ></FileListing>
-   </div>
+    <h4 v-if="!error && searchActive && !loading">
+      {{ $t("files.searchItemsFound", { amount: searchItems.length }) }}
+    </h4>
+    <FileListing
+      ref="listing"
+      :headerButtons="headerButtons"
+      @download="download"
+      @dragEnter="onDragEnter"
+      @dragLeave="onDragLeave"
+      @dropUpload="onDropUpload"
+      @onOpen="onOpen"
+      @onSearchClosed="onSearchClosed"
+      @onSearchQuery="onSearchQuery"
+      @openInNewWindow="openInNewWindow"
+      @upload="upload"
+      @uploadInput="onUploadInput"
+    ></FileListing>
+  </div>
 </template>
 
 <script>
-import { getItems } from '@/api/folder.js'
-import { search } from '@/api/search.js'
-import { createZIP } from '@/api/item.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
-import { useUploadStore } from '@/stores/uploadStore.js'
-import { scanDataTransfer } from '@/utils/uploadHelper.js'
-import { uploadType } from '@/utils/constants.js'
-import { name } from '@/utils/constants'
-import Breadcrumbs from '@/components/listing/Breadcrumbs.vue'
-import Errors from '@/components/Errors.vue'
-import FileListing from '@/components/FileListing.vue'
-import { cancelTokenMap } from '@/utils/networker.js'
+import { getItems } from "@/api/folder.js"
+import { search } from "@/api/search.js"
+import { createZIP } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import { useUploadStore } from "@/stores/uploadStore.js"
+import { scanDataTransfer } from "@/utils/uploadHelper.js"
+import { uploadType } from "@/utils/constants.js"
+import { name } from "@/utils/constants"
+import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
+import Errors from "@/components/Errors.vue"
+import FileListing from "@/components/FileListing.vue"
+import { cancelTokenMap } from "@/utils/networker.js"
 
 export default {
-   name: 'files',
+   name: "files",
 
    components: {
       Breadcrumbs,
@@ -61,12 +61,12 @@ export default {
       return {
          folderList: [],
          dragCounter: 0,
-         isActive: true
+         isActive: true,
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['searchItems', 'searchFilters', 'breadcrumbs', 'error', 'user', 'settings', 'loading', 'selected', 'perms', 'selected', 'currentFolder', 'disabledCreation', 'getFolderPassword', 'selectedCount', 'searchActive']),
+      ...mapState(useMainStore, ["searchItems", "searchFilters", "breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
       headerButtons() {
          return {
             info: !this.disabledCreation,
@@ -99,13 +99,13 @@ export default {
    },
 
    watch: {
-      $route: 'fetchFolder'
+      $route: "fetchFolder"
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setSearchFilters', 'setSearchItems', 'setCurrentFolderData', 'setLoading', 'setError', 'setDisabledCreation', 'setItems', 'setCurrentFolder', 'closeHover', 'showHover', 'setSearchActive']),
+      ...mapActions(useMainStore, ["setSearchFilters", "setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
 
-      ...mapActions(useUploadStore, ['startUpload']),
+      ...mapActions(useUploadStore, ["startUpload"]),
 
       async onSearchQuery(searchParams) {
 
@@ -130,24 +130,24 @@ export default {
          this.setSearchActive(false)
          this.setDisabledCreation(false)
          this.setError(null)
-         let searchRequest = cancelTokenMap.get('getItems')
+         let searchRequest = cancelTokenMap.get("getItems")
          if (searchRequest) {
             searchRequest.cancel(
                `Request cancelled due to a new request with the same cancel signature .`
             )
          }
          let searchDict = { ...this.searchFilters }
-         searchDict['query'] = ''
+         searchDict["query"] = ""
          this.setSearchFilters(searchDict)
       },
       upload() {
          if (
-            typeof window.DataTransferItem !== 'undefined' &&
-            typeof DataTransferItem.prototype.webkitGetAsEntry !== 'undefined'
+            typeof window.DataTransferItem !== "undefined" &&
+            typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
          ) {
-            this.showHover('upload')
+            this.showHover("upload")
          } else {
-            document.getElementById('upload-input').click()
+            document.getElementById("upload-input").click()
          }
       },
 
@@ -159,10 +159,10 @@ export default {
          } else {
             try {
                this.setLoading(true)
-               let res = await getItems(this.folderId, this.lockFromProp)
+               let res = await getItems(this.folderId, this.lockFrom)
                this.setCurrentFolderData(res)
             } catch (error) {
-               if (error.code === 'ERR_CANCELED') return
+               if (error.code === "ERR_CANCELED") return
                this.setError(error)
             } finally {
                if (this.isActive) this.setLoading(false)
@@ -181,7 +181,7 @@ export default {
 
          // When the user starts dragging an item, put every
          // file on the listing with 50% opacity.
-         let items = document.getElementsByClassName('item')
+         let items = document.getElementsByClassName("item")
 
          Array.from(items).forEach((file) => {
             file.style.opacity = 0.5
@@ -197,21 +197,21 @@ export default {
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            window.open(this.selected[0].download_url, '_blank')
-            let message = this.$t('toasts.downloadingSingle', { name: this.selected[0].name })
+            window.open(this.selected[0].download_url, "_blank")
+            let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
             this.$toast.success(message)
          } else {
             const ids = this.selected.map((obj) => obj.id)
             let res = await createZIP({ ids: ids })
-            window.open(res.download_url, '_blank')
+            window.open(res.download_url, "_blank")
 
-            let message = this.$t('toasts.downloadingZIP')
+            let message = this.$t("toasts.downloadingZIP")
             this.$toast.success(message)
          }
       },
 
       resetOpacity() {
-         let items = document.getElementsByClassName('item')
+         let items = document.getElementsByClassName("item")
 
          Array.from(items).forEach((file) => {
             file.style.opacity = 1
@@ -233,11 +233,11 @@ export default {
 
          //obtaining parent folder id
          for (let i = 0; i < 5; i++) {
-            if (el !== null && !el.classList.contains('item')) {
+            if (el !== null && !el.classList.contains("item")) {
                el = el.parentElement
             }
          }
-         if (el !== null && el.classList.contains('item') && el.dataset.dir === 'true') {
+         if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
             folderContextId = el.dataset.id
          }
          let files = await scanDataTransfer(dt)
@@ -268,7 +268,7 @@ export default {
       openInNewWindow(item) {
          let route = this.getNewRoute(item)
          let url = this.$router.resolve(route).href
-         window.open(url, '_blank')
+         window.open(url, "_blank")
       },
 
       onOpen(item) {
@@ -285,7 +285,7 @@ export default {
                let password = this.getFolderPassword(item.lockFrom)
                if (!password) {
                   this.showHover({
-                     prompt: 'FolderPassword',
+                     prompt: "FolderPassword",
 
                      props: { requiredFolderPasswords: [{ id: item.lockFrom, name: item.name }] },
                      confirm: () => {
@@ -303,6 +303,6 @@ export default {
 </script>
 <style>
 h4 {
-   padding-left: 1em;
+ padding-left: 1em;
 }
 </style>
