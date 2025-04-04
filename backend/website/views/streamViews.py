@@ -27,7 +27,7 @@ from ..utilities.Discord import discord
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache, MAX_MEDIA_CACHE_AGE
 from ..utilities.decorators import handle_common_errors, check_file, check_signed_url, no_gzip
 from ..utilities.errors import DiscordError, BadRequestError
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, create_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
@@ -139,11 +139,8 @@ def get_preview(request, file_obj: File):
             object_id=author.discord_id
         )
 
-        file_dict = {"parent_id": file_obj.parent.id, "id": file_obj.id, "iso": preview.iso,
-                     "model_name": preview.model_name,
-                     "aperture": preview.aperture, "exposure_time": preview.exposure_time,
-                     "focal_length": preview.focal_length}
-        send_event(file_obj.owner.id, EventCode.ITEM_UPDATE, request.request_id, [file_dict])
+        file_dict = create_file_dict(file_obj)
+        send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     except IntegrityError:
         pass

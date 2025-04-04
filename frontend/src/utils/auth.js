@@ -4,7 +4,7 @@ import { getUser, logoutUser, registerUser } from "@/api/user.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
-import onEvent from "@/utils/WsEventhandler.js"
+import { onEvent } from "@/utils/WsEventhandler.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
@@ -25,7 +25,7 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setTheme(body.settings.theme)
 
    app.use(VueNativeSock, baseWS + "/user", {reconnection: false, protocol: token})
-   app.config.globalProperties.$socket.onmessage = (data) => onEvent(data)
+   app.config.globalProperties.$socket.onmessage = (data) => onEvent(data).then()
 
 }
 

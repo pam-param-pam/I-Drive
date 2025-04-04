@@ -57,8 +57,8 @@ export default {
                id: res.task_id
             })
 
-            let filteredItems = this.items.filter((item) => !ids.includes(item.id))
-            this.setItems(filteredItems)
+            // let filteredItems = this.items.filter((item) => !ids.includes(item.id))
+            // this.setItems(filteredItems)
 
             if (this.currentPrompt.confirm) this.currentPrompt.confirm()
          } finally {

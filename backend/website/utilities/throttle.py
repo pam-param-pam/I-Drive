@@ -1,24 +1,41 @@
-from datetime import datetime, timedelta
+import time
 
 from django.core.exceptions import ImproperlyConfigured
 from rest_framework.throttling import UserRateThrottle
 
+from ..utilities.constants import cache
+
 
 class MyUserRateThrottleBase(UserRateThrottle):
-
     bucket = None
 
     def __init__(self):
         super().__init__()
+        self.fail_block = 30
+        self.fail_limit = 10
+        self.fail_count = None
         self.request = None
 
     def get_cache_key(self, request, view):
         self.request = request
-        if not getattr(self, 'bucket', None):
-            msg = "No bucket rate"
-            raise ImproperlyConfigured(msg)
-
+        if not self.bucket:
+            raise ImproperlyConfigured("Throttle class must define a bucket.")
         return super().get_cache_key(request, view)
+
+    def allow_request(self, request, view):
+        self.request = request
+
+        # STEP 1. Check general rate limit
+        user_allowed = super().allow_request(request, view)
+        if not user_allowed:
+            print("blocked with conventional methods")
+        # STEP 2. Check failed attempts (custom logic)
+
+        remaining_failed_requests = self.get_remaining_failed_requests()
+        if not user_allowed or remaining_failed_requests <= 0:
+            return self.throttle_failure()
+
+        return self.throttle_success()
 
     def parse_rate(self, rate):
         if rate is None:
@@ -30,57 +47,70 @@ class MyUserRateThrottleBase(UserRateThrottle):
         try:
             duration_time = int(duration[:-1])
         except ValueError:
-            # default to 1 if not found
-            # for example: '10/1s' is equal to '10/s'
             duration_time = 1
         duration_time *= {'s': 1, 'm': 60, 'h': 3600, 'd': 86400}[period]
         return num_requests, duration_time
 
-    def throttle_success(self):
+    def apply_ratelimit_headers(self):
 
-        self.request.META["rate_limit_remaining"] = self.get_remaining_requests()
-        self.request.META["rate_limit_reset_after"] = self.get_reset_time()
+        self.request.META["rate_limit_remaining"] = min(self.get_remaining_requests(), self.get_remaining_failed_requests())
+        self.request.META["rate_limit_reset_after"] = self.wait()
         self.request.META["rate_limit_bucket"] = self.bucket
 
+    def throttle_failure(self):
+        self.apply_ratelimit_headers()
+        return super().throttle_failure()
+
+    def throttle_success(self):
+        self.apply_ratelimit_headers()
         return super().throttle_success()
 
-    def get_reset_time(self):
-        """
-        Calculate the time when the rate limit bucket resets, in seconds.
-        """
-        if self.rate is None:
-            return None  # No limit
+    def wait(self):
+        if self.get_remaining_failed_requests() <= 0:
+            fail_key = self._get_fail_key(self.request)
+            fail_data = cache.get(fail_key, [])
+            now = time.time()
 
-        if not hasattr(self, 'history') or not hasattr(self, 'now'):
-            raise AttributeError("This method should be called after `allow_request` method.")
+            recent_fails = sorted(t for t in fail_data if now - t < self.fail_block)
+            fail_count = len(recent_fails)
 
-        if not self.history:  # If history is empty, no requests have been made yet
-            return self.duration  # Reset time is the duration itself, in seconds
+            if fail_count < self.fail_limit / 2:
+                return 0
 
-        # Convert the float timestamp to a datetime object
-        last_request_time = datetime.fromtimestamp(self.history[-1])
+            # How many fails must expire to be below half
+            target_fails = int(fail_count - (self.fail_limit // 2)) + 1
+            fail_to_expire = recent_fails[:target_fails][-1]
+            wait_time = max((fail_to_expire + self.fail_block) - now, 0)
 
-        # Calculate the time when the rate limit resets
-        reset_time = last_request_time + timedelta(seconds=self.duration)
+            return wait_time
 
-        # Calculate the total number of seconds until the reset time relative to the current time
-        seconds_until_reset = (reset_time - datetime.now()).total_seconds()
+        return super().wait()
 
-        # Return the reset time in seconds
-        return seconds_until_reset
+    def get_remaining_failed_requests(self):
+        fail_key = self._get_fail_key(self.request)
+        fail_data = cache.get(fail_key, [])
+        now = time.time()
+
+        recent_fails = [t for t in fail_data if now - t < self.fail_block]
+
+        return min(self.fail_limit - len(recent_fails), 0)
 
     def get_remaining_requests(self):
         """
         Returns the number of remaining requests before the limit is hit.
         """
         if self.rate is None:
-            return float('inf')  # No limit
+            return float('inf')
 
         if not hasattr(self, 'history') or not hasattr(self, 'now'):
             raise AttributeError("This method should be called after `allow_request` method.")
 
         return self.num_requests - len(self.history)
 
+    def _get_fail_key(self, request):
+        if request.user.is_authenticated:
+            return f"fail:{request.user.pk}"
+        return f"fail_ip:{request.META.get('REMOTE_ADDR')}"
 
 class defaultAnonUserThrottle(MyUserRateThrottleBase):
     scope = 'anon'

@@ -1,8 +1,15 @@
+import base64
+import hashlib
+import json
+import os
+from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 from urllib.parse import unquote
 
 import requests
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.db.models import Q
 from django.db.models.aggregates import Sum
@@ -19,6 +26,9 @@ from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, R
 signer = TimestampSigner()
 
 _SENTINEL = object()  # Unique object to detect omitted default
+
+
+
 
 
 def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
@@ -93,7 +103,7 @@ def formatDate(date: datetime) -> str:
 
 
 def logout_and_close_websockets(user_id: int) -> None:
-    send_event(user_id, EventCode.FORCE_LOGOUT, 0, {})
+    send_event(user_id, 0, None, EventCode.FORCE_LOGOUT, {})
     queue_ws_event.delay(
         'user',
         {
@@ -110,15 +120,71 @@ def logout_and_close_websockets(user_id: int) -> None:
     )
 
 
-def send_event(user_id: int, op_code: EventCode, request_id: int, data: Union[List, dict]) -> None:
+def derive_key(key: str) -> bytes:
+    """Derives a fixed-length 32-byte key from any input key."""
+    return hashlib.sha256(key.encode()).digest()
+
+
+def encrypt_message(key: str, data: Union[str, List, Dict]) -> str:
+    """Encrypts a message (string, list, or dict) using AES-256-CBC."""
+    key_bytes = derive_key(key)
+    iv = os.urandom(16)
+    cipher = Cipher(algorithms.AES(key_bytes), modes.CBC(iv))
+    encryptor = cipher.encryptor()
+
+    # Convert lists/dicts to JSON string
+    if isinstance(data, (dict, list)):
+        data = json.dumps(data)
+
+    # Pad message to be a multiple of 16 bytes
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(data.encode()) + padder.finalize()
+
+    encrypted = encryptor.update(padded_data) + encryptor.finalize()
+    return base64.b64encode(iv + encrypted).decode('utf-8')
+
+
+def group_and_send_event(user_id: int, request_id: int,  op_code: EventCode, resources: List[Union[File, Folder]]) -> None:
+    """Group files by parent object and send event for each parent"""
+    grouped_files = defaultdict(list)
+    parent_mapping = {}
+
+    for resource in resources:
+        parent_mapping[resource.parent_id] = resource.parent
+        if isinstance(resource, Folder):
+            grouped_files[resource.parent_id].append(create_folder_dict(resource))
+        else:
+            grouped_files[resource.parent_id].append(create_file_dict(resource))
+
+    for parent_id, file_dicts in grouped_files.items():
+        parent = parent_mapping[parent_id]
+        send_event(user_id, request_id, parent, op_code, file_dicts)
+
+
+def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str]) -> None:
+    """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
+
+    if not isinstance(data, list):
+        data = [data]
+
+    message = {'folder_context_id': folder_context.id}
+    event = {'op_code': op_code.value, 'data': data}
+    message['is_encrypted'] = False
+
+    if folder_context and folder_context.is_locked:
+        message['is_encrypted'] = True
+        message['lockFrom'] = folder_context.lockFrom.id
+        event = encrypt_message(folder_context.password, event)
+
+    message['event'] = event
+
     queue_ws_event.delay(
         'user',
         {
             'type': 'send_event',
             'user_id': user_id,
-            'op_code': op_code.value,
             'request_id': request_id,
-            'data': data,
+            'message': message
         }
     )
 

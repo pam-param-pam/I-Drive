@@ -3,8 +3,8 @@ import secrets
 from typing import Union
 
 import shortuuid
-from django.contrib.auth import user_logged_out, user_logged_in
-from django.contrib.auth.models import User
+from django.contrib.auth import user_logged_out, user_logged_in, user_login_failed
+from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -22,6 +22,7 @@ from simple_history.models import HistoricalRecords
 from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
 from .utilities.helpers import chop_long_file_name
 
+# todo MPTTModel is fucked up
 
 class Folder(MPTTModel):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
@@ -616,6 +617,12 @@ class SubtitleTrack(VideoMetadataTrackMixin):
 def user_logged_in_callback(sender, request, user, **kwargs):
     ip = request.META.get('REMOTE_ADDR')
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_IN.name, ip=ip, user=user, user_agent=request.user_agent)
+
+
+# @receiver(user_login_failed) todo
+# def user_login_failed_callback(sender, credentials, request, **kwargs):
+#     ip = request.META.get('REMOTE_ADDR')
+#     AuditEntry.objects.create(action=AuditAction.USER_LOGIN_FAILED.name, ip=ip, user=AnonymousUser, user_agent=request.user_agent)
 
 
 @receiver(user_logged_out)

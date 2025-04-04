@@ -12,13 +12,12 @@ django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
 from .utilities.middlewares import TokenAuthMiddleware
-from .consumers import UserConsumer, CommandConsumer
+from .consumers import UserConsumer
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
     'websocket': URLRouter([
         path('user', TokenAuthMiddleware(UserConsumer.as_asgi())),
-        path('command', TokenAuthMiddleware(CommandConsumer.as_asgi())),
     ]),
 })
 

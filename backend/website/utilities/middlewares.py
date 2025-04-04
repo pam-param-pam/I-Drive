@@ -1,9 +1,12 @@
 import random
+import time
 
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.authtoken.models import Token
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
+
+from ..utilities.constants import cache
 
 
 @database_sync_to_async
@@ -62,3 +65,24 @@ class RequestIdMiddleware:
         return response
 
 
+class FailedRequestLoggerMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if response.status_code >= 400:
+            key = self._get_key(request)
+            data = cache.get(key, [])
+            data.append(time.time())
+            data = [t for t in data if time.time() - t < 60]  # tylko z ostatniej minuty
+            cache.set(key, data, timeout=60)
+        return response
+
+    def _get_key(self, request):
+        if request.user.is_authenticated:
+            return f"fail:{request.user.pk}"
+        return f"fail_ip:{self._get_ip(request)}"
+
+    def _get_ip(self, request):
+        return request.META.get('REMOTE_ADDR')

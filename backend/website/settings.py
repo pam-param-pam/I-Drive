@@ -59,9 +59,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'website.utilities.middlewares.FailedRequestLoggerMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
-    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -174,7 +175,8 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/m',
-        'user': '50/5s',
+        'user': '20/5s',
+        # 'user': '1/4s',
         'media': '1000/m',
         'folder_password': '20/m',
         'password_change': '10/m',

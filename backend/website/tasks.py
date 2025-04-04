@@ -49,9 +49,7 @@ def send_message(message, args, finished, user_id, request_id, isError=False):
 
 @app.task
 def smart_delete(user_id, request_id, ids):
-    from .utilities.other import send_event, query_attachments  # circular error aah
-
-    send_event(user_id, EventCode.ITEM_DELETE, request_id, ids)
+    from .utilities.other import group_and_send_event, query_attachments  # circular error aah
 
     send_message("toasts.deleting", {"percentage": 0}, False, user_id, request_id)
 
@@ -64,6 +62,9 @@ def smart_delete(user_id, request_id, ids):
 
     if folders.exists():
         folders.update(ready=False)
+
+    group_and_send_event(user_id, request_id, EventCode.ITEM_DELETE, files)
+    group_and_send_event(user_id, request_id, EventCode.ITEM_DELETE, folders)
 
     items = list(files) + list(folders)
 
@@ -86,7 +87,6 @@ def smart_delete(user_id, request_id, ids):
         message_structure = defaultdict(list)
 
         # We find all attachments we want to remove
-
         for file in all_files:
 
             fragments = Fragment.objects.filter(file=file)
@@ -172,9 +172,8 @@ def prefetch_discord_message(message_id, attachment_id):
     discord.get_file_url(message_id, attachment_id)
 
 
-def move_group(grouped_items, new_parent, new_parent_id, user_id, request_id, processed_count, last_percentage, total_length, item_dicts_batch, is_folder):
+def move_group(grouped_items, new_parent, user_id, request_id, processed_count, last_percentage, total_length, is_folder):
     from .utilities.other import create_file_dict, create_folder_dict, send_event  # circular error aah
-
     if is_folder:
         model = Folder
     else:
@@ -182,13 +181,22 @@ def move_group(grouped_items, new_parent, new_parent_id, user_id, request_id, pr
 
     BATCH_SIZE = 250
 
-    for parent_id, item_group in grouped_items.items():
+    for old_parent_id, item_group in grouped_items.items():
+        old_parent = Folder.objects.get(id=old_parent_id)
+        print(old_parent)
         try:
+            item_dicts_batch = []
+            ids = []
+
             # Perform one normal move on first item to trigger checks & on_save()
             first_item = item_group.pop(0)
             first_item.parent = new_parent
             first_item.save()
-            item_dicts_batch.append({'item': create_folder_dict(first_item) if is_folder else create_file_dict(first_item), 'old_parent_id': parent_id, 'new_parent_id': new_parent_id})
+
+            send_event(user_id, request_id, old_parent, EventCode.ITEM_MOVE_OUT, [first_item.id])
+
+            first_item_dict = create_folder_dict(first_item) if is_folder else create_file_dict(first_item)
+            send_event(user_id, request_id, new_parent, EventCode.ITEM_MOVE_IN, [first_item_dict])
 
             while item_group:
                 batch = item_group[:BATCH_SIZE]  # Take first batch
@@ -198,18 +206,20 @@ def move_group(grouped_items, new_parent, new_parent_id, user_id, request_id, pr
                 for item in batch:
                     item.parent = new_parent
                     item.last_modified_at = timezone.now()
+                    # save without bulk update if it's a folder batch
                     if is_folder:
-                        item.save()
+                        item.refresh_from_db()
+                        item.move_to(new_parent, "last-child")
 
                 # Bulk update the batch only if it's a file batch (bulk update messes up MPTT structure I think)
                 if batch and not is_folder:
                     with transaction.atomic():
                         model.objects.bulk_update(batch, ['parent', 'last_modified_at'])
 
-                # Create event data & invalidate cache
                 for item in batch:
                     item_dict = create_folder_dict(item) if is_folder else create_file_dict(item)
-                    item_dicts_batch.append({'item': item_dict, 'old_parent_id': parent_id, 'new_parent_id': new_parent_id})
+                    item_dicts_batch.append(item_dict)
+                    ids.append(item.id)
 
                 # Update progress
                 processed_count += len(batch) + 1  # First item + bulk updated items
@@ -219,8 +229,10 @@ def move_group(grouped_items, new_parent, new_parent_id, user_id, request_id, pr
                     last_percentage = percentage
 
                 # Send batched events
-                send_event(user_id, EventCode.ITEM_MOVED, request_id, item_dicts_batch)
+                send_event(user_id, request_id, old_parent, EventCode.ITEM_MOVE_OUT, ids)
+                send_event(user_id, request_id, new_parent, EventCode.ITEM_MOVE_IN, item_dicts_batch)
                 item_dicts_batch = []
+                ids = []
 
         except Exception as e:
             print("UNKNOWN ERROR")
@@ -253,20 +265,19 @@ def move_task(user_id, request_id, ids, new_parent_id):
     for folder in folders:
         grouped_folders[folder.parent.id if folder.parent else None].append(folder)
 
-    item_dicts_batch = []
     last_percentage = 0
     processed_count = 0
 
     # Process files
     processed_count, last_percentage = move_group(
-        grouped_files, new_parent, new_parent_id, user_id, request_id,
-        processed_count, last_percentage, total_length, item_dicts_batch, is_folder=False
+        grouped_files, new_parent, user_id, request_id,
+        processed_count, last_percentage, total_length, is_folder=False
     )
 
     # Process folders
     move_group(
-        grouped_folders, new_parent, new_parent_id, user_id, request_id,
-        processed_count, last_percentage, total_length, item_dicts_batch, is_folder=True
+        grouped_folders, new_parent, user_id, request_id,
+        processed_count, last_percentage, total_length, is_folder=True
     )
 
     send_message(message="toasts.movedItems", args=None, finished=True, user_id=user_id, request_id=request_id)
@@ -274,15 +285,15 @@ def move_task(user_id, request_id, ids, new_parent_id):
 
 @app.task
 def move_to_trash_task(user_id, request_id, ids):
-    from .utilities.other import create_file_dict, send_event, create_folder_dict  # circular error aah
+    from .utilities.other import group_and_send_event, send_event, create_folder_dict  # circular error aah
 
     files = File.objects.filter(id__in=ids).select_related("parent")
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
-        file_dicts = [create_file_dict(file) for file in files]
-        send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, file_dicts)
         files.update(inTrash=True, inTrashSince=timezone.now())
+
+        group_and_send_event(user_id, request_id, EventCode.ITEM_MOVE_TO_TRASH, files)
 
     for file in files:
         file.remove_cache()
@@ -291,7 +302,7 @@ def move_to_trash_task(user_id, request_id, ids):
     last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = create_folder_dict(folder)
-        send_event(user_id, EventCode.ITEM_MOVE_TO_TRASH, request_id, [folder_dict])
+        send_event(user_id, request_id, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
         folder.moveToTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:
@@ -303,15 +314,14 @@ def move_to_trash_task(user_id, request_id, ids):
 
 @app.task
 def restore_from_trash_task(user_id, request_id, ids):
-    from .utilities.other import create_file_dict, send_event, create_folder_dict  # circular error aah
+    from .utilities.other import send_event, create_folder_dict, group_and_send_event  # circular error aah
 
     files = File.objects.filter(id__in=ids).select_related("parent")
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
-        file_dicts = [create_file_dict(file) for file in files]
-        send_event(user_id, EventCode.ITEM_RESTORE_FROM_TRASH, request_id, file_dicts)
         files.update(inTrash=False, inTrashSince=None)
+        group_and_send_event(user_id, request_id, EventCode.ITEM_RESTORE_FROM_TRASH, files)
 
     for file in files:
         file.remove_cache()
@@ -320,7 +330,7 @@ def restore_from_trash_task(user_id, request_id, ids):
     last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = create_folder_dict(folder)
-        send_event(user_id, EventCode.ITEM_RESTORE_FROM_TRASH, request_id, folder_dict)
+        send_event(user_id, request_id, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
         folder.restoreFromTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:

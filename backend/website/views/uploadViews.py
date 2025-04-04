@@ -16,7 +16,7 @@ from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, Encryptio
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
 from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
-    create_video_metadata
+    create_video_metadata, validate_ids_as_list, group_and_send_event
 from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 
 
@@ -29,17 +29,10 @@ def create_file(request):
     # return HttpResponse(status=500)
     if request.method == "POST":
         files = request.data['files']
-        if not isinstance(files, list):
-            raise BadRequestError("'files' must be a list.")
-
-        if len(files) > 25:
-            raise BadRequestError("'files' cannot be larger than 100")
-
-        if len(files) == 0:
-            raise BadRequestError("'files' length cannot be 0.")
+        validate_ids_as_list(files, max_length=25)
 
         response_json = []
-        ws_json = []
+        file_objs = []
 
         for file in files:
             file_name = file['name']
@@ -102,12 +95,11 @@ def create_file(request):
                 encryption_method=encryption_method,
                 created_at=created_at,
                 crc=crc,
+                ready=True
             )
 
             if duration:
                 file_obj.duration = duration
-
-            file_obj.ready = True
 
             try:
                 file_obj.save()
@@ -166,13 +158,12 @@ def create_file(request):
             if video_metadata:
                 create_video_metadata(file_obj, video_metadata)
 
-            if file_obj.ready:
-                file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name,
-                                      "type": file_type, "encryption_method": file_obj.encryption_method}
-                ws_json.append(create_file_dict(file_obj))
-                response_json.append(file_response_dict)
-        if ws_json:
-            send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, ws_json)
+            file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name, "type": file_type, "encryption_method": file_obj.encryption_method}
+            file_objs.append(file_obj)
+            response_json.append(file_response_dict)
+
+        if file_objs:
+            group_and_send_event(request.user.id, request.request_id, EventCode.ITEM_CREATE, file_objs)
 
         return JsonResponse(response_json, safe=False, status=200)
 
@@ -228,6 +219,7 @@ def create_file(request):
         file_obj.last_modified_at = timezone.now()
         file_obj.crc = crc
         file_obj.save()
+        send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, create_file_dict(file_obj))
 
         return HttpResponse(status=204)
 
@@ -274,7 +266,7 @@ def create_thumbnail(request):
     file_obj.remove_cache()
 
     file_dict = create_file_dict(file_obj)
-    send_event(file_obj.owner.id, EventCode.ITEM_UPDATE, request.request_id, file_dict)
+    send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     return HttpResponse(status=204)
 

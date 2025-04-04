@@ -145,7 +145,7 @@
         </div>
         <div v-else-if="error" class="info">
 
-          <div v-if="error.status === 400" class="title">
+          <div v-if="error.status === 404" class="title">
             <i class="material-icons">feedback</i>
             {{ $t("errors.resourceNotFound") }}
           </div>

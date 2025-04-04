@@ -31,13 +31,13 @@ def create_folder(request):
         raise BadRequestError("Folder name cannot be empty")
     folder_obj = Folder(name=name, parent=parent, owner=request.user)
 
-    #  apply lock if needed
+    # apply lock if needed
     if parent.is_locked:
         folder_obj.applyLock(parent.lockFrom, parent.password)
     folder_obj.save()
 
     folder_dict = create_folder_dict(folder_obj)
-    send_event(request.user.id, EventCode.ITEM_CREATE, request.request_id, [folder_dict])
+    send_event(request.user.id, request.request_id, parent, EventCode.ITEM_CREATE, folder_dict)
     return JsonResponse(folder_dict, status=200)
 
 
@@ -144,7 +144,7 @@ def restore_from_trash(request):
                 required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
 
         if not get_attr(item, 'inTrash'):
-            raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
+            raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
 
     if len(required_folder_passwords) > 0:
         raise MissingOrIncorrectResourcePasswordError(required_folder_passwords)
@@ -214,7 +214,7 @@ def rename(request):
     else:
         data = create_folder_dict(item)
 
-    send_event(request.user.id, EventCode.ITEM_UPDATE, request.request_id, data)
+    send_event(request.user.id, request.request_id, item.parent, EventCode.ITEM_UPDATE, data)
     return HttpResponse(status=204)
 
 
@@ -236,7 +236,7 @@ def folder_password(request, folder_id):
     isLocked = True if newPassword else False
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
+    send_event(request.user.id, request.request_id, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
     if isLocked:
         return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
@@ -265,7 +265,8 @@ def reset_folder_password(request, folder_id):
     isLocked = True if new_folder_password else False
 
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
-    send_event(request.user.id, EventCode.FOLDER_LOCK_STATUS_CHANGE, request.request_id,
+
+    send_event(request.user.id, request.request_id, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
 
     if isLocked:
