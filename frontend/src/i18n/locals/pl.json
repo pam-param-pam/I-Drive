@@ -133,7 +133,7 @@
     "passwordsDontMatch": "Hasła różnią się",
     "signup": "Utwórz konto",
     "submit": "Zaloguj się",
-    "tooManyRequests": "Za dużo prób, spróbuj pózniej",
+    "tooManyRequests": "Za dużo prób, spróbuj ponownie za {seconds} sekund",
     "unexpectedError": "Niespodziewany błąd serwera",
     "unknownError": "Nieznany błąd",
     "username": "Nazwa użytkownika",

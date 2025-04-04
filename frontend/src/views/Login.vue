@@ -203,7 +203,8 @@ export default {
             } else if (e.status === 500) {
                this.error = this.$t('login.unexpectedError')
             } else if (e.status === 429) {
-               this.error = this.$t('login.tooManyRequests')
+               console.log(e)
+               this.error = this.$t('login.tooManyRequests', {seconds: Math.round(e.response.headers['x-ratelimit-reset-after'])})
             } else if (e.status === 403) {
                this.error = this.$t('login.notAllowed')
             } else {

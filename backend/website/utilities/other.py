@@ -120,14 +120,14 @@ def logout_and_close_websockets(user_id: int) -> None:
     )
 
 
-def derive_key(key: str) -> bytes:
+def hash_key(key: str) -> bytes:
     """Derives a fixed-length 32-byte key from any input key."""
     return hashlib.sha256(key.encode()).digest()
 
 
 def encrypt_message(key: str, data: Union[str, List, Dict]) -> str:
     """Encrypts a message (string, list, or dict) using AES-256-CBC."""
-    key_bytes = derive_key(key)
+    key_bytes = hash_key(key)
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(key_bytes), modes.CBC(iv))
     encryptor = cipher.encryptor()
@@ -163,7 +163,6 @@ def group_and_send_event(user_id: int, request_id: int,  op_code: EventCode, res
 
 def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str]) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
-
     if not isinstance(data, list):
         data = [data]
 

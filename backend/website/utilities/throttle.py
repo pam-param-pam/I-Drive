@@ -12,7 +12,7 @@ class MyUserRateThrottleBase(UserRateThrottle):
     def __init__(self):
         super().__init__()
         self.fail_block = 30
-        self.fail_limit = 10
+        self.fail_limit = 15
         self.fail_count = None
         self.request = None
 
@@ -29,10 +29,12 @@ class MyUserRateThrottleBase(UserRateThrottle):
         user_allowed = super().allow_request(request, view)
         if not user_allowed:
             print("blocked with conventional methods")
-        # STEP 2. Check failed attempts (custom logic)
+            return self.throttle_failure()
 
+        # STEP 2. Check failed attempts (custom logic)
         remaining_failed_requests = self.get_remaining_failed_requests()
-        if not user_allowed or remaining_failed_requests <= 0:
+        if remaining_failed_requests <= 0:
+            print("blocked with unconventional methods")
             return self.throttle_failure()
 
         return self.throttle_success()
@@ -52,9 +54,8 @@ class MyUserRateThrottleBase(UserRateThrottle):
         return num_requests, duration_time
 
     def apply_ratelimit_headers(self):
-
         self.request.META["rate_limit_remaining"] = min(self.get_remaining_requests(), self.get_remaining_failed_requests())
-        self.request.META["rate_limit_reset_after"] = self.wait()
+        self.request.META["rate_limit_reset_after"] = round(self.wait(), 4)
         self.request.META["rate_limit_bucket"] = self.bucket
 
     def throttle_failure(self):
@@ -92,8 +93,7 @@ class MyUserRateThrottleBase(UserRateThrottle):
         now = time.time()
 
         recent_fails = [t for t in fail_data if now - t < self.fail_block]
-
-        return min(self.fail_limit - len(recent_fails), 0)
+        return max(self.fail_limit - len(recent_fails), 0)
 
     def get_remaining_requests(self):
         """

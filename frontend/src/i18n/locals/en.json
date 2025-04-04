@@ -131,7 +131,7 @@
     "passwordsDontMatch": "Passwords don't match",
     "signup": "Register",
     "submit": "Login",
-    "tooManyRequests": "Too many register attempts",
+    "tooManyRequests": "Too many attempts, try again in {seconds} seconds",
     "unexpectedError": "Unexpected server error",
     "unknownError": "Unknown error",
     "username": "Username",
