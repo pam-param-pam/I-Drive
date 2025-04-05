@@ -72,7 +72,7 @@
     "notImplemented": "Not implemented yet",
     "permissionDenied": "Permission denied",
     "permissionDeniedDetails": "You are not allowed to perform this action",
-    "rateLimit": "Enhance your calm, try again in a few seconds",
+    "rateLimit": "Too many requests!",
     "resourceAccessForbidden": "Access to resource forbidden",
     "resourceNotFound": "Resource doesn't exist",
     "resourceNotReady": "Resource is not ready yet",

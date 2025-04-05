@@ -246,10 +246,6 @@ export default {
          return null
       },
 
-      resolution() {
-         //todo
-         return null
-      },
       encryptionMethod() {
          if (this.selectedCount === 1) {
             if (this.selected[0].isDir) return null

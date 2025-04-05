@@ -103,7 +103,7 @@ def formatDate(date: datetime) -> str:
 
 
 def logout_and_close_websockets(user_id: int) -> None:
-    send_event(user_id, 0, None, EventCode.FORCE_LOGOUT, {})
+    send_event(user_id, 0, None, EventCode.FORCE_LOGOUT)
     queue_ws_event.delay(
         'user',
         {
@@ -161,14 +161,19 @@ def group_and_send_event(user_id: int, request_id: int,  op_code: EventCode, res
         send_event(user_id, request_id, parent, op_code, file_dicts)
 
 
-def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str]) -> None:
+def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
-    if not isinstance(data, list):
+    if data and not isinstance(data, list):
         data = [data]
 
-    message = {'folder_context_id': folder_context.id}
-    event = {'op_code': op_code.value, 'data': data}
-    message['is_encrypted'] = False
+    message = {'is_encrypted': False}
+    if folder_context:
+        message['folder_context_id'] = folder_context.id
+
+    event = {'op_code': op_code.value}
+
+    if data:
+        event['data'] = data
 
     if folder_context and folder_context.is_locked:
         message['is_encrypted'] = True
@@ -389,7 +394,7 @@ def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}
 
 
-def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:  # todo  maybe change to build_http_error_response?
+def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:
     return {"code": code, "error": error, "details": details}
 
 

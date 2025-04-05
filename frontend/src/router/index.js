@@ -169,6 +169,7 @@ router.beforeResolve(async (to, from, next) => {
    const store = useMainStore()
    store.closeHovers()
    store.resetSelected()
+   store.setError(null)
    // this will only be null on first route
    if (from.name == null) {
       await initAuth()

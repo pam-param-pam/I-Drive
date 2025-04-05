@@ -1,4 +1,5 @@
 import time
+from datetime import datetime, timedelta
 
 from django.core.exceptions import ImproperlyConfigured
 from rest_framework.throttling import UserRateThrottle
@@ -28,13 +29,11 @@ class MyUserRateThrottleBase(UserRateThrottle):
         # STEP 1. Check general rate limit
         user_allowed = super().allow_request(request, view)
         if not user_allowed:
-            print("blocked with conventional methods")
             return self.throttle_failure()
 
         # STEP 2. Check failed attempts (custom logic)
         remaining_failed_requests = self.get_remaining_failed_requests()
         if remaining_failed_requests <= 0:
-            print("blocked with unconventional methods")
             return self.throttle_failure()
 
         return self.throttle_success()
@@ -85,9 +84,37 @@ class MyUserRateThrottleBase(UserRateThrottle):
 
             return wait_time
 
-        return super().wait()
+        return self.get_reset_time()
+
+    def get_reset_time(self):
+        """
+        Calculate the time when the rate limit bucket resets, in seconds.
+        """
+        if self.rate is None:
+            return None  # No limit
+
+        if not hasattr(self, 'history') or not hasattr(self, 'now'):
+            raise AttributeError("This method should be called after `allow_request` method.")
+
+        if not self.history:  # If history is empty, no requests have been made yet
+            return self.duration  # Reset time is the duration itself, in seconds
+
+        # Convert the float timestamp to a datetime object
+        last_request_time = datetime.fromtimestamp(self.history[-1])
+
+        # Calculate the time when the rate limit resets
+        reset_time = last_request_time + timedelta(seconds=self.duration)
+
+        # Calculate the total number of seconds until the reset time relative to the current time
+        seconds_until_reset = (reset_time - datetime.now()).total_seconds()
+
+        # Return the reset time in seconds
+        return seconds_until_reset
 
     def get_remaining_failed_requests(self):
+        """
+        Returns the number of remaining requests in the global fail bucket before the limit is hit.
+        """
         fail_key = self._get_fail_key(self.request)
         fail_data = cache.get(fail_key, [])
         now = time.time()

@@ -22,7 +22,6 @@ from simple_history.models import HistoricalRecords
 from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
 from .utilities.helpers import chop_long_file_name
 
-# todo MPTTModel is fucked up
 
 class Folder(MPTTModel):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)

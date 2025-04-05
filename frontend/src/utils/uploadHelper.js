@@ -129,11 +129,11 @@ export async function getAudioCover(file) {
    return new Promise((resolve, reject) => {
       jsmediatags.read(file.systemFile, {
          onSuccess: (tag) => {
-            const picture = tag.tags.picture
+            let picture = tag.tags.picture
             if (picture) {
-               const { data, format } = picture
-               const byteArray = new Uint8Array(data)
-               const blob = new Blob([byteArray], { type: format })
+               let { data, format } = picture
+               let byteArray = new Uint8Array(data)
+               let blob = new Blob([byteArray], { type: format })
                resolve(blob)
             } else {
                reject(new Error("No picture found in audio file"))
@@ -159,10 +159,10 @@ export function captureVideoFrame(videoPlayer, seekTo = 0, quality = 0.75, maxWi
       // Extract thumbnail when seeking is complete
       videoPlayer.addEventListener("seeked", () => {
          // Create canvas with video dimensions
-         const canvas = document.createElement("canvas")
+         let canvas = document.createElement("canvas")
 
          // Draw video frame to canvas
-         const ctx = canvas.getContext("2d")
+         let ctx = canvas.getContext("2d")
 
          let width = videoPlayer.videoWidth
          let height = videoPlayer.videoHeight

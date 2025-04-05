@@ -194,7 +194,6 @@ export default {
 
          this.addSelected(this.file)
 
-         //todo show a progress bar
          let res = await fetch(this.file.download_url, {})
          this.setLoading(false)
 

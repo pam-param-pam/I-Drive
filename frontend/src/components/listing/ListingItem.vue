@@ -154,7 +154,6 @@ export default {
          event.preventDefault()
 
          if (!this.canDrop) {
-            event.dataTransfer.dropEffect = "not-allowed";
             return
          }
 

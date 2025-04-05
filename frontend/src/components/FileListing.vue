@@ -578,8 +578,8 @@ export default {
          }
       },
 
-      dragEnter() {
-         this.$emit('dragEnter')
+      dragEnter(event) {
+         this.$emit('dragEnter', event)
       },
 
       dragLeave() {

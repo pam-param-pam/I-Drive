@@ -402,10 +402,7 @@ export default {
          this.showHover({
             prompt: "moments",
             props: { video: this.videoRef },
-            // confirm: (timestamp) => {
-            //    this.videoRef.play()
-            //    // this.videoRef.currentTime = timestamp
-            // }
+
          })
       },
       rename() {
@@ -471,16 +468,26 @@ export default {
       async prefetch() {
          //todo make it better!
          this.prefetchTimeout = setTimeout(() => {
-            let url1 = this.files[this.currentIndex + 1]?.thumbnail_url
-            let url2 = this.files[this.currentIndex + 2]?.thumbnail_url
+            let file1 = this.files[this.currentIndex + 1]
+            let file2 = this.files[this.currentIndex + 2]
+            let thumb_url1 = file1?.thumbnail_url
+            let thumb_url2 = file2?.thumbnail_url
 
-            if (url1) {
+            if (thumb_url1) {
                let img1 = new Image()
-               img1.src = url1
+               img1.src = thumb_url1
             }
-            if (url1) {
+            if (thumb_url2) {
                let img2 = new Image()
-               img2.src = url2
+               img2.src = thumb_url2
+            }
+
+            if (file1.type === "video") {
+               let video_url= file1?.download_url
+               if (video_url) {
+                  let videoPlayer = document.createElement("video")
+                  videoPlayer.src = video_url
+               }
             }
          }, 50)
       },

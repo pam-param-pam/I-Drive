@@ -1,5 +1,6 @@
 <template>
-   <div v-if="!loading" class="row">
+   <errors v-if="error" :error="error" />
+   <div v-else-if="!loading" class="row">
       <div class="column">
          <div class="cards-wrapper">
             <!--        START OF WEBHOOKS CARD-->
@@ -205,8 +206,11 @@ import throttle from 'lodash.throttle'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
 import { useUploadStore } from '@/stores/uploadStore.js'
+import Errors from "@/components/Errors.vue"
+import { getAllShares } from "@/api/share.js"
 
 export default {
+   components: { Errors },
    data() {
       return {
          bots: [],
@@ -231,27 +235,28 @@ export default {
 
    async created() {
       this.setLoading(true)
-      let res = await getDiscordSettings()
-      this.setWebhooks(res.webhooks)
+      try {
+         let res = await getDiscordSettings()
+         this.setWebhooks(res.webhooks)
 
-      this.bots = res.bots
-      this.channelId = res.channel_id
-      this.guildId = res.guild_id
-      this.attachmentName = res.attachment_name
-      this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
-      this.uploadDestinationLocked = res.upload_destination_locked
-      this.setLoading(false)
-      this.res = res
+         this.bots = res.bots
+         this.channelId = res.channel_id
+         this.guildId = res.guild_id
+         this.attachmentName = res.attachment_name
+         this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
+         this.uploadDestinationLocked = res.upload_destination_locked
+         this.res = res
+      } catch (error) {
+         console.error(error)
+         this.setError(error)
+      } finally {
+         this.setLoading(false)
+      }
+
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'setLoading',
-         'showHover',
-         'setWebhooks',
-         'removeWebhook',
-         'addToWebhooks'
-      ]),
+      ...mapActions(useMainStore, ['setError', 'setLoading', 'showHover', 'setWebhooks', 'removeWebhook', 'addToWebhooks']),
 
       ...mapActions(useUploadStore, ['setWebhooks', 'removeWebhook', 'addToWebhooks']),
 
