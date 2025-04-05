@@ -231,6 +231,7 @@ export const useMainStore = defineStore("main", {
       updateItem(newItem) {
          let index1 = this.items.findIndex(item => item.id === newItem.id)
          let index2 = this.selected.findIndex(item => item.id === newItem.id)
+         let index3 = this.searchItems.findIndex(item => item.id === newItem.id)
 
          if (index1 !== -1) {
             this.items[index1] = newItem
@@ -240,6 +241,9 @@ export const useMainStore = defineStore("main", {
          }
          if (index2 !== -1) {
             this.selected[index2] = newItem
+         }
+         if (index3 !== -1) {
+            this.searchItems[index3] = newItem
          }
       },
       changeLockStatusAndPasswordCache({ folderId, newLockStatus, lockFrom }) {

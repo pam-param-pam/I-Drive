@@ -38,9 +38,7 @@ Credentials: `demo`/`demo`
 
 | TODO List                                                    | Status               |
 |--------------------------------------------------------------|----------------------|
-| fix possible access to locked items via websocket send event | ☠️  ASAP             |
 | Proper frontend networking & handling of errors              | 🛠️  in progress     |
-| events in search context like file move                      | 🛠️  in progress     |
 | fix 401 in locked folders in shares                          | 🛠️  in progress     |
 | Error handling in upload process                             | ⚠️  Only partial     |
 | Optimize shares                                              | ❌  Coming one day    |
@@ -55,9 +53,6 @@ Credentials: `demo`/`demo`
 | multiple files in 1 discord attachment support               | ⛔  Coming prob never |
 | fix mobile number download info frontend                     | ⛔  Coming prob never |
 | add deselect                                                 | ⛔  Coming prob never |
-| prefetch related vs select related                           | ⛔  Coming prob never |
-| FIX RESUMABLE DOWNLOAD                                       | ⛔  Coming prob never |
-
 
 
 # How it works

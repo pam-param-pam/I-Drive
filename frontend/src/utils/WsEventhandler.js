@@ -8,35 +8,44 @@ const toast = useToast()
 
 
 async function deriveKey(variableKey) {
-   const encoder = new TextEncoder()
-   const keyData = encoder.encode(variableKey)
+   let encoder = new TextEncoder()
+   let keyData = encoder.encode(variableKey)
 
-   const hash = await crypto.subtle.digest("SHA-256", keyData)
+   let hash = await crypto.subtle.digest("SHA-256", keyData)
    return hash
 }
 
 
 async function decryptMessage(key, encryptedData) {
-   const keyBytes = await deriveKey(key)
-   const encryptedBuffer = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
+   let keyBytes = await deriveKey(key)
+   let encryptedBuffer = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0))
 
-   const iv = encryptedBuffer.slice(0, 16) // First 16 bytes (IV)
-   const ciphertext = encryptedBuffer.slice(16) // Remaining encrypted data
+   let iv = encryptedBuffer.slice(0, 16) // First 16 bytes (IV)
+   let ciphertext = encryptedBuffer.slice(16) // Remaining encrypted data
 
-   const cryptoKey = await crypto.subtle.importKey(
+   let cryptoKey = await crypto.subtle.importKey(
       "raw", keyBytes, { name: "AES-CBC", length: 256 }, false, ["decrypt"]
    )
 
 
-   const decryptedBuffer = await crypto.subtle.decrypt(
+   let decryptedBuffer = await crypto.subtle.decrypt(
       { name: "AES-CBC", iv },
       cryptoKey,
       ciphertext
    )
 
-   const decodedText = new TextDecoder().decode(decryptedBuffer)
+   let decodedText = new TextDecoder().decode(decryptedBuffer)
    return JSON.parse(decodedText) // Try parsing JSON, else return string
+}
 
+
+function removeItemsByIds(store, ids) {
+   let updatedItems = store.items.filter(item => !ids.includes(item.id))
+   store.setItems(updatedItems)
+
+   if (!store.searchActive) return
+   let updatedSearchItems = store.searchItems.filter(item => !ids.includes(item.id))
+   store.setSearchItems(updatedSearchItems)
 }
 
 
@@ -59,10 +68,6 @@ export async function onEvent(message) {
 
    let op_code = event?.op_code
 
-   console.log(jsonObject)
-   console.log(event)
-   console.log(currentRoute)
-
    if (op_code === 1) { // items created event
       if (folder_context_id !== currentFolder?.id) return
       for (let item of event.data) {
@@ -78,21 +83,19 @@ export async function onEvent(message) {
       //if the deleted folder was the current folder, then let's redirect to root
       if (event.data.includes(currentFolder?.id)) {
          this.$router.push({ name: `Files` })
-
       }
 
    }
    if (op_code === 3) { // items updated event
       for (let item of event.data) {
-         if (item.parent_id !== currentFolder?.id) continue
+         if (item.parent_id !== currentFolder?.id && !store.searchActive) continue
          store.updateItem(item)
       }
    }
 
    if (op_code === 4) { // items move-out event
-      if (folder_context_id !== currentFolder?.id) return
-      let updatedItems = store.items.filter(item => !event.data.includes(item.id))
-      store.setItems(updatedItems)
+      if (folder_context_id !== currentFolder?.id && !store.searchActive) return
+      removeItemsByIds(store, event.data)
    }
 
    if (op_code === 5) { // items move-in event
@@ -106,9 +109,8 @@ export async function onEvent(message) {
       for (let item of event.data) {
          if (currentRoute === "Trash") {
             store.pushToItems(item)
-         } else if (item.parent_id === currentFolder?.id) {
-            let updatedItems = store.items.filter(item1 => item1.id !== item.id)
-            store.setItems(updatedItems)
+         } else if (item.parent_id === currentFolder?.id || store.searchActive) {
+            removeItemsByIds(store, [item.id])
          }
       }
    }
