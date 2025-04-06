@@ -27,16 +27,19 @@ class MyUserRateThrottleBase(UserRateThrottle):
         self.request = request
 
         # STEP 1. Check general rate limit
+        # allow_request already calls throttle_failure() or throttle_success()
+        # so we should be careful not to call it again. Especially because calling
+        # throttle_success() twice will lead to doubling the history records
         user_allowed = super().allow_request(request, view)
         if not user_allowed:
             return self.throttle_failure()
 
         # STEP 2. Check failed attempts (custom logic)
         remaining_failed_requests = self.get_remaining_failed_requests()
-        if remaining_failed_requests <= 0:
+        if remaining_failed_requests < 0:
             return self.throttle_failure()
 
-        return self.throttle_success()
+        return user_allowed
 
     def parse_rate(self, rate):
         if rate is None:
@@ -132,7 +135,7 @@ class MyUserRateThrottleBase(UserRateThrottle):
         if not hasattr(self, 'history') or not hasattr(self, 'now'):
             raise AttributeError("This method should be called after `allow_request` method.")
 
-        return self.num_requests - len(self.history)
+        return max(self.num_requests - len(self.history), 0)
 
     def _get_fail_key(self, request):
         if request.user.is_authenticated:
@@ -166,6 +169,10 @@ class PasswordChangeThrottle(MyUserRateThrottleBase):
 class RegisterThrottle(MyUserRateThrottleBase):
     scope = 'register'
     bucket = "FdHakamxf"
+
+class LoginThrottle(MyUserRateThrottleBase):
+    scope = 'login'
+    bucket = "Ad3DkDf5o"
 
 class DiscordSettingsThrottle(MyUserRateThrottleBase):
     scope = 'discord_settings'

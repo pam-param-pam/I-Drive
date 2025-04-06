@@ -2,7 +2,7 @@
    <div id="login">
       <form @submit.prevent.stop="submit">
          <h1>&#8205;{{ text }}&#8205;</h1>
-         <div v-if="error !== ''" class="wrong">{{ error }}</div>
+         <div v-if="error" class="wrong">{{ error }}</div>
 
          <input
             v-model="username"
@@ -203,8 +203,7 @@ export default {
             } else if (e.status === 500) {
                this.error = this.$t('login.unexpectedError')
             } else if (e.status === 429) {
-               console.log(e)
-               this.error = this.$t('login.tooManyRequests', {seconds: Math.round(e.response.headers['x-ratelimit-reset-after'])})
+               this.error = this.$t('login.tooManyRequests', {seconds: Math.round(e.response.headers['retry-after'])})
             } else if (e.status === 403) {
                this.error = this.$t('login.notAllowed')
             } else {

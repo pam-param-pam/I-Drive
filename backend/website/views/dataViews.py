@@ -30,8 +30,8 @@ def last_modified_func(request, file_obj, sequence=None):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_folder_and_permissions
 @etag(etag_func)
@@ -47,8 +47,8 @@ def get_folder_info(request, folder_obj: Folder):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_folder_and_permissions
 def get_dirs(request, folder_obj: Folder):
@@ -64,8 +64,8 @@ def get_dirs(request, folder_obj: Folder):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_file_and_permissions
 # @last_modified(last_modified_func)
@@ -74,13 +74,13 @@ def get_file_info(request, file_obj: File):
     return JsonResponse(file_content)
 
 
-@cache_page(60 * 1)
-@vary_on_headers("x-resource-password")
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_folder_and_permissions
+@vary_on_headers("x-resource-password")
+@cache_page(60 * 1)
 def get_usage(request, folder_obj: Folder):
     total_used_size = cache.get(f"TOTAL_USED_SIZE:{request.user}")
     if not total_used_size:
@@ -95,8 +95,8 @@ def get_usage(request, folder_obj: Folder):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def fetch_additional_info(request, item_id):
     item = get_resource(item_id)
@@ -127,8 +127,8 @@ def fetch_additional_info(request, item_id):
         return JsonResponse(metadata_dict, status=200)
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_folder_and_permissions
 def get_breadcrumbs(request, folder_obj: Folder):
@@ -137,8 +137,8 @@ def get_breadcrumbs(request, folder_obj: Folder):
 
 
 @api_view(['GET'])
-@throttle_classes([SearchThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([SearchThrottle])
 @handle_common_errors
 def search(request):
     user = request.user
@@ -272,8 +272,8 @@ def search(request):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
@@ -288,8 +288,8 @@ def get_trash(request):
 
 
 @api_view(['GET'])
-@throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([FolderPasswordThrottle])
 @handle_common_errors
 def check_password(request, resource_id):
     try:
@@ -309,8 +309,8 @@ def check_password(request, resource_id):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_file_and_permissions
 def get_moments(request, file_obj: File):
@@ -323,8 +323,8 @@ def get_moments(request, file_obj: File):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_file_and_permissions
 def get_tags(request, file_obj: File):

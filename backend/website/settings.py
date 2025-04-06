@@ -54,21 +54,21 @@ DJOSER = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'website.utilities.middlewares.FailedRequestLoggerMiddleware',
-    'website.utilities.middlewares.RequestIdMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+    'website.utilities.middlewares.RequestIdMiddleware',
+    'website.utilities.middlewares.FailedRequestLoggerMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
-
 ]
+
 CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
 
@@ -182,7 +182,8 @@ REST_FRAMEWORK = {
         'search': '60/m',
         'register': '20/h',
         'discord_settings': '2/1s',
-        'proxy': '20/s'
+        'proxy': '20/s',
+        'login': '5/10s'
 
     },
     'DEFAULT_RENDERER_CLASSES': (

@@ -1,7 +1,7 @@
 import router from "@/router"
 import { baseURL, baseWS } from "@/utils/constants"
 import { getUser, logoutUser, registerUser } from "@/api/user.js"
-import {useMainStore} from "@/stores/mainStore.js"
+import { useMainStore } from "@/stores/mainStore.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
 import { onEvent } from "@/utils/WsEventhandler.js"
@@ -24,35 +24,43 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setToken(token)
    mainStore.setTheme(body.settings.theme)
 
-   app.use(VueNativeSock, baseWS + "/user", {reconnection: false, protocol: token})
+   app.use(VueNativeSock, baseWS + "/user", { reconnection: false, protocol: token })
    app.config.globalProperties.$socket.onmessage = (data) => onEvent(data).then()
 
 }
 
-export async function login(username, password) {
-   const data = {username, password}
 
-   const res = await fetch(`${baseURL}/auth/token/login`, {
+export async function login(username, password) {
+   let data = { username, password }
+
+   let res = await fetch(`${baseURL}/auth/token/login`, {
       method: "POST",
       headers: {
-         "Content-Type": "application/json",
+         "Content-Type": "application/json"
       },
 
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
    })
 
-   const body = await res.text()
+   let body = await res.text()
 
    if (res.status === 200) {
 
-      const token = JSON.parse(body).auth_token
+      let token = JSON.parse(body).auth_token
 
       localStorage.setItem("token", token)
       await validateLogin()
 
    } else {
       const error = new Error()
+      // Map status and headers to from fetch to look the same way as axios ones
       error.status = res.status
+      error.response = {}
+      let headers = {}
+      res.headers.forEach((value, key) => {
+         headers[key] = value
+      })
+      error.response.headers = headers
       throw error
    }
 
@@ -60,10 +68,11 @@ export async function login(username, password) {
 
 
 export async function signup(username, password) {
-   let data = {username, password}
+   let data = { username, password }
    await registerUser(data)
-   
+
 }
+
 
 export async function logout() {
    let store = useMainStore()
@@ -76,6 +85,6 @@ export async function logout() {
       await logoutUser(token)
    }
 
-   await router.push({path: "/login"})
+   await router.push({ path: "/login" })
    router.go(0) // make sure every state is removed just in case
 }

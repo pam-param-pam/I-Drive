@@ -2,7 +2,6 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import path, re_path
 from django.views.static import serve
-from djoser.views import TokenCreateView
 
 from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
@@ -13,7 +12,7 @@ from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment
 from .views.testViews import get_discord_state, test
 from .views.uploadViews import create_file, create_thumbnail, proxy_discord
-from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
+from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
     update_upload_destination, enable_bot, can_upload, reset_discord_state
 
 urlpatterns = [
@@ -44,7 +43,7 @@ urlpatterns = [
     path("file/moment/<signed_file_id>/<timestamp>", stream_moment, name="stream moment"),
     path("file/tags/<file_id>", get_tags, name="get file moments"),
 
-    path("auth/token/login", TokenCreateView.as_view(), name="login"),
+    path("auth/token/login", MyTokenCreateView.as_view(), name="login"),
     path("auth/register", register_user, name="register"),
     path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
 

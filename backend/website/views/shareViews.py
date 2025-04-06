@@ -18,8 +18,8 @@ from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottl
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def get_shares(request):
     shares = ShareableLink.objects.filter(owner=request.user)
@@ -37,8 +37,8 @@ def get_shares(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def delete_share(request):
     token = request.data['token']
@@ -52,8 +52,8 @@ def delete_share(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SharePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def create_share(request):
     item_id = request.data['resource_id']
@@ -92,8 +92,8 @@ def create_share(request):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
 @permission_classes([AllowAny])
+@throttle_classes([defaultAnonUserThrottle])
 @handle_common_errors
 def view_share(request, token, folder_id=None):
     share = get_share(request, token)
@@ -130,8 +130,8 @@ def view_share(request, token, folder_id=None):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
+@throttle_classes([defaultAnonUserThrottle])
 @handle_common_errors
 def create_share_zip_model(request, token):
     ids = request.data['ids']
@@ -151,8 +151,8 @@ def create_share_zip_model(request, token):
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
+@throttle_classes([defaultAnonUserThrottle])
 @handle_common_errors
 def share_view_stream(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
@@ -173,8 +173,8 @@ def share_view_stream(request, token: str, file_id: str):
     return stream_file(request, signed_file_id)
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
+@throttle_classes([defaultAnonUserThrottle])
 @handle_common_errors
 def share_view_thumbnail(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
@@ -187,8 +187,8 @@ def share_view_thumbnail(request, token: str, file_id: str):
     return get_thumbnail(request._request, signed_file_id)
 
 @api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
+@throttle_classes([defaultAnonUserThrottle])
 @handle_common_errors
 def share_view_preview(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)

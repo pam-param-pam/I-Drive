@@ -9,7 +9,7 @@ from ..models import File, Folder, VideoPosition, Tag, Moment
 from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder, move_task
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
-from ..utilities.decorators import handle_common_errors, check_folder_and_permissions
+from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists, \
     delete_single_discord_attachment, get_discord_author, create_moment_dict, get_attr, validate_ids_as_list
@@ -17,8 +17,8 @@ from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def create_folder(request):
     name = request.data['name']
@@ -42,8 +42,8 @@ def create_folder(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def move(request):
     """This view uses values instead of ORM objects for files"""
@@ -83,8 +83,8 @@ def move(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def move_to_trash(request):
     """This view uses values instead of ORM objects for files"""
@@ -119,8 +119,8 @@ def move_to_trash(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def restore_from_trash(request):
     """This view uses values instead of ORM objects for files"""
@@ -155,8 +155,8 @@ def restore_from_trash(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & DeletePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def delete(request):
     """This view uses values instead of ORM objects for files"""
@@ -193,8 +193,8 @@ def delete(request):
 
 
 @api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def rename(request):
     obj_id = request.data['id']
@@ -219,8 +219,8 @@ def rename(request):
 
 
 @api_view(['POST'])
-@throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & LockPerms])
+@throttle_classes([FolderPasswordThrottle])
 @handle_common_errors
 def folder_password(request, folder_id):
 
@@ -244,8 +244,8 @@ def folder_password(request, folder_id):
 
 
 @api_view(['POST'])
-@throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ResetLockPerms])
+@throttle_classes([FolderPasswordThrottle])
 @handle_common_errors
 def reset_folder_password(request, folder_id):
     account_password = request.data['accountPassword']
@@ -275,8 +275,8 @@ def reset_folder_password(request, folder_id):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def update_video_position(request):
     file_id = request.data['file_id']
@@ -297,8 +297,8 @@ def update_video_position(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def add_tag(request):
     file_id = request.data['file_id']
@@ -329,8 +329,8 @@ def add_tag(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def remove_tag(request):
     file_id = request.data['file_id']
@@ -352,8 +352,8 @@ def remove_tag(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def add_moment(request):
     file_id = request.data['file_id']
@@ -398,8 +398,8 @@ def add_moment(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def remove_moment(request):
     file_id = request.data['file_id']
@@ -416,8 +416,8 @@ def remove_moment(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def change_crc(request):
     file_id = request.data['file_id']

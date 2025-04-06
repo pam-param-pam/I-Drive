@@ -31,9 +31,9 @@ from ..utilities.other import get_flattened_children, create_zip_file_dict, chec
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
-@cache_page(60 * 60 * 24)
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
+@cache_page(60 * 60 * 24)
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -176,9 +176,9 @@ def get_thumbnail(request, file_obj: File):
     response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
     return response
 
-@cache_page(60 * 60 * 24 * 30)
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
+@cache_page(60 * 60 * 24 * 30)
 @handle_common_errors
 @check_signed_url
 @check_file
@@ -201,8 +201,8 @@ def stream_moment(request, file_obj: File, timestamp):
     return response
 
 # todo  handle >416 Requested Range Not Satisfiable<
-@no_gzip
 @api_view(['GET'])
+@no_gzip
 @throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 @check_signed_url
@@ -330,8 +330,8 @@ def stream_file(request, file_obj: File):
 
     return response
 
-@no_gzip
 @api_view(['GET'])
+@no_gzip
 @throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def stream_zip_files(request, token):

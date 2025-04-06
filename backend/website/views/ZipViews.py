@@ -12,8 +12,8 @@ from ..utilities.throttle import defaultAuthUserThrottle
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & DownloadPerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def create_zip_model(request):
     ids = request.data['ids']

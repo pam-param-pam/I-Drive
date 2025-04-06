@@ -21,8 +21,8 @@ from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def create_file(request):
     check_if_bots_exists(request.user)
@@ -225,8 +225,8 @@ def create_file(request):
 
 
 @api_view(['POST'])
-@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
+@throttle_classes([defaultAuthUserThrottle])
 @handle_common_errors
 def create_thumbnail(request):
     file_id = request.data['file_id']
@@ -271,8 +271,8 @@ def create_thumbnail(request):
     return HttpResponse(status=204)
 
 @api_view(["POST"])
+@permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([ProxyRateThrottle])
-@permission_classes([IsAuthenticated])
 @handle_common_errors
 def proxy_discord(request):
     check_if_bots_exists(request.user)

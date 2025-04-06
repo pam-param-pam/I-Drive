@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 from django.http import HttpResponse, JsonResponse
 from djoser import utils
-from djoser.views import TokenDestroyView
+from djoser.views import TokenDestroyView, TokenCreateView
 from rest_framework.authtoken.admin import User
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
@@ -16,7 +16,7 @@ from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms, query_attachments
-from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle
+from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle, LoginThrottle
 
 
 @api_view(['POST'])
@@ -155,13 +155,20 @@ def update_settings(request):
 
 class MyTokenDestroyView(TokenDestroyView):
     """
-    Override view to include closing websocket connection
-    Use this endpoint to logout user (remove user authentication token).
+    Override view to include closing websocket connection aswell as standard logout
     """
+    throttle_classes = [LoginThrottle]
 
     def post(self, request):
         logout_and_close_websockets(request.user.id)
         return super().post(request)
+
+
+class MyTokenCreateView(TokenCreateView):
+    throttle_classes = [LoginThrottle]
+
+    def post(self, request, **kwargs):
+        return super().post(request, **kwargs)
 
 
 @api_view(['GET'])
