@@ -221,7 +221,9 @@ def stream_file(request, file_obj: File):
     # Encode the filename using RFC 5987
     encoded_filename = quote(file_obj.name)
 
-    if_range_header = request.headers.get('if-range')
+    print(request.headers)
+    is_download = request.headers.get('cookie') and not request.headers.get('accept')  # apparently chrome sends cookie header during download resume.
+    # but not during video seek. And sends accept during seek
 
     content_disposition = f'{"inline" if isInline else "attachment"}; filename="{filename_ascii}"; filename*=UTF-8\'\'{encoded_filename}'
     # If file is empty, return no content but still allow it to be downloaded
@@ -237,6 +239,7 @@ def stream_file(request, file_obj: File):
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
+                print("file_iterator")
                 auto_prefetch(file_obj, fragments[index].id)
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
@@ -261,7 +264,7 @@ def stream_file(request, file_obj: File):
                 # if we are returning a partial request we only want to stream 1 fragment.
                 # ⚠️ This does not conform to the protocol specifications.
                 # We are doing this to optimize browser video streaming to be faster
-                if status == 206 and not if_range_header:
+                if status == 206 and not is_download:
                     break
 
                 index += 1
@@ -324,12 +327,19 @@ def stream_file(request, file_obj: File):
     if range_header:
         response['Content-Range'] = 'bytes %s-%s/%s' % (real_start_byte, real_end_byte - 1, file_size)  # this -1 is vevy important
 
-    # if_range_header exists its likely this is from download resume process in a browser, hence we want to return the entire file and not just 1 fragment
-    if range_header and not if_range_header:
+    # if_match exists its likely this is from download resume process in a browser, hence we want to return the entire file and not just 1 fragment
+    if range_header and not is_download:
         response['Content-Length'] = real_end_byte - real_start_byte
 
     return response
+"""
+seeek
+{ 'Accept-Language': 'en-GB,en;q=0.9,de-DE;q=0.8,de;q=0.7,zh;q=0.6,pl;q=0.5,en-US;q=0.4,ja;q=0.3', 'Range': 'bytes=307429376-1786632812',}
 
+download
+{'Range': 'bytes=49791296-',  'Accept-Language': 'en-GB,en;q=0.9,de-DE;q=0.8,de;q=0.7,zh;q=0.6,pl;q=0.5,en-US;q=0.4,ja;q=0.3', 'Cookie': 'csrftoken=1wtJYI4WvOfSqleVTS91FND0ARAyAF5D'}
+
+"""
 @api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])

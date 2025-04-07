@@ -250,17 +250,21 @@ class Discord:
         return response
 
     def _calculate_expiry(self, message: dict) -> float:
-        url = message["attachments"][0]["url"]
-        parsed_url = urlparse(url)
-        query_params = parse_qs(parsed_url.query)
-        ex_param = query_params.get('ex', [None])[0]
-        if ex_param is None:
-            raise ValueError("The 'ex' parameter is missing in the URL")
-        expiry_timestamp = int(ex_param, 16)
-        expiry_datetime = datetime.utcfromtimestamp(expiry_timestamp)
-        current_datetime = datetime.utcnow()
-        ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
-        return ttl_seconds
+        try:
+            url = message["attachments"][0]["url"]
+            parsed_url = urlparse(url)
+            query_params = parse_qs(parsed_url.query)
+            ex_param = query_params.get('ex', [None])[0]
+            if ex_param is None:
+                raise ValueError("The 'ex' parameter is missing in the URL")
+            expiry_timestamp = int(ex_param, 16)
+            expiry_datetime = datetime.utcfromtimestamp(expiry_timestamp)
+            current_datetime = datetime.utcnow()
+            ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
+            return ttl_seconds
+        except KeyError:
+            print("Key Error attachments, message:")
+            print(message)
 
     def remove_user_state(self, user):
         print("===removing user state===")

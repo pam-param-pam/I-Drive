@@ -75,6 +75,7 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http:\/\/localhost:\d+$',
     r'^http:\/\/127.0.0.1:\d+$',
+    r'^http:\/\/192.168.1.14:\d+$',
 ]
 
 CORS_EXPOSE_HEADERS = (
