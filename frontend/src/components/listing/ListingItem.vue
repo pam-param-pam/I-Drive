@@ -1,64 +1,68 @@
 <template>
-   <div class="item-wrapper">
-      <div
-         ref="wrapper"
-         :aria-label="item.name"
-         :aria-selected="isSelected"
-         :data-dir="item.isDir"
-         :data-id="item.id"
-         :data-type="type"
-         :draggable="isDraggable"
-         class="item"
-         role="button"
-         tabindex="0"
-         @click="click"
-         @dblclick="open"
-         @dragover="dragOver"
-         @dragstart="dragStart"
-         @drop="drop"
-      >
-         <div :style="divStyle">
-            <img
-               v-if="item.preview_url && type === 'image' && item.size > 0"
-               v-lazy="{ src: item.preview_url }"
-            />
-            <img
-               v-else-if="item.download_url && type === 'image' && item.size > 0"
-               v-lazy="{ src: item.download_url}"
-            />
-            <img
-               v-else-if="item.thumbnail_url && type === 'video'"
-               v-lazy="{ src: item.thumbnail_url }"
-            />
-            <i v-else :style="iconStyle" class="material-icons"></i>
-         </div>
-         <div class="name">
-            <p>{{ item.name }}</p>
-         </div>
-         <div class="size">
-            <p :data-order="humanSize()" class="size">{{ humanSize() }}</p>
-         </div>
-         <div class="created">
-            <p>{{ item.created }}</p>
-         </div>
+  <div
+    :aria-label="item.name"
+    :aria-selected="isSelected"
+    :data-dir="item.isDir"
+    :data-id="item.id"
+    :data-type="type"
+    :draggable="isDraggable"
+    @click="click"
+    @dblclick="open"
+    @dragover="dragOver"
+    @dragstart="dragStart"
+    @drop="drop"
+    class="item-wrapper">
+    <div
+      ref="wrapper"
+      class="item"
+      role="button"
+      tabindex="0"
+    >
+      <div :style="divStyle">
+        <img
+          :draggable="false"
+          v-if="item.preview_url && type === 'image' && item.size > 0"
+          v-lazy="{ src: item.preview_url }"
+        />
+        <img
+          :draggable="false"
+          v-else-if="item.download_url && type === 'image' && item.size > 0"
+          v-lazy="{ src: item.download_url}"
+        />
+        <img
+          :draggable="false"
+          v-else-if="item.thumbnail_url && type === 'video'"
+          v-lazy="{ src: item.thumbnail_url }"
+        />
+        <i v-else :style="iconStyle" class="material-icons"></i>
       </div>
-   </div>
+      <div class="name">
+        <p>{{ item.name }}</p>
+      </div>
+      <div class="size">
+        <p :data-order="humanSize()" class="size">{{ humanSize() }}</p>
+      </div>
+      <div class="created">
+        <p>{{ item.created }}</p>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import { filesize } from '@/utils'
-import moment from 'moment/min/moment-with-locales.js'
-import { move } from '@/api/item.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
-import { isMobile } from '@/utils/common.js'
+import { filesize } from "@/utils"
+import moment from "moment/min/moment-with-locales.js"
+import { move } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import { isMobile } from "@/utils/common.js"
 
 export default {
-   name: 'item',
+   name: "item",
 
-   emits: ['onOpen', 'onLongPress'],
+   emits: ["onOpen", "onLongPress"],
 
-   props: ['readOnly', 'item', 'imageWidth', 'imageHeight'],
+   props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
    data() {
       return {
@@ -70,8 +74,8 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       type() {
-         if (this.item.isDir) return 'folder'
-         if (this.item.type === 'application') return 'pdf'
+         if (this.item.isDir) return "folder"
+         if (this.item.type === "application") return "pdf"
          return this.item.type
       },
       isSelected() {
@@ -98,16 +102,16 @@ export default {
       },
 
       iconStyle() {
-         if (this.settings.viewMode === 'height grid') {
+         if (this.settings.viewMode === "height grid") {
             return `font-size: ${this.imageHeight / 25}em; padding-top: 15px;`
          }
-         if (this.settings.viewMode === 'width grid') {
+         if (this.settings.viewMode === "width grid") {
             return `font-size: ${this.imageHeight / 17}em; padding-top: 15px;`
          }
          return null
       },
       divStyle() {
-         if (this.settings.viewMode.includes('grid')) {
+         if (this.settings.viewMode.includes("grid")) {
             return `min-width: ${this.imageWidth}px; height: ${this.imageHeight}px;  vertical-align: text-bottom; display: flex; justify-content: center; align-items: center;`
          }
          return null
@@ -115,23 +119,23 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setLastItem', 'addSelected', 'removeSelected', 'resetSelected']),
+      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected"]),
 
       humanSize() {
-         if (this.item.isDir) return '-'
+         if (this.item.isDir) return "-"
          return filesize(this.item.size)
       },
 
       humanTime() {
          if (this.settings.dateFormat) {
-            return moment(this.item.created, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
+            return moment(this.item.created, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
          }
          //todo czm globalny local nie dzIała?
-         let locale = this.settings?.locale || 'en'
+         let locale = this.settings?.locale || "en"
 
          moment.locale(locale)
          // Parse the target date
-         return moment(this.item.created, 'YYYY-MM-DD HH:mm').endOf('second').fromNow()
+         return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
       },
 
       dragStart(event) {
@@ -159,7 +163,7 @@ export default {
 
          let el = event.target
          for (let i = 0; i < 5; i++) {
-            if (!el.classList.contains('item')) {
+            if (!el.classList.contains("item")) {
                el = el.parentElement
             }
          }
@@ -173,7 +177,7 @@ export default {
          let listOfIds = this.selected.map((obj) => obj.id)
          let res = await move({ ids: listOfIds, new_parent_id: this.item.id })
 
-         let message = this.$t('toasts.movingItems')
+         let message = this.$t("toasts.movingItems")
          this.$toast.info(message, {
             timeout: null,
             id: res.task_id
@@ -185,11 +189,11 @@ export default {
       open() {
          if (this.item.isDir) this.setLastItem(null)
 
-         this.$emit('onOpen', this.item)
+         this.$emit("onOpen", this.item)
       },
 
       openContextMenu(event) {
-         this.$emit('onLongPress', event, this.item)
+         this.$emit("onLongPress", event, this.item)
       },
 
       click(event) {
@@ -256,62 +260,59 @@ export default {
 /* 📝 GRID VIEW STYLES       */
 /* ========================= */
 .grid .item-wrapper:hover {
-   box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.12),
-      0 1px 2px rgba(0, 0, 0, 0.24) !important;
-   background: var(--light-blue);
-   transform: scale(1.03);
+ box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
+ 0 1px 2px rgba(0, 0, 0, 0.24) !important;
+ background: var(--light-blue);
+ transform: scale(1.03);
 }
 
 .grid .item-wrapper {
-   border-radius: 10px;
-   margin: 0.5em;
-   background-color: var(--surfacePrimary);
-   overflow: hidden;
-   box-shadow:
-      rgba(0, 0, 0, 0.06) 0 1px 3px,
-      rgba(0, 0, 0, 0.12) 0 1px 2px;
+ border-radius: 10px;
+ margin: 0.5em;
+ background-color: var(--surfacePrimary);
+ overflow: hidden;
+ box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px,
+ rgba(0, 0, 0, 0.12) 0 1px 2px;
 }
 
 .grid .item-wrapper .item {
-   display: flex;
-   flex-direction: column;
-   text-align: center;
-   transition:
-      0.1s ease background,
-      0.1s ease opacity;
-   cursor: pointer;
-   user-select: none;
+ display: flex;
+ flex-direction: column;
+ text-align: center;
+ transition: 0.1s ease background,
+ 0.1s ease opacity;
+ cursor: pointer;
+ user-select: none;
 }
 
 .grid .item-wrapper .item img {
-   margin-top: 0.5em;
-   max-width: 100%;
-   object-fit: cover;
-   height: 100%;
+ margin-top: 0.5em;
+ max-width: 100%;
+ object-fit: cover;
+ height: 100%;
 }
 
 .grid .item-wrapper .item .name p {
-   text-overflow: ellipsis;
-   overflow: hidden;
-   font-size: 15px;
-   margin: 1.25em 2em 0.75em;
-   white-space: nowrap;
+ text-overflow: ellipsis;
+ overflow: hidden;
+ font-size: 15px;
+ margin: 1.25em 2em 0.75em;
+ white-space: nowrap;
 }
 
 .grid .item-wrapper .item .created,
 .grid .item-wrapper .item .size {
-   display: none;
+ display: none;
 }
 
 .grid .item-wrapper [aria-selected='true'] {
-   background: #c4e6ff;
+ background: #c4e6ff;
 }
 
 .grid .item-wrapper [data-dir='true'] p {
-   font-size: 20px !important;
-   font-weight: 300;
-   margin-top: 0.5em !important;
+ font-size: 20px !important;
+ font-weight: 300;
+ margin-top: 0.5em !important;
 }
 
 /* ========================= */
@@ -319,72 +320,72 @@ export default {
 /* ========================= */
 
 .list .item-wrapper {
-   width: 100%;
-   display: flex;
-   flex-direction: column;
+ width: 100%;
+ display: flex;
+ flex-direction: column;
 }
 
 /* List Item Styling */
 .list .item-wrapper .item {
-   display: flex;
-   align-items: center;
-   border-bottom: 1px solid var(--divider);
-   padding: 8px 12px;
-   cursor: pointer;
-   transition: background-color 0.2s ease-in-out;
+ display: flex;
+ align-items: center;
+ border-bottom: 1px solid var(--divider);
+ padding: 8px 12px;
+ cursor: pointer;
+ transition: background-color 0.2s ease-in-out;
 }
 
 .list .item-wrapper .item:hover {
-   background-color: var(--surfaceSecondary);
+ background-color: var(--surfaceSecondary);
 }
 
 /* Column Styles */
 .list .item-wrapper .item > div {
-   padding: 4px 8px;
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
+ padding: 4px 8px;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ white-space: nowrap;
 }
 
 /* Icon/Image Column */
 .list .item-wrapper .item > div:first-child {
-   flex: 0 0 40px; /* Fixed width for icons/images */
-   text-align: center;
+ flex: 0 0 40px; /* Fixed width for icons/images */
+ text-align: center;
 }
 
 /* Name Column */
 .list .item-wrapper .name {
-   flex: 2;
-   font-weight: 500;
+ flex: 2;
+ font-weight: 500;
 }
 
 /* Size Column */
 .list .item-wrapper .size {
-   flex: 1;
-   text-align: right;
-   color: #666;
-   font-size: 0.9em;
+ flex: 1;
+ text-align: right;
+ color: #666;
+ font-size: 0.9em;
 }
 
 /* Created Column */
 .list .item-wrapper .created {
-   flex: 1.5;
-   text-align: right;
-   color: #999;
-   font-size: 0.9em;
+ flex: 1.5;
+ text-align: right;
+ color: #999;
+ font-size: 0.9em;
 }
 
 /* Image Styling */
 .list .item-wrapper img {
-   max-width: 32px;
-   max-height: 32px;
-   object-fit: cover;
-   border-radius: 4px;
+ max-width: 32px;
+ max-height: 32px;
+ object-fit: cover;
+ border-radius: 4px;
 }
 
 /* Icon Styling */
 .list .item-wrapper .material-icons {
-   font-size: 24px;
-   color: #666;
+ font-size: 24px;
+ color: #666;
 }
 </style>

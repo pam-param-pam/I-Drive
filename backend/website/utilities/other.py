@@ -637,19 +637,19 @@ def check_if_bots_exists(user) -> None:
 
 
 def auto_prefetch(file_obj: File, fragment_id: str) -> None:
-    if not file_obj.duration or file_obj.duration <= 0:
-        return
-    if file_obj.type == "video":
-        mb_per_second = round((file_obj.size / file_obj.duration) / (1024 * 1024), 1)
-        fragments_to_prefetch = mb_per_second
-        if mb_per_second <= 1:
-            fragments_to_prefetch = 1
-        elif mb_per_second > 20:
-            fragments_to_prefetch = 20
-    else:
-        fragments_to_prefetch = 1
+    # if not file_obj.duration or file_obj.duration <= 0:
+    #     return
+    # if file_obj.type == "video":
+    #     mb_per_second = round((file_obj.size / file_obj.duration) / (1024 * 1024), 1)
+    #     fragments_to_prefetch = mb_per_second
+    #     if mb_per_second <= 1:
+    #         fragments_to_prefetch = 1
+    #     elif mb_per_second > 20:
+    #         fragments_to_prefetch = 20
+    # else:
+    #     fragments_to_prefetch = 1
 
-    prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
+    prefetch_next_fragments.delay(fragment_id, 1)
 
 
 def query_attachments(message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview, Moment]:
