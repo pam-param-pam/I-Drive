@@ -35,17 +35,40 @@ async function decryptMessage(key, encryptedData) {
    )
 
    let decodedText = new TextDecoder().decode(decryptedBuffer)
-   return JSON.parse(decodedText) // Try parsing JSON, else return string
+   return JSON.parse(decodedText)
 }
 
 
 function removeItemsByIds(store, ids) {
+   let itemsToRemove = store.items.filter(item => ids.includes(item.id))
+
    let updatedItems = store.items.filter(item => !ids.includes(item.id))
    store.setItems(updatedItems)
 
-   if (!store.searchActive) return
-   let updatedSearchItems = store.searchItems.filter(item => !ids.includes(item.id))
-   store.setSearchItems(updatedSearchItems)
+   if (store.searchActive) {
+      let updatedSearchItems = store.searchItems.filter(item => !ids.includes(item.id))
+      store.setSearchItems(updatedSearchItems)
+   }
+   itemsToRemove.forEach(itemToRemove => {
+      removeFromUsage(store, itemToRemove)
+   })
+
+}
+
+
+function addToUsage(store, item) {
+   let usage = store.usage
+   usage.used += item.size
+   usage.total += item.size
+   store.setUsage(usage)
+}
+
+
+function removeFromUsage(store, item) {
+   let usage = store.usage
+   usage.used -= item.size
+   usage.total -= item.size
+   store.setUsage(usage)
 }
 
 
@@ -72,6 +95,7 @@ export async function onEvent(message) {
       if (folder_context_id !== currentFolder?.id) return
       for (let item of event.data) {
          store.pushToItems(item)
+         addToUsage(store, item)
       }
 
    }
@@ -102,6 +126,7 @@ export async function onEvent(message) {
       for (let item of event.data) {
          if (item.parent_id !== currentFolder?.id) continue
          store.pushToItems(item)
+         addToUsage(store, item)
       }
    }
 
@@ -116,12 +141,15 @@ export async function onEvent(message) {
    }
 
    if (op_code === 7) { // items restore from trash event
+      if (currentRoute === "Trash") {
+         let updatedItems = store.items.filter(item => !event.data.includes(item.id))
+         store.setItems(updatedItems)
+         return
+      }
       for (let item of event.data) {
-         if (currentRoute === "Trash") {
-            let updatedItems = store.items.filter(item1 => item1.id !== item.id)
-            store.setItems(updatedItems)
-         } else if (item.parent_id === currentFolder?.id) {
+          if (item.parent_id === currentFolder?.id) {
             store.pushToItems(item)
+            addToUsage(store, item)
          }
       }
    }
@@ -150,7 +178,7 @@ export async function onEvent(message) {
       }, true)
    }
 
-   
+
    if (op_code === 9) { // message sent event, for example, when bot is being disabled
       let timeout = 0
       let type = "info"
@@ -172,7 +200,7 @@ export async function onEvent(message) {
    if (op_code === 10) { // folder lock status change event
       for (let item of event.data) {
          if (item.parent_id !== currentFolder?.id) return
-         store.changeLockStatusAndPasswordCache({folderId: item.id, newLockStatus: item.isLocked, lockFrom: item.lockFrom})
+         store.changeLockStatusAndPasswordCache({ folderId: item.id, newLockStatus: item.isLocked, lockFrom: item.lockFrom })
       }
    }
 

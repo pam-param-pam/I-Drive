@@ -24,7 +24,8 @@ export const useMainStore = defineStore("main", {
       breadcrumbs: [],
       currentFolder: null,
       items: [],
-      shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []}
+      shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []},
+      usage: { used: 0, total: 0 },
 
    }),
 
@@ -98,6 +99,9 @@ export const useMainStore = defineStore("main", {
    },
 
    actions: {
+      setUsage(value) {
+        this.usage = value
+      },
       setShellSettings(value) {
          if (typeof value !== "object") {
             console.warn('setShellSettings must be object')

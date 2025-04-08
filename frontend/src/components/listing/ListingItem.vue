@@ -1,22 +1,21 @@
 <template>
-  <div
-    :aria-label="item.name"
-    :aria-selected="isSelected"
-    :data-dir="item.isDir"
-    :data-id="item.id"
-    :data-type="type"
-    :draggable="isDraggable"
-    @click="click"
-    @dblclick="open"
-    @dragover="dragOver"
-    @dragstart="dragStart"
-    @drop="drop"
-    class="item-wrapper">
+  <div class="item-wrapper">
     <div
       ref="wrapper"
+      :aria-label="item.name"
+      :aria-selected="isSelected"
+      :data-dir="item.isDir"
+      :data-id="item.id"
+      :data-type="type"
+      :draggable="isDraggable"
       class="item"
       role="button"
       tabindex="0"
+      @click="click"
+      @dblclick="open"
+      @dragover="dragOver"
+      @dragstart="dragStart"
+      @drop="drop"
     >
       <div :style="divStyle">
         <img
@@ -50,19 +49,19 @@
 </template>
 
 <script>
-import { filesize } from "@/utils"
-import moment from "moment/min/moment-with-locales.js"
-import { move } from "@/api/item.js"
-import { useMainStore } from "@/stores/mainStore.js"
-import { mapActions, mapState } from "pinia"
-import { isMobile } from "@/utils/common.js"
+import { filesize } from '@/utils'
+import moment from 'moment/min/moment-with-locales.js'
+import { move } from '@/api/item.js'
+import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from 'pinia'
+import { isMobile } from '@/utils/common.js'
 
 export default {
-   name: "item",
+   name: 'item',
 
-   emits: ["onOpen", "onLongPress"],
+   emits: ['onOpen', 'onLongPress'],
 
-   props: ["readOnly", "item", "imageWidth", "imageHeight"],
+   props: ['readOnly', 'item', 'imageWidth', 'imageHeight'],
 
    data() {
       return {
@@ -74,8 +73,8 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       type() {
-         if (this.item.isDir) return "folder"
-         if (this.item.type === "application") return "pdf"
+         if (this.item.isDir) return 'folder'
+         if (this.item.type === 'application') return 'pdf'
          return this.item.type
       },
       isSelected() {
@@ -102,16 +101,16 @@ export default {
       },
 
       iconStyle() {
-         if (this.settings.viewMode === "height grid") {
+         if (this.settings.viewMode === 'height grid') {
             return `font-size: ${this.imageHeight / 25}em; padding-top: 15px;`
          }
-         if (this.settings.viewMode === "width grid") {
+         if (this.settings.viewMode === 'width grid') {
             return `font-size: ${this.imageHeight / 17}em; padding-top: 15px;`
          }
          return null
       },
       divStyle() {
-         if (this.settings.viewMode.includes("grid")) {
+         if (this.settings.viewMode.includes('grid')) {
             return `min-width: ${this.imageWidth}px; height: ${this.imageHeight}px;  vertical-align: text-bottom; display: flex; justify-content: center; align-items: center;`
          }
          return null
@@ -119,23 +118,23 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected"]),
+      ...mapActions(useMainStore, ['setLastItem', 'addSelected', 'removeSelected', 'resetSelected']),
 
       humanSize() {
-         if (this.item.isDir) return "-"
+         if (this.item.isDir) return '-'
          return filesize(this.item.size)
       },
 
       humanTime() {
          if (this.settings.dateFormat) {
-            return moment(this.item.created, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
+            return moment(this.item.created, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
          }
          //todo czm globalny local nie dzIała?
-         let locale = this.settings?.locale || "en"
+         let locale = this.settings?.locale || 'en'
 
          moment.locale(locale)
          // Parse the target date
-         return moment(this.item.created, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
+         return moment(this.item.created, 'YYYY-MM-DD HH:mm').endOf('second').fromNow()
       },
 
       dragStart(event) {
@@ -163,7 +162,7 @@ export default {
 
          let el = event.target
          for (let i = 0; i < 5; i++) {
-            if (!el.classList.contains("item")) {
+            if (!el.classList.contains('item')) {
                el = el.parentElement
             }
          }
@@ -177,7 +176,7 @@ export default {
          let listOfIds = this.selected.map((obj) => obj.id)
          let res = await move({ ids: listOfIds, new_parent_id: this.item.id })
 
-         let message = this.$t("toasts.movingItems")
+         let message = this.$t('toasts.movingItems')
          this.$toast.info(message, {
             timeout: null,
             id: res.task_id
@@ -189,11 +188,11 @@ export default {
       open() {
          if (this.item.isDir) this.setLastItem(null)
 
-         this.$emit("onOpen", this.item)
+         this.$emit('onOpen', this.item)
       },
 
       openContextMenu(event) {
-         this.$emit("onLongPress", event, this.item)
+         this.$emit('onLongPress', event, this.item)
       },
 
       click(event) {
@@ -260,8 +259,9 @@ export default {
 /* 📝 GRID VIEW STYLES       */
 /* ========================= */
 .grid .item-wrapper:hover {
- box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
- 0 1px 2px rgba(0, 0, 0, 0.24) !important;
+ box-shadow:
+   0 1px 3px rgba(0, 0, 0, 0.12),
+   0 1px 2px rgba(0, 0, 0, 0.24) !important;
  background: var(--light-blue);
  transform: scale(1.03);
 }
@@ -271,16 +271,18 @@ export default {
  margin: 0.5em;
  background-color: var(--surfacePrimary);
  overflow: hidden;
- box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px,
- rgba(0, 0, 0, 0.12) 0 1px 2px;
+ box-shadow:
+   rgba(0, 0, 0, 0.06) 0 1px 3px,
+   rgba(0, 0, 0, 0.12) 0 1px 2px;
 }
 
 .grid .item-wrapper .item {
  display: flex;
  flex-direction: column;
  text-align: center;
- transition: 0.1s ease background,
- 0.1s ease opacity;
+ transition:
+   0.1s ease background,
+   0.1s ease opacity;
  cursor: pointer;
  user-select: none;
 }
