@@ -57,6 +57,7 @@ function removeItemsByIds(store, ids) {
 
 
 function addToUsage(store, item) {
+   if (item.isDir) return
    let usage = store.usage
    usage.used += item.size
    usage.total += item.size
@@ -65,6 +66,7 @@ function addToUsage(store, item) {
 
 
 function removeFromUsage(store, item) {
+   if (item.isDir) return
    let usage = store.usage
    usage.used -= item.size
    usage.total -= item.size
@@ -142,7 +144,8 @@ export async function onEvent(message) {
 
    if (op_code === 7) { // items restore from trash event
       if (currentRoute === "Trash") {
-         let updatedItems = store.items.filter(item => !event.data.includes(item.id))
+         let idsToRemove = new Set(event.data.map(item => item.id))
+         let updatedItems = store.items.filter(item => !idsToRemove.has(item.id))
          store.setItems(updatedItems)
          return
       }
