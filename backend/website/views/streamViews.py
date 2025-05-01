@@ -239,18 +239,15 @@ def stream_file(request, file_obj: File):
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
-                print("file_iterator")
                 auto_prefetch(file_obj, fragments[index].id)
                 headers = {
                     'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
                 async with session.get(url, headers=headers) as response:
                     response.raise_for_status()
 
-                    # Asynchronously iterate over the content in chunks
                     total_decryption_time = 0
                     total_bytes = 0
                     async for raw_data in response.content.iter_chunked(chunk_size):
-                        # If the file is encrypted, decrypt it asynchronously
                         start_time = time.perf_counter()
                         decrypted_data = decryptor.decrypt(raw_data)
                         end_time = time.perf_counter()

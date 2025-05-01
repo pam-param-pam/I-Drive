@@ -102,7 +102,7 @@
           </div>
         </div>
 
-        <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl" />
+        <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl"/>
         <div v-else-if="file?.type === 'audio' && file?.size > 0" style="height: 100%">
           <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
           <audio
@@ -199,7 +199,7 @@ import Action from "@/components/header/Action.vue"
 import { getFile, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
-import { VueReader } from "vue-reader"
+import v, { VueReader } from "vue-reader"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import ExtendedImage from "@/components/listing/ExtendedImage.vue"
@@ -255,7 +255,9 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
-
+      enableSwipe() {
+         return !(this.file?.type === 'image' && this.file?.size > 0)
+      },
       isEpub() {
          if (!this.file) return false
          return this.file.extension === ".epub"
@@ -423,6 +425,7 @@ export default {
       },
       prev() {
          if (this.isVideoFullScreen()) return
+         if (!this.enableSwipe) return
          this.hoverNav = false
          if (this.hasPrevious) {
             let previousFile = this.files[this.currentIndex - 1]
@@ -447,6 +450,7 @@ export default {
 
       next() {
          if (this.isVideoFullScreen()) return
+         if (!this.enableSwipe) return
          this.hoverNav = false
          if (this.hasNext) {
             let nextFile = this.files[this.currentIndex + 1]
@@ -555,7 +559,6 @@ export default {
          let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
          this.$toast.success(message)
       },
-
       videoTimeUpdate() {
          if (!this.isLogged) return
          if (!this.$refs.video) {

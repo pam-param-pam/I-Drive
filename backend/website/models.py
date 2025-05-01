@@ -519,7 +519,7 @@ class Tag(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return f"Tag[Name={self.name}"
+        return f"Tag( {self.name} )"
 
 
 class Webhook(models.Model):
@@ -634,3 +634,7 @@ post_save.connect(UserPerms._create_user_perms, sender=User)
 post_save.connect(UserSettings._create_user_settings, sender=User)
 post_save.connect(Folder._create_user_root, sender=User)
 post_save.connect(DiscordSettings._create_user_discord_settings, sender=User)
+
+
+# Modify audit entry
+# Add file type, encryptionMethod audit type

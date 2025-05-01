@@ -98,6 +98,17 @@ export default {
    },
 
    methods: {
+      next(event) {
+         event.preventDefault();
+         console.log("11111111111111111111")
+         // Perform 'next' action
+      },
+      prev(event) {
+         event.preventDefault();
+         console.log("2222222222")
+
+         // Perform 'prev' action
+      },
       // Modified from UTIF.replaceIMG
       decodeUTIF() {
          const sufs = ["tif", "tiff", "dng", "cr2", "nef"]
