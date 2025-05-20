@@ -367,10 +367,16 @@ export default {
          return false
       },
       isVideoMetadata() {
-         return this.selected[0].isVideoMetadata
+         if (this.selectedCount === 1) {
+            return this.selected[0].isVideoMetadata
+         }
+         return false
       },
       crc() {
-         return this.selected[0].crc
+         if (this.selectedCount === 1) {
+            return this.selected[0].crc
+         }
+         return null
       },
       primaryMetadata() {
          if (!this.metadata) return

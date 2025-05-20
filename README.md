@@ -4,7 +4,9 @@
 <img src="https://img.shields.io/badge/build-passing-g" alt="Build Status"/>
 # I Drive
 
-I Drive is a cloud storage system & online web browser that stores files on Discord.
+I Drive is a cloud storage system & online file browser that stores files on Discord.
+
+It's basically like Google Drive, but instead it stores all files in Discord.
 
 # Demo
 It's available at `https://idrive.pamparampam.dev`
@@ -36,34 +38,40 @@ Credentials: `demo`/`demo`
 | Virtual lists to render tens of thousand of files in a single folder | ✅       |
 
 
-| TODO List                                                    | Status               |
-|--------------------------------------------------------------|----------------------|
-| Proper frontend networking & handling of errors              | 🛠️  in progress     |
-| fix 401 in locked folders in shares                          | 🛠️  in progress     |
-| Error handling in upload process                             | ⚠️  Only partial     |
-| Optimize shares                                              | ❌  Coming one day    |
-| fix enable-scroll css cuz it's cursed                        | ❌  Coming one day    |
-| cached docker build                                          | ❌  Coming one day    |
-| fix scrollbar in shares prompt                               | ❌  Coming one day    |
-| fix tasks                                                    | ❌  Coming one day    |
-| Virtual list view                                            | ⛔  Coming prob never |
-| Stop, pause, abort uploads                                   | ⛔  Coming prob never |
-| Editor support for large files                               | ⛔  Coming prob never |
-| fix __prependStaticUrl                                       | ⛔  Coming prob never |
-| multiple files in 1 discord attachment support               | ⛔  Coming prob never |
-| fix mobile number download info frontend                     | ⛔  Coming prob never |
-| add deselect                                                 | ⛔  Coming prob never |
+| TODO List                                       | Status               |
+|-------------------------------------------------|----------------------|
+| Fix file download for mobile                    | 🛠️  in progress     |
+| Proper frontend networking & handling of errors | 🛠️  in progress     |
+| fix 401 in locked folders in shares             | 🛠️  in progress     |
+| Error handling in upload process                | ⚠️  Only partial     |
+| Optimize shares                                 | ❌  Coming one day    |
+| fix enable-scroll css cuz it's cursed           | ❌  Coming one day    |
+| cached docker build                             | ❌  Coming one day    |
+| fix scrollbar in shares prompt                  | ❌  Coming one day    |
+| fix tasks                                       | ❌  Coming one day    |
+| Virtual list view                               | ⛔  Coming prob never |
+| Stop, pause, abort uploads                      | ⛔  Coming prob never |
+| Editor support for large files                  | ⛔  Coming prob never |
+| fix __prependStaticUrl                          | ⛔  Coming prob never |
+| multiple files in 1 Discord attachment support  | ⛔  Coming prob never |
+| fix mobile number download info frontend        | ⛔  Coming prob never |
+| add deselect                                    | ⛔  Coming prob never |
+| add multiple file select for mobile             | ⛔  Coming prob never |
+| add multiple file select for context menus      | ⛔  Coming prob never |
 
+
+> [!WARNING]  
+> This section is very much unfinished
 
 # How it works
 
 In essence, **I Drive** simply takes your upload files, and splits them into chunks to fit in Discord's (10Mb) file size limit. 
-They are then encrypted and uploaded to discord. After the upload is done, file's metadata is sent to backend and stored into a central database.
+They are then encrypted and uploaded to Discord. After the upload is done, file's metadata is sent to backend and stored into a central database.
 This allows for a simple way of viewing, managing, and downloading of your files
 
 # Technical Details
 
-This section will include technical details about how **I Drive** is implemented. 
+This section includes technical details about how **I Drive** is implemented. 
 It exists to help understand why **I Drive** does certain things 'weirdly' and to know its limitations.
 It also includes challenges in implementing a project like this, for people who're interested.
 
@@ -86,7 +94,7 @@ It's responsible for authenticating users and communicating with a database.
 It uses REST API to both serve & modify data.
 The main backend has more than 40 different endpoints.
 
-It's also  responsible for streaming files from discord. 
+It's also  responsible for streaming files from Discord. 
 It supports partial requests, streaming, in browser video/audio seeking, decryption, mimetypes
 
 Thanks to a [custom zipFly](https://github.com/pam-param-pam/ZipFly) library it also supports streaming zip files "on the fly"
@@ -103,23 +111,23 @@ Fast in memory database for caching and message broker for celery.
 Asynchronous task queue for delegating long tasks like file deletion outside of HTTP call lifecycle.
 
 
-## Solving discord's rate limit problems
+## Solving Discord's rate limit problems
     
-On average discord allows a single bot to make 1 request a second, that's way to little! 
+On average Discord allows a single bot to make 1 request a second, that's way to little! 
 That's why, for **iDrive** to work, a single user needs at least few bots, 
-this way backend can switch between tokens and bypass discord's ratelimits. 
+this way backend can switch between tokens and bypass Discord's ratelimits. 
 
 Discord issues cloudflare bans if you make more than 10k 4xx requests in 10 minutes. 
 **iDrive** tries to avoid this as much as possible, including throwing 502 errors when it can't handle more requests
 
 The same concept applies to webhooks.
 
-## Why use both webhooks and discord bots? 
-Why are webhooks needed? Why not use discord bots to upload files?
+## Why use both webhooks and Discord bots? 
+Why are webhooks needed? Why not use Discord bots to upload files?
 
 Discord bots are in my opinion too powerful to send tokens back and forth in the browser. 
 In an unlikely situation, a third party could steal bot's token and access all 
-files stored(encrypted or not) on a discord server. 
+files stored(encrypted or not) on a Discord server. 
 Discord bots if given too many permissions would also allow for easy raiding and greefing.
 
 Webhooks on the other hand can only send messages, and delete/modify their own.
@@ -208,5 +216,5 @@ PROTOCOL=http
 
 
 # PS
-Dear discord, please don't sue me 👉👈
+Dear Discord, please don't sue me 👉👈
 
