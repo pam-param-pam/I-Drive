@@ -20,7 +20,7 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
-from ..models import File, UserZIP, Moment
+from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
@@ -175,6 +175,37 @@ def get_thumbnail(request, file_obj: File):
     response = HttpResponse(thumbnail_content, content_type="image/jpeg")
     response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
     return response
+
+
+@api_view(['GET'])
+@throttle_classes([MediaThrottle])
+@handle_common_errors
+@check_signed_url
+@check_file
+def stream_subtitle(request, file_obj: File, subtitle_id):
+    subtitle_content = cache.get(f"subtitle:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe) todo
+    if not subtitle_content:
+        check_if_bots_exists(file_obj.owner)
+
+        subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
+        decryptor = Decryptor(method=file_obj.get_encryption_method(), key=subtitle.key, iv=subtitle.iv)
+
+        url = discord.get_attachment_url(file_obj.owner, subtitle)
+        discord_response = requests.get(url)
+        if discord_response.ok:
+            subtitle_content = discord_response.content
+            subtitle_content = decryptor.decrypt(subtitle_content)
+            subtitle_content += decryptor.finalize()
+
+        else:
+            return JsonResponse(status=discord_response.status_code, data=discord_response.json())
+
+        cache.set(f"subtitle:{file_obj.id}", subtitle_content, timeout=MAX_MEDIA_CACHE_AGE)
+
+    response = HttpResponse(subtitle_content) # , content_type="image/jpeg"
+    response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
+    return response
+
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])

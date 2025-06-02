@@ -309,6 +309,17 @@
                icon='image'
                show='EditThumbnail'
             />
+            <action
+              v-show="
+                  headerButtons.tag &&
+                  contextMenuState.advanced &&
+                  this.selected[0].type === 'video'
+               "
+              id='subtitles'
+              :label="$t('buttons.editSubtitles')"
+              icon='subtitles'
+              show='EditSubtitles'
+            />
          </context-menu>
       </template>
    </div>

@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from .Discord import discord
 from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment, VideoMetadataTrackMixin, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
@@ -798,3 +798,9 @@ def validate_ids_as_list(ids, max_length=1000):
         raise BadRequestError("'ids' length cannot be 0.")
     if len(ids) > max_length:
         raise BadRequestError("'ids' length cannot > 10000.")
+
+def create_subtitle_dict(subtitle: Subtitle):
+    signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
+
+    url = f"{API_BASE_URL}/file/subtitle/{signed_file_id}/{subtitle.id}"
+    return {"id": subtitle.id, "language": subtitle.language, "url": url}

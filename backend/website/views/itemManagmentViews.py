@@ -5,14 +5,14 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, VideoPosition, Tag, Moment
+from ..models import File, Folder, VideoPosition, Tag, Moment, Subtitle
 from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder, move_task
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..utilities.other import build_response, create_folder_dict, send_event, create_file_dict, get_resource, check_resource_perms, get_folder, get_file, check_if_bots_exists, \
-    delete_single_discord_attachment, get_discord_author, create_moment_dict, get_attr, validate_ids_as_list
+    delete_single_discord_attachment, get_discord_author, create_moment_dict, get_attr, validate_ids_as_list, create_subtitle_dict
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -429,4 +429,52 @@ def change_crc(request):
     file.crc = crc
     file.save()
 
+    return HttpResponse(status=204)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
+# @handle_common_errors
+def add_subtitle(request):
+    file_id = request.data['file_id']
+    language = request.data['language']
+
+    message_id = request.data['message_id']
+    attachment_id = request.data['attachment_id']
+    size = request.data['size']
+    message_author_id = request.data['message_author_id']
+    author = get_discord_author(request, message_author_id)
+    iv = request.data.get('iv')
+    key = request.data.get('key')
+
+    if iv:
+        iv = base64.b64decode(iv)
+    if key:
+        key = base64.b64decode(key)
+
+    file_obj = get_file(file_id)
+    check_resource_perms(request, file_obj)
+
+    subtitle = Subtitle.objects.create(
+        language=language,
+        file=file_obj,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        content_type=ContentType.objects.get_for_model(author),
+        object_id=author.discord_id,
+        size=size,
+        key=key,
+        iv=iv
+    )
+    return JsonResponse(create_subtitle_dict(subtitle), status=200)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@throttle_classes([defaultAuthUserThrottle])
+@handle_common_errors
+def remove_subtitle(request):
+    subtitle_id = request.data['subtitle_id']
+    subtitle = Subtitle.objects.get(id=subtitle_id, file__owner=request.user)
+    subtitle.delete()
     return HttpResponse(status=204)

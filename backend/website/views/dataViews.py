@@ -8,13 +8,13 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata
+from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
-    calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict
+    calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict, create_subtitle_dict
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -333,3 +333,18 @@ def get_tags(request, file_obj: File):
         tags_list.append(tag.name)
 
     return JsonResponse(tags_list, safe=False)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
+@handle_common_errors
+@check_file_and_permissions
+def get_subtitles(request, file_obj: File):
+    subtitles = Subtitle.objects.filter(file=file_obj)
+
+    subtitle_dicts = []
+    for sub in subtitles:
+        subtitle_dicts.append(create_subtitle_dict(sub))
+
+    return JsonResponse(subtitle_dicts, safe=False)

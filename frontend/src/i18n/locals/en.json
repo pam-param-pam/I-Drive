@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "addSubtitleFile": "Select subtitle file",
     "addMoment": "Add Moment",
     "moments": "Moments",
     "chooseFile": "Click to choose a new file",
@@ -51,7 +52,9 @@
     "unlock": "Unlock",
     "update": "Update",
     "upload": "Upload",
-    "editThumbnail": "Edit thumbnail"
+    "editThumbnail": "Edit thumbnail",
+    "editSubtitles": "Subtitles"
+
   },
   "errors": {
     "invalidMove": "Invalid move",
@@ -139,6 +142,10 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "manageSubtitles": "Manage subtitles",
+    "existingSubtitles": "Subtitles",
+    "addSubtitle": "Add subtitle",
+    "subtitleLanguage": "language",
     "crc32": "crc32",
     "videoMetadata": "Video metadata",
     "bitrate": "Bitrate",
@@ -158,7 +165,6 @@
     "momentsTip": "Save moments you'd like to rewatch later",
     "ALotOF429": "429 is happening too often!",
     "ALotOF429Explained": "Changing to different upload scheme and reducing number of concurrent requests.",
-    "thumbnailChanged": "Thumbnail changed!",
     "pausedFilesUpload": "Paused upload of {amount} files",
     "pausingFilesUpload": "Pausing upload of {amount} files",
     "editThumbnail": "Edit Thumbnail",
@@ -259,8 +265,7 @@
     "enterLimitToFolders": "Enter folder's ids, separate with ,",
     "enterExcludeFolders": "Enter folder's ids, separate with ,",
     "enterProperty": "e.g duration, size",
-    "enterRange": "> 50, 10 - 15, < 200",
-    "thumbnailUploadFailed": "Failed to upload a new thumbnail"
+    "enterRange": "> 50, 10 - 15, < 200"
   },
   "search": {
     "close": "Close",
@@ -352,12 +357,17 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "subtitleAdded": "Added subtitle!",
+    "subtitleRemoved": "Subtitle removed!",
+    "thumbnailChanged": "Thumbnail changed!",
+    "thumbnailUploadFailed": "Failed to upload a new thumbnail",
+    "subtitleUploadFailed": "Failed to upload a new subtitle",
     "failedImage": "Failed to load image",
     "playVideoFirst": "Play video first!",
     "momentAlreadyExists": "This moment already exists!",
     "savingMoment": "Saving Moment...",
     "momentRemoved": "Moment removed!",
-    "thumbnailFileTooBig": "File must be smaller than {max}",
+    "fileTooBig": "File must be smaller than {max}",
     "thumbnailInvalid": "Not a valid image file",
     "botEnabled": "Bot enabled!",
     "uploadDestinationUpdated": "Saved!",

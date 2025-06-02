@@ -39,6 +39,7 @@ import EditTags from "@/components/prompts/EditTags.vue"
 import UploadDestinationWarning from "@/components/prompts/UploadDestinationWarning.vue"
 import EditThumbnail from "@/components/prompts/EditThumbnail.vue"
 import Moments from "@/components/prompts/Moments.vue"
+import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
 
 export default {
    name: "prompts",
@@ -65,7 +66,8 @@ export default {
       EditTags,
       UploadDestinationWarning,
       EditThumbnail,
-      Moments
+      Moments,
+      EditSubtitles,
    },
 
    created() {

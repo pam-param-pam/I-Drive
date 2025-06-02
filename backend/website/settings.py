@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-#socksio==1.0.0 add to req
+# socksio==1.0.0 add to req
 # jebanie sie z static plikami
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -118,7 +119,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(os.environ["I_DRIVE_BACKEND_STORAGE_DIR"], 'db.sqlite3'),
-        'CONN_MAX_AGE':  None
+        'CONN_MAX_AGE': None
 
     }
 }
@@ -144,7 +145,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-#STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

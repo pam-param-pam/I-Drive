@@ -40,25 +40,31 @@ Credentials: `demo`/`demo`
 
 | TODO List                                       | Status               |
 |-------------------------------------------------|----------------------|
-| Fix file download for mobile                    | 🛠️  in progress     |
 | Proper frontend networking & handling of errors | 🛠️  in progress     |
-| fix 401 in locked folders in shares             | 🛠️  in progress     |
 | Error handling in upload process                | ⚠️  Only partial     |
 | Optimize shares                                 | ❌  Coming one day    |
-| fix enable-scroll css cuz it's cursed           | ❌  Coming one day    |
 | cached docker build                             | ❌  Coming one day    |
-| fix scrollbar in shares prompt                  | ❌  Coming one day    |
-| fix tasks                                       | ❌  Coming one day    |
 | Virtual list view                               | ⛔  Coming prob never |
 | Stop, pause, abort uploads                      | ⛔  Coming prob never |
 | Editor support for large files                  | ⛔  Coming prob never |
-| fix __prependStaticUrl                          | ⛔  Coming prob never |
+| Change  __prependStaticUrl                      | ⛔  Coming prob never |
 | multiple files in 1 Discord attachment support  | ⛔  Coming prob never |
-| fix mobile number download info frontend        | ⛔  Coming prob never |
 | add deselect                                    | ⛔  Coming prob never |
 | add multiple file select for mobile             | ⛔  Coming prob never |
 | add multiple file select for context menus      | ⛔  Coming prob never |
+| switch to a different backend framework         | ⛔  Coming prob never |
+| load balancing with round robin for nginx       | ⛔  Coming prob never |
 
+| BUGS                                                                                  |
+|---------------------------------------------------------------------------------------|
+| fix 401 in locked folders in shares                                                   |
+| Fix file download for mobile                                                          |
+| fix scrollbar in shares prompt                                                        |
+| fix tasks                                                                             |
+| Virtual list view                                                                     |
+| fix mobile number download info frontend                                              |
+| After opening movie from search context and clicking close, wrong folder is displayed |
+| fix encryption method is generateKey                                                  |
 
 > [!WARNING]  
 > This section is very much unfinished

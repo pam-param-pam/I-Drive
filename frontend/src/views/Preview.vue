@@ -85,7 +85,15 @@
           @timeupdate="videoTimeUpdate"
           @loadedmetadata="onVideoLoaded"
           crossorigin="anonymous"
-        ></video>
+        >
+          <track
+            v-for="(sub) in subtitles"
+            :key="sub.id"
+            kind="subtitles"
+            :label="sub.language"
+            :src="sub.url"
+          />
+        </video>
 
         <div v-else-if="isEpub" class="epub-reader">
           <vue-reader
@@ -196,7 +204,7 @@
 import throttle from "lodash.throttle"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
-import { getFile, updateVideoPosition } from "@/api/files.js"
+import { getFile, getSubtitles, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
 import v, { VueReader } from "vue-reader"
@@ -249,7 +257,9 @@ export default {
          prefetchTimeout: null,
          videoRef: null,
 
-         disabledMoments: true
+         disabledMoments: true,
+
+         subtitles: [],
       }
    },
 
@@ -375,6 +385,7 @@ export default {
             this.videoRef
             this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
+           this.subtitles =  await getSubtitles(this.file.id)
          }
 
          if (!this.isEpub) return
@@ -567,7 +578,7 @@ export default {
          }
          let position = Math.floor(this.$refs.video.currentTime) // round to seconds
          // To prevent sending too many requests, send only if the position has changed significantly
-         if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
+         if (Math.abs(position - this.lastSentVideoPosition) >= 10 && this.$refs.video.duration > 60) {
             // Adjust the interval as needed (e.g., every 1 second)
             updateVideoPosition({ file_id: this.file.id, position: position }, this.file.lockFrom)
 

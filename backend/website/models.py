@@ -603,14 +603,23 @@ class AudioTrack(VideoMetadataTrackMixin):
     sample_size = models.IntegerField()
 
     def __str__(self):
-        return f"Audio ({self.language}) for {self.video_metadata.file}"
+        return f"Audio Track({self.language}) for {self.video_metadata.file}"
 
 class SubtitleTrack(VideoMetadataTrackMixin):
     name = models.CharField(max_length=20)
 
     def __str__(self):
-        return f"Subtitle ({self.language}) for {self.video_metadata.file}"
+        return f"Subtitle Track({self.language}) for {self.video_metadata.file}"
 
+class Subtitle(DiscordAttachmentMixin):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="subtitles")
+    language = models.CharField(max_length=20)
+    iv = models.BinaryField(null=True)
+    key = models.BinaryField(null=True)
+
+    def __str__(self):
+        return f"Subtitle file ({self.language}) for {self.file}"
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):

@@ -14,7 +14,7 @@
       <div class="file-input-wrapper">
         <input id="fileInput" accept="image/*" type="file" @change="onFileInput" />
         <label class="file-label" for="fileInput">
-          {{ thumbnailFile ? thumbnailFile.name : $t("buttons.chooseFile") }}
+          {{ thumbnailFile ? thumbnailFile.name : $t("buttons.addSubtitleFile") }}
         </label>
       </div>
       <div v-if="uploading" class="progress-bar-wrapper">
@@ -109,7 +109,7 @@ export default {
 
          let maxSize = this.user.maxDiscordMessageSize
          if (file.size >= maxSize) {
-            this.$toast.error(this.$t("toasts.thumbnailFileTooBig", { max: filesize(maxSize) }))
+            this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
             return
          }
 
@@ -157,7 +157,7 @@ export default {
             }
             let uploadResponse = await upload(fileFormList, config)
 
-            let file_data = {
+            let thumbnail_data = {
                file_id: this.file.id,
                size: encryptedBlob.size,
                message_id: uploadResponse.data.id,
@@ -166,14 +166,14 @@ export default {
                key: key,
                message_author_id: uploadResponse.data.author.id
             }
-            await createThumbnail(file_data)
-            this.$toast.success(this.$t("prompts.thumbnailChanged"))
+            await createThumbnail(thumbnail_data)
+            this.$toast.success(this.$t("toasts.thumbnailChanged"))
 
             this.closeHover()
 
          } catch (error) {
             if (error.code === "ERR_CANCELED") return
-            this.$toast.error(this.$t("prompts.thumbnailUploadFailed"))
+            this.$toast.error(this.$t("toasts.thumbnailUploadFailed"))
             this.uploading = false
             this.uploadProgress = 0
          }

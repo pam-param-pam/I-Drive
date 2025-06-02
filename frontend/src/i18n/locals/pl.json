@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "addSubtitleFile": "Wybierz plik z napisami",
     "addMoment": "Dodaj Moment",
     "moments": "Momenty",
     "chooseFile": "Kliknij by wybrać nowy plik",
@@ -141,6 +142,10 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "manageSubtitles": "Zarządaj napisami",
+    "existingSubtitles": "Napisy",
+    "addSubtitle": "Dodaj napisy",
+    "subtitleLanguage": "język",
     "crc32": "crc32",
     "videoMetadata": "Metadane filmu",
     "bitrate": "Przepływność",
@@ -160,7 +165,6 @@
     "momentsTip": "Zapisz momenty które chciałbyś objerzeć na pózniej!",
     "ALotOF429": "Za dużo 429!",
     "ALotOF429Explained": "Zmieniam na inny typ uploadu i redukuje liczbe równoległych requestów.",
-    "thumbnailChanged": "Podgląd zmieniono!",
     "editThumbnail": "Zmień podgląd",
     "orderBy": "Sortuj po",
     "orderByName": "Nazwie",
@@ -249,9 +253,7 @@
     "unlockFolder": "Odblokuj Folder",
     "upload": "Prześlij",
     "uploadFiles": "Przesyłanie {amount} plików...",
-    "uploadMessage": "Proszę wybrać metodę przesyłania",
-    "thumbnailUploadFailed": "Nie udało sie przesłać nowego podglądu"
-
+    "uploadMessage": "Proszę wybrać metodę przesyłania"
   },
   "search": {
     "close": "Zamknij",
@@ -343,6 +345,12 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "subtitleAdded": "Dodano napisy!",
+    "subtitleRemoved": "Usunięto napisy!",
+    "thumbnailChanged": "Podgląd zmieniono!",
+    "thumbnailUploadFailed": "Nie udało sie przesłać nowego podglądu",
+    "subtitleUploadFailed": "Nie udało sie przesłać napisów",
+    "fileTooBig": "Plik musi byc mniejszy od {max}",
     "failedImage": "Nie udało sie załadować obrazu",
     "playVideoFirst": "Najpierw odpal film!",
     "momentAlreadyExists": "Ten moment już istnieje!",

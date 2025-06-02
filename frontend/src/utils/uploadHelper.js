@@ -355,6 +355,8 @@ export function generateIv(method) {
       iv = crypto.getRandomValues(new Uint8Array(16))
    } else if (method === encryptionMethod.ChaCha20) {
       iv = crypto.getRandomValues(new Uint8Array(12))
+   } else if (method === encryptionMethod.NotEncrypted) {
+      iv = null
    } else {
       throw Error(`unable to match encryptionMethod: ${method}`)
    }
@@ -370,6 +372,7 @@ export function roundUpTo64(size) {
 
 
 export function generateKey() {
+   //todo this should not be called if method is not not ecrypted
    let key = crypto.getRandomValues(new Uint8Array(32))
    return ivToBase64(key)
 

@@ -5,11 +5,12 @@ from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles
 from .views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc
+    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
+    remove_subtitle
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
-from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment
+from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import get_discord_state, test
 from .views.uploadViews import create_file, create_thumbnail, proxy_discord
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
@@ -42,6 +43,10 @@ urlpatterns = [
     path("file/moments/<file_id>", get_moments, name="get file moments"),
     path("file/moment/<signed_file_id>/<timestamp>", stream_moment, name="stream moment"),
     path("file/tags/<file_id>", get_tags, name="get file moments"),
+    path("file/subtitles/add", add_subtitle, name="add subtitle"),
+    path("file/subtitles/remove", remove_subtitle, name="remove subtitle"),
+    path("file/subtitles/<file_id>", get_subtitles, name="get file subtitles"),
+    path("file/subtitle/<signed_file_id>/<subtitle_id>", stream_subtitle, name="get subtitle by file id"),
 
     path("auth/token/login", MyTokenCreateView.as_view(), name="login"),
     path("auth/register", register_user, name="register"),
@@ -84,6 +89,7 @@ urlpatterns = [
     path("item/restoreFromTrash", restore_from_trash, name="move file/folder to trash"),
     path("item/rename", rename, name="rename file/folder"),
     path("item/moreinfo/<item_id>", fetch_additional_info, name="fetch more info about a folder"),
+
 
     path("resource/password/<resource_id>", check_password, name="check password"),
 
