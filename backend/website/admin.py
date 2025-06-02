@@ -10,10 +10,10 @@ from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment, \
-    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack
+    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle
 from .tasks import smart_delete
 from .utilities.Discord import discord
-from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL
+from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL, EncryptionMethod
 from .utilities.other import sign_resource_id_with_expiry
 
 admin.site.register(UserSettings, SimpleHistoryAdmin)
@@ -237,7 +237,7 @@ class PreviewAdmin(SimpleHistoryAdmin):
     ordering = ['-created_at']
     list_display = ['file_name', 'owner', 'readable_size', 'readable_encrypted_size', 'created_at']
 
-    readonly_fields = ['created_at', 'message_id', 'attachment_id', 'size', 'file']
+    readonly_fields = ['created_at', 'message_id', 'attachment_id', 'size', 'file', 'encryption_method']
 
     def file_name(self, obj: Preview):
         return obj.file.name
@@ -251,12 +251,14 @@ class PreviewAdmin(SimpleHistoryAdmin):
     def readable_encrypted_size(self, obj: Preview):
         return filesizeformat(obj.encrypted_size)
 
+    def encryption_method(self, obj: Subtitle):
+        return EncryptionMethod(obj.file.encryption_method).name
 
 @admin.register(Thumbnail)
 class ThumbnailAdmin(SimpleHistoryAdmin):
     ordering = ['-created_at']
     list_display = ['file_name', 'owner', 'readable_size', 'created_at']
-    readonly_fields = ['created_at', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media']
+    readonly_fields = ['created_at', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method']
 
     def file_name(self, obj: Thumbnail):
         return obj.file.name
@@ -271,6 +273,9 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
         url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+
+    def encryption_method(self, obj: Subtitle):
+        return EncryptionMethod(obj.file.encryption_method).name
 
     thumbnail_media.short_description = 'PREVIEW THUMBNAIL'
 
@@ -342,7 +347,7 @@ class BotAdmin(admin.ModelAdmin):
 class MomentAdmin(admin.ModelAdmin):
     search_fields = ('file_name',)
     list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
-    readonly_fields = ('message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'preview')
+    readonly_fields = ('message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'preview', 'encryption_method')
     exclude = ['size', 'timestamp']
 
     def preview(self, obj: Moment):
@@ -360,6 +365,9 @@ class MomentAdmin(admin.ModelAdmin):
     def readable_size(self, obj: Moment):
         return filesizeformat(obj.size)
 
+    def encryption_method(self, obj: Subtitle):
+        return EncryptionMethod(obj.file.encryption_method).name
+
     readable_size.short_description = 'Size'
     readable_size.admin_order_field = 'size'
 
@@ -371,3 +379,18 @@ class MomentAdmin(admin.ModelAdmin):
 class VideoMetadataAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id')
     readonly_fields = ('file', 'is_progressive', 'is_fragmented', 'has_moov', 'has_IOD', 'brands', 'mime')
+
+@admin.register(Subtitle)
+class SubtitleAdmin(admin.ModelAdmin):
+    search_fields = ('file__name', 'file__id')
+    readonly_fields = ('file', 'iv', 'key', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method')
+    exclude = ['size']
+
+    def readable_size(self, obj: Subtitle):
+        return filesizeformat(obj.size)
+
+    def encryption_method(self, obj: Subtitle):
+        return EncryptionMethod(obj.file.encryption_method).name
+
+    readable_size.short_description = 'Size'
+    readable_size.admin_order_field = 'size'

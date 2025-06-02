@@ -543,7 +543,7 @@ export default {
 
       close() {
          try {
-            let parent_id = this.file?.parent_id
+            let parent_id = this.currentFolder?.id
 
             if (this.isInShareContext) {
                this.$router.push({

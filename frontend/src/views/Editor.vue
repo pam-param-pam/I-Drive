@@ -230,7 +230,7 @@ export default {
                let key
                if (method !== encryptionMethod.NotEncrypted) {
                   iv = generateIv(method)
-                  key = generateKey()
+                  key = generateKey(method)
                }
                let formData = new FormData()
                let blob = new Blob([this.raw])

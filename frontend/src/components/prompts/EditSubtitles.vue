@@ -29,7 +29,7 @@
           class="input input--block"
         />
       </div>
-      <div v-if="uploading" class="progress-bar-wrapper">
+      <div v-if="uploading" class="prompts-progress-bar-wrapper">
         <ProgressBar :progress="uploadProgress" />
         <span>
                <b> {{ uploadProgress }}% </b>
@@ -113,32 +113,29 @@ export default {
          this.newSubtitleFile = file
       },
       async addSubtitle() {
-         if (!this.canSubmit) return
-
-         if (this.uploading) return
-
-         this.uploading = true
-         this.uploadProgress = 0
-
-         let maxSize = this.user.maxDiscordMessageSize
-
-         if (this.newSubtitleFile.size >= maxSize) {
-            this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
-            this.uploading = false
-            return
-         }
-         let file = this.selected[0]
+         if (!this.canSubmit || this.uploading) return
          try {
+            this.uploading = true
+            this.uploadProgress = 0
+
+            let maxSize = this.user.maxDiscordMessageSize
+
+            if (this.newSubtitleFile.size >= maxSize) {
+               this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
+               this.uploading = false
+               return
+            }
+            let file = this.selected[0]
 
             let res = await canUpload(file.parent_id)
             if (!res.can_upload) {
                return
             }
-            let fileFormList = new FormData()
 
+            let fileFormList = new FormData()
             let method = file.encryption_method
             let iv = generateIv(method)
-            let key = generateKey()
+            let key = generateKey(method)
             let encryptedBlob = await encrypt(this.newSubtitleFile, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
@@ -172,20 +169,19 @@ export default {
             let subtitle_res = await addSubtitle(subtitle_data)
             this.$toast.success(this.$t("toasts.subtitleAdded"))
             this.subtitles.push(subtitle_res)
-            this.uploading = false
             this.newLanguage = ""
             this.newSubtitleFile = null
 
          } catch (error) {
-            console.log(error)
             if (error.code === "ERR_CANCELED") return
             this.$toast.error(this.$t("toasts.subtitleUploadFailed"))
+         } finally {
             this.uploading = false
             this.uploadProgress = 0
          }
       },
       async removeSubtitle(subtitle_id) {
-         await removeSubtitle({"subtitle_id": subtitle_id})
+         await removeSubtitle({ "subtitle_id": subtitle_id })
          this.subtitles = this.subtitles.filter(subtitle => subtitle.id !== subtitle_id)
          this.$toast.success(this.$t("toasts.subtitleRemoved"))
       },
@@ -251,12 +247,4 @@ input[type="file"] {
  margin-top: 2em;
 }
 
-.progress-bar-wrapper {
- padding-top: 1em;
- padding-right: 0.5em;
- padding-left: 0.5em;
- display: flex;
- gap: 1rem;
- align-items: center;
-}
 </style>

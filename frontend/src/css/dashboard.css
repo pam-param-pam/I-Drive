@@ -479,3 +479,12 @@ table tr>*:last-child {
 .expiry-column {
   padding-left: 1em;
 }
+
+.prompts-progress-bar-wrapper {
+  padding-top: 1em;
+  padding-right: 0.5em;
+  padding-left: 0.5em;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}

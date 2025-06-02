@@ -61,10 +61,7 @@ Credentials: `demo`/`demo`
 | Fix file download for mobile                                                          |
 | fix scrollbar in shares prompt                                                        |
 | fix tasks                                                                             |
-| Virtual list view                                                                     |
 | fix mobile number download info frontend                                              |
-| After opening movie from search context and clicking close, wrong folder is displayed |
-| fix encryption method is generateKey                                                  |
 
 > [!WARNING]  
 > This section is very much unfinished

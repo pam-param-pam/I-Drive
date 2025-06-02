@@ -357,6 +357,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "momentUploadFile": "Added moment!",
     "subtitleAdded": "Added subtitle!",
     "subtitleRemoved": "Subtitle removed!",
     "thumbnailChanged": "Thumbnail changed!",

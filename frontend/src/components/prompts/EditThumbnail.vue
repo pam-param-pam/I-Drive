@@ -17,7 +17,7 @@
           {{ thumbnailFile ? thumbnailFile.name : $t("buttons.addSubtitleFile") }}
         </label>
       </div>
-      <div v-if="uploading" class="progress-bar-wrapper">
+      <div v-if="uploading" class="prompts-progress-bar-wrapper">
         <ProgressBar :progress="uploadProgress" />
         <span>
                <b> {{ uploadProgress }}% </b>
@@ -125,10 +125,10 @@ export default {
       async submit() {
          if (this.uploading) return
 
-         this.uploading = true
-         this.uploadProgress = 0
-
          try {
+            this.uploading = true
+            this.uploadProgress = 0
+
             let res = await canUpload(this.file.parent_id)
             if (!res.can_upload) {
                this.uploading = false
@@ -138,7 +138,7 @@ export default {
 
             let method = this.file.encryption_method
             let iv = generateIv(method)
-            let key = generateKey()
+            let key = generateKey(method)
             let encryptedBlob = await encrypt(this.thumbnailFile, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
@@ -230,14 +230,5 @@ input[type='file'] {
  max-height: 200px;
  border-radius: 5px;
  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.progress-bar-wrapper {
- padding-top: 1em;
- padding-right: 0.5em;
- padding-left: 0.5em;
- display: flex;
- gap: 1rem;
- align-items: center;
 }
 </style>

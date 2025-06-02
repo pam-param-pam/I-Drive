@@ -19,6 +19,12 @@
         >
           <span>{{ $t("buttons.addMoment") }}</span>
         </button>
+        <div v-if="uploading" class="prompts-progress-bar-wrapper">
+          <ProgressBar :progress="uploadProgress" />
+          <span>
+               <b> {{ uploadProgress }}% </b>
+            </span>
+        </div>
       </div>
       <div v-if="moments.length === 0">
          <span>
@@ -79,9 +85,11 @@ import { encrypt } from "@/utils/encryption.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
+import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 
 export default {
    name: "moments",
+   components: { ProgressBar },
    props: {
       video: {
          type: HTMLVideoElement,
@@ -92,8 +100,9 @@ export default {
       return {
          moments: [],
          currentThumbnailURL: null,
-         currentThumbnailData: null
-
+         currentThumbnailData: null,
+         uploadProgress: 0,
+         uploading: false
       }
    },
    async mounted() {
@@ -118,50 +127,72 @@ export default {
       }
    },
    methods: {
-
       ...mapActions(useMainStore, ["closeHover"]),
       async fetchData() {
          this.moments = await getMoments(this.file.id)
       },
       addMoment: throttle(async function() {
-         let timestamp = Math.floor(this.currentTimestamp)
-         if (this.moments.some(moment => moment.timestamp === timestamp)) {
-            this.$toast.error(this.$t("toasts.momentAlreadyExists"))
-            return
-         }
-         this.$toast.info(this.$t("toasts.savingMoment"))
+         if (this.uploading) return
 
-         let res = await canUpload(this.file.parent_id)
-         if (!res.can_upload) {
-            return
-         }
-         let fileFormList = new FormData()
+         try {
+            this.uploading = true
+            this.uploadProgress = 0
 
-         let method = this.file.encryption_method
-         let iv
-         let key
-         if (method !== encryptionMethod.NotEncrypted) {
-            iv = generateIv(method)
-            key = generateKey()
-         }
-         let encryptedBlob = await encrypt(this.currentThumbnailData, method, key, iv, 0)
+            let timestamp = Math.floor(this.currentTimestamp)
+            if (this.moments.some(moment => moment.timestamp === timestamp)) {
+               this.$toast.error(this.$t("toasts.momentAlreadyExists"))
+               return
+            }
+            this.$toast.info(this.$t("toasts.savingMoment"))
 
-         fileFormList.append("file", encryptedBlob, this.attachmentName)
+            let res = await canUpload(this.file.parent_id)
+            if (!res.can_upload) {
+               return
+            }
+            let fileFormList = new FormData()
 
-         let uploadResponse = await upload(fileFormList, {})
-         let moment_data = {
-            timestamp: timestamp,
-            file_id: this.file.id,
-            size: encryptedBlob.size,
-            message_id: uploadResponse.data.id,
-            attachment_id: uploadResponse.data.attachments[0].id,
-            iv: iv,
-            key: key,
-            message_author_id: uploadResponse.data.author.id
-         }
-         let moment = await addMoment(moment_data)
-         if (moment) {
-            this.moments.push(moment)
+            let method = this.file.encryption_method
+            let iv
+            let key
+            if (method !== encryptionMethod.NotEncrypted) {
+               iv = generateIv(method)
+               key = generateKey(method)
+            }
+            let encryptedBlob = await encrypt(this.currentThumbnailData, method, key, iv, 0)
+
+            fileFormList.append("file", encryptedBlob, this.attachmentName)
+
+            let config = {
+               onUploadProgress: (progressEvent) => {
+                  if (progressEvent.total) {
+                     this.uploadProgress = Math.round(
+                        (progressEvent.loaded / progressEvent.total) * 100
+                     )
+                  }
+               }
+            }
+
+            let uploadResponse = await upload(fileFormList, config)
+            let moment_data = {
+               timestamp: timestamp,
+               file_id: this.file.id,
+               size: encryptedBlob.size,
+               message_id: uploadResponse.data.id,
+               attachment_id: uploadResponse.data.attachments[0].id,
+               iv: iv,
+               key: key,
+               message_author_id: uploadResponse.data.author.id
+            }
+            let moment = await addMoment(moment_data)
+            if (moment) {
+               this.moments.push(moment)
+            }
+         } catch (error) {
+            this.$toast.error(this.$t("toasts.momentUploadFile"))
+
+         } finally {
+            this.uploading = false
+            this.uploadProgress = 0
          }
       }, 1000),
       async deleteMoment(event, moment) {
@@ -374,5 +405,8 @@ h3 {
 
 .thumbnail-container:hover .play-button {
  display: flex;
+}
+.prompts-progress-bar-wrapper {
+ width: 100%;
 }
 </style>

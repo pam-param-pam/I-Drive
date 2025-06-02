@@ -102,6 +102,7 @@ function processFile(fileEntry) {
    })
 }
 
+
 export function isAudioFile(file) {
    return file.fileObj.type.includes("audio/")
 }
@@ -113,6 +114,8 @@ export function isVideoFile(file) {
 
 
 let currentWebhookIndex = 0
+
+
 export function getWebhook() {
    let uploadStore = useUploadStore()
    let webhooks = uploadStore.webhooks
@@ -201,6 +204,7 @@ export function captureVideoFrame(videoPlayer, seekTo = 0, quality = 0.75, maxWi
    })
 }
 
+
 export function parseVideoMetadata(info) {
    let videoMetadata = {}
    console.log(info)
@@ -214,7 +218,7 @@ export function parseVideoMetadata(info) {
    videoMetadata.has_IOD = info.hasIOD
 
    videoMetadata.mime = info.mime
-   videoMetadata.brands = info.brands.join(', ')
+   videoMetadata.brands = info.brands.join(", ")
 
    for (let infoTrack of info.tracks) {
       let track = {}
@@ -222,7 +226,7 @@ export function parseVideoMetadata(info) {
       track.codec = infoTrack.codec
       track.size = infoTrack.size
 
-      track.duration =  parseFloat((infoTrack.duration / infoTrack.timescale).toFixed(2))
+      track.duration = parseFloat((infoTrack.duration / infoTrack.timescale).toFixed(2))
       track.language = infoTrack.language === "und" ? null : infoTrack.language
 
       let trackType = infoTrack.type
@@ -298,6 +302,7 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    })
 }
 
+
 export function appendMp4BoxBuffer(mp4box, chunk, offset) {
    chunk.arrayBuffer(offset)
       .then((buffer) => {
@@ -305,6 +310,7 @@ export function appendMp4BoxBuffer(mp4box, chunk, offset) {
          mp4box.appendBuffer(buffer)
       })
 }
+
 
 export async function getOrCreateFolder(fileObj) {
    let uploadStore = useUploadStore()
@@ -356,13 +362,11 @@ export function generateIv(method) {
    } else if (method === encryptionMethod.ChaCha20) {
       iv = crypto.getRandomValues(new Uint8Array(12))
    } else if (method === encryptionMethod.NotEncrypted) {
-      iv = null
+      return null
    } else {
       throw Error(`unable to match encryptionMethod: ${method}`)
    }
    return ivToBase64(iv)
-
-
 }
 
 
@@ -371,11 +375,12 @@ export function roundUpTo64(size) {
 }
 
 
-export function generateKey() {
-   //todo this should not be called if method is not not ecrypted
+export function generateKey(method) {
+   if (method === encryptionMethod.NotEncrypted) {
+      return null
+   }
    let key = crypto.getRandomValues(new Uint8Array(32))
    return ivToBase64(key)
-
 }
 
 

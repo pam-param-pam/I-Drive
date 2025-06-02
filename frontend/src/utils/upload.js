@@ -40,7 +40,7 @@ export async function* prepareRequests() {
       queueFile.fileObj.folderId = await getOrCreateFolder(queueFile.fileObj)
       if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
          queueFile.fileObj.iv = generateIv(queueFile.fileObj.encryptionMethod)
-         queueFile.fileObj.key = generateKey()
+         queueFile.fileObj.key = generateKey(queueFile.fileObj.encryptionMethod)
       }
 
       let thumbnail
@@ -82,7 +82,7 @@ export async function* prepareRequests() {
          let attachment = { "type": attachmentType.thumbnail, "fileObj": queueFile.fileObj, "rawBlob": thumbnail }
          if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
             attachment.iv = generateIv(queueFile.fileObj.encryptionMethod)
-            attachment.key = generateKey()
+            attachment.key = generateKey(queueFile.fileObj.encryptionMethod)
          }
 
          attachments.push(attachment)

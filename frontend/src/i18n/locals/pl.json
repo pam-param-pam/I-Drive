@@ -345,6 +345,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "momentUploadFile": "Dodano moment!",
     "subtitleAdded": "Dodano napisy!",
     "subtitleRemoved": "Usunięto napisy!",
     "thumbnailChanged": "Podgląd zmieniono!",
