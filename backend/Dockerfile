@@ -5,7 +5,7 @@ FROM python:3.10-slim
 WORKDIR /app/backend
 
 # Include nano
-RUN apt-get update && apt-get install -y nano
+RUN apt-get update && apt-get install -y nano && apt-get install -y g++
 
 # Copy the requirements file into the container
 COPY requirements.txt .
