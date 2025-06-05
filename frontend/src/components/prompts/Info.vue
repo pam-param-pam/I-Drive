@@ -374,7 +374,9 @@ export default {
       },
       crc() {
          if (this.selectedCount === 1) {
-            return this.selected[0].crc.toString(16).toUpperCase()
+            if (!this.selected[0].isDir) {
+               this.selected[0].crc.toString(16).toUpperCase()
+            }
          }
          return null
       },

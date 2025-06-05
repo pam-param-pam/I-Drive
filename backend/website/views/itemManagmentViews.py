@@ -476,5 +476,8 @@ def add_subtitle(request):
 def remove_subtitle(request):
     subtitle_id = request.data['subtitle_id']
     subtitle = Subtitle.objects.get(id=subtitle_id, file__owner=request.user)
+
+    delete_single_discord_attachment(request.user, subtitle)
     subtitle.delete()
+
     return HttpResponse(status=204)
