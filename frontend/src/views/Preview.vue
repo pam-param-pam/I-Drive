@@ -110,7 +110,7 @@
           </div>
         </div>
 
-        <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl"/>
+        <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl" />
         <div v-else-if="file?.type === 'audio' && file?.size > 0" style="height: 100%">
           <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
           <audio
@@ -165,7 +165,7 @@
             <i class="material-icons">error_outline</i>
             {{ $t("errors.unknownError") }}
           </div>
-          
+
           <div>
             <a class="button button--flat">
               <div>
@@ -207,7 +207,7 @@ import Action from "@/components/header/Action.vue"
 import { getFile, getSubtitles, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
-import v, { VueReader } from "vue-reader"
+import { VueReader } from "vue-reader"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import ExtendedImage from "@/components/listing/ExtendedImage.vue"
@@ -259,14 +259,14 @@ export default {
 
          disabledMoments: true,
 
-         subtitles: [],
+         subtitles: []
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
       enableSwipe() {
-         return !(this.file?.type === 'image' && this.file?.size > 0)
+         return !(this.file?.type === "image" && this.file?.size > 0)
       },
       isEpub() {
          if (!this.file) return false
@@ -384,7 +384,9 @@ export default {
          if (this.file?.type === "video" && this.$refs.video && this.isLogged) {
             this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
-           this.subtitles =  await getSubtitles(this.file.id)
+            this.subtitles = await getSubtitles(this.file.id)
+            this.loadSubtitleStyle()
+
          }
 
          if (!this.isEpub) return
@@ -413,7 +415,7 @@ export default {
 
          this.showHover({
             prompt: "moments",
-            props: { video: this.videoRef },
+            props: { video: this.videoRef }
 
          })
       },
@@ -497,7 +499,7 @@ export default {
             }
 
             if (file1.type === "video") {
-               let video_url= file1?.download_url
+               let video_url = file1?.download_url
                if (video_url) {
                   let videoPlayer = document.createElement("video")
                   videoPlayer.src = video_url
@@ -584,7 +586,38 @@ export default {
             this.lastSentVideoPosition = position
          }
       },
+      loadSubtitleStyle() {
+         let style = localStorage.getItem("subtitleStyle")
+         if (!style) {
+            this.removeSubtitleStyle()
+            return
+         }
+         let subtitleStyle = JSON.parse(style)
+         if (subtitleStyle.default) {
+            this.removeSubtitleStyle()
+            return
+         }
+         let css = `
+            video::cue {
+               font-size: ${subtitleStyle.fontSize}px;
+               color: ${subtitleStyle.color};
+               background-color: ${subtitleStyle.backgroundColor};
+               text-shadow: ${subtitleStyle.textShadow};
+               text-align: ${subtitleStyle.textAlign};
+            }
+         `
+         this.removeSubtitleStyle()
 
+         // Inject new style
+         let styleTag = document.createElement("style")
+         styleTag.id = "subtitle-style-cue"
+         styleTag.innerHTML = css
+         document.head.appendChild(styleTag)
+      },
+      removeSubtitleStyle() {
+         let existing = document.getElementById("subtitle-style-cue")
+         if (existing) existing.remove()
+      },
       getRendition(rendition) {
          // rendition.hooks.content.register((contents) => {
          //   rendition.manager.container.style['scroll-behavior'] = 'smooth'

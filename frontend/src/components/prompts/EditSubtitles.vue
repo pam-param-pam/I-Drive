@@ -8,9 +8,7 @@
       <p v-if="subtitles.length !== 0">{{ $t("prompts.existingSubtitles") }}</p>
       <ul class="subtitle-list">
         <li v-for="(sub) in subtitles" :key="sub.id">
-          <label>
-            {{ sub.language }}
-          </label>
+          <label>{{ sub.language }}</label>
           <button class="action remove" @click="removeSubtitle(sub.id)">
             <i class="material-icons">delete</i>
           </button>
@@ -19,7 +17,7 @@
 
       <hr v-if="subtitles.length !== 0" />
 
-      <p>{{ $t("prompts.addSubtitle") }}</p>
+      <p><strong>{{ $t("prompts.addSubtitle") }}</strong></p>
       <div class="input-group input">
         <label for="langInput">{{ $t("prompts.subtitleLanguage") }}</label>
         <input
@@ -29,12 +27,7 @@
           class="input input--block"
         />
       </div>
-      <div v-if="uploading" class="prompts-progress-bar-wrapper">
-        <ProgressBar :progress="uploadProgress" />
-        <span>
-               <b> {{ uploadProgress }}% </b>
-            </span>
-      </div>
+
       <div class="file-input-wrapper">
         <input
           id="subtitleInput"
@@ -47,10 +40,55 @@
         </label>
       </div>
 
-    </div>
+      <div v-if="uploading" class="prompts-progress-bar-wrapper">
+        <ProgressBar :progress="uploadProgress" />
+        <span><b>{{ uploadProgress }}%</b></span>
+      </div>
 
+      <!-- Expandable section -->
+      <div class="expandable-section">
+        <div class="expandable-header" @click="isExpanded = !isExpanded">
+          <strong>{{ $t("prompts.advanced") }}</strong>
+          <i :class="{ expanded: isExpanded }" class="material-icons expand-icon">
+            keyboard_arrow_down
+          </i>
+        </div>
+
+        <div v-if="isExpanded" class="expandable-content  advanced-settings">
+
+          <div class="input-group">
+            <label>Font Size (px)</label>
+            <input type="number" v-model.number="subtitleStyle.fontSize" min="10" />
+          </div>
+          <div class="input-group input-color">
+            <label>Font Color</label>
+            <input type="color" v-model="subtitleStyle.color" />
+          </div>
+          <div class="input-group input-color">
+            <label>Background Color</label>
+            <input type="color" v-model="subtitleStyle.backgroundColor" />
+          </div>
+          <div class="input-group">
+            <label>Text Shadow</label>
+            <input type="text" v-model="subtitleStyle.textShadow" placeholder="e.g. 2px 2px 4px #000000" />
+          </div>
+          <div class="input-group">
+            <label>Alignment</label>
+            <select v-model="subtitleStyle.textAlign">
+              <option value="center">Center</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Default</label>
+            <input type="checkbox" v-model="subtitleStyle.default"/>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="card-action">
-      <button class="button button--flat button--grey" @click=cancel>
+      <button class="button button--flat button--grey" @click="cancel">
         {{ $t("buttons.cancel") }}
       </button>
       <button
@@ -85,22 +123,46 @@ export default {
          newLanguage: "",
          cancelTokenSource: null,
          uploadProgress: 0,
-         uploading: false
+         uploading: false,
+         isExpanded: false,
+         subtitleStyle: {
+            fontSize: 18,
+            color: "#fbeda5",
+            backgroundColor: "rgba(0, 0, 0, 0.4)",
+            textShadow: "2px 2px 4px #000000",
+            textAlign: "center",
+            default: true,
+         }
       }
    },
    computed: {
       ...mapState(useMainStore, ["user", "selected"]),
-
       canSubmit() {
          return this.newSubtitleFile && this.newLanguage.length > 0
       }
    },
    async mounted() {
       this.subtitles = await getSubtitles(this.selected[0]?.id)
+
+      let savedStyle = localStorage.getItem('subtitleStyle');
+      if (savedStyle) {
+         try {
+            this.subtitleStyle = JSON.parse(savedStyle);
+         } catch (e) {
+            console.warn("Failed to parse subtitleStyle from localStorage");
+         }
+      }
+   },
+   watch: {
+      subtitleStyle: {
+         handler(newValue) {
+            localStorage.setItem('subtitleStyle', JSON.stringify(newValue))
+         },
+         deep: true
+      }
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
-
       onSubtitleInput(event) {
          let file = event.target.files[0]
          if (!file) return
@@ -112,35 +174,33 @@ export default {
 
          this.newSubtitleFile = file
       },
+
       async addSubtitle() {
          if (!this.canSubmit || this.uploading) return
+
          try {
             this.uploading = true
             this.uploadProgress = 0
 
             let maxSize = this.user.maxDiscordMessageSize
-
             if (this.newSubtitleFile.size >= maxSize) {
                this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
                this.uploading = false
                return
             }
+
             let file = this.selected[0]
-
             let res = await canUpload(file.parent_id)
-            if (!res.can_upload) {
-               return
-            }
+            if (!res.can_upload) return
 
-            let fileFormList = new FormData()
             let method = file.encryption_method
             let iv = generateIv(method)
             let key = generateKey(method)
             let encryptedBlob = await encrypt(this.newSubtitleFile, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
-
-            fileFormList.append("file", encryptedBlob, this.attachmentName)
+            let form = new FormData()
+            form.append("file", encryptedBlob, this.newSubtitleFile.name)
 
             let config = {
                onUploadProgress: (progressEvent) => {
@@ -153,7 +213,7 @@ export default {
                cancelToken: this.cancelTokenSource.token
             }
 
-            let uploadResponse = await upload(fileFormList, config)
+            let uploadResponse = await upload(form, config)
 
             let subtitle_data = {
                language: this.newLanguage,
@@ -167,6 +227,7 @@ export default {
             }
 
             let subtitle_res = await addSubtitle(subtitle_data)
+
             this.$toast.success(this.$t("toasts.subtitleAdded"))
             this.subtitles.push(subtitle_res)
             this.newLanguage = ""
@@ -180,11 +241,13 @@ export default {
             this.uploadProgress = 0
          }
       },
+
       async removeSubtitle(subtitle_id) {
          await removeSubtitle({ "subtitle_id": subtitle_id })
          this.subtitles = this.subtitles.filter(subtitle => subtitle.id !== subtitle_id)
          this.$toast.success(this.$t("toasts.subtitleRemoved"))
       },
+
       cancel() {
          if (this.cancelTokenSource) {
             this.cancelTokenSource.cancel("Upload has been canceled by the user.")
@@ -232,6 +295,7 @@ input[type="file"] {
  text-align: center;
  width: 100%;
  font-size: 14px;
+ margin-top: 2em;
 }
 
 .input-group.input {
@@ -243,8 +307,43 @@ input[type="file"] {
  color: var(--textSecondary);
 }
 
-.file-label {
- margin-top: 2em;
+.prompts-progress-bar-wrapper {
+ display: flex;
+ align-items: center;
+ gap: 1em;
+ margin-top: 1em;
 }
+
+.advanced-settings {
+ margin-top: 1em;
+ padding: 1em;
+ background: var(--surfacePrimary);
+ border: 1px solid var(--divider);
+ border-radius: 8px;
+}
+
+.advanced-settings .input-group {
+ margin-bottom: 1em;
+}
+
+.advanced-settings .input-color input{
+ padding: 0.20em 0.20em !important;
+ height: 25px;
+}
+
+
+.advanced-settings input,
+.advanced-settings select {
+ margin-top: 0.5em;
+ margin-left: 0.5em;
+ padding: 0.5em 0.5em;
+ border: 1px solid var(--divider);
+ border-radius: 6px;
+ background-color: var(--surfaceSecondary);
+ color: var(--textPrimary);
+ font-size: 14px;
+ box-sizing: border-box;
+}
+
 
 </style>

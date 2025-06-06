@@ -144,7 +144,7 @@ class FileAdmin(SimpleHistoryAdmin):
 
         elif obj.type == "video":
             url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
-            poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"  # Example poster URL
+            poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
 
             return format_html(
                 '<video controls style="width: 350px; height: auto;" poster="{}">'
@@ -383,8 +383,15 @@ class VideoMetadataAdmin(admin.ModelAdmin):
 @admin.register(Subtitle)
 class SubtitleAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id')
-    readonly_fields = ('file', 'iv', 'key', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method')
+    readonly_fields = ('file', 'iv', 'key', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'preview')
     exclude = ['size']
+
+    def preview(self, obj):
+        signed_file_id = sign_resource_id_with_expiry(obj.file.id)
+        url = f"{API_BASE_URL}/file/subtitle/{signed_file_id}/{obj.id}"
+        return format_html('<a href="{}" target="_blank">Preview Subtitle</a>', url)
+
+    preview.short_description = "Subtitle Preview"
 
     def readable_size(self, obj: Subtitle):
         return filesizeformat(obj.size)
