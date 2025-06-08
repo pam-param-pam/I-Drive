@@ -79,7 +79,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .code-editor .dropdown .list.fade-enter-active,
 .code-editor .dropdown .list.fade-leave-active {
    transition:

@@ -8,6 +8,8 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 
 const toast = useToast()
 
+//todo this really needs a fucking cleanup
+
 export const cancelTokenMap = new Map()
 let upload_429_errors = 0
 function retry(error, delay, maxRetries = 5) {
@@ -135,6 +137,26 @@ backendInstance.interceptors.response.use(
          return Promise.reject(error)
 
       }
+
+      if (response) {
+         let contentType = response.headers['content-type'] || ''
+         if (
+            (config.responseType === 'arraybuffer' || config.responseType === 'blob') &&
+            contentType.includes('application/json')
+         ) {
+            let errorText = ''
+
+            if (response.data instanceof ArrayBuffer) {
+               const decoder = new TextDecoder('utf-8')
+               errorText = decoder.decode(response.data)
+            } else if (response.data instanceof Blob) {
+               errorText = await response.data.text()
+            }
+
+            response.data = JSON.parse(errorText)
+         }
+      }
+
       // Check if the error is 429 Too Many Requests errors
       if (response && response.status === 429 && error.config.__retry500) {
          let retryAfter = error.response.headers["retry-after"]
@@ -248,6 +270,7 @@ backendInstance.interceptors.response.use(
             }
          }
       }
+
       let errorMessage = response?.data?.error
       let errorDetails = response?.data?.details
       if (!errorMessage && errorMessage !== "") errorMessage = "Unexpected error"

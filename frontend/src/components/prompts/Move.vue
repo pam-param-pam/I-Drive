@@ -5,6 +5,9 @@
       </div>
 
       <div class="card-content">
+         <p>
+            {{ $t('prompts.moveTo') }} <code class="move-to">{{ dest?.folder_path }}</code>
+         </p>
          <FolderList ref="fileList" @update:current="(val) => (dest = val)"> </FolderList>
       </div>
 
@@ -101,3 +104,8 @@ export default {
    }
 }
 </script>
+<style scoped>
+.move-to {
+   color: var(--textSecondary)
+}
+</style>

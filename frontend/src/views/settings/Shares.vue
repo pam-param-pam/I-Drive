@@ -111,17 +111,22 @@ export default {
       async deleteLink(event, share) {
          event.preventDefault()
 
-         this.showHover({
-            prompt: 'share-delete',
-            confirm: () => {
-               this.closeHover()
-               removeShare({ token: share.token })
-               this.shares = this.shares.filter((item) => item.token !== share.token)
-               this.$toast.success(this.$t('toasts.shareDeleted'))
-            }
-         })
+         if (event.ctrlKey) {
+            await removeShare({ token: share.token })
+            this.shares = this.shares.filter((item) => item.token !== share.token)
+            this.$toast.success(this.$t('toasts.shareDeleted'))
+         } else {
+            this.showHover({
+               prompt: 'share-delete',
+               confirm: () => {
+                  this.closeHover()
+                  removeShare({ token: share.token })
+                  this.shares = this.shares.filter((item) => item.token !== share.token)
+                  this.$toast.success(this.$t('toasts.shareDeleted'))
+               }
+            })
+         }
       },
-
       humanTime(time) {
          //todo czm globalny local nie dzIała?
          let locale = this.settings?.locale || 'en'

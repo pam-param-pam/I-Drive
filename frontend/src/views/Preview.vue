@@ -1,5 +1,4 @@
 <template>
-
   <div
     id="previewer"
     v-touch:swipe.left="next"
@@ -128,6 +127,11 @@
           class="pdf"
         ></object>
 
+        <OfficePreview
+          v-else-if="['.docx'].includes(file?.extension)"
+          :file="file"
+          :file-url="fileSrcUrl"
+        />
         <div v-else-if="file" class="info">
           <div class="title">
             <i class="material-icons">feedback</i>
@@ -151,7 +155,7 @@
             </a>
           </div>
         </div>
-        <div v-else-if="error" class="info">
+        <div v-if="error" class="info">
 
           <div v-if="error.status === 404" class="title">
             <i class="material-icons">feedback</i>
@@ -161,9 +165,13 @@
             <i class="material-icons">block</i>
             {{ $t("errors.folderPasswordRequired") }}
           </div>
+          <div v-else-if="error.status === 403" class="title">
+            <i class="material-icons">block</i>
+            {{ $t("errors.permissionDenied") }}
+          </div>
           <div v-else class="title">
             <i class="material-icons">error_outline</i>
-            {{ $t("errors.unknownError") }}
+            {{ $t("errors.unknownError", { code: error?.status, response: error?.response?.data?.details }) }}
           </div>
 
           <div>
@@ -211,11 +219,15 @@ import { VueReader } from "vue-reader"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import ExtendedImage from "@/components/listing/ExtendedImage.vue"
+import { defineAsyncComponent } from "vue"
 
 export default {
    name: "preview",
 
    components: {
+      OfficePreview: defineAsyncComponent(() =>
+         import('@/components/OfficePreview.vue')
+      ),
       HeaderBar,
       VueReader,
       Action,
@@ -266,7 +278,11 @@ export default {
    computed: {
       ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
       enableSwipe() {
-         return !(this.file?.type === "image" && this.file?.size > 0)
+
+         return (
+            (this.file?.type === "image" && this.file?.size > 0) ||
+            ![".docx"].includes(this.file?.extension)
+         )
       },
       isEpub() {
          if (!this.file) return false
@@ -384,6 +400,7 @@ export default {
          if (this.file?.type === "video" && this.$refs.video && this.isLogged) {
             this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
+            this.lastSentVideoPosition = this.file.video_position || 0
             this.subtitles = await getSubtitles(this.file.id)
             this.loadSubtitleStyle()
 
@@ -567,7 +584,7 @@ export default {
       },
 
       download() {
-         window.open(this.selected[0].download_url, "_blank")
+         window.open(this.selected[0].download_url + "?download=true", "_blank")
          let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
          this.$toast.success(message)
       },
@@ -603,7 +620,6 @@ export default {
                color: ${subtitleStyle.color};
                background-color: ${subtitleStyle.backgroundColor};
                text-shadow: ${subtitleStyle.textShadow};
-               text-align: ${subtitleStyle.textAlign};
             }
          `
          this.removeSubtitleStyle()
@@ -711,7 +727,7 @@ export default {
    }
 }
 </script>
-<style>
+<style scoped>
 .page {
  position: fixed;
  left: 50%;

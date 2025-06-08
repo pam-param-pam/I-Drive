@@ -480,7 +480,7 @@ export default {
    }
 }
 </script>
-<style lang="css" scoped>
+<style scoped>
 .checkmark-true:after {
  content: '\002705';
  color: #2ecc71;

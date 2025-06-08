@@ -14,7 +14,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .progress-wrapper {
    width: 100%;
    height: 1rem;

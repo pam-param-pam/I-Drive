@@ -67,9 +67,8 @@ export default {
       UploadDestinationWarning,
       EditThumbnail,
       Moments,
-      EditSubtitles,
+      EditSubtitles
    },
-
    created() {
       window.addEventListener("keydown", (event) => {
          if (this.currentPrompt == null) return

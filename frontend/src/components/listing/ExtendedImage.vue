@@ -16,6 +16,7 @@
       class="image-ex-img image-ex-img-center"
       @load="onLoad"
       @error="onError"
+      :draggable="!turnedOFF"
     />
   </div>
 </template>
@@ -23,6 +24,7 @@
 import throttle from "lodash.throttle"
 import UTIF from "utif"
 import { isMobile } from "@/utils/common.js"
+import { getFileRawData } from "@/api/files.js"
 
 export default {
    props: {
@@ -63,9 +65,9 @@ export default {
       }
    },
 
-   mounted() {
+   async mounted() {
       if (!this.decodeUTIF()) {
-         this.$refs.imgex.src = this.src
+         await this.loadImage()
       }
       let container = this.$refs.container
       this.classList.forEach((className) => container.classList.add(className))
@@ -86,9 +88,9 @@ export default {
    },
 
    watch: {
-      src() {
+      async src() {
          if (!this.decodeUTIF()) {
-            this.$refs.imgex.src = this.src
+            await this.loadImage()
          }
 
          this.scale = 1
@@ -98,22 +100,34 @@ export default {
    },
 
    methods: {
+      async loadImage() {
+         try {
+            let data = await getFileRawData(this.src, { responseType: 'arraybuffer' })
+
+            let blob = data instanceof Blob ? data : new Blob([data])
+
+            // Revoke old URL to free memory if any
+            if (this._currentBlobUrl) {
+               URL.revokeObjectURL(this._currentBlobUrl)
+            }
+
+            this._currentBlobUrl = URL.createObjectURL(blob)
+            this.$refs.imgex.src = this._currentBlobUrl
+         } catch (e) {
+            console.error("Error loading image blob:", e)
+            this.onError()
+         }
+      },
       next(event) {
          event.preventDefault();
-         console.log("11111111111111111111")
-         // Perform 'next' action
       },
       prev(event) {
          event.preventDefault();
-         console.log("2222222222")
-
-         // Perform 'prev' action
       },
-      // Modified from UTIF.replaceIMG
       decodeUTIF() {
          const sufs = ["tif", "tiff", "dng", "cr2", "nef"]
          let suff = document.location.pathname.split(".").pop().toLowerCase()
-         if (sufs.indexOf(suff) == -1) return false
+         if (sufs.indexOf(suff) === -1) return false
          let xhr = new XMLHttpRequest()
          UTIF._xhrs.push(xhr)
          UTIF._imgs.push(this.$refs.imgex)
@@ -132,7 +146,6 @@ export default {
             this.$refs.imgex.style.width = "40%"
 
          }
-         this.$toast.error(this.$t("toasts.failedImage"))
       },
       onLoad() {
          let img = this.$refs.imgex
@@ -318,7 +331,7 @@ export default {
    }
 }
 </script>
-<style>
+<style scoped>
 .image-ex-container {
  margin: auto;
  overflow: hidden;

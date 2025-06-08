@@ -169,7 +169,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .fileitem-wrapper {
    display: flex;
    flex-direction: column;

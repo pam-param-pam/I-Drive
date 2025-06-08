@@ -183,3 +183,19 @@ input[type="number"]::-webkit-outer-spin-button {
  -ms-user-select: none;
  user-select: none;
 }
+
+.message {
+ text-align: center;
+ font-size: 2em;
+ margin: 1em auto;
+ display: block !important;
+ width: 95%;
+ color: rgba(0, 0, 0, 0.3);
+ font-weight: 500;
+}
+
+.message i {
+ font-size: 2.5em;
+ margin-bottom: .2em;
+ display: block;
+}

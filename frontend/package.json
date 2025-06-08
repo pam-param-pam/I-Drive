@@ -14,6 +14,7 @@
     "axios": "1.8.2",
     "clipboard": "^2.0.11",
     "crc-32": "https://cdn.sheetjs.com/crc-32-latest/crc-32-latest.tgz",
+    "docx-preview": "^0.3.5",
     "filesize": "^10.1.4",
     "floating-vue": "^5.2.2",
     "highlight.js": "11.8.0",
@@ -43,7 +44,7 @@
     "vue-toastification": "^2.0.0-rc.5",
     "vue-virtual-scroller": "^2.0.0-beta.8",
     "vue3-lazyload": "^0.3.8",
-    "vue3-touch-events": "^4.2.0"
+    "vue3-touch-events": "^5.0.13"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",
@@ -53,7 +54,7 @@
     "eslint-plugin-vue": "^9.23.0",
     "prettier": "^3.2.5",
     "sass-embedded": "^1.77.8",
-    "vite": "6.2.3",
+    "vite": "6.3.4",
     "vite-plugin-vue-devtools": "^7.3.1"
   }
 }

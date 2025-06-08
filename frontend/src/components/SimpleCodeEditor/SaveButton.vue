@@ -119,7 +119,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .code-editor .save-file {
    transition: 0.2s opacity ease;
    position: relative;

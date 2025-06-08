@@ -221,3 +221,25 @@ export default {
    }
 }
 </script>
+<style scoped>
+.share-table-container {
+   max-height: 50vh;
+   overflow-y: auto;
+   overflow-x: hidden;
+   padding-right: 0.5em;
+}
+
+.share-table-container table {
+   width: 100%;
+   border-collapse: collapse; /* optional for nicer border */
+}
+
+.share-table-container th {
+   position: sticky;
+   top: 0;
+   background: var(--surfacePrimary);
+   z-index: 2;
+   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+
+}
+</style>

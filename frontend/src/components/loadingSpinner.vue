@@ -25,20 +25,4 @@ export default {
 }
 
 </script>
-<style>
-.message {
-  text-align: center;
-  font-size: 2em;
-  margin: 1em auto;
-  display: block !important;
-  width: 95%;
-  color: rgba(0, 0, 0, 0.3);
-  font-weight: 500;
-}
 
-.message i {
-  font-size: 2.5em;
-  margin-bottom: .2em;
-  display: block;
-}
-</style>

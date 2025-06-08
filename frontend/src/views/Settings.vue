@@ -5,18 +5,20 @@
       <div id="nav">
          <div class="wrapper">
             <ul>
-               <router-link to="/settings/profile">
-                  <li :class="{ active: $route.path === '/settings/profile' }">
+               <router-link to="/settings/profile" :draggable="false">
+                  <li :draggable="false" :class="{ active: $route.path === '/settings/profile' }">
                      {{ $t('settings.profileSettings') }}
                   </li>
                </router-link>
-               <router-link v-if="perms.share" to="/settings/shares">
-                  <li :class="{ active: $route.path === '/settings/shares' }">
+
+               <router-link v-if="perms.share" to="/settings/shares" :draggable="false">
+                  <li :draggable="false" :class="{ active: $route.path === '/settings/shares' }">
                      {{ $t('settings.shareManagement') }}
                   </li>
                </router-link>
-               <router-link to="/settings/discord">
-                  <li :class="{ active: $route.path === '/settings/discord' }">
+
+               <router-link to="/settings/discord" :draggable="false">
+                  <li :draggable="false" :class="{ active: $route.path === '/settings/discord' }">
                      {{ $t('settings.discordSettings') }}
                   </li>
                </router-link>

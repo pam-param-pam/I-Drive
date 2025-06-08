@@ -5,10 +5,10 @@
     </div>
 
     <div class="card-content">
-      <p v-if="subtitles.length !== 0">{{ $t("prompts.existingSubtitles") }}</p>
+      <p v-if="subtitles.length !== 0">{{ $t("prompts.existingSubtitles") }}: </p>
       <ul class="subtitle-list">
         <li v-for="(sub) in subtitles" :key="sub.id">
-          <label>{{ sub.language }}</label>
+          <label class="subtitle-lang">{{ sub.language }}</label>
           <button class="action remove" @click="removeSubtitle(sub.id)">
             <i class="material-icons">delete</i>
           </button>
@@ -23,7 +23,7 @@
         <input
           id="langInput"
           v-model.trim="newLanguage"
-          placeholder="english"
+          placeholder="English"
           class="input input--block"
         />
       </div>
@@ -73,14 +73,6 @@
             <input type="text" v-model="subtitleStyle.textShadow" placeholder="e.g. 2px 2px 4px #000000" />
           </div>
           <div class="input-group">
-            <label>Alignment</label>
-            <select v-model="subtitleStyle.textAlign">
-              <option value="center">Center</option>
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-            </select>
-          </div>
-          <div class="input-group">
             <label>Default</label>
             <input type="checkbox" v-model="subtitleStyle.default"/>
           </div>
@@ -126,11 +118,10 @@ export default {
          uploading: false,
          isExpanded: false,
          subtitleStyle: {
-            fontSize: 18,
+            fontSize: 50,
             color: "#fbeda5",
             backgroundColor: "rgba(0, 0, 0, 0.4)",
             textShadow: "2px 2px 4px #000000",
-            textAlign: "center",
             default: true,
          }
       }
@@ -345,5 +336,8 @@ input[type="file"] {
  box-sizing: border-box;
 }
 
-
+.subtitle-lang {
+ color: var(--textSecondary);
+ padding-left: 0.5em;
+}
 </style>

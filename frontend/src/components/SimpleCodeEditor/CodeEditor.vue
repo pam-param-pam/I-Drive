@@ -473,7 +473,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 .code-editor {
    position: relative;
 }

@@ -54,6 +54,7 @@ Credentials: `demo`/`demo`
 | add multiple file select for context menus      | ⛔  Coming prob never |
 | switch to a different backend framework         | ⛔  Coming prob never |
 | load balancing with round robin for nginx       | ⛔  Coming prob never |
+| add resolution to images                        | ⛔  Coming prob never |
 
 | BUGS                                                                                  |
 |---------------------------------------------------------------------------------------|

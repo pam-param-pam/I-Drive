@@ -1,8 +1,5 @@
 <template>
    <div>
-      <p>
-         {{ $t('prompts.moveTo') }} <code>{{ nav?.folder_path }}</code>
-      </p>
       <ul class="file-list">
          <li
             v-for="item in dirs"

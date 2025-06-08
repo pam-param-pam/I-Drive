@@ -125,3 +125,8 @@ export async function getSubtitles(file_id) {
    let response = await backendInstance.get(url)
    return response.data
 }
+
+export async function getFileRawData(fileUrl, config = {}) {
+   let response = await backendInstance.get(fileUrl, config)
+   return response.data
+}
