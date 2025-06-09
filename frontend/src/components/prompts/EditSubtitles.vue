@@ -104,6 +104,7 @@ import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
 import { encrypt } from "@/utils/encryption.js"
 import axios from "axios"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
+import { useUploadStore } from "@/stores/uploadStore.js"
 
 export default {
    name: "manage-subtitles",
@@ -128,6 +129,7 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["user", "selected"]),
+      ...mapState(useUploadStore, ["attachmentName"]),
       canSubmit() {
          return this.newSubtitleFile && this.newLanguage.length > 0
       }
@@ -162,6 +164,11 @@ export default {
             this.$toast.error(this.$t("toasts.invalidSubtitleFormat"))
             return
          }
+         let maxSize = this.user.maxDiscordMessageSize
+         if (file.size >= maxSize) {
+            this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
+            return
+         }
 
          this.newSubtitleFile = file
       },
@@ -172,15 +179,8 @@ export default {
          try {
             this.uploading = true
             this.uploadProgress = 0
-
-            let maxSize = this.user.maxDiscordMessageSize
-            if (this.newSubtitleFile.size >= maxSize) {
-               this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
-               this.uploading = false
-               return
-            }
-
             let file = this.selected[0]
+
             let res = await canUpload(file.parent_id)
             if (!res.can_upload) return
 
@@ -191,7 +191,7 @@ export default {
 
             this.cancelTokenSource = axios.CancelToken.source()
             let form = new FormData()
-            form.append("file", encryptedBlob, this.newSubtitleFile.name)
+            form.append("file", encryptedBlob, this.attachmentName)
 
             let config = {
                onUploadProgress: (progressEvent) => {

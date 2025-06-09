@@ -226,7 +226,7 @@ export default {
 
    components: {
       OfficePreview: defineAsyncComponent(() =>
-         import('@/components/OfficePreview.vue')
+         import("@/components/OfficePreview.vue")
       ),
       HeaderBar,
       VueReader,
@@ -616,12 +616,12 @@ export default {
          }
          let css = `
             video::cue {
-               font-size: ${subtitleStyle.fontSize}px;
-               color: ${subtitleStyle.color};
-               background-color: ${subtitleStyle.backgroundColor};
-               text-shadow: ${subtitleStyle.textShadow};
+                font-size: ${subtitleStyle.fontSize}px !important;
+                color: ${subtitleStyle.color} !important;
+                background-color: ${subtitleStyle.backgroundColor} !important;
+                text-shadow: ${subtitleStyle.textShadow} !important;
             }
-         `
+        `
          this.removeSubtitleStyle()
 
          // Inject new style

@@ -1,5 +1,6 @@
 <template>
    <div class='wrapper'>
+      <PopupPreview v-if="!isMobile() && false" />
       <header-bar>
          <Search
             v-if='headerButtons.search'
@@ -337,11 +338,13 @@ import HeaderBar from '@/components/header/HeaderBar.vue'
 import Search from '@/components/Search.vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import loadingSpinner from '@/components/loadingSpinner.vue'
+import PopupPreview from "@/components/listing/PopupPreview.vue"
 
 export default {
    name: 'FileListing',
 
    components: {
+      PopupPreview,
       Search,
       HeaderBar,
       Action,

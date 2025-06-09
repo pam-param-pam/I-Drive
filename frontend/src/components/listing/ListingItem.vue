@@ -19,19 +19,11 @@
     >
       <div :style="divStyle">
         <img
+          v-if="imageSrc"
           :draggable="false"
-          v-if="item.preview_url && type === 'image' && item.size > 0"
-          v-lazy="{ src: item.preview_url }"
-        />
-        <img
-          :draggable="false"
-          v-else-if="item.download_url && type === 'image' && item.size > 0"
-          v-lazy="{ src: item.download_url}"
-        />
-        <img
-          :draggable="false"
-          v-else-if="item.thumbnail_url && type === 'video'"
-          v-lazy="{ src: item.thumbnail_url }"
+          @mouseenter="handleHoverStart"
+          @mouseleave="handleHoverEnd"
+          v-lazy="{ src: imageSrc }"
         />
         <i v-else :style="iconStyle" class="material-icons"></i>
       </div>
@@ -72,6 +64,16 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
+      imageSrc() {
+         if (this.type === 'image' && this.item.size > 0) {
+            if (this.showPreview && this.item.preview_url) return this.item.preview_url
+            if (this.item.download_url) return this.item.download_url
+         }
+         if (this.type === 'video' && this.item.thumbnail_url) {
+            return this.item.thumbnail_url
+         }
+         return null
+      },
       type() {
          if (this.item.isDir) return 'folder'
          if (this.item.type === 'application') return 'pdf'
@@ -118,12 +120,24 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setLastItem', 'addSelected', 'removeSelected', 'resetSelected']),
+      ...mapActions(useMainStore, ['setLastItem', 'addSelected', 'removeSelected', 'resetSelected', 'setPopupPreviewURL', 'clearPopupPreviewURL']),
 
       humanSize() {
          if (this.item.isDir) return '-'
          return filesize(this.item.size)
       },
+
+      handleHoverStart() {
+         this.hoverTimer = setTimeout(() => {
+
+            this.setPopupPreviewURL(this.imageSrc)
+         }, 500)
+      },
+      handleHoverEnd() {
+         clearTimeout(this.hoverTimer)
+         this.clearPopupPreviewURL()
+      },
+
 
       humanTime() {
          if (this.settings.dateFormat) {
@@ -327,7 +341,6 @@ export default {
  flex-direction: column;
 }
 
-/* List Item Styling */
 .list .item-wrapper .item {
  display: flex;
  align-items: center;
@@ -341,7 +354,6 @@ export default {
  background-color: var(--surfaceSecondary);
 }
 
-/* Column Styles */
 .list .item-wrapper .item > div {
  padding: 4px 8px;
  overflow: hidden;
@@ -349,19 +361,16 @@ export default {
  white-space: nowrap;
 }
 
-/* Icon/Image Column */
 .list .item-wrapper .item > div:first-child {
- flex: 0 0 40px; /* Fixed width for icons/images */
+ flex: 0 0 40px;
  text-align: center;
 }
 
-/* Name Column */
 .list .item-wrapper .name {
  flex: 2;
  font-weight: 500;
 }
 
-/* Size Column */
 .list .item-wrapper .size {
  flex: 1;
  text-align: right;
@@ -369,7 +378,6 @@ export default {
  font-size: 0.9em;
 }
 
-/* Created Column */
 .list .item-wrapper .created {
  flex: 1.5;
  text-align: right;
@@ -377,7 +385,6 @@ export default {
  font-size: 0.9em;
 }
 
-/* Image Styling */
 .list .item-wrapper img {
  max-width: 32px;
  max-height: 32px;
@@ -385,7 +392,6 @@ export default {
  border-radius: 4px;
 }
 
-/* Icon Styling */
 .list .item-wrapper .material-icons {
  font-size: 24px;
  color: #666;
