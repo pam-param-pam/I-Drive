@@ -33,6 +33,7 @@
 import { moveToTrash } from '@/api/item.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'MoveToTrash',
@@ -44,28 +45,24 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'setItems']),
 
-      async submit() {
-         try {
-            let ids = this.selected.map((item) => item.id)
+      submit: onceAtATime(async function () {
+         let ids = this.selected.map((item) => item.id)
+         let res = await moveToTrash({ ids: ids })
+         let message = this.$t('toasts.itemsAreBeingMovedToTrash', { amount: ids.length })
 
-            let res = await moveToTrash({ ids: ids })
+         this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id
+         })
 
-            let message = this.$t('toasts.itemsAreBeingMovedToTrash', { amount: ids.length })
+         // let filteredItems = this.items.filter((item) => !ids.includes(item.id))
+         // this.setItems(filteredItems)
 
-            this.$toast.info(message, {
-               timeout: null,
-               id: res.task_id
-            })
+         if (this.currentPrompt.confirm) this.currentPrompt.confirm()
 
-            // let filteredItems = this.items.filter((item) => !ids.includes(item.id))
-            // this.setItems(filteredItems)
-
-            if (this.currentPrompt.confirm) this.currentPrompt.confirm()
-         } finally {
-            this.resetSelected()
-            this.closeHover()
-         }
-      }
+         this.resetSelected()
+         this.closeHover()
+      })
    }
 }
 </script>

@@ -17,7 +17,7 @@
           :disabled="disabledCreation || !currentFolder"
           :title="$t('sidebar.newFolder')"
           class="action"
-          @click="showHover('newDir')"
+          @click="showHover('newFolder')"
         >
           <i class="material-icons">create_new_folder</i>
           <span>{{ $t("sidebar.newFolder") }}</span>

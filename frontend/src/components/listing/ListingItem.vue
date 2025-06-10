@@ -66,7 +66,7 @@ export default {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       imageSrc() {
          if (this.type === 'image' && this.item.size > 0) {
-            if (this.showPreview && this.item.preview_url) return this.item.preview_url
+            if (this.item.preview_url) return this.item.preview_url
             if (this.item.download_url) return this.item.download_url
          }
          if (this.type === 'video' && this.item.thumbnail_url) {

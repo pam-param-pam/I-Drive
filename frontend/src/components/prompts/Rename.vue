@@ -40,6 +40,7 @@ import { rename } from '@/api/item.js'
 import throttle from 'lodash.throttle'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'rename',
@@ -66,7 +67,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover']),
 
-      submit: throttle(async function (event) {
+      submit: onceAtATime(async function () {
          if (this.canSubmit) {
             let id = this.selected[0].id
             let new_name = this.name
@@ -79,7 +80,7 @@ export default {
 
             this.closeHover()
          }
-      }, 1000)
+      })
    }
 }
 </script>

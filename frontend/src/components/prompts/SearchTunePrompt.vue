@@ -149,6 +149,7 @@
 <script>
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'filterFiles',
@@ -194,7 +195,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['setSearchFilters', 'setDisabledCreation', 'resetSelected', 'closeHover', 'setSortingBy', 'setSortByAsc', 'setError', 'setLoading']),
 
-      submit() {
+      submit: onceAtATime(async function () {
          this.setDisabledCreation(true)
          this.resetSelected()
 
@@ -229,7 +230,7 @@ export default {
          this.setSortingBy(this.orderBy)
          this.setError(null)
          this.setLoading(true)
-      }
+      })
    }
 }
 </script>

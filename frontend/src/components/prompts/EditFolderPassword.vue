@@ -49,6 +49,7 @@ import { lockWithPassword } from '@/api/folder.js'
 import throttle from 'lodash.throttle'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'folder-password',
@@ -74,7 +75,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover', 'setFolderPassword']),
 
-      submit: throttle(async function (event) {
+      submit: onceAtATime(async function () {
          if (!(this.password === '' && this.oldPassword === '')) {
             let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
             let message = this.$t('toasts.passwordIsBeingUpdated')
@@ -84,7 +85,7 @@ export default {
             })
             this.closeHover()
          }
-      }, 1000)
+      })
    }
 }
 </script>

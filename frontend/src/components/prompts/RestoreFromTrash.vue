@@ -33,6 +33,7 @@
 import { restoreFromTrash } from '@/api/item.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'RestoreFromTrash',
@@ -44,26 +45,26 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'setItems']),
 
-      async submit() {
-         try {
-            let ids = this.selected.map((item) => item.id)
+      submit: onceAtATime(async function () {
 
-            let res = await restoreFromTrash({ ids: ids })
+         let ids = this.selected.map((item) => item.id)
 
-            let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', { amount: ids.length })
-            this.$toast.info(message, {
-               timeout: null,
-               id: res.task_id
-            })
-            // let filteredItems = this.items.filter((item) => !ids.includes(item.id))
-            // this.setItems(filteredItems)
+         let res = await restoreFromTrash({ ids: ids })
 
-            if (this.currentPrompt.confirm) this.currentPrompt.confirm()
-         } finally {
-            this.closeHover()
-            this.resetSelected()
-         }
-      }
+         let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', { amount: ids.length })
+         this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id
+         })
+         // let filteredItems = this.items.filter((item) => !ids.includes(item.id))
+         // this.setItems(filteredItems)
+
+         if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+
+         this.closeHover()
+         this.resetSelected()
+
+      })
    }
 }
 </script>

@@ -55,6 +55,7 @@ import { move } from '@/api/item.js'
 import throttle from 'lodash.throttle'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'move',
@@ -80,7 +81,7 @@ export default {
 
       createDir() {
          this.showHover({
-            prompt: 'newDir',
+            prompt: 'newFolder',
             props: { folder: this.dest },
             confirm: (data) => {
                this.$refs.fileList.dirs.push(data)
@@ -88,7 +89,7 @@ export default {
          })
       },
 
-      submit: throttle(async function (event) {
+      submit: onceAtATime(async function () {
          let ids = this.selected.map((obj) => obj.id)
          let res = await move({ ids: ids, new_parent_id: this.dest.id })
 
@@ -100,7 +101,7 @@ export default {
 
          this.resetSelected()
          this.closeHover()
-      }, 1000)
+      })
    }
 }
 </script>

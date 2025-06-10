@@ -36,6 +36,7 @@
 import { remove } from '@/api/item.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'delete',
@@ -47,7 +48,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'setItems']),
 
-      async submit() {
+      submit: onceAtATime(async function () {
          try {
             let ids = this.selected.map((item) => item.id)
             let res = await remove({ ids: ids })
@@ -66,7 +67,7 @@ export default {
          } finally {
             this.closeHover()
          }
-      }
+      })
    }
 }
 </script>

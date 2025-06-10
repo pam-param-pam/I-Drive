@@ -60,6 +60,7 @@ import { resetPassword } from '@/api/folder.js'
 import throttle from 'lodash.throttle'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'resetFolderPassword',
@@ -90,7 +91,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover', 'setFolderPassword']),
 
-      submit: throttle(async function (event) {
+      submit: onceAtATime(async function () {
          let res = await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
          let message = this.$t('toasts.passwordIsBeingUpdated')
          this.$toast.info(message, {
@@ -108,7 +109,7 @@ export default {
             this.closeHover()
             this.currentPrompt.confirm()
          }
-      }, 1000)
+      })
    }
 }
 </script>

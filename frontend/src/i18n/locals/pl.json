@@ -226,8 +226,8 @@
     "moveTo": "Przenieś do: ",
     "moveToTrashMessageMultiple": "Czy jesteś pewien, że chcesz przeniesć do kosza {count} plik(ów)?",
     "moveToTrashMessageSingle": "Czy jesteś pewien, że chcesz przeniesć do kosza ten plik/folder?",
-    "newDir": "Nowy folder",
-    "newDirMessage": "Podaj nazwę tworzonego folderu.",
+    "newFolder": "Nowy folder",
+    "newFolderMessage": "Podaj nazwę tworzonego folderu.",
     "newFolderPassword": "Nowe hasło do folderu",
     "numberDirs": "Liczba Folderów",
     "numberFiles": "Liczba plików",
@@ -345,6 +345,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "actionAlreadyInProgress": "Operacja w toku. Prosze poczekaj",
     "momentUploadFile": "Dodano moment!",
     "subtitleAdded": "Dodano napisy!",
     "subtitleRemoved": "Usunięto napisy!",

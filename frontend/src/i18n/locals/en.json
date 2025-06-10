@@ -107,14 +107,14 @@
     "sortBySize": "Sort by size"
   },
   "help": {
-    "click": "select file or directory",
+    "click": "select file or folder",
     "ctrl": {
       "click": "select multiple files or directories",
       "f": "opens search",
-      "s": "save a file or download the directory where you are"
+      "s": "save a file or download the folder where you are"
     },
     "del": "delete selected items",
-    "doubleClick": "open a file or directory",
+    "doubleClick": "open a file or folder",
     "esc": "clear selection and/or close the prompt",
     "f1": "more item information",
     "f2": "rename file",
@@ -229,8 +229,8 @@
     "moveTo": "Move to: ",
     "moveToTrashMessageMultiple": "Are you sure you wish to move to trash {count} file(s)?",
     "moveToTrashMessageSingle": "Are you sure you wish to move to trash this file/folder?",
-    "newDir": "New directory",
-    "newDirMessage": "Name your new directory.",
+    "newFolder": "New folder",
+    "newFolderMessage": "Name your new folder.",
     "newFolderPassword": "New folder password",
     "numberDirs": "Folder count",
     "numberFiles": "File count",
@@ -357,6 +357,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "actionAlreadyInProgress": "This operation is already in progress. Please wait",
     "momentUploadFile": "Added moment!",
     "subtitleAdded": "Added subtitle!",
     "subtitleRemoved": "Subtitle removed!",

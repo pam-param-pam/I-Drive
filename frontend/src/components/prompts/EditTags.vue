@@ -72,6 +72,7 @@
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import { addTag, getTags, removeTag } from "@/api/files.js"
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'EditTags',
@@ -106,7 +107,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'updateItem']),
 
-      async submit() {
+      submit: onceAtATime(async function () {
          if (this.tagName === '') {
             this.closeHover()
             return
@@ -116,13 +117,13 @@ export default {
 
          await addTag({ tag_name: tagName, file_id: this.file.id })
          this.tags.push(tagName)
-      },
+      }),
 
-      async removeTag(tagName) {
+      removeTag: onceAtATime(async function (tagName) {
          await removeTag({ tag_name: tagName, file_id: this.file.id })
 
          this.tags = this.tags.filter((tag) => tag !== tagName)
-      }
+      })
    }
 }
 </script>

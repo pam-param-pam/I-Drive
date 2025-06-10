@@ -56,13 +56,15 @@ Credentials: `demo`/`demo`
 | load balancing with round robin for nginx       | ⛔  Coming prob never |
 | add resolution to images                        | ⛔  Coming prob never |
 
-| BUGS                                                                                  |
-|---------------------------------------------------------------------------------------|
-| fix 401 in locked folders in shares                                                   |
-| Fix file download for mobile                                                          |
-| fix scrollbar in shares prompt                                                        |
-| fix tasks                                                                             |
-| fix mobile number download info frontend                                              |
+| BUGS                                                 |
+|------------------------------------------------------|
+| fix 401 in locked folders in shares                  |
+| Fix file download for mobile                         |
+| fix scrollbar in shares prompt                       |
+| fix tasks                                            |
+| fix mobile number download info frontend             |
+| CannotProcessDiscordRequestError in tasks            |
+| remove dangling discord attachments is buggy at best |
 
 > [!WARNING]  
 > This section is very much unfinished

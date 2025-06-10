@@ -109,6 +109,7 @@ import { createShare, getAllShares, removeShare } from '@/api/share.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import throttle from 'lodash.throttle'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'share',
@@ -156,7 +157,7 @@ export default {
          }
       },
 
-      submit: throttle(async function (event) {
+      submit: onceAtATime(async function () {
          if (this.listing) return
          let res = await createShare({
             resource_id: this.selected[0].id,
@@ -174,7 +175,7 @@ export default {
          this.$toast.success(this.$root.$t('settings.shareCreated'))
 
          this.listing = true
-      }, 1000),
+      }),
 
       async deleteLink(event, share) {
          event.preventDefault()
@@ -231,7 +232,7 @@ export default {
 
 .share-table-container table {
    width: 100%;
-   border-collapse: collapse; /* optional for nicer border */
+   border-collapse: collapse;
 }
 
 .share-table-container th {

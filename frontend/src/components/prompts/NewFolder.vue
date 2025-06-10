@@ -1,11 +1,11 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t('prompts.newDir') }}</h2>
+         <h2>{{ $t('prompts.newFolder') }}</h2>
       </div>
 
       <div class="card-content">
-         <p>{{ $t('prompts.newDirMessage') }}</p>
+         <p>{{ $t('prompts.newFolderMessage') }}</p>
          <input v-focus v-model.trim="name" class="input input--block" type="text" />
       </div>
 
@@ -36,9 +36,10 @@
 import { create } from '@/api/folder.js'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
+import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'new-dir',
+   name: 'new-folder',
 
    data() {
       return {
@@ -63,7 +64,7 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['closeHover']),
 
-      async submit(event) {
+      submit: onceAtATime(async function () {
          if (this.canSubmit) {
             try {
                let folder = this.folder || this.currentFolder
@@ -75,7 +76,7 @@ export default {
                this.closeHover()
             }
          }
-      }
+      })
    }
 }
 </script>

@@ -40,6 +40,7 @@ export default {
 
       submit() {
          if (this.currentPrompt.confirm) this.currentPrompt.confirm()
+         this.closeHover()
       }
    }
 }
