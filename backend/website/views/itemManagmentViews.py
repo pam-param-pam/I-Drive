@@ -54,12 +54,15 @@ def move(request):
 
     # Fetch the new parent details
     new_parent = get_folder(new_parent_id)
-    check_resource_perms(request, new_parent, checkRoot=False)
-
     files_data = list(File.objects.filter(id__in=ids).annotate(**File.LOCK_FROM_ANNOTATE).values(*File.STANDARD_VALUES))
     folders = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
+    try:
+        check_resource_perms(request, new_parent, checkRoot=False)
+    except MissingOrIncorrectResourcePasswordError as e:
+        required_folder_passwords.extend(e.requiredPasswords)
+
     for item in files_data + folders:
         # handle multiple folder passwords
         try:
