@@ -38,33 +38,37 @@ Credentials: `demo`/`demo`
 | Virtual lists to render tens of thousand of files in a single folder | ✅       |
 
 
-| TODO List                                       | Status               |
-|-------------------------------------------------|----------------------|
-| Proper frontend networking & handling of errors | 🛠️  in progress     |
-| Error handling in upload process                | ⚠️  Only partial     |
-| Optimize shares                                 | ❌  Coming one day    |
-| cached docker build                             | ❌  Coming one day    |
-| Virtual list view                               | ⛔  Coming prob never |
-| Stop, pause, abort uploads                      | ⛔  Coming prob never |
-| Editor support for large files                  | ⛔  Coming prob never |
-| Change  __prependStaticUrl                      | ⛔  Coming prob never |
-| multiple files in 1 Discord attachment support  | ⛔  Coming prob never |
-| add deselect                                    | ⛔  Coming prob never |
-| add multiple file select for mobile             | ⛔  Coming prob never |
-| add multiple file select for context menus      | ⛔  Coming prob never |
-| switch to a different backend framework         | ⛔  Coming prob never |
-| load balancing with round robin for nginx       | ⛔  Coming prob never |
-| add resolution to images                        | ⛔  Coming prob never |
+| TODO List                                            | Status               |
+|------------------------------------------------------|----------------------|
+| Proper frontend networking & handling of errors      | 🛠️  in progress     |
+| Error handling in upload process                     | ⚠️  Only partial     |
+| Optimize shares                                      | ❌  Coming one day    |
+| cached docker build                                  | ❌  Coming one day    |
+| Virtual list view                                    | ⛔  Coming prob never |
+| Stop, pause, abort uploads                           | ⛔  Coming prob never |
+| Editor support for large files                       | ⛔  Coming prob never |
+| Change  __prependStaticUrl                           | ⛔  Coming prob never |
+| multiple files in 1 Discord attachment support       | ⛔  Coming prob never |
+| add deselect                                         | ⛔  Coming prob never |
+| add multiple file select for mobile                  | ⛔  Coming prob never |
+| add multiple file select for context menus           | ⛔  Coming prob never |
+| switch to a different backend framework              | ⛔  Coming prob never |
+| load balancing with round robin for nginx            | ⛔  Coming prob never |
+| add resolution to images                             | ⛔  Coming prob never |
+| add image previews                                   | ⛔  Coming prob never |
+
 
 | BUGS                                                 |
 |------------------------------------------------------|
 | fix 401 in locked folders in shares                  |
 | Fix file download for mobile                         |
-| fix scrollbar in shares prompt                       |
 | fix tasks                                            |
 | fix mobile number download info frontend             |
 | CannotProcessDiscordRequestError in tasks            |
 | remove dangling discord attachments is buggy at best |
+| items dont appear in trash                           |
+| crc not displayed                                    |
+| zip timeouts on thousands of files                   |
 
 > [!WARNING]  
 > This section is very much unfinished

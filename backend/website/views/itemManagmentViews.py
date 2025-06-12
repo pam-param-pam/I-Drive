@@ -63,16 +63,17 @@ def move(request):
     except MissingOrIncorrectResourcePasswordError as e:
         required_folder_passwords.extend(e.requiredPasswords)
 
+    seen_ids = set()
     for item in files_data + folders:
-        # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if lockFrom_id is in list of tuples and add it if needed
             lockFrom_id = get_attr(item, 'lockFrom_id')
             lockFrom_name = get_attr(item, 'lockFrom__name')
-            if lockFrom_id not in required_folder_passwords:
+
+            if lockFrom_id not in seen_ids:
                 required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
+                seen_ids.add(lockFrom_id)
 
         if get_attr(item, 'id') == new_parent_id or get_attr(item, 'parent_id') == new_parent_id:
             raise BadRequestError("errors.InvalidMove")
@@ -99,16 +100,17 @@ def move_to_trash(request):
     folders = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
+    seen_ids = set()
     for item in files_data + folders:
-        # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if lockFrom_id is in list of tuples and add it if needed
             lockFrom_id = get_attr(item, 'lockFrom_id')
             lockFrom_name = get_attr(item, 'lockFrom__name')
-            if lockFrom_id not in required_folder_passwords:
+
+            if lockFrom_id not in seen_ids:
                 required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
+                seen_ids.add(lockFrom_id)
 
         if get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
@@ -135,16 +137,17 @@ def restore_from_trash(request):
     folders = list(Folder.objects.filter(id__in=ids))
 
     required_folder_passwords = []
+    seen_ids = set()
     for item in files_data + folders:
-        # handle multiple folder passwords
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if lockFrom_id is in list of tuples and add it if needed
             lockFrom_id = get_attr(item, 'lockFrom_id')
             lockFrom_name = get_attr(item, 'lockFrom__name')
-            if lockFrom_id not in required_folder_passwords:
+
+            if lockFrom_id not in seen_ids:
                 required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
+                seen_ids.add(lockFrom_id)
 
         if not get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
@@ -173,16 +176,17 @@ def delete(request):
     items = list(files_data) + list(folders)
 
     required_folder_passwords = []
-    for item in items:
-        # handle multiple folder passwords
+    seen_ids = set()
+    for item in files_data + folders:
         try:
             check_resource_perms(request, item)
         except MissingOrIncorrectResourcePasswordError:
-            # check if lockFrom_id is in list of tuples and add it if needed
             lockFrom_id = get_attr(item, 'lockFrom_id')
             lockFrom_name = get_attr(item, 'lockFrom__name')
-            if lockFrom_id not in required_folder_passwords:
+
+            if lockFrom_id not in seen_ids:
                 required_folder_passwords.append({"id": lockFrom_id, "name": lockFrom_name})
+                seen_ids.add(lockFrom_id)
 
         if not get_attr(item, 'ready'):
             raise BadRequestError("Cannot delete. At least one item is not ready.")

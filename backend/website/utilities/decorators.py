@@ -131,11 +131,11 @@ def handle_common_errors(view_func):
         except Throttled as e:
             return JsonResponse(build_http_error_response(code=403, error="errors.rateLimit", details=str(e)), status=403)
 
+        # 469 WRONG FOLDER PASSWORD
         except MissingOrIncorrectResourcePasswordError as e:
             json_error = build_http_error_response(code=469, error="errors.missingOrIncorrectResourcePassword", details=str(e))
             list_of_dicts = []
             for folder in e.requiredPasswords:
-                print(folder)
                 list_of_dicts.append({"id": get_attr(folder, "id"), "name": get_attr(folder, "name")})
             json_error["requiredFolderPasswords"] = list_of_dicts
 

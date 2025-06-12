@@ -224,7 +224,7 @@ class FileAdmin(SimpleHistoryAdmin):
     def is_locked(self, obj: File):
         return obj._is_locked()
 
-    is_locked.admin_order_field = 'password'
+    is_locked.admin_order_field = 'parent__password'
     is_locked.boolean = True
     formatted_key.short_description = "Encryption key (base64)"
     formatted_iv.short_description = "Encryption iv (base64)"
@@ -282,13 +282,30 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
-    readonly_fields = ('token',)
+    list_display = ('token', 'resource_link', 'expiration_time', 'created_at', 'owner', 'content_type')
+    readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner')
 
-    list_display = ('token', 'expiration_time', 'owner', 'content_type', 'object_id', 'is_expired')
+    def resource_name(self, obj: ShareableLink):
+        if obj.resource:
+            return str(obj.resource.name)
+        else:
+            return "<RESOURCE DELETED>"
 
-    def readable_size(self, obj: ShareableLink):
-        return filesizeformat(obj.is_expired)
+    resource_name.short_description = 'Name'
 
+    def resource_link(self, obj: ShareableLink):
+        url = reverse('admin:%s_%s_change' % (
+            obj.content_type.app_label,
+            obj.content_type.model
+        ), args=[obj.object_id])
+        return format_html('<a href="{}">' + self.resource_name(obj) + '</a>', url)
+
+    def is_expired(self, obj: ShareableLink):
+        return obj.is_expired()
+
+    resource_link.short_description = 'Resource'
+    is_expired.admin_order_field = 'expiration_time'
+    is_expired.boolean = True
 
 @admin.register(UserZIP)
 class UserZIPAdmin(admin.ModelAdmin):

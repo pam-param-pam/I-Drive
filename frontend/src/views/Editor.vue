@@ -209,6 +209,8 @@ export default {
 
          try {
             this.raw = await getFileRawData(this.file.download_url)
+            this.raw = typeof this.raw === 'string' ? this.raw : JSON.stringify(this.raw, null, 2)
+
             this.setLastItem(this.file)
          } catch (error) {
             console.log(error)
