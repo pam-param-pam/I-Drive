@@ -11,12 +11,14 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
+from ..utilities.Discord import discord
 from ..utilities.Permissions import ReadPerms
 from ..utilities.constants import cache
 from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
-    calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict, create_subtitle_dict
+    calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict, create_subtitle_dict, get_file, \
+    get_folder, validate_ids_as_list
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -357,3 +359,60 @@ def get_subtitles(request, file_obj: File):
         subtitle_dicts.append(create_subtitle_dict(sub))
 
     return JsonResponse(subtitle_dicts, safe=False)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
+@handle_common_errors
+def ultra_download_metadata(request):
+    folder_id = request.data.get('folder_id')
+    file_ids = request.data.get('file_ids', [])
+
+    if not folder_id and not file_ids:
+        return BadRequestError("Missing folder_id and file_ids")
+
+    if folder_id and file_ids:
+        return BadRequestError("You can't use both folder_id and file_ids")
+
+    files = []
+
+    if file_ids:
+        validate_ids_as_list(file_ids, max_length=10)
+        for file_id in file_ids:
+            file = get_file(file_id)
+            check_resource_perms(request, file)
+            files.append(file)
+
+    if folder_id:
+        folder = get_folder(folder_id)
+        check_resource_perms(request, folder)
+        files = folder.get_all_files()
+
+    def file_metadata(file_obj: File):
+        file_dict = {
+            "id": str(file_obj.id),
+            "name": file_obj.name,
+            "encryption_method": file_obj.get_encryption_method().value,
+        }
+        if file.is_encrypted():
+            file_dict["key"] = file_obj.get_base64_key()
+            file_dict["iv"] = file_obj.get_base64_iv()
+
+        fragment_dicts = []
+        fragments = Fragment.objects.filter(file=file_obj)
+        for fragment in fragments:
+            fragment_dict = {
+                "message_id": fragment.message_id,
+                "attachment_id": fragment.attachment_id,
+                "offset": fragment.offset,
+                "sequence": fragment.sequence,
+                "url": discord.get_attachment_url(request.user, fragment)
+            }
+            fragment_dicts.append(fragment_dict)
+
+        file_dict["fragments"] = fragment_dicts
+        return file_dict
+    response_data = [file_metadata(f) for f in files]
+
+    return JsonResponse(response_data, safe=False)

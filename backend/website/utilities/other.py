@@ -793,7 +793,7 @@ def validate_ids_as_list(ids, max_length=1000):
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
     if len(ids) > max_length:
-        raise BadRequestError("'ids' length cannot > 10000.")
+        raise BadRequestError(f"'ids' length cannot > {max_length}.")
 
 def create_subtitle_dict(subtitle: Subtitle):
     signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)

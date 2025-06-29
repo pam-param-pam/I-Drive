@@ -58,17 +58,20 @@ Credentials: `demo`/`demo`
 | add image previews                                   | ⛔  Coming prob never |
 
 
-| BUGS                                                 |
-|------------------------------------------------------|
-| fix 401 in locked folders in shares                  |
-| Fix file download for mobile                         |
-| fix tasks                                            |
-| fix mobile number download info frontend             |
-| CannotProcessDiscordRequestError in tasks            |
-| remove dangling discord attachments is buggy at best |
-| items dont appear in trash                           |
-| crc not displayed                                    |
-| zip timeouts on thousands of files                   |
+| BUGS                                                                                              |
+|---------------------------------------------------------------------------------------------------|
+| fix 401 in locked folders in shares                                                               |
+| Fix file download for mobile                                                                      |
+| fix tasks                                                                                         |
+| fix mobile number download info frontend                                                          |
+| CannotProcessDiscordRequestError in tasks                                                         |
+| remove dangling discord attachments is buggy at best                                              |
+| items dont appear in trash                                                                        |
+| crc not displayed                                                                                 |
+| zip timeouts on thousands of files                                                                |
+| share -> settings error                                                                           |
+| select a file, drag another file (from disk) to a folder(to upload), the selected file gets moved |
+| upload file prompt displays on top of context menu                                                |
 
 > [!WARNING]  
 > This section is very much unfinished

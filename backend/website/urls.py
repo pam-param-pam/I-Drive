@@ -5,7 +5,7 @@ from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
     remove_subtitle
@@ -90,6 +90,7 @@ urlpatterns = [
     path("item/rename", rename, name="rename file/folder"),
     path("item/moreinfo/<item_id>", fetch_additional_info, name="fetch more info about a folder"),
 
+    path("item/ultraDownload", ultra_download_metadata, name="download metadata for ultra download"),
 
     path("resource/password/<resource_id>", check_password, name="check password"),
 
