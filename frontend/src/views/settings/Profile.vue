@@ -1,5 +1,5 @@
 <template>
-  <div class="row">
+  <div v-if="!loading" class="row">
     <div class="column">
       <form class="card" @submit.prevent="saveSettings">
         <div class="card-title">
@@ -134,7 +134,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["user", "settings"]),
+      ...mapState(useMainStore, ["user", "settings", "loading"]),
       passwordClass() {
          const baseClass = "input input--block"
 

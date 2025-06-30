@@ -215,7 +215,6 @@ import Action from "@/components/header/Action.vue"
 import { getFile, getSubtitles, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
-import { VueReader } from "vue-reader"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import ExtendedImage from "@/components/listing/ExtendedImage.vue"
@@ -228,8 +227,10 @@ export default {
       OfficePreview: defineAsyncComponent(() =>
          import("@/components/OfficePreview.vue")
       ),
+      VueReader: defineAsyncComponent(() =>
+         import('vue-reader')
+      ),
       HeaderBar,
-      VueReader,
       Action,
       ExtendedImage
    },

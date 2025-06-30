@@ -10,12 +10,19 @@ import VueLazyLoad from "vue3-lazyload"
 import Vue3TouchEvents from "vue3-touch-events"
 import VueVirtualScroller from "vue-virtual-scroller"
 import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
-import FloatingVue from "floating-vue"
-import "floating-vue/dist/style.css"
-
-FloatingVue.options.themes.tooltip.placement = "top-start"
 
 const app = createApp(App)
+
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+import 'dayjs/locale/en'
+import 'dayjs/locale/pl'
+
+dayjs.extend(relativeTime)
+dayjs.extend(localizedFormat)
+
+
 app.use(router)
 app.use(i18n)
 app.use(Vue3TouchEvents)
@@ -39,8 +46,6 @@ const filterBeforeCreate = (toast, toasts) => {
    return toast
 
 }
-
-app.use(FloatingVue)
 
 const options = {
    transition: "Vue-Toastification__bounce",
@@ -108,3 +113,4 @@ router.isReady().then(() => app.mount("#app"))
 // }
 
 export default app
+

@@ -1,11 +1,9 @@
-import {createRouter, createWebHistory} from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router"
 import Trash from "@/views/Trash.vue"
 import Layout from "@/views/Layout.vue"
-import Login from "@/views/Login.vue"
 
-import {useMainStore} from "@/stores/mainStore.js"
-import {validateLogin} from "@/utils/auth.js"
-import Preview from "@/views/Preview.vue"
+import { useMainStore } from "@/stores/mainStore.js"
+import { validateLogin } from "@/utils/auth.js"
 
 const router = createRouter({
 
@@ -14,7 +12,7 @@ const router = createRouter({
       {
          path: "/login",
          name: "Login",
-         component: Login,
+         component: () => import("../views/Login.vue"),
          beforeEnter: async (to, from, next) => {
             const store = useMainStore()
             if (store.user == null) {
@@ -22,117 +20,114 @@ const router = createRouter({
             }
 
             if (store.isLogged) {
-               return next({name: 'Files', params: {folderId: store.user.root}})
+               return next({ name: "Files", params: { folderId: store.user.root } })
             }
 
             next()
-         },
+         }
       },
       {
          path: "/*",
          component: Layout,
          children: [
-
             {
                path: "/share/:token/:folderId?",
                name: "Share",
-               component: () => import('../views/Share.vue'),
+               component: () => import("../views/Share.vue"),
                props: true,
                meta: {
-                  requiresAuth: false,
-               },
+                  requiresAuth: false
+               }
             },
-
             {
                path: "/trash",
                name: "Trash",
-               component: Trash,
+               component: Trash,  // idk why but lazy loading this doesnt work, css gets messed up, very weaird
                meta: {
-                  requiresAuth: true,
-               },
+                  requiresAuth: true
+               }
 
             },
             {
                path: "/files/:folderId/:lockFrom?",
                name: "Files",
-               component: () => import('../views/Files.vue'),
+               component: () => import("../views/Files.vue"),
                props: true,
                meta: {
-                  requiresAuth: true,
-               },
+                  requiresAuth: true
+               }
             },
             {
-               path: "/editor/:folderId?/:fileId/:token", // kolejnosc tych dwóch Editor childrenów tu ma znaczenie :3
+               path: "/editor/:folderId?/:fileId/:token", // The order of these two Editor children matters :3
                name: "ShareEditor",
                // component: Editor,
-               component: () => import('../views/Editor.vue'),
+               component: () => import("../views/Editor.vue"),
                props: true,
                meta: {
-                  requiresAuth: false,
-               },
-
+                  requiresAuth: false
+               }
             },
             {
                path: "/editor/:fileId",
                name: "Editor",
                // component: Editor,
-               component: () => import('../views/Editor.vue'),
+               component: () => import("../views/Editor.vue"),
 
                props: true,
                meta: {
-                  requiresAuth: true,
-               },
+                  requiresAuth: true
+               }
             },
             {
                path: "/preview/:folderId?/:fileId/:token", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
                name: "SharePreview",
-               component: Preview,
+               component: () => import("../views/Preview.vue"),
                props: true,
                meta: {
-                  requiresAuth: false,
-               },
+                  requiresAuth: false
+               }
 
             },
             {
                path: "/preview/:fileId",
                name: "Preview",
-               component: Preview,
+               component: () => import("../views/Preview.vue"),
                props: true,
                meta: {
-                  requiresAuth: true,
-               },
+                  requiresAuth: true
+               }
 
             },
             {
                path: "/settings",
                name: "Settings",
-               component: () => import('../views/Settings.vue'),
+               component: () => import("../views/Settings.vue"),
                redirect: {
-                  path: "/settings/profile",
+                  path: "/settings/profile"
                },
                meta: {
-                  requiresAuth: true,
+                  requiresAuth: true
                },
                children: [
                   {
                      path: "/settings/profile",
                      name: "ProfileSettings",
-                     component: () => import('../views/settings/Profile.vue'),
+                     component: () => import("../views/settings/Profile.vue")
 
                   },
                   {
                      path: "/settings/shares",
                      name: "Shares",
-                     component: () => import('../views/settings/Shares.vue'),
+                     component: () => import("../views/settings/Shares.vue")
                   },
                   {
                      path: "/settings/discord",
                      name: "DiscordSettings",
-                     component: () => import('../views/settings/Discord.vue'),
-                  },
-               ],
-            },
-         ],
+                     component: () => import("../views/settings/Discord.vue")
+                  }
+               ]
+            }
+         ]
       },
       {
          path: "/:catchAll(.*)",
@@ -147,15 +142,16 @@ const router = createRouter({
             }
 
             if (!store.isLogged) {
-               return next({name: 'Login'})
+               return next({ name: "Login" })
             }
 
-            return next({name: 'Files', params: {folderId: store.user.root}})
+            return next({ name: "Files", params: { folderId: store.user.root } })
          }
-      },
+      }
 
-   ],
+   ]
 })
+
 
 async function initAuth() {
    try {
@@ -165,6 +161,15 @@ async function initAuth() {
    }
 }
 
+router.beforeEach((to, from, next) => {
+   const store = useMainStore()
+   store.setLoading(true)
+   next()
+})
+router.afterEach(() => {
+   const store = useMainStore()
+   store.setLoading(false)
+});
 router.beforeResolve(async (to, from, next) => {
    const store = useMainStore()
    store.closeHovers()
@@ -178,7 +183,7 @@ router.beforeResolve(async (to, from, next) => {
    if (to.matched.some((record) => record.meta.requiresAuth)) {
       if (!store.isLogged) {
          next({
-            path: "/login",
+            path: "/login"
          })
 
          return
@@ -186,7 +191,7 @@ router.beforeResolve(async (to, from, next) => {
 
       if (to.matched.some((record) => record.meta.requiresAdmin)) {
          if (!store.perms.admin) {
-            next({path: "/403"})
+            next({ path: "/403" })
             return
          }
       }

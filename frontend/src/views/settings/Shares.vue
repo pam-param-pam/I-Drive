@@ -59,12 +59,12 @@
 </template>
 
 <script>
-import moment from 'moment/min/moment-with-locales.js'
 import Clipboard from 'clipboard'
 import { getAllShares, removeShare } from '@/api/share.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import Errors from '@/components/Errors.vue'
+import dayjs from "@/utils/dayjsSetup.js"
 
 export default {
    name: 'shares',
@@ -128,12 +128,7 @@ export default {
          }
       },
       humanTime(time) {
-         //todo czm globalny local nie dzIała?
-         let locale = this.settings?.locale || 'en'
-
-         moment.locale(locale)
-         // Parse the target date
-         return moment(time, 'YYYY-MM-DD HH:mm').endOf('second').fromNow()
+         return dayjs(time, 'YYYY-MM-DD HH:mm').fromNow()
       },
 
       buildLink(share) {

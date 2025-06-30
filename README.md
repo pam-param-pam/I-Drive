@@ -67,11 +67,12 @@ Credentials: `demo`/`demo`
 | CannotProcessDiscordRequestError in tasks                                                         |
 | remove dangling discord attachments is buggy at best                                              |
 | items dont appear in trash                                                                        |
-| crc not displayed                                                                                 |
 | zip timeouts on thousands of files                                                                |
 | share -> settings error                                                                           |
 | select a file, drag another file (from disk) to a folder(to upload), the selected file gets moved |
 | upload file prompt displays on top of context menu                                                |
+| handle empty files (upload, editor, anything else)                                                |
+| fix next/prev on desktop with images move                                                         |
 
 > [!WARNING]  
 > This section is very much unfinished

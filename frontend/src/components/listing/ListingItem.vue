@@ -42,11 +42,11 @@
 
 <script>
 import { filesize } from '@/utils'
-import moment from 'moment/min/moment-with-locales.js'
 import { move } from '@/api/item.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import { isMobile } from '@/utils/common.js'
+import dayjs from "@/utils/dayjsSetup.js"
 
 export default {
    name: 'item',
@@ -140,15 +140,12 @@ export default {
 
 
       humanTime() {
-         if (this.settings.dateFormat) {
-            return moment(this.item.created, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
-         }
-         //todo czm globalny local nie dzIała?
-         let locale = this.settings?.locale || 'en'
+         const date = this.item.created
 
-         moment.locale(locale)
-         // Parse the target date
-         return moment(this.item.created, 'YYYY-MM-DD HH:mm').endOf('second').fromNow()
+         if (this.settings.dateFormat) {
+            return dayjs(date, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
+         }
+         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
       },
 
       dragStart(event) {

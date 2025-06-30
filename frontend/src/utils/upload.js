@@ -18,9 +18,17 @@ import { encryptAttachment } from "@/utils/encryption.js"
 import { useToast } from "vue-toastification"
 import axios from "axios"
 import * as CRC32 from "crc-32"
-import MP4Box from "mp4box"
 
 const toast = useToast()
+let _MP4BoxPromise = null
+
+
+async function getMp4Box() {
+   if (!_MP4BoxPromise) {
+      _MP4BoxPromise = import("mp4box")
+   }
+   return _MP4BoxPromise
+}
 
 
 export async function* prepareRequests() {
@@ -30,6 +38,8 @@ export async function* prepareRequests() {
     */
    const uploadStore = useUploadStore()
    const mainStore = useMainStore()
+   const MP4Box = await getMp4Box()
+
    let maxChunkSize = mainStore.user.maxDiscordMessageSize
 
    let totalSize = 0

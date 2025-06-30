@@ -26,12 +26,12 @@
 
 <script>
 import { createShareZIP, getShare } from '@/api/share.js'
-import moment from 'moment/min/moment-with-locales.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import Breadcrumbs from '@/components/listing/Breadcrumbs.vue'
 import Errors from '@/components/Errors.vue'
 import FileListing from '@/components/FileListing.vue'
+import dayjs from "@/utils/dayjsSetup.js"
 
 export default {
    name: 'files',
@@ -169,13 +169,7 @@ export default {
       },
 
       humanExpiry(date) {
-         //todo czm globalny local nie działa?
-         let locale = this.settings?.locale || 'en'
-
-         moment.locale(locale)
-
-         // Parse the target date
-         return moment(date, 'YYYY-MM-DD HH:mm').endOf('second').fromNow()
+         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
       }
    }
 }

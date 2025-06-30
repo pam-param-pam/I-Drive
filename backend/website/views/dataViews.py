@@ -395,7 +395,7 @@ def ultra_download_metadata(request):
             "name": file_obj.name,
             "encryption_method": file_obj.get_encryption_method().value,
         }
-        if file.is_encrypted():
+        if file_obj.is_encrypted():
             file_dict["key"] = file_obj.get_base64_key()
             file_dict["iv"] = file_obj.get_base64_iv()
 

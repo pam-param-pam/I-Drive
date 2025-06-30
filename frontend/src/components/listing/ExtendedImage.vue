@@ -22,7 +22,6 @@
 </template>
 <script>
 import throttle from "lodash.throttle"
-import UTIF from "utif"
 import { isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
 
@@ -66,9 +65,8 @@ export default {
    },
 
    async mounted() {
-      if (!this.decodeUTIF()) {
-         await this.loadImage()
-      }
+       await this.loadImage()
+
       let container = this.$refs.container
       this.classList.forEach((className) => container.classList.add(className))
       // set width and height if they are zero
@@ -89,10 +87,7 @@ export default {
 
    watch: {
       async src() {
-         if (!this.decodeUTIF()) {
-            await this.loadImage()
-         }
-
+         await this.loadImage()
          this.scale = 1
          this.setZoom()
          this.setCenter()
@@ -123,19 +118,6 @@ export default {
       },
       prev(event) {
          event.preventDefault();
-      },
-      decodeUTIF() {
-         const sufs = ["tif", "tiff", "dng", "cr2", "nef"]
-         let suff = document.location.pathname.split(".").pop().toLowerCase()
-         if (sufs.indexOf(suff) === -1) return false
-         let xhr = new XMLHttpRequest()
-         UTIF._xhrs.push(xhr)
-         UTIF._imgs.push(this.$refs.imgex)
-         xhr.open("GET", this.src)
-         xhr.responseType = "arraybuffer"
-         xhr.onload = UTIF._imgLoaded
-         xhr.send()
-         return true
       },
       onError() {
          this.turnedOFF = true

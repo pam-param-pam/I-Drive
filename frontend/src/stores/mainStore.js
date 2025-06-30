@@ -1,6 +1,6 @@
 import { defineStore } from "pinia"
-import moment from "moment"
 import i18n from "@/i18n/index.js"
+import dayjs from "@/utils/dayjsSetup.js"
 
 export const useMainStore = defineStore("main", {
    state: () => ({
@@ -282,16 +282,16 @@ export const useMainStore = defineStore("main", {
          if (locale === "") {
             locale = i18n.detectLocale()
          }
-         moment.locale(locale)
+         dayjs.locale(locale)
          i18n.global.locale = locale
          this.settings = value
       },
       setAnonState() {
-         const country = "pl"
-         moment.locale(country)
-         i18n.global.locale = country
+         let locale = "pl"
+         dayjs.locale(locale)
+         i18n.global.locale = locale
 
-         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "width grid", dateFormat: false, locale: country }
+         this.settings = { sortByAsc: false, sortingBy: "name", viewMode: "width grid", dateFormat: false, locale: locale }
          this.setTheme("dark")
       },
       updateSettings(value) {
@@ -303,7 +303,7 @@ export const useMainStore = defineStore("main", {
 
          let locale = value?.locale
          if (locale) {
-            moment.locale(locale)
+            dayjs.locale(locale)
             i18n.global.locale = locale
          }
       },

@@ -27,10 +27,10 @@
         <strong>{{ $t("prompts.extension") }}:</strong> {{ extension }}
       </p>
 
-      <p v-if="size">
+      <p v-if="size != null">
         <strong>{{ $t("prompts.size") }}: </strong>
-        <code>
-          <a @dblclick="changeView($event, 'size')">{{ humanSize(size) }}</a>
+        <code @dblclick="changeView($event, size, humanSize, ' bytes')">
+          {{ humanSize(size) }}
         </code>
       </p>
 
@@ -57,8 +57,11 @@
       <p v-if="last_modified">
         <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime(last_modified) }}
       </p>
-      <p v-if="crc">
-        <strong>{{ $t("prompts.crc32") }}:</strong> {{ crc }}
+      <p v-if="crc != null">
+        <strong>{{ $t("prompts.crc32") }}: </strong>
+        <code @dblclick="changeView($event, crc, formatCrc)">
+          {{ formatCrc(crc) }}
+        </code>
       </p>
       <p v-if="iso">
         <strong>{{ $t("prompts.iso") }}:</strong> {{ iso }}
@@ -92,15 +95,10 @@
           <p>
             <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}
           </p>
-          <p>
+          <p v-if="folderSize != null">
             <strong>{{ $t("prompts.size") }}: </strong>
-            <code>
-              <a v-if="!isMoreDataFetched" @dblclick="changeView($event, 'folderSize')">{{
-                  humanSize(0)
-                }}</a>
-              <a v-else @dblclick="changeView($event, 'folderSize')">{{
-                  humanSize(folderSize)
-                }}</a>
+            <code @dblclick="changeView($event, folderSize, humanSize, ' bytes')">
+              {{ humanSize(folderSize) }}
             </code>
           </p>
         </div>
@@ -199,12 +197,12 @@
 
 <script>
 import { filesize } from "@/utils"
-import moment from "moment/min/moment-with-locales.js"
 import { fetchAdditionalInfo } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
 import { formatSeconds } from "@/utils/common.js"
+import dayjs from "@/utils/dayjsSetup.js"
 
 export default {
    name: "info",
@@ -375,7 +373,7 @@ export default {
       crc() {
          if (this.selectedCount === 1) {
             if (!this.selected[0].isDir) {
-               this.selected[0].crc.toString(16).toUpperCase()
+               return this.selected[0].crc
             }
          }
          return null
@@ -442,40 +440,26 @@ export default {
       humanSize(size) {
          return filesize(size)
       },
-
+      formatCrc(crc) {
+         return "0x" + crc.toString(16).toUpperCase()
+      },
       humanTime(date) {
-         if (this.settings.dateFormat) {
-            return moment(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
+         if (this.settings?.dateFormat) {
+            return dayjs(date, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
          }
-         //todo czm globalny local nie dzIała?
-         let locale = this.settings?.locale || "en"
 
-         moment.locale(locale)
-         // Parse the target date
-         return moment(date, "YYYY-MM-DD HH:mm").endOf("second").fromNow()
+         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
       },
 
-      async changeView(event, type) {
-         if (event.target.innerHTML.toString().includes("bytes")) {
-            if (type === "size") {
-               event.target.innerHTML = this.humanSize(this.size)
-            } else if (type === "folderSize") {
-               event.target.innerHTML = this.humanSize(this.folderSize)
-            }
-         } else {
-            if (type === "size") {
-               event.target.innerHTML = this.size + " bytes"
-            } else if (type === "folderSize") {
-               event.target.innerHTML = this.folderSize + " bytes"
-            }
-         }
-         if (type === "size") {
-            navigator.clipboard.writeText(this.size)
-         } else if (type === "folderSize") {
-            navigator.clipboard.writeText(this.folderSize)
-         }
-         this.$toast.success(this.$t("toasts.copied"))
+      async changeView(event, rawValue, formatFn, suffix = "") {
+         let pretty = formatFn(rawValue).toString()
+         let raw = rawValue.toString() + suffix
+         let current = event.target.innerText.trim()
 
+         event.target.innerText = current === pretty ? raw : pretty
+
+         await navigator.clipboard.writeText(rawValue.toString())
+         this.$toast.success(this.$t("toasts.copied"))
       }
    }
 }
