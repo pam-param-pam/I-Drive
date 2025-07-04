@@ -113,7 +113,7 @@ export default {
          if (item.isDir) {
             return { name: 'Share', params: { token: this.token, folderId: item.id } }
          } else {
-            if (item.type === 'text' && item.size < 1024 * 1024) {
+            if ((item.type === 'text' || item.type === "Code") && item.size < 1024 * 1024) {
                return {
                   name: 'ShareEditor',
                   params: { folderId: item.parent_id, fileId: item.id, token: this.token }

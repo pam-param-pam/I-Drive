@@ -168,8 +168,8 @@ export default {
                if (this.isActive) this.setLoading(false)
             }
          }
-         if (this.currentFolder.parent_id) {
-            //only set title if its not root folder
+         //only set title if its not root folder and isn't locked
+         if (this.currentFolder.parent_id && !this.currentFolder.isLocked) {
             document.title = `${this.currentFolder.name} - ` + name
          } else {
             document.title = name
@@ -257,7 +257,7 @@ export default {
          if (item.isDir) {
             return { name: 'Files', params: { folderId: item.id, lockFrom: item.lockFrom } }
          } else {
-            if (item.type === 'text' && item.size < 1024 * 1024) {
+            if ((item.type === 'Text' || item.type === "Code") && item.size < 1024 * 1024) {
                return { name: 'Editor', params: { fileId: item.id, lockFrom: item.lockFrom } }
             } else {
                return { name: 'Preview', params: { fileId: item.id, lockFrom: item.lockFrom } }

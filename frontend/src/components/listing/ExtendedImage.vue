@@ -24,8 +24,12 @@
 import throttle from "lodash.throttle"
 import { isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
+import Action from "@/components/header/Action.vue"
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import i18n from "@/i18n/index.js"
 
 export default {
+   components: { HeaderBar, Action },
    props: {
       src: String,
       moveDisabledTime: {
@@ -60,12 +64,13 @@ export default {
          maxScale: 4,
          minScale: 0.25,
 
-         turnedOFF: false
+         turnedOFF: false,
+         requestController: null,
       }
    },
 
    async mounted() {
-       await this.loadImage()
+      await this.loadImage()
 
       let container = this.$refs.container
       this.classList.forEach((className) => container.classList.add(className))
@@ -87,6 +92,11 @@ export default {
 
    watch: {
       async src() {
+         if (this.requestController) {
+            this.requestController.abort()
+         }
+         this.imageLoaded = false
+         this.$refs.imgex.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
          await this.loadImage()
          this.scale = 1
          this.setZoom()
@@ -97,27 +107,62 @@ export default {
    methods: {
       async loadImage() {
          try {
-            let data = await getFileRawData(this.src, { responseType: 'arraybuffer' })
-
-            let blob = data instanceof Blob ? data : new Blob([data])
-
             // Revoke old URL to free memory if any
             if (this._currentBlobUrl) {
                URL.revokeObjectURL(this._currentBlobUrl)
             }
 
+            this.requestController = new AbortController()
+            let src = this.src
+            const config = {
+               responseType: "arraybuffer",
+               signal: this.requestController.signal,
+               onDownloadProgress: (event) => {
+                  this.updateLoadingToast(event.progress, src)
+               }
+            }
+            let data = await getFileRawData(this.src, config)
+
+            let blob = data instanceof Blob ? data : new Blob([data])
+
             this._currentBlobUrl = URL.createObjectURL(blob)
+            if (!this.$refs.imgex) return
             this.$refs.imgex.src = this._currentBlobUrl
          } catch (e) {
+            if (e.code === "ERR_CANCELED") {
+               this.endToast()
+               return
+            }
             console.error("Error loading image blob:", e)
             this.onError()
          }
       },
+      updateLoadingToast(percentage, src) {
+         if (src !== this.src) {
+            return
+         }
+         if (percentage) {
+            percentage = Math.round(percentage * 100)
+            this.$toast.update("progress-image", {
+
+               content: this.$t('toasts.loadingImage', {percentage}),
+
+               options: { timeout: null, type: "info", draggable: false, closeOnClick: false }
+
+            }, true)
+            if (percentage >=100) {
+               this.endToast()
+            }
+         }
+      },
+      endToast() {
+        this.$toast.dismiss("progress-image")
+      },
       next(event) {
-         event.preventDefault();
+         event.preventDefault()
       },
       prev(event) {
-         event.preventDefault();
+         event.preventDefault()
       },
       onError() {
          this.turnedOFF = true

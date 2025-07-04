@@ -26,6 +26,37 @@ SIGNED_URL_EXPIRY_SECONDS = 7200
 cache = caches["default"]
 
 RAW_IMAGE_EXTENSIONS = ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2')
+VIDEO_EXTENSIONS = (".mp4", ".avi", ".mkv", ".mov", ".wmv", ".m4v", ".webm", ".ts", ".ogv")
+AUDIO_EXTENSIONS = (".mp3", ".wav", ".flac", ".aac")
+TEXT_EXTENSIONS = (".txt", '.text')
+DOCUMENT_EXTENSIONS = (".doc", ".docx", ".odt", ".xls", ".xlsx", ".ods", ".ppt", ".pptx", ".odp", ".pdf")
+EBOOK_EXTENSIONS = (".epub", ".mobi", ".azw", ".fb2")
+SYSTEM_EXTENSIONS = (".dll", ".sys", ".ini", ".log", ".cfg", "sqlite", "sqlite3")
+DATABASE_EXTENSIONS = (".sql", ".db", ".sqlite", ".mdb", ".accdb")
+ARCHIVE_EXTENSIONS = (".zip", ".rar", ".7z", ".tar", ".gz", ".bz2")
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")
+EXECUTABLE_EXTENSIONS = (".exe", ".msi", ".apk", ".bat", ".sh", ".bin", ".ps1")
+CODE_EXTENSIONS = (
+    ".py", ".js", ".ts", ".java", ".cpp", ".c", ".cs", ".rb", ".php", ".html", ".css", ".xml", ".json", ".yaml", ".yml", ".go", ".rs", ".tsconfig", ".babelrc",
+    ".eslintrc", ".prettierrc", ".editorconfig", ".md", ".gitignore", ".vue", ".scss", ".swift", ".zig", ".dart", ".kts", ".kt", ".lua", ".conf", ".srs", ".vtt",
+    ".sql", ".svg"
+)
+
+FILE_TYPE_CHOICES = [
+    ("Video", "Video"),
+    ("Audio", "Audio"),
+    ("Text", "Text"),
+    ("Document", "Document"),
+    ("Ebook", "Ebook"),
+    ("System", "System"),
+    ("Database", "Database"),
+    ("Archive", "Archive"),
+    ("Image", "Image"),
+    ("Executable", "Executable"),
+    ("Code", "Code"),
+    ("Raw image", "Raw image"),
+    ("Other", "Other"),
+]
 
 class EventCode(Enum):
     ITEM_CREATE = 1

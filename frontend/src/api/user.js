@@ -107,6 +107,8 @@ export async function canUpload(folderContext) {
       let uploadStore = useUploadStore()
       uploadStore.setWebhooks(response.data.webhooks)
       uploadStore.setAttachmentName(response.data.attachment_name)
+      uploadStore.setFileExtensions(response.data.extensions)
+
    }
    else {
       let toast = useToast()

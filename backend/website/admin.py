@@ -134,15 +134,15 @@ class FileAdmin(SimpleHistoryAdmin):
     def media_tag(self, obj: File):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
 
-        if obj.extension in RAW_IMAGE_EXTENSIONS:
+        if obj.type == "Raw image":
             url = f"{API_BASE_URL}/api/file/preview/{signed_file_id}"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
-        elif obj.type == "image":
+        elif obj.type == "Image":
             url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
-        elif obj.type == "video":
+        elif obj.type == "Video":
             url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
             poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
 
@@ -153,7 +153,7 @@ class FileAdmin(SimpleHistoryAdmin):
                 poster_url,
                 url
             )
-        elif obj.type == "audio":
+        elif obj.type == "Audio":
             url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
             # poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
 

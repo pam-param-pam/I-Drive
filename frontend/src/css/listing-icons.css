@@ -2,16 +2,13 @@
 
 /* General */
 
-/*.file-icons [aria-label^="."] { opacity: 0.33 }*/
-/*.file-icons [aria-label$=".bak"] { opacity: 0.33 }*/
-
-.file-icons [data-type=audio] i::before { content: 'volume_up' }
-.file-icons [data-type=blob] i::before { content: 'insert_drive_file' }
-.file-icons [data-type=image] i::before { content: 'image' }
-.file-icons [data-type=pdf] i::before { content: 'description' }
-.file-icons [data-type=text] i::before { content: 'description' }
-.file-icons [data-type=video] i::before { content: 'movie' }
-.file-icons [data-type=invalid_link] i::before { content: 'link_off' }
+.file-icons [data-type=Audio] i::before { content: 'volume_up' }
+.file-icons [data-type=Blob] i::before { content: 'insert_drive_file' }
+.file-icons [data-type=Image] i::before { content: 'image' }
+.file-icons [data-type=Text] i::before { content: 'description' }
+.file-icons [data-type=Other] i::before { content: 'description' }
+.file-icons [data-type=Database] i::before { content: 'sd_card' }
+.file-icons [data-type=Video] i::before { content: 'movie' }
 
 /* #f90 - Image */
 
@@ -35,6 +32,7 @@
 .file-icons [aria-label$=".ods"] i::before,
 .file-icons [aria-label$=".xls"] i::before,
 .file-icons [aria-label$=".xlsx"] i::before
+
 { content: 'border_all' }
 
 /* #00f - Document */
@@ -43,7 +41,8 @@
 .file-icons [aria-label$=".docx"] i::before,
 .file-icons [aria-label$=".log"] i::before,
 .file-icons [aria-label$=".odt"] i::before,
-.file-icons [aria-label$=".rtf"] i::before
+.file-icons [aria-label$=".rtf"] i::before,
+.file-icons [aria-label$=".pdf"] i::before
 { content: 'description' }
 
 /* #999 - Code */
@@ -76,7 +75,7 @@
 .file-icons [aria-label$=".jar"] i::before,
 .file-icons [aria-label$=".ps1"] i::before,
 .file-icons [aria-label$=".sh"] i::before
-{ content: 'web_asset' }
+{ content: 'terminal' }
 
 /* #999 - Installer */
 
@@ -132,10 +131,9 @@
 
 /* General */
 
-.file-icons [data-type=audio] i  { color: var(--icon-yellow) }
-.file-icons [data-type=image] i { color: var(--icon-orange) }
-.file-icons [data-type=video] i { color: var(--icon-violet) }
-.file-icons [data-type=invalid_link] i { color: var(--icon-red) }
+.file-icons [data-type=Audio] i  { color: var(--icon-yellow) }
+.file-icons [data-type=Image] i { color: var(--icon-orange) }
+.file-icons [data-type=Video] i { color: var(--icon-violet) }
 
 /* #f00 - Adobe/Oracle */
 
@@ -144,7 +142,7 @@
 .file-icons [aria-label$=".jar"] i,
 .file-icons [aria-label$=".psd"] i,
 .file-icons [aria-label$=".rb"] i,
-.file-icons [data-type=pdf] i
+.file-icons [aria-label$=".pdf"] i
 { color: var(--icon-red) }
 
 /* #f90 - Image/Presentation */
@@ -163,7 +161,12 @@
 .file-icons [aria-label$=".css"] i,
 .file-icons [aria-label$=".js"] i,
 .file-icons [aria-label$=".json"] i,
-.file-icons [aria-label$=".zip"] i
+.file-icons [aria-label$=".zip"] i,
+.file-icons [aria-label$=".bat"] i,
+.file-icons [aria-label$=".msi"] i,
+.file-icons [aria-label$=".odt"] i,
+.file-icons [aria-label$=".ps1"] i,
+.file-icons [aria-label$=".exe"] i
 { color: var(--icon-yellow) }
 
 /* #0f0 - Spreadsheet/Google */
@@ -179,21 +182,17 @@
 /* #00f - Document/Microsoft/Apple/Closed */
 
 .file-icons [aria-label$=".aac"] i,
-.file-icons [aria-label$=".bat"] i,
+
 .file-icons [aria-label$=".cab"] i,
 .file-icons [aria-label$=".cs"] i,
 .file-icons [aria-label$=".dmg"] i,
 .file-icons [aria-label$=".doc"] i,
 .file-icons [aria-label$=".docx"] i,
 .file-icons [aria-label$=".emf"] i,
-.file-icons [aria-label$=".exe"] i,
 .file-icons [aria-label$=".ico"] i,
 .file-icons [aria-label$=".mp2"] i,
 .file-icons [aria-label$=".mp4"] i,
 .file-icons [aria-label$=".mpg"] i,
-.file-icons [aria-label$=".msi"] i,
-.file-icons [aria-label$=".odt"] i,
-.file-icons [aria-label$=".ps1"] i,
 .file-icons [aria-label$=".rtf"] i,
 .file-icons [aria-label$=".vob"] i,
 .file-icons [aria-label$=".wim"] i

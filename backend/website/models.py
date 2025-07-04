@@ -9,7 +9,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Case, Value, BooleanField, When, F
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -19,7 +19,7 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES
 from .utilities.helpers import chop_long_file_name
 
 
@@ -174,7 +174,7 @@ class File(models.Model):
     extension = models.CharField(max_length=10, null=False, blank=False)
     size = models.PositiveBigIntegerField()
     mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
-    type = models.CharField(max_length=15, null=False, blank=False, default="text")
+    type = models.CharField(max_length=15, null=False, blank=False, default="text", choices=FILE_TYPE_CHOICES)
     inTrash = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now_add=True)
@@ -187,14 +187,22 @@ class File(models.Model):
     encryption_method = models.SmallIntegerField()
     duration = models.IntegerField(null=True, blank=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
-    history = HistoricalRecords()
     frontend_id = models.CharField(max_length=40, unique=True)
     crc = models.BigIntegerField()
+    history = HistoricalRecords()
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(type__in=[choice[0] for choice in FILE_TYPE_CHOICES]),
+                name="valid_file_type"
+            )
+        ]
 
     STANDARD_VALUES = ("id", "name", "type", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
 
     DISPLAY_VALUES = STANDARD_VALUES + (
-        "extension", "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
+        "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
         "duration", "parent__id", "preview__iso", "preview__model_name", "crc",
         "preview__aperture", "preview__exposure_time", "preview__focal_length",
         "thumbnail", "videoposition__timestamp", "videometadata__id"

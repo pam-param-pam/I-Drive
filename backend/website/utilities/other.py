@@ -20,7 +20,8 @@ from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZ
     VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS
+from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
+    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
 signer = TimestampSigner()
@@ -250,7 +251,6 @@ def create_file_dict(file_values, hide=False) -> FileDict:
         "id": get_attr(file_values, "id"),
         "name": get_attr(file_values, "name"),
         "parent_id": get_attr(file_values, "parent_id"),
-        "extension": get_attr(file_values, "extension"),
         "size": get_attr(file_values, "size"),
         "type": get_attr(file_values, "type"),
         "created": formatDate(get_attr(file_values, "created_at")),
@@ -281,7 +281,7 @@ def create_file_dict(file_values, hide=False) -> FileDict:
     if not hide and not (get_attr(file_values, "is_locked") and get_attr(file_values, "inTrash")):
         signed_file_id = sign_resource_id_with_expiry(get_attr(file_values, "id"))
 
-        if get_attr(file_values, "extension") in RAW_IMAGE_EXTENSIONS:
+        if get_attr(file_values, "type") == "Raw image":
             file_dict["preview_url"] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
 
         file_dict["download_url"] = f"{API_BASE_URL}/stream/{signed_file_id}"
@@ -787,7 +787,7 @@ def create_video_metadata(file: File, metadata: dict) -> None:
     create_tracks(metadata, "subtitle_tracks", SubtitleTrack, video_metadata)
 
 
-def validate_ids_as_list(ids, max_length=1000):
+def validate_ids_as_list(ids: list, max_length: int=1000) -> None:
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
@@ -795,8 +795,39 @@ def validate_ids_as_list(ids, max_length=1000):
     if len(ids) > max_length:
         raise BadRequestError(f"'ids' length cannot > {max_length}.")
 
-def create_subtitle_dict(subtitle: Subtitle):
+def create_subtitle_dict(subtitle: Subtitle) -> dict:
     signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
 
     url = f"{API_BASE_URL}/file/subtitle/{signed_file_id}/{subtitle.id}"
     return {"id": subtitle.id, "language": subtitle.language, "url": url}
+
+
+def get_file_type(extension: str) -> str:
+    print(extension)
+    if extension in VIDEO_EXTENSIONS:
+        return "Video"
+    elif extension in AUDIO_EXTENSIONS:
+        return "Audio"
+    elif extension in TEXT_EXTENSIONS:
+        return "Text"
+    elif extension in DOCUMENT_EXTENSIONS:
+        return "Document"
+    elif extension in EBOOK_EXTENSIONS:
+        return "Ebook"
+    elif extension in SYSTEM_EXTENSIONS:
+        return "System"
+    elif extension in DATABASE_EXTENSIONS:
+        return "Database"
+    elif extension in ARCHIVE_EXTENSIONS:
+        return "Archive"
+    elif extension in IMAGE_EXTENSIONS:
+        return "Image"
+    elif extension in EXECUTABLE_EXTENSIONS:
+        return "Executable"
+    elif extension in CODE_EXTENSIONS:
+        return "Code"
+    elif extension in RAW_IMAGE_EXTENSIONS:
+        return "Raw image"
+    else:
+        return "Other"
+

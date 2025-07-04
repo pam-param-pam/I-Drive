@@ -62,7 +62,7 @@ def get_preview(request, file_obj: File):
         return HttpResponse(status=204)
 
     # RAW IMAGE FILE
-    if file_obj.extension not in RAW_IMAGE_EXTENSIONS:
+    if file_obj.type == "Raw image":
         raise BadRequestError(f"Resource of type {file_obj.type} is not previewable")
 
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
@@ -172,7 +172,7 @@ def get_thumbnail(request, file_obj: File):
 
         cache.set(f"thumbnail:{file_obj.id}", thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
-    response = HttpResponse(thumbnail_content, content_type="image/jpeg")
+    response = HttpResponse(thumbnail_content, content_type="image/webp")
     response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
     return response
 

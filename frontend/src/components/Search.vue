@@ -77,8 +77,8 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['setLastItem', 'showHover', 'resetSelected', 'setSearchFilters']),
 
-      search: throttle(async function(event) {
-         if (!this.query) return
+      search: throttle(async function(override) {
+         if (!this.query && !override) return
          this.setLastItem(null)
          //copying to not mutate vuex store state
          let searchDict = { ...this.searchFilters }
@@ -91,7 +91,7 @@ export default {
          this.showHover({
             prompt: 'SearchTunePrompt',
             confirm: () => {
-               this.search()
+               this.search(true)
             }
          })
       },

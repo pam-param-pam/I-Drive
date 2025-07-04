@@ -44,7 +44,7 @@ export const useUploadStore = defineStore("upload2", {
 
       state: uploadState.idle,
       uploadSpeedList: [],
-
+      fileExtensions: null
    }),
 
    getters: {
@@ -339,8 +339,8 @@ export const useUploadStore = defineStore("upload2", {
       setAttachmentName(value) {
          this.attachmentName = value
       },
-      fillVideoMetadata(videoMetadata) {
-
+      setFileExtensions(value) {
+         this.fileExtensions = value
       },
 
       //experimental

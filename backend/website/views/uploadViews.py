@@ -16,7 +16,7 @@ from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, Encryptio
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import BadRequestError
 from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
-    create_video_metadata, validate_ids_as_list, group_and_send_event
+    create_video_metadata, validate_ids_as_list, group_and_send_event, get_file_type
 from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 
 
@@ -26,7 +26,7 @@ from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
 @handle_common_errors
 def create_file(request):
     check_if_bots_exists(request.user)
-    # return HttpResponse(status=500)
+
     if request.method == "POST":
         files = request.data['files']
         validate_ids_as_list(files, max_length=25)
@@ -66,7 +66,8 @@ def create_file(request):
             if not file_name:
                 raise BadRequestError("'name' cannot be empty")
 
-            file_type = mimetype.split("/")[0]
+
+            file_type = get_file_type(extension)
 
             parent = get_folder(parent_id)
             check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
@@ -246,6 +247,7 @@ def create_thumbnail(request):
 
     file_obj = get_file(file_id)
     check_resource_perms(request, file_obj)
+    # todo
     try:
         delete_single_discord_attachment(request.user, file_obj.thumbnail)
         file_obj.thumbnail.delete()
@@ -269,21 +271,3 @@ def create_thumbnail(request):
     send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     return HttpResponse(status=204)
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated & CreatePerms])
-@throttle_classes([ProxyRateThrottle])
-@handle_common_errors
-def proxy_discord(request):
-    check_if_bots_exists(request.user)
-
-    # todo secure to prevent denial of service
-    json_payload = request.data.get("json_payload")
-    # return HttpResponse(status=429)
-    files = request.FILES
-    start_time = time.time()
-    message = discord.send_file(request.user, json=json_payload, files=files)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"Time taken to send the file: {elapsed_time:.4f} seconds")
-    return JsonResponse(message, status=200, safe=False)

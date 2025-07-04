@@ -85,7 +85,7 @@
       class="credits"
       style="width: 80%; margin: 2em 2.5em 3em 2.5em"
     >
-      <progress-bar :val="Math.round((usage.used / usage.total) * 100)" size="small"></progress-bar>
+      <progress-bar :val="Math.round((usage.used / usage.total) * 100)" size="small" @click="showHover('fileStats')"></progress-bar>
       <br />
       {{ filesize(usage.used) }} of {{ filesize(usage.total) }} used
     </div>

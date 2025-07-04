@@ -5,14 +5,14 @@ from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_stats, get_discord_attachment_report
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
     remove_subtitle
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import get_discord_state, test
-from .views.uploadViews import create_file, create_thumbnail, proxy_discord
+from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
     update_upload_destination, enable_bot, can_upload, reset_discord_state
 
@@ -20,8 +20,6 @@ urlpatterns = [
     path('test/<file_id>', test, name='stream_file'),
 
     path('file/change/crc', change_crc, name='change crc'),
-
-    path("proxy/discord", proxy_discord, name="discord_proxy"),
 
     path("zip", create_zip_model, name="create zip model"),
     path('stream/<signed_file_id>', stream_file, name="stream file"),
@@ -97,6 +95,8 @@ urlpatterns = [
     path('admin', admin.site.urls),
 
     path('test', get_discord_state),
+    path("stats", get_stats, name="stats"),
+    path("stats2", get_discord_attachment_report, name="stats2"),
 
     # path('download-test/', download_large_file, name='download_test'),
 

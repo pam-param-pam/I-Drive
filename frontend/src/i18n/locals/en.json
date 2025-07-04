@@ -357,6 +357,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "loadingImage": "Loading image {percentage}%",
+    "videoUnplayable": "Sorry, this video is unplayable",
     "actionAlreadyInProgress": "This operation is already in progress. Please wait",
     "momentUploadFile": "Added moment!",
     "subtitleAdded": "Added subtitle!",

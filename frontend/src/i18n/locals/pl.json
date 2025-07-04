@@ -345,6 +345,8 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "loadingImage": "Ładowanie obrazu {percentage}%",
+    "videoUnplayable": "Tego filmu nie da sie odtworzyć",
     "actionAlreadyInProgress": "Operacja w toku. Prosze poczekaj",
     "momentUploadFile": "Dodano moment!",
     "subtitleAdded": "Dodano napisy!",

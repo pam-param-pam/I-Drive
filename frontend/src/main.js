@@ -13,16 +13,6 @@ import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
 
 const app = createApp(App)
 
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import localizedFormat from 'dayjs/plugin/localizedFormat'
-import 'dayjs/locale/en'
-import 'dayjs/locale/pl'
-
-dayjs.extend(relativeTime)
-dayjs.extend(localizedFormat)
-
-
 app.use(router)
 app.use(i18n)
 app.use(Vue3TouchEvents)
@@ -81,7 +71,7 @@ app.directive("focus", {
 })
 router.isReady().then(() => app.mount("#app"))
 
-// // Save original console methods
+// // Save original console methods //todo
 // const originalLog = console.log
 // const originalWarn = console.warn
 // const originalError = console.error

@@ -6,10 +6,12 @@ import {
    generateIv,
    generateKey,
    getAudioCover,
+   getImageThumbnail,
    getOrCreateFolder,
    getVideoCover,
    isAudioFile,
-   isVideoFile,
+   isImageFile,
+   isVideoFile, makeThumbnailIfNeeded,
    parseVideoMetadata,
    roundUpTo64,
    upload
@@ -17,7 +19,7 @@ import {
 import { encryptAttachment } from "@/utils/encryption.js"
 import { useToast } from "vue-toastification"
 import axios from "axios"
-import * as CRC32 from "crc-32"
+import { buf as crc32buf } from "crc-32"
 
 const toast = useToast()
 let _MP4BoxPromise = null
@@ -38,7 +40,7 @@ export async function* prepareRequests() {
     */
    const uploadStore = useUploadStore()
    const mainStore = useMainStore()
-   const MP4Box = await getMp4Box()
+   const MP4Box = await getMp4Box() //todo only if video file
 
    let maxChunkSize = mainStore.user.maxDiscordMessageSize
 
@@ -53,35 +55,16 @@ export async function* prepareRequests() {
          queueFile.fileObj.key = generateKey(queueFile.fileObj.encryptionMethod)
       }
 
-      let thumbnail
-      //extracting cover if needed
-      if (isAudioFile(queueFile)) {
-         try {
-            thumbnail = await getAudioCover(queueFile)
-         } catch (e) {
-            console.warn(e)
-         }
-      }
-      //generating a thumbnail if needed.
-      if (isVideoFile(queueFile)) {
-         try {
-            let data = await getVideoCover(queueFile)
-            let duration = data.duration
-            thumbnail = data.thumbnail
-            queueFile.fileObj.duration = Math.round(duration)
+      let thumbnail = await makeThumbnailIfNeeded(queueFile)
 
-         } catch (e) {
-            console.log(e)
-            toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
-         }
-      }
-
-      //if cover/thumbnail exist(they can never exist both at the same time) we generate a request with them
+      //if thumbnail exists we generate a request with them
       if (thumbnail) {
          queueFile.fileObj.thumbnail = true
 
          //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
          if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
+            toast.warning("Couldn't fit thumbnail with 1st fragment for file: " + queueFile.fileObj.name)
+
             let request = { "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []
@@ -116,15 +99,20 @@ export async function* prepareRequests() {
       let i = 0
       let fileSize = queueFile.fileObj.size
       let offset = 0
-      let mp4boxfile = MP4Box.createFile()
-      mp4boxfile.fileObj = queueFile.fileObj
+      let mp4boxfile
 
-      mp4boxfile.onReady = function(info) {
-         let videoMetadata = parseVideoMetadata(info)
-         videoMetadata.type = attachmentType.videoMetadata
-         videoMetadata.fileObj = mp4boxfile.fileObj
-         uploadStore.fillAttachmentInfo(videoMetadata, null, null)
-         mp4boxfile.fileObj.mp4boxFinished = true
+      //create mp4box only if needed
+      if (isVideoFile(queueFile)) {
+         mp4boxfile = MP4Box.createFile()
+         mp4boxfile.fileObj = queueFile.fileObj
+
+         mp4boxfile.onReady = function(info) {
+            let videoMetadata = parseVideoMetadata(info)
+            videoMetadata.type = attachmentType.videoMetadata
+            videoMetadata.fileObj = mp4boxfile.fileObj
+            uploadStore.fillAttachmentInfo(videoMetadata, null, null)
+            mp4boxfile.fileObj.mp4boxFinished = true
+         }
       }
 
       while (offset < fileSize) {
@@ -135,7 +123,7 @@ export async function* prepareRequests() {
 
          let chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
 
-         if (!mp4boxfile.fileObj.mp4boxFinished) {
+         if (isVideoFile(queueFile) && !mp4boxfile.fileObj.mp4boxFinished) {
             appendMp4BoxBuffer(mp4boxfile, chunk, offset)
          }
 
@@ -150,7 +138,7 @@ export async function* prepareRequests() {
          attachments.push(attachment)
          totalSize += roundUpTo64(chunk.size)
          offset += chunk.size
-         queueFile.fileObj.crc = CRC32.buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc)
+         queueFile.fileObj.crc = crc32buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc)
          i++
 
          // we have to yield
@@ -162,8 +150,10 @@ export async function* prepareRequests() {
       }
       //we need to inform about totalChunks of a file
       queueFile.fileObj.totalChunks = i
-      queueFile.fileObj.mp4boxFinished = true
-      mp4boxfile.flush()
+      if (isVideoFile(queueFile)) {
+         queueFile.fileObj.mp4boxFinished = true
+         mp4boxfile.flush()
+      }
 
    }
    //we need to handle the already created attachments after break

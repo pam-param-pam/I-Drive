@@ -105,7 +105,7 @@
       </div>
     </div>
     <!-- Expandable section for tracks -->
-    <div v-if="!isDir && type==='video' && isVideoMetadata" class="expandable-section card-content">
+    <div v-if="!isDir && type==='Video' && isVideoMetadata" class="expandable-section card-content">
       <div class="expandable-header" @click="fetchAdditionalInfo">
         <strong>{{ $t("prompts.videoMetadata") }}</strong>
         <i :class="{ expanded: isFileExpanded }" class="material-icons expand-icon">
@@ -225,7 +225,10 @@ export default {
          return this.folderSize !== "Loading..."
       },
       size() {
-         if (this.selectedCount >= 1) {
+         if (this.selectedCount === 1 && !this.selected[0].isDir) {
+            return this.selected[0].size
+         }
+         if (this.selectedCount > 1) {
             let sum = 0
             for (let selected of this.selected) {
                if (!selected.isDir) sum += selected.size
@@ -327,8 +330,10 @@ export default {
       },
       extension() {
          if (this.selectedCount === 1) {
-            let extension = this.selected[0].extension
-            if (extension) return extension.replace(".", "")
+            const filename = this.selected[0].name
+            if (filename && filename.includes(".")) {
+               return filename.split(".").pop().toLowerCase()
+            }
          }
          return null
       },
@@ -445,10 +450,10 @@ export default {
       },
       humanTime(date) {
          if (this.settings?.dateFormat) {
-            return dayjs(date, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
+            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
          }
 
-         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
+         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
       },
 
       async changeView(event, rawValue, formatFn, suffix = "") {

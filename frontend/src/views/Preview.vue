@@ -19,13 +19,19 @@
           @action="decreaseFontSize"
         />
         <action
+          v-if="file?.type === 'Image' && file?.thumbnail_url"
+          :label="$t('buttons.toggleSize')"
+          :icon="imageFullSize ? 'fullscreen_exit' : 'fullscreen'"
+          @action="imageFullSize = !imageFullSize"
+        />
+        <action
           v-if="isEpub"
           :label="$t('buttons.increaseFontSize')"
           icon="add"
           @action="increaseFontSize"
         />
         <action
-          v-if="file?.type === 'video' && file?.size > 0 && !isInShareContext"
+          v-if="file?.type === 'Video' && file?.size > 0 && !isInShareContext"
           :disabled="disabledMoments"
           :label="$t('buttons.moments')"
           icon="bookmarks"
@@ -72,7 +78,7 @@
       <div class="preview">
 
         <video
-          v-if="file?.type === 'video' && file?.size > 0"
+          v-if="file?.type === 'Video' && file?.size > 0"
           id="video"
           ref="video"
           :autoplay="autoPlay"
@@ -83,6 +89,7 @@
           @play="autoPlay = true"
           @timeupdate="videoTimeUpdate"
           @loadedmetadata="onVideoLoaded"
+          @error="onVideoError"
           crossorigin="anonymous"
         >
           <track
@@ -109,8 +116,8 @@
           </div>
         </div>
 
-        <ExtendedImage v-else-if="file?.type === 'image' && file?.size > 0" :src="fileSrcUrl" />
-        <div v-else-if="file?.type === 'audio' && file?.size > 0" style="height: 100%">
+        <ExtendedImage v-else-if="file?.type === 'Image' && file?.size > 0" :src="fileSrcUrl" />
+        <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
           <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
           <audio
             ref="player"
@@ -122,13 +129,13 @@
         </div>
 
         <object
-          v-else-if="file?.extension === '.pdf' && file?.size > 0"
+          v-else-if="file?.name.endsWith('.pdf') && file?.size > 0"
           :data="fileSrcUrl"
           class="pdf"
         ></object>
 
         <OfficePreview
-          v-else-if="['.docx'].includes(file?.extension)"
+          v-else-if="file?.name.endsWith('.docx') && file?.size > 0"
           :file="file"
           :file-url="fileSrcUrl"
         />
@@ -217,7 +224,6 @@ import { getItems } from "@/api/folder.js"
 import { getShare } from "@/api/share.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import ExtendedImage from "@/components/listing/ExtendedImage.vue"
 import { defineAsyncComponent } from "vue"
 
 export default {
@@ -230,9 +236,12 @@ export default {
       VueReader: defineAsyncComponent(() =>
          import('vue-reader')
       ),
+      ExtendedImage: defineAsyncComponent(() =>
+         import('@/components/listing/ExtendedImage.vue')
+      ),
       HeaderBar,
       Action,
-      ExtendedImage
+
    },
 
    props: {
@@ -272,28 +281,30 @@ export default {
 
          disabledMoments: true,
 
-         subtitles: []
+         subtitles: [],
+         imageFullSize: false,
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
       enableSwipe() {
-
          return (
-            (this.file?.type === "image" && this.file?.size > 0) ||
-            ![".docx"].includes(this.file?.extension)
+            (this.file?.type === "image" && this.file?.size > 0) || !this.file?.name.endsWith('.docx')
          )
       },
       isEpub() {
-         if (!this.file) return false
-         return this.file.extension === ".epub"
+         return this.file?.name.endsWith(".epub")
       },
       isInShareContext() {
          return this.token !== undefined
       },
 
       fileSrcUrl() {
+         if (this.file?.type === 'Image' && !this.imageFullSize && this.file?.thumbnail_url) {
+            console.log("AAAAAAAAAAAAAAAAA")
+            return this.file?.thumbnail_url
+         }
          if (this.file?.preview_url) return this.file?.preview_url + "?inline=True"
          return this.file?.download_url + "?inline=True"
       },
@@ -424,6 +435,9 @@ export default {
       onVideoLoaded() {
          this.disabledMoments = false
       },
+      onVideoError() {
+        this.$toast.error(this.$t("toasts.videoUnplayable"))
+      },
       showMoments() {
          if (!this.videoRef.readyState) {
             this.$toast.error(this.$t("toasts.playVideoFirst"))
@@ -546,7 +560,6 @@ export default {
       resetPrompts() {
          this.closeHover()
       },
-
       toggleNavigation: throttle(function() {
          this.showNav = true
 

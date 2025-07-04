@@ -65,18 +65,20 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       imageSrc() {
-         if (this.type === 'image' && this.item.size > 0) {
+         if (this.type === 'Raw image') {
             if (this.item.preview_url) return this.item.preview_url
             if (this.item.download_url) return this.item.download_url
          }
-         if (this.type === 'video' && this.item.thumbnail_url) {
+         if (['Video', 'Audio', 'Image'].includes(this.type) && this.item.thumbnail_url) {
             return this.item.thumbnail_url
+         }
+         if (this.type === "Image") {
+            return this.item.download_url
          }
          return null
       },
       type() {
          if (this.item.isDir) return 'folder'
-         if (this.item.type === 'application') return 'pdf'
          return this.item.type
       },
       isSelected() {

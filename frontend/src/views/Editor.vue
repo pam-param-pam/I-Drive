@@ -52,7 +52,7 @@ import { encrypt } from "@/utils/encryption.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
 import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
-import * as CRC32 from "crc-32"
+import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
 
 export default {
@@ -83,7 +83,7 @@ export default {
          folderList: [],
          currentLanguage: null,
          savingFile: false,
-         fontSize: isMobile() ? 10 : 15,
+         fontSize: isMobile() ? 10 : 15
 
       }
    },
@@ -97,7 +97,7 @@ export default {
       },
       isInShareContext() {
          return this.token !== undefined
-      },
+      }
    },
 
    created() {
@@ -169,7 +169,12 @@ export default {
             ino: "arduino",
             xml: "xml"
          }
-         let ext = this.file.name.split(".").pop().toLowerCase()
+         let name = this.file.name || ""
+         let ext = ""
+
+         if (name.includes(".")) {
+            ext = name.split(".").pop().toLowerCase()
+         }
          let lang = extensionMap[ext] || "plaintext"
          return [[lang, lang]]
       },
@@ -209,7 +214,7 @@ export default {
 
          try {
             this.raw = await getFileRawData(this.file.download_url)
-            this.raw = typeof this.raw === 'string' ? this.raw : JSON.stringify(this.raw, null, 2)
+            this.raw = typeof this.raw === "string" ? this.raw : JSON.stringify(this.raw, null, 2)
 
             this.setLastItem(this.file)
          } catch (error) {
@@ -258,7 +263,7 @@ export default {
 
                formData.append("file", encryptedBlob, this.attachmentName)
 
-               let crc = CRC32.buf(new Uint8Array(await blob.arrayBuffer()), 0)
+               let crc = crc32buf(new Uint8Array(await blob.arrayBuffer()), 0)
                let uploadResponse = await upload(formData, {})
 
                let file_data = {

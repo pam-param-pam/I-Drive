@@ -303,7 +303,7 @@
                v-show="
                   headerButtons.tag &&
                   contextMenuState.advanced &&
-                  this.selected[0].type === 'video'
+                  this.selected[0].type === 'Video'
                "
                id='thumbnail'
                :label="$t('buttons.editThumbnail')"
@@ -314,7 +314,7 @@
               v-show="
                   headerButtons.tag &&
                   contextMenuState.advanced &&
-                  this.selected[0].type === 'video'
+                  this.selected[0].type === 'Video'
                "
               id='subtitles'
               :label="$t('buttons.editSubtitles')"

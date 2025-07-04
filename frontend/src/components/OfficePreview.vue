@@ -42,7 +42,7 @@ export default {
    },
    computed: {
       isDocx() {
-         return this.file.extension === '.docx'
+         return this.file.name.endsWith('.docx')
       },
    },
    async mounted() {

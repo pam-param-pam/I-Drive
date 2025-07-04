@@ -12,7 +12,7 @@ from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragme
 from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS
 from ..utilities.decorators import handle_common_errors
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms, query_attachments
@@ -74,7 +74,8 @@ def can_upload(request, folder_id: str):
 
     bots = Bot.objects.filter(owner=request.user, disabled=False)
     allowed_to_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and bots.exists())
-    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id})
+    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id,
+                         "extensions": {"video": VIDEO_EXTENSIONS, "audio": AUDIO_EXTENSIONS, "image": IMAGE_EXTENSIONS}})
 
 
 @api_view(['GET'])

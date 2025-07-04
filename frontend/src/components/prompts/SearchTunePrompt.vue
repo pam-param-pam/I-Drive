@@ -162,7 +162,7 @@ export default {
          includeFiles: null,
          includeFolders: null,
          resultLimit: null,
-         fileTypes: ['application', 'audio', 'document', 'image', 'video', 'text'],
+         fileTypes: ['Video', 'Audio', 'Text', 'Document', 'Ebook', 'System', 'Database', 'Archive', 'Image', 'Executable', 'Code', 'Raw image', 'Other'],
          tags: null,
          orderBy: null,
          ascending: null,
