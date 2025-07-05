@@ -633,7 +633,8 @@ class Subtitle(DiscordAttachmentMixin):
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):
-    ip = request.META.get('REMOTE_ADDR')
+    from .utilities.other import get_ip
+    ip, _ = get_ip(request)
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_IN.name, ip=ip, user=user, user_agent=request.user_agent)
 
 
@@ -645,7 +646,8 @@ def user_logged_in_callback(sender, request, user, **kwargs):
 
 @receiver(user_logged_out)
 def user_logged_out_callback(sender, request, user, **kwargs):
-    ip = request.META.get('REMOTE_ADDR')
+    from .utilities.other import get_ip
+    ip, _ = get_ip(request)
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_OUT.name, ip=ip, user=user, user_agent=request.user_agent)
 
 

@@ -258,7 +258,7 @@ class PreviewAdmin(SimpleHistoryAdmin):
 class ThumbnailAdmin(SimpleHistoryAdmin):
     ordering = ['-created_at']
     list_display = ['file_name', 'owner', 'readable_size', 'created_at']
-    readonly_fields = ['created_at', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method']
+    readonly_fields = ['created_at', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'object_id', 'content_type']
 
     def file_name(self, obj: Thumbnail):
         return obj.file.name
@@ -282,8 +282,8 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
-    list_display = ('token', 'resource_link', 'expiration_time', 'created_at', 'owner', 'content_type')
-    readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner')
+    list_display = ('token', 'resource_link', 'expiration_time', 'created_at', 'owner', 'content_type', 'is_expired')
+    readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner', 'is_expired')
 
     def resource_name(self, obj: ShareableLink):
         if obj.resource:

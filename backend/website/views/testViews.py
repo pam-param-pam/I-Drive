@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view, throttle_classes
 
 from ..models import File
 from ..utilities.Discord import discord
-from ..utilities.other import get_file, get_attr
+from ..utilities.other import get_file, get_attr, get_ip
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
 
@@ -35,13 +35,7 @@ def get_discord_state(request):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 def your_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        from_nginx = True
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        from_nginx = False
-        ip = request.META.get('REMOTE_ADDR')
+    ip, from_nginx = get_ip(request)
 
     return JsonResponse({"ip": ip, "nginx": from_nginx})
 

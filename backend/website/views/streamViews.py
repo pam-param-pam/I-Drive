@@ -30,7 +30,8 @@ from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, create_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
-
+from PIL import Image
+from io import BytesIO
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
@@ -149,28 +150,78 @@ def get_preview(request, file_obj: File):
 @throttle_classes([MediaThrottle])
 @extract_from_signed_url
 def get_thumbnail(request, file_obj: File):
-    thumbnail_content = cache.get(f"thumbnail:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
+    size_param = request.GET.get("size", "original").lower()
+
+    # Only allow specific sizes
+    allowed_sizes = {"64", "128", "512", "1024", "original"}
+    if size_param not in allowed_sizes:
+        return JsonResponse({"error": f"Invalid size: must be one of {', '.join(allowed_sizes)}"}, status=400)
+
+    cache_key = f"thumbnail:{file_obj.id}:{size_param}"
+    thumbnail_content = cache.get(cache_key)
+
     if not thumbnail_content:
         check_if_bots_exists(file_obj.owner)
 
         thumbnail = file_obj.thumbnail
-        decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
+        decryptor = Decryptor(
+            method=file_obj.get_encryption_method(),
+            key=thumbnail.key,
+            iv=thumbnail.iv
+        )
 
-        # todo potential security risk, without stream its possible to overload the server
         url = discord.get_attachment_url(file_obj.owner, thumbnail)
         discord_response = requests.get(url)
-        if discord_response.ok:
-            thumbnail_content = discord_response.content
-            thumbnail_content = decryptor.decrypt(thumbnail_content)
-            thumbnail_content += decryptor.finalize()
-
-        else:
+        if not discord_response.ok:
             return JsonResponse(status=discord_response.status_code, data=discord_response.json())
 
-        cache.set(f"thumbnail:{file_obj.id}", thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
+        thumbnail_content = decryptor.decrypt(discord_response.content)
+        thumbnail_content += decryptor.finalize()
+
+        if size_param != "original":
+            try:
+                resize_start = time.perf_counter()
+
+                target_size = int(size_param)
+
+                image = Image.open(BytesIO(thumbnail_content))
+                image = image.convert("RGB")
+
+                orig_width, orig_height = image.size
+                aspect_ratio = orig_width / orig_height
+
+                if orig_width >= orig_height:
+                    new_width = target_size
+                    new_height = int(target_size / aspect_ratio)
+                else:
+                    new_height = target_size
+                    new_width = int(target_size * aspect_ratio)
+
+                image = image.resize((new_width, new_height), Image.LANCZOS)
+
+                buffer = BytesIO()
+                image.save(buffer, format="WEBP")
+                thumbnail_content = buffer.getvalue()
+
+                resize_duration = time.perf_counter() - resize_start
+                print(f"[resize] Resized {file_obj.id} to {new_width}x{new_height} in {resize_duration:.3f}s")
+
+            except Exception as e:
+                return JsonResponse({"error": f"Failed to resize image: {e}"}, status=400)
+
+        cache.set(cache_key, thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
     response = HttpResponse(thumbnail_content, content_type="image/webp")
-    response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"
+    response["Cache-Control"] = f"max-age={MAX_MEDIA_CACHE_AGE}"
+
+    # Set Vary header
+    vary = response.get("Vary", "")
+    vary_values = [v.strip() for v in vary.split(",") if v.strip()]
+    for item in ["x-resource-password", "Query-Size"]:
+        if item not in vary_values:
+            vary_values.append(item)
+    response["Vary"] = ", ".join(vary_values)
+
     return response
 
 
