@@ -15,10 +15,9 @@ from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDis
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.DEBUG)
 
-# Add a console handler if none exists
 if not logger.hasHandlers():
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)  # Handler level
+    ch.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     logger.addHandler(ch)

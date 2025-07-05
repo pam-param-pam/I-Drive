@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, get_thumbnail, get_preview
 from ..models import UserSettings, ShareableLink, UserZIP
-from ..utilities.Permissions import SharePerms, default_checks
+from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady
 from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import extract_item, check_resource_permissions
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
@@ -150,7 +150,7 @@ def share_view_stream(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
     #todo wtf perms where?!?!?1
     file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
     check_if_item_belongs_to_share(request, share, file_obj)
 
     signed_file_id = sign_resource_id_with_expiry(file_obj.id)
@@ -171,7 +171,7 @@ def share_view_thumbnail(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
 
     file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
 
     check_if_item_belongs_to_share(request, share, file_obj)
     signed_file_id = sign_resource_id_with_expiry(file_obj.id)
@@ -184,7 +184,8 @@ def share_view_preview(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
 
     file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
     check_if_item_belongs_to_share(request, share, file_obj)
     signed_file_id = sign_resource_id_with_expiry(file_obj.id)
+
     return get_preview(request._request, signed_file_id)

@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, throttle_classes, permission_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Fragment, Thumbnail
-from ..utilities.Permissions import CreatePerms, default_checks
+from ..utilities.Permissions import CreatePerms, default_checks, CheckTrash
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import extract_file, check_resource_permissions
 from ..utilities.errors import BadRequestError
@@ -66,7 +66,7 @@ def create_file(request):
             file_type = get_file_type(extension)
 
             parent = get_folder(parent_id)
-            check_resource_perms(request, parent, checkRoot=False, checkTrash=True)
+            check_resource_perms(request, parent, [CheckTrash])
 
             if File.objects.filter(frontend_id=frontend_id).exists():
                 continue
@@ -183,7 +183,7 @@ def create_file(request):
         author = get_discord_author(request, message_author_id)
 
         file_obj = get_file(file_id)
-        check_resource_perms(request, file_obj)
+        check_resource_perms(request, file_obj, [default_checks])
 
         if file_obj.type != "text":
             raise BadRequestError("You can only edit text files!")

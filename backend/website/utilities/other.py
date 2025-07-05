@@ -456,7 +456,7 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
     if root_folder is None:
         root_folder = folder
 
-    check_resource_perms("dummy request", folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    # check_resource_perms("dummy request", folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
 
     # Collect all files in the current folder
     files = folder.files.filter(ready=True, inTrash=False)
@@ -524,7 +524,7 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
 
 
 def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:
-    check_resource_perms(request, requested_item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    # check_resource_perms(request, requested_item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
     obj_in_share = get_resource(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
 

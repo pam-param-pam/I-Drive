@@ -55,9 +55,9 @@ Credentials: `demo`/`demo`
 | switch to a different backend framework                | ⛔  Coming prob never |
 | load balancing with round robin for nginx              | ⛔  Coming prob never |
 | add resolution to images                               | ⛔  Coming prob never |
-| add image previews                                     | ⛔  Coming prob never |
 | move away from cancelToken in axios to abortController | ⛔  Coming prob never |
 
+clean Discord class, tasks, shares, check_resource_perms
 
 | BUGS                                                                                              |
 |---------------------------------------------------------------------------------------------------|

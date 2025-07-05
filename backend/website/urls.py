@@ -86,7 +86,6 @@ urlpatterns = [
     path("item/rename", rename, name="rename file/folder"),
     path("item/moreinfo/<item_id>", fetch_additional_info, name="fetch more info about a folder"),
 
-    path("item/ultraDownload", ultra_download_metadata, name="download metadata for ultra download"),
 
     path("resource/password/<resource_id>", check_password, name="check password"),
 
@@ -96,6 +95,7 @@ urlpatterns = [
     path('test', get_discord_state),
     path("stats", get_stats, name="stats"),
     path("stats2", get_discord_attachment_report, name="stats2"),
+    path("item/ultraDownload", ultra_download_metadata, name="download metadata for ultra download"),
 
     # path('download-test/', download_large_file, name='download_test'),
 

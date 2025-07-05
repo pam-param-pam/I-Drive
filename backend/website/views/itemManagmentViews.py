@@ -140,7 +140,7 @@ def rename(request, item_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & LockPerms])
 @throttle_classes([FolderPasswordThrottle])
-@extract_folder()
+@extract_folder(source='data')
 @check_resource_permissions([CheckOwnership, CheckReady, CheckRoot, CheckTrash], resource_key="folder_obj")
 def change_folder_password(request, folder_obj):
     newPassword = request.data['new_password']
@@ -162,7 +162,7 @@ def change_folder_password(request, folder_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ResetLockPerms])
 @throttle_classes([FolderPasswordThrottle])
-@extract_folder()
+@extract_folder(source='data')
 @check_resource_permissions([*default_checks, CheckRoot], resource_key="folder_obj")
 def reset_folder_password(request, folder_obj):
     account_password = request.data['accountPassword']
@@ -191,7 +191,7 @@ def reset_folder_password(request, folder_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def update_video_position(request, file_obj):
     new_position = request.data['position']
@@ -210,7 +210,7 @@ def update_video_position(request, file_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_tag(request, file_obj):
     tag_name = request.data['tag_name']
@@ -239,7 +239,7 @@ def add_tag(request, file_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_tag(request, file_obj):
     tag_name = request.data['tag_name']
@@ -259,7 +259,7 @@ def remove_tag(request, file_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_moment(request, file_obj):
     timestamp = request.data['timestamp']
@@ -302,7 +302,7 @@ def add_moment(request, file_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_moment(request, file_obj):
     timestamp = request.data['timestamp']
@@ -317,7 +317,7 @@ def remove_moment(request, file_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def change_crc(request, file_obj):
     crc = int(request.data['crc'])
@@ -330,7 +330,7 @@ def change_crc(request, file_obj):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
+@extract_file(source='data')
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_subtitle(request, file_obj):
     language = request.data['language']

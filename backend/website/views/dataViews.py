@@ -188,7 +188,7 @@ def search(request):
         raise BadRequestError("Please specify at least one search parameter")
 
     if order_by == "duration" or attribute == "duration":
-        file_type = "video"
+        file_type = "Video"
         include_folders = False
 
     if attribute == "size":
