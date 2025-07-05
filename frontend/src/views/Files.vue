@@ -77,11 +77,11 @@ export default {
             modify: this.selectedCount === 1 && this.perms.modify,
             move: this.selectedCount >= 1 && this.perms.modify,
             share: this.selectedCount === 1 && this.perms.share,
-            lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock,
+            lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock && this.perms.modify,
             locate: this.selectedCount === 1 && this.searchActive,
             search: true,
             openInNewWindow: true,
-            tag: this.selectedCount === 1 && !this.selected[0].isDir
+            modifyFile: this.selectedCount === 1 && !this.selected[0].isDir && this.perms.modify
          }
       }
    },

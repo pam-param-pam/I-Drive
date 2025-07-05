@@ -11,8 +11,9 @@ from rest_framework.permissions import IsAuthenticated
 from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragment, UserPerms
 from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
-from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms
+from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS
+from ..utilities.decorators import check_resource_permissions, extract_folder
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms, query_attachments
 from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle, LoginThrottle
@@ -57,13 +58,12 @@ def register_user(request):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
-def can_upload(request, folder_id: str):
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
+def can_upload(request, folder_obj: Folder):
     discordSettings = request.user.discordsettings
     webhooks = Webhook.objects.filter(owner=request.user)
     webhook_dicts = []
-
-    folder_obj = get_folder(folder_id)
-    check_resource_perms(request, folder_obj, checkRoot=False)
 
     for webhook in webhooks:
         webhook_dicts.append(create_webhook_dict(webhook))

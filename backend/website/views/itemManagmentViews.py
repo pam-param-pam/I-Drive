@@ -60,6 +60,7 @@ def move(request, new_parent_obj, items):
 
     return JsonResponse(build_response(request.request_id, "Moving items..."))
 
+
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
@@ -75,6 +76,7 @@ def move_to_trash(request, items):
     move_to_trash_task.delay(request.user.id, request.request_id, ids)
 
     return JsonResponse(build_response(request.request_id, "Moving to Trash..."))
+
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated & ModifyPerms])
@@ -134,6 +136,7 @@ def rename(request, item_obj):
     send_event(request.user.id, request.request_id, item_obj.parent, EventCode.ITEM_UPDATE, data)
     return HttpResponse(status=204)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & LockPerms])
 @throttle_classes([FolderPasswordThrottle])
@@ -189,7 +192,7 @@ def reset_folder_password(request, folder_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def update_video_position(request, file_obj):
     new_position = request.data['position']
 
@@ -208,7 +211,7 @@ def update_video_position(request, file_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def add_tag(request, file_obj):
     tag_name = request.data['tag_name']
     if not tag_name:
@@ -237,7 +240,7 @@ def add_tag(request, file_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_tag(request, file_obj):
     tag_name = request.data['tag_name']
 
@@ -257,7 +260,7 @@ def remove_tag(request, file_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def add_moment(request, file_obj):
     timestamp = request.data['timestamp']
     message_id = request.data['message_id']
@@ -300,7 +303,7 @@ def add_moment(request, file_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_moment(request, file_obj):
     timestamp = request.data['timestamp']
 
@@ -315,7 +318,7 @@ def remove_moment(request, file_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def change_crc(request, file_obj):
     crc = int(request.data['crc'])
     file_obj.crc = crc
@@ -328,7 +331,7 @@ def change_crc(request, file_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def add_subtitle(request, file_obj):
     language = request.data['language']
 
@@ -345,18 +348,11 @@ def add_subtitle(request, file_obj):
     if key:
         key = base64.b64decode(key)
 
-    subtitle = Subtitle.objects.create(
-        language=language,
-        file=file_obj,
-        message_id=message_id,
-        attachment_id=attachment_id,
-        content_type=ContentType.objects.get_for_model(author),
-        object_id=author.discord_id,
-        size=size,
-        key=key,
-        iv=iv
-    )
+    subtitle = Subtitle.objects.create(language=language, file=file_obj, message_id=message_id, attachment_id=attachment_id,
+                                       content_type=ContentType.objects.get_for_model(author), object_id=author.discord_id, size=size, key=key, iv=iv)
+
     return JsonResponse(create_subtitle_dict(subtitle), status=200)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ModifyPerms])

@@ -224,8 +224,8 @@ def create_file(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file()
-@check_resource_permissions([default_checks], resource_key="file_obj")
+@extract_file(source='data')
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def create_thumbnail(request, file_obj):
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']

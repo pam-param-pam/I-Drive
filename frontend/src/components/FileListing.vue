@@ -293,7 +293,7 @@
                @action="$emit('copyFileShareUrl')"
             />
             <action
-               v-show='headerButtons.tag && contextMenuState.advanced'
+               v-show='headerButtons.modifyFile && contextMenuState.advanced'
                id='tag'
                :label="$t('buttons.editTags')"
                icon='sell'
@@ -301,9 +301,9 @@
             />
             <action
                v-show="
-                  headerButtons.tag &&
+                  headerButtons.modifyFile &&
                   contextMenuState.advanced &&
-                  this.selected[0].type === 'Video'
+                  this.selected[0]?.type === 'Video' || this.selected[0]?.type === 'Image'
                "
                id='thumbnail'
                :label="$t('buttons.editThumbnail')"
@@ -312,7 +312,7 @@
             />
             <action
               v-show="
-                  headerButtons.tag &&
+                  headerButtons.modifyFile &&
                   contextMenuState.advanced &&
                   this.selected[0].type === 'Video'
                "

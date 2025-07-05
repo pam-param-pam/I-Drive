@@ -11,14 +11,12 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     remove_subtitle
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
-from .views.testViews import get_discord_state, test
+from .views.testViews import get_discord_state, your_ip
 from .views.uploadViews import create_file, create_thumbnail
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, delete_bot, \
     update_upload_destination, enable_bot, can_upload, reset_discord_state
 
 urlpatterns = [
-    path('test/<file_id>', test, name='stream_file'),
-
     path('file/change/crc', change_crc, name='change crc'),
 
     path("zip", create_zip_model, name="create zip model"),
@@ -94,6 +92,7 @@ urlpatterns = [
 
     path('admin', admin.site.urls),
 
+    path('ip', your_ip, name='get ip'),
     path('test', get_discord_state),
     path("stats", get_stats, name="stats"),
     path("stats2", get_discord_attachment_report, name="stats2"),
