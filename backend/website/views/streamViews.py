@@ -24,19 +24,18 @@ from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
-from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, RAW_IMAGE_EXTENSIONS, EventCode, cache, MAX_MEDIA_CACHE_AGE
-from ..utilities.decorators import handle_common_errors, check_file, check_signed_url, no_gzip
-from ..utilities.errors import DiscordError, BadRequestError, ResourcePermissionError
+from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE
+from ..utilities.decorators import extract_from_signed_url, no_gzip
+from ..utilities.errors import DiscordError, BadRequestError
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, create_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
+
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @cache_page(60 * 60 * 24)
-@handle_common_errors
-@check_signed_url
-@check_file
+@extract_from_signed_url
 def get_preview(request, file_obj: File):
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -148,9 +147,7 @@ def get_preview(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
+@extract_from_signed_url
 def get_thumbnail(request, file_obj: File):
     thumbnail_content = cache.get(f"thumbnail:{file_obj.id}")  # we have to manually cache this cuz html video poster is retarded and sends no-cache header (cringe)
     if not thumbnail_content:
@@ -179,9 +176,7 @@ def get_thumbnail(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
+@extract_from_signed_url
 def stream_subtitle(request, file_obj: File, subtitle_id):
     check_if_bots_exists(file_obj.owner)
 
@@ -204,9 +199,7 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @cache_page(60 * 60 * 24 * 30)
-@handle_common_errors
-@check_signed_url
-@check_file
+@extract_from_signed_url
 def stream_moment(request, file_obj: File, timestamp):
 
     check_if_bots_exists(file_obj.owner)
@@ -229,9 +222,7 @@ def stream_moment(request, file_obj: File, timestamp):
 @api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_signed_url
-@check_file
+@extract_from_signed_url
 def stream_file(request, file_obj: File):
     print(f"========={file_obj.name}=========")
 
@@ -355,7 +346,6 @@ def stream_file(request, file_obj: File):
 @api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def stream_zip_files(request, token):
     range_header = request.headers.get('Range')
     if range_header:

@@ -1,4 +1,3 @@
-import time
 from collections import defaultdict
 
 from django.core.exceptions import FieldError
@@ -14,9 +13,9 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Folder, ShareableLink, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..utilities.Discord import discord
-from ..utilities.Permissions import ReadPerms
+from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckReady, CheckTrash
 from ..utilities.constants import cache, MAX_DISCORD_MESSAGE_SIZE
-from ..utilities.decorators import check_folder_and_permissions, check_file_and_permissions, handle_common_errors
+from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, get_resource, check_resource_perms, \
     calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict, create_subtitle_dict, get_file, \
@@ -38,13 +37,12 @@ def last_modified_func(request, file_obj, sequence=None):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_folder_and_permissions
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
 @etag(etag_func)
 def get_folder_info(request, folder_obj: Folder):
     folder_content = cache.get(folder_obj.id)
     if not folder_content:
-        print("=======using uncached version=======")
         folder_content = build_folder_content(folder_obj)
         cache.set(folder_obj.id, folder_content)
 
@@ -55,8 +53,8 @@ def get_folder_info(request, folder_obj: Folder):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_folder_and_permissions
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_dirs(request, folder_obj: Folder):
     folder_content = build_folder_content(folder_obj, include_files=False)
     breadcrumbs = create_breadcrumbs(folder_obj)
@@ -72,8 +70,8 @@ def get_dirs(request, folder_obj: Folder):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_file_and_permissions
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
 # @last_modified(last_modified_func)
 def get_file_info(request, file_obj: File):
     file_content = create_file_dict(file_obj)
@@ -83,8 +81,8 @@ def get_file_info(request, file_obj: File):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_folder_and_permissions
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
 @vary_on_headers("x-resource-password")
 @cache_page(60 * 1)
 def get_usage(request, folder_obj: Folder):
@@ -96,7 +94,7 @@ def get_usage(request, folder_obj: Folder):
         moment_used = Moment.objects.filter(file__owner=request.user).aggregate(Sum('size'))['size__sum'] or 0
         subtitle_used = Subtitle.objects.filter(file__owner=request.user).aggregate(Sum('size'))['size__sum'] or 0
 
-        total_used_size = file_used+thumbnail_used+preview_used+moment_used+subtitle_used
+        total_used_size = file_used + thumbnail_used + preview_used + moment_used + subtitle_used
         cache.set(f"TOTAL_USED_SIZE:{request.user}", total_used_size, 60)
 
     if folder_obj.parent:
@@ -110,28 +108,29 @@ def get_usage(request, folder_obj: Folder):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-def fetch_additional_info(request, item_id):
-    item = get_resource(item_id)
-    check_resource_perms(request, item, checkRoot=False)
-    if isinstance(item, Folder):
-        folder_used_size = calculate_size(item)
-        folder_count, file_count = calculate_file_and_folder_count(item)
+@extract_item()
+@check_resource_permissions(default_checks, resource_key="item_obj")
+def fetch_additional_info(request, item_obj):
+    if isinstance(item_obj, Folder):
+        folder_used_size = calculate_size(item_obj)
+        folder_count, file_count = calculate_file_and_folder_count(item_obj)
         return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
+
     else:
         tracks = []
-        for track in VideoTrack.objects.filter(video_metadata__file=item):
+        for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
             tracks.append(create_video_track_dict(track))
 
-        for track in AudioTrack.objects.filter(video_metadata__file=item):
+        for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
             tracks.append(create_audio_track_dict(track))
 
-        for track in SubtitleTrack.objects.filter(video_metadata__file=item):
+        for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
             tracks.append(create_subtitle_track_dict(track))
         try:
-            metadata = VideoMetadata.objects.get(file=item)
+            metadata = VideoMetadata.objects.get(file=item_obj)
         except VideoMetadata.DoesNotExist:
             raise ResourceNotFoundError("No video metadata for this file :(")
+
         metadata_dict = {
             "tracks": tracks, "is_fragmented": metadata.is_fragmented, "is_progressive": metadata.is_progressive,
             "has_moov": metadata.has_moov, "has_IOD": metadata.has_IOD, "brands": metadata.brands, "mime": metadata.mime,
@@ -139,11 +138,12 @@ def fetch_additional_info(request, item_id):
 
         return JsonResponse(metadata_dict, status=200)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_folder_and_permissions
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_breadcrumbs(request, folder_obj: Folder):
     breadcrumbs = create_breadcrumbs(folder_obj)
     return JsonResponse(breadcrumbs, safe=False)
@@ -152,10 +152,9 @@ def get_breadcrumbs(request, folder_obj: Folder):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([SearchThrottle])
-@handle_common_errors
 def search(request):
     user = request.user
-
+    # todo check if this is secure
     query = request.GET.get('query', None)
     file_type = request.GET.get('type', None)
     extension = request.GET.get('extension', None)
@@ -255,14 +254,14 @@ def search(request):
     try:
         if include_files:
             files = File.objects.filter(file_filters) \
-                .select_related("parent", "videoposition", "thumbnail", "preview") \
-                .prefetch_related("tags") \
-                .order_by(ascending + order_by)[:result_limit]
+                        .select_related("parent", "videoposition", "thumbnail", "preview") \
+                        .prefetch_related("tags") \
+                        .order_by(ascending + order_by)[:result_limit]
 
         if include_folders:
             folders = Folder.objects.filter(folder_filters) \
-                  .select_related("parent") \
-                  .order_by("-created_at")[:result_limit]
+                          .select_related("parent") \
+                          .order_by("-created_at")[:result_limit]
 
             if order_by == 'size':
                 # Sort folders by calculated size
@@ -287,7 +286,6 @@ def search(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
         "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
@@ -303,19 +301,12 @@ def get_trash(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
-@handle_common_errors
-def check_password(request, resource_id):
-    try:
-        item = get_resource(resource_id)
-        check_resource_perms(request, item, checkRoot=False, checkFolderLock=False)
-    except ResourceNotFoundError:
-        try:
-            item = ShareableLink.objects.get(id=resource_id)
-        except ShareableLink.DoesNotExist:
-            raise ResourceNotFoundError()
+@extract_resource()
+@check_resource_permissions([CheckOwnership, CheckTrash, CheckReady], resource_key="resource_obj")
+def check_password(request, resource_obj):
     password = request.headers.get("X-Resource-Password")
 
-    if item.password == password:
+    if resource_obj.password == password:
         return HttpResponse(status=204)
 
     raise ResourcePermissionError("Folder password is incorrect")
@@ -324,8 +315,8 @@ def check_password(request, resource_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_file_and_permissions
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def get_moments(request, file_obj: File):
     moments = Moment.objects.filter(file=file_obj).all()
     moments_list = []
@@ -338,8 +329,8 @@ def get_moments(request, file_obj: File):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_file_and_permissions
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def get_tags(request, file_obj: File):
     tags_list = []
     for tag in file_obj.tags.all():
@@ -351,8 +342,8 @@ def get_tags(request, file_obj: File):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-@check_file_and_permissions
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
 
@@ -363,10 +354,12 @@ def get_subtitles(request, file_obj: File):
     return JsonResponse(subtitle_dicts, safe=False)
 
 
+"""====================================================HERE BE DRAGONS=========================================================="""
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def ultra_download_metadata(request):
     folder_id = request.data.get('folder_id')
     file_ids = request.data.get('file_ids', [])
@@ -415,14 +408,15 @@ def ultra_download_metadata(request):
 
         file_dict["fragments"] = fragment_dicts
         return file_dict
+
     response_data = [file_metadata(f) for f in files]
 
     return JsonResponse(response_data, safe=False)
 
+
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated & ReadPerms])
 # @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def get_stats(request):
     qs = (
         File.objects
@@ -446,7 +440,6 @@ def get_stats(request):
 @api_view(["GET"])
 # @permission_classes([IsAuthenticated & ReadPerms])
 # @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def get_discord_attachment_report(request):
     owner_id = 1  # hardcoded or use request.user.id
 

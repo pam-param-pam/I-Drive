@@ -86,13 +86,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, [
-         'setLoading',
-         'setError',
-         'setDisabledCreation',
-         'setItems',
-         'getFolderPassword'
-      ]),
+      ...mapActions(useMainStore, ['setLoading', 'setError', 'setDisabledCreation', 'setItems', 'getFolderPassword']),
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {

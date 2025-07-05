@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
+    'website.utilities.middlewares.CommonErrorsMiddleware',
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.FailedRequestLoggerMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',

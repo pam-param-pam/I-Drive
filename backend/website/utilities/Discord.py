@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime, timezone
 from threading import Lock
@@ -11,92 +12,93 @@ from ..models import DiscordSettings, Bot, Webhook
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
 
-class Discord:
-    def __del__(self):
-        self.client.close()
+logger = logging.getLogger("Discord")
+logger.setLevel(logging.DEBUG)
 
-    # todo fix this (retry after and switching tokens)
+# Add a console handler if none exists
+if not logger.hasHandlers():
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)  # Handler level
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+class Discord:
     def __init__(self):
         self.client = httpx.Client(timeout=10.0)
-
         self.current_token_index = 0
-
-        self.file_upload_headers = {}
-        self.users = {}
+        self.users_state = {}
         self.lock = Lock()
+        self.MAX_CONCURRENT_REQUESTS_PER_TOKEN = 3
 
     def get_token(self, user):
         slept = 0
-
-        while slept < 5:  # wait max for 5 seconds, then return service unavailable
+        while slept < 5:
             current_time = datetime.now(timezone.utc).timestamp()
             with self.lock:
                 user_state = self._get_user_state(user)
                 tokens_dict = user_state["tokens"]
-                for token, data in tokens_dict.items():
-                    if tokens_dict[token]['locked1'] and tokens_dict[token]['locked2'] and tokens_dict[token]['locked3']:
-                        continue
 
-                    if data['requests_remaining'] > 3:
-                        tokens_dict[token]['requests_remaining'] -= 1
-                        if not tokens_dict[token]['locked1']:
-                            tokens_dict[token]['locked1'] = True
-                        elif not tokens_dict[token]['locked2']:
-                            tokens_dict[token]['locked2'] = True
-                        else:
-                            tokens_dict[token]['locked3'] = True
-                        return token
+                for token, data in tokens_dict.items():
+                    if data['requests_remaining'] > 1:
+                        if self._acquire_lock(data):
+                            data['requests_remaining'] -= 1
+                            return token
 
                     if data['reset_time']:
                         reset_time = float(data['reset_time'])
-
                         if current_time >= reset_time:
-                            tokens_dict[token]['requests_remaining'] = 1
-                            if not tokens_dict[token]['locked1']:
-                                tokens_dict[token]['locked1'] = True
-                            elif not tokens_dict[token]['locked2']:
-                                tokens_dict[token]['locked2'] = True
-                            else:
-                                tokens_dict[token]['locked3'] = True
-                            return token
+                            data['requests_remaining'] = 1
+                            if self._acquire_lock(data):
+                                return token
 
             time.sleep(0.5)
-            print(f"===sleeping==={slept}")
+            logger.debug(f"===sleeping==={slept}")
             slept += 0.5
 
         raise CannotProcessDiscordRequestError("Unable to process this request at the moment, server is too busy.")
 
     def update_token(self, user, token: str, headers: dict):
-        print(f"update token: {token}")
+        logger.debug(f"Updating token: {token}")
         reset_time = headers.get('X-RateLimit-Reset')
-        requests_remaining = headers.get('X-RateLimit-remaining')
+        requests_remaining = headers.get('X-RateLimit-Remaining')
 
         with self.lock:
             token_dict = self._get_user_state(user)["tokens"][token]
-            if token_dict['locked1']:
-                token_dict['locked1'] = False
-            elif token_dict['locked2']:
-                token_dict['locked2'] = False
-            else:
-                token_dict['locked3'] = False
-
+            self._release_lock(token_dict)
             if requests_remaining and reset_time:
                 token_dict['reset_time'] = reset_time
                 token_dict['requests_remaining'] = int(requests_remaining)
-
             else:
-                print("===Missing ratelimit headers====")
+                logger.warning("Missing ratelimit headers in response")
+
+    def _acquire_lock(self, token_data):
+        for i in range(1, self.MAX_CONCURRENT_REQUESTS_PER_TOKEN + 1):
+            if not token_data[f"locked{i}"]:
+                token_data[f"locked{i}"] = True
+                return True
+        return False
+
+    def _release_lock(self, token_data):
+        for i in range(1, self.MAX_CONCURRENT_REQUESTS_PER_TOKEN + 1):
+            if token_data[f"locked{i}"]:
+                token_data[f"locked{i}"] = False
+                return True
+        return False
+
+    def _check_discord_block(self, user):
+        if self._get_user_state(user)['blocked']:
+            remaining_time = self._get_user_state(user)['retry_timestamp'] - time.time()
+            if remaining_time > 0:
+                raise DiscordBlockError(message="This view is protected, discord blocked you, try again later", retry_after=remaining_time)
+            self.remove_user_state(user)
 
     def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         return response
 
     def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3) -> Response:
-        if self._get_user_state(user)['locked']:
-            remaining_time = self._get_user_state(user)['retry_timestamp'] - time.time()
-            if remaining_time > 0:
-                raise DiscordBlockError(message="This view is protected, discord blocked you, try again later", retry_after=remaining_time)
-            self.remove_user_state(user)
+        self._check_discord_block(user)
 
         if not headers:
             headers = {}
@@ -109,8 +111,7 @@ class Discord:
                 token = self.get_token(user)
                 headers['Authorization'] = f'Bot {token}'
 
-            print(f"Making bot request with token: {token}")
-            print("hit discord api")
+            logger.debug(f"Making bot request with token: {token}")
 
             response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
@@ -118,37 +119,41 @@ class Discord:
                 return response
 
             if response.status_code == 429:
-                print("hit 429 !!!!!!!!!!!!!!!")
+                logger.debug("==============HIT 429!!!!!1=============")
                 retry_after = response.json().get("retry_after")
                 if not retry_after:  # retry_after is missing if discord blocked us
                     self._handle_discord_block(user, response)
 
-                return self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
+                return self._make_bot_request(user, method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
             if response.status_code in (403, 401):
-                from ..tasks import queue_ws_event
-                with self.lock:
-                    token_dict = self._get_user_state(user)["tokens"][token]
+                self._handle_bot_having_no_perms(user, token, response)
 
-                    bot = Bot.objects.get(owner=user, token=token)
-                    bot.disabled = True
-                    bot.reason = "errors.LackOfRequiredPerms"
-                    bot.save()
-                    queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id,
-                                                  'message': "toasts.botRemovedForInsufficientPerms",
-                                                  'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
-                self.remove_user_state(user)
-
-                raise DiscordError(response.text, response.status_code)
         finally:
             try:
                 self.update_token(user, token, response.headers)
             except:
                 self.remove_user_state(user)
 
+    def _handle_bot_having_no_perms(self, user, token, response):
+        from ..tasks import queue_ws_event
+        with self.lock:
+            token_dict = self._get_user_state(user)["tokens"][token]
+
+            bot = Bot.objects.get(owner=user, token=token)
+            bot.disabled = True
+            bot.reason = "errors.LackOfRequiredPerms"
+            bot.save()
+            queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id,
+                                          'message': "toasts.botRemovedForInsufficientPerms",
+                                          'args': {"name": token_dict['name']}, 'finished': True, 'error': True})
+        self.remove_user_state(user)
+
+        raise DiscordError(response.text, response.status_code)
+
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
 
-        print(f"Making webhook request with: {url}")
+        logger.debug(f"Making webhook request: {url}")
 
         response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         # todo implement ratelimit for webhooks
@@ -212,9 +217,7 @@ class Discord:
             return cached_message
 
         channel_id = self._get_channel_id(user)
-
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
-
         response = self._make_bot_request(user, 'GET', url)
 
         message = response.json()
@@ -224,7 +227,6 @@ class Discord:
 
     def remove_message(self, user, message_id: str) -> httpx.Response:
         channel_id = self._get_channel_id(user)
-
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'DELETE', url)
         return response
@@ -263,14 +265,14 @@ class Discord:
             ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
             return ttl_seconds
         except KeyError:
-            print("Key Error attachments, message:")
-            print(message)
+            logger.debug("Key Error attachments, message: ")
+            logger.debug(message)
 
     def remove_user_state(self, user):
-        print("===removing user state===")
+        logger.debug("Removing user state")
         with self.lock:
             try:
-                del self.users[user.id]
+                del self.users_state[user.id]
             except KeyError:
                 pass
 
@@ -279,9 +281,10 @@ class Discord:
         return user_state['channel_id']
 
     def _get_user_state(self, user):
-        user_state = self.users.get(user.id)
+        user_state = self.users_state.get(user.id)
         if not user_state:
-            print("===obtaining user state===")
+            logger.debug("===obtaining user state===")
+
             settings, bots = self._get_discord_settings(user)
 
             if not bots:
@@ -289,17 +292,15 @@ class Discord:
 
             token_dict = {
                 bot.token: {
-                    'requests_remaining': 4,  # Default discord remaining
+                    'requests_remaining': 4,
                     'reset_time': None,
-                    'locked1': False,
-                    'locked2': False,
-                    'locked3': False,
+                    **{f'locked{i}': False for i in range(1, self.MAX_CONCURRENT_REQUESTS_PER_TOKEN + 1)},
                     'name': bot.name,
                 }
                 for bot in bots
             }
-            self.users[user.id] = {"channel_id": settings.channel_id, "guild_id": settings.guild_id, "tokens": token_dict, "locked": False}
-        return self.users.get(user.id)
+            self.users_state[user.id] = {"channel_id": settings.channel_id, "guild_id": settings.guild_id, "tokens": token_dict, "blocked": False}
+        return self.users_state.get(user.id)
 
     def _get_discord_settings(self, user):
         settings = DiscordSettings.objects.get(user=user)
@@ -307,11 +308,11 @@ class Discord:
         return settings, bots
 
     def _handle_discord_block(self, user, response):
-        print("HANDLING DISCORD BLOCK")
+        logger.debug("HANDLING DISCORD BLOCK")
         retry_after = response.headers['retry-after']
         with self.lock:
-            state = self.users[user.id]
-            state['locked'] = True
+            state = self.users_state[user.id]
+            state['blocked'] = True
             current_time = time.time()
             retry_timestamp = current_time + retry_after
             state['retry_timestamp'] = retry_timestamp

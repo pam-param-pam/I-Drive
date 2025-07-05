@@ -1,5 +1,4 @@
 import base64
-import time
 from datetime import datetime
 
 from django.contrib.contenttypes.models import ContentType
@@ -10,20 +9,18 @@ from rest_framework.decorators import api_view, throttle_classes, permission_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Fragment, Thumbnail
-from ..utilities.Discord import discord
-from ..utilities.Permissions import CreatePerms
+from ..utilities.Permissions import CreatePerms, default_checks
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
-from ..utilities.decorators import handle_common_errors
+from ..utilities.decorators import extract_file, check_resource_permissions
 from ..utilities.errors import BadRequestError
 from ..utilities.other import send_event, create_file_dict, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
     create_video_metadata, validate_ids_as_list, group_and_send_event, get_file_type
-from ..utilities.throttle import defaultAuthUserThrottle, ProxyRateThrottle
+from ..utilities.throttle import defaultAuthUserThrottle
 
 
 @api_view(['POST', 'PATCH', 'PUT'])
 @permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def create_file(request):
     check_if_bots_exists(request.user)
 
@@ -65,7 +62,6 @@ def create_file(request):
 
             if not file_name:
                 raise BadRequestError("'name' cannot be empty")
-
 
             file_type = get_file_type(extension)
 
@@ -228,9 +224,9 @@ def create_file(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-def create_thumbnail(request):
-    file_id = request.data['file_id']
+@extract_file()
+@check_resource_permissions([default_checks], resource_key="file_obj")
+def create_thumbnail(request, file_obj):
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     size = request.data['size']
@@ -245,10 +241,8 @@ def create_thumbnail(request):
     if key:
         key = base64.b64decode(key)
 
-    file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj)
-    # todo
     try:
+        # todo
         delete_single_discord_attachment(request.user, file_obj.thumbnail)
         file_obj.thumbnail.delete()
     except Thumbnail.DoesNotExist:

@@ -409,7 +409,7 @@ export default {
          this.addSelected(this.file)
          this.setLastItem(this.file)
          await this.$nextTick() //this is vevy important
-         if (this.file?.type === "video" && this.$refs.video && this.isLogged) {
+         if (this.file?.type === "Video" && this.$refs.video && this.isLogged) {
             this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
             this.lastSentVideoPosition = this.file.video_position || 0

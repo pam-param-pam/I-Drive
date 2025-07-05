@@ -8,9 +8,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, get_thumbnail, get_preview
 from ..models import UserSettings, ShareableLink, UserZIP
-from ..utilities.Permissions import SharePerms
+from ..utilities.Permissions import SharePerms, default_checks
 from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import handle_common_errors
+from ..utilities.decorators import extract_item, check_resource_permissions
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_dict, create_share_breadcrumbs, formatDate, get_resource, check_resource_perms, create_share_resource_dict, \
     build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, sign_resource_id_with_expiry, get_file, validate_ids_as_list
@@ -20,7 +20,6 @@ from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottl
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def get_shares(request):
     shares = ShareableLink.objects.filter(owner=request.user)
     items = []
@@ -39,7 +38,6 @@ def get_shares(request):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
 def delete_share(request):
     token = request.data['token']
 
@@ -54,16 +52,13 @@ def delete_share(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@handle_common_errors
-def create_share(request):
-    item_id = request.data['resource_id']
+@extract_item(source="data")
+@check_resource_permissions([*default_checks], resource_key="item_obj")
+def create_share(request, item_obj):
     value = abs(int(request.data['value']))
 
     unit = request.data['unit']
     password = request.data.get('password')
-
-    item = get_resource(item_id)
-    check_resource_perms(request, item, checkRoot=False, checkTrash=True)
 
     current_time = timezone.now()
 
@@ -79,8 +74,8 @@ def create_share(request):
     share = ShareableLink.objects.create(
         expiration_time=expiration_time,
         owner=request.user,
-        content_type=ContentType.objects.get_for_model(item),
-        object_id=item.id
+        content_type=ContentType.objects.get_for_model(item_obj),
+        object_id=item_obj.id
     )
     if password:
         share.password = password
@@ -94,7 +89,6 @@ def create_share(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-@handle_common_errors
 def view_share(request, token, folder_id=None):
     share = get_share(request, token)
 
@@ -132,7 +126,6 @@ def view_share(request, token, folder_id=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-@handle_common_errors
 def create_share_zip_model(request, token):
     ids = request.data['ids']
 
@@ -153,10 +146,9 @@ def create_share_zip_model(request, token):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-@handle_common_errors
 def share_view_stream(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
-
+    #todo wtf perms where?!?!?1
     file_obj = get_file(file_id)
     check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
     check_if_item_belongs_to_share(request, share, file_obj)
@@ -175,7 +167,6 @@ def share_view_stream(request, token: str, file_id: str):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-@handle_common_errors
 def share_view_thumbnail(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
 
@@ -189,7 +180,6 @@ def share_view_thumbnail(request, token: str, file_id: str):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-@handle_common_errors
 def share_view_preview(request, token: str, file_id: str):
     share = get_share(request, token, ignorePassword=True)
 

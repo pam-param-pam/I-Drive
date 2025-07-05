@@ -5,7 +5,9 @@ import jsmediatags from "jsmediatags"
 import { uploadInstance } from "@/utils/networker.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
+
 const toast = useToast()
+
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -126,6 +128,8 @@ export function isImageFile(file) {
 
 
 let currentWebhookIndex = 0
+
+
 export function getWebhook() {
    let uploadStore = useUploadStore()
    let webhooks = uploadStore.webhooks
@@ -136,6 +140,7 @@ export function getWebhook() {
 
    return webhook
 }
+
 
 export async function makeThumbnailIfNeeded(queueFile) {
    let thumbnail
@@ -161,9 +166,7 @@ export async function makeThumbnailIfNeeded(queueFile) {
       }
    }
    //generating a thumbnail if needed for video file
-   console.log(1111111111)
    if (isImageFile(queueFile) && queueFile.fileObj.size > 200 * 1024) {
-      console.log(2222222222)
       try {
          thumbnail = await getImageThumbnail(queueFile)
       } catch (e) {
@@ -174,11 +177,12 @@ export async function makeThumbnailIfNeeded(queueFile) {
    return thumbnail
 }
 
+
 function createThumbnail(source, options = {}) {
    const {
       quality = 0.65,
-      maxWidth = null,
-      maxHeight = null,
+      maxWidth = 1920,
+      maxHeight = 1080,
       mimeType = "image/webp"
    } = options
 
@@ -186,27 +190,28 @@ function createThumbnail(source, options = {}) {
       let width = source.width
       let height = source.height
 
-      if (maxWidth && maxHeight) {
-         if (width > height) {
-            if (width > maxWidth) {
-               height *= maxWidth / width
-               width = maxWidth
-            }
-         } else {
-            if (height > maxHeight) {
-               width *= maxHeight / height
-               height = maxHeight
-            }
+      // Downscale to target resolution
+      if (width > height) {
+         if (width > maxWidth) {
+            height *= maxWidth / width
+            width = maxWidth
+         }
+      } else {
+         if (height > maxHeight) {
+            width *= maxHeight / height
+            height = maxHeight
          }
       }
 
+      // Draw downscaled image
       const canvas = document.createElement("canvas")
-      canvas.width = width
-      canvas.height = height
+      canvas.width = Math.round(width)
+      canvas.height = Math.round(height)
 
       const ctx = canvas.getContext("2d")
-      ctx.drawImage(source, 0, 0, width, height)
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height)
 
+      // Compress
       canvas.toBlob((blob) => {
          resolve(blob)
       }, mimeType, quality)
@@ -216,7 +221,7 @@ function createThumbnail(source, options = {}) {
 
 export function getImageThumbnail(file, options = {}) {
    const defaultOptions = {
-      quality: 0.1,
+      quality: 0.5,
       ...options
    }
    return new Promise((resolve, reject) => {
@@ -249,18 +254,13 @@ export async function getAudioCover(file, options = {}) {
             const byteArray = new Uint8Array(data)
             const blob = new Blob([byteArray], { type: format })
 
-            // If thumbnail options are passed, compress the image
-            if (options?.quality || options?.maxWidth || options?.maxHeight) {
-               const img = new Image()
-               img.onload = () => {
-                  createThumbnail(img, options).then(resolve).catch(reject)
-                  URL.revokeObjectURL(img.src)
-               }
-               img.onerror = reject
-               img.src = URL.createObjectURL(blob)
-            } else {
-               resolve(blob) // Return original image if no options
+            const img = new Image()
+            img.onload = () => {
+               createThumbnail(img, options).then(resolve).catch(reject)
+               URL.revokeObjectURL(img.src)
             }
+            img.onerror = reject
+            img.src = URL.createObjectURL(blob)
          },
          onError: (error) => {
             console.error("Error reading file:", error.type, error.info)
@@ -271,37 +271,37 @@ export async function getAudioCover(file, options = {}) {
 }
 
 
-export function captureVideoFrame(videoPlayer, seekTo = 0, quality = 0.65, maxWidth = null, maxHeight = null) {
+export function captureVideoFrame(videoPlayer, seekTo = 0, options = {}) {
    return new Promise((resolve, reject) => {
       setTimeout(() => {
          videoPlayer.currentTime = seekTo
       }, 20)
 
       videoPlayer.addEventListener("seeked", () => {
+         // Draw current video frame on canvas first
          const width = videoPlayer.videoWidth
          const height = videoPlayer.videoHeight
 
-         const canvas = document.createElement("canvas")
-         canvas.width = width
-         canvas.height = height
-
-         const ctx = canvas.getContext("2d")
+         const frameCanvas = document.createElement("canvas")
+         frameCanvas.width = width
+         frameCanvas.height = height
+         const ctx = frameCanvas.getContext("2d")
          ctx.drawImage(videoPlayer, 0, 0, width, height)
 
-         canvas.toBlob((blob) => {
+         // Pass canvas to createThumbnail for resizing/compression
+         createThumbnail(frameCanvas, options).then(blob => {
             resolve({
                thumbnail: blob,
-               canvas,
+               canvas: frameCanvas,
                duration: videoPlayer.duration
             })
-         }, "image/webp", quality)
+         }).catch(reject)
 
          videoPlayer.pause()
          URL.revokeObjectURL(videoPlayer.src)
       }, { once: true })
    })
 }
-
 
 export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    return new Promise((resolve, reject) => {

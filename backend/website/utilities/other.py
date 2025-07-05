@@ -22,15 +22,11 @@ from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
     EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS
-from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, RootPermissionError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
+from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
 signer = TimestampSigner()
 
 _SENTINEL = object()  # Unique object to detect omitted default
-
-
-
-
 
 def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
     """Helper function to get attribute from either an object or a dictionary.
@@ -421,55 +417,12 @@ def get_resource(obj_id: str) -> Resource:
     return item
 
 
-def check_resource_perms(request, resource: Union[Resource, dict], checkOwnership=True, checkRoot=True, checkFolderLock=True, checkTrash=False, checkReady=True) -> None:
-    if checkOwnership:
-        owner_id = get_attr(resource, 'owner_id')
-        if owner_id != request.user.id:
-            raise ResourcePermissionError("You have no access to this resource!")
-
-    if checkFolderLock:
-        check_folder_password(request, resource)
-
-    if checkRoot:
-        if get_attr(resource, 'parent_id', None) is None:
-            raise RootPermissionError()
-
-    if checkTrash:
-        if get_attr(resource, 'inTrash', False):
-            raise ResourcePermissionError("Cannot access resource in trash!")
-
-    if checkReady:
-        if not get_attr(resource, 'ready', True):
-            raise ResourceNotFoundError("Resource is not ready")
-
-
-def check_folder_password(request, resource: Union[Resource, dict]) -> None:
-    """Check if the correct password is provided for a locked resource."""
-    password = request.headers.get("X-Resource-Password")
-    if password:
-        password = unquote(password)
-
-    passwords = request.data.get('resourcePasswords')
-    is_locked = get_attr(resource, 'is_locked')
-
-    if is_locked:
-        resource_password = get_attr(resource, 'password')
-        lockFrom_id = get_attr(resource, 'lockFrom_id')
-        lockFrom_name = get_attr(resource, 'lockFrom__name')
-
-        if password:
-            if resource_password != password:
-                raise MissingOrIncorrectResourcePasswordError([{"id": lockFrom_id, "name": lockFrom_name}])
-        elif passwords:
-            if is_locked and resource_password != passwords.get(lockFrom_id):
-                raise MissingOrIncorrectResourcePasswordError([{"id": lockFrom_id, "name": lockFrom_name}])
-        else:
-            raise MissingOrIncorrectResourcePasswordError([{"id": lockFrom_id, "name": lockFrom_name}])
-
+def check_resource_perms(request, resource: Union[Resource, dict], checks) -> None:
+    for Check in checks:
+        Check().check(request, resource)
 
 def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
-    check_resource_perms("dummy request", file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
-
+    # todo do i need to check perms here
     return {"name": file_name, "isDir": False, "fileObj": file_obj}
 
 
@@ -526,16 +479,28 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
 
 def get_share(request, token: str, ignorePassword: bool = False) -> ShareableLink:
     password = request.headers.get("X-Resource-Password")
+    if password:
+        password = unquote(password)
+
+    passwords = request.data.get('resourcePasswords')
+
     share = ShareableLink.objects.get(token=token)
     if share.is_expired():
         share.delete()
         raise ResourceNotFoundError("Share not found or expired")
 
     if not ignorePassword:
-        if share.password and share.password != password:
+        if share.is_locked() and share.password != password:
             share.name = "Share"
-            raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
 
+            if password:
+                if share.password != password:
+                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+            elif passwords:
+                if share.password != passwords.get(share.id):
+                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+            else:
+                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
     return share
 
 
@@ -803,7 +768,6 @@ def create_subtitle_dict(subtitle: Subtitle) -> dict:
 
 
 def get_file_type(extension: str) -> str:
-    print(extension)
     if extension in VIDEO_EXTENSIONS:
         return "Video"
     elif extension in AUDIO_EXTENSIONS:

@@ -7,7 +7,7 @@ from .views.ZipViews import create_zip_model
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_stats, get_discord_attachment_report
 from .views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
+    delete, change_folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
     remove_subtitle
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview
 from .views.streamViews import get_preview, get_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
@@ -78,7 +78,7 @@ urlpatterns = [
     path('folder/dirs/<folder_id>', get_dirs, name="get folders from a folder id"),
     path('folder/usage/<folder_id>', get_usage, name="get size of all files in that folder to all user's files"),
     path("folder/breadcrumbs/<folder_id>", get_breadcrumbs, name="get root's real content"),
-    path("folder/password/<folder_id>", folder_password, name="create folder"),
+    path("folder/password/<folder_id>", change_folder_password, name="create folder"),
     path("folder/password/reset/<folder_id>", reset_folder_password, name="create folder"),
 
     path("item/move", move, name="move file/folder"),

@@ -199,6 +199,8 @@ class File(models.Model):
             )
         ]
 
+    MINIMAL_VALUES = ("id", "name", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password")
+
     STANDARD_VALUES = ("id", "name", "type", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
 
     DISPLAY_VALUES = STANDARD_VALUES + (

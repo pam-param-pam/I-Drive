@@ -74,6 +74,8 @@ Credentials: `demo`/`demo`
 | upload file prompt displays on top of context menu                                                |
 | handle empty files (upload, editor, anything else)                                                |
 | fix next/prev on desktop with images move                                                         |
+| share password bugged                                                                             |
+| zip download in shares                                                                            |
 
 > [!WARNING]  
 > This section is very much unfinished

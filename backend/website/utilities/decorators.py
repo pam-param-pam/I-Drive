@@ -1,21 +1,15 @@
 import os
-import traceback
 from functools import wraps
+from typing import Callable
 
-import httpx
-from django.core.exceptions import ValidationError
-from django.http import JsonResponse
-from httpx import ConnectError
-from mptt.exceptions import InvalidMove
-from requests.exceptions import SSLError
-from rest_framework.exceptions import Throttled
+from django.core.exceptions import ObjectDoesNotExist
 
-from ..models import File, Folder, ShareableLink, Thumbnail, UserZIP, Preview, Moment, VideoMetadata, Tag, Subtitle
-from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
-from ..utilities.other import build_http_error_response, verify_signed_resource_id, check_resource_perms, get_file, get_folder, get_attr
+from ..models import File, Folder, ShareableLink
+from ..utilities.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError
+from ..utilities.other import verify_signed_resource_id, get_file, validate_ids_as_list
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
+
 
 def no_gzip(view_func):
     """Decorator to prevent GZipMiddleware from compressing the response."""
@@ -24,141 +18,178 @@ def no_gzip(view_func):
         request.META["HTTP_ACCEPT_ENCODING"] = "identity"
         response = view_func(request, *args, **kwargs)
         return response
+
     return wrapped_view
 
+def disable_common_errors(view_func):
+    view_func.disable_common_errors = True
+    return view_func
 
-def check_signed_url(view_func):
+def extract_from_signed_url(view_func):
     @wraps(view_func)
     def wrapper(request, signed_file_id, *args, **kwargs):
-
         file_id = verify_signed_resource_id(signed_file_id)
-
-        return view_func(request, file_id, *args, **kwargs)
-
-    return wrapper
-
-
-def check_file_and_permissions(view_func):
-    @wraps(view_func)
-    def wrapper(request, file_id, *args, **kwargs):
-
         file_obj = get_file(file_id)
-        check_resource_perms(request, file_obj, checkRoot=False)
-
-        return view_func(request, file_obj, *args, **kwargs)
-
-    return wrapper
-
-# goofy ah code duplication
-def check_file(view_func):
-    @wraps(view_func)
-    def wrapper(request, file_id, *args, **kwargs):
-
-        file_obj = get_file(file_id)
-        check_resource_perms(request, file_obj, checkOwnership=False, checkRoot=False, checkFolderLock=False)
-
-        if file_obj.inTrash and file_obj.is_locked:
-            raise ResourcePermissionError("Cannot access resource in trash!")
 
         return view_func(request, file_obj, *args, **kwargs)
 
     return wrapper
 
 
-def check_folder_and_permissions(view_func):
-    @wraps(view_func)
-    def wrapper(request, folder_id, *args, **kwargs):
+def check_resource_permissions(checks: list, resource_key):
+    def decorator(view_func: Callable):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            resource = kwargs.get(resource_key)
+            if not resource:
+                raise ValueError(f"Missing '{resource_key}' in kwargs")
 
-        folder_obj = get_folder(folder_id)
+            for Check in checks:
+                Check().check(request, resource)
 
-        check_resource_perms(request, folder_obj, checkRoot=False)
-
-        return view_func(request, folder_obj, *args, **kwargs)
-
-    return wrapper
-
-
-def handle_common_errors(view_func):
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-
-        try:
             return view_func(request, *args, **kwargs)
 
-        # 404 NOT FOUND
-        except (Moment.DoesNotExist, UserZIP.DoesNotExist, Preview.DoesNotExist, Thumbnail.DoesNotExist, File.DoesNotExist, Folder.DoesNotExist, VideoMetadata.DoesNotExist, Tag.DoesNotExist, Subtitle.DoesNotExist):
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""),
-                                status=404)
-        except ShareableLink.DoesNotExist:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found or expired"),
-                                status=404)
-        except ResourceNotFoundError as e:
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(e)), status=404)
+        return _wrapped_view
 
-        # 400 BAD REQUEST
-        except (ValidationError, BadRequestError) as e:
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(e)), status=400)
+    return decorator
 
-        except NoBotsError:
-            return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="User has no bots, unable to fetch anything from discord."), status=400)
 
-        except NotImplementedError as e:
-            return JsonResponse(build_http_error_response(code=400, error="error.notImplemented", details=str(e)), status=400)
+def extract_folder(source="kwargs", key="folder_id", inject_as="folder_obj"):
+    return extract_resources({
+        "source": source,
+        "key": key,
+        "model": Folder,
+        "inject_as": inject_as,
+    })
 
-        except InvalidMove:
-            return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="Invalid parent, recursion detected."), status=400)
 
-        except KeyError:
-            if is_dev_env:
-                traceback.print_exc()
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
+def extract_file(source="kwargs", key="file_id", inject_as="file_obj"):
+    return extract_resources({
+        "source": source,
+        "key": key,
+        "model": File,
+        "inject_as": inject_as,
+    })
 
-        except (ValueError, TypeError):
-            if is_dev_env:
-                traceback.print_exc()
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
 
-        except OverflowError:
-            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
+def extract_item(source="kwargs", key="item_id", inject_as="item_obj"):
+    return extract_resources({
+        "source": source,
+        "key": key,
+        "model": [Folder, File],
+        "inject_as": inject_as,
+    })
 
-        # 403 REQUEST FORBIDDEN
-        except ResourcePermissionError as e:
-            return JsonResponse(build_http_error_response(code=403, error="errors.resourceAccessForbidden", details=str(e)), status=403)
-        except RootPermissionError:
-            return JsonResponse(build_http_error_response(code=403, error="errors.rootFolderNoAccess", details="Access to root folder denied"), status=403)
+def extract_resource(source="kwargs", key="resource_id", inject_as="resource_obj"):
+    return extract_resources({
+        "source": source,
+        "key": key,
+        "model": [Folder, File, ShareableLink],
+        "inject_as": inject_as,
+    })
 
-        # 429 RATE LIMIT
-        except Throttled as e:
-            return JsonResponse(build_http_error_response(code=403, error="errors.rateLimit", details=str(e)), status=403)
 
-        # 469 WRONG FOLDER PASSWORD
-        except MissingOrIncorrectResourcePasswordError as e:
-            json_error = build_http_error_response(code=469, error="errors.missingOrIncorrectResourcePassword", details=str(e))
-            list_of_dicts = []
-            for folder in e.requiredPasswords:
-                list_of_dicts.append({"id": get_attr(folder, "id"), "name": get_attr(folder, "name")})
-            json_error["requiredFolderPasswords"] = list_of_dicts
 
-            return JsonResponse(json_error, status=469)
 
-        # 500 SERVER ERROR
-        except (ConnectError, SSLError, MalformedDatabaseRecord) as e:
-            return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(e)), status=500)
+def extract_resources(*rules):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            for rule in rules:
+                source = rule.get("source", "data")
+                key = rule["key"]
+                models = rule["model"]
+                inject_as = rule["inject_as"]
+                # Choose correct input container
+                container = kwargs if source == "kwargs" else getattr(request, source, {})
 
-        # 503 Service Unavailable
-        except CannotProcessDiscordRequestError as e:
-            return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(e)), status=503)
+                if key not in container:
+                    raise ValueError(f"Missing key '{key}' in request.{source}")
 
-        except DiscordBlockError as e:
-            res = build_http_error_response(code=503, error="errors.discordBlocked", details=str(e))
-            res['retry_after'] = e.retry_after
-            return JsonResponse(res, status=503)
+                ids = container[key]
 
-        except httpx.ConnectError as e:
-            return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(e)), status=503)
+                # Support list of models (try each one until found)
+                if isinstance(models, (list, tuple)):
+                    resource = None
+                    for model in models:
+                        try:
+                            resource = model.objects.get(id=ids)
+                            # If found, break
+                            if resource:
+                                break
+                        except ObjectDoesNotExist:
+                            continue
+                    if not resource:
+                        model_names = ", ".join([m.__name__ for m in models])
+                        raise ResourceNotFoundError(f"No resource with ID '{ids}' found in models: {model_names}")
+                else:
+                    try:
+                        resource = models.objects.get(id=ids)
+                    except ObjectDoesNotExist:
+                        raise ResourceNotFoundError(f"{models.__name__} with ID '{ids}' not found.")
 
-        # DYNAMIC STATUS CODE
-        except DiscordError as e:
-            return JsonResponse(build_http_error_response(code=e.status, error="errors.unexpectedDiscordResponse", details=e.message), status=e.status)
+                # Inject resource(s)
+                kwargs[inject_as] = resource
 
-    return wrapper
+                # Remove key from container if possible (especially kwargs)
+                if source == "kwargs" and key in kwargs:
+                    del kwargs[key]
+                elif source in ("data", "GET") and hasattr(container, "pop"):
+                    container.pop(key, None)
+
+            return view_func(request, *args, **kwargs)
+
+        return _wrapped_view
+
+    return decorator
+
+def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_model=Folder, file_model=File, inject_as="items", source="data", key="ids", max_length=10000):
+    file_annotate = file_annotate or {}
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            container = getattr(request, source, {})
+            ids = container.get(key)
+
+            validate_ids_as_list(ids, max_length=max_length)
+
+            files = list(
+                file_model.objects
+                .filter(id__in=ids)
+                .annotate(**file_annotate)
+                .values(*file_values)
+            )
+            folders = list(folder_model.objects.filter(id__in=ids))
+
+            kwargs[inject_as] = files + folders
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
+
+def check_bulk_permissions(checks, resource_key="items"):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            resources = kwargs.get(resource_key)
+            all_required_passwords = []
+            seen_ids = set()
+
+            for check in checks:
+                try:
+                    for resource in resources:
+                        check().check(request, resource)
+                except MissingOrIncorrectResourcePasswordError as e:
+                    for pwd in e.requiredPasswords:
+                        if pwd["id"] not in seen_ids:
+                            all_required_passwords.append(pwd)
+                            seen_ids.add(pwd["id"])
+
+            # Inject collected passwords if any
+            if all_required_passwords:
+                raise MissingOrIncorrectResourcePasswordError(all_required_passwords)
+
+            return view_func(request, *args, **kwargs)
+
+        return _wrapped_view
+    return decorator

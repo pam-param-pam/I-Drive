@@ -159,7 +159,7 @@ export default {
       submit: onceAtATime(async function () {
          if (this.listing) return
          let res = await createShare({
-            resource_id: this.selected[0].id,
+            item_id: this.selected[0].id,
             password: this.password,
             value: this.time,
             unit: this.unit
