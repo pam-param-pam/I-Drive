@@ -57,7 +57,7 @@ Credentials: `demo`/`demo`
 | add resolution to images                               | ⛔  Coming prob never |
 | move away from cancelToken in axios to abortController | ⛔  Coming prob never |
 
-clean Discord class, tasks, shares, check_resource_perms
+fix urls mapping, clean Discord class, tasks, shares, check_resource_perms
 
 | BUGS                                                                                              |
 |---------------------------------------------------------------------------------------------------|

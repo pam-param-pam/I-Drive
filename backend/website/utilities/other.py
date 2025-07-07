@@ -278,12 +278,12 @@ def create_file_dict(file_values, hide=False) -> FileDict:
         signed_file_id = sign_resource_id_with_expiry(get_attr(file_values, "id"))
 
         if get_attr(file_values, "type") == "Raw image":
-            file_dict["preview_url"] = f"{API_BASE_URL}/file/preview/{signed_file_id}"
+            file_dict["preview_url"] = f"{API_BASE_URL}/files/{signed_file_id}/preview/stream"
 
-        file_dict["download_url"] = f"{API_BASE_URL}/stream/{signed_file_id}"
+        file_dict["download_url"] = f"{API_BASE_URL}/files/{signed_file_id}/stream"
 
         if get_attr(file_values, "thumbnail", None):
-            file_dict["thumbnail_url"] = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+            file_dict["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
 
         if get_attr(file_values, "videoposition__timestamp", None):
             file_dict["video_position"] = get_attr(file_values, "videoposition__timestamp")
@@ -316,12 +316,7 @@ def create_folder_dict(folder_obj: Folder) -> FolderDict:
 
 
 def create_share_dict(share: ShareableLink) -> ShareDict:
-    try:
-        obj = get_resource(share.object_id)
-    except ResourceNotFoundError:
-        # looks like folder/file no longer exist, deleting time!
-        share.delete()
-        raise ResourceNotFoundError()
+    obj = share.get_resource_inside()
 
     isDir = True if isinstance(obj, Folder) else False
 
@@ -357,13 +352,13 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
     else:
         resource_dict = create_file_dict(resource_in_share)
         rsc_id = get_attr(resource_in_share, "id")
-        resource_dict["download_url"] = f"{API_BASE_URL}/share/stream/{share.token}/{rsc_id}"
+        resource_dict["download_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/stream"
 
         if resource_dict.get("thumbnail_url"):
-            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/share/thumbnail/{share.token}/{rsc_id}"
+            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/thumbnail/stream"
 
         if resource_dict.get("preview_url"):
-            resource_dict["preview_url"] = f"{API_BASE_URL}/share/preview/{share.token}/{rsc_id}"
+            resource_dict["preview_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/preview/stream"
 
     return hide_info_in_share_context(share, resource_dict)
 
@@ -663,7 +658,7 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
 def create_moment_dict(moment: Moment) -> dict:
     signed_file_id = sign_resource_id_with_expiry(moment.file.id)
 
-    url = f"{API_BASE_URL}/file/moment/{signed_file_id}/{moment.timestamp}"
+    url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.timestamp}/stream"
 
     return {"file_id": moment.file.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
 
@@ -763,11 +758,15 @@ def validate_ids_as_list(ids: list, max_length: int=1000) -> None:
 def create_subtitle_dict(subtitle: Subtitle) -> dict:
     signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
 
-    url = f"{API_BASE_URL}/file/subtitle/{signed_file_id}/{subtitle.id}"
+    url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{subtitle.id}/stream"
     return {"id": subtitle.id, "language": subtitle.language, "url": url}
 
+def create_share_subtitle_dict(token: str, file_id: str, subtitle: Subtitle) -> dict:
+    url = f"{API_BASE_URL}/shares/{token}/files/{file_id}/subtitles/{subtitle.id}/stream"
+    return {"id": subtitle.id, "language": subtitle.language, "url": url}
 
 def get_file_type(extension: str) -> str:
+    extension = extension.lower()
     if extension in VIDEO_EXTENSIONS:
         return "Video"
     elif extension in AUDIO_EXTENSIONS:

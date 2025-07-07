@@ -18,7 +18,6 @@ from ..utilities.other import send_event, create_file_dict, check_resource_perms
 from ..utilities.throttle import defaultAuthUserThrottle
 
 
-@api_view(['POST', 'PATCH', 'PUT'])
 @permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
 def create_file(request):
@@ -221,10 +220,9 @@ def create_file(request):
         return HttpResponse(status=204)
 
 
-@api_view(['POST'])
 @permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
-@extract_file(source='data')
+@extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def create_thumbnail(request, file_obj):
     message_id = request.data['message_id']

@@ -104,7 +104,7 @@
 
 <script>
 import Clipboard from 'clipboard'
-import { createShare, getAllShares, removeShare } from '@/api/share.js'
+import { createShare, getAllShares, deleteShare } from '@/api/share.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import { onceAtATime } from "@/utils/common.js"
@@ -179,7 +179,7 @@ export default {
       async deleteLink(event, share) {
          event.preventDefault()
 
-         await removeShare({ token: share.token })
+         await deleteShare(share.token)
          this.links = this.links.filter((item) => item.id !== share.id)
          this.$toast.success(this.$t('settings.shareDeleted'))
          if (this.links.length === 0) {

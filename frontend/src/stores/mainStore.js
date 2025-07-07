@@ -66,7 +66,7 @@ export const useMainStore = defineStore("main", {
          } else {
             items = this.items
          }
-         if (!items) return
+         if (!items || !this.settings) return
 
          let fieldName = this.settings.sortingBy
          let hideLocked = this.settings.hideLockedFolders

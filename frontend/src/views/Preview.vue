@@ -221,7 +221,7 @@ import HeaderBar from "@/components/header/HeaderBar.vue"
 import Action from "@/components/header/Action.vue"
 import { getFile, getSubtitles, updateVideoPosition } from "@/api/files.js"
 import { getItems } from "@/api/folder.js"
-import { getShare } from "@/api/share.js"
+import { getShare, getShareSubtitles } from "@/api/share.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { defineAsyncComponent } from "vue"
@@ -413,7 +413,7 @@ export default {
             this.videoRef = this.$refs.video
             this.$refs.video.currentTime = this.file.video_position || 0
             this.lastSentVideoPosition = this.file.video_position || 0
-            this.subtitles = await getSubtitles(this.file.id)
+            await this.fetchSubtitles()
             this.loadSubtitleStyle()
 
          }
@@ -557,8 +557,13 @@ export default {
          }
       },
 
-      resetPrompts() {
-         this.closeHover()
+      async fetchSubtitles() {
+         if (!this.isInShareContext) {
+            this.subtitles = await getSubtitles(this.file.id)
+         } else {
+            this.subtitles = await getShareSubtitles(this.token, this.file.id)
+
+         }
       },
       toggleNavigation: throttle(function() {
          this.showNav = true
@@ -612,7 +617,7 @@ export default {
          // To prevent sending too many requests, send only if the position has changed significantly
          if (Math.abs(position - this.lastSentVideoPosition) >= 10 && this.$refs.video.duration > 60) {
             // Adjust the interval as needed (e.g., every 1 second)
-            updateVideoPosition({ file_id: this.file.id, position: position }, this.file.lockFrom)
+            updateVideoPosition(this.file.id, this.file.lockFrom,{ position })
 
             this.lastSentVideoPosition = position
          }

@@ -60,7 +60,7 @@
 
 <script>
 import Clipboard from 'clipboard'
-import { getAllShares, removeShare } from '@/api/share.js'
+import { getAllShares, deleteShare } from '@/api/share.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import Errors from '@/components/Errors.vue'
@@ -112,15 +112,14 @@ export default {
          event.preventDefault()
 
          if (event.ctrlKey) {
-            await removeShare({ token: share.token })
+            await deleteShare(share.token)
             this.shares = this.shares.filter((item) => item.token !== share.token)
             this.$toast.success(this.$t('toasts.shareDeleted'))
          } else {
             this.showHover({
                prompt: 'share-delete',
-               confirm: () => {
-                  this.closeHover()
-                  removeShare({ token: share.token })
+               confirm: async () => {
+                  await deleteShare(share.token)
                   this.shares = this.shares.filter((item) => item.token !== share.token)
                   this.$toast.success(this.$t('toasts.shareDeleted'))
                }

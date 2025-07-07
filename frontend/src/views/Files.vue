@@ -169,7 +169,7 @@ export default {
             }
          }
          //only set title if its not root folder and isn't locked
-         if (this.currentFolder.parent_id && !this.currentFolder.isLocked) {
+         if (this.currentFolder?.parent_id && !this.currentFolder.isLocked) {
             document.title = `${this.currentFolder.name} - ` + name
          } else {
             document.title = name

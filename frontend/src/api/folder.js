@@ -1,10 +1,10 @@
 import {useMainStore} from "@/stores/mainStore.js"
 import {backendInstance} from "@/utils/networker.js"
 
-export async function getItems(folder_id, lockFrom) {
+export async function getItems(folderId, lockFrom) {
    const store = useMainStore()
 
-   let url = "/folder/" + folder_id
+   let url = `/folders/${folderId}`
    let password = store.getFolderPassword(lockFrom)
 
    let response = await backendInstance.get(url, {
@@ -17,8 +17,8 @@ export async function getItems(folder_id, lockFrom) {
 
 }
 
-export async function getDirs(folder_id) {
-   let url = "/folder/dirs/" + folder_id
+export async function getDirs(folderId) {
+   let url = `/folders/${folderId}/dirs`
 
    let response = await backendInstance.get(url)
    return response.data
@@ -26,8 +26,8 @@ export async function getDirs(folder_id) {
 }
 
 
-export async function lockWithPassword(folder_id, password, oldPassword) {
-   let url = `/folder/password/${folder_id}`
+export async function lockWithPassword(folderId, password, oldPassword) {
+   let url = `/folders/${folderId}/password`
    let headers = {}
 
    if (oldPassword === "") {
@@ -49,10 +49,16 @@ export async function lockWithPassword(folder_id, password, oldPassword) {
 }
 
 export async function create(data, config={}) {
-   let url = "/folder/create"
+   let url = "/folders"
    let response = await backendInstance.post(url, data, config)
    return response.data
 
+}
+
+export async function breadcrumbs(folderId) {
+   let url = `/folders/${folderId}/breadcrumbs`
+   let response = await backendInstance.get(url)
+   return response.data
 }
 
 export async function getUsage(folderId, lockFrom) {
@@ -60,7 +66,7 @@ export async function getUsage(folderId, lockFrom) {
 
    let password = store.getFolderPassword(lockFrom)
 
-   let url = `/folder/usage/${folderId}`
+   let url = `/folders/${folderId}/usage`
    let response = await backendInstance.get(url, {
       headers: {
          "x-resource-password": password
@@ -71,11 +77,10 @@ export async function getUsage(folderId, lockFrom) {
 }
 
 export async function resetPassword(folderId, accountPassword, newPassword) {
-   let url = `/folder/password/reset/${folderId}`
+   let url = `/folders/${folderId}/password/reset`
 
    let data = {"accountPassword": accountPassword, "folderPassword": newPassword}
    let response = await backendInstance.post(url, data)
    return response.data
 
 }
-

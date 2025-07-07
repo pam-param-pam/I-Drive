@@ -35,7 +35,7 @@ def custom_exception_handler(exc, context):
         custom_response_data = {
             'error': 'errors.permissionDenied',
             'code': 403,
-            'details': 'errors.permissionDeniedDetails',
+            'details': exc.detail,
         }
         response.data = custom_response_data
 

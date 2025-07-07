@@ -1,87 +1,131 @@
 from urllib.parse import unquote
 
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
 from .errors import ResourcePermissionError, RootPermissionError, ResourceNotFoundError, MissingOrIncorrectResourcePasswordError
 from .other import get_attr
 from ..models import UserPerms
 
+class BasePermissionWithMessage(BasePermission):
+    message = "Permission denied."
 
-class AdminPerms(BasePermission):
+    def __init__(self):
+        self.user_perms = None
+
     def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+        if not hasattr(request, '_user_perms_cache'):
+            request._user_perms_cache = UserPerms.objects.get(user=request.user)
+        self.user_perms = request._user_perms_cache
+
+        if not self.check_permission(request, view):
+            raise PermissionDenied(self.message)
+        return True
+
+    def check_permission(self, request, view):
+        return False
+
+class AdminPerms(BasePermissionWithMessage):
+    message = "You don't have admin perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.admin or perms.admin) and not perms.globalLock
 
 
-class CmdExecutePerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class CmdExecutePerms(BasePermissionWithMessage):
+    message = "You don't have command execute perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.execute or perms.admin) and not perms.globalLock
 
 
-class CreatePerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class CreatePerms(BasePermissionWithMessage):
+    message = "You don't have create perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.create or perms.admin) and not perms.globalLock
 
 
-class ModifyPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class ModifyPerms(BasePermissionWithMessage):
+    message = "You don't have modify perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.modify or perms.admin) and not perms.globalLock
 
 
-class DeletePerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class DeletePerms(BasePermissionWithMessage):
+    message = "You don't have delete perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.delete or perms.admin) and not perms.globalLock
 
 
-class SharePerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class SharePerms(BasePermissionWithMessage):
+    message = "You don't have share perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.share or perms.admin) and not perms.globalLock
 
 
-class DownloadPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class DownloadPerms(BasePermissionWithMessage):
+    message = "You don't have download perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.download or perms.admin) and not perms.globalLock
 
 
-class LockPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class LockPerms(BasePermissionWithMessage):
+    message = "You don't have lock perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.lock or perms.admin) and not perms.globalLock
 
 
-class ReadPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class ReadPerms(BasePermissionWithMessage):
+    message = "You don't have read perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.read or perms.admin) and not perms.globalLock
 
 
-class SettingsModifyPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class SettingsModifyPerms(BasePermissionWithMessage):
+    message = "You don't have settings modify perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.settings_modify or perms.admin) and not perms.globalLock
 
 
-class DiscordModifyPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class DiscordModifyPerms(BasePermissionWithMessage):
+    message = "You don't have discord modify perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.discord_modify or perms.admin) and not perms.globalLock
 
 
-class ChangePassword(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class ChangePassword(BasePermissionWithMessage):
+    message = "You don't have change password perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.change_password or perms.admin) and not perms.globalLock
 
 
-class ResetLockPerms(BasePermission):
-    def has_permission(self, request, view):
-        perms = UserPerms.objects.get(user=request.user)
+class ResetLockPerms(BasePermissionWithMessage):
+    message = "You don't have lock reset perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
         return (perms.reset_lock or perms.admin) and not perms.globalLock
 
 

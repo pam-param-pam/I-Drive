@@ -11,7 +11,7 @@ from ..utilities.other import validate_and_add_to_zip
 from ..utilities.throttle import defaultAuthUserThrottle
 
 
-@api_view(['POST'])
+
 @permission_classes([IsAuthenticated & DownloadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)

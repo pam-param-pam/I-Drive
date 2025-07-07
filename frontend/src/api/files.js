@@ -1,10 +1,10 @@
 import { useMainStore } from "@/stores/mainStore.js"
 import { backendInstance } from "@/utils/networker.js"
 
-export async function getFile(file_id, lockFrom) {
+export async function getFile(fileId, lockFrom) {
    const store = useMainStore()
 
-   let url = `/file/${file_id}`
+   let url = `/files/${fileId}`
    let password = store.getFolderPassword(lockFrom)
    let response = await backendInstance.get(url, {
       headers: {
@@ -16,15 +16,15 @@ export async function getFile(file_id, lockFrom) {
 }
 
 
-export async function createThumbnail(data) {
-   let url = `/file/thumbnail/create`
+export async function createThumbnail(fileId, data) {
+   let url = `/files/${fileId}/thumbnail`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
 
 export async function createFile(data, password) {
-   let url = `/file/create`
+   let url = `/files`
    let response = await backendInstance.post(url, data, {
       headers: {
          "x-resource-password": password
@@ -36,21 +36,21 @@ export async function createFile(data, password) {
 }
 
 
-export async function editFile(data) {
-   let url = `/file/create`
+export async function editFile(fileId, data) {
+   let url = `/files/${fileId}`
    let response = await backendInstance.put(url, data)
    return response.data
 
 }
 
 
-export async function updateVideoPosition(data, lockFrom) {
-   let url = `/file/video/position`
+export async function updateVideoPosition(fileId, lockFrom, data) {
+   let url = `/files/${fileId}/video-position`
 
    const store = useMainStore()
    let password = store.getFolderPassword(lockFrom)
 
-   let response = await backendInstance.post(url, data, {
+   let response = await backendInstance.put(url, data, {
       headers: {
          "x-resource-password": password
       }
@@ -60,69 +60,67 @@ export async function updateVideoPosition(data, lockFrom) {
 }
 
 
-export async function addTag(data) {
-   let url = `/file/tag/add`
+export async function addTag(fileId, data) {
+   let url = `/files/${fileId}/tag`
    let response = await backendInstance.post(url, data)
    return response.data
 
 }
 
 
-export async function removeTag(data) {
-   let url = `/file/tag/remove`
+export async function removeTag(fileId, data) {
+   let url = `/files/${fileId}/tag`
+   let response = await backendInstance.delete(url, data)
+   return response.data
+
+}
+
+
+export async function addMoment(fileId, data) {
+   let url = `/files/${fileId}/moments`
    let response = await backendInstance.post(url, data)
    return response.data
 
 }
 
 
-export async function addMoment(data) {
-   let url = `/file/moment/add`
-   let response = await backendInstance.post(url, data)
+export async function removeMoment(fileId, timestamp) {
+   let url = `/files/${fileId}/moments/${timestamp}`
+   let response = await backendInstance.delete(url)
    return response.data
 
 }
 
 
-export async function removeMoment(data) {
-   let url = `/file/moment/remove`
-   let response = await backendInstance.post(url, data)
-   return response.data
-
-}
-
-
-export async function getMoments(file_id) {
-   let url = `/file/moments/${file_id}`
+export async function getMoments(fileId) {
+   let url = `/files/${fileId}/moments`
    let response = await backendInstance.get(url)
    return response.data
 }
 
 
-export async function getTags(file_id) {
-   let url = `/file/tags/${file_id}`
+export async function getTags(fileId) {
+   let url = `/files/${fileId}/tags`
    let response = await backendInstance.get(url)
    return response.data
 }
 
 
-export async function removeSubtitle(data) {
-   let url = `/file/subtitles/remove`
-   let response = await backendInstance.post(url, data)
+export async function getSubtitles(fileId) {
+   const url = `/files/${fileId}/subtitles`
+   const response = await backendInstance.get(url)
    return response.data
 }
 
-
-export async function addSubtitle(data) {
-   let url = `/file/subtitles/add`
-   let response = await backendInstance.post(url, data)
+export async function addSubtitle(fileId, data) {
+   const url = `/files/${fileId}/subtitles`
+   const response = await backendInstance.post(url, data)
    return response.data
 }
 
-
-export async function getSubtitles(file_id) {
-   let url = `/file/subtitles/${file_id}`
-   let response = await backendInstance.get(url)
+export async function deleteSubtitle(fileId, subtitleId) {
+   const url = `/files/${fileId}/subtitles/${subtitleId}`
+   const response = await backendInstance.delete(url)
    return response.data
 }
 

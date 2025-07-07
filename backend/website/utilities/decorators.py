@@ -5,7 +5,7 @@ from typing import Callable
 from django.core.exceptions import ObjectDoesNotExist
 
 from ..models import File, Folder, ShareableLink
-from ..utilities.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError
+from ..utilities.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
 from ..utilities.other import verify_signed_resource_id, get_file, validate_ids_as_list
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -13,6 +13,7 @@ is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 def no_gzip(view_func):
     """Decorator to prevent GZipMiddleware from compressing the response."""
+
     @wraps(view_func)
     def wrapped_view(request, *args, **kwargs):
         request.META["HTTP_ACCEPT_ENCODING"] = "identity"
@@ -21,11 +22,13 @@ def no_gzip(view_func):
 
     return wrapped_view
 
+
 def disable_common_errors(view_func):
     view_func.disable_common_errors = True
     return view_func
 
-def extract_from_signed_url(view_func):
+
+def extract_file_from_signed_url(view_func):
     @wraps(view_func)
     def wrapper(request, signed_file_id, *args, **kwargs):
         file_id = verify_signed_resource_id(signed_file_id)
@@ -76,19 +79,18 @@ def extract_item(source="kwargs", key="item_id", inject_as="item_obj"):
     return extract_resources({
         "source": source,
         "key": key,
-        "model": [Folder, File],
+        "model": [File, Folder],
         "inject_as": inject_as,
     })
+
 
 def extract_resource(source="kwargs", key="resource_id", inject_as="resource_obj"):
     return extract_resources({
         "source": source,
         "key": key,
-        "model": [Folder, File, ShareableLink],
+        "model": [File, Folder, ShareableLink],
         "inject_as": inject_as,
     })
-
-
 
 
 def extract_resources(*rules):
@@ -100,9 +102,10 @@ def extract_resources(*rules):
                 key = rule["key"]
                 models = rule["model"]
                 inject_as = rule["inject_as"]
+
                 # Choose correct input container
                 container = kwargs if source == "kwargs" else getattr(request, source, {})
-
+                print(kwargs)
                 if key not in container:
                     raise ValueError(f"Missing key '{key}' in request.{source}")
 
@@ -143,6 +146,7 @@ def extract_resources(*rules):
 
     return decorator
 
+
 def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_model=Folder, file_model=File, inject_as="items", source="data", key="ids", max_length=10000):
     file_annotate = file_annotate or {}
 
@@ -154,18 +158,33 @@ def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_mod
 
             validate_ids_as_list(ids, max_length=max_length)
 
-            files = list(
+            files_qs = (
                 file_model.objects
                 .filter(id__in=ids)
                 .annotate(**file_annotate)
                 .values(*file_values)
             )
-            folders = list(folder_model.objects.filter(id__in=ids))
+            files = list(files_qs)
+            matched_file_ids = {f["id"] for f in files}
+
+            # Get remaining IDs to query from Folder
+            remaining_ids = set(ids) - matched_file_ids
+            folders = list(folder_model.objects.filter(id__in=remaining_ids))
+            matched_folder_ids = {f.id for f in folders}
+
+            # Optional: Check if total matched == input length
+            total_matched = len(matched_file_ids) + len(matched_folder_ids)
+            if total_matched != len(set(ids)):
+                missing = set(ids) - matched_file_ids - matched_folder_ids
+                raise BadRequestError(f"Some IDs were wrong: {missing}")
 
             kwargs[inject_as] = files + folders
             return view_func(request, *args, **kwargs)
+
         return _wrapped_view
+
     return decorator
+
 
 def check_bulk_permissions(checks, resource_key="items"):
     def decorator(view_func):
@@ -185,11 +204,18 @@ def check_bulk_permissions(checks, resource_key="items"):
                             all_required_passwords.append(pwd)
                             seen_ids.add(pwd["id"])
 
-            # Inject collected passwords if any
             if all_required_passwords:
                 raise MissingOrIncorrectResourcePasswordError(all_required_passwords)
 
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view
+
     return decorator
+
+
+from django.urls import path
+from django.http import HttpResponseNotAllowed
+
+
+

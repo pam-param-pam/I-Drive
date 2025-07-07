@@ -37,7 +37,6 @@
 
 <script>
 import { rename } from '@/api/item.js'
-import throttle from 'lodash.throttle'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import { onceAtATime } from "@/utils/common.js"
@@ -69,9 +68,9 @@ export default {
 
       submit: onceAtATime(async function () {
          if (this.canSubmit) {
-            let id = this.selected[0].id
             let new_name = this.name
-            await rename({ "item_id": id, "new_name": new_name })
+            let fileId = this.selected[0].id
+            await rename(fileId, { "new_name": new_name })
 
             let message = this.$t('toasts.itemRenamed')
             this.$toast.success(message)

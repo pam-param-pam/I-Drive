@@ -24,20 +24,19 @@ from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
-from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE
-from ..utilities.decorators import extract_from_signed_url, no_gzip
-from ..utilities.errors import DiscordError, BadRequestError
+from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
+from ..utilities.decorators import extract_file_from_signed_url, no_gzip
+from ..utilities.errors import DiscordError, BadRequestError, FailedToResizeImage
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, create_file_dict
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 from PIL import Image
 from io import BytesIO
 
-@api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @cache_page(60 * 60 * 24)
-@extract_from_signed_url
-def get_preview(request, file_obj: File):
+@extract_file_from_signed_url
+def stream_preview(request, file_obj: File):
     try:
         preview = Preview.objects.get(file=file_obj)
         url = discord.get_attachment_url(file_obj.owner, preview)
@@ -146,16 +145,14 @@ def get_preview(request, file_obj: File):
         pass
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
-@api_view(['GET'])
 @throttle_classes([MediaThrottle])
-@extract_from_signed_url
-def get_thumbnail(request, file_obj: File):
+@extract_file_from_signed_url
+def stream_thumbnail(request, file_obj: File):
     size_param = request.GET.get("size", "original").lower()
 
     # Only allow specific sizes
-    allowed_sizes = {"64", "128", "512", "1024", "original"}
-    if size_param not in allowed_sizes:
-        return JsonResponse({"error": f"Invalid size: must be one of {', '.join(allowed_sizes)}"}, status=400)
+    if size_param not in ALLOWED_THUMBNAIL_SIZES:
+        return JsonResponse({"error": f"Invalid size: must be one of {', '.join(ALLOWED_THUMBNAIL_SIZES)}"}, status=400)
 
     cache_key = f"thumbnail:{file_obj.id}:{size_param}"
     thumbnail_content = cache.get(cache_key)
@@ -206,8 +203,8 @@ def get_thumbnail(request, file_obj: File):
                 resize_duration = time.perf_counter() - resize_start
                 print(f"[resize] Resized {file_obj.id} to {new_width}x{new_height} in {resize_duration:.3f}s")
 
-            except Exception as e:
-                return JsonResponse({"error": f"Failed to resize image: {e}"}, status=400)
+            except Exception:
+                raise FailedToResizeImage("Failed to resize image")
 
         cache.set(cache_key, thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
@@ -225,14 +222,12 @@ def get_thumbnail(request, file_obj: File):
     return response
 
 
-@api_view(['GET'])
 @throttle_classes([MediaThrottle])
-@extract_from_signed_url
+@extract_file_from_signed_url
 def stream_subtitle(request, file_obj: File, subtitle_id):
     check_if_bots_exists(file_obj.owner)
 
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
-    print(subtitle)
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=subtitle.key, iv=subtitle.iv)
 
     url = discord.get_attachment_url(file_obj.owner, subtitle)
@@ -245,12 +240,11 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
     else:
         return JsonResponse(status=discord_response.status_code, data=discord_response.json())
 
-    return  HttpResponse(subtitle_content)
+    return HttpResponse(subtitle_content)
 
-@api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @cache_page(60 * 60 * 24 * 30)
-@extract_from_signed_url
+@extract_file_from_signed_url
 def stream_moment(request, file_obj: File, timestamp):
 
     check_if_bots_exists(file_obj.owner)
@@ -270,10 +264,9 @@ def stream_moment(request, file_obj: File, timestamp):
     return response
 
 # todo  handle >416 Requested Range Not Satisfiable<
-@api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
-@extract_from_signed_url
+@extract_file_from_signed_url
 def stream_file(request, file_obj: File):
     print(f"========={file_obj.name}=========")
 
@@ -394,7 +387,6 @@ def stream_file(request, file_obj: File):
     return response
 
 
-@api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
 def stream_zip_files(request, token):

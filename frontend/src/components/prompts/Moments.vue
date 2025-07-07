@@ -175,7 +175,6 @@ export default {
             let uploadResponse = await upload(fileFormList, config)
             let moment_data = {
                timestamp: timestamp,
-               file_id: this.file.id,
                size: encryptedBlob.size,
                message_id: uploadResponse.data.id,
                attachment_id: uploadResponse.data.attachments[0].id,
@@ -183,12 +182,14 @@ export default {
                key: key,
                message_author_id: uploadResponse.data.author.id
             }
-            let moment = await addMoment(moment_data)
+            let moment = await addMoment(this.file.id, moment_data)
             if (moment) {
                this.moments.push(moment)
             }
+            this.$toast.success(this.$t("toasts.momentUploaded"))
+
          } catch (error) {
-            this.$toast.error(this.$t("toasts.momentUploadFile"))
+            this.$toast.error(this.$t("toasts.momentUploadFailed"))
 
          } finally {
             this.uploading = false
@@ -196,7 +197,7 @@ export default {
          }
       }, 1000),
       async deleteMoment(event, moment) {
-         await removeMoment({ "file_id": this.file.id, "timestamp": moment.timestamp })
+         await removeMoment(this.file.id, moment.timestamp)
          this.moments = this.moments.filter(m => m !== moment)
          this.$toast.success(this.$t("toasts.momentRemoved"))
 

@@ -135,16 +135,16 @@ class FileAdmin(SimpleHistoryAdmin):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
 
         if obj.type == "Raw image":
-            url = f"{API_BASE_URL}/api/file/preview/{signed_file_id}"
+            url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}/stream"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "Image":
-            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
+            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "Video":
-            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
-            poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
+            poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
 
             return format_html(
                 '<video controls style="width: 350px; height: auto;" poster="{}">'
@@ -154,8 +154,8 @@ class FileAdmin(SimpleHistoryAdmin):
                 url
             )
         elif obj.type == "Audio":
-            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
-            # poster_url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
+            # poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
 
             return format_html(
                 '<div style="display: flex; align-items: center;">'
@@ -169,7 +169,7 @@ class FileAdmin(SimpleHistoryAdmin):
                 url
             )
         else:
-            url = f"{API_BASE_URL}/stream/{signed_file_id}?inline=True"
+            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
             return format_html(f'<a href="{url}" target="_blank">{url}</a>')
 
     def formatted_key(self, obj: File):
@@ -271,7 +271,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 
     def thumbnail_media(self, obj: Thumbnail):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/file/thumbnail/{signed_file_id}"
+        url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
     def encryption_method(self, obj: Subtitle):
@@ -369,7 +369,7 @@ class MomentAdmin(admin.ModelAdmin):
 
     def preview(self, obj: Moment):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/file/moment/{signed_file_id}/{obj.timestamp}"
+        url = f"{API_BASE_URL}/files/moment/{signed_file_id}/{obj.timestamp}"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
     def owner(self, obj: Moment):
@@ -405,7 +405,7 @@ class SubtitleAdmin(admin.ModelAdmin):
 
     def preview(self, obj):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/file/subtitle/{signed_file_id}/{obj.id}"
+        url = f"{API_BASE_URL}/files/subtitle/{signed_file_id}/{obj.id}/stream"
         return format_html('<a href="{}" target="_blank">Preview Subtitle</a>', url)
 
     preview.short_description = "Subtitle Preview"

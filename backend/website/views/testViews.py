@@ -12,7 +12,6 @@ from ..utilities.other import get_file, get_attr, get_ip
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
 
-@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 def get_discord_state(request):
     user = User.objects.get(id=1)
@@ -32,7 +31,6 @@ def get_discord_state(request):
 
     return JsonResponse({"blocked": state['blocked'], "retry_after": remaining_time, "bots": bots_dict}, safe=False)
 
-@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 def your_ip(request):
     ip, from_nginx = get_ip(request)

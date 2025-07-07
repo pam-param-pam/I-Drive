@@ -19,7 +19,7 @@ from rest_framework.exceptions import Throttled
 from ..models import ShareableLink
 from ..utilities.constants import cache
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError
+    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, FailedToResizeImage
 from ..utilities.other import build_http_error_response, get_attr
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -116,36 +116,54 @@ class CommonErrorsMiddleware(MiddlewareMixin):
         if getattr(request._view_func, 'disable_common_errors', False):
             return None
 
-        if isinstance(exception, ObjectDoesNotExist):
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""), status=404)
-        elif isinstance(exception, ShareableLink.DoesNotExist):
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found or expired"), status=404)
-        elif isinstance(exception, ResourceNotFoundError):
-            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(exception)), status=404)
-        elif isinstance(exception, (ValidationError, BadRequestError)):
+        #  400 BAD REQUEST
+        if isinstance(exception, (ValidationError, BadRequestError)):
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception)), status=400)
+
         elif isinstance(exception, NoBotsError):
             return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="User has no bots, unable to fetch anything from discord."), status=400)
+
         elif isinstance(exception, NotImplementedError):
             return JsonResponse(build_http_error_response(code=400, error="error.notImplemented", details=str(exception)), status=400)
+
         elif isinstance(exception, InvalidMove):
             return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="Invalid parent, recursion detected."), status=400)
+
         elif isinstance(exception, KeyError):
             if is_dev_env:
                 traceback.print_exc()
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
+
         elif isinstance(exception, (ValueError, TypeError)):
             if is_dev_env:
                 traceback.print_exc()
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
+
         elif isinstance(exception, OverflowError):
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
+
+        #  403 BAD REQUEST
         elif isinstance(exception, ResourcePermissionError):
             return JsonResponse(build_http_error_response(code=403, error="errors.resourceAccessForbidden", details=str(exception)), status=403)
+
         elif isinstance(exception, RootPermissionError):
             return JsonResponse(build_http_error_response(code=403, error="errors.rootFolderNoAccess", details="You cannot perform this action on a 'root' folder"), status=403)
+
+        # 404 BAD REQUEST
+        elif isinstance(exception, ObjectDoesNotExist):
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""), status=404)
+
+        elif isinstance(exception, ShareableLink.DoesNotExist):
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found or expired"), status=404)
+
+        elif isinstance(exception, ResourceNotFoundError):
+            return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(exception)), status=404)
+
+        # 429 RATE LIMIT
         elif isinstance(exception, Throttled):
-            return JsonResponse(build_http_error_response(code=403, error="errors.rateLimit", details=str(exception)), status=403)
+            return JsonResponse(build_http_error_response(code=429, error="errors.rateLimit", details=str(exception)), status=429)
+
+        # 469 INVALID RESOURCE PASSWORD
         elif isinstance(exception, MissingOrIncorrectResourcePasswordError):
             json_error = build_http_error_response(code=469, error="errors.missingOrIncorrectResourcePassword", details=str(exception))
             list_of_dicts = []
@@ -153,18 +171,25 @@ class CommonErrorsMiddleware(MiddlewareMixin):
                 list_of_dicts.append({"id": get_attr(folder, "id"), "name": get_attr(folder, "name")})
             json_error["requiredFolderPasswords"] = list_of_dicts
             return JsonResponse(json_error, status=469)
-        elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord)):
+
+        # 500 INTERNAL SERVER ERROR
+        elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord, FailedToResizeImage)):
             return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
+
+        # 503 SERVICE UNAVAILABLE
         elif isinstance(exception, CannotProcessDiscordRequestError):
             return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(exception)), status=503)
+
         elif isinstance(exception, DiscordBlockError):
             res = build_http_error_response(code=503, error="errors.discordBlocked", details=str(exception))
             res['retry_after'] = exception.retry_after
             return JsonResponse(res, status=503)
+
         elif isinstance(exception, httpx.ConnectError):
             return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(exception)), status=503)
+
+        # OTHER
         elif isinstance(exception, DiscordError):
             return JsonResponse(build_http_error_response(code=exception.status, error="errors.unexpectedDiscordResponse", details=exception.message), status=exception.status)
 
-        # If not handled here, return None to propagate
         return None

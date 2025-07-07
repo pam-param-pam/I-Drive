@@ -95,7 +95,7 @@
 </template>
 
 <script>
-import { addSubtitle, getSubtitles, removeSubtitle } from "@/api/files.js"
+import { addSubtitle, getSubtitles, deleteSubtitle } from "@/api/files.js"
 import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
@@ -208,7 +208,6 @@ export default {
 
             let subtitle_data = {
                language: this.newLanguage,
-               file_id: file.id,
                size: encryptedBlob.size,
                message_id: uploadResponse.data.id,
                attachment_id: uploadResponse.data.attachments[0].id,
@@ -217,7 +216,7 @@ export default {
                message_author_id: uploadResponse.data.author.id
             }
 
-            let subtitle_res = await addSubtitle(subtitle_data)
+            let subtitle_res = await addSubtitle(file.id, subtitle_data)
 
             this.$toast.success(this.$t("toasts.subtitleAdded"))
             this.subtitles.push(subtitle_res)
@@ -234,7 +233,7 @@ export default {
       },
 
       async removeSubtitle(subtitle_id) {
-         await removeSubtitle({ "subtitle_id": subtitle_id })
+         await deleteSubtitle({ "subtitle_id": subtitle_id })
          this.subtitles = this.subtitles.filter(subtitle => subtitle.id !== subtitle_id)
          this.$toast.success(this.$t("toasts.subtitleRemoved"))
       },

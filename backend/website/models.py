@@ -19,7 +19,8 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES, ALLOWED_THUMBNAIL_SIZES
+from .utilities.errors import ResourceNotFoundError
 from .utilities.helpers import chop_long_file_name
 
 
@@ -353,8 +354,16 @@ class Thumbnail(DiscordAttachmentMixin):
     history = HistoricalRecords()
 
     def delete(self, *args, **kwargs):
+        # Delete all possible thumbnail cache keys for this file
+
+        for size in ALLOWED_THUMBNAIL_SIZES:
+            cache_key = f"thumbnail:{self.file.id}:{size}"
+            cache.delete(cache_key)
+
+        # Also delete the base cache key if needed (like in your original)
         cache.delete(f"thumbnail:{self.file.id}")
-        super(Thumbnail, self).delete()
+
+        super(Thumbnail, self).delete(*args, **kwargs)
 
     def __str__(self):
         return f"Thumbnail=[{self.file.name}]"
@@ -475,7 +484,16 @@ class ShareableLink(models.Model):
     def is_locked(self):
         return self.password
 
+    def get_resource_inside(self):
+        from .utilities.other import get_resource
 
+        try:
+            obj = get_resource(self.object_id)
+            return obj
+        except ResourceNotFoundError:
+            # looks like folder/file no longer exist, deleting time!
+            self.delete()
+            raise ResourceNotFoundError()
 class UserZIP(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
@@ -527,9 +545,10 @@ class Tag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     history = HistoricalRecords()
+    #todo add a tag id here
 
     def __str__(self):
-        return f"Tag( {self.name} )"
+        return f"Tag({self.name})"
 
 
 class Webhook(models.Model):

@@ -415,7 +415,7 @@ export const useUploadStore = defineStore("upload2", {
                //    this.filesUploading.push(file.fileObj)
                //    this.setStatus(file.frontendId, fileUploadStatus.failed)
                // }
-               //todo HANDLE THIS OMFG
+               //todo set error for failed files
             })
 
          }

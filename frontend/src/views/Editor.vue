@@ -267,7 +267,6 @@ export default {
                let uploadResponse = await upload(formData, {})
 
                let file_data = {
-                  file_id: this.file.id,
                   offset: 0,
                   fragment_size: encryptedBlob.size,
                   message_id: uploadResponse.data.id,
@@ -278,7 +277,7 @@ export default {
                   crc: crc
                }
 
-               await editFile(file_data)
+               await editFile(this.file.id, file_data)
                this.copyRaw = this.raw
             }
             document.querySelector("#save-button").classList.remove("loading")

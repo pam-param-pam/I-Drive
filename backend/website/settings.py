@@ -54,25 +54,31 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django_user_agents.middleware.UserAgentMiddleware',
-    'website.utilities.middlewares.CommonErrorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',           # Must be first for security-related headers
+    'django.contrib.sessions.middleware.SessionMiddleware',    # Sessions need to come before auth and CSRF
+    'corsheaders.middleware.CorsMiddleware',                   # CORS middleware should be early, before CommonMiddleware
+    'django.middleware.common.CommonMiddleware',                # Handles common tasks like URL normalization
+    'django.middleware.csrf.CsrfViewMiddleware',                # CSRF protection after sessions and before auth
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Auth depends on sessions and CSRF
+    'django.contrib.messages.middleware.MessageMiddleware',     # Message framework depends on auth
+    'django.middleware.gzip.GZipMiddleware',                     # Can be late but before clickjacking (optional)
+    'django_user_agents.middleware.UserAgentMiddleware',        # Custom user agent detection; OK here
+    'website.utilities.middlewares.CommonErrorsMiddleware',     # Custom middlewares; keep after core Django middleware
     'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.FailedRequestLoggerMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',       # History tracking middleware; typically last but before clickjacking
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',   # Usually last; sets security headers
 ]
 
 CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://192.168.1.14:5173",
+]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http:\/\/localhost:\d+$',

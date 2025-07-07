@@ -7,7 +7,7 @@ export async function getAllShares() {
 }
 
 export async function getShare(token, folderId = "") {
-   let url = `/share/${token}`
+   let url = `/shares/${token}`
    if (folderId) url = url + `/${folderId}`
 
 
@@ -19,22 +19,26 @@ export async function getShare(token, folderId = "") {
    return response.data
 }
 
-export async function removeShare(data) {
-   let url = "/share/delete"
-   let response = await backendInstance.patch(url, data)
+export async function deleteShare(token) {
+   let url = `/shares/${token}`
+   let response = await backendInstance.delete(url)
    return response.data
-
 }
 
 export async function createShare(data) {
-   let url = "/share/create"
+   let url = `/shares`
    let response = await backendInstance.post(url, data)
    return response.data
-
 }
 
 export async function createShareZIP(token, data) {
-   let url = "/share/zip/" + token
+   let url = `/shares/${token}/zip`
    let response = await backendInstance.post(url, data)
+   return response.data
+}
+
+export async function getShareSubtitles(token, fileId) {
+   let url = `/shares/${token}/files/${fileId}/subtitles`
+   let response = await backendInstance.get(url)
    return response.data
 }

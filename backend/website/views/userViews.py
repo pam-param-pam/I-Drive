@@ -19,7 +19,6 @@ from ..utilities.other import logout_and_close_websockets, create_webhook_dict, 
 from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle, LoginThrottle
 
 
-@api_view(['POST'])
 @throttle_classes([PasswordChangeThrottle])
 @permission_classes([IsAuthenticated & ChangePassword])
 def change_password(request):
@@ -40,10 +39,9 @@ def change_password(request):
     return JsonResponse(data, status=200)
 
 
-@api_view(['POST'])
 @throttle_classes([RegisterThrottle])
 def register_user(request):
-    raise ResourcePermissionError("This functionality is turned off.")
+    # raise ResourcePermissionError("This functionality is turned off.")
     username = request.data['username']
     password = request.data['password']
 
@@ -55,7 +53,6 @@ def register_user(request):
     return HttpResponse(status=204)
 
 
-@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 @extract_folder()
@@ -74,7 +71,6 @@ def can_upload(request, folder_obj: Folder):
                          "extensions": {"video": VIDEO_EXTENSIONS, "audio": AUDIO_EXTENSIONS, "image": IMAGE_EXTENSIONS}})
 
 
-@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def users_me(request):
@@ -100,7 +96,6 @@ def users_me(request):
     return JsonResponse(response, safe=False, status=200)
 
 
-@api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SettingsModifyPerms])
 def update_settings(request):
@@ -166,7 +161,6 @@ class MyTokenCreateView(TokenCreateView):
         return super().post(request, **kwargs)
 
 
-@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def get_discord_settings(request):
@@ -187,7 +181,6 @@ def get_discord_settings(request):
                          "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked})
 
 
-@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def add_webhook(request):
@@ -214,7 +207,6 @@ def add_webhook(request):
     return JsonResponse(create_webhook_dict(webhook), status=200)
 
 
-@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def delete_webhook(request):
@@ -231,7 +223,6 @@ def delete_webhook(request):
     return HttpResponse(status=204)
 
 
-@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def add_bot(request):
@@ -257,7 +248,6 @@ def add_bot(request):
     return JsonResponse(create_bot_dict(bot), status=200)
 
 
-@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def delete_bot(request):
@@ -277,7 +267,6 @@ def delete_bot(request):
     return HttpResponse(status=204)
 
 
-@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def enable_bot(request):
@@ -302,7 +291,6 @@ def enable_bot(request):
     return HttpResponse(status=204)
 
 
-@api_view(['PUT'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def update_upload_destination(request):
@@ -334,7 +322,6 @@ def update_upload_destination(request):
 
     return JsonResponse({"can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked}, status=200)
 
-@api_view(['PUT'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated])
 def reset_discord_state(request):

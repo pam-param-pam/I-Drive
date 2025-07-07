@@ -115,12 +115,12 @@ export default {
          let tagName = this.tagName.trim()
          this.tagName = ''
 
-         await addTag({ tag_name: tagName, file_id: this.file.id })
+         await addTag(this.file.id, { tag_name: tagName })
          this.tags.push(tagName)
       }),
 
       removeTag: onceAtATime(async function (tagName) {
-         await removeTag({ tag_name: tagName, file_id: this.file.id })
+         await removeTag(this.file.id, { tag_name: tagName })
 
          this.tags = this.tags.filter((tag) => tag !== tagName)
       })

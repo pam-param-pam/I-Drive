@@ -158,7 +158,6 @@ export default {
             let uploadResponse = await upload(fileFormList, config)
 
             let thumbnail_data = {
-               file_id: this.file.id,
                size: encryptedBlob.size,
                message_id: uploadResponse.data.id,
                attachment_id: uploadResponse.data.attachments[0].id,
@@ -166,7 +165,7 @@ export default {
                key: key,
                message_author_id: uploadResponse.data.author.id
             }
-            await createThumbnail(thumbnail_data)
+            await createThumbnail(this.file.id, thumbnail_data)
             this.$toast.success(this.$t("toasts.thumbnailChanged"))
 
             this.closeHover()

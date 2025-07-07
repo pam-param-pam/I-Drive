@@ -12,7 +12,6 @@ class ResourceNotFoundError(IDriveException):
 class ResourcePermissionError(IDriveException):
     """Raised when user has not enough privilege to access a resource"""
 
-
 class BadRequestError(IDriveException):
     """Raised when user's request has some bad/missing data in it"""
 
@@ -33,6 +32,9 @@ class DiscordBlockError(IDriveException):
 
 class CannotProcessDiscordRequestError(IDriveException):
     """Raised when we are unable to make requests to discord due to being overloaded"""
+
+class FailedToResizeImage(IDriveException):
+    """Raised when we are unable to resize an image for unknown reasons"""
 
 class DiscordError(IDriveException):
     def __init__(self, message="Unexpected Discord Error.", status=0):
