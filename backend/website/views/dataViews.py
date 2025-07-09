@@ -2,7 +2,6 @@ import time
 from collections import defaultdict
 
 import ujson
-from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldError
 from django.db.models import Value, IntegerField
 from django.db.models.aggregates import Sum, Count
@@ -19,7 +18,7 @@ from ..utilities.Discord import discord
 from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckReady, CheckTrash
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer
 from ..utilities.constants import cache, MAX_DISCORD_MESSAGE_SIZE
-from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource, extract_items_from_ids_annotated, check_bulk_permissions, \
+from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource, check_bulk_permissions, \
     extract_items
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
@@ -380,7 +379,7 @@ def get_subtitles(request, file_obj: File):
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_items(source='data')
-@check_bulk_permissions([*default_checks])
+@check_bulk_permissions(default_checks)
 def ultra_download_metadata(request, items):
     files = []
 

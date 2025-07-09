@@ -50,7 +50,7 @@ def check_resource_permissions(checks: list, resource_key):
             resource = kwargs.get(resource_key)
             if not resource:
                 raise ValueError(f"Missing '{resource_key}' in kwargs")
-
+            print(f"got checks: {checks}")
             for Check in checks:
                 Check().check(request, resource)
 
@@ -207,6 +207,7 @@ def check_bulk_permissions(checks, resource_key="items"):
             resources = kwargs.get(resource_key)
             all_required_passwords = []
             seen_ids = set()
+            print(f"got checks: {checks}")
 
             for check in checks:
                 try:

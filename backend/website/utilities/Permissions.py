@@ -3,9 +3,10 @@ from urllib.parse import unquote
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from .errors import ResourcePermissionError, RootPermissionError, ResourceNotFoundError, MissingOrIncorrectResourcePasswordError
+from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError
 from .other import get_attr
 from ..models import UserPerms
+
 
 class BasePermissionWithMessage(BasePermission):
     message = "Permission denied."
@@ -23,7 +24,8 @@ class BasePermissionWithMessage(BasePermission):
         return True
 
     def check_permission(self, request, view):
-        return False
+        return NotImplementedError()
+
 
 class AdminPerms(BasePermissionWithMessage):
     message = "You don't have admin perms."
@@ -93,6 +95,7 @@ class ReadPerms(BasePermissionWithMessage):
     message = "You don't have read perms."
 
     def check_permission(self, request, view):
+        # return False
         perms = self.user_perms
         return (perms.read or perms.admin) and not perms.globalLock
 
@@ -172,7 +175,7 @@ class CheckReady(BaseResourceCheck):
     def check(self, request, resource):
         ready = self._require_attr(resource, 'ready')
         if not ready:
-            raise ResourceNotFoundError("Resource is not ready")
+            raise ResourcePermissionError("Resource is not ready")
 
 
 class CheckFolderLock(BaseResourceCheck):
@@ -220,4 +223,31 @@ class CheckFolderLock(BaseResourceCheck):
         }
 
 
-default_checks = [CheckOwnership, CheckFolderLock, CheckTrash, CheckReady]
+class CheckGroup:
+    def __init__(self, *check_classes: type):
+        self.checks = list(check_classes)
+
+    def __and__(self, other):
+        if isinstance(other, CheckGroup):
+            return CheckGroup(*(self.checks + other.checks))
+        elif isinstance(other, type):
+            return CheckGroup(*(self.checks + [other]))
+        else:
+            raise TypeError("CheckGroup can only combine with classes or other CheckGroups")
+
+    def __sub__(self, check_class: type):
+        filtered = [cls for cls in self.checks if cls != check_class]
+        return CheckGroup(*filtered)
+
+    def __iter__(self):
+        return iter(self.checks)
+
+    def __str__(self):
+        names = [cls.__name__ for cls in self.checks]
+        return f"CheckGroup({', '.join(names)})"
+
+    def __repr__(self):
+        return self.__str__()
+
+
+default_checks = CheckGroup(CheckOwnership, CheckFolderLock, CheckTrash, CheckReady)

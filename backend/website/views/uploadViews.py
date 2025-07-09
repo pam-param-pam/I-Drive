@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, throttle_classes, permission_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Fragment, Thumbnail
-from ..utilities.Permissions import CreatePerms, default_checks, CheckTrash
+from ..utilities.Permissions import CreatePerms, default_checks, CheckTrash, ModifyPerms
 from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import extract_file, check_resource_permissions
@@ -164,7 +164,7 @@ def create_file(request):
     return JsonResponse(response_json, safe=False, status=200)
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & CreatePerms])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 def edit_file(request):
     check_if_bots_exists(request.user)

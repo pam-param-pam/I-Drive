@@ -22,4 +22,3 @@ def chop_long_file_name(file_name: str) -> str:
             shortened_file_name += "." + file_extension
         return shortened_file_name
     return file_name
-

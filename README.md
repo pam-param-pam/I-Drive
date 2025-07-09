@@ -57,7 +57,7 @@ Credentials: `demo`/`demo`
 | add resolution to images                               | ⛔  Coming prob never |
 | move away from cancelToken in axios to abortController | ⛔  Coming prob never |
 
-fix urls mapping, clean Discord class, tasks, shares, check_resource_perms
+fix urls mapping, clean Discord class, tasks, shares
 
 | BUGS                                                                                              |
 |---------------------------------------------------------------------------------------------------|
@@ -67,10 +67,8 @@ fix urls mapping, clean Discord class, tasks, shares, check_resource_perms
 | fix mobile number download info frontend                                                          |
 | CannotProcessDiscordRequestError in tasks                                                         |
 | remove dangling discord attachments is buggy at best                                              |
-| items dont appear in trash                                                                        |
 | zip timeouts on thousands of files                                                                |
 | share -> settings error                                                                           |
-| select a file, drag another file (from disk) to a folder(to upload), the selected file gets moved |
 | upload file prompt displays on top of context menu                                                |
 | handle empty files (upload, editor, anything else)                                                |
 | fix next/prev on desktop with images move                                                         |

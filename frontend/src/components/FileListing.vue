@@ -606,7 +606,7 @@ export default {
 
       async drop(event) {
          event.preventDefault()
-         if (!this.currentFolder || this.isSearchActive) {
+         if ((!this.currentFolder || this.isSearchActive) && event.dataTransfer.files.length > 0) {
             this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
             this.$emit('dragLeave')
             return

@@ -184,6 +184,7 @@ export default {
       },
 
       async drop(event) {
+         if (event.dataTransfer.files.length > 0) return
          if (!this.canDrop) return
          if (this.selectedCount === 0) return
 

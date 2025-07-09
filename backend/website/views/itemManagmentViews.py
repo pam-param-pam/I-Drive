@@ -44,7 +44,7 @@ def create_folder(request, parent):
 @extract_folder(source="data", key="new_parent_id", inject_as="new_parent_obj")
 @check_resource_permissions(default_checks, resource_key="new_parent_obj")
 @extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
-@check_bulk_permissions([*default_checks, CheckRoot])
+@check_bulk_permissions(default_checks & CheckRoot)
 def move(request, new_parent_obj, items):
     new_parent_id = new_parent_obj.id
 
@@ -63,7 +63,7 @@ def move(request, new_parent_obj, items):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
-@check_bulk_permissions([CheckOwnership, CheckFolderLock, CheckReady, CheckRoot])
+@check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def move_to_trash(request, items):
     """This view uses values instead of ORM objects for files"""
     for item in items:
@@ -79,7 +79,7 @@ def move_to_trash(request, items):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
-@check_bulk_permissions([CheckOwnership, CheckFolderLock, CheckReady, CheckRoot])
+@check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def restore_from_trash(request, items):
     """This view uses values instead of ORM objects for files"""
     for item in items:
@@ -113,7 +113,7 @@ def delete(request, items):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_item()
-@check_resource_permissions([*default_checks, CheckRoot], resource_key="item_obj")
+@check_resource_permissions(default_checks, resource_key="item_obj")
 def rename(request, item_obj):
     new_name = request.data["new_name"]
 
@@ -132,7 +132,7 @@ def rename(request, item_obj):
     return HttpResponse(status=204)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & LockPerms])
+@permission_classes([IsAuthenticated & ModifyPerms & LockPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_folder()
 @check_resource_permissions([CheckOwnership, CheckReady, CheckRoot, CheckTrash], resource_key="folder_obj")
@@ -153,10 +153,10 @@ def change_folder_password(request, folder_obj):
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ResetLockPerms])
+@permission_classes([IsAuthenticated & ModifyPerms & ResetLockPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_folder()
-@check_resource_permissions([*default_checks, CheckRoot], resource_key="folder_obj")
+@check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
 def reset_folder_password(request, folder_obj):
     account_password = request.data['accountPassword']
     new_folder_password = request.data['folderPassword']

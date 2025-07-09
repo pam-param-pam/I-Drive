@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_subtitle
 from ..models import UserSettings, ShareableLink, UserZIP, Subtitle
-from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady
+from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady, ReadPerms, ModifyPerms
 from ..utilities.Serializers import ShareSerializer
 from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import extract_item, check_resource_permissions
@@ -20,7 +20,7 @@ from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottl
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & SharePerms])
+@permission_classes([IsAuthenticated & ReadPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
 def get_shares(request):
     shares = ShareableLink.objects.filter(owner=request.user)
@@ -40,7 +40,7 @@ def get_shares(request):
 
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated & SharePerms])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
 def delete_share(request, token):
     share = ShareableLink.objects.get(token=token)
@@ -52,10 +52,10 @@ def delete_share(request, token):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & SharePerms])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_item(source="data")
-@check_resource_permissions([*default_checks], resource_key="item_obj")
+@check_resource_permissions(default_checks, resource_key="item_obj")
 def create_share(request, item_obj):
     value = abs(int(request.data['value']))
 
