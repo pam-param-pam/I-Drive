@@ -87,7 +87,7 @@
             <action :icon='viewIcon' :label="$t('buttons.switchView')" @action='switchView' />
             <action
                v-if='headerButtons.info'
-               :disabled='searchActive && !selectedCount > 0'
+               :disabled='selectedCount <= 0 && (searchActive || !this.currentFolder)'
                :label="$t('buttons.info')"
                icon='info'
                show='info'

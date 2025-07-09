@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragment, UserPerms
 from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
-from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks
+from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks, CreatePerms, ModifyPerms, ReadPerms, AdminPerms
 from ..utilities.Serializers import WebhookSerializer, BotSerializer
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS
 from ..utilities.decorators import check_resource_permissions, extract_folder
@@ -43,7 +43,7 @@ def change_password(request):
 @api_view(['POST'])
 @throttle_classes([RegisterThrottle])
 def register_user(request):
-    # raise ResourcePermissionError("This functionality is turned off.")
+    raise ResourcePermissionError("This functionality is turned off.")
     username = request.data['username']
     password = request.data['password']
 
@@ -56,7 +56,7 @@ def register_user(request):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & CreatePerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def can_upload(request, folder_obj: Folder):
@@ -100,7 +100,7 @@ def users_me(request):
 
 @api_view(['PUT'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & SettingsModifyPerms])
+@permission_classes([IsAuthenticated & ModifyPerms & SettingsModifyPerms])
 def update_settings(request):
     locale = request.data.get('locale')
     hideLockedFolders = request.data.get('hideLockedFolders')
@@ -165,7 +165,7 @@ class MyTokenCreateView(TokenCreateView):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated & ReadPerms])
 def get_discord_settings(request):
     settings = request.user.discordsettings
     webhooks = Webhook.objects.filter(owner=request.user).order_by('created_at')
@@ -188,7 +188,7 @@ def get_discord_settings(request):
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([DiscordModifyPerms])
+@permission_classes([ModifyPerms & DiscordModifyPerms])
 def add_webhook(request):
     url = request.data.get('webhook_url')
     if urlparse(url).netloc != "discord.com":
@@ -214,7 +214,7 @@ def add_webhook(request):
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([DiscordModifyPerms])
+@permission_classes([ModifyPerms & DiscordModifyPerms])
 def delete_webhook(request, webhook_id):
     webhook = get_webhook(request, webhook_id)
 
@@ -228,7 +228,7 @@ def delete_webhook(request, webhook_id):
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([DiscordModifyPerms])
+@permission_classes([ModifyPerms & DiscordModifyPerms])
 def add_bot(request):
     token = request.data.get('token')
 
@@ -253,7 +253,7 @@ def add_bot(request):
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([DiscordModifyPerms])
+@permission_classes([ModifyPerms & DiscordModifyPerms])
 def delete_bot(request, bot_id):
     try:
         bot = Bot.objects.get(discord_id=bot_id, owner=request.user)
@@ -271,7 +271,7 @@ def delete_bot(request, bot_id):
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([DiscordModifyPerms])
+@permission_classes([ModifyPerms & DiscordModifyPerms])
 def enable_bot(request, bot_id):
     try:
         bot = Bot.objects.get(discord_id=bot_id, owner=request.user)
@@ -293,7 +293,7 @@ def enable_bot(request, bot_id):
 
 @api_view(['PATCH'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([DiscordModifyPerms])
+@permission_classes([ModifyPerms & DiscordModifyPerms])
 def update_upload_destination(request):
     guild_id = request.data['guild_id']
     channel_id = request.data['channel_id']
@@ -325,7 +325,7 @@ def update_upload_destination(request):
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([IsAuthenticated])
+@permission_classes([AdminPerms & IsAuthenticated])
 def reset_discord_state(request):
     discord.remove_user_state(request.user)
     return HttpResponse(status=204)

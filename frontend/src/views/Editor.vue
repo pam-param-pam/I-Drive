@@ -40,7 +40,6 @@
 
 <script>
 import { editFile, getFile, getFileRawData } from "@/api/files.js"
-import { breadcrumbs } from "@/api/item.js"
 import { getShare } from "@/api/share.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
@@ -54,6 +53,7 @@ import { canUpload } from "@/api/user.js"
 import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
+import { breadcrumbs } from "@/api/folder.js"
 
 export default {
    name: "editor",

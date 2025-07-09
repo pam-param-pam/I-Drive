@@ -43,6 +43,7 @@ import { theme } from "@/utils/constants"
 import throttle from "lodash.throttle"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
+import { getItems } from "@/api/folder.js"
 
 export default {
    name: "shell",
@@ -89,7 +90,7 @@ export default {
       }
    },
    methods: {
-      ...mapActions(useMainStore, ["toggleShell", "setShellSettings", "pushShellContent", "clearShellContent", "setItems"]),
+      ...mapActions(useMainStore, ["toggleShell", "setShellSettings", "pushShellContent", "clearShellContent", "currentFolder", "user"]),
       focusInput() {
          this.$refs.input?.focus()
       },
@@ -189,18 +190,18 @@ export default {
          this.scroll()
       },
 
-      submit(event) {
+      async submit(event) {
          let cmd = event.target.innerText.trim()
 
          if (cmd === "") {
             return
          }
-         if (cmd === "clear") {
+         else if (cmd === "clear") {
             this.clearContent()
             event.target.innerHTML = ""
             return
          }
-         if (cmd === "exit") {
+         else if (cmd === "exit") {
             event.target.innerHTML = ""
             this.toggleShell()
             return
@@ -215,18 +216,30 @@ export default {
             this.pushContent("toggled", "success")
             return
          }
-         if (cmd === "ls") {
-            this.items.forEach((item) => {
-               this.pushContent( item.name)
-            })
+         else if (cmd === "ls") {
+            try {
+               let context_folder = this.currentFolder.id ? this.currentFolder : this.user.root
+               let res = await getItems(context_folder)
+               console.log(res)
+               let items = res.folder.children
+
+               items.forEach((item) => {
+                  this.pushContent( item.name)
+               })
+            }
+            catch (e) {
+               this.pushContent( e, "error")
+
+            }
+
          }
-         if (cmd === "sudo hack obama") {
+         else if (cmd === "sudo hack obama") {
             this.pushContent( "Hacking main frame...", "success")
             this.pushContent( "...", "success")
             this.pushContent( "ERROR", "warn")
             this.pushContent( "Incoming missiles", "error")
          }
-         if (cmd.startsWith("eval")) {
+         else if (cmd.startsWith("eval")) {
             try {
                eval(cmd.replace("eval ", ""));
             } catch (error) {

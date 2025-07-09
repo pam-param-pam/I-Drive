@@ -104,22 +104,22 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setSearchFilters", "setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
-
       ...mapActions(useUploadStore, ["startUpload"]),
 
       async onSearchQuery(searchParams) {
-
          this.setLoading(true)
-         let lockFrom = this.currentFolder.lockFrom
+         let lockFrom = this.currentFolder?.lockFrom
          let password = this.getFolderPassword(lockFrom)
          try {
-            let items = await search(searchParams, lockFrom, password)
             this.setSearchActive(true)
             this.setDisabledCreation(true)
+            let items = await search(searchParams, lockFrom, password)
             this.setSearchItems(items)
-         } catch (e) {
-            console.warn(e)
-            //ignore canceled errors
+         } catch (error) {
+            if (error.code === "ERR_CANCELED") return
+            console.log(error)
+            this.setError(error)
+
          } finally {
             this.setLoading(false)
          }
