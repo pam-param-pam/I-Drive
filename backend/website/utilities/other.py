@@ -2,31 +2,29 @@ import base64
 import hashlib
 import json
 import os
+import time
 from collections import defaultdict
-from datetime import datetime, timedelta
-from typing import Union, List, Dict, Optional, Tuple, Any
+from typing import Union, List, Dict, Optional
 from urllib.parse import unquote
 
 import requests
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.db.models import Q
 from django.db.models.aggregates import Sum
-from django.utils import timezone
 
 from .Discord import discord
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment, VideoMetadataTrackMixin, DiscordAttachmentMixin, \
+from .Serializers import FolderSerializer, FileSerializer
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment, DiscordAttachmentMixin, \
     VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle
 from ..tasks import queue_ws_event, prefetch_next_fragments
-from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ShareDict, ResponseDict, ZipFileDict, ErrorDict
-from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
+from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ResponseDict, ZipFileDict, ErrorDict
+from ..utilities.constants import API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
     EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError, NoBotsError
 
-signer = TimestampSigner()
-
 _SENTINEL = object()  # Unique object to detect omitted default
+
 
 def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
     """Helper function to get attribute from either an object or a dictionary.
@@ -75,26 +73,6 @@ def format_wait_time(seconds: int) -> str:
         return f"{seconds} second{'s' if seconds > 1 else ''}"
 
 
-# Function to sign a URL with an expiration time
-def sign_resource_id_with_expiry(file_id: str) -> str:
-    signed_file_id = signer.sign(file_id)
-    return signed_file_id
-
-
-# Function to verify and extract the file id
-def verify_signed_resource_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
-    try:
-        file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=expiry_seconds))
-        return file_id
-    except (BadSignature, SignatureExpired):
-        raise ResourcePermissionError("URL not valid or expired.")
-
-
-def formatDate(date: datetime) -> str:
-    localized_date = timezone.localtime(date)
-    return f"{localized_date.year}-{localized_date.month:02d}-{localized_date.day:02d} {localized_date.hour:02d}:{localized_date.minute:02d}:{localized_date.second:02d}"
-
-
 def logout_and_close_websockets(user_id: int) -> None:
     send_event(user_id, 0, None, EventCode.FORCE_LOGOUT)
     queue_ws_event.delay(
@@ -137,17 +115,20 @@ def encrypt_message(key: str, data: Union[str, List, Dict]) -> str:
     return base64.b64encode(iv + encrypted).decode('utf-8')
 
 
-def group_and_send_event(user_id: int, request_id: int,  op_code: EventCode, resources: List[Union[File, Folder]]) -> None:
+def group_and_send_event(user_id: int, request_id: int, op_code: EventCode, resources: List[Union[File, Folder]]) -> None:
     """Group files by parent object and send event for each parent"""
     grouped_files = defaultdict(list)
     parent_mapping = {}
 
+    folder_serializer = FolderSerializer()
+    file_serializer = FileSerializer()
+
     for resource in resources:
         parent_mapping[resource.parent_id] = resource.parent
         if isinstance(resource, Folder):
-            grouped_files[resource.parent_id].append(create_folder_dict(resource))
+            grouped_files[resource.parent_id].append(folder_serializer.serialize_object(resource))
         else:
-            grouped_files[resource.parent_id].append(create_file_dict(resource))
+            grouped_files[resource.parent_id].append(file_serializer.serialize_object(resource))
 
     for parent_id, file_dicts in grouped_files.items():
         parent = parent_mapping[parent_id]
@@ -220,115 +201,32 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolde
 
 
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
+    from .Serializers import FileSerializer
+
     file_children = []
+    start_time = time.perf_counter()
     if include_files:
         file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
             "parent", "videoposition", "thumbnail", "preview", "videometadata"
-        ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
+        ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)
 
     folder_children = []
     if include_folders:
         folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
 
-    file_dicts = [create_file_dict(file) for file in file_children]
-    folder_dicts = [create_folder_dict(folder) for folder in folder_children]
+    end_time = time.perf_counter()
+    elapsed = end_time - start_time
+    print(f"fetching from DATABASE took {elapsed:.4f} seconds")
 
-    folder_dict = create_folder_dict(folder_obj)
+    folder_serializer = FolderSerializer()
+    file_serializer = FileSerializer()
+    file_dicts = [file_serializer.serialize_tuple(file) for file in file_children]
+    folder_dicts = [folder_serializer.serialize_object(folder) for folder in folder_children]
+
+    folder_dict = folder_serializer.serialize_object(folder_obj)
     folder_dict["children"] = file_dicts + folder_dicts  # type: ignore         # goofy python bug
 
     return folder_dict
-
-
-def create_file_dict(file_values, hide=False) -> FileDict:
-    """Optimized version that uses dict values instead of ORM objects"""
-
-    file_dict = {
-        "isDir": False,
-        "id": get_attr(file_values, "id"),
-        "name": get_attr(file_values, "name"),
-        "parent_id": get_attr(file_values, "parent_id"),
-        "size": get_attr(file_values, "size"),
-        "type": get_attr(file_values, "type"),
-        "created": formatDate(get_attr(file_values, "created_at")),
-        "last_modified": formatDate(get_attr(file_values, "last_modified_at")),
-        "isLocked": get_attr(file_values, "is_locked"),
-        "encryption_method": get_attr(file_values, "encryption_method"),
-        "isVideoMetadata": get_attr(file_values, "videometadata__id", None) is not None,
-        "crc": get_attr(file_values, "crc"),
-    }
-    if get_attr(file_values, "is_locked"):
-        file_dict["lockFrom"] = get_attr(file_values, "lockFrom_id")
-
-    if get_attr(file_values, "inTrashSince", None):
-        file_dict["in_trash_since"] = formatDate(get_attr(file_values, "inTrashSince"))
-
-    if get_attr(file_values, "duration", None):
-        file_dict["duration"] = get_attr(file_values, "duration")
-
-    if get_attr(file_values, "preview__iso", None):
-        file_dict.update({
-            "iso": get_attr(file_values, "preview__iso"),
-            "model_name": get_attr(file_values, "preview__model_name"),
-            "aperture": get_attr(file_values, "preview__aperture"),
-            "exposure_time": get_attr(file_values, "preview__exposure_time"),
-            "focal_length": get_attr(file_values, "preview__focal_length"),
-        })
-
-    if not hide and not (get_attr(file_values, "is_locked") and get_attr(file_values, "inTrash")):
-        signed_file_id = sign_resource_id_with_expiry(get_attr(file_values, "id"))
-
-        if get_attr(file_values, "type") == "Raw image":
-            file_dict["preview_url"] = f"{API_BASE_URL}/files/{signed_file_id}/preview/stream"
-
-        file_dict["download_url"] = f"{API_BASE_URL}/files/{signed_file_id}/stream"
-
-        if get_attr(file_values, "thumbnail", None):
-            file_dict["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
-
-        if get_attr(file_values, "videoposition__timestamp", None):
-            file_dict["video_position"] = get_attr(file_values, "videoposition__timestamp")
-
-    return file_dict
-
-
-def create_folder_dict(folder_obj: Folder) -> FolderDict:
-    """
-    Crates partial folder dict, not containing children items
-    """
-
-    folder_dict = {
-        'isDir': True,
-        'id': folder_obj.id,
-        'name': folder_obj.name,
-        'parent_id': folder_obj.parent_id,
-        'created': formatDate(folder_obj.created_at),
-        'last_modified': formatDate(folder_obj.last_modified_at),
-        'isLocked': folder_obj.is_locked,
-
-    }
-    if folder_obj.is_locked:
-        folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
-
-    if folder_obj.inTrashSince:
-        folder_dict["in_trash_since"] = formatDate(folder_obj.inTrashSince)
-
-    return folder_dict
-
-
-def create_share_dict(share: ShareableLink) -> ShareDict:
-    obj = share.get_resource_inside()
-
-    isDir = True if isinstance(obj, Folder) else False
-
-    item = {
-        "expire": formatDate(share.expiration_time),
-        "name": obj.name,
-        "isDir": isDir,
-        "token": share.token,
-        "resource_id": share.object_id,
-        "id": share.id,
-    }
-    return item
 
 
 def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDict, FolderDict]) -> Dict:
@@ -347,10 +245,13 @@ def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDi
 
 
 def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource) -> Dict:
+    folder_serializer = FolderSerializer()
+    file_serializer = FileSerializer()
     if isinstance(resource_in_share, Folder):
-        resource_dict = create_folder_dict(resource_in_share)
+        resource_dict = folder_serializer.serialize_object(resource_in_share)
     else:
-        resource_dict = create_file_dict(resource_in_share)
+        resource_dict = file_serializer.serialize_object(resource_in_share)
+
         rsc_id = get_attr(resource_in_share, "id")
         resource_dict["download_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/stream"
 
@@ -365,7 +266,7 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
     children = list(folder_obj.files.filter(ready=True, inTrash=False).select_related(
-        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
+        "parent", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
 
     if include_folders:
         folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
@@ -416,10 +317,6 @@ def check_resource_perms(request, resource: Union[Resource, dict], checks) -> No
     for Check in checks:
         Check().check(request, resource)
 
-def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
-    # todo do i need to check perms here
-    return {"name": file_name, "isDir": False, "fileObj": file_obj}
-
 
 def calculate_size(folder: Folder) -> int:
     """
@@ -436,6 +333,11 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     file_count = folder.get_all_files().filter(ready=True, inTrash=False).count()
     folder_count = folder.get_all_subfolders().filter(ready=True, inTrash=False).count()
     return folder_count, file_count
+
+
+def create_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
+    # todo do i need to check perms here
+    return {"name": file_name, "isDir": False, "fileObj": file_obj}
 
 
 def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> List[ZipFileDict]:
@@ -519,6 +421,7 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
 
 
 def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:
+    #todo
     # check_resource_perms(request, requested_item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
     obj_in_share = get_resource(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
@@ -537,14 +440,6 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item
                     raise ResourceNotFoundError()
             else:
                 raise ResourceNotFoundError()
-
-
-def create_webhook_dict(webhook: Webhook) -> dict:
-    return {"name": webhook.name, "created_at": formatDate(webhook.created_at), "discord_id": webhook.discord_id, "url": webhook.url}
-
-
-def create_bot_dict(bot: Bot) -> dict:
-    return {"name": bot.name, "created_at": formatDate(bot.created_at), "discord_id": bot.discord_id, "disabled": bot.disabled, "reason": bot.reason}
 
 
 def get_and_check_webhook(request, webhook_url: str) -> tuple[str, str, str, str]:
@@ -625,9 +520,10 @@ def query_attachments(message_id=None, attachment_id=None, author_id=None, owner
     thumbnails = Thumbnail.objects.filter(query)
     previews = Preview.objects.filter(query)
     moments = Moment.objects.filter(query)
+    subtitle = Subtitle.objects.filter(query)
 
     # Combine all the QuerySets using union()
-    combined_results = list(fragments) + list(thumbnails) + list(previews) + list(moments)
+    combined_results = list(fragments) + list(thumbnails) + list(previews) + list(moments) + list(subtitle)
 
     return combined_results
 
@@ -653,51 +549,6 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
             discord.edit_attachments(user, author.token, resource.message_id, attachment_ids_to_keep)
     else:
         discord.remove_message(user, resource.message_id)
-
-
-def create_moment_dict(moment: Moment) -> dict:
-    signed_file_id = sign_resource_id_with_expiry(moment.file.id)
-
-    url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.timestamp}/stream"
-
-    return {"file_id": moment.file.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
-
-
-def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
-    return {
-        "bitrate": track.bitrate,
-        "codec": track.codec,
-        "size": track.size,
-        "duration": track.duration,
-        "language": track.language,
-        "number": track.track_number
-    }
-
-
-def create_video_track_dict(track: VideoTrack) -> dict:
-    track_dict = create_track_dict(track)
-    track_dict["height"] = track.height
-    track_dict["width"] = track.width
-    track_dict["fps"] = track.fps
-    track_dict["type"] = "Video"
-    return track_dict
-
-
-def create_audio_track_dict(track: AudioTrack) -> dict:
-    track_dict = create_track_dict(track)
-    track_dict["name"] = track.name
-    track_dict["channel_count"] = track.channel_count
-    track_dict["sample_rate"] = track.sample_rate
-    track_dict["sample_size"] = track.sample_size
-    track_dict["type"] = "Audio"
-    return track_dict
-
-
-def create_subtitle_track_dict(track: SubtitleTrack) -> dict:
-    track_dict = create_track_dict(track)
-    track_dict["name"] = track.name
-    track_dict["type"] = "Subtitle"
-    return track_dict
 
 
 def create_tracks(metadata, track_type, model_class, video_metadata):
@@ -747,7 +598,7 @@ def create_video_metadata(file: File, metadata: dict) -> None:
     create_tracks(metadata, "subtitle_tracks", SubtitleTrack, video_metadata)
 
 
-def validate_ids_as_list(ids: list, max_length: int=1000) -> None:
+def validate_ids_as_list(ids: list, max_length: int = 1000) -> None:
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
     if len(ids) == 0:
@@ -755,15 +606,6 @@ def validate_ids_as_list(ids: list, max_length: int=1000) -> None:
     if len(ids) > max_length:
         raise BadRequestError(f"'ids' length cannot > {max_length}.")
 
-def create_subtitle_dict(subtitle: Subtitle) -> dict:
-    signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
-
-    url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{subtitle.id}/stream"
-    return {"id": subtitle.id, "language": subtitle.language, "url": url}
-
-def create_share_subtitle_dict(token: str, file_id: str, subtitle: Subtitle) -> dict:
-    url = f"{API_BASE_URL}/shares/{token}/files/{file_id}/subtitles/{subtitle.id}/stream"
-    return {"id": subtitle.id, "language": subtitle.language, "url": url}
 
 def get_file_type(extension: str) -> str:
     extension = extension.lower()
@@ -793,6 +635,7 @@ def get_file_type(extension: str) -> str:
         return "Raw image"
     else:
         return "Other"
+
 
 def get_ip(request) -> tuple:
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

@@ -12,13 +12,15 @@ from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, Fragme
 from ..utilities.Discord import discord
 from ..utilities.DiscordHelper import DiscordHelper
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks
+from ..utilities.Serializers import WebhookSerializer, BotSerializer
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS
 from ..utilities.decorators import check_resource_permissions, extract_folder
 from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import logout_and_close_websockets, create_webhook_dict, create_bot_dict, get_and_check_webhook, get_webhook, get_folder, check_resource_perms, query_attachments
+from ..utilities.other import logout_and_close_websockets, get_and_check_webhook, get_webhook, query_attachments
 from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle, LoginThrottle
 
 
+@api_view(['PATCH'])
 @throttle_classes([PasswordChangeThrottle])
 @permission_classes([IsAuthenticated & ChangePassword])
 def change_password(request):
@@ -38,7 +40,7 @@ def change_password(request):
     data = {"auth_token": str(token)}
     return JsonResponse(data, status=200)
 
-
+@api_view(['POST'])
 @throttle_classes([RegisterThrottle])
 def register_user(request):
     # raise ResourcePermissionError("This functionality is turned off.")
@@ -52,7 +54,7 @@ def register_user(request):
     user.save()
     return HttpResponse(status=204)
 
-
+@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 @extract_folder()
@@ -63,14 +65,14 @@ def can_upload(request, folder_obj: Folder):
     webhook_dicts = []
 
     for webhook in webhooks:
-        webhook_dicts.append(create_webhook_dict(webhook))
+        webhook_dicts.append(WebhookSerializer.serialize_object(webhook))
 
     bots = Bot.objects.filter(owner=request.user, disabled=False)
     allowed_to_upload = bool(discordSettings.guild_id and discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and bots.exists())
     return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id,
                          "extensions": {"video": VIDEO_EXTENSIONS, "audio": AUDIO_EXTENSIONS, "image": IMAGE_EXTENSIONS}})
 
-
+@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def users_me(request):
@@ -96,6 +98,7 @@ def users_me(request):
     return JsonResponse(response, safe=False, status=200)
 
 
+@api_view(['PUT'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & SettingsModifyPerms])
 def update_settings(request):
@@ -160,7 +163,7 @@ class MyTokenCreateView(TokenCreateView):
     def post(self, request, **kwargs):
         return super().post(request, **kwargs)
 
-
+@api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def get_discord_settings(request):
@@ -168,19 +171,22 @@ def get_discord_settings(request):
     webhooks = Webhook.objects.filter(owner=request.user).order_by('created_at')
     bots = Bot.objects.filter(owner=request.user).order_by('created_at')
     webhook_dicts = []
+
+    serializer = WebhookSerializer()
+
     for webhook in webhooks:
-        webhook_dicts.append(create_webhook_dict(webhook))
+        webhook_dicts.append(serializer.serialize_object(webhook))
 
     bots_dicts = []
     for bot in bots:
-        bots_dicts.append(create_bot_dict(bot))
+        bots_dicts.append(BotSerializer().serialize_object(bot))
 
     upload_destination_locked = bool(Fragment.objects.filter(file__owner=request.user).exists())
     can_add_bots_or_webhooks = bool(settings.guild_id and settings.channel_id)
     return JsonResponse({"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channel_id": settings.channel_id,
                          "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked})
 
-
+@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def add_webhook(request):
@@ -204,15 +210,13 @@ def add_webhook(request):
     webhook.save()
     discord.remove_user_state(request.user)
 
-    return JsonResponse(create_webhook_dict(webhook), status=200)
+    return JsonResponse(WebhookSerializer().serialize_object(webhook), status=200)
 
-
+@api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
-def delete_webhook(request):
-    discord_id = request.data.get('discord_id')
-
-    webhook = get_webhook(request, discord_id)
+def delete_webhook(request, webhook_id):
+    webhook = get_webhook(request, webhook_id)
 
     if query_attachments(author_id=webhook.discord_id, owner=request.user):
         raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
@@ -222,7 +226,7 @@ def delete_webhook(request):
 
     return HttpResponse(status=204)
 
-
+@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def add_bot(request):
@@ -245,16 +249,14 @@ def add_bot(request):
     bot.save()
     discord.remove_user_state(request.user)
 
-    return JsonResponse(create_bot_dict(bot), status=200)
+    return JsonResponse(BotSerializer().serialize_object(bot), status=200)
 
-
+@api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
-def delete_bot(request):
-    discord_id = request.data.get('discord_id')
-
+def delete_bot(request, bot_id):
     try:
-        bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
+        bot = Bot.objects.get(discord_id=bot_id, owner=request.user)
     except Bot.DoesNotExist:
         raise BadRequestError("Bot with this token doesn't exists!")
 
@@ -267,13 +269,12 @@ def delete_bot(request):
     return HttpResponse(status=204)
 
 
+@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
-def enable_bot(request):
-    discord_id = request.data.get('discord_id')
-
+def enable_bot(request, bot_id):
     try:
-        bot = Bot.objects.get(discord_id=discord_id, owner=request.user)
+        bot = Bot.objects.get(discord_id=bot_id, owner=request.user)
     except Bot.DoesNotExist:
         raise BadRequestError("Bot with this token doesn't exists!")
 
@@ -290,7 +291,7 @@ def enable_bot(request):
 
     return HttpResponse(status=204)
 
-
+@api_view(['PATCH'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([DiscordModifyPerms])
 def update_upload_destination(request):
@@ -322,6 +323,7 @@ def update_upload_destination(request):
 
     return JsonResponse({"can_add_bots_or_webhooks": can_add_bots_or_webhooks, "upload_destination_locked": upload_destination_locked}, status=200)
 
+@api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated])
 def reset_discord_state(request):

@@ -36,7 +36,7 @@ class MyUserRateThrottleBase(UserRateThrottle):
 
         # STEP 2. Check failed attempts (custom logic)
         remaining_failed_requests = self.get_remaining_failed_requests()
-        if remaining_failed_requests < 0:
+        if remaining_failed_requests <= 0:
             return self.throttle_failure()
 
         return user_allowed

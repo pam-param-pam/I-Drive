@@ -13,8 +13,8 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle
 from .tasks import smart_delete
 from .utilities.Discord import discord
-from .utilities.constants import cache, RAW_IMAGE_EXTENSIONS, API_BASE_URL, EncryptionMethod
-from .utilities.other import sign_resource_id_with_expiry
+from .utilities.constants import cache, API_BASE_URL, EncryptionMethod
+from .utilities.signer import sign_resource_id_with_expiry
 
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
@@ -357,7 +357,7 @@ class WebhookAdmin(admin.ModelAdmin):
 class BotAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
-    readonly_fields = ('token', 'owner', 'discord_id', 'disabled', 'reason')
+    readonly_fields = ('token', 'owner', 'discord_id', 'reason')
 
 
 @admin.register(Moment)

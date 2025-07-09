@@ -233,7 +233,7 @@ export default {
       },
 
       async removeSubtitle(subtitle_id) {
-         await deleteSubtitle({ "subtitle_id": subtitle_id })
+         await deleteSubtitle(this.selected[0].id, subtitle_id)
          this.subtitles = this.subtitles.filter(subtitle => subtitle.id !== subtitle_id)
          this.$toast.success(this.$t("toasts.subtitleRemoved"))
       },

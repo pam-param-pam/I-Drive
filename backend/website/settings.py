@@ -74,11 +74,6 @@ MIDDLEWARE = [
 CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://192.168.1.14:5173",
-]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http:\/\/localhost:\d+$',

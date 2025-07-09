@@ -163,6 +163,7 @@ export default {
                this.setCurrentFolderData(res)
             } catch (error) {
                if (error.code === "ERR_CANCELED") return
+               console.log(error)
                this.setError(error)
             } finally {
                if (this.isActive) this.setLoading(false)

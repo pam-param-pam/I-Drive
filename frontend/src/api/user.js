@@ -36,16 +36,16 @@ export async function logoutUser(token) {
 }
 
 export async function changePassword(data) {
-   let url = `/user/changepassword`
-   let response = await backendInstance.post(url, data)
+   let url = `/user/password`
+   let response = await backendInstance.patch(url, data)
    return response.data
 
 
 }
 
 export async function updateSettings(data) {
-   let url = `/user/updatesettings`
-   await backendInstance.post(url, data)
+   let url = `/user/settings`
+   await backendInstance.put(url, data)
 
 }
 
@@ -66,38 +66,38 @@ export async function getDiscordSettings() {
 }
 
 export async function addDiscordWebhook(data) {
-   let url = `/user/discordSettings/webhook/add`
+   let url = `/user/discordSettings/webhook`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
-export async function deleteDiscordWebhook(data) {
-   let url = `/user/discordSettings/webhook/delete`
-   let response = await backendInstance.post(url, data)
+export async function deleteDiscordWebhook(discordId) {
+   let url = `/user/discordSettings/webhook/${discordId}`
+   let response = await backendInstance.delete(url)
    return response.data
 }
 
 export async function addDiscordBot(data) {
-   let url = `/user/discordSettings/bot/add`
+   let url = `/user/discordSettings/bot`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
-export async function deleteDiscordBot(data) {
-   let url = `/user/discordSettings/bot/delete`
-   let response = await backendInstance.post(url, data)
+export async function deleteDiscordBot(discordId) {
+   let url = `/user/discordSettings/bot/${discordId}`
+   let response = await backendInstance.delete(url)
    return response.data
 }
 
 export async function updateDiscordSettings(data) {
-   let url = `/user/updateDiscordSettings`
-   let response = await backendInstance.put(url, data)
+   let url = `/user/discordSettings`
+   let response = await backendInstance.patch(url, data)
    return response.data
 }
 
-export async function enableDiscordBot(data) {
-   let url = `/user/discordSettings/bot/enable`
-   let response = await backendInstance.post(url, data)
+export async function enableDiscordBot(discordId) {
+   let url = `/user/discordSettings/bot/${discordId}/enable`
+   let response = await backendInstance.post(url)
    return response.data
 }
 export async function canUpload(folderContext) {

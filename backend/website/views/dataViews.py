@@ -1,5 +1,8 @@
+import time
 from collections import defaultdict
 
+import ujson
+from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldError
 from django.db.models import Value, IntegerField
 from django.db.models.aggregates import Sum, Count
@@ -8,19 +11,19 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import etag
 from django.views.decorators.vary import vary_on_headers
-from rest_framework.decorators import permission_classes, api_view, throttle_classes
+from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..utilities.Discord import discord
 from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckReady, CheckTrash
+from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer
 from ..utilities.constants import cache, MAX_DISCORD_MESSAGE_SIZE
-from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource
+from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource, extract_items_from_ids_annotated, check_bulk_permissions, \
+    extract_items
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..utilities.other import build_folder_content, create_file_dict, create_folder_dict, create_breadcrumbs, check_resource_perms, \
-    calculate_size, calculate_file_and_folder_count, create_moment_dict, create_video_track_dict, create_audio_track_dict, create_subtitle_track_dict, create_subtitle_dict, get_file, \
-    get_folder, validate_ids_as_list
-from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle
+from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
+from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
 
 
 def etag_func(request, folder_obj):
@@ -33,22 +36,34 @@ def last_modified_func(request, file_obj, sequence=None):
     last_modified_str = file_obj.last_modified_at
     return last_modified_str
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 @etag(etag_func)
 def get_folder_info(request, folder_obj: Folder):
-    folder_content = cache.get(folder_obj.id)
-    if not folder_content:
-        folder_content = build_folder_content(folder_obj)
-        cache.set(folder_obj.id, folder_content)
+    # todo
+    # folder_content = cache.get(folder_obj.id)
+    # if not folder_content:
+    start_time = time.perf_counter()
+
+    folder_content = build_folder_content(folder_obj)
+
+    end_time = time.perf_counter()
+    elapsed = end_time - start_time
+    print(f"build_folder_content took {elapsed:.4f} seconds")
+    # cache.set(folder_obj.id, folder_content)
 
     breadcrumbs = create_breadcrumbs(folder_obj)
-    return JsonResponse({"folder": folder_content, "breadcrumbs": breadcrumbs})
+    return HttpResponse(
+        ujson.dumps({"folder": folder_content, "breadcrumbs": breadcrumbs}),
+        content_type="application/json",
+        status=200
+    )
 
 
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_folder()
@@ -64,17 +79,17 @@ def get_dirs(request, folder_obj: Folder):
     folder_content['folder_path'] = folder_path
     return JsonResponse(folder_content)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 # @last_modified(last_modified_func)
 def get_file_info(request, file_obj: File):
-    file_content = create_file_dict(file_obj)
+    file_content = FileSerializer().serialize_object(file_obj)
     return JsonResponse(file_content)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_folder()
@@ -100,7 +115,7 @@ def get_usage(request, folder_obj: Folder):
 
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_item()
@@ -113,14 +128,18 @@ def fetch_additional_info(request, item_obj):
 
     else:
         tracks = []
+        videoSerializer = VideoTrackSerializer()
+        audioSerializer = AudioTrackSerializer()
+        subtitleSerializer = SubtitleTrackSerializer()
+
         for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
-            tracks.append(create_video_track_dict(track))
+            tracks.append(videoSerializer.serialize_object(track))
 
         for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
-            tracks.append(create_audio_track_dict(track))
+            tracks.append(audioSerializer.serialize_object(track))
 
         for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
-            tracks.append(create_subtitle_track_dict(track))
+            tracks.append(subtitleSerializer.serialize_object(track))
         try:
             metadata = VideoMetadata.objects.get(file=item_obj)
         except VideoMetadata.DoesNotExist:
@@ -133,7 +152,7 @@ def fetch_additional_info(request, item_obj):
 
         return JsonResponse(metadata_dict, status=200)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_folder()
@@ -142,7 +161,7 @@ def get_breadcrumbs(request, folder_obj: Folder):
     breadcrumbs = create_breadcrumbs(folder_obj)
     return JsonResponse(breadcrumbs, safe=False)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([SearchThrottle])
 def search(request):
@@ -249,7 +268,7 @@ def search(request):
             files = File.objects.filter(file_filters) \
                         .select_related("parent", "videoposition", "thumbnail", "preview") \
                         .prefetch_related("tags") \
-                        .order_by(ascending + order_by)[:result_limit]
+                        .order_by(ascending + order_by).annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)[:result_limit]
 
         if include_folders:
             folders = Folder.objects.filter(folder_filters) \
@@ -264,18 +283,25 @@ def search(request):
 
     folder_dicts = []
     file_dicts = []
+
+    folder_serializer = FolderSerializer()
+    file_serializer = FileSerializer()
+
     if include_folders and not (extension or file_type):
         for folder in folders:
-            folder_dict = create_folder_dict(folder)
+            folder_dict = folder_serializer.serialize_object(folder)
             folder_dicts.append(folder_dict)
 
     if include_files:
+        #    file_dicts = [file_serializer.serialize_dict(file) for file in files]
+
         for file in files:
-            file_dict = create_file_dict(file)
+            file_dict = file_serializer.serialize_tuple(file)
             file_dicts.append(file_dict)
+
     return JsonResponse(file_dicts + folder_dicts, safe=False)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 def get_trash(request):
@@ -284,12 +310,15 @@ def get_trash(request):
 
     folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
 
-    file_dicts = [create_file_dict(file) for file in files]
-    folder_dicts = [create_folder_dict(folder) for folder in folders]
+    file_serializer = FileSerializer()
+    folder_serializer = FolderSerializer()
+
+    file_dicts = [file_serializer.serialize_dict(file) for file in files]
+    folder_dicts = [folder_serializer.serialize_object(folder) for folder in folders]
 
     return JsonResponse({"trash": file_dicts + folder_dicts})
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_resource()
@@ -302,7 +331,7 @@ def check_password(request, resource_obj):
 
     raise ResourcePermissionError("Folder password is incorrect")
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
@@ -310,12 +339,13 @@ def check_password(request, resource_obj):
 def get_moments(request, file_obj: File):
     moments = Moment.objects.filter(file=file_obj).all()
     moments_list = []
+    serializer = MomentSerializer()
     for moment in moments:
-        moments_list.append(create_moment_dict(moment))
+        moments_list.append(serializer.serialize_object(moment))
 
     return JsonResponse(moments_list, safe=False)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
@@ -327,7 +357,7 @@ def get_tags(request, file_obj: File):
 
     return JsonResponse(tags_list, safe=False)
 
-
+@api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
@@ -336,40 +366,29 @@ def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
 
     subtitle_dicts = []
+    serializer = SubtitleSerializer()
+
     for sub in subtitles:
-        subtitle_dicts.append(create_subtitle_dict(sub))
+        subtitle_dicts.append(serializer.serialize_object(sub))
 
     return JsonResponse(subtitle_dicts, safe=False)
 
 
 """====================================================HERE BE DRAGONS=========================================================="""
 
-
+@api_view(['POST'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
-def ultra_download_metadata(request):
-    folder_id = request.data.get('folder_id')
-    file_ids = request.data.get('file_ids', [])
-
-    if not folder_id and not file_ids:
-        return BadRequestError("Missing folder_id and file_ids")
-
-    if folder_id and file_ids:
-        return BadRequestError("You can't use both folder_id and file_ids")
-
+@extract_items(source='data')
+@check_bulk_permissions([*default_checks])
+def ultra_download_metadata(request, items):
     files = []
 
-    if file_ids:
-        validate_ids_as_list(file_ids, max_length=10)
-        for file_id in file_ids:
-            file = get_file(file_id)
-            check_resource_perms(request, file)
-            files.append(file)
-
-    if folder_id:
-        folder = get_folder(folder_id)
-        check_resource_perms(request, folder)
-        files = folder.get_all_files()
+    for item in items:
+        if isinstance(item, File):
+            files.append(item)
+        else:
+            files.append(item.get_all_files())
 
     def file_metadata(file_obj: File):
         file_dict = {
@@ -389,7 +408,6 @@ def ultra_download_metadata(request):
                 "attachment_id": fragment.attachment_id,
                 "offset": fragment.offset,
                 "sequence": fragment.sequence,
-                "url": discord.get_attachment_url(request.user, fragment)
             }
             fragment_dicts.append(fragment_dict)
 
@@ -401,6 +419,19 @@ def ultra_download_metadata(request):
     return JsonResponse(response_data, safe=False)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([MediaThrottle])
+def get_attachment_url_view(request, attachment_id):
+    fragment = Fragment.objects.get(attachment_id=attachment_id)
+
+    file = fragment.file
+    check_resource_perms(request, file, default_checks)
+
+    url = discord.get_attachment_url(request.user, fragment)
+    return JsonResponse({"url": url})
+
+@api_view(['GET'])
 # @permission_classes([IsAuthenticated & ReadPerms])
 # @throttle_classes([defaultAuthUserThrottle])
 def get_stats(request):
@@ -422,7 +453,7 @@ def get_stats(request):
 
     return JsonResponse(result, safe=False)
 
-
+@api_view(['GET'])
 # @permission_classes([IsAuthenticated & ReadPerms])
 # @throttle_classes([defaultAuthUserThrottle])
 def get_discord_attachment_report(request):

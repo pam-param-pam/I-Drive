@@ -1,4 +1,3 @@
-
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
@@ -7,7 +6,6 @@ class MalformedDatabaseRecord(Exception):
 
 class ResourceNotFoundError(IDriveException):
     """Raised when resource can't be found in the database"""
-
 
 class ResourcePermissionError(IDriveException):
     """Raised when user has not enough privilege to access a resource"""
@@ -21,10 +19,8 @@ class NoBotsError(IDriveException):
 class RootPermissionError(IDriveException):
     """Raised when user tries to manage 'root' folder"""
 
-
 class DiscordBlockError(IDriveException):
     """Raised when discord blocks us for whatever reason"""
-
     def __init__(self, message, retry_after):
         self.message = message
         self.retry_after = retry_after
@@ -44,7 +40,6 @@ class DiscordError(IDriveException):
 
     def __str__(self):
         return f'Discord error-> {self.status}: {self.message}'
-
 
 class MissingOrIncorrectResourcePasswordError(IDriveException):
     """Raised when password for a resource is missing"""

@@ -1,12 +1,14 @@
 import os
+import time
 from functools import wraps
 from typing import Callable
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from .signer import verify_signed_resource_id
 from ..models import File, Folder, ShareableLink
 from ..utilities.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
-from ..utilities.other import verify_signed_resource_id, get_file, validate_ids_as_list
+from ..utilities.other import get_file, validate_ids_as_list
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
@@ -43,12 +45,18 @@ def check_resource_permissions(checks: list, resource_key):
     def decorator(view_func: Callable):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
+            start_time = time.perf_counter()
+
             resource = kwargs.get(resource_key)
             if not resource:
                 raise ValueError(f"Missing '{resource_key}' in kwargs")
 
             for Check in checks:
                 Check().check(request, resource)
+
+            end_time = time.perf_counter()
+            elapsed = end_time - start_time
+            print(f"PERMISSION CHECKS took {elapsed:.4f} seconds")
 
             return view_func(request, *args, **kwargs)
 
@@ -61,7 +69,7 @@ def extract_folder(source="kwargs", key="folder_id", inject_as="folder_obj"):
     return extract_resources({
         "source": source,
         "key": key,
-        "model": Folder,
+        "model": [Folder],
         "inject_as": inject_as,
     })
 
@@ -70,7 +78,7 @@ def extract_file(source="kwargs", key="file_id", inject_as="file_obj"):
     return extract_resources({
         "source": source,
         "key": key,
-        "model": File,
+        "model": [File],
         "inject_as": inject_as,
     })
 
@@ -83,7 +91,14 @@ def extract_item(source="kwargs", key="item_id", inject_as="item_obj"):
         "inject_as": inject_as,
     })
 
-
+def extract_items(source="kwargs", key="ids", inject_as="items"):
+    return extract_resources({
+        "source": source,
+        "key": key,
+        "model": [File, Folder],
+        "inject_as": inject_as,
+        "many": True,
+    })
 def extract_resource(source="kwargs", key="resource_id", inject_as="resource_obj"):
     return extract_resources({
         "source": source,
@@ -94,6 +109,15 @@ def extract_resource(source="kwargs", key="resource_id", inject_as="resource_obj
 
 
 def extract_resources(*rules):
+    def _get_resource_from_models(models, obj_id):
+        for model in models:
+            try:
+                return model.objects.get(id=obj_id)
+            except ObjectDoesNotExist:
+                continue
+        model_names = ", ".join(m.__name__ for m in models)
+        raise ResourceNotFoundError(f"No resource with ID '{obj_id}' found in models: {model_names}")
+
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
@@ -102,39 +126,30 @@ def extract_resources(*rules):
                 key = rule["key"]
                 models = rule["model"]
                 inject_as = rule["inject_as"]
+                many = rule.get("many", False)
 
-                # Choose correct input container
+                # Get container
                 container = kwargs if source == "kwargs" else getattr(request, source, {})
-                print(kwargs)
                 if key not in container:
                     raise ValueError(f"Missing key '{key}' in request.{source}")
 
                 ids = container[key]
 
-                # Support list of models (try each one until found)
-                if isinstance(models, (list, tuple)):
-                    resource = None
-                    for model in models:
-                        try:
-                            resource = model.objects.get(id=ids)
-                            # If found, break
-                            if resource:
-                                break
-                        except ObjectDoesNotExist:
-                            continue
-                    if not resource:
-                        model_names = ", ".join([m.__name__ for m in models])
-                        raise ResourceNotFoundError(f"No resource with ID '{ids}' found in models: {model_names}")
+                if many:
+                    if not isinstance(ids, (list, tuple)):
+                        raise ValueError(f"Expected list of IDs for key '{key}', got {type(ids).__name__}")
+                    found_resources = []
+                    for obj_id in ids:
+                        resource = _get_resource_from_models(models, obj_id)
+                        found_resources.append(resource)
+                    kwargs[inject_as] = found_resources
                 else:
-                    try:
-                        resource = models.objects.get(id=ids)
-                    except ObjectDoesNotExist:
-                        raise ResourceNotFoundError(f"{models.__name__} with ID '{ids}' not found.")
+                    if isinstance(ids, (list, tuple)):
+                        raise ValueError(f"Expected single ID for key '{key}', got multiple")
+                    resource = _get_resource_from_models(models, ids)
+                    kwargs[inject_as] = resource
 
-                # Inject resource(s)
-                kwargs[inject_as] = resource
-
-                # Remove key from container if possible (especially kwargs)
+                # Remove original key
                 if source == "kwargs" and key in kwargs:
                     del kwargs[key]
                 elif source in ("data", "GET") and hasattr(container, "pop"):
@@ -143,7 +158,6 @@ def extract_resources(*rules):
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view
-
     return decorator
 
 
@@ -212,10 +226,3 @@ def check_bulk_permissions(checks, resource_key="items"):
         return _wrapped_view
 
     return decorator
-
-
-from django.urls import path
-from django.http import HttpResponseNotAllowed
-
-
-

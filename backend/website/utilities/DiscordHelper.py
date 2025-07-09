@@ -112,4 +112,3 @@ class DiscordHelper:
             }
             missing_permissions = [perm for perm, has_perm in permissions.items() if not has_perm]
             raise BadRequestError(f"{', '.join(missing_permissions)} permissions are missing.")
-

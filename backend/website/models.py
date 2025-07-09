@@ -3,8 +3,8 @@ import secrets
 from typing import Union
 
 import shortuuid
-from django.contrib.auth import user_logged_out, user_logged_in, user_login_failed
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth import user_logged_out, user_logged_in
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -202,8 +202,7 @@ class File(models.Model):
 
     MINIMAL_VALUES = ("id", "name", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password")
 
-    STANDARD_VALUES = ("id", "name", "type", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
-
+    STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
         "duration", "parent__id", "preview__iso", "preview__model_name", "crc",

@@ -1,13 +1,16 @@
 import io
 import re
 import time
+from io import BytesIO
 from urllib.parse import quote
 
 import aiohttp
+import asyncio
 import exifread
 import imageio
 import rawpy
 import requests
+from PIL import Image
 from asgiref.sync import sync_to_async
 from cryptography.fernet import Fernet
 from django.contrib.contenttypes.models import ContentType
@@ -24,15 +27,16 @@ from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
 from ..utilities.Discord import discord
+from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
 from ..utilities.decorators import extract_file_from_signed_url, no_gzip
 from ..utilities.errors import DiscordError, BadRequestError, FailedToResizeImage
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, create_file_dict
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
-from PIL import Image
-from io import BytesIO
 
+
+@api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @cache_page(60 * 60 * 24)
 @extract_file_from_signed_url
@@ -138,13 +142,15 @@ def stream_preview(request, file_obj: File):
             object_id=author.discord_id
         )
 
-        file_dict = create_file_dict(file_obj)
+        file_dict = FileSerializer().serialize_object(file_obj)
         send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     except IntegrityError:
         pass
     return HttpResponse(data.getvalue(), content_type="image/jpeg")
 
+
+@api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @extract_file_from_signed_url
 def stream_thumbnail(request, file_obj: File):
@@ -222,6 +228,7 @@ def stream_thumbnail(request, file_obj: File):
     return response
 
 
+@api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @extract_file_from_signed_url
 def stream_subtitle(request, file_obj: File, subtitle_id):
@@ -242,11 +249,12 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
 
     return HttpResponse(subtitle_content)
 
+
+@api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @cache_page(60 * 60 * 24 * 30)
 @extract_file_from_signed_url
 def stream_moment(request, file_obj: File, timestamp):
-
     check_if_bots_exists(file_obj.owner)
 
     moment = Moment.objects.get(file=file_obj, timestamp=timestamp)
@@ -263,6 +271,8 @@ def stream_moment(request, file_obj: File, timestamp):
     response = HttpResponse(moment_content, content_type="image/jpeg")
     return response
 
+
+@api_view(['GET'])
 # todo  handle >416 Requested Range Not Satisfiable<
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
@@ -295,7 +305,6 @@ def stream_file(request, file_obj: File):
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
-                auto_prefetch(file_obj, fragments[index].id)
                 headers = {'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
 
                 async with session.get(url, headers=headers) as response:
@@ -314,13 +323,12 @@ def stream_file(request, file_obj: File):
                     print(f"Fragment index: {fragments[index].sequence}")
                     print(f"Time taken for decryption (seconds): {total_decryption_time:.6f} for {total_bytes / 1000_000}MB.")
 
-                # if we are returning a partial request we only want to stream 1 fragment.
-                # ⚠️ This does not conform to the protocol specifications.
-                # We are doing this to optimize browser video streaming to be faster
-                if status == 206 and not isDownload:
+                # Handle partial requests (single fragment)
+                if not isDownload:
                     break
 
                 index += 1
+
             if file_obj.is_encrypted():
                 yield decryptor.finalize()
 
@@ -387,6 +395,7 @@ def stream_file(request, file_obj: File):
     return response
 
 
+@api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
 def stream_zip_files(request, token):
