@@ -4,6 +4,7 @@ from .signer import sign_resource_id_with_expiry
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack
 from ..utilities.constants import API_BASE_URL
 
+
 class SimpleSerializer(ABC):
 
     @abstractmethod
@@ -139,7 +140,6 @@ class FolderSerializer(SimpleSerializer):
 
 class ShareSerializer(SimpleSerializer):
     def serialize_object(self, share: ShareableLink) -> dict:
-
         obj = share.get_resource_inside()
 
         isDir = True if isinstance(obj, Folder) else False
@@ -154,9 +154,11 @@ class ShareSerializer(SimpleSerializer):
         }
         return item
 
+
 class WebhookSerializer(SimpleSerializer):
     def serialize_object(self, webhook: Webhook) -> dict:
-        return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url, "channel": webhook.channel.name}
+        return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url, "channel":
+                {"id": webhook.channel.id, "name": webhook.channel.name}}
 
 
 class BotSerializer(SimpleSerializer):
@@ -179,6 +181,7 @@ class SubtitleSerializer(SimpleSerializer):
 
         return {"id": subtitle.id, "language": subtitle.language, "url": url}
 
+
 def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
     return {
         "bitrate": track.bitrate,
@@ -189,6 +192,7 @@ def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
         "number": track.track_number
     }
 
+
 class VideoTrackSerializer(SimpleSerializer):
     def serialize_object(self, track: VideoTrack) -> dict:
         track_dict = create_track_dict(track)
@@ -197,6 +201,7 @@ class VideoTrackSerializer(SimpleSerializer):
         track_dict["fps"] = track.fps
         track_dict["type"] = "Video"
         return track_dict
+
 
 class AudioTrackSerializer(SimpleSerializer):
     def serialize_object(self, track: AudioTrack) -> dict:
@@ -208,13 +213,13 @@ class AudioTrackSerializer(SimpleSerializer):
         track_dict["type"] = "Audio"
         return track_dict
 
+
 class SubtitleTrackSerializer(SimpleSerializer):
     def serialize_object(self, track: SubtitleTrack) -> dict:
         track_dict = create_track_dict(track)
         track_dict["name"] = track.name
         track_dict["type"] = "Subtitle"
         return track_dict
-
 
 # class ShareSubtitleSerializer(SimpleSerializer):
 #     def serialize_object(self, track: Subtitle) -> dict:

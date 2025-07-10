@@ -281,7 +281,11 @@
     "video": "Video"
   },
   "settings": {
-    "useProxy": "Use proxy for upload",
+    "autoSetup": "Auto setup",
+    "enterGuildId": "Enter guild ID",
+    "primaryBot": "Primary Bot",
+    "enterAttachmentName": "Enter attachment name",
+    "enterBotToken": "Enter bot token",
     "concurrentUploadRequestsIsNegative": "Concurrent upload requests setting must be > 0",
     "changePassword": "Change password",
     "attachmentName": "Discord's attachment name",

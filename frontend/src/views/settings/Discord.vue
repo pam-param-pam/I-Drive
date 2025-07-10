@@ -19,7 +19,7 @@
               type="text"
               @keyup.enter="doAutoSetup"
             />
-            <h3>{{ $t("settings.primaryToken") }}</h3>
+            <h3>{{ $t("settings.primaryBot") }}</h3>
             <input
               v-model="botToken"
               :placeholder="$t('settings.enterBotToken')"
@@ -69,7 +69,7 @@
                       }}</a>
                   </td>
                   <td class="channel-column">
-                    <a>{{ webhook.channel }}</a>
+                    <a>{{ webhook.channel.name }}</a>
                   </td>
                   <td class="expiry-column">
                     <a>{{ humanTime(webhook.created_at) }}</a>

@@ -134,11 +134,39 @@ export function getWebhook() {
    let uploadStore = useUploadStore()
    let webhooks = uploadStore.webhooks
 
-   let webhook = webhooks[currentWebhookIndex]
+   // Group webhooks by channel id
+   let channelMap = new Map()
+   webhooks.forEach((wh) => {
+      if (!channelMap.has(wh.channel.id)) {
+         channelMap.set(wh.channel.id, [])
+      }
+      channelMap.get(wh.channel.id).push(wh)
+   })
 
-   currentWebhookIndex = (currentWebhookIndex + 1) % webhooks.length
+   // Calculate weights: weight = 1 / number of webhooks for that channel
+   // So channels with fewer webhooks have higher weights
+   let weightedWebhooks = []
+   channelMap.forEach((hooks, channelId) => {
+      let weight = 1 / hooks.length
+      hooks.forEach((wh) => {
+         weightedWebhooks.push({ webhook: wh, weight })
+      })
+   })
 
-   return webhook
+   // Compute total weight for normalization
+   let totalWeight = weightedWebhooks.reduce((sum, wh) => sum + wh.weight, 0)
+
+   // Pick a webhook randomly, weighted by the calculated weights
+   let r = Math.random() * totalWeight
+   for (let i = 0; i < weightedWebhooks.length; i++) {
+      r -= weightedWebhooks[i].weight
+      if (r <= 0) {
+         return weightedWebhooks[i].webhook
+      }
+   }
+
+   // Fallback in case of floating point issues
+   return weightedWebhooks[weightedWebhooks.length - 1].webhook
 }
 
 
@@ -302,6 +330,7 @@ export function captureVideoFrame(videoPlayer, seekTo = 0, options = {}) {
       }, { once: true })
    })
 }
+
 
 export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
    return new Promise((resolve, reject) => {

@@ -229,11 +229,11 @@ def add_bot(request):
 
     settings = DiscordSettings.objects.get(user=request.user)
 
-    primary_token = Bot.objects.filter(owner=request.user, primary=True).first().token
-    if not primary_token:
+    primary_bot = Bot.objects.filter(owner=request.user, primary=True).first()
+    if not primary_bot:
         raise BadRequestError("No primary bot found.")
 
-    bot_id, bot_name = DiscordStarter().check_bot(settings.guild_id, primary_token, settings.role_id, token)
+    bot_id, bot_name = DiscordStarter().check_bot(settings.guild_id, primary_bot.token, settings.role_id, token)
     bot = Bot(
         token=token,
         discord_id=bot_id,

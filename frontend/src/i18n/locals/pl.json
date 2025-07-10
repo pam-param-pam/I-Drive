@@ -269,7 +269,11 @@
     "video": "Filmy"
   },
   "settings": {
-    "useProxy": "Używaj proxy do przesyłania plików",
+    "autoSetup": "Auto konfiguracja",
+    "enterGuildId": "Wpisz ID serwera",
+    "primaryBot": "Głowny Bot",
+    "enterAttachmentName": "Wpisz nazwe plików na discordzie",
+    "enterBotToken": "Wpisz token bota",
     "attachmentName": "Nazwa plików na discordzie",
     "webhooks": "Webhooki",
     "concurrentUploadRequestsIsNegative": "Ilość równoległych requestów z uploadem plików musi być większa od 0",
