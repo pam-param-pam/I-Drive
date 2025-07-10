@@ -13,10 +13,10 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 
-from .Discord import discord
-from .Serializers import FolderSerializer, FileSerializer
+from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer
+from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import API_BASE_URL, EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
@@ -421,7 +421,7 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
 
 
 def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:
-    #todo
+    # todo
     # check_resource_perms(request, requested_item, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
     obj_in_share = get_resource(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
@@ -647,3 +647,32 @@ def get_ip(request) -> tuple:
         ip = request.META.get('REMOTE_ADDR')
 
     return ip, from_nginx
+
+
+def obtain_discord_settings(user) -> dict:
+    settings = user.discordsettings
+    webhooks = Webhook.objects.filter(owner=user).order_by('created_at')
+    bots = Bot.objects.filter(owner=user).order_by('created_at')
+    channels = Channel.objects.filter(owner=user)
+
+    webhook_dicts = []
+
+    serializer = WebhookSerializer()
+
+    for webhook in webhooks:
+        webhook_dicts.append(serializer.serialize_object(webhook))
+
+    bots_dicts = []
+    for bot in bots:
+        bots_dicts.append(BotSerializer().serialize_object(bot))
+
+    upload_destination_locked = bool(Fragment.objects.filter(file__owner=user).exists())
+    can_add_bots_or_webhooks = bool(settings.guild_id and len(channels) > 0)
+
+    channel_dicts = []
+    for channel in channels:
+        channel_dicts.append({"name": channel.name, "id": channel.id})
+
+    return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
+            "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks,
+            "upload_destination_locked": upload_destination_locked, "auto_setup_complete": settings.auto_setup_complete}

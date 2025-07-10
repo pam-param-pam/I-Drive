@@ -1,6 +1,7 @@
 import {backendInstance} from "@/utils/networker.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { useToast } from "vue-toastification"
+import i18n from "@/i18n/index.js"
 
 export async function getUser(token) {
    if (!token) return
@@ -112,7 +113,19 @@ export async function canUpload(folderContext) {
    }
    else {
       let toast = useToast()
-      toast.error(this.$t("errors.notAllowedToUpload"), {timeout: null})
+      toast.error(i18n.global.t("errors.notAllowedToUpload"), {timeout: null})
    }
+   return response.data
+}
+
+export async function autoSetup(data) {
+   let url = `/user/discordSettings/autoSetup`
+   let response = await backendInstance.post(url, data)
+   return response.data
+}
+
+export async function deleteDiscordSettings() {
+   let url = `/user/discordSettings`
+   let response = await backendInstance.delete(url)
    return response.data
 }

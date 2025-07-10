@@ -3,8 +3,44 @@
   <div v-else-if="!loading" class="row">
     <div class="column">
       <div class="cards-wrapper">
+
+        <!-- AUTO SETUP CARD -->
+        <div v-if="!autoSetupComplete" class="card">
+          <div class="card-title">
+            <h2>{{ $t("settings.autoSetup") }}</h2>
+          </div>
+          <div class="card-content">
+            <h3>{{ $t("settings.guildId") }}</h3>
+            <input
+              v-model="guildId"
+              :disabled="uploadDestinationLocked"
+              :placeholder="$t('settings.enterGuildId')"
+              class="input"
+              type="text"
+              @keyup.enter="doAutoSetup"
+            />
+            <h3>{{ $t("settings.primaryToken") }}</h3>
+            <input
+              v-model="botToken"
+              :placeholder="$t('settings.enterBotToken')"
+              class="input"
+              type="text"
+              @keyup.enter="doAutoSetup"
+            />
+          </div>
+          <div class="card-action">
+            <button
+              :aria-label="$t('buttons.autoSetup')"
+              :title="$t('buttons.autoSetup')"
+              class="button button--flat"
+              @click="doAutoSetup"
+            >
+              {{ $t("buttons.autoSetup") }}
+            </button>
+          </div>
+        </div>
         <!--        START OF WEBHOOKS CARD-->
-        <div v-if="canAddBotsOrWebhooks" class="card">
+        <div v-if="canAddBotsOrWebhooks && autoSetupComplete" class="card">
           <div class="card-title">
             <h2>{{ $t("settings.webhooks") }}</h2>
           </div>
@@ -13,6 +49,7 @@
               <table>
                 <tr>
                   <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
+                  <th class="channel-column">{{ $t("settings.channel") }}</th>
                   <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
                   <th></th>
                 </tr>
@@ -22,6 +59,9 @@
                     <a>{{
                         index + 1 + " &#8205; &#8205; &#8205; &#8205;" + webhook.name
                       }}</a>
+                  </td>
+                  <td class="channel-column">
+                    <a>{{ "files1" }}</a>
                   </td>
                   <td class="expiry-column">
                     <a>{{ humanTime(webhook.created_at) }}</a>
@@ -68,7 +108,7 @@
           </div>
         </div>
         <!--        START OF UPLOAD DEST CARD-->
-        <div class="card">
+        <div v-if="autoSetupComplete" class="card">
           <div class="card-title">
             <h2>{{ $t("settings.uploadDestination") }}</h2>
           </div>
@@ -90,6 +130,14 @@
               type="text"
               @keyup.enter="saveUploadDestination"
             />
+            <h3>{{ $t("settings.secondChannelId") }}</h3>
+            <input
+              v-model="secondChannelId"
+              :disabled="uploadDestinationLocked"
+              class="input"
+              type="text"
+              @keyup.enter="saveUploadDestination"
+            />
             <h3>{{ $t("settings.attachmentName") }}</h3>
             <input
               v-model="attachmentName"
@@ -100,6 +148,15 @@
           </div>
           <div class="card-action">
             <button
+              :aria-label="$t('buttons.reset')"
+              :title="$t('buttons.reset')"
+              class="button button--flat button--red"
+              @click="resetAll"
+            >
+              {{ $t("buttons.reset") }}
+            </button>
+
+            <button
               :aria-label="$t('buttons.save')"
               :title="$t('buttons.save')"
               class="button button--flat"
@@ -107,13 +164,14 @@
             >
               {{ $t("buttons.save") }}
             </button>
+
           </div>
         </div>
         <!--        END OF UPLOAD DEST CARD-->
       </div>
     </div>
 
-    <div v-if="canAddBotsOrWebhooks" class="column">
+    <div v-if="canAddBotsOrWebhooks && autoSetupComplete" class="column">
       <div class="card">
         <div class="card-title">
           <h2>{{ $t("settings.bots") }}</h2>
@@ -205,7 +263,8 @@
 import {
    addDiscordBot,
    addDiscordWebhook,
-   deleteDiscordBot,
+   autoSetup,
+   deleteDiscordBot, deleteDiscordSettings,
    deleteDiscordWebhook,
    enableDiscordBot,
    getDiscordSettings,
@@ -225,14 +284,15 @@ export default {
          bots: [],
          showWebhookInput: false,
          webhookUrl: "",
-         channel_id: null,
+         channelId: null,
+         secondChannelId: null,
          guildId: null,
          showBotInput: false,
          botToken: "",
          attachmentName: "",
          canAddBotsOrWebhooks: false,
+         autoSetupComplete: false,
          canChangeUploadDestination: false,
-
          res: null
       }
    },
@@ -246,15 +306,7 @@ export default {
       this.setLoading(true)
       try {
          let res = await getDiscordSettings()
-         this.setWebhooks(res.webhooks)
-
-         this.bots = res.bots
-         this.channelId = res.channel_id
-         this.guildId = res.guild_id
-         this.attachmentName = res.attachment_name
-         this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
-         this.uploadDestinationLocked = res.upload_destination_locked
-         this.res = res
+         this.setDiscordSettings(res)
       } catch (error) {
          console.error(error)
          this.setError(error)
@@ -268,7 +320,19 @@ export default {
       ...mapActions(useMainStore, ["setError", "setLoading", "showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
 
       ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
+      setDiscordSettings(res) {
+         this.setWebhooks(res.webhooks)
 
+         this.bots = res.bots
+         this.channelId = res.channel_id
+         this.secondChannelId = res.second_channel_id
+         this.guildId = res.guild_id
+         this.attachmentName = res.attachment_name
+         this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
+         this.uploadDestinationLocked = res.upload_destination_locked
+         this.autoSetupComplete = res.auto_setup_complete
+         this.res = res
+      },
       addWebhook: throttle(async function() {
          if (this.webhookUrl === "") {
             this.showWebhookInput = true
@@ -317,9 +381,43 @@ export default {
       }, 1000),
       humanTime(date) {
          if (this.settings.dateFormat) {
-            return dayjs(date, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
+            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
          }
-         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
+         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
+      },
+      async resetAll() {
+         let res = await deleteDiscordSettings()
+         this.setDiscordSettings(res)
+         this.$toast.success(this.$t("toasts.discordSettingsDeleted"))
+      },
+      async doAutoSetup() {
+         if (!this.guildId || !this.botToken) {
+            this.$toast.error(this.$t("toasts.fillBoth"))
+            return
+         }
+         this.showHover({
+            prompt: "UploadDestinationWarning",
+            confirm: async () => {
+               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"),
+                  { type: "info", timeout: null}
+               )
+               try {
+                  let res = await autoSetup({ "guild_id": this.guildId, "bot_token": this.botToken })
+
+                  this.$toast.update(toastId, {
+                     content: this.$t("toasts.autoSetupComplete"),
+                     options: { type: "success", timeout: 3000}
+                  }, true)
+
+                  this.setDiscordSettings(res)
+               }
+               catch (e) {
+                  console.error(e)
+                  this.$toast.dismiss(toastId)
+               }
+
+            }
+         })
       },
       saveUploadDestination: throttle(async function() {
          if (this.res.guild_id !== this.guildId || this.res.channel_id !== this.channelId) {
@@ -381,6 +479,10 @@ export default {
 
 .disabled {
  color: gray;
+}
+
+.channel-column {
+ max-width: 50px;
 }
 
 .expiry-column {

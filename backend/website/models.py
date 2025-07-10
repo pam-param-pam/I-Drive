@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -556,6 +556,7 @@ class Webhook(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=100)
     channel_id = models.CharField(max_length=100)
+    channel_fk = models.ForeignKey("Channel", null=True, on_delete=models.CASCADE)
     discord_id = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     history = HistoricalRecords()
@@ -565,6 +566,7 @@ class Webhook(models.Model):
 
 
 class Bot(models.Model):
+    primary = models.BooleanField(default=False)
     token = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -575,11 +577,25 @@ class Bot(models.Model):
 
     history = HistoricalRecords()
 
+    def save(self, *args, **kwargs):
+        if self.primary:
+            with transaction.atomic():
+                Bot.objects.filter(primary=True).exclude(pk=self.pk).update(primary=False)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Bot[name={self.name}]"
 
+class Channel(models.Model):
+    name = models.CharField(max_length=20)
+    id = models.CharField(primary_key=True, max_length=50)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    guild_id = models.CharField(max_length=100, default="", blank=True)
 
 class DiscordSettings(models.Model):
+    auto_setup_complete = models.BooleanField(default=False)
+    category_id = models.CharField(max_length=100, default="", blank=True)
+    role_id = models.CharField(max_length=100, default="", blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
     channel_id = models.CharField(max_length=100, default="", blank=True)
     guild_id = models.CharField(max_length=100, default="", blank=True)

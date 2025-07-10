@@ -19,7 +19,7 @@ from .views.testViews import your_ip
 from .views.uploadViews import create_file, create_thumbnail, edit_file
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, \
     delete_bot, \
-    update_upload_destination, enable_bot, can_upload, reset_discord_state
+    update_upload_destination, enable_bot, can_upload, reset_discord_state, discord_settings_start, reset_discord_settings
 
 _route_registry = {}
 _registered_routes = set()
@@ -115,6 +115,9 @@ urlpatterns = [
     path("user/settings", ['PUT'], update_settings, name="update settings"),
     path("user/discordSettings", ['GET'], get_discord_settings, name="get discord settings"),
     path("user/discordSettings", ['PATCH'], update_upload_destination, name="update upload destination"),
+    path("user/discordSettings", ['DELETE'], reset_discord_settings, name="reset discord settings"),
+
+    path("user/discordSettings/autoSetup", ['POST'], discord_settings_start, name="do euto setup"),
     path("user/discordSettings/webhook", ['POST'], add_webhook, name="add a webhook"),
     path("user/discordSettings/webhook/<webhook_id>", ['DELETE'], delete_webhook, name="delete a webhook"),
     path("user/discordSettings/bot", ['POST'], add_bot, name="add a bot"),

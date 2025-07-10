@@ -13,8 +13,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from .celery import app
+from .discord.Discord import discord
 from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment
-from .utilities.Discord import discord
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
 

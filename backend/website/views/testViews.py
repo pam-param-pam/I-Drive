@@ -2,16 +2,10 @@ import time
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-from rest_framework import serializers
 from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from ..models import File, Folder
-from ..utilities.Discord import discord
-from ..utilities.constants import API_BASE_URL
+from ..discord.Discord import discord
 from ..utilities.other import get_ip
-from ..utilities.signer import sign_resource_id_with_expiry
 from ..utilities.throttle import defaultAuthUserThrottle
 
 

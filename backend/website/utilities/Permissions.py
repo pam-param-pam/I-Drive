@@ -35,13 +35,12 @@ class AdminPerms(BasePermissionWithMessage):
         return (perms.admin or perms.admin) and not perms.globalLock
 
 
-class CmdExecutePerms(BasePermissionWithMessage):
-    message = "You don't have command execute perms."
+class ReadPerms(BasePermissionWithMessage):
+    message = "You don't have read perms."
 
     def check_permission(self, request, view):
         perms = self.user_perms
-        return (perms.execute or perms.admin) and not perms.globalLock
-
+        return (perms.read or perms.admin) and not perms.globalLock
 
 class CreatePerms(BasePermissionWithMessage):
     message = "You don't have create perms."
@@ -57,6 +56,14 @@ class ModifyPerms(BasePermissionWithMessage):
     def check_permission(self, request, view):
         perms = self.user_perms
         return (perms.modify or perms.admin) and not perms.globalLock
+
+
+class CmdExecutePerms(BasePermissionWithMessage):
+    message = "You don't have command execute perms."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
+        return (perms.execute or perms.admin) and not perms.globalLock
 
 
 class DeletePerms(BasePermissionWithMessage):
@@ -89,15 +96,6 @@ class LockPerms(BasePermissionWithMessage):
     def check_permission(self, request, view):
         perms = self.user_perms
         return (perms.lock or perms.admin) and not perms.globalLock
-
-
-class ReadPerms(BasePermissionWithMessage):
-    message = "You don't have read perms."
-
-    def check_permission(self, request, view):
-        # return False
-        perms = self.user_perms
-        return (perms.read or perms.admin) and not perms.globalLock
 
 
 class SettingsModifyPerms(BasePermissionWithMessage):

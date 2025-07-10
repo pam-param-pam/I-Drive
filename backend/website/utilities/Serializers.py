@@ -155,6 +155,7 @@ class ShareSerializer(SimpleSerializer):
         return item
 
 class WebhookSerializer(SimpleSerializer):
+    # , "channel": webhook.channel_fk.name
     def serialize_object(self, webhook: Webhook) -> dict:
         return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url}
 

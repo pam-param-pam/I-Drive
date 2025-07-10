@@ -279,6 +279,7 @@
     "createdAt": "Utworzone",
     "guildId": "ID serwera",
     "channelId": "ID kanału",
+    "channel": "Kanał",
     "uploadDestination": "Miejsce przesyłania plików",
     "newWebhookPlaceholder": "Wpisz URL webhooka",
     "newBotPlaceholder": "Wpisz token bota",

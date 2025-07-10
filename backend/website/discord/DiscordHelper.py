@@ -14,12 +14,6 @@ class DiscordHelper:
             "Authorization": f"Bot {self.token}",
             "Content-Type": "application/json",
         }
-        self.VIEW_CHANNEL = 0x0000000000000400
-        self.SEND_MESSAGES = 0x0000000000000800
-        self.MANAGE_MESSAGES = 0x0000000000002000
-        self.ADMINISTRATOR = 0x0000000000000008
-        self.READ_MESSAGE_HISTORY = 0x0000000000010000
-        self.ATTACH_FILES = 0x0000000000008000
 
     def _get_bot_info(self):
 

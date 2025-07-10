@@ -23,10 +23,10 @@ from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedE
 from rest_framework.decorators import api_view, throttle_classes
 from zipFly import GenFile, ZipFly
 
+from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
-from ..utilities.Discord import discord
 from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
 from ..utilities.decorators import extract_file_from_signed_url, no_gzip
