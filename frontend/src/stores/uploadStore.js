@@ -369,6 +369,7 @@ export const useUploadStore = defineStore("upload", {
             let attachment_data = {
                "fragment_sequence": attachment.fragmentSequence,
                "fragment_size": attachment.rawBlob.size,
+               "channel_id": discordResponse.data.channel_id,
                "message_id": discordResponse.data.id,
                "attachment_id": discordAttachment.id,
                "message_author_id": discordResponse.data.author.id,
@@ -378,6 +379,7 @@ export const useUploadStore = defineStore("upload", {
          } else if (attachment.type === attachmentType.thumbnail) {
             state.thumbnail = {
                "size": attachment.rawBlob.size,
+               "channel_id": discordResponse.data.channel_id,
                "message_id": discordResponse.data.id,
                "attachment_id": discordAttachment.id,
                "iv": attachment.iv,

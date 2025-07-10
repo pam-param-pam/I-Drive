@@ -23,7 +23,6 @@ admin.site.register(VideoPosition)
 admin.site.register(VideoTrack)
 admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
-admin.site.register(Channel)
 
 
 @admin.register(Fragment)
@@ -345,6 +344,12 @@ class TagAdmin(SimpleHistoryAdmin):
         return "No files"
 
     file_list.short_description = "Files"
+
+@admin.register(Channel)
+class ChannelAdmin(admin.ModelAdmin):
+    search_fields = ('id', 'name')
+    list_display = ['name', 'id', 'guild_id', 'created_at']
+    readonly_fields = ('id', 'guild_id', 'owner')
 
 
 @admin.register(Webhook)

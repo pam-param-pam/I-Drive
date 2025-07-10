@@ -321,6 +321,7 @@ class DiscordAttachmentMixin(models.Model):
     )
     object_id = models.PositiveIntegerField()
     author = GenericForeignKey('content_type', 'object_id')
+    channel_id = models.CharField(max_length=32, db_index=True)
 
     class Meta:
         abstract = True
@@ -350,7 +351,6 @@ class Thumbnail(DiscordAttachmentMixin):
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
-    history = HistoricalRecords()
 
     def delete(self, *args, **kwargs):
         # Delete all possible thumbnail cache keys for this file
@@ -590,6 +590,9 @@ class Channel(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=100, default="", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Channel({self.name})"
 
 class DiscordSettings(models.Model):
     auto_setup_complete = models.BooleanField(default=False)

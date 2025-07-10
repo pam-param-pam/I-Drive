@@ -15,12 +15,14 @@ from django.utils import timezone
 from .celery import app
 from .discord.Discord import discord
 from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment
+from .utilities.Serializers import FolderSerializer, FileSerializer
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
 
 logger = get_task_logger(__name__)
 
-
+folder_serializer = FolderSerializer()
+file_serializer = FileSerializer()
 # thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
 @shared_task(bind=True, name='queue_ws_event', ignore_result=True, queue='wsQ')
 def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this self arg is needed - no, don't ask me why
@@ -167,13 +169,8 @@ def smart_delete(user_id, request_id, ids):
         traceback.print_exc()
 
 
-@app.task
-def prefetch_discord_message(message_id, attachment_id):
-    discord.get_file_url(message_id, attachment_id)
-
-
 def move_group(grouped_items, new_parent, user_id, request_id, processed_count, last_percentage, total_length, is_folder):
-    from .utilities.other import create_file_dict, create_folder_dict, send_event  # circular error aah
+    from .utilities.other import send_event  # circular error aah
     if is_folder:
         model = Folder
     else:
@@ -195,7 +192,7 @@ def move_group(grouped_items, new_parent, user_id, request_id, processed_count, 
 
             send_event(user_id, request_id, old_parent, EventCode.ITEM_MOVE_OUT, [first_item.id])
 
-            first_item_dict = create_folder_dict(first_item) if is_folder else create_file_dict(first_item)
+            first_item_dict = folder_serializer.serialize_object(first_item) if is_folder else file_serializer.serialize_object(first_item)
             send_event(user_id, request_id, new_parent, EventCode.ITEM_MOVE_IN, [first_item_dict])
 
             while item_group:
@@ -217,7 +214,7 @@ def move_group(grouped_items, new_parent, user_id, request_id, processed_count, 
                         model.objects.bulk_update(batch, ['parent', 'last_modified_at'])
 
                 for item in batch:
-                    item_dict = create_folder_dict(item) if is_folder else create_file_dict(item)
+                    item_dict = folder_serializer.serialize_object(item) if is_folder else file_serializer.serialize_object(item)
                     item_dicts_batch.append(item_dict)
                     ids.append(item.id)
 
@@ -285,7 +282,7 @@ def move_task(user_id, request_id, ids, new_parent_id):
 
 @app.task
 def move_to_trash_task(user_id, request_id, ids):
-    from .utilities.other import group_and_send_event, send_event, create_folder_dict  # circular error aah
+    from .utilities.other import group_and_send_event, send_event  # circular error aah
 
     files = File.objects.filter(id__in=ids).select_related("parent")
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
@@ -301,7 +298,7 @@ def move_to_trash_task(user_id, request_id, ids):
     total_length = len(folders)
     last_percentage = 0
     for index, folder in enumerate(folders):
-        folder_dict = create_folder_dict(folder)
+        folder_dict = folder_serializer.serialize_object(folder)
         send_event(user_id, request_id, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
         folder.moveToTrash()
         percentage = round((index + 1) / total_length * 100)
@@ -314,7 +311,7 @@ def move_to_trash_task(user_id, request_id, ids):
 
 @app.task
 def restore_from_trash_task(user_id, request_id, ids):
-    from .utilities.other import send_event, create_folder_dict, group_and_send_event  # circular error aah
+    from .utilities.other import send_event, group_and_send_event  # circular error aah
 
     files = File.objects.filter(id__in=ids).select_related("parent")
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
@@ -329,7 +326,7 @@ def restore_from_trash_task(user_id, request_id, ids):
     total_length = len(folders)
     last_percentage = 0
     for index, folder in enumerate(folders):
-        folder_dict = create_folder_dict(folder)
+        folder_dict = folder_serializer.serialize_object(folder)
         send_event(user_id, request_id, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
         folder.restoreFromTrash()
         percentage = round((index + 1) / total_length * 100)

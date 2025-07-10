@@ -271,11 +271,10 @@ def stream_moment(request, file_obj: File, timestamp):
     response = HttpResponse(moment_content, content_type="image/jpeg")
     return response
 
-
-@api_view(['GET'])
 # todo  handle >416 Requested Range Not Satisfiable<
+@api_view(['GET'])
 @no_gzip
-@throttle_classes([defaultAuthUserThrottle])
+@throttle_classes([MediaThrottle])
 @extract_file_from_signed_url
 def stream_file(request, file_obj: File):
     print(f"========={file_obj.name}=========")

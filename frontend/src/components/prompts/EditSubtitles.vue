@@ -209,6 +209,7 @@ export default {
             let subtitle_data = {
                language: this.newLanguage,
                size: encryptedBlob.size,
+               channel_id: uploadResponse.data.channel_id,
                message_id: uploadResponse.data.id,
                attachment_id: uploadResponse.data.attachments[0].id,
                iv: iv,

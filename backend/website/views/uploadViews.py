@@ -104,6 +104,7 @@ def create_file(request):
 
         for attachment in attachments:
             fragment_sequence = attachment['fragment_sequence']
+            channel_id = attachment['channel_id']
             message_id = attachment['message_id']
             attachment_id = attachment['attachment_id']
             fragment_size = attachment['fragment_size']
@@ -117,6 +118,7 @@ def create_file(request):
                 file=file_obj,
                 size=fragment_size,
                 offset=offset,
+                channel_id=channel_id,
                 message_id=message_id,
                 attachment_id=attachment_id,
                 content_type=ContentType.objects.get_for_model(author),
@@ -124,6 +126,7 @@ def create_file(request):
             )
 
         if thumbnail:
+            channel_id = thumbnail['channel_id']
             message_id = thumbnail['message_id']
             attachment_id = thumbnail['attachment_id']
             size = thumbnail['size']
@@ -146,6 +149,7 @@ def create_file(request):
                 size=size,
                 iv=iv,
                 key=key,
+                channel_id=channel_id,
                 message_id=message_id,
                 attachment_id=attachment_id,
                 content_type=ContentType.objects.get_for_model(author),
@@ -171,6 +175,7 @@ def edit_file(request):
 
     file_id = request.data['file_id']
     fragment_size = request.data['fragment_size']
+    channel_id = request.data['channel_id']
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     offset = request.data['offset']
@@ -208,6 +213,7 @@ def edit_file(request):
         file=file_obj,
         size=fragment_size,
         offset=offset,
+        channel_id=channel_id,
         message_id=message_id,
         attachment_id=attachment_id,
         content_type=ContentType.objects.get_for_model(author),
@@ -232,6 +238,7 @@ def edit_file(request):
 def create_thumbnail(request, file_obj):
     check_if_bots_exists(request.user)
 
+    channel_id = request.data['channel_id']
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     size = request.data['size']
@@ -258,6 +265,7 @@ def create_thumbnail(request, file_obj):
         size=size,
         key=key,
         iv=iv,
+        channel_id=channel_id,
         message_id=message_id,
         attachment_id=attachment_id,
         content_type=ContentType.objects.get_for_model(author),

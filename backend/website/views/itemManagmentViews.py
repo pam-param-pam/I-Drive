@@ -253,6 +253,7 @@ def remove_tag(request, file_obj):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_moment(request, file_obj):
     timestamp = request.data['timestamp']
+    channel_id = request.data['channel_id']
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     size = request.data['size']
@@ -281,6 +282,7 @@ def add_moment(request, file_obj):
         message_id=message_id,
         attachment_id=attachment_id,
         content_type=ContentType.objects.get_for_model(author),
+        channel_id=channel_id,
         object_id=author.discord_id,
         size=size,
         key=key,
@@ -321,7 +323,7 @@ def change_crc(request, file_obj):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_subtitle(request, file_obj):
     language = request.data['language']
-
+    channel_id = request.data['channel_id']
     message_id = request.data['message_id']
     attachment_id = request.data['attachment_id']
     size = request.data['size']
@@ -335,7 +337,7 @@ def add_subtitle(request, file_obj):
     if key:
         key = base64.b64decode(key)
 
-    subtitle = Subtitle.objects.create(language=language, file=file_obj, message_id=message_id, attachment_id=attachment_id,
+    subtitle = Subtitle.objects.create(language=language, file=file_obj, channel_id=channel_id, message_id=message_id, attachment_id=attachment_id,
                                        content_type=ContentType.objects.get_for_model(author), object_id=author.discord_id, size=size, key=key, iv=iv)
 
     return JsonResponse(SubtitleSerializer().serialize_object(subtitle), status=200)

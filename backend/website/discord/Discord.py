@@ -26,7 +26,7 @@ if not logger.hasHandlers():
 class Discord:
 
     def __init__(self):
-        self.client = httpx.Client(timeout=10.0)
+        self.client = httpx.Client(http2=True, timeout=10.0)
         self.current_token_index = 0
         self.users_state = {}
         self.lock = Lock()
@@ -69,15 +69,11 @@ class Discord:
                 pass
 
     def _get_channel_id(self, user, message_id=None):
-        start_time = time.time()
-
         from ..utilities.other import query_attachments
 
         attachments = query_attachments(message_id=message_id)
         if len(attachments) > 0:
-            duration = time.time() - start_time
-            print(f"_get_channel_id took {duration:.4f} seconds")
-            return attachments[0].get_author().channel.id
+            return attachments[0].channel_id
 
         raise DiscordError(f"Unable to find channel id associated with message ID={message_id}")
 
@@ -173,7 +169,9 @@ class Discord:
             logger.debug(message)
 
     def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
+        start = time.perf_counter()
         response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
+        print(f"⏱  _make_request took {time.perf_counter() - start:.4f} seconds")
         return response
 
     def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3) -> Response:
@@ -191,8 +189,12 @@ class Discord:
                 headers['Authorization'] = f'Bot {token}'
 
             logger.debug(f"Making bot request with token: {token}")
+            start_time = time.monotonic()
 
             response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
+            duration = time.monotonic() - start_time
+
+            print(f"⏱ _make_bot_request took {duration:.3f} seconds")
 
             if response.is_success:
                 return response
@@ -268,28 +270,34 @@ class Discord:
         return message
 
     def get_attachment_url(self, user, resource: Union['Fragment', 'Thumbnail', 'Preview', 'Moment', 'Subtitle']) -> str:
-        return self.get_file_url(user, resource.message_id, resource.attachment_id)
+        start = time.perf_counter()
+        result = self.get_file_url(user, resource.message_id, resource.attachment_id, resource.channel_id)
+        print(f"⏱ get_attachment_url took {time.perf_counter() - start:.4f} seconds")
+        return result
 
-    def get_file_url(self, user, message_id: str, attachment_id: str) -> str:
-        message = self.get_message(user, message_id).json()
+    def get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str) -> str:
+        start = time.perf_counter()
+        message = self.get_message(user, message_id, channel_id).json()
         for attachment in message["attachments"]:
             if attachment["id"] == attachment_id:
-                print(f"RETURNED {attachment['url']}")
+                print(f"⏱ get_file_url took {time.perf_counter() - start:.4f} seconds")
                 return attachment["url"]
         raise DiscordError(f"File with {attachment_id} not found")
 
-    def get_message(self, user, message_id: str) -> httpx.Response:
-        cached_message = cache.get(message_id)
-        if cached_message:
-            return cached_message
+    def get_message(self, user, message_id: str, channel_id: str) -> httpx.Response:
+        start = time.perf_counter()
+        # cached_message = cache.get(message_id)
+        # if cached_message:
+        #     print(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
+        #     return cached_message
 
-        channel_id = self._get_channel_id(user, message_id)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'GET', url)
 
         message = response.json()
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
+        print(f"⏱ get_message (non-cache) took {time.perf_counter() - start:.4f} seconds")
         return response
 
     def remove_message(self, user, message_id: str) -> httpx.Response:

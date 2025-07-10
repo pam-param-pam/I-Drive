@@ -269,6 +269,7 @@ export default {
                let file_data = {
                   offset: 0,
                   fragment_size: encryptedBlob.size,
+                  channel_id: uploadResponse.data.channel_id,
                   message_id: uploadResponse.data.id,
                   attachment_id: uploadResponse.data.attachments[0].id,
                   message_author_id: uploadResponse.data.author.id,
