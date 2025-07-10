@@ -1,6 +1,7 @@
 <template>
   <errors v-if="error" :error="error" />
   <div v-else-if="!loading" class="row">
+    <!-- COLUMN 1 -->
     <div class="column">
       <div class="cards-wrapper">
 
@@ -13,7 +14,6 @@
             <h3>{{ $t("settings.guildId") }}</h3>
             <input
               v-model="guildId"
-              :disabled="uploadDestinationLocked"
               :placeholder="$t('settings.enterGuildId')"
               class="input"
               type="text"
@@ -23,6 +23,14 @@
             <input
               v-model="botToken"
               :placeholder="$t('settings.enterBotToken')"
+              class="input"
+              type="text"
+              @keyup.enter="doAutoSetup"
+            />
+            <h3>{{ $t("settings.attachmentName") }}</h3>
+            <input
+              v-model="attachmentName"
+              :placeholder="$t('settings.enterAttachmentName')"
               class="input"
               type="text"
               @keyup.enter="doAutoSetup"
@@ -40,7 +48,7 @@
           </div>
         </div>
         <!--        START OF WEBHOOKS CARD-->
-        <div v-if="canAddBotsOrWebhooks && autoSetupComplete" class="card">
+        <div v-if="autoSetupComplete" class="card">
           <div class="card-title">
             <h2>{{ $t("settings.webhooks") }}</h2>
           </div>
@@ -61,7 +69,7 @@
                       }}</a>
                   </td>
                   <td class="channel-column">
-                    <a>{{ "files1" }}</a>
+                    <a>{{ webhook.channel }}</a>
                   </td>
                   <td class="expiry-column">
                     <a>{{ humanTime(webhook.created_at) }}</a>
@@ -80,12 +88,12 @@
               </table>
             </div>
             <div v-else class="info">
-                     <span>
-                        {{ $t("settings.webhookInfo") }}
-                        <br />
-                        <br />
-                        {{ $t("settings.webhookAdvice") }}
-                     </span>
+             <span>
+                {{ $t("settings.webhookInfo") }}
+                <br />
+                <br />
+                {{ $t("settings.webhookAdvice") }}
+             </span>
             </div>
             <input
               v-if="showWebhookInput || webhooks.length === 0"
@@ -107,6 +115,8 @@
             </button>
           </div>
         </div>
+
+
         <!--        START OF UPLOAD DEST CARD-->
         <div v-if="autoSetupComplete" class="card">
           <div class="card-title">
@@ -116,28 +126,12 @@
             <h3>{{ $t("settings.guildId") }}</h3>
             <input
               v-model="guildId"
-              :disabled="uploadDestinationLocked"
+              :disabled="autoSetupComplete"
               class="input"
               type="text"
               @keyup.enter="saveUploadDestination"
             />
 
-            <h3>{{ $t("settings.channelId") }}</h3>
-            <input
-              v-model="channelId"
-              :disabled="uploadDestinationLocked"
-              class="input"
-              type="text"
-              @keyup.enter="saveUploadDestination"
-            />
-            <h3>{{ $t("settings.secondChannelId") }}</h3>
-            <input
-              v-model="secondChannelId"
-              :disabled="uploadDestinationLocked"
-              class="input"
-              type="text"
-              @keyup.enter="saveUploadDestination"
-            />
             <h3>{{ $t("settings.attachmentName") }}</h3>
             <input
               v-model="attachmentName"
@@ -167,93 +161,88 @@
 
           </div>
         </div>
-        <!--        END OF UPLOAD DEST CARD-->
       </div>
     </div>
+    <!-- COLUMN 2 -->
+    <div v-if="autoSetupComplete" class="column">
+      <div class="cards-wrapper">
 
-    <div v-if="canAddBotsOrWebhooks && autoSetupComplete" class="column">
-      <div class="card">
-        <div class="card-title">
-          <h2>{{ $t("settings.bots") }}</h2>
-        </div>
-        <div class="card-content">
-          <div v-if="bots.length > 0" class="table-wrapper">
-            <table>
-              <tr>
-                <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
-                <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
-                <th></th>
-              </tr>
-
-              <tr
-                v-for="(bot, index) in bots"
-                :key="bot.discord_id"
-                :class="{ disabled: bot.disabled }"
-              >
-                <td
-                  v-if="bot.disabled"
-                  v-tooltip="$t('settings.botDisabledNoPerms')"
-                  class="share-name-column"
-                >
-                  <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
-                </td>
-                <td v-else class="share-name-column">
-                  <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
-                </td>
-                <td class="expiry-column">
-                  <a>{{ humanTime(bot.created_at) }}</a>
-                </td>
-                <td v-if="bot.disabled" class="small">
-                  <button
-                    :aria-label="$t('buttons.retry')"
-                    :title="$t('buttons.retry')"
-                    class="action"
-                    @click="enableBot(bot.discord_id)"
-                  >
-                    <i class="material-icons">sync</i>
-                  </button>
-                </td>
-                <td v-else class="small" />
-                <td class="small">
-                  <button
-                    :aria-label="$t('buttons.delete')"
-                    :title="$t('buttons.delete')"
-                    class="action"
-                    @click="deleteBot(bot.discord_id)"
-                  >
-                    <i class="material-icons">delete</i>
-                  </button>
-                </td>
-              </tr>
-            </table>
+        <!--        START OF BOTS CARD      -->
+        <div class="card">
+          <div class="card-title">
+            <h2>{{ $t("settings.bots") }}</h2>
           </div>
-          <div v-else class="info">
+          <div class="card-content">
+            <div v-if="bots.length > 0" class="table-wrapper">
+              <table>
+                <tr>
+                  <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
+                  <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
+                  <th></th>
+                </tr>
+
+                <tr
+                  v-for="(bot, index) in bots"
+                  :key="bot.discord_id"
+                >
+                  <td class="share-name-column">
+                    <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
+                    <span v-if="bot.primary" :title="$t('settings.primaryBot')">
+                     <svg class="crown-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
+                          style="vertical-align: text-bottom;">
+                      <path fill="currentColor"
+                            d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"></path>
+                    </svg>
+                  </span>
+
+                  </td>
+                  <td class="expiry-column">
+                    <a>{{ humanTime(bot.created_at) }}</a>
+                  </td>
+                  <td class="small">
+                    <button
+                      :aria-label="$t('buttons.delete')"
+                      :title="$t('buttons.delete')"
+                      :disabled="bot.primary"
+                      class="action"
+                      @click="deleteBot(bot.discord_id)"
+                    >
+                      <i class="material-icons">delete</i>
+                    </button>
+                  </td>
+                </tr>
+              </table>
+            </div>
+            <div v-if="bots.length <= 1" class="info">
                   <span>
                      {{ $t("settings.botInfo") }}
                      <br />
                      <br />
                      {{ $t("settings.botAdvice") }}
                   </span>
+            </div>
+            <input
+              v-if="showBotInput || bots.length === 0"
+              v-model="botToken"
+              :placeholder="$t('settings.newBotPlaceholder')"
+              class="input"
+              type="text"
+              @keyup.enter="addBot"
+            />
           </div>
-          <input
-            v-if="showBotInput || bots.length === 0"
-            v-model="botToken"
-            :placeholder="$t('settings.newBotPlaceholder')"
-            class="input"
-            type="text"
-            @keyup.enter="addBot"
-          />
+          <div class="card-action">
+            <button
+              :aria-label="$t('buttons.add')"
+              :title="$t('buttons.add')"
+              class="button button--flat"
+              @click="addBot"
+            >
+              {{ $t("buttons.add") }}
+            </button>
+          </div>
         </div>
-        <div class="card-action">
-          <button
-            :aria-label="$t('buttons.add')"
-            :title="$t('buttons.add')"
-            class="button button--flat"
-            @click="addBot"
-          >
-            {{ $t("buttons.add") }}
-          </button>
-        </div>
+
+
       </div>
     </div>
   </div>
@@ -264,9 +253,9 @@ import {
    addDiscordBot,
    addDiscordWebhook,
    autoSetup,
-   deleteDiscordBot, deleteDiscordSettings,
+   deleteDiscordBot,
+   deleteDiscordSettings,
    deleteDiscordWebhook,
-   enableDiscordBot,
    getDiscordSettings,
    updateDiscordSettings
 } from "@/api/user.js"
@@ -282,17 +271,16 @@ export default {
    data() {
       return {
          bots: [],
-         showWebhookInput: false,
-         webhookUrl: "",
-         channelId: null,
-         secondChannelId: null,
-         guildId: null,
-         showBotInput: false,
-         botToken: "",
-         attachmentName: "",
-         canAddBotsOrWebhooks: false,
+         channels: [],
          autoSetupComplete: false,
-         canChangeUploadDestination: false,
+
+         webhookUrl: "",
+         guildId: "",
+         botToken: "",
+         attachmentName: "ala",
+
+         showBotInput: false,
+         showWebhookInput: false,
          res: null
       }
    },
@@ -324,13 +312,11 @@ export default {
          this.setWebhooks(res.webhooks)
 
          this.bots = res.bots
-         this.channelId = res.channel_id
-         this.secondChannelId = res.second_channel_id
          this.guildId = res.guild_id
+         this.webhooks = res.webhooks
          this.attachmentName = res.attachment_name
-         this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
-         this.uploadDestinationLocked = res.upload_destination_locked
          this.autoSetupComplete = res.auto_setup_complete
+         this.channels = res.channels
          this.res = res
       },
       addWebhook: throttle(async function() {
@@ -365,20 +351,12 @@ export default {
          this.$toast.success(this.$t("toasts.webhookDeleted"))
       }, 1000),
 
-      enableBot: throttle(async function(discord_id) {
-         await enableDiscordBot(discord_id)
-         let bot = this.bots.find((bot) => bot.discord_id === discord_id)
-         if (bot) {
-            bot.disabled = false
-         }
-         this.$toast.success(this.$t("toasts.botEnabled"))
-      }, 1000),
-
       deleteBot: throttle(async function(discord_id) {
          await deleteDiscordBot(discord_id)
          this.bots = this.bots.filter((webhook) => webhook.discord_id !== discord_id)
          this.$toast.success(this.$t("toasts.botDeleted"))
       }, 1000),
+
       humanTime(date) {
          if (this.settings.dateFormat) {
             return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
@@ -387,31 +365,31 @@ export default {
       },
       async resetAll() {
          let res = await deleteDiscordSettings()
-         this.setDiscordSettings(res)
+         if (res.errors) {
+            this.$toast.info(res.errors, {timeout: null})
+         }
+         this.setDiscordSettings(res.settings)
          this.$toast.success(this.$t("toasts.discordSettingsDeleted"))
       },
       async doAutoSetup() {
-         if (!this.guildId || !this.botToken) {
-            this.$toast.error(this.$t("toasts.fillBoth"))
+         if (!this.guildId || !this.botToken || !this.attachmentName) {
+            this.$toast.error(this.$t("toasts.fillAll"))
             return
          }
          this.showHover({
             prompt: "UploadDestinationWarning",
             confirm: async () => {
-               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"),
-                  { type: "info", timeout: null}
-               )
+               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"), { type: "info", timeout: null })
                try {
-                  let res = await autoSetup({ "guild_id": this.guildId, "bot_token": this.botToken })
+                  let res = await autoSetup({ "guild_id": this.guildId, "bot_token": this.botToken, "attachment_name": this.attachmentName })
 
                   this.$toast.update(toastId, {
                      content: this.$t("toasts.autoSetupComplete"),
-                     options: { type: "success", timeout: 3000}
+                     options: { type: "success", timeout: 3000 }
                   }, true)
 
                   this.setDiscordSettings(res)
-               }
-               catch (e) {
+               } catch (e) {
                   console.error(e)
                   this.$toast.dismiss(toastId)
                }
@@ -431,9 +409,6 @@ export default {
                   })
                   this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
                   this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
-                  this.uploadDestinationLocked = res.upload_destination_locked
-                  console.log(this.uploadDestinationLocked)
-                  console.log(this.canAddBotsOrWebhooks)
                }
             })
          } else {
@@ -487,5 +462,13 @@ export default {
 
 .expiry-column {
  max-width: 50px;
+}
+
+.crown-icon {
+ margin-left: 4px;
+ margin-bottom: 1px;
+ height: 1em;
+ vertical-align: middle;
+ color: #d6ac82;
 }
 </style>

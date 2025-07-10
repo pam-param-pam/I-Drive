@@ -8,7 +8,7 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
-from ..models import DiscordSettings, Bot, Webhook
+from ..models import DiscordSettings, Bot, Webhook, Channel
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
 
@@ -24,6 +24,7 @@ if not logger.hasHandlers():
 
 
 class Discord:
+
     def __init__(self):
         self.client = httpx.Client(timeout=10.0)
         self.current_token_index = 0
@@ -40,7 +41,8 @@ class Discord:
     def _set_user_state(self, user):
         logger.debug("===obtaining user state===")
         settings = DiscordSettings.objects.get(user=user)
-        bots = Bot.objects.filter(owner=user, disabled=False).order_by('created_at')
+        bots = Bot.objects.filter(owner=user).order_by('created_at')
+        channels = Channel.objects.filter(owner=user)
 
         if len(bots) == 0:
             raise BadRequestError("User has no bots")
@@ -54,8 +56,9 @@ class Discord:
             }
             for bot in bots
         }
+        channels = [channel.id for channel in channels]
         with self.lock:
-            self.users_state[user.id] = {"channel_id": settings.channel_id, "guild_id": settings.guild_id, "bots": bots_dict, "blocked": False}
+            self.users_state[user.id] = {"channels": channels, "guild_id": settings.guild_id, "bots": bots_dict, "blocked": False}
 
     def remove_user_state(self, user):
         logger.debug("Removing user state")
@@ -65,9 +68,18 @@ class Discord:
             except KeyError:
                 pass
 
-    def _get_channel_id(self, user):
-        user_state = self._get_user_state(user)
-        return user_state['channel_id']
+    def _get_channel_id(self, user, message_id=None):
+        start_time = time.time()
+
+        from ..utilities.other import query_attachments
+
+        attachments = query_attachments(message_id=message_id)
+        if len(attachments) > 0:
+            duration = time.time() - start_time
+            print(f"_get_channel_id took {duration:.4f} seconds")
+            return attachments[0].get_author().channel.id
+
+        raise DiscordError(f"Unable to find channel id associated with message ID={message_id}")
 
     def _handle_discord_block(self, user, response):
         logger.debug("HANDLING DISCORD BLOCK")
@@ -143,21 +155,6 @@ class Discord:
                 raise DiscordBlockError(message="This view is protected, discord blocked you, try again later", retry_after=remaining_time)
             self.remove_user_state(user)
 
-    def _handle_bot_having_no_perms(self, user, token, response):
-        from ..tasks import queue_ws_event
-        bot_dict = self._get_user_state(user)["bots"][token]
-
-        bot = Bot.objects.get(owner=user, token=token)
-        bot.disabled = True
-        bot.reason = "errors.LackOfRequiredPerms"
-        bot.save()
-        queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id,
-                                      'message': "toasts.botRemovedForInsufficientPerms",
-                                      'args': {"name": bot_dict['name']}, 'finished': True, 'error': True})
-        self.remove_user_state(user)
-
-        raise DiscordError(response.text, response.status_code)
-
     def _calculate_expiry(self, message: dict) -> float:
         try:
             url = message["attachments"][0]["url"]
@@ -212,13 +209,13 @@ class Discord:
                 return self._make_bot_request(user, method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
             if response.status_code in (403, 401):
-                self._handle_bot_having_no_perms(user, token, response)
+                raise DiscordError(response.text, response.status_code)
 
         finally:
-
+            try:
                 self._update_token(user, token, response.headers)
-
-                # self.remove_user_state(user)
+            except:
+                self.remove_user_state(user)
 
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
 
@@ -286,7 +283,7 @@ class Discord:
         if cached_message:
             return cached_message
 
-        channel_id = self._get_channel_id(user)
+        channel_id = self._get_channel_id(user, message_id)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'GET', url)
 
@@ -296,7 +293,7 @@ class Discord:
         return response
 
     def remove_message(self, user, message_id: str) -> httpx.Response:
-        channel_id = self._get_channel_id(user)
+        channel_id = self._get_channel_id(user, message_id)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'DELETE', url)
         return response
@@ -310,7 +307,7 @@ class Discord:
         return response
 
     def edit_attachments(self, user, token, message_id, attachment_ids_to_keep) -> httpx.Response:
-        channel_id = self._get_channel_id(user)
+        channel_id = self._get_channel_id(user, message_id)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
 
         attachments_to_keep = []
@@ -321,9 +318,8 @@ class Discord:
         response = self._make_bot_request(user, 'PATCH', url, json={"attachments": attachments_to_keep}, headers=headers)
         return response
 
-    def fetch_messages(self, user):
+    def fetch_messages(self, user, channel_id):
         # todo
-        channel_id = self._get_channel_id(user)
         url = f"{DISCORD_BASE_URL}/channels/{channel_id}/messages"
         params = {"limit": 100}
         number_of_errors = 0

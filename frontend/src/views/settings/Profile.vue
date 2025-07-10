@@ -31,12 +31,7 @@
               {{ $t("settings.keepCreationTimestamp") }}
             </label>
           </p>
-          <p>
-            <label>
-              <input v-model="useProxy" type="checkbox" />
-              {{ $t("settings.useProxy") }}
-            </label>
-          </p>
+
 
           <div>
             <label>
@@ -129,7 +124,6 @@ export default {
          concurrentUploadRequests: 4,
          encryptionMethod: null,
          keepCreationTimestamp: false,
-         useProxy: false
       }
    },
 
@@ -159,7 +153,6 @@ export default {
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
       this.encryptionMethod = this.settings.encryptionMethod
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
-      this.useProxy = this.settings.useProxy
    },
 
    methods: {
@@ -195,7 +188,6 @@ export default {
             concurrentUploadRequests: this.concurrentUploadRequests,
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
-            useProxy: this.useProxy
          }
 
          await updateSettings(data)

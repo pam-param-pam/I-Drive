@@ -7,7 +7,6 @@ from collections import defaultdict
 from typing import Union, List, Dict, Optional
 from urllib.parse import unquote
 
-import requests
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.db.models import Q
@@ -15,7 +14,7 @@ from django.db.models.aggregates import Sum
 
 from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer
 from ..discord.Discord import discord
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, DiscordSettings, Preview, Fragment, Moment, DiscordAttachmentMixin, \
+from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, Preview, Fragment, Moment, DiscordAttachmentMixin, \
     VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FileDict, FolderDict, ResponseDict, ZipFileDict, ErrorDict
@@ -442,29 +441,6 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item
                 raise ResourceNotFoundError()
 
 
-def get_and_check_webhook(request, webhook_url: str) -> tuple[str, str, str, str]:
-    res = requests.get(webhook_url)
-    if not res.ok:
-        raise BadRequestError("Webhook URL is invalid")
-
-    settings = DiscordSettings.objects.get(user=request.user)
-
-    if not settings.guild_id or not settings.channel_id:
-        raise BadRequestError("First specify Channel ID and Guild ID.")
-
-    webhook = res.json()
-
-    guild_id = webhook['guild_id']
-    channel_id = webhook['channel_id']
-    discord_id = webhook['id']
-    name = webhook['name']
-
-    if settings.guild_id != guild_id or settings.channel_id != channel_id:
-        raise BadRequestError("Webhook's channel is not the same as in upload destination!")
-
-    return guild_id, channel_id, discord_id, name
-
-
 def get_webhook(request, discord_id: str) -> Webhook:
     try:
         return Webhook.objects.get(discord_id=discord_id, owner=request.user)
@@ -483,7 +459,7 @@ def get_discord_author(request, message_author_id: int) -> Webhook:
 
 
 def check_if_bots_exists(user) -> None:
-    if not Bot.objects.filter(owner=user, disabled=False).exists():
+    if not Bot.objects.filter(owner=user).exists():
         raise NoBotsError()
 
 
@@ -666,7 +642,6 @@ def obtain_discord_settings(user) -> dict:
     for bot in bots:
         bots_dicts.append(BotSerializer().serialize_object(bot))
 
-    upload_destination_locked = bool(Fragment.objects.filter(file__owner=user).exists())
     can_add_bots_or_webhooks = bool(settings.guild_id and len(channels) > 0)
 
     channel_dicts = []
@@ -674,5 +649,4 @@ def obtain_discord_settings(user) -> dict:
         channel_dicts.append({"name": channel.name, "id": channel.id})
 
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
-            "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks,
-            "upload_destination_locked": upload_destination_locked, "auto_setup_complete": settings.auto_setup_complete}
+            "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}

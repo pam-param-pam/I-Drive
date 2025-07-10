@@ -351,7 +351,7 @@ class TagAdmin(SimpleHistoryAdmin):
 class WebhookAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
-    readonly_fields = ('url', 'owner', 'discord_id', 'guild_id', 'channel_id')
+    readonly_fields = ('url', 'owner', 'discord_id', 'guild_id', 'channel')
 
 
 @admin.register(Bot)

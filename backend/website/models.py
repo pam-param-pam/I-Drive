@@ -309,8 +309,8 @@ class File(models.Model):
 
 
 class DiscordAttachmentMixin(models.Model):
-    message_id = models.CharField(max_length=32)
-    attachment_id = models.CharField(max_length=32, null=True, unique=True)
+    message_id = models.CharField(max_length=32, db_index=True)
+    attachment_id = models.CharField(max_length=32, null=True, unique=True, db_index=True)
     size = models.PositiveBigIntegerField()
 
     # GenericForeignKey to point to either Bot or Webhook
@@ -411,7 +411,6 @@ class UserSettings(models.Model):
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
     theme = models.CharField(default="dark", max_length=20)
-    use_proxy = models.BooleanField(default=True)
 
     history = HistoricalRecords()
 
@@ -555,8 +554,7 @@ class Webhook(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=100)
-    channel_id = models.CharField(max_length=100)
-    channel_fk = models.ForeignKey("Channel", null=True, on_delete=models.CASCADE)
+    channel = models.ForeignKey("Channel", null=True, on_delete=models.CASCADE)
     discord_id = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     history = HistoricalRecords()
@@ -591,13 +589,13 @@ class Channel(models.Model):
     id = models.CharField(primary_key=True, max_length=50)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     guild_id = models.CharField(max_length=100, default="", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class DiscordSettings(models.Model):
     auto_setup_complete = models.BooleanField(default=False)
     category_id = models.CharField(max_length=100, default="", blank=True)
     role_id = models.CharField(max_length=100, default="", blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
-    channel_id = models.CharField(max_length=100, default="", blank=True)
     guild_id = models.CharField(max_length=100, default="", blank=True)
     attachment_name = models.CharField(max_length=20, default="", blank=True)
 

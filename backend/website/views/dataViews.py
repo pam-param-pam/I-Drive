@@ -317,7 +317,7 @@ def get_trash(request):
 
     return JsonResponse({"trash": file_dicts + folder_dicts})
 
-@api_view(['GET'])
+@api_view(['HEAD'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_resource()

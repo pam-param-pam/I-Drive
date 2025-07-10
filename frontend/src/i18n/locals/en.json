@@ -297,7 +297,7 @@
     "newBotPlaceholder": "Enter bot token",
     "webhookInfo": "Add webhooks to upload files. All webhooks must use the same channel and guild.",
     "webhookAdvice": "It is advised not to use more than 3 webhooks.",
-    "botInfo": "Add bots to upload files. All bots require VIEW, READ HISTORY, WRITE, MANAGE permissions",
+    "botInfo": "Add more bots so iDrive works faster. All bots require VIEW, READ HISTORY, WRITE, MANAGE permissions",
     "botAdvice": "It is advised to use at least 5 bots.",
     "discordSettings": "Discord settings",
     "AES_CTR": "AES CTR",

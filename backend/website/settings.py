@@ -187,7 +187,6 @@ REST_FRAMEWORK = {
         'search': '60/m',
         'register': '20/h',
         'discord_settings': '2/1s',
-        'proxy': '20/s',
         'login': '5/10s'
 
     },

@@ -155,14 +155,13 @@ class ShareSerializer(SimpleSerializer):
         return item
 
 class WebhookSerializer(SimpleSerializer):
-    # , "channel": webhook.channel_fk.name
     def serialize_object(self, webhook: Webhook) -> dict:
-        return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url}
+        return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url, "channel": webhook.channel.name}
 
 
 class BotSerializer(SimpleSerializer):
     def serialize_object(self, bot: Bot) -> dict:
-        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "disabled": bot.disabled, "reason": bot.reason}
+        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "disabled": bot.disabled, "primary": bot.primary, "reason": bot.reason}
 
 
 class MomentSerializer(SimpleSerializer):

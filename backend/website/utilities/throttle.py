@@ -178,6 +178,3 @@ class DiscordSettingsThrottle(MyUserRateThrottleBase):
     scope = 'discord_settings'
     bucket = "YWJob2rcw"
 
-class ProxyRateThrottle(MyUserRateThrottleBase):
-    scope = 'proxy'
-    bucket = "2ADdw3qsw"

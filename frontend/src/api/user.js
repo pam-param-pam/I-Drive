@@ -96,11 +96,6 @@ export async function updateDiscordSettings(data) {
    return response.data
 }
 
-export async function enableDiscordBot(discordId) {
-   let url = `/user/discordSettings/bot/${discordId}/enable`
-   let response = await backendInstance.post(url)
-   return response.data
-}
 export async function canUpload(folderContext) {
    let url = `/user/canUpload/${folderContext}`
    let response = await backendInstance.get(url)
