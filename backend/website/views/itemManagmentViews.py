@@ -135,7 +135,7 @@ def rename(request, item_obj):
 @permission_classes([IsAuthenticated & ModifyPerms & LockPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_folder()
-@check_resource_permissions([CheckOwnership, CheckReady, CheckRoot, CheckTrash], resource_key="folder_obj")
+@check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
 def change_folder_password(request, folder_obj):
     newPassword = request.data['new_password']
     if newPassword:

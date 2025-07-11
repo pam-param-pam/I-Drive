@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
-from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckReady, CheckTrash
+from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckReady, CheckTrash, CheckRoot, CheckFolderLock
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer
 from ..utilities.constants import cache, MAX_DISCORD_MESSAGE_SIZE
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource, check_bulk_permissions, \
@@ -292,11 +292,7 @@ def search(request):
             folder_dicts.append(folder_dict)
 
     if include_files:
-        #    file_dicts = [file_serializer.serialize_dict(file) for file in files]
-
-        for file in files:
-            file_dict = file_serializer.serialize_tuple(file)
-            file_dicts.append(file_dict)
+        file_dicts = [file_serializer.serialize_dict(file) for file in files]
 
     return JsonResponse(file_dicts + folder_dicts, safe=False)
 
@@ -317,11 +313,12 @@ def get_trash(request):
 
     return JsonResponse({"trash": file_dicts + folder_dicts})
 
+
 @api_view(['HEAD'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_resource()
-@check_resource_permissions([CheckOwnership, CheckTrash, CheckReady], resource_key="resource_obj")
+@check_resource_permissions(default_checks - CheckRoot - CheckFolderLock, resource_key="resource_obj")
 def check_password(request, resource_obj):
     password = request.headers.get("X-Resource-Password")
 
