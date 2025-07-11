@@ -19,6 +19,9 @@ class NoBotsError(IDriveException):
 class RootPermissionError(IDriveException):
     """Raised when user tries to manage 'root' folder"""
 
+class HttpxError(IDriveException):
+    """Raised when httpx fails"""
+
 class DiscordBlockError(IDriveException):
     """Raised when discord blocks us for whatever reason"""
     def __init__(self, message, retry_after):

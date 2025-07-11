@@ -116,7 +116,6 @@
           </div>
         </div>
 
-
         <!--        START OF UPLOAD DEST CARD-->
         <div v-if="autoSetupComplete" class="card">
           <div class="card-title">
@@ -129,7 +128,6 @@
               :disabled="autoSetupComplete"
               class="input"
               type="text"
-              @keyup.enter="saveUploadDestination"
             />
 
             <h3>{{ $t("settings.attachmentName") }}</h3>
@@ -137,7 +135,7 @@
               v-model="attachmentName"
               class="input"
               type="text"
-              @keyup.enter="saveUploadDestination"
+              @keyup.enter="updateAttachmentName"
             />
           </div>
           <div class="card-action">
@@ -154,7 +152,7 @@
               :aria-label="$t('buttons.save')"
               :title="$t('buttons.save')"
               class="button button--flat"
-              @click="saveUploadDestination"
+              @click="updateAttachmentName"
             >
               {{ $t("buttons.save") }}
             </button>
@@ -301,7 +299,6 @@ export default {
       } finally {
          this.setLoading(false)
       }
-
    },
 
    methods: {
@@ -366,7 +363,7 @@ export default {
       async resetAll() {
          let res = await deleteDiscordSettings()
          if (res.errors) {
-            this.$toast.info(res.errors, {timeout: null})
+            this.$toast.info(res.errors, { timeout: null })
          }
          this.setDiscordSettings(res.settings)
          this.$toast.success(this.$t("toasts.discordSettingsDeleted"))
@@ -397,28 +394,9 @@ export default {
             }
          })
       },
-      saveUploadDestination: throttle(async function() {
-         if (this.res.guild_id !== this.guildId || this.res.channel_id !== this.channelId) {
-            this.showHover({
-               prompt: "UploadDestinationWarning",
-               confirm: async () => {
-                  let res = await updateDiscordSettings({
-                     channel_id: this.channelId,
-                     guild_id: this.guildId,
-                     attachment_name: this.attachmentName
-                  })
-                  this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
-                  this.canAddBotsOrWebhooks = res.can_add_bots_or_webhooks
-               }
-            })
-         } else {
-            await updateDiscordSettings({
-               channel_id: this.channelId,
-               guild_id: this.guildId,
-               attachment_name: this.attachmentName
-            })
-            this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
-         }
+      updateAttachmentName: throttle(async function() {
+         await updateDiscordSettings({ attachment_name: this.attachmentName })
+         this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
       }, 1000)
    }
 }

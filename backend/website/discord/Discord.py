@@ -1,5 +1,6 @@
 import logging
 import time
+import traceback
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Union
@@ -10,7 +11,7 @@ from httpx import Response
 
 from ..models import DiscordSettings, Bot, Webhook, Channel
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
-from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
+from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError
 
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.DEBUG)
@@ -26,7 +27,7 @@ if not logger.hasHandlers():
 class Discord:
 
     def __init__(self):
-        self.client = httpx.Client(http2=True, timeout=10.0)
+        self.client = httpx.Client(timeout=10.0)
         self.current_token_index = 0
         self.users_state = {}
         self.lock = Lock()
@@ -183,6 +184,8 @@ class Discord:
         token = headers.get('Authorization')
         if token:
             token = token.replace("Bot ", "")
+
+        response = None
         try:
             if not token:
                 token = self._get_token(user)
@@ -212,11 +215,15 @@ class Discord:
 
             if response.status_code in (403, 401):
                 raise DiscordError(response.text, response.status_code)
-
+        except httpx.RequestError as e:
+            raise HttpxError(str(e))
         finally:
             try:
-                self._update_token(user, token, response.headers)
-            except:
+                if response:
+                    self._update_token(user, token, response.headers)
+            except Exception as e:
+                print(f"ERROR HAPPENED IN DISCORD, UNABLE TO HANDLE IT: {str(e)}")
+                print(traceback.print_exc())
                 self.remove_user_state(user)
 
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):

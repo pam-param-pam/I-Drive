@@ -4,7 +4,6 @@
     "addSubtitleFile": "Select subtitle file",
     "addMoment": "Add Moment",
     "moments": "Moments",
-    "chooseFile": "Click to choose a new file",
     "imSure": "I'm sure and want to continue",
     "removeTag": "Remove tag",
     "addTag": "Add tag",
@@ -21,7 +20,6 @@
     "file": "File",
     "folder": "Folder",
     "forgotFolderPassword": "Forgot password?",
-    "fullScreen": "Toggle full screen",
     "increaseFontSize": "Increase font size",
     "info": "Info",
     "locate": "Locate",
@@ -39,7 +37,6 @@
     "previous": "Previous",
     "proceedAnyway": "Proceed anyway",
     "rename": "Rename",
-    "reportIssue": "Report Issue",
     "reset": "Reset",
     "restoreFromTrash": "Restore from Trash",
     "save": "Save",
@@ -55,7 +52,6 @@
     "upload": "Upload",
     "editThumbnail": "Edit thumbnail",
     "editSubtitles": "Subtitles"
-
   },
   "errors": {
     "invalidMove": "Invalid move",
@@ -89,7 +85,6 @@
   },
   "files": {
     "clear": "Clear",
-    "closePreview": "Close preview",
     "created": "Created at",
     "files": "Files",
     "folders": "Folders",
@@ -194,7 +189,6 @@
     "deleteMessageMultiple": "Are you sure you wish to delete {count} file(s)? This action is irreversible!",
     "deleteMessageShare": "Are you sure you wish to delete this share?",
     "deleteMessageSingle": "Are you sure you wish to delete this file/folder?",
-    "deleteTitle": "Delete files",
     "discardEditorChanges": "Are you sure you wish to discard the changes you've made?",
     "displayName": "Display Name",
     "download": "Download files",
@@ -292,7 +286,6 @@
     "attachmentName": "Discord's attachment name",
     "webhooks": "Webhooks",
     "bots": "Bots",
-    "botDisabledNoPerms": "This bot lacks required permission.",
     "addedAt": "Added at",
     "uploadDestination": "Upload destination",
     "guildId": "Guild ID",
