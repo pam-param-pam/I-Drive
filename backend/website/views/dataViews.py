@@ -292,7 +292,7 @@ def search(request):
             folder_dicts.append(folder_dict)
 
     if include_files:
-        file_dicts = [file_serializer.serialize_dict(file) for file in files]
+        file_dicts = [file_serializer.serialize_tuple(file) for file in files]
 
     return JsonResponse(file_dicts + folder_dicts, safe=False)
 
