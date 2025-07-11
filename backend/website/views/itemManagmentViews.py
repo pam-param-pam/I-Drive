@@ -95,7 +95,7 @@ def restore_from_trash(request, items):
 @permission_classes([IsAuthenticated & DeletePerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
-@check_bulk_permissions([CheckOwnership, CheckFolderLock, CheckReady, CheckRoot])
+@check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def delete(request, items):
     """This view uses values instead of ORM objects for files"""
     check_if_bots_exists(request.user)

@@ -4,6 +4,7 @@ from ..discord.constants import *
 from ..models import DiscordSettings, Channel, Bot
 from ..utilities.constants import DISCORD_BASE_URL
 from ..utilities.errors import BadRequestError, DiscordError
+from ..utilities.other import query_attachments
 
 ALL_BOTS_ROLE_PERMS = (
         VIEW_CHANNEL |
@@ -229,13 +230,23 @@ class DiscordHelper:
         if not bot_token:
             raise BadRequestError("Cannot remove discord settings, no primary bot found.")
 
-        errors = []
-        if discord_settings.category_id:
-            errors.append(self._create_category_cleanup(bot_token, discord_settings.category_id))
-
         channels = Channel.objects.filter(owner=user)
         for ch in channels:
+            if len(query_attachments(channel_id=ch.id)) > 0:
+                raise BadRequestError("Cannot reset discord settings. There are files in this channel")
+
+        if DiscordSettings.objects.exclude(user=user).filter(category_id=discord_settings.category_id).exists():
+            raise BadRequestError("Cannot remove category, its in use by another user.")
+
+        if DiscordSettings.objects.exclude(user=user).filter(role_id=discord_settings.role_id).exists():
+            raise BadRequestError("Cannot remove role, its in use by another user.")
+
+        errors = []
+        for ch in channels:
             errors.append(self._create_channel_in_category_cleanup(bot_token, ch.id))
+
+        if discord_settings.category_id:
+            errors.append(self._create_category_cleanup(bot_token, discord_settings.category_id))
 
         if discord_settings.role_id:
             errors.append(self._create_role_cleanup(guild_id, bot_token, discord_settings.role_id))

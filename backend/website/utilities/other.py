@@ -477,11 +477,13 @@ def auto_prefetch(file_obj: File, fragment_id: str) -> None:
     prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
 
 
-def query_attachments(message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview, Moment, Subtitle]:
+def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview, Moment, Subtitle]:
     # Create a Q object to build the query
     query = Q()
 
     # Add conditions based on provided arguments
+    if channel_id:
+        query &= Q(channel_id=channel_id)
     if message_id:
         query &= Q(message_id=message_id)
     if attachment_id:

@@ -113,16 +113,15 @@ urlpatterns = [
     path('user/canUpload/<folder_id>', ['GET'], can_upload, name="check if user is allowed to upload"),
     path("user/password", ['PATCH'], change_password, name="change password"),
     path("user/settings", ['PUT'], update_settings, name="update settings"),
+
     path("user/discordSettings", ['GET'], get_discord_settings, name="get discord settings"),
     path("user/discordSettings", ['PATCH'], update_attachment_name, name="update upload destination"),
     path("user/discordSettings", ['DELETE'], reset_discord_settings, name="reset discord settings"),
-
     path("user/discordSettings/autoSetup", ['POST'], discord_settings_start, name="do euto setup"),
     path("user/discordSettings/webhook", ['POST'], add_webhook, name="add a webhook"),
     path("user/discordSettings/webhook/<webhook_id>", ['DELETE'], delete_webhook, name="delete a webhook"),
     path("user/discordSettings/bot", ['POST'], add_bot, name="add a bot"),
     path("user/discordSettings/bot/<bot_id>", ['DELETE'], delete_bot, name="delete a bot"),
-    path("user/resetDiscordState", ['POST'], reset_discord_state, name="resets discord state when stuck"),
 
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),
@@ -147,8 +146,8 @@ urlpatterns = [
     # path('test', get_discord_state),
     # path("stats", get_stats, name="stats"),
     # path("stats2", get_discord_attachment_report, name="stats2"),
-    path("item/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download"),
-    path("item/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
+    path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download"),
+    path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

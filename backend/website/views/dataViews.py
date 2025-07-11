@@ -19,7 +19,7 @@ from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, C
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer
 from ..utilities.constants import cache, MAX_DISCORD_MESSAGE_SIZE
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource, check_bulk_permissions, \
-    extract_items
+    extract_items, disable_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
@@ -375,6 +375,7 @@ def get_subtitles(request, file_obj: File):
 
 """====================================================HERE BE DRAGONS=========================================================="""
 
+@disable_common_errors
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
@@ -387,7 +388,7 @@ def ultra_download_metadata(request, items):
         if isinstance(item, File):
             files.append(item)
         else:
-            files.append(item.get_all_files())
+            files.extend(item.get_all_files())
 
     def file_metadata(file_obj: File):
         file_dict = {

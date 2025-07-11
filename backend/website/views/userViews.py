@@ -209,7 +209,7 @@ def add_webhook(request):
 def delete_webhook(request, webhook_id):
     webhook = get_webhook(request, webhook_id)
 
-    if query_attachments(author_id=webhook.discord_id, owner=request.user):
+    if query_attachments(author_id=webhook.discord_id):
         raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
 
     webhook.delete()
@@ -259,7 +259,7 @@ def delete_bot(request, bot_id):
     if bot.primary:
         raise BadRequestError("Cannot remove primary bot.")
 
-    if query_attachments(author_id=bot.discord_id, owner=request.user):
+    if query_attachments(author_id=bot.discord_id):
         raise BadRequestError("Cannot remove bot. There are files associated with this bot")
 
     bot.delete()
@@ -281,7 +281,7 @@ def discord_settings_start(request):
     if settings.auto_setup_complete:
         raise BadRequestError("Auto setup was already done")
 
-    bot, role_id, category_id, channels, webhooks =  DiscordHelper().start(guild_id, bot_token)
+    bot, role_id, category_id, channels, webhooks = DiscordHelper().start(guild_id, bot_token)
 
     with transaction.atomic():
         settings.guild_id = guild_id

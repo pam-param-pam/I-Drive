@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from .celery import app
 from .discord.Discord import discord
-from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment
+from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment, Subtitle
 from .utilities.Serializers import FolderSerializer, FileSerializer
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
@@ -111,6 +111,11 @@ def smart_delete(user_id, request_id, ids):
             moments = Moment.objects.filter(file=file)
             for moment in moments:
                 message_structure[moment.message_id].append(moment.attachment_id)
+
+            # adding moments attachment if it exists
+            subtitles = Subtitle.objects.filter(file=file)
+            for subtitle in subtitles:
+                message_structure[subtitle.message_id].append(subtitle.attachment_id)
 
         length = len(message_structure)
         last_percentage = 0

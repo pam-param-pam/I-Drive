@@ -127,46 +127,41 @@ export function isImageFile(file) {
 }
 
 
-let currentWebhookIndex = 0
-
-
 export function getWebhook() {
-   let uploadStore = useUploadStore()
-   let webhooks = uploadStore.webhooks
+   const uploadStore = useUploadStore()
+   const webhooks = uploadStore.webhooks
 
-   // Group webhooks by channel id
-   let channelMap = new Map()
+   // Step 1: Group webhooks by channel ID
+   const channelMap = new Map()
    webhooks.forEach((wh) => {
-      if (!channelMap.has(wh.channel.id)) {
-         channelMap.set(wh.channel.id, [])
+      const channelId = wh.channel.id
+      if (!channelMap.has(channelId)) {
+         channelMap.set(channelId, [])
       }
-      channelMap.get(wh.channel.id).push(wh)
+      channelMap.get(channelId).push(wh)
    })
 
-   // Calculate weights: weight = 1 / number of webhooks for that channel
-   // So channels with fewer webhooks have higher weights
-   let weightedWebhooks = []
-   channelMap.forEach((hooks, channelId) => {
-      let weight = 1 / hooks.length
-      hooks.forEach((wh) => {
-         weightedWebhooks.push({ webhook: wh, weight })
-      })
-   })
+   // Step 2: Assign weights to each channel
+   const weightedChannels = []
+   for (const [channelId, hooks] of channelMap.entries()) {
+      const weight = 1 / hooks.length // Fewer webhooks = higher weight
+      weightedChannels.push({ channelId, webhooks: hooks, weight })
+   }
 
-   // Compute total weight for normalization
-   let totalWeight = weightedWebhooks.reduce((sum, wh) => sum + wh.weight, 0)
-
-   // Pick a webhook randomly, weighted by the calculated weights
+   // Step 3: Weighted random selection of a channel
+   const totalWeight = weightedChannels.reduce((sum, ch) => sum + ch.weight, 0)
    let r = Math.random() * totalWeight
-   for (let i = 0; i < weightedWebhooks.length; i++) {
-      r -= weightedWebhooks[i].weight
+   for (let i = 0; i < weightedChannels.length; i++) {
+      r -= weightedChannels[i].weight
       if (r <= 0) {
-         return weightedWebhooks[i].webhook
+         const hooks = weightedChannels[i].webhooks
+         return hooks[Math.floor(Math.random() * hooks.length)]
       }
    }
 
-   // Fallback in case of floating point issues
-   return weightedWebhooks[weightedWebhooks.length - 1].webhook
+   // Fallback
+   const last = weightedChannels[weightedChannels.length - 1]
+   return last.webhooks[Math.floor(Math.random() * last.webhooks.length)]
 }
 
 

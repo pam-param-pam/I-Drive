@@ -59,21 +59,22 @@ Credentials: `demo`/`demo`
 
 fix urls mapping, clean Discord class, tasks, shares
 
-| BUGS                                                                                              |
-|---------------------------------------------------------------------------------------------------|
-| fix 401 in locked folders in shares                                                               |
-| Fix file download for mobile                                                                      |
-| fix tasks                                                                                         |
-| fix mobile number download info frontend                                                          |
-| CannotProcessDiscordRequestError in tasks                                                         |
-| remove dangling discord attachments is buggy at best                                              |
-| zip timeouts on thousands of files                                                                |
-| share -> settings error                                                                           |
-| upload file prompt displays on top of context menu                                                |
-| handle empty files (upload, editor, anything else)                                                |
-| fix next/prev on desktop with images move                                                         |
-| share password bugged                                                                             |
-| zip download in shares                                                                            |
+| BUGS                                                 |
+|------------------------------------------------------|
+| fix 401 in locked folders in shares                  |
+| Fix file download for mobile                         |
+| fix tasks                                            |
+| fix mobile number download info frontend             |
+| CannotProcessDiscordRequestError in tasks            |
+| remove dangling discord attachments is buggy at best |
+| zip timeouts on thousands of files                   |
+| share -> settings error                              |
+| upload file prompt displays on top of context menu   |
+| handle empty files (upload, editor, anything else)   |
+| fix next/prev on desktop with images move            |
+| share password bugged                                |
+| zip download in shares                               |
+| fix video metadata info prompt                       |
 
 > [!WARNING]  
 > This section is very much unfinished
