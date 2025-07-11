@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "autoSetup": "Uruchom auto konfiguracje",
     "addSubtitleFile": "Wybierz plik z napisami",
     "addMoment": "Dodaj Moment",
     "moments": "Momenty",
@@ -350,6 +351,10 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",
+    "autoSetupInProgress": "Poczekaj chwile, trwa konfiguracja...",
+    "autoSetupComplete": "Konfiguracja zakonczona!",
+    "fillAllFields": "Uzupełnij wszystkie pola najpierw!",
     "loadingImage": "Ładowanie obrazu {percentage}%",
     "videoUnplayable": "Tego filmu nie da sie odtworzyć",
     "actionAlreadyInProgress": "Operacja w toku. Prosze poczekaj",

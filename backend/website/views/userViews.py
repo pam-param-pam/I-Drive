@@ -10,7 +10,7 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..discord.Discord import discord
-from ..discord.DiscordStarter import DiscordStarter
+from ..discord.DiscordHelper import DiscordHelper
 from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, UserPerms, Channel, File
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks, CreatePerms, ModifyPerms, ReadPerms, AdminPerms
 from ..utilities.Serializers import WebhookSerializer, BotSerializer
@@ -187,7 +187,7 @@ def add_webhook(request):
     if Webhook.objects.filter(url=url, owner=request.user).exists():
         raise BadRequestError("Webhook with this URL already exists!")
 
-    guild_id, channel, discord_id, name = DiscordStarter().get_and_check_webhook(request.user, url)
+    guild_id, channel, discord_id, name = DiscordHelper().get_and_check_webhook(request.user, url)
 
     webhook = Webhook(
         url=url,
@@ -233,7 +233,7 @@ def add_bot(request):
     if not primary_bot:
         raise BadRequestError("No primary bot found.")
 
-    bot_id, bot_name = DiscordStarter().check_bot(settings.guild_id, primary_bot.token, settings.role_id, token)
+    bot_id, bot_name = DiscordHelper().check_bot(settings.guild_id, primary_bot.token, settings.role_id, token)
     bot = Bot(
         token=token,
         discord_id=bot_id,
@@ -281,9 +281,7 @@ def discord_settings_start(request):
     if settings.auto_setup_complete:
         raise BadRequestError("Auto setup was already done")
 
-    discordHelper = DiscordStarter()
-
-    bot, role_id, category_id, channels, webhooks = discordHelper.start(guild_id, bot_token)
+    bot, role_id, category_id, channels, webhooks =  DiscordHelper().start(guild_id, bot_token)
 
     with transaction.atomic():
         settings.guild_id = guild_id
@@ -336,7 +334,7 @@ def reset_discord_settings(request):
     if not primary_bot:
         raise BadRequestError("No bot found, please remove state manually via admin page")
 
-    errors = DiscordStarter().remove_all(user=request.user)
+    errors = DiscordHelper().remove_all(user=request.user)
     error_string = ", ".join(e for e in errors if e)
 
     # Delete webhooks

@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "autoSetup": "Run auto setup",
     "addSubtitleFile": "Select subtitle file",
     "addMoment": "Add Moment",
     "moments": "Moments",
@@ -362,6 +363,10 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto rzeczy z discorda",
+    "autoSetupInProgress": "Auto setup in progress...",
+    "autoSetupComplete": "Auto setup complete!",
+    "fillAllFields": "Fill all fields first!",
     "loadingImage": "Loading image {percentage}%",
     "videoUnplayable": "Sorry, this video is unplayable",
     "actionAlreadyInProgress": "This operation is already in progress. Please wait",

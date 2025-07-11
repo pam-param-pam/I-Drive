@@ -1,108 +1,269 @@
 import requests
 
+from ..discord.constants import *
+from ..models import DiscordSettings, Channel, Bot
 from ..utilities.constants import DISCORD_BASE_URL
-from ..utilities.errors import BadRequestError
+from ..utilities.errors import BadRequestError, DiscordError
+
+ALL_BOTS_ROLE_PERMS = (
+        VIEW_CHANNEL |
+        READ_MESSAGE_HISTORY |
+        SEND_MESSAGES |
+        ATTACH_FILES |
+        MANAGE_MESSAGES
+)
+
+PRIMARY_BOT_REQUIRED_PERMS = (
+        MANAGE_CHANNELS |
+        MANAGE_WEBHOOKS |
+        VIEW_CHANNEL |
+        SEND_MESSAGES |
+        READ_MESSAGE_HISTORY |
+        ATTACH_FILES |
+        MANAGE_MESSAGES |
+        MANAGE_ROLES
+)
 
 
 class DiscordHelper:
+    def start(self, guild_id, bot_token):
+        self._verify_guild_id(guild_id)
+        bot_id, bot_name = self._get_bot(bot_token)
+        self._verify_bot_is_in_guild(guild_id, bot_token)
+        self._verify_bot_perms(guild_id, bot_token, bot_id, PRIMARY_BOT_REQUIRED_PERMS)
 
-    def __init__(self, token, guild_id, channel_id):
-        self.token = token
-        self.channel_id = channel_id
-        self.guild_id = guild_id
-        self.headers = {
-            "Authorization": f"Bot {self.token}",
-            "Content-Type": "application/json",
+        role_id = None
+        category_id = None
+        created_channels = []
+        created_webhook_channels = []
+
+        try:
+            # Create role
+            role_payload = {
+                "name": "iDrive",
+                "permissions": str(ALL_BOTS_ROLE_PERMS),
+                "color": 0,
+                "hoist": False,
+                "mentionable": False
+            }
+            role_id = self._create_role(guild_id, bot_token, role_payload)
+
+            # Assign role
+            self._assign_role_to_bot(guild_id, bot_token, bot_id, role_id)
+
+            # Create category
+            category_payload = {
+                'name': 'iDrive',
+                'type': 4  # 4 = Category
+            }
+            category_id = self._create_category(guild_id, bot_token, category_payload)
+
+            # Create channels
+            channels = []
+            for i in range(2):
+                channel_payload = {
+                    'name': f"Files_{i + 1}",
+                    'type': 0,
+                    'parent_id': category_id,
+                    'permission_overwrites': [
+                        {
+                            'id': role_id,  # Bot role
+                            'type': 0,
+                            'allow': str(ALL_BOTS_ROLE_PERMS)
+                        }
+                    ]
+                }
+                channel_id, channel_name = self._create_channel_in_category(guild_id, bot_token, channel_payload)
+                created_channels.append(channel_id)
+                channels.append((channel_id, channel_name))
+
+            # Create webhooks
+            webhooks = []
+            for channel in channels:
+                for i in range(3):
+                    webhook_payload = {'name': f'Captain Hook v{i + 1}'}
+                    webhook_id, webhook_url, webhook_name, channel_id = self._create_webhook(bot_token, channel, webhook_payload)
+                    webhooks.append((webhook_id, webhook_url, webhook_name, channel_id))
+                    created_webhook_channels.append(channel_id)
+
+            return (bot_id, bot_name), role_id, category_id, channels, webhooks
+
+        except Exception as e:
+            if created_channels:
+                for ch_id in created_channels:
+                    self._create_channel_in_category_cleanup(bot_token, ch_id)
+
+            if category_id:
+                self._create_category_cleanup(bot_token, category_id)
+
+            if role_id:
+                self._create_role_cleanup(guild_id, bot_token, role_id)
+
+            raise e
+
+    def _get_headers(self, bot_token):
+        return {
+            'Authorization': f'Bot {bot_token}',
+            'Content-Type': 'application/json'
         }
 
-    def _get_bot_info(self):
+    def _verify_guild_id(self, guild_id):
+        if not isinstance(guild_id, str) and guild_id.isdigit() and len(guild_id) >= 17:
+            raise BadRequestError("Bad guild id")
 
-        bot_user_url = f"{DISCORD_BASE_URL}/users/@me"
-        response = requests.get(bot_user_url, headers=self.headers)
-        if response.status_code in (401, 403):
-            raise BadRequestError(f"Bot token is incorrect")
-        response.raise_for_status()
+    def _get_bot(self, bot_token):
+        bot_response = requests.get(f"{DISCORD_BASE_URL}/users/@me", headers=self._get_headers(bot_token))
+        if not bot_response.ok:
+            raise BadRequestError("Token is wrong")
 
-        return response.json()
+        bot_user = bot_response.json()
+        return bot_user['id'], bot_user['username']
 
-    def _get_bot_roles(self, bot_id):
-        response = requests.get(f"{DISCORD_BASE_URL}/guilds/{self.guild_id}/members/{bot_id}", headers=self.headers)
-        response.raise_for_status()
+    def _verify_bot_is_in_guild(self, guild_id, bot_token):
+        guild_response = requests.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}", headers=self._get_headers(bot_token))
+        if not guild_response.ok:
+            raise BadRequestError("Bot not in guild or guild not found.")
 
-        return response.json().get("roles", [])
+    def _verify_bot_perms(self, guild_id, bot_token, bot_id, perms):
+        # Step 1.2: Get bot's member object in guild
+        member_resp = requests.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}", headers=self._get_headers(bot_token))
+        if not member_resp.ok:
+            raise DiscordError(member_resp.text, member_resp.status_code)
+        member_data = member_resp.json()
+        bot_role_ids = member_data['roles']
 
-    def _get_channel_permissions(self):
+        # Step 1.3: Get all roles in the guild
+        roles_resp = requests.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles", headers=self._get_headers(bot_token))
+        if not roles_resp.ok:
+            raise DiscordError(roles_resp.text, roles_resp.status_code)
+        roles = roles_resp.json()
 
-        response = requests.get(f"{DISCORD_BASE_URL}/channels/{self.channel_id}", headers=self.headers)
-        if response.status_code in (401, 403):
-            raise BadRequestError(f"Bot has no access to {self.channel_id} channel")
+        # Step 1.4: Compute combined permissions of all roles the bot has
+        combined_permissions = 0
+        for role in roles:
+            if role['id'] in bot_role_ids:
+                combined_permissions |= int(role['permissions'])
 
-        else:
-            response.raise_for_status()
-            data = response.json()
-            return data.get("permission_overwrites", [])
+        # Step 1.5: Check if bot has all required permissions
+        if (combined_permissions & perms) != perms:
+            # Calculate missing permissions
+            missing_perms = perms & ~combined_permissions
 
-    def _get_roles(self):
-        response = requests.get(f"{DISCORD_BASE_URL}/guilds/{self.guild_id}/roles", headers=self.headers)
-        response.raise_for_status()
-        return response.json()
+            missing_names = [
+                name for bit, name in PERMISSION_NAMES.items()
+                if (missing_perms & bit) == bit
+            ]
 
-    def _calculate_permissions(self, bot_roles, all_roles, permission_overwrites):
-        permissions = 0
+            if missing_names:
+                raise BadRequestError(f"Bot is missing required permissions: {', '.join(missing_names)}")
 
-        # Apply permissions from the bot's roles
-        for role in all_roles:
-            if role["id"] in bot_roles:
-                permissions |= int(role["permissions"])
+    def _create_role(self, guild_id, bot_token, role_payload):
+        res = requests.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles", headers=self._get_headers(bot_token), json=role_payload)
+        if not res.ok:
+            raise DiscordError(f"Failed to create role in step 4", res.status_code)
 
-        # Get the @everyone role permissions
-        everyone_role = next((role for role in all_roles if role["id"] == self.guild_id), None)
+        return res.json()['id']
 
-        if everyone_role:
-            permissions |= int(everyone_role["permissions"])
+    def _create_role_cleanup(self, guild_id, bot_token, role_id):
+        try:
+            res = requests.delete(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles/{role_id}", headers=self._get_headers(bot_token))
+            if not res.ok:
+                return f"Failed to delete role {role_id}({res.status_code})"
+        except Exception as ex:
+            print(f"Exception when deleting role {role_id}: {ex}")
 
-            # Track explicit allow and deny for overwrites
-            explicit_allow = 0
-            explicit_deny = 0
+    def _assign_role_to_bot(self, guild_id, bot_token, bot_id, role_id):
+        res = requests.put(f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}/roles/{role_id}", headers=self._get_headers(bot_token))
+        if not res.ok:
+            raise DiscordError("Failed to assign role in step 5", res.status_code)
 
-            for overwrite in permission_overwrites:
-                if overwrite["type"] in [0, 1]:  # Role (0) and user (1) overwrites
-                    explicit_allow |= int(overwrite["allow"])
-                    explicit_deny |= int(overwrite["deny"])
+    def _create_category(self, guild_id, bot_token, category_payload):
+        res = requests.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/channels", headers=self._get_headers(bot_token), json=category_payload)
+        if not res.ok:
+            raise DiscordError("Failed to create a category in step 6", res.status_code)
+        return res.json()['id']
 
-            # Apply explicit allows and denies from overwrites
-            permissions |= explicit_allow
-            permissions &= ~explicit_deny
+    def _create_category_cleanup(self, bot_token, category_id):
+        try:
+            res = requests.delete(f"{DISCORD_BASE_URL}/channels/{category_id}", headers=self._get_headers(bot_token))
+            if not res.ok:
+                return f"Failed to delete category {category_id}({res.status_code})"
+        except Exception as e:
+            print(f"Exception when deleting category: {e}")
 
-            # Check individual permissions
-            had_admin_perms = bool(permissions & self.ADMINISTRATOR)
-            has_view_permission = bool(permissions & self.VIEW_CHANNEL)
-            had_read_history_permission = bool(permissions & self.READ_MESSAGE_HISTORY)
-            has_write_permission = bool(permissions & self.SEND_MESSAGES)
-            has_delete_permission = bool(permissions & self.MANAGE_MESSAGES)
-            has_attach_files_permission = bool(permissions & self.ATTACH_FILES)
-            return had_admin_perms, has_view_permission, had_read_history_permission, has_write_permission, has_delete_permission, has_attach_files_permission
+    def _create_channel_in_category(self, guild_id, bot_token, channel_payload):
+        res = requests.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/channels", headers=self._get_headers(bot_token), json=channel_payload)
+        if not res.ok:
+            raise DiscordError("Failed to create a channel in step 7", res.status_code)
 
-    def check_bot_and_its_perms(self):
-        bot_info = self._get_bot_info()
-        permission_overwrites = self._get_channel_permissions()
-        bot_id = bot_info['id']
-        bot_name = bot_info['username']
+        return res.json()['id'], res.json()['name']
 
-        bot_roles = self._get_bot_roles(bot_id)
-        all_roles = self._get_roles()
+    def _create_channel_in_category_cleanup(self, bot_token, channel_id):
+        try:
+            res = requests.delete(f"{DISCORD_BASE_URL}/channels/{channel_id}", headers=self._get_headers(bot_token))
+            if not res.ok:
+                return f"Failed to delete channel {channel_id}({res.status_code})"
+        except Exception as e:
+            print(f"Exception when deleting channel {channel_id}: {e}")
 
-        has_admin_perms, has_view, had_read_history, has_write, has_delete, has_attach_files = self._calculate_permissions(bot_roles, all_roles, permission_overwrites)
-        if has_admin_perms or (has_view and has_write and has_delete and had_read_history and has_attach_files):
-            return bot_id, bot_name
+    def _create_webhook(self, bot_token, channel, webhook_payload):
 
-        else:
-            permissions = {
-                "VIEW": has_view,
-                "WRITE": has_write,
-                "MANAGE": has_delete,
-                "READ HISTORY": had_read_history,
-                "ATTACH FILES": has_attach_files,
-            }
-            missing_permissions = [perm for perm, has_perm in permissions.items() if not has_perm]
-            raise BadRequestError(f"{', '.join(missing_permissions)} permissions are missing.")
+        res = requests.post(f"{DISCORD_BASE_URL}/channels/{channel[0]}/webhooks", headers=self._get_headers(bot_token), json=webhook_payload)
+        if not res.ok:
+            raise DiscordError(f"Failed to create webhook in channel {channel[0]}", res.status_code)
+
+        return res.json()['id'], res.json()['url'], res.json()['name'], channel[0]
+
+    def check_bot(self, guild_id, primary_token, role_id, bot_token):
+        self._verify_guild_id(guild_id)
+        bot_id, bot_name = self._get_bot(bot_token)
+        self._verify_bot_is_in_guild(guild_id, bot_token)
+        self._assign_role_to_bot(guild_id, primary_token, bot_id, role_id)
+        return bot_id, bot_name
+
+    def remove_all(self, user):
+        discord_settings = DiscordSettings.objects.get(user=user)
+        guild_id = discord_settings.guild_id
+        bot_token = Bot.objects.filter(owner=user, primary=True).first().token
+
+        if not bot_token:
+            raise BadRequestError("Cannot remove discord settings, no primary bot found.")
+
+        errors = []
+        if discord_settings.category_id:
+            errors.append(self._create_category_cleanup(bot_token, discord_settings.category_id))
+
+        channels = Channel.objects.filter(owner=user)
+        for ch in channels:
+            errors.append(self._create_channel_in_category_cleanup(bot_token, ch.id))
+
+        if discord_settings.role_id:
+            errors.append(self._create_role_cleanup(guild_id, bot_token, discord_settings.role_id))
+
+        return errors
+
+    def get_and_check_webhook(self, user, webhook_url: str) -> tuple[str, str, str, str]:
+        res = requests.get(webhook_url)
+        if not res.ok:
+            raise BadRequestError("Webhook URL is invalid")
+
+        settings = DiscordSettings.objects.get(user=user)
+
+        if not settings.auto_setup_complete:
+            raise BadRequestError("First do auto setup.")
+
+        webhook = res.json()
+
+        guild_id = webhook['guild_id']
+        channel_id = webhook['channel_id']
+        discord_id = webhook['id']
+        name = webhook['name']
+
+        if settings.guild_id != guild_id:
+            raise BadRequestError("Webhook's guild is not the same as in upload destination!")
+
+        channel = Channel.objects.filter(owner=user, id=channel_id)
+        if not channel.exists():
+            raise BadRequestError("Webhook's channel ID incorrect!")
+
+        return guild_id, channel.first(), discord_id, name

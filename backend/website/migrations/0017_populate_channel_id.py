@@ -19,13 +19,15 @@ def populate_channel_ids(apps, schema_editor):
         for obj in Model.objects.select_related('content_type').all():
             ct = obj.content_type
             if ct.model == 'bot':
-                author = Bot.objects.get(discord_id=obj.object_id)
+                channel_id = input("Please type channel_id")
+
             elif ct.model == 'webhook':
                 author = Webhook.objects.get(discord_id=obj.object_id)
+                channel_id = author.channel.id
             else:
                 raise Exception(f"Unknown ct.model = {ct.model}")
 
-            obj.channel_id = author.channel.id
+            obj.channel_id = channel_id
             obj.save(update_fields=["channel_id"])
 
 

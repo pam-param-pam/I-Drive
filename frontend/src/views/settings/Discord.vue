@@ -373,13 +373,13 @@ export default {
       },
       async doAutoSetup() {
          if (!this.guildId || !this.botToken || !this.attachmentName) {
-            this.$toast.error(this.$t("toasts.fillAll"))
+            this.$toast.error(this.$t("toasts.fillAllFields"))
             return
          }
          this.showHover({
             prompt: "UploadDestinationWarning",
             confirm: async () => {
-               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"), { type: "info", timeout: null })
+               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"), { type: "info", timeout: null, draggable: false, closeOnClick: false })
                try {
                   let res = await autoSetup({ "guild_id": this.guildId, "bot_token": this.botToken, "attachment_name": this.attachmentName })
 
