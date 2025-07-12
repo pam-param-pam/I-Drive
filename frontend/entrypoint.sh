@@ -47,3 +47,6 @@ done
 
 echo "All replacements completed successfully."
 
+echo "Starting nginx..."
+# Now run the original NGINX entrypoint to start the server
+exec nginx -g 'daemon off;'
