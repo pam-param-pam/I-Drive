@@ -42,17 +42,10 @@ def last_modified_func(request, file_obj, sequence=None):
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 @etag(etag_func)
 def get_folder_info(request, folder_obj: Folder):
-    # todo
-    # folder_content = cache.get(folder_obj.id)
-    # if not folder_content:
-    start_time = time.perf_counter()
-
-    folder_content = build_folder_content(folder_obj)
-
-    end_time = time.perf_counter()
-    elapsed = end_time - start_time
-    print(f"build_folder_content took {elapsed:.4f} seconds")
-    # cache.set(folder_obj.id, folder_content)
+    folder_content = cache.get(folder_obj.id)
+    if not folder_content:
+        folder_content = build_folder_content(folder_obj)
+        cache.set(folder_obj.id, folder_content)
 
     breadcrumbs = create_breadcrumbs(folder_obj)
     return HttpResponse(
