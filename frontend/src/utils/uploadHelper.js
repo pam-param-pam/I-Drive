@@ -189,7 +189,7 @@ export async function makeThumbnailIfNeeded(queueFile) {
       }
    }
    //generating a thumbnail if needed for video file
-   if (isImageFile(queueFile) && queueFile.fileObj.size > 200 * 1024) {
+   if (isImageFile(queueFile)) { // && queueFile.fileObj.size > 200 * 1024
       try {
          thumbnail = await getImageThumbnail(queueFile)
       } catch (e) {

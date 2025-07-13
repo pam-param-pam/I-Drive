@@ -76,11 +76,7 @@ export default {
       submit: throttle(async function (event) {
          if ((await isPasswordCorrect(this.folder.id, this.password)) === true) {
             this.setFolderPassword({ folderId: this.folder.id, password: this.password })
-
             this.finishAndShowAnotherPrompt()
-         } else {
-            let message = this.$t('toasts.folderPasswordIncorrect')
-            this.$toast.error(message)
          }
       }, 1000),
 

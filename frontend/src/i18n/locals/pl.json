@@ -345,7 +345,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
-    "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",
+    "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto rzeczy z discorda",
     "autoSetupInProgress": "Poczekaj chwile, trwa konfiguracja...",
     "autoSetupComplete": "Konfiguracja zakonczona!",
     "fillAllFields": "Uzupełnij wszystkie pola najpierw!",

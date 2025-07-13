@@ -170,10 +170,11 @@ def create_file(request):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
-def edit_file(request):
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
+def edit_file(request, file_obj):
     check_if_bots_exists(request.user)
 
-    file_id = request.data['file_id']
     fragment_size = request.data['fragment_size']
     channel_id = request.data['channel_id']
     message_id = request.data['message_id']
@@ -191,10 +192,7 @@ def edit_file(request):
 
     author = get_discord_author(request, message_author_id)
 
-    file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, [default_checks])
-
-    if file_obj.type != "text":
+    if file_obj.type != "Text":
         raise BadRequestError("You can only edit text files!")
 
     fragments = Fragment.objects.filter(file=file_obj)

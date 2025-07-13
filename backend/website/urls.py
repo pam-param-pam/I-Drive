@@ -70,7 +70,7 @@ urlpatterns = [
     path("files/<signed_file_id>/stream", ["GET"], stream_file, name="stream_subtitle"),
 
     path("files", ["POST"], create_file, name="create file"),
-    path("files", ["PATCH"], edit_file, name="edit file"),
+    path("files/<file_id>", ["PATCH"], edit_file, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
     path("files/<file_id>/thumbnail", ["POST"], create_thumbnail, name="create a thumbnail"),
     path("files/<file_id>/video-position", ["PUT"], update_video_position, name="update video position"),
@@ -102,7 +102,7 @@ urlpatterns = [
 
     path('zip/<token>', ['GET'], stream_zip_files),
 
-    path("items/<item_id>/moreinfo/", ["GET"], fetch_additional_info, name="fetch more info about an item"),
+    path("items/<item_id>/moreinfo", ["GET"], fetch_additional_info, name="fetch more info about an item"),
     path("items/<item_id>/rename", ["PATCH"], rename, name="rename an item"),
 
     django_path("auth/token/login", MyTokenCreateView.as_view(), name="login"),
@@ -136,7 +136,7 @@ urlpatterns = [
     path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),
     path('shares/<token>', ['GET'], view_share, name='view_share'),
 
-    path("resources/<resource_id>/password", ['HEAD'], check_password, name="check password"),
+    path("resources/<resource_id>/password", ['GET'], check_password, name="check password"),
 
     django_path('admin', admin.site.urls),
 

@@ -38,7 +38,7 @@ export async function createFile(data, password) {
 
 export async function editFile(fileId, data) {
    let url = `/files/${fileId}`
-   let response = await backendInstance.put(url, data)
+   let response = await backendInstance.patch(url, data)
    return response.data
 
 }

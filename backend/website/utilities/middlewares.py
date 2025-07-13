@@ -8,6 +8,7 @@ from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.db import OperationalError
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from httpx import ConnectError
@@ -187,6 +188,9 @@ class CommonErrorsMiddleware(MiddlewareMixin):
 
         elif isinstance(exception, httpx.ConnectError):
             return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(exception)), status=503)
+
+        elif isinstance(exception, OperationalError):
+            return JsonResponse(build_http_error_response(code=503, error="errors.databaseError", details=str(exception)), status=503)
 
         # OTHER
         elif isinstance(exception, DiscordError):

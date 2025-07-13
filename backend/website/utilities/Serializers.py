@@ -87,7 +87,7 @@ class FileSerializer(AdvancedSerializer):
             d["lockFrom"] = lock_from_id
 
         if in_trash:
-            d["in_trash_since"] = in_trash_since
+            d["in_trash_since"] = in_trash_since.isoformat()
 
         if duration:
             d["duration"] = duration

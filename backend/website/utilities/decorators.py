@@ -26,8 +26,10 @@ def no_gzip(view_func):
 
 
 def disable_common_errors(view_func):
-    view_func.disable_common_errors = True
-    return view_func
+    def wrapper(*args, **kwargs):
+        setattr(wrapper, 'disable_common_errors', True)
+        return view_func(*args, **kwargs)
+    return wrapper
 
 
 def extract_file_from_signed_url(view_func):
