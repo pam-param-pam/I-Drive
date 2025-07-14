@@ -1,7 +1,7 @@
 import { backendInstance } from "@/utils/networker.js"
 
-export async function isPasswordCorrect(resourceId, password) {
-   let url = `/resources/${resourceId}/password`
+export async function isPasswordCorrect(itemId, password) {
+   let url = `/items/${itemId}/password`
    try {
       let response = await backendInstance.get(url, {
          headers: {

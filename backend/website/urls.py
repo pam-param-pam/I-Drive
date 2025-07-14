@@ -13,7 +13,7 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, change_folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
     remove_subtitle
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview, share_view_subtitle, \
-    share_get_subtitles
+    share_get_subtitles, check_share_password
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import your_ip
 from .views.uploadViews import create_file, create_thumbnail, edit_file
@@ -104,6 +104,7 @@ urlpatterns = [
 
     path("items/<item_id>/moreinfo", ["GET"], fetch_additional_info, name="fetch more info about an item"),
     path("items/<item_id>/rename", ["PATCH"], rename, name="rename an item"),
+    path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 
     django_path("auth/token/login", MyTokenCreateView.as_view(), name="login"),
     django_path("auth/register", register_user, name="register"),
@@ -132,11 +133,11 @@ urlpatterns = [
     path("shares/<token>/files/<file_id>/preview/stream", ['GET'], share_view_preview, name="view share file preview"),
     path("shares/<token>/files/<file_id>/subtitles/<subtitle_id>/stream", ['GET'], share_view_subtitle, name="view share file subtitle"),
     path("shares/<token>/files/<file_id>/subtitles", ['GET'], share_get_subtitles, name="view share file all subtitles"),
+    path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),
     path('shares/<token>', ['GET'], view_share, name='view_share'),
 
-    path("resources/<resource_id>/password", ['GET'], check_password, name="check password"),
 
     django_path('admin', admin.site.urls),
 

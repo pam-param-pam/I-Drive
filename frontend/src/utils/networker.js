@@ -251,10 +251,11 @@ backendInstance.interceptors.response.use(
 
             if (passwordMissing.length > 0) {
                return new Promise((resolve, reject) => {
-
+                  console.log("PASSWORD IS MISSINGF")
+                  console.log(config)
                   store.showHover({
                      prompt: "FolderPassword",
-                     props: { requiredFolderPasswords: response.data.requiredFolderPasswords },
+                     props: { requiredFolderPasswords: response.data.requiredFolderPasswords, isInShareContext: config.__shareContext },
                      confirm: () => {
                         retry469Request(config)
                            .then(resolve)

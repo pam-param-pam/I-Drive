@@ -90,6 +90,18 @@ def create_share(request, item_obj):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([defaultAuthUserThrottle])
+def check_share_password(request, token):
+    share = ShareableLink.objects.get(token=token)
+    password = request.headers.get("X-Resource-Password")
+
+    if share.password == password:
+        return HttpResponse(status=204)
+
+    raise ResourcePermissionError("Share password is incorrect")
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
 def view_share(request, token, folder_id=None):
     share = get_share(request, token)

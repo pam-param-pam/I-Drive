@@ -247,6 +247,8 @@
     "streamable": "Strumieniowalne",
     "type": "Rodzaj Pliku",
     "unlockFolder": "Odblokuj Folder",
+    "unlockShare": "Odblokuj link",
+    "enterSharePassword": "Ten link wymaga hasła. Wpisz je by odblokować dostęp do",
     "upload": "Prześlij",
     "uploadFiles": "Przesyłanie {amount} plików...",
     "uploadMessage": "Proszę wybrać metodę przesyłania"

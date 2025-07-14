@@ -390,13 +390,13 @@ def get_share(request, token: str, ignorePassword: bool = False) -> ShareableLin
             share.name = "Share"
 
             if password:
-                if share.password != password:
-                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+                if share.password != password: # todo
+                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
             elif passwords:
                 if share.password != passwords.get(share.id):
-                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
             else:
-                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[share])
+                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
     return share
 
 

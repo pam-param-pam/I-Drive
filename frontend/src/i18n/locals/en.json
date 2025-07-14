@@ -249,6 +249,8 @@
     "streamable": "Streamable",
     "type": "Type",
     "unlockFolder": "Unlock Folder",
+    "unlockShare": "Unlock Share",
+    "enterSharePassword": "This share requires a password. Please enter it",
     "upload": "Upload",
     "uploadFiles": "Uploading {amount} files...",
     "uploadMessage": "Please pick upload method",

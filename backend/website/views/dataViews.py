@@ -310,8 +310,8 @@ def get_trash(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
-@extract_resource()
-@check_resource_permissions(default_checks - CheckRoot - CheckFolderLock, resource_key="resource_obj") # todo fix this for shares
+@extract_item()
+@check_resource_permissions(default_checks - CheckFolderLock, resource_key="item_obj")
 @disable_common_errors
 def check_password(request, resource_obj):
     password = request.headers.get("X-Resource-Password")

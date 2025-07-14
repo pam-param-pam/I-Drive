@@ -145,6 +145,10 @@ class DiscordHelper:
             if role['id'] in bot_role_ids:
                 combined_permissions |= int(role['permissions'])
 
+        # Step 1.4.1: Shortcut if bot has ADMINISTRATOR, which grants all perms
+        if (combined_permissions & ADMINISTRATOR) == ADMINISTRATOR:
+            return
+
         # Step 1.5: Check if bot has all required permissions
         if (combined_permissions & perms) != perms:
             # Calculate missing permissions
