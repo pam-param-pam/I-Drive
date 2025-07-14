@@ -231,6 +231,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
 def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDict, FolderDict]) -> Dict:
     """hide info from share context and apply lockFrom if share is locked"""
     del resource_dict['isLocked']
+    resource_dict['isVideoMetadata'] = False
     try:
         del resource_dict['video_position']
         del resource_dict['lockFrom']
@@ -249,7 +250,7 @@ def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource
     if isinstance(resource_in_share, Folder):
         resource_dict = folder_serializer.serialize_object(resource_in_share)
     else:
-        resource_dict = file_serializer.serialize_object(resource_in_share)
+        resource_dict = file_serializer.serialize_dict(resource_in_share)
 
         rsc_id = get_attr(resource_in_share, "id")
         resource_dict["download_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/stream"

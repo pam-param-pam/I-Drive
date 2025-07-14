@@ -313,10 +313,10 @@ def get_trash(request):
 @extract_item()
 @check_resource_permissions(default_checks - CheckFolderLock, resource_key="item_obj")
 @disable_common_errors
-def check_password(request, resource_obj):
+def check_password(request, item_obj):
     password = request.headers.get("X-Resource-Password")
 
-    if resource_obj.password == password:
+    if item_obj.password == password:
         return HttpResponse(status=204)
 
     raise ResourcePermissionError("Folder password is incorrect")

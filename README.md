@@ -74,7 +74,6 @@ fix urls mapping, clean Discord class, tasks, shares
 | fix next/prev on desktop with images move            |
 | share password bugged                                |
 | zip download in shares                               |
-| fix video metadata info prompt                       |
 
 > [!WARNING]  
 > This section is very much unfinished
@@ -216,19 +215,19 @@ PROTOCOL=http
 ### All .env variables:
 *THIS IS NOT FINISHED*
 
-| Name                           | default (with docker compose)          | required (with docker compose) | required (building from source) | description |
-|--------------------------------|----------------------------------------|--------------------------------|---------------------------------|-------------|
-| I_DRIVE_BACKEND_SECRET_KEY     | -                                      | Yes                            | yes                             | todo        |
-| IS_DEV_ENV                     | false                                  | No                             | No                              | todo        |
-| DEPLOYMENT_HOST                | localhost                              | No                             | yes                             | todo        |
-| PROTOCOL                       | https                                  | No                             | yes                             | todo        |
-| NGINX_PORT                     | 80                                     | No                             | yes                             | todo        |
-| I_DRIVE_REDIS_ADDRESS          | redis                                  | No                             | yes                             | todo        |
-| I_DRIVE_REDIS_PORT             | 6379                                   | No                             | yes                             | todo        |
-| I_DRIVE_BACKEND_STORAGE_DIR    | /app/data                              | No                             | yes                             | todo        |
-| BACKEND_BASE_URL               | ${PROTOCOL}://${DEPLOYMENT_HOST}/api   | No                             | yes                             | todo        |
-| VITE_BACKEND_BASE_URL          | ${PROTOCOL}://${DEPLOYMENT_HOST}/api   | No                             | yes                             | todo        |
-| VITE_BACKEND_BASE_WS           | ${PROTOCOL}://${DEPLOYMENT_HOST}/api   | No                             | yes                             | todo        |
+| Name                           | default (with docker compose)        | required (with docker compose) | required (building from source) | description |
+|--------------------------------|--------------------------------------|--------------------------------|---------------------------------|-------------|
+| I_DRIVE_BACKEND_SECRET_KEY     | -                                    | Yes                            | Yes                             | todo        |
+| IS_DEV_ENV                     | false                                | No                             | Yes                             | todo        |
+| DEPLOYMENT_HOST                | localhost:2137                       | No                             | Yes                             | todo        |
+| PROTOCOL                       | http                                 | No                             | Yes                             | todo        |
+| NGINX_PORT                     | 2137                                 | No                             | Yes                             | todo        |
+| I_DRIVE_REDIS_ADDRESS          | redis                                | No                             | Yes                             | todo        |
+| I_DRIVE_REDIS_PORT             | 6379                                 | No                             | Yes                             | todo        |
+| I_DRIVE_BACKEND_STORAGE_DIR    | /app/data                            | No                             | Yes                             | todo        |
+| BACKEND_BASE_URL               | ${PROTOCOL}://${DEPLOYMENT_HOST}/api | No                             | Yes                             | todo        |
+| VITE_BACKEND_BASE_URL          | ${PROTOCOL}://${DEPLOYMENT_HOST}/api | No                             | Yes                             | todo        |
+| VITE_BACKEND_BASE_WS           | ${PROTOCOL}://${DEPLOYMENT_HOST}/api | No                             | Yes                             | todo        |
 
 
 # PS
