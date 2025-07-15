@@ -37,6 +37,8 @@ class FailedToResizeImage(IDriveException):
 
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""
+    def __init__(self, ip):
+        self.ip = ip
 
 class DiscordError(IDriveException):
     def __init__(self, message="Unexpected Discord Error.", status=0):

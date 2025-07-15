@@ -178,8 +178,8 @@ class CheckReady(BaseResourceCheck):
 
 class CheckFolderLock(BaseResourceCheck):
     def check(self, request, resource):
-        if self._is_locked(resource) and self._check_ip(request):
-            raise LockedFolderWrongIpError()
+        if self._is_locked(resource):
+            self._check_ip(request)
 
         if self._is_locked(resource) and not self._is_password_valid(request, resource):
             raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
@@ -203,9 +203,11 @@ class CheckFolderLock(BaseResourceCheck):
         return self._require_attr(resource, 'is_locked')
 
     def _check_ip(self, request):
-        return True
         ip, _ = get_ip(request)
-        return ip not in ("127.0.0.1", "192.168.1.1")
+        good_ip = ip in ("127.0.0.1", "192.168.1.1")
+        if not good_ip:
+            raise LockedFolderWrongIpError(ip=ip)
+        return True
 
     def _is_password_valid(self, request, resource):
         provided_password = request.headers.get("X-Resource-Password")

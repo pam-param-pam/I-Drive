@@ -146,7 +146,7 @@ class CommonErrorsMiddleware(MiddlewareMixin):
 
         #  403 FORBIDDEN
         elif isinstance(exception, LockedFolderWrongIpError):
-            return JsonResponse(build_http_error_response(code=403, error="errors.resourceInaccessibleFromIP", details="This resource cannot be accessed from this IP"), status=403)
+            return JsonResponse(build_http_error_response(code=403, error="errors.resourceInaccessibleFromIP", details=f"This resource cannot be accessed from this IP({exception.ip})"), status=403)
 
         elif isinstance(exception, ResourcePermissionError):
             return JsonResponse(build_http_error_response(code=403, error="errors.resourceAccessForbidden", details=str(exception)), status=403)
