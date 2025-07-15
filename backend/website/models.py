@@ -482,6 +482,14 @@ class ShareableLink(models.Model):
     def is_locked(self):
         return self.password
 
+    def get_type(self):
+        if self.content_type.name == "folder":
+            return "folder"
+        elif self.content_type.name == "file":
+            return "file"
+        else:
+            raise KeyError("Wrong content_type in share")
+
     def get_resource_inside(self):
         from .utilities.other import get_resource
 
@@ -492,6 +500,7 @@ class ShareableLink(models.Model):
             # looks like folder/file no longer exist, deleting time!
             self.delete()
             raise ResourceNotFoundError()
+
 class UserZIP(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
@@ -578,7 +587,7 @@ class Bot(models.Model):
     def save(self, *args, **kwargs):
         if self.primary:
             with transaction.atomic():
-                Bot.objects.filter(primary=True).exclude(pk=self.pk).update(primary=False)
+                Bot.objects.filter(owner=self.owner, primary=True).exclude(pk=self.pk).update(primary=False)
         super().save(*args, **kwargs)
 
     def __str__(self):

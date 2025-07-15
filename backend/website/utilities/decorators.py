@@ -101,24 +101,25 @@ def extract_items(source="kwargs", key="ids", inject_as="items"):
         "inject_as": inject_as,
         "many": True,
     })
-def extract_resource(source="kwargs", key="resource_id", inject_as="resource_obj"):
+
+def extract_share(source="kwargs", key="token", inject_as="share_obj"):
     return extract_resources({
         "source": source,
         "key": key,
-        "model": [File, Folder, ShareableLink],
+        "model": [ShareableLink],
         "inject_as": inject_as,
+        "model_field": "token"
     })
 
-
 def extract_resources(*rules):
-    def _get_resource_from_models(models, obj_id):
+    def _get_resource_from_models(models, obj_id, model_field: str):
         for model in models:
             try:
-                return model.objects.get(id=obj_id)
+                return model.objects.get(**{model_field: obj_id})
             except ObjectDoesNotExist:
                 continue
         model_names = ", ".join(m.__name__ for m in models)
-        raise ResourceNotFoundError(f"No resource with ID '{obj_id}' found in models: {model_names}")
+        raise ResourceNotFoundError(f"No resource with {model_field.upper()} '{obj_id}' found in models: {model_names}")
 
     def decorator(view_func):
         @wraps(view_func)
@@ -129,6 +130,7 @@ def extract_resources(*rules):
                 models = rule["model"]
                 inject_as = rule["inject_as"]
                 many = rule.get("many", False)
+                model_field = rule.get("model_field", "id")
 
                 # Get container
                 container = kwargs if source == "kwargs" else getattr(request, source, {})
@@ -142,13 +144,13 @@ def extract_resources(*rules):
                         raise ValueError(f"Expected list of IDs for key '{key}', got {type(ids).__name__}")
                     found_resources = []
                     for obj_id in ids:
-                        resource = _get_resource_from_models(models, obj_id)
+                        resource = _get_resource_from_models(models, obj_id, model_field)
                         found_resources.append(resource)
                     kwargs[inject_as] = found_resources
                 else:
                     if isinstance(ids, (list, tuple)):
                         raise ValueError(f"Expected single ID for key '{key}', got multiple")
-                    resource = _get_resource_from_models(models, ids)
+                    resource = _get_resource_from_models(models, ids, model_field)
                     kwargs[inject_as] = resource
 
                 # Remove original key
@@ -209,7 +211,6 @@ def check_bulk_permissions(checks, resource_key="items"):
             resources = kwargs.get(resource_key)
             all_required_passwords = []
             seen_ids = set()
-            print(f"got checks: {checks}")
 
             for check in checks:
                 try:

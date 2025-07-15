@@ -57,7 +57,6 @@
 
 <script>
 import { resetPassword } from '@/api/folder.js'
-import throttle from 'lodash.throttle'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
 import { onceAtATime } from "@/utils/common.js"

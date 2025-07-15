@@ -26,7 +26,6 @@ import { isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
 import Action from "@/components/header/Action.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
-import i18n from "@/i18n/index.js"
 
 export default {
    components: { HeaderBar, Action },

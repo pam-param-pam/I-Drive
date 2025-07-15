@@ -54,6 +54,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "resourceInaccessibleFromIP": "Invalid IP",
     "invalidMove": "Invalid move",
     "notAllowedToUpload": "You are not allowed to upload yet. First configure discord settings.",
     "goBack": "Go back",
@@ -250,7 +251,7 @@
     "type": "Type",
     "unlockFolder": "Unlock Folder",
     "unlockShare": "Unlock Share",
-    "enterSharePassword": "This share requires a password. Please enter it",
+    "enterSharePassword": "This share requires a password. Please enter it to unlock: ",
     "upload": "Upload",
     "uploadFiles": "Uploading {amount} files...",
     "uploadMessage": "Please pick upload method",

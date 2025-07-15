@@ -127,6 +127,8 @@ urlpatterns = [
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),
     path("shares/<token>", ['DELETE'], delete_share, name="delete share"),
+    path('shares/<token>', ['GET'], view_share, name='view_share'),
+    path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),
     path("shares/<token>/zip", ['POST'], create_share_zip_model, name="create zip for share"),
     path("shares/<token>/files/<file_id>/stream", ['GET'], share_view_stream, name="view share file stream"),
     path("shares/<token>/files/<file_id>/thumbnail/stream", ['GET'], share_view_thumbnail, name="view share file thumbnail"),
@@ -135,8 +137,7 @@ urlpatterns = [
     path("shares/<token>/files/<file_id>/subtitles", ['GET'], share_get_subtitles, name="view share file all subtitles"),
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
-    path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),
-    path('shares/<token>', ['GET'], view_share, name='view_share'),
+
 
 
     django_path('admin', admin.site.urls),

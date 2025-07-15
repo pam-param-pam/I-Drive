@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 
-from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer
+from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer
 from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, Preview, Fragment, Moment, DiscordAttachmentMixin, \
     VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel
@@ -180,23 +180,18 @@ def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
     return breadcrumbs
 
 
-def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, isFolderId: bool = False) -> List[Breadcrumbs]:
-    folder_path = []
-
+def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, is_folder_id: bool = False) -> List[Breadcrumbs]:
     subfolders = folder_obj.get_ancestors(include_self=True, ascending=True)
+
+    breadcrumbs = []
     for subfolder in subfolders:
         data = {"name": subfolder.name, "id": subfolder.id}
-
-        if subfolder != obj_in_share:
-            folder_path.append(data)
-
+        if subfolder != obj_in_share or is_folder_id:
+            breadcrumbs.append(data)
         if subfolder == obj_in_share:
-            if isFolderId:
-                folder_path.append(data)
             break
 
-    folder_path.reverse()
-    return folder_path
+    return list(reversed(breadcrumbs))
 
 
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
@@ -245,36 +240,33 @@ def hide_info_in_share_context(share: ShareableLink, resource_dict: Union[FileDi
 
 
 def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource) -> Dict:
-    folder_serializer = FolderSerializer()
-    file_serializer = FileSerializer()
+    folder_serializer = ShareFolderSerializer()
+    file_serializer = ShareFileSerializer(share)
+
     if isinstance(resource_in_share, Folder):
         resource_dict = folder_serializer.serialize_object(resource_in_share)
     else:
-        resource_dict = file_serializer.serialize_dict(resource_in_share)
+        resource_dict = file_serializer.serialize_object(resource_in_share)
 
-        rsc_id = get_attr(resource_in_share, "id")
-        resource_dict["download_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/stream"
-
-        if resource_dict.get("thumbnail_url"):
-            resource_dict["thumbnail_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/thumbnail/stream"
-
-        if resource_dict.get("preview_url"):
-            resource_dict["preview_url"] = f"{API_BASE_URL}/shares/{share.token}/files/{rsc_id}/preview/stream"
-
-    return hide_info_in_share_context(share, resource_dict)
+    return resource_dict
 
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
-    children = list(folder_obj.files.filter(ready=True, inTrash=False).select_related(
+    folder_serializer = ShareFolderSerializer()
+    file_serializer = ShareFileSerializer(share)
+
+    files = list(folder_obj.files.filter(ready=True, inTrash=False).select_related(
         "parent", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
 
+    folders = []
     if include_folders:
-        folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
-        children.extend(folder_children)
+        folders = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
 
-    children_dicts = [create_share_resource_dict(share, file) for file in children]
+    file_dicts = [file_serializer.serialize_dict(file) for file in files]
+    folder_dicts = [folder_serializer.serialize_object(folder) for folder in folders]
     folder_dict = create_share_resource_dict(share, folder_obj)
-    folder_dict["children"] = children_dicts
+
+    folder_dict["children"] = file_dicts + folder_dicts
     return folder_dict
 
 
@@ -372,33 +364,6 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
         children.extend(get_flattened_children(subfolder, subfolder_full_path, root_folder))
 
     return children
-
-
-def get_share(request, token: str, ignorePassword: bool = False) -> ShareableLink:
-    password = request.headers.get("X-Resource-Password")
-    if password:
-        password = unquote(password)
-
-    passwords = request.data.get('resourcePasswords')
-
-    share = ShareableLink.objects.get(token=token)
-    if share.is_expired():
-        share.delete()
-        raise ResourceNotFoundError("Share not found or expired")
-
-    if not ignorePassword:
-        if share.is_locked() and share.password != password:
-            share.name = "Share"
-
-            if password:
-                if share.password != password: # todo
-                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
-            elif passwords:
-                if share.password != passwords.get(share.id):
-                    raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
-            else:
-                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
-    return share
 
 
 def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:

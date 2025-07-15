@@ -54,6 +54,7 @@
 
   },
   "errors": {
+    "resourceInaccessibleFromIP": "Błędne IP",
     "invalidMove": "Błedne przeniesienie folderu",
     "notAllowedToUpload": "Nie możesz jeszcze wysyłać plików. Skonfiguruj ustawienia discorda najpierw",
     "goBack": "Zabierz mnie stąd",

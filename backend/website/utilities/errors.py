@@ -35,6 +35,9 @@ class CannotProcessDiscordRequestError(IDriveException):
 class FailedToResizeImage(IDriveException):
     """Raised when we are unable to resize an image for unknown reasons"""
 
+class LockedFolderWrongIpError(IDriveException):
+    """Raised when locked folder is trying to be accessed from wrong IP"""
+
 class DiscordError(IDriveException):
     def __init__(self, message="Unexpected Discord Error.", status=0):
         self.status = status

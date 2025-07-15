@@ -3,8 +3,8 @@ from urllib.parse import unquote
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError
-from .other import get_attr
+from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError, LockedFolderWrongIpError
+from .other import get_attr, get_ip
 from ..models import UserPerms
 
 
@@ -178,6 +178,9 @@ class CheckReady(BaseResourceCheck):
 
 class CheckFolderLock(BaseResourceCheck):
     def check(self, request, resource):
+        if self._is_locked(resource) and self._check_ip(request):
+            raise LockedFolderWrongIpError()
+
         if self._is_locked(resource) and not self._is_password_valid(request, resource):
             raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
 
@@ -197,7 +200,12 @@ class CheckFolderLock(BaseResourceCheck):
             raise MissingOrIncorrectResourcePasswordError(required_passwords)
 
     def _is_locked(self, resource):
-        return get_attr(resource, 'is_locked', False)
+        return self._require_attr(resource, 'is_locked')
+
+    def _check_ip(self, request):
+        return True
+        ip, _ = get_ip(request)
+        return ip not in ("127.0.0.1", "192.168.1.1")
 
     def _is_password_valid(self, request, resource):
         provided_password = request.headers.get("X-Resource-Password")
@@ -205,8 +213,8 @@ class CheckFolderLock(BaseResourceCheck):
             provided_password = unquote(provided_password)
 
         passwords = request.data.get('resourcePasswords') or {}
-        resource_password = get_attr(resource, 'password')
-        lock_from_id = get_attr(resource, 'lockFrom_id')
+        resource_password = self._require_attr(resource, 'password')
+        lock_from_id = self._require_attr(resource, 'lockFrom_id')
 
         if provided_password:
             return provided_password == resource_password
@@ -216,10 +224,43 @@ class CheckFolderLock(BaseResourceCheck):
 
     def _build_password_info(self, resource):
         return {
-            "id": get_attr(resource, "lockFrom_id"),
+            "id": self._require_attr(resource, "lockFrom_id"),
             "name": get_attr(resource, "lockFrom__name"),
         }
 
+class CheckShareExpired(BaseResourceCheck):
+    def check(self, request, share):
+        if share.is_expired():
+            share.delete()
+            raise ResourceNotFoundError("Share not found or expired")
+
+class CheckShareReady(BaseResourceCheck):
+    def check(self, request, share):
+        ready = self._require_attr(share.get_resource_inside(), 'ready')
+        if not ready:
+            raise ResourceNotFoundError("Share not found or expired")
+
+class CheckShareTrash(BaseResourceCheck):
+    def check(self, request, share):
+        in_trash = self._require_attr(share.get_resource_inside(), 'inTrash')
+        if in_trash:
+            raise ResourceNotFoundError("Share not found or expired")
+
+class CheckSharePassword(BaseResourceCheck):
+    def check(self, request, share):
+        password = request.headers.get("X-Resource-Password")
+        if password:
+            password = unquote(password)
+
+        passwords = request.data.get('resourcePasswords')
+
+        if share.is_locked():
+            share.name = "Share"
+            valid_password = (password == share.password or (passwords and passwords.get(share.id) == share.password))
+            if not valid_password:
+                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
+
+        return share
 
 class CheckGroup:
     def __init__(self, *check_classes: type):

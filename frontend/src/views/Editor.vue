@@ -53,7 +53,6 @@ import { canUpload } from "@/api/user.js"
 import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
-import { breadcrumbs } from "@/api/folder.js"
 
 export default {
    name: "editor",
@@ -80,7 +79,6 @@ export default {
          file: null,
          raw: "",
          editor: null,
-         folderList: [],
          currentLanguage: null,
          savingFile: false,
          fontSize: isMobile() ? 10 : 15
@@ -184,16 +182,18 @@ export default {
 
          // if editor is opened from Share
          if (this.isInShareContext) {
+            console.log("shareee")
+            console.log(this.folderId)
             let res = await getShare(this.token, this.folderId)
             this.shareObj = res
             this.setItems(res.share)
-            this.folderList = res.breadcrumbs
 
             for (let i = 0; i < this.items.length; i++) {
                if (this.items[i].id === this.fileId) {
                   this.file = this.items[i]
                }
             }
+            console.log(this.file)
          }
          // if It's opened from Files, hence we know the user
          else {
@@ -207,14 +207,12 @@ export default {
             if (!this.file) {
                this.file = await getFile(this.fileId)
             }
-            this.folderList = await breadcrumbs(this.file.parent_id)
          }
 
          this.addSelected(this.file)
 
          try {
-            this.raw = await getFileRawData(this.file.download_url)
-            this.raw = typeof this.raw === "string" ? this.raw : JSON.stringify(this.raw, null, 2)
+            this.raw = await getFileRawData(this.file.download_url, {responseType: "text"})
 
             this.setLastItem(this.file)
          } catch (error) {
@@ -258,7 +256,7 @@ export default {
                   key = generateKey(method)
                }
                let formData = new FormData()
-               let blob = new Blob([this.raw])
+               let blob = new Blob([String(this.raw)])
                let encryptedBlob = await encrypt(blob, method, key, iv, 0)
 
                formData.append("file", encryptedBlob, this.attachmentName)

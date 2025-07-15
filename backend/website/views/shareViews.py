@@ -8,13 +8,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_subtitle
 from ..models import UserSettings, ShareableLink, UserZIP, Subtitle
-from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady, ReadPerms, ModifyPerms
+from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady, ReadPerms, ModifyPerms, CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady
 from ..utilities.Serializers import ShareSerializer
 from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import extract_item, check_resource_permissions
+from ..utilities.decorators import extract_item, check_resource_permissions, extract_share
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_breadcrumbs, get_resource, check_resource_perms, create_share_resource_dict, \
-    build_share_folder_content, get_folder, get_share, validate_and_add_to_zip, check_if_item_belongs_to_share, get_file, validate_ids_as_list
+    build_share_folder_content, get_folder, validate_and_add_to_zip, check_if_item_belongs_to_share, get_file, validate_ids_as_list
 from ..utilities.signer import sign_resource_id_with_expiry
 from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle
 
@@ -37,18 +37,6 @@ def get_shares(request):
             share.delete()
 
     return JsonResponse(items, status=200, safe=False)
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
-@throttle_classes([defaultAuthUserThrottle])
-def delete_share(request, token):
-    share = ShareableLink.objects.get(token=token)
-
-    if share.owner != request.user:
-        raise ResourcePermissionError("You have no access to this resource!")
-    share.delete()
-    return HttpResponse("Share deleted!", status=204)
 
 
 @api_view(['POST'])
@@ -88,14 +76,26 @@ def create_share(request, item_obj):
     return JsonResponse(item, status=200, safe=False)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
+@throttle_classes([defaultAuthUserThrottle])
+@extract_share()
+def delete_share(request, share_obj):
+    if share_obj.owner != request.user:
+        raise ResourcePermissionError("You have no access to this resource!")
+
+    share_obj.delete()
+    return HttpResponse("Share deleted!", status=204)
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAuthUserThrottle])
-def check_share_password(request, token):
-    share = ShareableLink.objects.get(token=token)
+@extract_share()
+def check_share_password(request, share_obj):
     password = request.headers.get("X-Resource-Password")
 
-    if share.password == password:
+    if share_obj.password == password:
         return HttpResponse(status=204)
 
     raise ResourcePermissionError("Share password is incorrect")
@@ -103,55 +103,50 @@ def check_share_password(request, token):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def view_share(request, token, folder_id=None):
-    share = get_share(request, token)
-
-    settings = UserSettings.objects.get(user=share.owner)
-
-    if share.content_type.name == "folder":
-        obj_in_share = get_folder(share.object_id)
-        breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
-
-    else:
-        obj_in_share = get_file(share.object_id)
-        breadcrumbs = []
-
-    response_dict = create_share_resource_dict(share, obj_in_share)
-
-    # hide parent_id since upper parent is not shared
-    del response_dict["parent_id"]
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckSharePassword, CheckShareReady], resource_key="share_obj")
+def view_share(request, share_obj: ShareableLink, folder_id=None):
+    settings = UserSettings.objects.get(user=share_obj.owner)
+    obj_in_share = share_obj.get_resource_inside()
 
     if obj_in_share.inTrash:
         raise ResourceNotFoundError()
 
+    if share_obj.get_type() == "folder":
+        breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
+    else:
+        breadcrumbs = []
+
+    response_dict = create_share_resource_dict(share_obj, obj_in_share)
+    del response_dict["parent_id"] # todo  parent id may be leaked if the obj_in_resource = folderId
+
     if folder_id:
         requested_folder = get_folder(folder_id)
-        check_if_item_belongs_to_share(request, share, requested_folder)
+        check_if_item_belongs_to_share(request, share_obj, requested_folder)  # todo
 
-        breadcrumbs = create_share_breadcrumbs(requested_folder, obj_in_share, True)
+        breadcrumbs = create_share_breadcrumbs(requested_folder, obj_in_share, True)  # todo
 
-        folder_content = build_share_folder_content(share, requested_folder, include_folders=settings.subfolders_in_shares)["children"]
+        folder_content = build_share_folder_content(share_obj, requested_folder, include_folders=settings.subfolders_in_shares)["children"]  # todo
     else:
-
         folder_content = [response_dict]
-    return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": share.expiration_time.isoformat(), "id": share.id}, status=200)
+
+    return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": share_obj.expiration_time.isoformat(), "id": share_obj.id}, status=200)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def create_share_zip_model(request, token):
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckSharePassword, CheckShareReady], resource_key="share_obj")
+def create_share_zip_model(request, share_obj):
     ids = request.data['ids']
-
     validate_ids_as_list(ids)
 
     user_zip = UserZIP.objects.create(owner=request.user)
 
-    share = get_share(request, token)
-
     for item_id in ids:
         item = get_resource(item_id)
-        check_if_item_belongs_to_share(request, share, item)
+        check_if_item_belongs_to_share(request, share_obj, item)
         validate_and_add_to_zip(user_zip, item)
 
     user_zip.save()
@@ -161,15 +156,15 @@ def create_share_zip_model(request, token):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def share_view_stream(request, token: str, file_id: str):
-    share = get_share(request, token, ignorePassword=True)
-    # todo wtf perms where?!?!?1
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+def share_view_stream(request, share_obj: ShareableLink, file_id: str):     # todo wtf perms where?!?!?1 this allows for bypass of share.password if file_id is known
     file_obj = get_file(file_id)
+
+    check_if_item_belongs_to_share(request, share_obj, file_obj)
     check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
-    check_if_item_belongs_to_share(request, share, file_obj)
 
     signed_file_id = sign_resource_id_with_expiry(file_obj.id)
-
     # Extremely hacky way,
     # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
     # request is changed into rest's framework's request with the decorators,
@@ -183,13 +178,14 @@ def share_view_stream(request, token: str, file_id: str):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def share_view_thumbnail(request, token: str, file_id: str):
-    share = get_share(request, token, ignorePassword=True)
-
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+def share_view_thumbnail(request, share_obj: ShareableLink, file_id: str):
     file_obj = get_file(file_id)
+
+    check_if_item_belongs_to_share(request, share_obj, file_obj)
     check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
 
-    check_if_item_belongs_to_share(request, share, file_obj)
     signed_file_id = sign_resource_id_with_expiry(file_obj.id)
     return stream_thumbnail(request._request, signed_file_id)
 
@@ -197,40 +193,43 @@ def share_view_thumbnail(request, token: str, file_id: str):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def share_view_preview(request, token: str, file_id: str):
-    share = get_share(request, token, ignorePassword=True)
-
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+def share_view_preview(request, share_obj: ShareableLink, file_id: str):
     file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
-    check_if_item_belongs_to_share(request, share, file_obj)
-    signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
+    check_if_item_belongs_to_share(request, share_obj, file_obj)
+    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
+
+    signed_file_id = sign_resource_id_with_expiry(file_obj.id)
     return stream_preview(request._request, signed_file_id)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def share_view_subtitle(request, token: str, file_id: str, subtitle_id: str):
-    share = get_share(request, token, ignorePassword=True)
-
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+def share_view_subtitle(request, share_obj: ShareableLink, file_id: str, subtitle_id: str):
     file_obj = get_file(file_id)
-    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
-    check_if_item_belongs_to_share(request, share, file_obj)
-    signed_file_id = sign_resource_id_with_expiry(file_obj.id)
 
+    check_if_item_belongs_to_share(request, share_obj, file_obj)
+    check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
+
+    signed_file_id = sign_resource_id_with_expiry(file_obj.id)
     return stream_subtitle(request._request, signed_file_id, subtitle_id)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
-def share_get_subtitles(request, token: str, file_id: str):
-    share = get_share(request, token, ignorePassword=True)
-
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired], resource_key="share_obj")
+def share_get_subtitles(request, share_obj: ShareableLink, file_id: str):
     file_obj = get_file(file_id)
+
+    check_if_item_belongs_to_share(request, share_obj, file_obj)
     check_resource_perms(request, file_obj, [CheckTrash, CheckReady])
-    check_if_item_belongs_to_share(request, share, file_obj)
 
     subtitles = Subtitle.objects.filter(file=file_obj)
 
@@ -238,7 +237,7 @@ def share_get_subtitles(request, token: str, file_id: str):
 
     for sub in subtitles:
         #todo
-        url = f"{API_BASE_URL}/shares/{token}/files/{file_id}/subtitles/{sub.id}/stream"
+        url = f"{API_BASE_URL}/shares/{share_obj.token}/files/{file_id}/subtitles/{sub.id}/stream"
         subtitle_dicts.append({"id": sub.id, "language": sub.language, "url": url})
 
     return JsonResponse(subtitle_dicts, safe=False)

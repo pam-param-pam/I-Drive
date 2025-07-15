@@ -5,7 +5,6 @@ from io import BytesIO
 from urllib.parse import quote
 
 import aiohttp
-import asyncio
 import exifread
 import imageio
 import rawpy
@@ -379,7 +378,7 @@ def stream_file(request, file_obj: File):
     response['Accept-Ranges'] = 'bytes'
     response["ETag"] = file_obj.id
 
-    if file_obj.type == "text":
+    if file_obj.type == "Text":
         response['Cache-Control'] = "no-cache"
     else:
         response['Cache-Control'] = f"max-age={MAX_MEDIA_CACHE_AGE}"  # 1 month

@@ -46,7 +46,6 @@
 
 <script>
 import { lockWithPassword } from '@/api/folder.js'
-import throttle from 'lodash.throttle'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import { onceAtATime } from "@/utils/common.js"

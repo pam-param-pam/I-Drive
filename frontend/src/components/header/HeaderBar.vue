@@ -37,7 +37,6 @@
 import {logoURL} from "@/utils/constants"
 
 import Action from "@/components/header/Action.vue"
-import {updateSettings} from "@/api/user.js"
 import {useMainStore} from "@/stores/mainStore.js"
 import {mapActions, mapState} from "pinia"
 

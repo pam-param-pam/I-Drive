@@ -20,7 +20,8 @@ from rest_framework.exceptions import Throttled
 from ..models import ShareableLink
 from ..utilities.constants import cache
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, FailedToResizeImage
+    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, \
+    FailedToResizeImage, LockedFolderWrongIpError
 from ..utilities.other import build_http_error_response, get_attr
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -143,7 +144,10 @@ class CommonErrorsMiddleware(MiddlewareMixin):
         elif isinstance(exception, OverflowError):
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
 
-        #  403 BAD REQUEST
+        #  403 FORBIDDEN
+        elif isinstance(exception, LockedFolderWrongIpError):
+            return JsonResponse(build_http_error_response(code=403, error="errors.resourceInaccessibleFromIP", details="This resource cannot be accessed from this IP"), status=403)
+
         elif isinstance(exception, ResourcePermissionError):
             return JsonResponse(build_http_error_response(code=403, error="errors.resourceAccessForbidden", details=str(exception)), status=403)
 

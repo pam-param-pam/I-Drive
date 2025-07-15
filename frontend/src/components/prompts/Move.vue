@@ -52,7 +52,6 @@
 <script>
 import FolderList from '@/components/FolderList.vue'
 import { move } from '@/api/item.js'
-import throttle from 'lodash.throttle'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
 import { onceAtATime } from "@/utils/common.js"

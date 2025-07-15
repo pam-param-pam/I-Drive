@@ -19,7 +19,7 @@ from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack
 from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckReady, CheckTrash, CheckRoot, CheckFolderLock
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer
 from ..utilities.constants import cache, MAX_DISCORD_MESSAGE_SIZE
-from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, extract_resource, check_bulk_permissions, \
+from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items, disable_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
@@ -311,7 +311,7 @@ def get_trash(request):
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
 @extract_item()
-@check_resource_permissions(default_checks - CheckFolderLock, resource_key="item_obj")
+@check_resource_permissions([CheckOwnership], resource_key="item_obj")
 @disable_common_errors
 def check_password(request, item_obj):
     password = request.headers.get("X-Resource-Password")

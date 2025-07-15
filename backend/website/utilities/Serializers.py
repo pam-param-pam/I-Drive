@@ -41,7 +41,6 @@ class AdvancedSerializer(ABC):
 class FileSerializer(AdvancedSerializer):
 
     def _object_to_tuple(self, obj) -> tuple:
-        # Fallback: prefetch as values tuple from DB
         file_tuple = (
             File.objects
             .filter(id=obj.id).annotate(**File.LOCK_FROM_ANNOTATE)
@@ -115,9 +114,54 @@ class FileSerializer(AdvancedSerializer):
 
         return d
 
+class ShareFileSerializer(FileSerializer):
+    def __init__(self, share: ShareableLink):
+        self.share = share
+
+    def _serialize(self, tuple_data: tuple, hide=False) -> dict:
+        (
+            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
+            lock_from__name, password, type_, is_dir,
+            size, created_at, last_modified_at, encryption_method, in_trash_since,
+            duration, parent__id, iso, model_name, crc,
+            aperture, exposure_time, focal_length,
+            thumbnail, video_position, video_metadata_id
+        ) = tuple_data
+
+        d = {
+            "isDir": False,
+            "id": id,
+            "parent_id": parent_id,
+            "name": name,
+            "size": size,
+            "type": type_,
+            "created": created_at.isoformat() if created_at else None,
+            "last_modified": last_modified_at.isoformat() if last_modified_at else None,
+            "encryption_method": encryption_method,
+            "isVideoMetadata": video_metadata_id is not None,
+            "crc": None,
+        }
+
+        if duration:
+            d["duration"] = duration
+
+        if not hide and not (is_locked and in_trash):
+            if type_ == "Raw image":
+
+                d["preview_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{id}/preview/stream"
+
+            d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{id}/stream"
+
+            if thumbnail:
+                d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{id}/thumbnail/stream"
+
+            if video_position:
+                d["video_position"] = video_position
+
+        return d
+
 
 class FolderSerializer(SimpleSerializer):
-
     def serialize_object(self, folder_obj: Folder) -> dict:
         folder_dict = {
             'isDir': True,
@@ -137,6 +181,17 @@ class FolderSerializer(SimpleSerializer):
 
         return folder_dict
 
+class ShareFolderSerializer(SimpleSerializer):
+    def serialize_object(self, folder_obj: Folder) -> dict:
+        folder_dict = {
+            'isDir': True,
+            'id': folder_obj.id,
+            "parent_id": folder_obj.parent.id,
+            'name': folder_obj.name,
+            'created': folder_obj.created_at.isoformat(),
+            'last_modified': folder_obj.last_modified_at.isoformat(),
+        }
+        return folder_dict
 
 class ShareSerializer(SimpleSerializer):
     def serialize_object(self, share: ShareableLink) -> dict:
