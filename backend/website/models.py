@@ -493,6 +493,10 @@ class ShareableLink(models.Model):
     def get_resource_inside(self):
         from .utilities.other import get_resource
 
+        if self.is_expired():
+            self.delete()
+            raise ResourceNotFoundError()
+
         try:
             obj = get_resource(self.object_id)
             return obj

@@ -65,8 +65,6 @@ class FileSerializer(AdvancedSerializer):
             thumbnail, video_position, video_metadata_id
         ) = tuple_data
 
-        signed_id = sign_resource_id_with_expiry(id)
-
         d = {
             "isDir": False,
             "id": id,
@@ -101,6 +99,8 @@ class FileSerializer(AdvancedSerializer):
             })
 
         if not hide and not (is_locked and in_trash):
+            signed_id = sign_resource_id_with_expiry(id)
+
             if type_ == "Raw image":
                 d["preview_url"] = f"{API_BASE_URL}/files/{signed_id}/preview/stream"
 
@@ -146,14 +146,16 @@ class ShareFileSerializer(FileSerializer):
             d["duration"] = duration
 
         if not hide and not (is_locked and in_trash):
+            signed_id = sign_resource_id_with_expiry(id)
+
             if type_ == "Raw image":
 
-                d["preview_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{id}/preview/stream"
+                d["preview_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/preview/stream"
 
-            d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{id}/stream"
+            d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/stream"
 
             if thumbnail:
-                d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{id}/thumbnail/stream"
+                d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/thumbnail/stream"
 
             if video_position:
                 d["video_position"] = video_position

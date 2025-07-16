@@ -1,7 +1,7 @@
 import os
 import time
 from functools import wraps
-from typing import Callable
+from typing import Callable, Union
 
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -29,6 +29,7 @@ def disable_common_errors(view_func):
     def wrapper(*args, **kwargs):
         setattr(wrapper, 'disable_common_errors', True)
         return view_func(*args, **kwargs)
+
     return wrapper
 
 
@@ -37,28 +38,44 @@ def extract_file_from_signed_url(view_func):
     def wrapper(request, signed_file_id, *args, **kwargs):
         file_id = verify_signed_resource_id(signed_file_id)
         file_obj = get_file(file_id)
-
-        return view_func(request, file_obj, *args, **kwargs)
+        kwargs["file_obj"] = file_obj
+        request.META['signed_file_id'] = signed_file_id
+        return view_func(request, *args, **kwargs)
 
     return wrapper
 
 
-def check_resource_permissions(checks: list, resource_key):
+def check_resource_permissions(checks: list, resource_key: Union[str, list[str]], optional: bool = False): #todo rename to keys
+    if isinstance(resource_key, str):
+        resource_key = [resource_key]
+
     def decorator(view_func: Callable):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             start_time = time.perf_counter()
 
-            resource = kwargs.get(resource_key)
-            if not resource:
-                raise ValueError(f"Missing '{resource_key}' in kwargs")
-            print(f"got checks: {checks}")
+            resources = []
+            missing_keys = []
+            for key in resource_key:
+                resource = kwargs.get(key)
+                if resource is None:
+                    missing_keys.append(key)
+                resources.append(resource)
+
+            if missing_keys:
+                if optional:
+                    print(f"[check_resource_permissions] Skipping checks: missing or None resource(s) {missing_keys} with optional=True")
+                    return view_func(request, *args, **kwargs)
+                else:
+                    print(kwargs)
+                    raise ValueError(f"[check_resource_permissions] Missing required resource(s) {missing_keys} in kwargs")
+
+            print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
             for Check in checks:
-                Check().check(request, resource)
+                Check().check(request, *resources)
 
             end_time = time.perf_counter()
-            elapsed = end_time - start_time
-            print(f"PERMISSION CHECKS took {elapsed:.4f} seconds")
+            print(f"[check_resource_permissions] Checks took {end_time - start_time:.4f}s")
 
             return view_func(request, *args, **kwargs)
 
@@ -67,16 +84,17 @@ def check_resource_permissions(checks: list, resource_key):
     return decorator
 
 
-def extract_folder(source="kwargs", key="folder_id", inject_as="folder_obj"):
+def extract_folder(source: str = "kwargs", key: str = "folder_id", inject_as: str = "folder_obj", optional: bool = False):
     return extract_resources({
         "source": source,
         "key": key,
         "model": [Folder],
         "inject_as": inject_as,
+        "optional": optional
     })
 
 
-def extract_file(source="kwargs", key="file_id", inject_as="file_obj"):
+def extract_file(source: str = "kwargs", key: str = "file_id", inject_as: str = "file_obj"):
     return extract_resources({
         "source": source,
         "key": key,
@@ -85,7 +103,7 @@ def extract_file(source="kwargs", key="file_id", inject_as="file_obj"):
     })
 
 
-def extract_item(source="kwargs", key="item_id", inject_as="item_obj"):
+def extract_item(source: str = "kwargs", key: str = "item_id", inject_as: str = "item_obj"):
     return extract_resources({
         "source": source,
         "key": key,
@@ -93,7 +111,8 @@ def extract_item(source="kwargs", key="item_id", inject_as="item_obj"):
         "inject_as": inject_as,
     })
 
-def extract_items(source="kwargs", key="ids", inject_as="items"):
+
+def extract_items(source: str = "kwargs", key: str = "ids", inject_as: str = "items"):
     return extract_resources({
         "source": source,
         "key": key,
@@ -102,7 +121,8 @@ def extract_items(source="kwargs", key="ids", inject_as="items"):
         "many": True,
     })
 
-def extract_share(source="kwargs", key="token", inject_as="share_obj"):
+
+def extract_share(source: str = "kwargs", key: str = "token", inject_as: str = "share_obj"):
     return extract_resources({
         "source": source,
         "key": key,
@@ -110,6 +130,7 @@ def extract_share(source="kwargs", key="token", inject_as="share_obj"):
         "inject_as": inject_as,
         "model_field": "token"
     })
+
 
 def extract_resources(*rules):
     def _get_resource_from_models(models, obj_id, model_field: str):
@@ -130,12 +151,20 @@ def extract_resources(*rules):
                 models = rule["model"]
                 inject_as = rule["inject_as"]
                 many = rule.get("many", False)
+                optional = rule.get("optional", False)
                 model_field = rule.get("model_field", "id")
 
-                # Get container
+                # Get container (e.g. kwargs, request.GET, request.data, etc.)
                 container = kwargs if source == "kwargs" else getattr(request, source, {})
+
+                # If key not in container and optional, skip this rule
                 if key not in container:
-                    raise ValueError(f"Missing key '{key}' in request.{source}")
+                    if optional:
+                        kwargs[inject_as] = None if not many else []
+                        continue
+                    else:
+                        print(container)
+                        raise ValueError(f"Missing key '{key}' in request.{source}")
 
                 ids = container[key]
 
@@ -162,6 +191,7 @@ def extract_resources(*rules):
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view
+
     return decorator
 
 

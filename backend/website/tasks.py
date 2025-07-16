@@ -312,7 +312,7 @@ def move_to_trash_task(user_id, request_id, ids):
             last_percentage = percentage
 
     send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
-
+# TODO FIX TASKS :sob:
 
 @app.task
 def restore_from_trash_task(user_id, request_id, ids):

@@ -1,11 +1,13 @@
+from typing import Union, Type, Tuple
 from urllib.parse import unquote
 
+from django.db.models import Model
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
 from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError, LockedFolderWrongIpError
-from .other import get_attr, get_ip
-from ..models import UserPerms
+from .other import get_attr, get_ip, check_if_item_belongs_to_share, get_folder, get_file
+from ..models import UserPerms, File, Folder, ShareableLink
 
 
 class BasePermissionWithMessage(BasePermission):
@@ -144,40 +146,64 @@ class BaseResourceCheck:
         else:
             raise AttributeError(f"Missing required attribute '{attr}' on resource {obj}")
 
-    def check(self, request, resource):
+    def _require_type(self, resource, models: Union[Type[Model], Tuple[Type[Model], ...]]):
+        if not isinstance(resource, models):
+            expected = (
+                ", ".join(m.__name__ for m in models)
+                if isinstance(models, tuple)
+                else models.__name__
+            )
+            raise TypeError(f"Expected {expected}, got {type(resource).__name__}")
+
+    def check(self, request, *resources):
         raise NotImplementedError("Subclasses must implement this method")
 
 
 class CheckOwnership(BaseResourceCheck):
-    def check(self, request, resource):
+    def check(self, request, *resource):
+        resource = resource[0]
+        self._require_type(resource, (File, Folder))
+
         owner_id = self._require_attr(resource, 'owner_id')
         if owner_id != request.user.id:
             raise ResourcePermissionError("You have no access to this resource!")
 
 
 class CheckRoot(BaseResourceCheck):
-    def check(self, request, resource):
+    def check(self, request, *resource):
+        resource = resource[0]
+        self._require_type(resource, (File, Folder))
+
         parent_id = self._require_attr(resource, 'parent_id')
         if parent_id is None:
             raise RootPermissionError()
 
 
 class CheckTrash(BaseResourceCheck):
-    def check(self, request, resource):
+    def check(self, request, *resource):
+        resource = resource[0]
+        self._require_type(resource, (File, Folder))
+
         in_trash = self._require_attr(resource, 'inTrash')
         if in_trash:
             raise ResourcePermissionError("Cannot access resource in trash!")
 
 
 class CheckReady(BaseResourceCheck):
-    def check(self, request, resource):
+    def check(self, request, *resource):
+        resource = resource[0]
+        self._require_type(resource, (File, Folder))
+
         ready = self._require_attr(resource, 'ready')
         if not ready:
             raise ResourcePermissionError("Resource is not ready")
 
 
 class CheckFolderLock(BaseResourceCheck):
-    def check(self, request, resource):
+    def check(self, request, *resource):
+        resource = resource[0]
+        self._require_type(resource, (File, Folder))
+
         if self._is_locked(resource):
             self._check_ip(request)
 
@@ -230,39 +256,60 @@ class CheckFolderLock(BaseResourceCheck):
             "name": get_attr(resource, "lockFrom__name"),
         }
 
+class CheckShareItemBelongings(BaseResourceCheck):
+    def check(self, request, *resources):
+        share_obj = resources[0]
+        item_obj = resources[1] if len(resources) > 1 else None
+        self._require_type(share_obj, ShareableLink)
+        if item_obj:
+            self._require_type(item_obj, (Folder, File))
+            check_if_item_belongs_to_share(request, share_obj, item_obj)
+
 class CheckShareExpired(BaseResourceCheck):
-    def check(self, request, share):
-        if share.is_expired():
-            share.delete()
+    def check(self, request, *resources):
+        share_obj = resources[0]
+        self._require_type(share_obj, ShareableLink)
+
+        if share_obj.is_expired():
+            share_obj.delete()
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckShareReady(BaseResourceCheck):
-    def check(self, request, share):
-        ready = self._require_attr(share.get_resource_inside(), 'ready')
+    def check(self, request, *resources):
+        share_obj = resources[0]
+        self._require_type(share_obj, ShareableLink)
+
+        ready = self._require_attr(share_obj.get_resource_inside(), 'ready')
         if not ready:
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckShareTrash(BaseResourceCheck):
-    def check(self, request, share):
-        in_trash = self._require_attr(share.get_resource_inside(), 'inTrash')
+    def check(self, request, *resources):
+        share_obj = resources[0]
+        self._require_type(share_obj, ShareableLink)
+
+        in_trash = self._require_attr(share_obj.get_resource_inside(), 'inTrash')
         if in_trash:
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckSharePassword(BaseResourceCheck):
-    def check(self, request, share):
+    def check(self, request, *resources):
+        share_obj = resources[0]
+        self._require_type(share_obj, ShareableLink)
+
         password = request.headers.get("X-Resource-Password")
         if password:
             password = unquote(password)
 
         passwords = request.data.get('resourcePasswords')
 
-        if share.is_locked():
-            share.name = "Share"
-            valid_password = (password == share.password or (passwords and passwords.get(share.id) == share.password))
+        if share_obj.is_locked():
+            share_obj.name = "Share"
+            valid_password = (password == share_obj.password or (passwords and passwords.get(share_obj.id) == share_obj.password))
             if not valid_password:
-                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share.resource.name, "id": share.token}])
+                raise MissingOrIncorrectResourcePasswordError(requiredPasswords=[{"name": share_obj.resource.name, "id": share_obj.token}])
 
-        return share
+        return share_obj
 
 class CheckGroup:
     def __init__(self, *check_classes: type):

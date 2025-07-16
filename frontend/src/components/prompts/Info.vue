@@ -80,7 +80,7 @@
       </p>
 
       <!-- Expandable section -->
-      <div v-if="isDir" class="expandable-section">
+      <div v-if="isDir && !isInShareContext" class="expandable-section">
         <div class="expandable-header" @click="fetchAdditionalInfo">
           <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
           <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
@@ -105,7 +105,7 @@
       </div>
     </div>
     <!-- Expandable section for tracks -->
-    <div v-if="!isDir && type==='Video' && isVideoMetadata" class="expandable-section card-content">
+    <div v-if="!isDir && type==='Video' && isVideoMetadata && !isInShareContext" class="expandable-section card-content">
       <div class="expandable-header" @click="fetchAdditionalInfo">
         <strong>{{ $t("prompts.videoMetadata") }}</strong>
         <i :class="{ expanded: isFileExpanded }" class="material-icons expand-icon">
@@ -220,9 +220,12 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["selected", "settings", "currentFolder", "selectedCount"]),
+      ...mapState(useMainStore, ["selected", "settings", "currentFolder", "selectedCount", "isLogged"]),
       isMoreDataFetched() {
          return this.folderSize !== "Loading..."
+      },
+      isInShareContext() {
+         return !this.isLogged
       },
       size() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
