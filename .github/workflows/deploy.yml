@@ -37,8 +37,8 @@ jobs:
           IS_DEV_ENV=False
           DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
           I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
-          PORT=8080
-
+          NGINX_PORT=8080
+          PROTOCOL=https
           EOF
           
           echo "Pulling docker-compose.yml..."

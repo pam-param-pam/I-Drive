@@ -155,6 +155,9 @@
   .scroller {
     padding-bottom: 0.5em !important;
   }
+  .message {
+    margin-right: auto !important;
+  }
 }
 
 @media (max-width: 450px) {

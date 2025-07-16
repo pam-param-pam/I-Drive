@@ -1,8 +1,8 @@
 <template>
   <div
     id="previewer"
-    v-touch:swipe.left="next"
-    v-touch:swipe.right="prev"
+    v-touch:swipe.left="onSwipeLeft"
+    v-touch:swipe.right="onSwipeRight"
     @mousemove="toggleNavigation"
     @touchstart="toggleNavigation"
   >
@@ -81,12 +81,11 @@
           v-if="file?.type === 'Video' && file?.size > 0"
           id="video"
           ref="video"
-          :autoplay="autoPlay"
+          :autoplay="true"
           :poster="file?.thumbnail_url"
           :src="fileSrcUrl"
           controls
           loop
-          @play="autoPlay = true"
           @timeupdate="videoTimeUpdate"
           @loadedmetadata="onVideoLoaded"
           @error="onVideoError"
@@ -121,10 +120,9 @@
           <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
           <audio
             ref="player"
-            :autoplay="autoPlay"
+            :autoplay="true"
             :src="fileSrcUrl"
             controls
-            @play="autoPlay = true"
           ></audio>
         </div>
 
@@ -234,13 +232,13 @@ export default {
          import("@/components/OfficePreview.vue")
       ),
       VueReader: defineAsyncComponent(() =>
-         import('vue-reader')
+         import("vue-reader")
       ),
       ExtendedImage: defineAsyncComponent(() =>
-         import('@/components/listing/ExtendedImage.vue')
+         import("@/components/listing/ExtendedImage.vue")
       ),
       HeaderBar,
-      Action,
+      Action
 
    },
 
@@ -264,7 +262,6 @@ export default {
          file: null,
          navTimeout: null,
          hoverNav: false,
-         autoPlay: true,
 
          //epub reader data
          bookLocation: null,
@@ -274,8 +271,8 @@ export default {
          rendition: null,
          toc: [],
          fontSize: 100,
-         lastSentVideoPosition: 0,
 
+         lastSentVideoPosition: 0,
          prefetchTimeout: null,
          videoRef: null,
 
@@ -288,34 +285,25 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
-      enableSwipe() {
-         return (
-            (this.file?.type === "image" && this.file?.size > 0) || !this.file?.name.endsWith('.docx')
-         )
-      },
       isEpub() {
          return this.file?.name.endsWith(".epub")
       },
       isInShareContext() {
          return this.token !== undefined
       },
-
       fileSrcUrl() {
-         if (this.file?.type === 'Image' && !this.imageFullSize && this.file?.thumbnail_url) {
-            console.log("AAAAAAAAAAAAAAAAA")
+         if (this.file?.type === "Image" && !this.imageFullSize && this.file?.thumbnail_url) {
             return this.file?.thumbnail_url
          }
          if (this.file?.preview_url) return this.file?.preview_url + "?inline=True"
          return this.file?.download_url + "?inline=True"
       },
-
       currentIndex() {
          if (this.files && this.file) {
             return this.files.findIndex((item) => item.id === this.file.id)
          }
          return -1
       },
-
       files() {
          let files = []
 
@@ -334,6 +322,9 @@ export default {
       },
       hasPrevious() {
          return this.files.length > 1 && this.currentIndex > 0
+      },
+      disableSwipe() {
+         return this.file?.type === 'Image'
       }
    },
 
@@ -436,7 +427,7 @@ export default {
          this.disabledMoments = false
       },
       onVideoError() {
-        this.$toast.error(this.$t("toasts.videoUnplayable"))
+         this.$toast.error(this.$t("toasts.videoUnplayable"))
       },
       showMoments() {
          if (!this.videoRef.readyState) {
@@ -460,7 +451,7 @@ export default {
          })
       },
       isVideoFullScreen() {
-         if (this.file.type !== "video") return false
+         if (this.file.type !== "Video") return false
          let videoElement = this.$refs.video
          return document.fullscreenElement === videoElement ||
             document.webkitFullscreenElement === videoElement ||
@@ -469,7 +460,6 @@ export default {
       },
       prev() {
          if (this.isVideoFullScreen()) return
-         if (!this.enableSwipe) return
          this.hoverNav = false
          if (this.hasPrevious) {
             let previousFile = this.files[this.currentIndex - 1]
@@ -494,7 +484,6 @@ export default {
 
       next() {
          if (this.isVideoFullScreen()) return
-         if (!this.enableSwipe) return
          this.hoverNav = false
          if (this.hasNext) {
             let nextFile = this.files[this.currentIndex + 1]
@@ -512,7 +501,14 @@ export default {
             }
          }
       },
-
+      onSwipeLeft(event) {
+         if (this.disableSwipe) return
+         this.next()
+      },
+      onSwipeRight(event) {
+         if (this.disableSwipe) return
+         this.prev()
+      },
       async prefetch() {
          //todo make it better!
          this.prefetchTimeout = setTimeout(() => {
@@ -617,7 +613,7 @@ export default {
          // To prevent sending too many requests, send only if the position has changed significantly
          if (Math.abs(position - this.lastSentVideoPosition) >= 10 && this.$refs.video.duration > 60) {
             // Adjust the interval as needed (e.g., every 1 second)
-            updateVideoPosition(this.file.id, this.file.lockFrom,{ position })
+            updateVideoPosition(this.file.id, this.file.lockFrom, { position })
 
             this.lastSentVideoPosition = position
          }

@@ -226,8 +226,8 @@ export default {
 
       mouseMove(event) {
          if (this.turnedOFF || !this.inDrag) return
-         this.doMove(event.movementX, event.movementY)
          event.preventDefault()
+         this.doMove(event.movementX, event.movementY)
       },
 
       mouseUp(event) {
