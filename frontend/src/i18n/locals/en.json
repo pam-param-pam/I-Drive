@@ -1,5 +1,10 @@
 {
   "buttons": {
+    "savingFile": "Saving file...",
+    "fileSaved": "File saved!",
+    "saveFile": "Save file",
+    "copyText": "Copy text",
+    "copied": "Copied!",
     "autoSetup": "Run auto setup",
     "addSubtitleFile": "Select subtitle file",
     "addMoment": "Add Moment",

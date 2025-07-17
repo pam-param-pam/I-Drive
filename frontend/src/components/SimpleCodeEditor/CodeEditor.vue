@@ -121,11 +121,10 @@
 import hljs from 'highlight.js'
 import Dropdown from './Dropdown.vue'
 import CopyCode from './CopyCode.vue'
-import './themes/themes-base16.css'
-import './themes/themes.css'
 import SaveButton from '@/components/SimpleCodeEditor/SaveButton.vue'
 import saveButton from '@/components/SimpleCodeEditor/SaveButton.vue'
 import CloseButton from '@/components/SimpleCodeEditor/CloseButton.vue'
+import './themes/themes.css'
 
 export default {
    components: {

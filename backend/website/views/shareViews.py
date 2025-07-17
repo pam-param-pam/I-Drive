@@ -12,7 +12,7 @@ from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, Chec
     CheckShareItemBelongings
 from ..utilities.Serializers import ShareSerializer
 from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url
+from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_breadcrumbs, get_resource, create_share_resource_dict, \
     build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms
@@ -213,7 +213,7 @@ def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subti
 @throttle_classes([defaultAnonUserThrottle])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired], resource_key="share_obj")
-@extract_file_from_signed_url
+@extract_file()
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
 def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):
@@ -223,7 +223,7 @@ def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):
 
     for sub in subtitles:
         signed_file_id = sign_resource_id_with_expiry(file_obj.id)
-        url = f"{API_BASE_URL}/shares/{share_obj.token}/files/{file_obj.id}/subtitles/{signed_file_id}/stream"
+        url = f"{API_BASE_URL}/shares/{share_obj.token}/files/{signed_file_id}/subtitles/{sub.id}/stream"
         subtitle_dicts.append({"id": sub.id, "language": sub.language, "url": url})
 
     return JsonResponse(subtitle_dicts, safe=False)

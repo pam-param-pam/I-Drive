@@ -1,6 +1,6 @@
 <template>
    <div class="close-button">
-      <div class="tooltip">{{ message }}</div>
+      <div class="tooltip">{{ $t(message) }}</div>
       <svg
          fill="none"
          height="100%"
@@ -24,7 +24,7 @@ export default {
 
    data() {
       return {
-         message: 'Close'
+         message: 'buttons.close'
       }
    }
 }
@@ -65,12 +65,12 @@ export default {
    left: 40px;
    font-size: 12px;
    color: white;
-   width: 84px;
-   height: 30px;
-   line-height: 30px;
    background: rgba(0, 0, 0, 0.8);
    box-sizing: border-box;
    text-align: center;
    border-radius: 4px;
+   padding: 8px 12px;
+   white-space: nowrap;
+   z-index: 10;
 }
 </style>

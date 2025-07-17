@@ -1,5 +1,10 @@
 {
   "buttons": {
+    "savingFile": "Zapisywanie pliku...",
+    "fileSaved": "Plik zapisany!",
+    "saveFile": "Zapisz plik",
+    "copyText": "Kopiuj tekst",
+    "copied": "Skopiowano!",
     "autoSetup": "Uruchom auto konfiguracje",
     "addSubtitleFile": "Wybierz plik z napisami",
     "addMoment": "Dodaj Moment",

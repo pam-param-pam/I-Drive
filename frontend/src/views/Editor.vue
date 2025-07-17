@@ -15,10 +15,12 @@
             ['gradient-dark', 'Gradient Dark'],
             ['devibeans', 'Devibeans'],
             ['night-owl', 'Night Owl'],
-            ['github-dark', 'Github Dark']
+            ['github-dark', 'Github Dark'],
+            ['androidstudio', 'Android Studio'],
+            ['lioshi', 'Lioshi']
          ]"
       border-radius="0px"
-      height="100%"
+      :height="height + 'vh'"
       padding="20px"
       width="100%"
       @close="onClose()"
@@ -95,6 +97,10 @@ export default {
       },
       isInShareContext() {
          return this.token !== undefined
+      },
+      height() {
+         console.log(isMobile() ? "96" : "98")
+         return isMobile() ? "96" : "98"
       }
    },
 

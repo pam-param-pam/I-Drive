@@ -146,7 +146,7 @@ class BaseResourceCheck:
         else:
             raise AttributeError(f"Missing required attribute '{attr}' on resource {obj}")
 
-    def _require_type(self, resource, models: Union[Type[Model], Tuple[Type[Model], ...]]):
+    def _require_type(self, resource, models: Union[Type, Tuple[Type, ...]]):
         if not isinstance(resource, models):
             expected = (
                 ", ".join(m.__name__ for m in models)
@@ -162,7 +162,7 @@ class BaseResourceCheck:
 class CheckOwnership(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
-        self._require_type(resource, (File, Folder))
+        self._require_type(resource, (File, Folder, dict, tuple))
 
         owner_id = self._require_attr(resource, 'owner_id')
         if owner_id != request.user.id:
@@ -172,7 +172,7 @@ class CheckOwnership(BaseResourceCheck):
 class CheckRoot(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
-        self._require_type(resource, (File, Folder))
+        self._require_type(resource, (File, Folder, dict, tuple))
 
         parent_id = self._require_attr(resource, 'parent_id')
         if parent_id is None:
@@ -182,7 +182,7 @@ class CheckRoot(BaseResourceCheck):
 class CheckTrash(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
-        self._require_type(resource, (File, Folder))
+        self._require_type(resource, (File, Folder, dict, tuple))
 
         in_trash = self._require_attr(resource, 'inTrash')
         if in_trash:
@@ -192,7 +192,7 @@ class CheckTrash(BaseResourceCheck):
 class CheckReady(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
-        self._require_type(resource, (File, Folder))
+        self._require_type(resource, (File, Folder, dict, tuple))
 
         ready = self._require_attr(resource, 'ready')
         if not ready:
@@ -202,7 +202,7 @@ class CheckReady(BaseResourceCheck):
 class CheckFolderLock(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
-        self._require_type(resource, (File, Folder))
+        self._require_type(resource, (File, Folder, dict, tuple))
 
         if self._is_locked(resource):
             self._check_ip(request)

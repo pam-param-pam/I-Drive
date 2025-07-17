@@ -1,6 +1,6 @@
 <template>
    <div class="copy-code" @click="showMessage" @mouseout="resetMessage">
-      <div class="tooltip">{{ message }}</div>
+      <div class="tooltip">{{ $t(message) }}</div>
       <svg
          fill="none"
          height="100%"
@@ -24,17 +24,17 @@ export default {
 
    data() {
       return {
-         message: 'Copy code'
+         message: 'buttons.copyText'
       }
    },
 
    methods: {
       showMessage() {
-         this.message = 'Copied!'
+         this.message = 'buttons.copied'
       },
 
       resetMessage() {
-         this.message = 'Copy code'
+         this.message = 'buttons.copyText'
       }
    }
 }
@@ -74,12 +74,12 @@ export default {
    left: -96px;
    font-size: 12px;
    color: white;
-   width: 84px;
-   height: 30px;
-   line-height: 30px;
    background: rgba(0, 0, 0, 0.8);
+   padding: 8px 12px;
    box-sizing: border-box;
    text-align: center;
    border-radius: 4px;
+   white-space: nowrap;
+   z-index: 10;
 }
 </style>

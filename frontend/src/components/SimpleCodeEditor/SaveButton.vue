@@ -1,6 +1,6 @@
 <template>
    <div id="save-button" ref="saveButton" class="save-file">
-      <div class="tooltip">{{ message }}</div>
+      <div class="tooltip">{{ $t(message) }}</div>
       <svg
          v-if="currentState === 'normal'"
          fill="none"
@@ -56,13 +56,12 @@ export default {
 
    data() {
       return {
-         message: 'Save File',
-         currentState: 'normal' // Default state
+         message: 'buttons.saveFile',
+         currentState: 'normal'
       }
    },
 
    mounted() {
-      // Create an observer to monitor class changes
       this.observer = new MutationObserver((mutations) => {
          for (const m of mutations) {
             const newValue = m.target.getAttribute(m.attributeName)
@@ -72,10 +71,8 @@ export default {
          }
       })
 
-      // Ensure saveButton is correctly referenced
-      const saveButtonElement = this.$refs.saveButton
+      let saveButtonElement = this.$refs.saveButton
 
-      // Verify that saveButtonElement is a valid DOM node
       if (saveButtonElement) {
          this.observer.observe(saveButtonElement, {
             attributes: true,
@@ -97,18 +94,18 @@ export default {
 
    methods: {
       updateStateFromClass() {
-         const button = this.$refs.saveButton
-         const classList = button.classList
+         let button = this.$refs.saveButton
+         let classList = button.classList
 
          if (classList.contains('loading')) {
             this.currentState = 'loading'
-            this.message = 'Saving...'
+            this.message = 'buttons.savingFile'
          } else if (classList.contains('success')) {
             this.currentState = 'success'
-            this.message = 'Saved!'
+            this.message = 'buttons.fileSaved'
          } else {
             this.currentState = 'normal'
-            this.message = 'Save File'
+            this.message = 'buttons.saveFile'
          }
       },
 
@@ -165,13 +162,13 @@ export default {
    left: -96px;
    font-size: 12px;
    color: white;
-   width: 84px;
-   height: 30px;
-   line-height: 30px;
    background: rgba(0, 0, 0, 0.8);
    box-sizing: border-box;
    text-align: center;
    border-radius: 4px;
+   padding: 8px 12px;
+   white-space: nowrap;
+   z-index: 10;
 }
 
 /* Loading Spinner Animation */
@@ -197,6 +194,6 @@ export default {
 }
 
 .code-editor .save-file.success svg path {
-   stroke-width: 1; /* Reduce stroke width to make the icon less bold */
+   stroke-width: 1;
 }
 </style>
