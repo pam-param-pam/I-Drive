@@ -97,7 +97,7 @@ export async function* prepareRequests() {
       let mp4boxfile
 
       //create mp4box only if needed
-      if (isVideoFile(queueFile)) {
+      if (isVideoFile(queueFile.fileObj.extension)) {
          mp4boxfile = MP4Box.createFile()
          mp4boxfile.fileObj = queueFile.fileObj
 
@@ -118,7 +118,7 @@ export async function* prepareRequests() {
 
          let chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
 
-         if (isVideoFile(queueFile) && !mp4boxfile.fileObj.mp4boxFinished) {
+         if (isVideoFile(queueFile.fileObj.extension) && !mp4boxfile.fileObj.mp4boxFinished) {
             appendMp4BoxBuffer(mp4boxfile, chunk, offset)
          }
 
@@ -145,7 +145,7 @@ export async function* prepareRequests() {
       }
       //we need to inform about totalChunks of a file
       queueFile.fileObj.totalChunks = i
-      if (isVideoFile(queueFile)) {
+      if (isVideoFile(queueFile.fileObj.extension)) {
          queueFile.fileObj.mp4boxFinished = true
          mp4boxfile.flush()
       }

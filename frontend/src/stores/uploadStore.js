@@ -8,6 +8,7 @@ import { Uploader } from "@/utils/Uploader.js"
 import { canUpload } from "@/api/user.js"
 import { createFile } from "@/api/files.js"
 import { v4 as uuidv4 } from "uuid"
+import { isVideoFile } from "@/utils/uploadHelper.js"
 
 const toast = useToast()
 
@@ -345,6 +346,8 @@ export const useUploadStore = defineStore("upload", {
 
       //experimental
       fillAttachmentInfo(attachment, discordResponse, discordAttachment) {
+         console.log("fillAttachmentInfo")
+         console.log(attachment)
          let fileObj = attachment.fileObj
          if (!this.backendState.has(fileObj.frontendId)) {
             let file_data = {
@@ -400,7 +403,7 @@ export const useUploadStore = defineStore("upload", {
             }
          }
          this.backendState.set(fileObj.frontendId, state)
-         if (state.attachments.length === fileObj.totalChunks && (!fileObj.thumbnail || state.thumbnail) && (!fileObj.type.includes("video") || state.videoMetadata || fileObj.mp4boxFinished)) {
+         if (state.attachments.length === fileObj.totalChunks && (!fileObj.thumbnail || state.thumbnail) && (!isVideoFile(fileObj.extension) || state.videoMetadata || fileObj.mp4boxFinished)) {
             this.finishedFiles.push(state)
             if (!state.videoMetadata) console.warn("videoMetadata is missing")
             this.finishFileUpload(fileObj.frontendId)
@@ -409,6 +412,8 @@ export const useUploadStore = defineStore("upload", {
          for (let finishedFile of this.finishedFiles) {
             totalSize += finishedFile.size
          }
+         console.log(this.finishedFiles)
+         console.log(this.isUploadFinished)
          if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || (this.isUploadFinished && this.finishedFiles.length > 0)) {
             let finishedFiles = this.finishedFiles
             this.finishedFiles = []

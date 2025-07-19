@@ -107,26 +107,28 @@ function processFile(fileEntry) {
 }
 
 
-export function isAudioFile(file) {
+export function isAudioFile(extension) {
+   extension = extension.toLowerCase()
    let uploadStore = useUploadStore()
-   console.log(uploadStore.fileExtensions)
-   console.log(file.fileObj.extension)
-   return uploadStore.fileExtensions.audio.includes(file.fileObj.extension)
+   return uploadStore.fileExtensions.audio.includes(extension)
 }
 
 
-export function isVideoFile(file) {
+export function isVideoFile(extension) {
+   extension = extension.toLowerCase()
    let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.video.includes(file.fileObj.extension)
+   return uploadStore.fileExtensions.video.includes(extension)
 }
 
 
-export function isImageFile(file) {
+export function isImageFile(extension) {
+   extension = extension.toLowerCase()
    let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.image.includes(file.fileObj.extension)
+   return uploadStore.fileExtensions.image.includes(extension)
 }
 
 
+//todo yea this needs fixing lol
 export function getWebhook() {
    const uploadStore = useUploadStore()
    const webhooks = uploadStore.webhooks
@@ -168,7 +170,7 @@ export function getWebhook() {
 export async function makeThumbnailIfNeeded(queueFile) {
    let thumbnail
    //extracting thumbnail if needed for audio file
-   if (isAudioFile(queueFile)) {
+   if (isAudioFile(queueFile.fileObj.extension)) {
       try {
          thumbnail = await getAudioCover(queueFile)
       } catch (e) {
@@ -176,12 +178,14 @@ export async function makeThumbnailIfNeeded(queueFile) {
       }
    }
    //generating a thumbnail if needed for video file
-   if (isVideoFile(queueFile)) {
+   if (isVideoFile(queueFile.fileObj.extension)) {
       try {
+         console.log("getting video cover:")
          let data = await getVideoCover(queueFile)
          let duration = data.duration
          thumbnail = data.thumbnail
          queueFile.fileObj.duration = Math.round(duration)
+         console.log("finnished getting video cover")
 
       } catch (e) {
          console.warn(e)
@@ -189,7 +193,7 @@ export async function makeThumbnailIfNeeded(queueFile) {
       }
    }
    //generating a thumbnail if needed for video file
-   if (isImageFile(queueFile)) { // && queueFile.fileObj.size > 200 * 1024
+   if (isImageFile(queueFile.fileObj.extension)) { // && queueFile.fileObj.size > 200 * 1024
       try {
          thumbnail = await getImageThumbnail(queueFile)
       } catch (e) {

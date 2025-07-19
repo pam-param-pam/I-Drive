@@ -65,7 +65,7 @@ def create_file(request):
         file_type = get_file_type(extension)
 
         parent = get_folder(parent_id)
-        check_resource_perms(request, parent, [CheckTrash])
+        check_resource_perms(request, parent, default_checks)
 
         if File.objects.filter(frontend_id=frontend_id).exists():
             continue

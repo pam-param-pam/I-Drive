@@ -76,9 +76,35 @@
     </div>
     <template v-else>
       <div class="preview">
+        <div v-if="error" class="info">
 
+          <div v-if="error.status === 404" class="title">
+            <i class="material-icons">feedback</i>
+            {{ $t("errors.resourceNotFound") }}
+          </div>
+          <div v-else-if="error.status === 469" class="title">
+            <i class="material-icons">block</i>
+            {{ $t("errors.folderPasswordRequired") }}
+          </div>
+          <div v-else-if="error.status === 403" class="title">
+            <i class="material-icons">block</i>
+            {{ $t("errors.permissionDenied") }}
+          </div>
+          <div v-else class="title">
+            <i class="material-icons">error_outline</i>
+            {{ $t("errors.unknownError", { code: error?.status, response: error?.response?.data?.details }) }}
+          </div>
+
+          <div>
+            <a class="button button--flat">
+              <div>
+                <i class="material-icons" @click="close">arrow_back</i>{{ $t("errors.goBack") }}
+              </div>
+            </a>
+          </div>
+        </div>
         <video
-          v-if="file?.type === 'Video' && file?.size > 0"
+          v-else-if="file?.type === 'Video' && file?.size > 0"
           id="video"
           ref="video"
           :autoplay="true"
@@ -160,33 +186,7 @@
             </a>
           </div>
         </div>
-        <div v-if="error" class="info">
 
-          <div v-if="error.status === 404" class="title">
-            <i class="material-icons">feedback</i>
-            {{ $t("errors.resourceNotFound") }}
-          </div>
-          <div v-else-if="error.status === 469" class="title">
-            <i class="material-icons">block</i>
-            {{ $t("errors.folderPasswordRequired") }}
-          </div>
-          <div v-else-if="error.status === 403" class="title">
-            <i class="material-icons">block</i>
-            {{ $t("errors.permissionDenied") }}
-          </div>
-          <div v-else class="title">
-            <i class="material-icons">error_outline</i>
-            {{ $t("errors.unknownError", { code: error?.status, response: error?.response?.data?.details }) }}
-          </div>
-
-          <div>
-            <a class="button button--flat">
-              <div>
-                <i class="material-icons" @click="close">arrow_back</i>{{ $t("errors.goBack") }}
-              </div>
-            </a>
-          </div>
-        </div>
       </div>
     </template>
 
