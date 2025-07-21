@@ -9,7 +9,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, Exists
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -219,7 +219,7 @@ class File(models.Model):
         "lockFrom_id": F("parent__lockFrom__id"),
         "lockFrom__name": F("parent__lockFrom__name"),
         "password": F("parent__password"),
-        "is_dir": Value(False, output_field=BooleanField())
+        "is_dir": Value(False, output_field=BooleanField()),
     }
 
     def _is_locked(self):
@@ -288,7 +288,6 @@ class File(models.Model):
         if not self.parent.inTrash:
             self.inTrash = True
             self.inTrashSince = timezone.now()
-
             self.save()
 
     def restoreFromTrash(self):

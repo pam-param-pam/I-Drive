@@ -1,12 +1,11 @@
 from typing import Union, Type, Tuple
 from urllib.parse import unquote
 
-from django.db.models import Model
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
 from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError, LockedFolderWrongIpError
-from .other import get_attr, get_ip, check_if_item_belongs_to_share, get_folder, get_file
+from .other import get_attr, get_ip, check_if_item_belongs_to_share
 from ..models import UserPerms, File, Folder, ShareableLink
 
 

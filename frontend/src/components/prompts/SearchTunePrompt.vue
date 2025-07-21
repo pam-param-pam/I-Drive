@@ -88,7 +88,7 @@
                   <label>{{ $t('prompts.limitToFolders') }}</label>
                   <input
                      v-model="limitToFolders"
-                     :placeholder="$t('prompts.enterLimitToFolders')"
+                     :placeholder="$t('prompts.enterFolderIds')"
                      class="input input--block styled-input"
                      type="text"
                   />
@@ -97,27 +97,52 @@
                   <label>{{ $t('prompts.excludeFolders') }}</label>
                   <input
                      v-model="excludeFolders"
-                     :placeholder="$t('prompts.enterExcludeFolders')"
+                     :placeholder="$t('prompts.enterFolderIds')"
                      class="input input--block styled-input"
                      type="text"
                   />
                </div>
                <div>
                   <label>{{ $t('prompts.property') }}</label>
-                  <input
-                     v-model="property"
-                     :placeholder="$t('prompts.enterProperty')"
-                     class="input input--block styled-input"
-                     type="text"
-                  />
+                  <select
+                    v-model="property"
+                    @change="onPropertyChange"
+                    class="input input--block styled-input"
+                  >
+                     <option value="">{{ $t('prompts.selectProperty') }}</option>
+                     <option v-for="prop in properties" :key="prop.value" :value="prop.value">
+                        {{ prop.label }}
+                     </option>
+                  </select>
                </div>
-               <div>
-                  <label>{{ $t('prompts.range') }}</label>
+
+               <div v-if="selectedPropertyType">
+                  <label>{{ $t('prompts.propertyValue') }}</label>
+
+                  <!-- String Input -->
                   <input
-                     v-model="range"
-                     :placeholder="$t('prompts.enterRange')"
-                     class="input input--block styled-input"
-                     type="text"
+                    v-if="selectedPropertyType === 'string'"
+                    v-model="range"
+                    type="text"
+                    class="input input--block styled-input"
+                    :placeholder="$t('prompts.enterRegex')"
+                  />
+
+                  <!-- Number Input -->
+                  <input
+                    v-else-if="selectedPropertyType === 'number'"
+                    v-model.number="range"
+                    type="text"
+                    class="input input--block styled-input"
+                    :placeholder="$t('prompts.enterRange')"
+                  />
+
+                  <!-- Date Input -->
+                  <input
+                    v-else-if="selectedPropertyType === 'date'"
+                    v-model="range"
+                    type="date"
+                    class="input input--block styled-input"
                   />
                </div>
             </div>
@@ -169,12 +194,26 @@ export default {
          limitToFolders: null,
          excludeFolders: null,
          property: null,
-         range: null
+         range: null,
+         selectedProperty: null,
+         properties: [
+            { label: "Name", value: "name", type: "string" },
+            { label: "Extension", value: "extension", type: "string" },
+            { label: "Size", value: "size", type: "number" },
+            { label: "Created At", value: "created_at", type: "date" },
+            { label: "Last Modified At", value: "last_modified_at", type: "date" },
+            { label: "Duration", value: "duration", type: "number" },
+         ]
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['searchFilters', 'currentPrompt'])
+      ...mapState(useMainStore, ['searchFilters', 'currentPrompt']),
+      selectedPropertyType() {
+         return this.properties.find(
+           (p) => p.value === this.property
+         )?.type
+      }
    },
 
    created() {
@@ -194,7 +233,9 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ['setSearchFilters', 'setDisabledCreation', 'resetSelected', 'closeHover', 'setSortingBy', 'setSortByAsc', 'setError', 'setLoading']),
-
+      onPropertyChange() {
+         this.range = null;
+      },
       submit: onceAtATime(async function () {
          this.setDisabledCreation(true)
          this.resetSelected()
@@ -212,8 +253,10 @@ export default {
             ascending: this.ascending,
             limitToFolders: this.limitToFolders,
             excludeFolders: this.excludeFolders,
-            property: this.property,
-            range: this.range
+         }
+         if (this.property && this.range) {
+            searchFilterDict.property = this.property
+            searchFilterDict.range = this.range
          }
 
          if (this.fileType !== null) searchFilterDict.type = this.fileType

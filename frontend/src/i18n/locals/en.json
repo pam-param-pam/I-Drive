@@ -144,6 +144,11 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "property": "File Property",
+    "selectProperty": "Select property",
+    "propertyValue": "Value",
+    "enterRegex": "Enter regex",
+    "enterRange": "> 50, 10 - 15, < 200",
     "manageSubtitles": "Manage subtitles",
     "existingSubtitles": "Subtitles",
     "addSubtitle": "Add subtitle",
@@ -263,12 +268,7 @@
     "advanced": "Advanced",
     "limitToFolders": "Only from folders",
     "excludeFolders": "Excluded Folders",
-    "property": "Property",
-    "range": "Range",
-    "enterLimitToFolders": "Enter folder's ids, separate with ,",
-    "enterExcludeFolders": "Enter folder's ids, separate with ,",
-    "enterProperty": "e.g duration, size",
-    "enterRange": "> 50, 10 - 15, < 200"
+    "enterFolderIds": "Enter folder's ids, separate with ,"
   },
   "search": {
     "close": "Close",

@@ -77,7 +77,7 @@ class FileSerializer(AdvancedSerializer):
             "isLocked": is_locked,
             "encryption_method": encryption_method,
             "isVideoMetadata": video_metadata_id is not None,
-            "crc": None,
+            "crc": crc,
         }
 
         if is_locked:
@@ -139,7 +139,7 @@ class ShareFileSerializer(FileSerializer):
             "last_modified": last_modified_at.isoformat() if last_modified_at else None,
             "encryption_method": encryption_method,
             "isVideoMetadata": video_metadata_id is not None,
-            "crc": None,
+            "crc": crc,
         }
 
         if duration:

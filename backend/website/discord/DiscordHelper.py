@@ -64,7 +64,7 @@ class DiscordHelper:
 
             # Create channels
             channels = []
-            for i in range(2):
+            for i in range(3):
                 channel_payload = {
                     'name': f"Files_{i + 1}",
                     'type': 0,

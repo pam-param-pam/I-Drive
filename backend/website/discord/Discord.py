@@ -14,7 +14,7 @@ from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError
 
 logger = logging.getLogger("Discord")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 if not logger.hasHandlers():
     ch = logging.StreamHandler()
@@ -172,7 +172,7 @@ class Discord:
     def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         start = time.perf_counter()
         response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
-        print(f"⏱  _make_request took {time.perf_counter() - start:.4f} seconds")
+        logger.debug(f"⏱  _make_request took {time.perf_counter() - start:.4f} seconds")
         return response
 
     def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3) -> Response:
@@ -197,7 +197,7 @@ class Discord:
             response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
             duration = time.monotonic() - start_time
 
-            print(f"⏱ _make_bot_request took {duration:.3f} seconds")
+            logger.debug(f"⏱ _make_bot_request took {duration:.3f} seconds")
 
             if response.is_success:
                 return response
@@ -222,8 +222,8 @@ class Discord:
                 if response:
                     self._update_token(user, token, response.headers)
             except Exception as e:
-                print(f"ERROR HAPPENED IN DISCORD, UNABLE TO HANDLE IT: {str(e)}")
-                print(traceback.print_exc())
+                logger.error(f"ERROR HAPPENED IN DISCORD, UNABLE TO HANDLE IT: {str(e)}")
+                logger.error(traceback.print_exc())
                 self.remove_user_state(user)
 
     def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
@@ -279,7 +279,7 @@ class Discord:
     def get_attachment_url(self, user, resource: Union['Fragment', 'Thumbnail', 'Preview', 'Moment', 'Subtitle']) -> str:
         start = time.perf_counter()
         result = self.get_file_url(user, resource.message_id, resource.attachment_id, resource.channel_id)
-        print(f"⏱ get_attachment_url took {time.perf_counter() - start:.4f} seconds")
+        logger.debug(f"⏱ get_attachment_url took {time.perf_counter() - start:.4f} seconds")
         return result
 
     def get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str) -> str:
@@ -287,7 +287,7 @@ class Discord:
         message = self.get_message(user, message_id, channel_id).json()
         for attachment in message["attachments"]:
             if attachment["id"] == attachment_id:
-                print(f"⏱ get_file_url took {time.perf_counter() - start:.4f} seconds")
+                logger.debug(f"⏱ get_file_url took {time.perf_counter() - start:.4f} seconds")
                 return attachment["url"]
         raise DiscordError(f"File with {attachment_id} not found")
 
@@ -295,7 +295,7 @@ class Discord:
         start = time.perf_counter()
         # cached_message = cache.get(message_id)
         # if cached_message:
-        #     print(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
+        #     logger.debug(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
         #     return cached_message
 
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
@@ -304,7 +304,7 @@ class Discord:
         message = response.json()
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
-        print(f"⏱ get_message (non-cache) took {time.perf_counter() - start:.4f} seconds")
+        logger.debug(f"⏱ get_message (non-cache) took {time.perf_counter() - start:.4f} seconds")
         return response
 
     def remove_message(self, user, message_id: str) -> httpx.Response:

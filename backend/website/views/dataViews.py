@@ -1,9 +1,12 @@
 import json
+import re
 import time
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 import ujson
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, FieldDoesNotExist
+from django.db import models
 from django.db.models import Value, IntegerField
 from django.db.models.aggregates import Sum, Count
 from django.db.models.query_utils import Q
@@ -177,7 +180,7 @@ def search(request):
     if order_by not in ('size', 'duration', 'created_at'):
         order_by = 'created_at'
 
-    result_limit = min(int(request.GET.get('resultLimit', 100)), 1000)
+    result_limit = min(int(request.GET.get('resultLimit', 100)), 10000) # todo
 
     include_files = request.GET.get('files', 'True').lower() != "false"
 
@@ -196,7 +199,7 @@ def search(request):
         file_type = "Video"
         include_folders = False
 
-    if attribute == "size":
+    if attribute:
         include_folders = False
 
     if bool(attribute) != bool(attribute_range):
@@ -229,19 +232,46 @@ def search(request):
         file_filters &= Q(tags__name__in=tags)
 
     # Apply attributeRange filtering
-
     if attribute_range:
-        if '>' in attribute_range:
-            value = attribute_range.lstrip('>')
-            file_filters &= Q(**{f"{attribute}__gt": value})
-        elif '<' in attribute_range:
-            value = attribute_range.lstrip('<')
-            file_filters &= Q(**{f"{attribute}__lt": value})
-        elif '-' in attribute_range:
-            start, end = attribute_range.split('-')
-            file_filters &= Q(**{f"{attribute}__range": (start, end)})
+        # Try to get the field type from the model
+        if attribute not in ("name", "extension", "size", "created_at", "last_modified_at", "number"):
+            raise BadRequestError(f"Invalid property: {attribute}")
+
+        field = File._meta.get_field(attribute)
+
+        if isinstance(field, (models.IntegerField, models.FloatField, models.DecimalField, models.BigIntegerField)):
+            # Numeric filters
+            if attribute_range.startswith(">"):
+                file_filters &= Q(**{f"{attribute}__gt": attribute_range[1:]})
+            elif attribute_range.startswith("<"):
+                file_filters &= Q(**{f"{attribute}__lt": attribute_range[1:]})
+            elif "-" in attribute_range:
+                try:
+                    start, end = map(str.strip, attribute_range.split("-"))
+                    file_filters &= Q(**{f"{attribute}__range": (start, end)})
+                except ValueError:
+                    raise BadRequestError("Invalid numeric range format (use start-end)")
+            else:
+                file_filters &= Q(**{f"{attribute}": attribute_range})
+
+        elif isinstance(field, models.DateTimeField):
+            # For DateTimeField, filter for the whole day range
+            date_value = datetime.strptime(attribute_range, "%Y-%m-%d")
+            start_of_day = date_value
+            end_of_day = date_value + timedelta(days=1)
+            file_filters &= Q(**{f"{attribute}__gte": start_of_day}) & Q(**{f"{attribute}__lt": end_of_day})
+
+        elif isinstance(field, models.CharField) or isinstance(field, models.TextField):
+            # String / regex filters
+            try:
+                re.compile(attribute_range)
+                file_filters &= Q(**{f"{attribute}__regex": attribute_range})
+            except re.error:
+                file_filters &= Q(**{f"{attribute}": attribute_range})
+
         else:
-            raise BadRequestError("Unsupported range")
+            raise BadRequestError("Unsupported field type")
+
     # Apply excludeFolders filtering (exclude files from these folder IDs)
     if exclude_folders:
         exclude_folder_ids = [folder_id.strip() for folder_id in exclude_folders.split(',')]
@@ -256,23 +286,22 @@ def search(request):
 
     files = []
     folders = []
-    try:
-        if include_files:
-            files = File.objects.filter(file_filters) \
-                        .select_related("parent", "videoposition", "thumbnail", "preview") \
-                        .prefetch_related("tags") \
-                        .order_by(ascending + order_by).annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)[:result_limit]
 
-        if include_folders:
-            folders = Folder.objects.filter(folder_filters) \
-                          .select_related("parent") \
-                          .order_by("-created_at")[:result_limit]
+    if include_files:
+        files = File.objects.filter(file_filters) \
+                    .select_related("parent", "videoposition", "thumbnail", "preview") \
+                    .prefetch_related("tags") \
+                    .order_by(ascending + order_by).annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)[:result_limit]
 
-            if order_by == 'size':
-                # Sort folders by calculated size
-                folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
-    except FieldError:
-        raise BadRequestError("Invalid property")
+    if include_folders:
+        folders = Folder.objects.filter(folder_filters) \
+                      .select_related("parent") \
+                      .order_by("-created_at")[:result_limit]
+
+        if order_by == 'size':
+            # Sort folders by calculated size
+            folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
+
 
     folder_dicts = []
     file_dicts = []
@@ -349,7 +378,7 @@ def get_tags(request, file_obj: File):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated & ReadPerms])
-@throttle_classes([defaultAuthUserThrottle])
+@throttle_classes([MediaThrottle])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):

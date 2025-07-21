@@ -61,7 +61,7 @@ export async function updateVideoPosition(fileId, lockFrom, data) {
 
 
 export async function addTag(fileId, data) {
-   let url = `/files/${fileId}/tag`
+   let url = `/files/${fileId}/tags`
    let response = await backendInstance.post(url, data)
    return response.data
 
@@ -69,7 +69,7 @@ export async function addTag(fileId, data) {
 
 
 export async function removeTag(fileId, data) {
-   let url = `/files/${fileId}/tag`
+   let url = `/files/${fileId}/tags`
    let response = await backendInstance.delete(url, data)
    return response.data
 

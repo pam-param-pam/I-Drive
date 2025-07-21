@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "editSubtitles": "Edytuj napisy",
     "savingFile": "Zapisywanie pliku...",
     "fileSaved": "Plik zapisany!",
     "saveFile": "Zapisz plik",
@@ -145,6 +146,15 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "advanced": "Zaawansowane",
+    "limitToFolders": "Tylko z folderów",
+    "excludeFolders": "Wykluczone foldery",
+    "enterFolderIds": "Podaj ID folderów, oddziel za pomocą ,",
+    "property": "Właściwość plików",
+    "selectProperty": "Wybierz właściwość",
+    "propertyValue": "Wartość",
+    "enterRegex": "Wpisz regex",
+    "enterRange": "> 50, 10 - 15, < 200",
     "manageSubtitles": "Zarządaj napisami",
     "existingSubtitles": "Napisy",
     "addSubtitle": "Dodaj napisy",
