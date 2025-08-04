@@ -14,6 +14,7 @@
                      <th class="expiry-column">{{ $t('settings.shareExpiry') }}</th>
                      <th></th>
                      <th></th>
+                     <th></th>
                   </tr>
 
                   <tr v-for="share in shares" :key="share.token">
@@ -25,6 +26,16 @@
                            >{{ humanTime(share.expire) }}
                         </template>
                         <template v-else>{{ $t('permanent') }}</template>
+                     </td>
+                     <td class="small">
+                        <button
+                          :aria-label="$t('buttons.info')"
+                          :title="$t('buttons.info')"
+                          class="action"
+                          @click="showInfo($event, share)"
+                        >
+                           <i class="material-icons">info</i>
+                        </button>
                      </td>
                      <td class="small">
                         <button
@@ -117,7 +128,7 @@ export default {
             this.$toast.success(this.$t('toasts.shareDeleted'))
          } else {
             this.showHover({
-               prompt: 'share-delete',
+               prompt: 'shareDelete',
                confirm: async () => {
                   await deleteShare(share.token)
                   this.shares = this.shares.filter((item) => item.token !== share.token)
@@ -133,6 +144,13 @@ export default {
       buildLink(share) {
          let route = this.$router.resolve({ name: 'Share', params: { token: share.token } })
          return new URL(route.href, window.location.origin).href
+      },
+
+      showInfo(event, share) {
+         this.showHover({
+            prompt: "shareAccesses",
+            props: {share},
+         })
       }
    }
 }

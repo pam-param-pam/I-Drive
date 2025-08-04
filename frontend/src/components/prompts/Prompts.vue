@@ -40,6 +40,7 @@ import UploadDestinationWarning from "@/components/prompts/UploadDestinationWarn
 import EditThumbnail from "@/components/prompts/EditThumbnail.vue"
 import Moments from "@/components/prompts/Moments.vue"
 import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
+import shareAccesses from "@/components/prompts/ShareAccesses.vue"
 
 export default {
    name: "prompts",
@@ -67,7 +68,8 @@ export default {
       UploadDestinationWarning,
       EditThumbnail,
       Moments,
-      EditSubtitles
+      EditSubtitles,
+      shareAccesses
    },
    created() {
       window.addEventListener("keydown", (event) => {

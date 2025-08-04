@@ -188,24 +188,18 @@ export default {
       },
 
       toRoot() {
-         // let folderId = this.currentFolder?.id || this.user.root
-         let folderId = this.user.root
-         this.$router
-            .push({ name: `Files`, params: { folderId: folderId } })
-            .catch((err) => {
-            })
+         let folderId = this.currentFolder?.id || this.user.root
+         this.$router.push({ name: `Files`, params: { folderId: folderId } })
          this.closeHover()
       },
 
       toTrash() {
-         this.$router.push({ name: `Trash` }).catch((err) => {
-         })
+         this.$router.push({ name: `Trash` })
          this.closeHover()
       },
 
       toSettings() {
-         this.$router.push({ name: `Settings` }).catch((err) => {
-         })
+         this.$router.push({ name: `Settings` })
          this.closeHover()
       },
 

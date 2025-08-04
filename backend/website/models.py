@@ -468,7 +468,7 @@ class ShareableLink(models.Model):
     resource = GenericForeignKey('content_type', 'object_id')
 
     def __str__(self):
-        return f"Share[owner={self.owner.username}, created_at={self.created_at}, object_id={self.object_id}"
+        return f"Share[owner={self.owner.username}, resource={self.get_resource_inside().name}]"
 
     def save(self, *args, **kwargs):
         if self.token is None or self.token == '':
@@ -677,6 +677,17 @@ class Subtitle(DiscordAttachmentMixin):
 
     def __str__(self):
         return f"Subtitle file ({self.language}) for {self.file}"
+
+
+class ShareAccess(models.Model):
+    share = models.ForeignKey(ShareableLink, on_delete=models.CASCADE)
+    ip = models.GenericIPAddressField(null=True)
+    user_agent = models.TextField()
+    accessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    access_time = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Access to {self.share.get_resource_inside().name} from {self.ip} at {self.access_time} ({self.accessed_by})"
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):

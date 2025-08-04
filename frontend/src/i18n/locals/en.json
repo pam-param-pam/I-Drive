@@ -59,6 +59,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "notImplementedError": "Not implemented",
     "resourceInaccessibleFromIP": "Invalid IP",
     "invalidMove": "Invalid move",
     "notAllowedToUpload": "You are not allowed to upload yet. First configure discord settings.",
@@ -144,6 +145,12 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "shareVisits": "Share visits",
+    "totalVisits": "Total visits of",
+    "user": "user",
+    "count": "count",
+    "lastAccess": "last access",
+    "noShareVisits": "Nobody visited this share yet",
     "property": "File Property",
     "selectProperty": "Select property",
     "propertyValue": "Value",

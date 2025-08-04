@@ -15,11 +15,11 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview, share_view_subtitle, \
     share_get_subtitles, check_share_password
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
-from .views.testViews import your_ip
+from .views.testViews import your_ip, get_discord_state
 from .views.uploadViews import create_file, create_thumbnail, edit_file
 from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, \
     delete_bot, \
-    update_attachment_name, can_upload, reset_discord_state, discord_settings_start, reset_discord_settings
+    update_attachment_name, can_upload, discord_settings_start, reset_discord_settings
 
 _route_registry = {}
 _registered_routes = set()
@@ -138,13 +138,11 @@ urlpatterns = [
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     django_path('admin', admin.site.urls),
+    django_path('test', get_discord_state),
 
     path('ip', ['POST'], your_ip, name='get ip'),
     path('ip', ['GET'], your_ip, name='get ip'),
 
-    # path('test', get_discord_state),
-    # path("stats", get_stats, name="stats"),
-    # path("stats2", get_discord_attachment_report, name="stats2"),
     path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download"),
     path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
 

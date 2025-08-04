@@ -15,7 +15,7 @@ from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_breadcrumbs, get_resource, create_share_resource_dict, \
-    build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms
+    build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms, log_share_access
 from ..utilities.signer import sign_resource_id_with_expiry
 from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle
 
@@ -107,11 +107,10 @@ def check_share_password(request, share_obj):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "folder_obj"], optional=True)
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="folder_obj", optional=True)
 def view_share(request, share_obj: ShareableLink, folder_obj=None):
+    log_share_access(request, share_obj)
+
     settings = UserSettings.objects.get(user=share_obj.owner)
     obj_in_share = share_obj.get_resource_inside()
-
-    if obj_in_share.inTrash:
-        raise ResourceNotFoundError()
 
     if share_obj.get_type() == "folder":
         breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)

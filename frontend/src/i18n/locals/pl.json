@@ -60,6 +60,7 @@
 
   },
   "errors": {
+    "notImplementedError": "Ta funkcja jeszcze nie działa",
     "resourceInaccessibleFromIP": "Błędne IP",
     "invalidMove": "Błedne przeniesienie folderu",
     "notAllowedToUpload": "Nie możesz jeszcze wysyłać plików. Skonfiguruj ustawienia discorda najpierw",
@@ -146,6 +147,12 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "shareVisits": "Wizyty linku",
+    "totalVisits": "Wszystkie wizyty",
+    "user": "Użytkownik",
+    "count": "ilość",
+    "lastAccess": "ostatnie",
+    "noShareVisits": "Nikt jeszcze nie odwiedził tego linku",
     "advanced": "Zaawansowane",
     "limitToFolders": "Tylko z folderów",
     "excludeFolders": "Wykluczone foldery",

@@ -4,17 +4,19 @@ import json
 import os
 import time
 from collections import defaultdict
+from datetime import timedelta
 from typing import Union, List, Dict, Optional
 
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.db.models import Q
 from django.db.models.aggregates import Sum
+from django.utils import timezone
 
 from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer
 from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, Preview, Fragment, Moment, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel, ShareAccess
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
@@ -598,3 +600,29 @@ def obtain_discord_settings(user) -> dict:
 
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
             "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
+
+def log_share_access(request, share_obj):
+    print("loggin share access")
+    ip, _ = get_ip(request)
+    user_agent = request.user_agent
+    user = request.user if request.user.is_authenticated else None
+    now = timezone.now()
+    one_hour_ago = now - timedelta(hours=1)
+
+    # Check for recent similar access
+    recent_access = ShareAccess.objects.filter(
+        share=share_obj,
+        ip=ip,
+        user_agent=user_agent,
+        accessed_by=user,
+        access_time__gte=one_hour_ago
+    ).exists()
+
+    if not recent_access:
+        # Log new access
+        ShareAccess.objects.create(
+            share=share_obj,
+            ip=ip,
+            user_agent=user_agent,
+            accessed_by=user
+        )

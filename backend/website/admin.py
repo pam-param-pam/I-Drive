@@ -11,7 +11,7 @@ from simple_history.admin import SimpleHistoryAdmin
 
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment, \
-    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel
+    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess
 from .tasks import smart_delete
 from .utilities.constants import cache, API_BASE_URL, EncryptionMethod
 from .utilities.signer import sign_resource_id_with_expiry
@@ -438,3 +438,16 @@ class SubtitleAdmin(admin.ModelAdmin):
 
     readable_size.short_description = 'Size'
     readable_size.admin_order_field = 'size'
+
+@admin.register(ShareAccess)
+class ShareAccessAdmin(admin.ModelAdmin):
+    readonly_fields = ('share', 'ip', 'user_agent', 'readable_accessed_by', 'access_time')
+    exclude = ['accessed_by']
+
+    def readable_accessed_by(self, obj: ShareAccess):
+        if obj.accessed_by:
+            return obj.accessed_by.username
+        else:
+            return "Unknown (Anonymous)"
+
+    readable_accessed_by.short_description = "Accessed by"

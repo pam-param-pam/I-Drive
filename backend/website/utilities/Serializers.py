@@ -1,7 +1,8 @@
 from abc import abstractmethod, ABC
+from collections import defaultdict
 
 from .signer import sign_resource_id_with_expiry
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess
 from ..utilities.constants import API_BASE_URL
 
 
@@ -209,6 +210,42 @@ class ShareSerializer(SimpleSerializer):
             "resource_id": share.object_id,
             "id": share.id,
         }
+
+        # Group accesses
+        accessed = ShareAccess.objects.filter(share=share)
+
+        access_summary = defaultdict(lambda: {
+            "user": None,
+            "ip": None,
+            "user_agent": None,
+            "access_count": 0,
+            "last_access_time": None,
+        })
+
+        for access in accessed:
+            key = (
+                access.accessed_by.username if access.accessed_by else "anonymous",
+                access.ip,
+                access.user_agent,
+            )
+
+            entry = access_summary[key]
+            entry["user"] = key[0]
+            entry["ip"] = key[1]
+            entry["user_agent"] = key[2]
+            entry["access_count"] += 1
+
+            if entry["last_access_time"] is None or access.access_time > entry["last_access_time"]:
+                entry["last_access_time"] = access.access_time
+
+        item["accesses"] = [
+            {
+                **entry,
+                "last_access_time": entry["last_access_time"].isoformat()
+            }
+            for entry in access_summary.values()
+        ]
+
         return item
 
 

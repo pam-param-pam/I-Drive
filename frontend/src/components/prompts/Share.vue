@@ -1,5 +1,5 @@
 <template>
-   <div id="share" class="card floating share__promt__card">
+   <div id="share" class="card floating">
       <div class="card-title">
          <h2>{{ $t('buttons.share') }}</h2>
       </div>

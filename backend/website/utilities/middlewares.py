@@ -123,13 +123,13 @@ class CommonErrorsMiddleware(MiddlewareMixin):
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception)), status=400)
 
         elif isinstance(exception, NoBotsError):
-            return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="User has no bots, unable to fetch anything from discord."), status=400)
+            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="User has no bots, unable to fetch anything from discord."), status=400)
 
         elif isinstance(exception, NotImplementedError):
-            return JsonResponse(build_http_error_response(code=400, error="error.notImplemented", details=str(exception)), status=400)
+            return JsonResponse(build_http_error_response(code=400, error="errors.notImplemented", details=str(exception)), status=400)
 
         elif isinstance(exception, InvalidMove):
-            return JsonResponse(build_http_error_response(code=400, error="error.badRequest", details="Invalid parent, recursion detected."), status=400)
+            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Invalid parent, recursion detected."), status=400)
 
         elif isinstance(exception, KeyError):
             if is_dev_env:
