@@ -1,0 +1,29 @@
+name: Auto Migrate
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Run Django Migrations on Remote VM
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+        port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+        username: ${{ secrets.CI_RPI_USERNAME }}
+        key: ${{ secrets.CI_RPI_SSH_KEY }}
+        script: |
+          echo "Navigating to idrive directory..."
+          cd idrive || exit 1
+
+          echo "Running Django migrations inside container..."
+          docker compose exec -T idrive-backend python manage.py migrate
+
+          echo "Migrations completed."
