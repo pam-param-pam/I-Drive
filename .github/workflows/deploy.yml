@@ -20,7 +20,7 @@ jobs:
         port: ${{ secrets.CI_DEPLOYMENT_PORT }}
         username: ${{ secrets.CI_RPI_USERNAME }}
         key: ${{ secrets.CI_RPI_SSH_KEY }}
-        timeout: 900
+        timeout: 900s
         script: |
           
           echo "Logging in to GitHub Container Registry..."
