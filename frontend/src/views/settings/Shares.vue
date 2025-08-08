@@ -71,7 +71,7 @@
 
 <script>
 import Clipboard from 'clipboard'
-import { getAllShares, deleteShare } from '@/api/share.js'
+import { getAllShares, deleteShare, getShareVisits } from "@/api/share.js"
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import Errors from '@/components/Errors.vue'
@@ -146,10 +146,12 @@ export default {
          return new URL(route.href, window.location.origin).href
       },
 
-      showInfo(event, share) {
+      async showInfo(event, share) {
+         let visits = await getShareVisits(share.token)
+
          this.showHover({
             prompt: "shareAccesses",
-            props: {share},
+            props: {share, visits},
          })
       }
    }

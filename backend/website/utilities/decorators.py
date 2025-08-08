@@ -5,6 +5,7 @@ from typing import Callable, Union
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from .Permissions import CheckGroup
 from .signer import verify_signed_resource_id
 from ..models import File, Folder, ShareableLink
 from ..utilities.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
@@ -46,6 +47,12 @@ def extract_file_from_signed_url(view_func):
 
 
 def check_resource_permissions(checks: list, resource_key: Union[str, list[str]], optional: bool = False): #todo rename to keys
+    if not isinstance(checks, CheckGroup):
+        if isinstance(checks, list):
+            checks = CheckGroup(*checks)
+        else:
+            raise ValueError(f"checks must be a list or a CheckGroup, got: {type(checks)}")
+
     if isinstance(resource_key, str):
         resource_key = [resource_key]
 
@@ -122,13 +129,13 @@ def extract_items(source: str = "kwargs", key: str = "ids", inject_as: str = "it
     })
 
 
-def extract_share(source: str = "kwargs", key: str = "token", inject_as: str = "share_obj"):
+def extract_share(source: str = "kwargs", key: str = "token", inject_as: str = "share_obj", model_field: str = "token"):
     return extract_resources({
         "source": source,
         "key": key,
         "model": [ShareableLink],
         "inject_as": inject_as,
-        "model_field": "token"
+        "model_field": model_field
     })
 
 

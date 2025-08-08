@@ -9,8 +9,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_subtitle
 from ..models import UserSettings, ShareableLink, UserZIP, Subtitle, File
 from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady, ReadPerms, ModifyPerms, CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady, \
-    CheckShareItemBelongings
-from ..utilities.Serializers import ShareSerializer
+    CheckShareItemBelongings, CheckShareOwnership
+from ..utilities.Serializers import ShareSerializer, ShareAccessSerializer
 from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
@@ -73,17 +73,27 @@ def create_share(request, item_obj):
 
     return JsonResponse(item, status=200, safe=False)
 
-
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_share()
+@check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
 def delete_share(request, share_obj):
     if share_obj.owner != request.user:
         raise ResourcePermissionError("You have no access to this resource!")
 
     share_obj.delete()
     return HttpResponse("Share deleted!", status=204)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
+@throttle_classes([defaultAuthUserThrottle])
+@extract_share()
+@check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
+def get_share_visits(request, share_obj):
+    visits = ShareAccessSerializer().serialize_object(share_obj)
+    return JsonResponse(visits)
 
 
 @api_view(['GET'])

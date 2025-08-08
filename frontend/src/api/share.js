@@ -27,6 +27,12 @@ export async function deleteShare(token) {
    return response.data
 }
 
+export async function getShareVisits(token) {
+   let url = `/shares/${token}/visits`
+   let response = await backendInstance.get(url)
+   return response.data
+}
+
 export async function createShare(data) {
    let url = `/shares`
    let response = await backendInstance.post(url, data)

@@ -51,7 +51,7 @@ class DiscordError(IDriveException):
 
 class MissingOrIncorrectResourcePasswordError(IDriveException):
     """Raised when password for a resource is missing"""
-    def __init__(self, requiredPasswords, message="Resource password is missing"):
+    def __init__(self, requiredPasswords, message="Resource password is missing or incorrect"):
         self.requiredPasswords = requiredPasswords
         self.message = message
         super().__init__(self.message)

@@ -211,7 +211,7 @@
                 </tr>
               </table>
             </div>
-            <div v-if="bots.length <= 1" class="info">
+            <div v-if="bots.length < 5" class="info">
                   <span>
                      {{ $t("settings.botInfo") }}
                      <br />

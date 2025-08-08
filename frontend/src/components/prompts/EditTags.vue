@@ -13,7 +13,7 @@
             <span v-for="(tag, index) in tags" :key="index" class="tag">
                <i class="material-icons tag-icon">sell</i>
 
-               {{ tag }}
+               {{ tag.name }}
                <button
                   :aria-label="$t('buttons.removeTag', { tag })"
                   class="remove-tag-button"
@@ -115,14 +115,14 @@ export default {
          let tagName = this.tagName.trim()
          this.tagName = ''
 
-         await addTag(this.file.id, { tag_name: tagName })
-         this.tags.push(tagName)
+         let tag = await addTag(this.file.id, { tag_name: tagName })
+         this.tags.push(tag)
       }),
 
-      removeTag: onceAtATime(async function (tagName) {
-         await removeTag(this.file.id, { tag_name: tagName })
+      removeTag: onceAtATime(async function (tag) {
+         await removeTag(this.file.id, tag.id)
 
-         this.tags = this.tags.filter((tag) => tag !== tagName)
+         this.tags = this.tags.filter(t => t.id !== tag.id)
       })
    }
 }

@@ -2,15 +2,21 @@ from abc import abstractmethod, ABC
 from collections import defaultdict
 
 from .signer import sign_resource_id_with_expiry
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag
 from ..utilities.constants import API_BASE_URL
 
 
 class SimpleSerializer(ABC):
 
     @abstractmethod
-    def serialize_object(self, obj_data: object):
+    def serialize_object(self, obj: object) -> dict:
         raise NotImplementedError
+
+    def serialize_objects(self, objs: list[object]) -> list:
+        dicts_list = []
+        for obj in objs:
+            dicts_list.append(self.serialize_object(obj))
+        return dicts_list
 
 
 class AdvancedSerializer(ABC):
@@ -196,6 +202,7 @@ class ShareFolderSerializer(SimpleSerializer):
         }
         return folder_dict
 
+
 class ShareSerializer(SimpleSerializer):
     def serialize_object(self, share: ShareableLink) -> dict:
         obj = share.get_resource_inside()
@@ -210,7 +217,10 @@ class ShareSerializer(SimpleSerializer):
             "resource_id": share.object_id,
             "id": share.id,
         }
+        return item
 
+class ShareAccessSerializer(SimpleSerializer):
+    def serialize_object(self, share: ShareAccess) -> dict:
         # Group accesses
         accessed = ShareAccess.objects.filter(share=share)
 
@@ -238,15 +248,15 @@ class ShareSerializer(SimpleSerializer):
             if entry["last_access_time"] is None or access.access_time > entry["last_access_time"]:
                 entry["last_access_time"] = access.access_time
 
-        item["accesses"] = [
-            {
-                **entry,
-                "last_access_time": entry["last_access_time"].isoformat()
-            }
-            for entry in access_summary.values()
-        ]
-
-        return item
+        return {
+            "accesses": [
+                {
+                    **entry,
+                    "last_access_time": entry["last_access_time"].isoformat()
+                }
+                for entry in access_summary.values()
+            ]
+        }
 
 
 class WebhookSerializer(SimpleSerializer):
@@ -257,7 +267,7 @@ class WebhookSerializer(SimpleSerializer):
 
 class BotSerializer(SimpleSerializer):
     def serialize_object(self, bot: Bot) -> dict:
-        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "disabled": bot.disabled, "primary": bot.primary, "reason": bot.reason}
+        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "disabled": bot.disabled, "primary": bot.primary}
 
 
 class MomentSerializer(SimpleSerializer):
@@ -268,12 +278,16 @@ class MomentSerializer(SimpleSerializer):
         return {"file_id": moment.file.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
 
 
+class TagSerializer(SimpleSerializer):
+    def serialize_object(self, tag: Tag) -> dict:
+        return {"name": tag.name, "id": tag.id}
+
 class SubtitleSerializer(SimpleSerializer):
     def serialize_object(self, subtitle: Subtitle) -> dict:
         signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{subtitle.id}/stream"
 
-        return {"id": subtitle.id, "language": subtitle.language, "url": url}
+        return {"file_id": subtitle.file.id, "id": subtitle.id, "language": subtitle.language, "url": url}
 
 
 def create_track_dict(track: VideoMetadataTrackMixin) -> dict:

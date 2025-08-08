@@ -68,9 +68,9 @@ export async function addTag(fileId, data) {
 }
 
 
-export async function removeTag(fileId, data) {
-   let url = `/files/${fileId}/tags`
-   let response = await backendInstance.delete(url, data)
+export async function removeTag(fileId, tagId) {
+   let url = `/files/${fileId}/tags/${tagId}`
+   let response = await backendInstance.delete(url)
    return response.data
 
 }

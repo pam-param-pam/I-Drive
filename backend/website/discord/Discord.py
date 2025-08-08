@@ -170,10 +170,18 @@ class Discord:
             logger.debug(message)
 
     def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
-        start = time.perf_counter()
-        response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
-        logger.debug(f"⏱  _make_request took {time.perf_counter() - start:.4f} seconds")
-        return response
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            start = time.perf_counter()
+            try:
+                response = self.client.request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
+                logger.debug(f"⏱  _make_request took {time.perf_counter() - start:.4f} seconds (Attempt {attempt})")
+                return response
+            except httpx.RequestError as e:
+                logger.warning(f"Request failed (attempt {attempt}/{max_retries}): {e}")
+                if attempt == max_retries:
+                    raise
+                time.sleep(1)
 
     def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3) -> Response:
         self._check_discord_block(user)

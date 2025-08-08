@@ -6,12 +6,14 @@ import time
 from collections import defaultdict
 from datetime import timedelta
 from typing import Union, List, Dict, Optional
+from urllib.parse import quote
 
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.utils import timezone
+from django.utils.encoding import smart_str
 
 from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer
 from ..discord.Discord import discord
@@ -370,7 +372,7 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
         user_zip.files.add(item)
 
 
-def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:
+def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:  # todo
     obj_in_share = get_resource(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
 
@@ -601,28 +603,36 @@ def obtain_discord_settings(user) -> dict:
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
             "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
 
-def log_share_access(request, share_obj):
-    print("loggin share access")
+def log_share_access(request, share_obj: ShareableLink) -> None:
     ip, _ = get_ip(request)
     user_agent = request.user_agent
     user = request.user if request.user.is_authenticated else None
     now = timezone.now()
-    one_hour_ago = now - timedelta(hours=1)
+    one_hour_ago = now - timedelta(minutes=30)
 
-    # Check for recent similar access
-    recent_access = ShareAccess.objects.filter(
-        share=share_obj,
-        ip=ip,
-        user_agent=user_agent,
-        accessed_by=user,
-        access_time__gte=one_hour_ago
-    ).exists()
+    # Prepare filters based on user or IP
+    filters = {
+        "share": share_obj,
+        "access_time__gte": one_hour_ago,
+    }
+
+    if user:
+        filters["accessed_by"] = user
+    else:
+        filters["ip"] = ip
+        filters["accessed_by__isnull"] = True
+
+    recent_access = ShareAccess.objects.filter(**filters).exists()
 
     if not recent_access:
-        # Log new access
         ShareAccess.objects.create(
             share=share_obj,
             ip=ip,
             user_agent=user_agent,
             accessed_by=user
         )
+
+def get_content_disposition_string(name: str) -> tuple[str, str]:
+    name_ascii = quote(smart_str(name))
+    encoded_name = quote(name)
+    return name_ascii, encoded_name

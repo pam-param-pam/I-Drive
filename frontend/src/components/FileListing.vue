@@ -303,7 +303,7 @@
                v-show="
                   headerButtons.modifyFile &&
                   contextMenuState.advanced &&
-                  this.selected[0]?.type === 'Video' || this.selected[0]?.type === 'Image'
+                  (this.selected[0]?.type === 'Video' || this.selected[0]?.type === 'Image')
                "
                id='thumbnail'
                :label="$t('buttons.editThumbnail')"

@@ -223,6 +223,7 @@ import { getShare, getShareSubtitles } from "@/api/share.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { defineAsyncComponent } from "vue"
+import { backendInstance } from "@/utils/networker.js"
 
 export default {
    name: "preview",
@@ -426,9 +427,11 @@ export default {
       onVideoLoaded() {
          this.disabledMoments = false
       },
-      onVideoError() {
-         this.$toast.error(this.$t("toasts.videoUnplayable"))
+      async onVideoError() {
+          await backendInstance.get(this.file.download_url)
+          this.$toast.error(this.$t("toasts.videoUnplayable"))
       },
+
       showMoments() {
          if (!this.videoRef.readyState) {
             this.$toast.error(this.$t("toasts.playVideoFirst"))
@@ -526,7 +529,7 @@ export default {
                img2.src = thumb_url2
             }
 
-            if (file1.type === "video") {
+            if (file1?.type === "video") {
                let video_url = file1?.download_url
                if (video_url) {
                   let videoPlayer = document.createElement("video")

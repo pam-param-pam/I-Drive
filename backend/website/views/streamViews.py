@@ -30,7 +30,7 @@ from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
 from ..utilities.decorators import extract_file_from_signed_url, no_gzip
 from ..utilities.errors import DiscordError, BadRequestError, FailedToResizeImage
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, get_content_disposition_string
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
@@ -146,7 +146,10 @@ def stream_preview(request, file_obj: File):
 
     except IntegrityError:
         pass
-    return HttpResponse(data.getvalue(), content_type="image/jpeg")
+    response = HttpResponse(data.getvalue(), content_type="image/webp")
+    name_ascii, name_encoded = get_content_disposition_string(f"preview_{file_obj.get_name_no_extension()}.webp")
+    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
+    return response
 
 
 @api_view(['GET'])
@@ -214,6 +217,8 @@ def stream_thumbnail(request, file_obj: File):
         cache.set(cache_key, thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
     response = HttpResponse(thumbnail_content, content_type="image/webp")
+    name_ascii, name_encoded = get_content_disposition_string(f"thumbnail_{file_obj.get_name_no_extension()}.webp")
+    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
     response["Cache-Control"] = f"max-age={MAX_MEDIA_CACHE_AGE}"
 
     # Set Vary header
@@ -246,7 +251,10 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
     else:
         return JsonResponse(status=discord_response.status_code, data=discord_response.json())
 
-    return HttpResponse(subtitle_content)
+    response = HttpResponse(subtitle_content)
+    name_ascii, name_encoded = get_content_disposition_string(f"{subtitle.language}_subtitles_" + file_obj.get_name_no_extension() + ".vtt")
+    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
+    return response
 
 
 @api_view(['GET'])
@@ -267,8 +275,11 @@ def stream_moment(request, file_obj: File, timestamp):
     else:
         return JsonResponse(status=discord_response.status_code, data=discord_response.json())
 
-    response = HttpResponse(moment_content, content_type="image/jpeg")
+    response = HttpResponse(moment_content, content_type="image/webp")
+    name_ascii, name_encoded = get_content_disposition_string(f"moment_{file_obj.get_name_no_extension()}.webp")
+    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
     return response
+
 
 # todo  handle >416 Requested Range Not Satisfiable<
 @api_view(['GET'])
@@ -285,9 +296,7 @@ def stream_file(request, file_obj: File):
     user = file_obj.owner
 
     check_if_bots_exists(user)
-
-    filename_ascii = quote(smart_str(file_obj.name))
-    encoded_filename = quote(file_obj.name)
+    filename_ascii, encoded_filename = get_content_disposition_string(file_obj.name)
     content_disposition = f'{"inline" if isInline else "attachment"}; filename="{filename_ascii}"; filename*=UTF-8\'\'{encoded_filename}'
 
     # If file is empty, return no content but still allow it to be downloaded
@@ -443,6 +452,7 @@ def stream_zip_files(request, token):
             dict_files += folder_tree
 
     zip_name = user_zip.name if not single_root else folders[0].name
+    zip_name += ".zip"
     files = []
     for file in dict_files:
         if not file["isDir"]:
@@ -457,9 +467,7 @@ def stream_zip_files(request, token):
         status = 200
 
     # streamed response
-    response = StreamingHttpResponse(
-        zipFly.async_stream(start_byte),
-        content_type="application/zip", status=status)
+    response = StreamingHttpResponse(zipFly.async_stream(start_byte), content_type="application/zip", status=status)
 
     file_size = zipFly.calculate_archive_size()
     response['Content-Length'] = file_size
@@ -469,5 +477,6 @@ def stream_zip_files(request, token):
         response['Content-Range'] = 'bytes %s-%s/%s' % (start_byte, file_size - 1, file_size)
         response['Content-Length'] = file_size - start_byte
 
-    response['Content-Disposition'] = f'attachment; filename="{zip_name}.zip"'
+    zip_name_ascii, zip_name_encoded = get_content_disposition_string(zip_name)
+    response['Content-Disposition'] = f'attachment; filename="{zip_name_ascii}"; filename*=UTF-8\'\'{zip_name_encoded}'
     return response

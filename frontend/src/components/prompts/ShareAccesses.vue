@@ -4,10 +4,10 @@
       <h2>{{ $t('prompts.shareVisits') }}</h2>
     </div>
 
-    <template v-if="share.accesses.length > 0">
+    <template v-if="visits.length > 0">
       <div class="card-content">
         <p>
-          {{ $t('prompts.totalVisits') }} <code class="move-to">{{ share.name }}: {{ share.accesses.length }}</code>
+          {{ $t('prompts.totalVisits') }} <code class="move-to">{{ share.name }}: {{ visits.length }}</code>
         </p>
         <div class="share-table-container">
           <table>
@@ -18,16 +18,16 @@
               <th>{{ $t('prompts.lastAccess') }}</th>
             </tr>
 
-            <tr v-for="(access, index) in share.accesses">
+            <tr v-for="(visit, index) in visits">
               <td>{{ index + 1 }}</td>
-              <td :title="`IP: ${access.ip}, Agent: ${access.user_agent}`">
-                {{access.user}}
+              <td :title="`IP: ${visit.ip}, Agent: ${visit.user_agent}`">
+                {{visit.user}}
               </td>
               <td>
-                {{access.access_count}}
+                {{visit.access_count}}
               </td>
               <td>
-                {{humanTime(access.last_access_time)}}
+                {{humanTime(visit.last_access_time)}}
               </td>
             </tr>
           </table>
@@ -55,7 +55,7 @@
 
 <script>
 import dayjs from "@/utils/dayjsSetup.js"
-import { mapState } from "pinia"
+import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
@@ -65,6 +65,10 @@ export default {
       share: {
          type: {},
          required: true
+      },
+      visits: {
+         type: [],
+         required: true
       }
 
    },
@@ -72,6 +76,8 @@ export default {
       ...mapState(useMainStore, ['settings'])
    },
    methods: {
+      ...mapActions(useMainStore, ['closeHover']),
+
       humanTime(date) {
          if (this.settings.dateFormat) {
             return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")

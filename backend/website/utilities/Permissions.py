@@ -206,7 +206,7 @@ class CheckFolderLock(BaseResourceCheck):
         if self._is_locked(resource):
             self._check_ip(request)
 
-        if self._is_locked(resource) and not self._is_password_valid(request, resource):
+        if self._is_locked(resource) and not self._is_password_valid(request, resource): # todo, if not locked u can provide any password
             raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
 
     def check_bulk(self, request, resources):
@@ -263,6 +263,14 @@ class CheckShareItemBelongings(BaseResourceCheck):
         if item_obj:
             self._require_type(item_obj, (Folder, File))
             check_if_item_belongs_to_share(request, share_obj, item_obj)
+
+class CheckShareOwnership(BaseResourceCheck):
+    def check(self, request, *resources):
+        share_obj = resources[0]
+        self._require_type(share_obj, ShareableLink)
+
+        if share_obj.owner.id != request.user.id:
+            raise ResourcePermissionError("You have no access to this resource!")
 
 class CheckShareExpired(BaseResourceCheck):
     def check(self, request, *resources):

@@ -1,4 +1,5 @@
 import base64
+import os
 import secrets
 from typing import Union
 
@@ -222,6 +223,9 @@ class File(models.Model):
         "is_dir": Value(False, output_field=BooleanField()),
     }
 
+    def get_name_no_extension(self):
+        return os.path.splitext(self.name)[0]
+
     def _is_locked(self):
         if self.parent._is_locked():
             return True
@@ -383,6 +387,7 @@ class Preview(DiscordAttachmentMixin):
         return f"Preview=[{self.file.name}]"
 
 class Moment(DiscordAttachmentMixin):
+    # id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
     created_at = models.DateTimeField(auto_now_add=True)
     timestamp = models.IntegerField(default=0)
@@ -551,11 +556,11 @@ class AuditEntry(models.Model):
 
 
 class Tag(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     name = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     history = HistoricalRecords()
-    #todo add a tag id here
 
     def __str__(self):
         return f"Tag({self.name})"
@@ -583,7 +588,6 @@ class Bot(models.Model):
     discord_id = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     disabled = models.BooleanField(default=False)
-    reason = models.CharField(max_length=100, unique=False, blank=True)
 
     history = HistoricalRecords()
 
@@ -674,6 +678,7 @@ class Subtitle(DiscordAttachmentMixin):
     language = models.CharField(max_length=20)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Subtitle file ({self.language}) for {self.file}"

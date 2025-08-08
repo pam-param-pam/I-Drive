@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.contrib import admin
 from django.http import HttpResponseNotAllowed, HttpResponseNotFound
@@ -13,7 +15,7 @@ from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, change_folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
     remove_subtitle
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview, share_view_subtitle, \
-    share_get_subtitles, check_share_password
+    share_get_subtitles, check_share_password, get_share_visits
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import your_ip, get_discord_state
 from .views.uploadViews import create_file, create_thumbnail, edit_file
@@ -76,8 +78,8 @@ urlpatterns = [
     path("files/<file_id>/video-position", ["PUT"], update_video_position, name="update video position"),
 
     path("files/<file_id>/tags", ["POST"], add_tag, name="add a tag"),
-    path("files/<file_id>/tags/<tag_id>", ["DELETE"], remove_tag, name="remove a tag"),
     path("files/<file_id>/tags", ["GET"], get_tags, name="get file moments"),
+    path("files/<file_id>/tags/<tag_id>", ["DELETE"], remove_tag, name="remove a tag"),
     path("files/<file_id>/moments", ["GET"], get_moments, name="add a moment"),
     path("files/<file_id>/moments", ["POST"], add_moment, name="get all moments"),
     path("files/<file_id>/moments/<timestamp>", ["DELETE"], remove_moment, name="remove a moment"),
@@ -118,14 +120,15 @@ urlpatterns = [
     path("user/discordSettings", ['GET'], get_discord_settings, name="get discord settings"),
     path("user/discordSettings", ['PATCH'], update_attachment_name, name="update upload destination"),
     path("user/discordSettings", ['DELETE'], reset_discord_settings, name="reset discord settings"),
-    path("user/discordSettings/autoSetup", ['POST'], discord_settings_start, name="do euto setup"),
-    path("user/discordSettings/webhook", ['POST'], add_webhook, name="add a webhook"),
-    path("user/discordSettings/webhook/<webhook_id>", ['DELETE'], delete_webhook, name="delete a webhook"),
-    path("user/discordSettings/bot", ['POST'], add_bot, name="add a bot"),
-    path("user/discordSettings/bot/<bot_id>", ['DELETE'], delete_bot, name="delete a bot"),
+    path("user/discordSettings/autoSetup", ['POST'], discord_settings_start, name="do auto setup"),
+    path("user/discordSettings/webhooks", ['POST'], add_webhook, name="add a webhook"),
+    path("user/discordSettings/webhooks/<webhook_id>", ['DELETE'], delete_webhook, name="delete a webhook"),
+    path("user/discordSettings/bots", ['POST'], add_bot, name="add a bot"),
+    path("user/discordSettings/bots/<bot_id>", ['DELETE'], delete_bot, name="delete a bot"),
 
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),
+    path("shares/<token>/visits", ['GET'], get_share_visits, name="get share visits"),
     path("shares/<token>", ['DELETE'], delete_share, name="delete share"),
     path('shares/<token>', ['GET'], view_share, name='view_share'),
     path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),

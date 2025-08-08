@@ -7,15 +7,15 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Folder, VideoPosition, Tag, Moment, Subtitle
 from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder, move_task
-from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms, default_checks, CheckRoot, CheckReady, CheckTrash, CheckFolderLock, \
-    CheckOwnership
-from ..utilities.Serializers import FolderSerializer, FileSerializer, MomentSerializer, SubtitleSerializer
+from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms, default_checks, CheckRoot, CheckTrash
+from ..utilities.Serializers import FolderSerializer, FileSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
 from ..utilities.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file
 from ..utilities.errors import BadRequestError, ResourcePermissionError
-from ..utilities.other import build_response,  send_event, check_if_bots_exists, \
+from ..utilities.other import build_response, send_event, check_if_bots_exists, \
     delete_single_discord_attachment, get_discord_author, get_attr
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated & CreatePerms])
@@ -225,17 +225,16 @@ def add_tag(request, file_obj):
     cache.delete(file_obj.id)
     cache.delete(file_obj.parent.id)
 
-    return HttpResponse(status=204)
+    serializer = TagSerializer()
+    return JsonResponse(serializer.serialize_object(tag), status=200)
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def remove_tag(request, file_obj):
-    tag_name = request.data['tag_name']
-
-    tag = Tag.objects.get(name=tag_name, owner=request.user)
+def remove_tag(request, file_obj, tag_id):
+    tag = Tag.objects.get(id=tag_id, owner=request.user)
     file_obj.tags.remove(tag)
 
     cache.delete(file_obj.id)

@@ -309,7 +309,7 @@
     "newBotPlaceholder": "Wpisz token bota",
     "webhookInfo": "Dodaj webhooki by przesyłać pliki. Wszystkie webhooki muszą być przypisane do tego samego serwera i kanału.",
     "webhookAdvice": "Zalecane jest nie używać więcej niż 3 webhooki.",
-    "botInfo": "Dodaj więcej botów by iDrive działał szybciej. Wszystkie boty muszą mieć VIEW, READ HISTORY, WRITE, MANAGE permisje.",
+    "botInfo": "Dodaj więcej botów by iDrive działał szybciej. Wszystkie boty muszą być na serwerze.",
     "botAdvice": "Zalecane jest używanie conajmniej 5 botów.",
     "discordSettings": "Ustawienia discorda",
     "AES_CTR": "AES CTR",

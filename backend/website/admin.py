@@ -59,12 +59,17 @@ class FragmentAdmin(SimpleHistoryAdmin):
 
 
 @admin.register(Folder)
-class FolderAdmin(admin.ModelAdmin):
+class FolderAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id',)
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock']
     search_fields = ["id", "name"]
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
+        form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
+        return form
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
         ids = []
@@ -118,7 +123,7 @@ class FolderAdmin(admin.ModelAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'size', 'readable_size', 'duration', 'inTrashSince', 'ready', 'created_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
+    readonly_fields = ('id', 'size', 'readable_size', 'duration', 'inTrashSince', 'ready', 'is_locked', 'created_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'ready', 'type', 'created_at',
                     'inTrash', 'is_locked']
@@ -130,6 +135,9 @@ class FileAdmin(SimpleHistoryAdmin):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
         return form
+
+    def is_locked(self, obj: File):
+        return obj.parent.is_locked
 
     def media_tag(self, obj: File):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
@@ -328,7 +336,7 @@ class TagAdmin(SimpleHistoryAdmin):
     list_display = ['name', 'owner', 'amount_of_files']
     search_fields = ('name',)
 
-    readonly_fields = ('file_list', 'created_at')
+    readonly_fields = ('id', 'file_list', 'created_at')
 
     def all_files(self, obj: Tag):
         return obj.files.all()
@@ -364,7 +372,7 @@ class WebhookAdmin(admin.ModelAdmin):
 class BotAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
-    readonly_fields = ('token', 'owner', 'discord_id', 'reason')
+    readonly_fields = ('token', 'owner', 'discord_id')
 
 
 @admin.register(Moment)

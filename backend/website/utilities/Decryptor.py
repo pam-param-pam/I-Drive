@@ -56,4 +56,3 @@ class Decryptor:
     def _discard_initial_bytes(self, bytes_to_discard):
         if bytes_to_discard > 0:
             self._decryptor.update(b'\x00' * bytes_to_discard)
-            

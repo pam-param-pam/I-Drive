@@ -15,11 +15,11 @@ from rest_framework.permissions import IsAuthenticated
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership
-from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer
+from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..utilities.constants import cache
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items, disable_common_errors
-from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
+from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, CannotProcessDiscordRequestError
 from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
 
@@ -366,8 +366,9 @@ def get_moments(request, file_obj: File):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_tags(request, file_obj: File):
     tags_list = []
+    serializer = TagSerializer()
     for tag in file_obj.tags.all():
-        tags_list.append(tag.name)
+        tags_list.append(serializer.serialize_object(tag))
 
     return JsonResponse(tags_list, safe=False)
 
@@ -437,6 +438,7 @@ def ultra_download_metadata(request, items):
 @permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([MediaThrottle])
 def get_attachment_url_view(request, attachment_id):
+    # raise CannotProcessDiscordRequestError("Unable to process this request at the moment, server is too busy.")
     fragment = Fragment.objects.get(attachment_id=attachment_id)
 
     file = fragment.file
@@ -444,4 +446,3 @@ def get_attachment_url_view(request, attachment_id):
 
     url = discord.get_attachment_url(request.user, fragment)
     return JsonResponse({"url": url})
-
