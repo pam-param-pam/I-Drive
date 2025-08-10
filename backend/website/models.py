@@ -1,16 +1,19 @@
 import base64
+import datetime
+import hashlib
+import hmac
 import os
 import secrets
 from typing import Union
 
 import shortuuid
-from django.contrib.auth import user_logged_out, user_logged_in
+from django.contrib.auth import user_logged_out, user_logged_in, get_user_model
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, Exists
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -721,4 +724,96 @@ post_save.connect(DiscordSettings._create_user_discord_settings, sender=User)
 
 
 # Modify audit entry
-# Add file type, encryptionMethod audit type
+# todo Add file type, encryptionMethod audit type
+
+"""HERE BE DRAGONS"""
+
+class PerDeviceTokenManager(models.Manager):
+    def _hash(self, raw_token: str) -> str:
+        return hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+
+    def create_token(self, user, device_name: str, device_id: str, expires: datetime.timedelta, ip_address: str, user_agent: str, country: str = None, city: str = None, device_type: str = None):
+        raw = secrets.token_urlsafe(32)
+        hashed = self._hash(raw)
+        expires_at = timezone.now() + expires if expires else None
+        instance = self.create(
+            user=user,
+            token_hash=hashed,
+            device_name=device_name,
+            device_id=device_id,
+            expires_at=expires_at,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            country=country,
+            city=city,
+            device_type=device_type
+        )
+        return raw, instance
+
+    def revoke_device(self, user, device_id: str = None, token_hash: str = None):
+        from .utilities.other import logout_and_close_websockets
+
+        qs = self.filter(user=user)
+        if device_id:
+            token = qs.filter(device_id=device_id).first()
+        elif token_hash:
+            token = qs.filter(token_hash=token_hash).first()
+        else:
+            raise KeyError()
+
+        token.delete()
+        logout_and_close_websockets(user_id=user.id, device_id=token.device_id)
+
+    def revoke_all_for_user(self, user):
+        from .utilities.other import logout_and_close_websockets
+        deleted_count, _ = self.filter(user=user).delete()
+        logout_and_close_websockets(user_id=user.id)
+        return deleted_count
+
+    def get_active_for_user(self, user):
+        now = timezone.now()
+        return self.filter(user=user).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now))
+
+class PerDeviceToken(models.Model):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='device_tokens')
+    token_hash = models.CharField(max_length=64, db_index=True)
+    device_name = models.CharField(max_length=200)
+    device_id = models.CharField(max_length=200, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField()
+    country = models.CharField(max_length=100, null=True)
+    city = models.CharField(max_length=100, null=True)
+    device_type = models.CharField(max_length=10, choices=[("mobile", "Mobile"), ("pc", "PC"), ("code", "Code")], null=True, blank=True)
+    objects = PerDeviceTokenManager()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(device_type__in=["mobile", "pc", "code"]) | models.Q(device_type__isnull=True),
+                name="valid_device_type"
+            )
+        ]
+        ordering = ["-created_at"]
+        verbose_name = "Per-device token"
+        verbose_name_plural = "Per-device tokens"
+
+    def is_expired(self):
+        return self.expires_at is not None and timezone.now() >= self.expires_at
+
+    def check_token(self, raw_token: str) -> bool:
+        hashed = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+        # constant-time comparison
+        return hmac.compare_digest(hashed, self.token_hash)
+
+    def mark_used(self):
+        self.last_used_at = timezone.now()
+        self.save(update_fields=['last_used_at'])
+
+    def revoke(self):
+        return PerDeviceToken.objects.revoke_device(user=self.user, token_hash=self.token_hash)
+
+    def __str__(self):
+        return f"Token for {self.device_name} for user {self.user}"

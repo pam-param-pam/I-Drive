@@ -36,9 +36,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'daphne',
     'django_celery_beat',
-    'djoser',
     'rest_framework',
-    'rest_framework.authtoken',
     'channels',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -170,7 +168,7 @@ CHANNEL_LAYERS = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
+        'website.authentication.PerDeviceTokenAuthentication',
     ),
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',

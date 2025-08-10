@@ -7,6 +7,9 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 DISCORD_BASE_URL = "https://discord.com/api/v10"
 
+# Auth token expire time
+TOKEN_EXPIRY_DAYS = 30
+
 # Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 10Mb
 MAX_DISCORD_MESSAGE_SIZE = 10 * 1023 * 1024
 
@@ -72,6 +75,7 @@ class EventCode(Enum):
     MESSAGE_SENT = 9
     FOLDER_LOCK_STATUS_CHANGE = 10
     FORCE_LOGOUT = 11
+    NEW_DEVICE_LOG_IN = 12
 
 class EncryptionMethod(Enum):
     Not_Encrypted = 0

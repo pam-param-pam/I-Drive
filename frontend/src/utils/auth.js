@@ -47,8 +47,11 @@ export async function login(username, password) {
    if (res.status === 200) {
 
       let token = JSON.parse(body).auth_token
+      let deviceId = JSON.parse(body).device_id
 
       localStorage.setItem("token", token)
+      localStorage.setItem("device_id", deviceId)
+
       await validateLogin()
 
    } else {
@@ -75,11 +78,14 @@ export async function signup(username, password) {
 
 
 export async function logout() {
+   console.log("POLITE LOGOUT ACKNOWLEDGED")
+
    let store = useMainStore()
 
    let token = store.token
    store.setToken(null)
    localStorage.removeItem("token")
+   localStorage.removeItem("device_id")
 
    if (token) {
       await logoutUser(token)
@@ -88,3 +94,12 @@ export async function logout() {
    await router.push({ path: "/login" })
    router.go(0) // make sure every state is removed just in case
 }
+export async function forceLogout() {
+   console.log("FORCE LOGOUT ACKNOWLEDGED")
+   localStorage.removeItem("token")
+   await router.push({ path: "/login" })
+   router.go(0)
+}
+
+
+

@@ -1,3 +1,4 @@
+import hashlib
 import os
 import random
 import time
@@ -17,7 +18,7 @@ from requests.exceptions import SSLError
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import Throttled
 
-from ..models import ShareableLink
+from ..models import ShareableLink, PerDeviceToken
 from ..utilities.constants import cache
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, \
@@ -28,11 +29,17 @@ is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 
 @database_sync_to_async
-def get_user(token_key):
+def get_user(raw_token):
+    if not raw_token:
+        return AnonymousUser()
+
+    hashed = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     try:
-        token = Token.objects.get(key=token_key)
+        token = PerDeviceToken.objects.get(token_hash=hashed)
+        if token.is_expired():
+            return AnonymousUser()
         return token.user
-    except Token.DoesNotExist:
+    except PerDeviceToken.DoesNotExist:
         return AnonymousUser()
 
 
@@ -41,12 +48,33 @@ class TokenAuthMiddleware(BaseMiddleware):
         super().__init__(inner)
 
     async def __call__(self, scope, receive, send):
-        try:
-            token_key = dict(scope['headers'])[b'sec-websocket-protocol'].decode('utf-8')
-        except (ValueError, KeyError):
-            token_key = None
+        headers = dict(scope['headers'])
+        token_key = None
+        is_standard_protocol = False
+
+        # Try authorization header first
+        auth_header = headers.get(b'authorization')
+        if auth_header:
+            try:
+                auth_str = auth_header.decode('utf-8')
+                if auth_str.lower().startswith('bearer '):
+                    token_key = auth_str[7:]
+                    is_standard_protocol = True
+            except (KeyError, ValueError):
+                pass
+
+        # Fallback to sec-websocket-protocol header
+        if token_key is None:
+            try:
+                token_key = headers[b'sec-websocket-protocol'].decode('utf-8')
+                is_standard_protocol = False
+            except (KeyError, ValueError):
+                token_key = None
+
         scope['user'] = AnonymousUser() if token_key is None else await get_user(token_key)
         scope['token'] = token_key
+        scope['is_standard_protocol'] = is_standard_protocol
+
         return await super().__call__(scope, receive, send)
 
 

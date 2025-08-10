@@ -1,4 +1,5 @@
 import base64
+import datetime
 import hashlib
 import json
 import os
@@ -8,21 +9,24 @@ from datetime import timedelta
 from typing import Union, List, Dict, Optional
 from urllib.parse import quote
 
+import requests
+import shortuuid
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from django.contrib.auth import user_logged_in
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.utils import timezone
 from django.utils.encoding import smart_str
 
-from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer
+from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer, DeviceTokenSerializer
 from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, Preview, Fragment, Moment, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel, ShareAccess
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
-    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS
+    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, BadRequestError, NoBotsError
 
 _SENTINEL = object()  # Unique object to detect omitted default
@@ -75,20 +79,14 @@ def format_wait_time(seconds: int) -> str:
         return f"{seconds} second{'s' if seconds > 1 else ''}"
 
 
-def logout_and_close_websockets(user_id: int) -> None:
-    send_event(user_id, 0, None, EventCode.FORCE_LOGOUT)
+def logout_and_close_websockets(user_id: int, device_id: str = None) -> None:
+    send_event(user_id, 0, None, EventCode.FORCE_LOGOUT, {"device_id": device_id})
     queue_ws_event.delay(
         'user',
         {
             "type": "logout",
             "user_id": user_id,
-        }
-    )
-    queue_ws_event.delay(
-        'command',
-        {
-            "type": "logout",
-            "user_id": user_id,
+            "device_id": device_id,
         }
     )
 
@@ -636,3 +634,56 @@ def get_content_disposition_string(name: str) -> tuple[str, str]:
     name_ascii = quote(smart_str(name))
     encoded_name = quote(name)
     return name_ascii, encoded_name
+
+def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
+    response = requests.get(f'https://ipapi.co/{ip}/json/')
+    if not response.ok:
+        print("===FAILED TO GET GEO LOCATION DATA===")
+        return None, None
+
+    data = response.json()
+
+    country = data.get('country_name')
+    city = data.get('city')
+    return country, city
+
+
+def create_token(request, user) -> tuple[str, PerDeviceToken]:
+    ip, _ = get_ip(request)
+
+    # Get device info from django_user_agents
+    ua = request.user_agent
+    device_family = '' if (ua.device.family or '') == 'Other' else (ua.device.family or '')
+
+    device_name = f"{device_family} {ua.os.family or ''} {ua.os.version_string or ''}".strip()
+    if ua.is_mobile or ua.is_tablet:
+        device_type = "mobile"
+    elif ua.is_pc:
+        device_type = "pc"
+    else:
+        device_type = "code"
+
+    country, city = get_location_from_ip(ip)
+
+    # Generate a backend-only device_id
+    device_id = shortuuid.uuid()
+
+    # Expiry set to 30 days from now
+    expires = datetime.timedelta(days=TOKEN_EXPIRY_DAYS)
+
+    # Create per-device token
+    raw_token, token_instance = PerDeviceToken.objects.create_token(
+        user=user,
+        device_name=device_name,
+        device_id=device_id,
+        expires=expires,
+        ip_address=ip,
+        user_agent=str(ua),
+        country=country,
+        city=city,
+        device_type=device_type
+    )
+    user_logged_in.send(sender=user.__class__, request=request, user=user)
+    send_event(user.id, 0, None, EventCode.FORCE_LOGOUT, DeviceTokenSerializer().serialize_object(token_instance))
+
+    return raw_token, token_instance

@@ -37,6 +37,7 @@ import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { cancelTokenMap } from "@/utils/networker.js"
+import i18n from "@/i18n/index.js"
 
 export default {
    name: "files",

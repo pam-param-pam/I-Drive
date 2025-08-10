@@ -7,7 +7,7 @@
             <ul>
                <router-link to="/settings/profile" :draggable="false">
                   <li :draggable="false" :class="{ active: $route.path === '/settings/profile' }">
-                     {{ $t('settings.profileSettings') }}
+                     {{ $t('settings.profile') }}
                   </li>
                </router-link>
 
@@ -20,6 +20,11 @@
                <router-link to="/settings/discord" :draggable="false">
                   <li :draggable="false" :class="{ active: $route.path === '/settings/discord' }">
                      {{ $t('settings.discordSettings') }}
+                  </li>
+               </router-link>
+               <router-link to="/settings/devices" :draggable="false">
+                  <li :draggable="false" :class="{ active: $route.path === '/settings/devices' }">
+                     {{ $t('settings.devices') }}
                   </li>
                </router-link>
             </ul>

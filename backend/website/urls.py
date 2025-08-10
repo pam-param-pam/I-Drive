@@ -1,5 +1,3 @@
-import re
-
 from django.conf import settings
 from django.contrib import admin
 from django.http import HttpResponseNotAllowed, HttpResponseNotFound
@@ -9,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
+from .views.authViews import login_per_device, logout_per_device, register_user
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view
 from .views.itemManagmentViews import rename, move_to_trash, move, \
@@ -19,9 +18,9 @@ from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import your_ip, get_discord_state
 from .views.uploadViews import create_file, create_thumbnail, edit_file
-from .views.userViews import change_password, users_me, update_settings, MyTokenDestroyView, MyTokenCreateView, register_user, get_discord_settings, add_webhook, delete_webhook, add_bot, \
+from .views.userViews import change_password, users_me, update_settings, get_discord_settings, add_webhook, delete_webhook, add_bot, \
     delete_bot, \
-    update_attachment_name, can_upload, discord_settings_start, reset_discord_settings
+    update_attachment_name, can_upload, discord_settings_start, reset_discord_settings, list_active_devices, revoke_device, logout_all_devices
 
 _route_registry = {}
 _registered_routes = set()
@@ -108,14 +107,18 @@ urlpatterns = [
     path("items/<item_id>/rename", ["PATCH"], rename, name="rename an item"),
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 
-    django_path("auth/token/login", MyTokenCreateView.as_view(), name="login"),
+    django_path("auth/token/login", login_per_device, name="login"),
+    django_path("auth/token/logout", logout_per_device, name="logout"),
     django_path("auth/register", register_user, name="register"),
-    django_path("auth/token/logout", MyTokenDestroyView.as_view(), name="logout"),
 
     path('user/me', ['GET'], users_me, name="get current user"),
     path('user/canUpload/<folder_id>', ['GET'], can_upload, name="check if user is allowed to upload"),
     path("user/password", ['PATCH'], change_password, name="change password"),
     path("user/settings", ['PUT'], update_settings, name="update settings"),
+
+    path("user/devices", ['GET'], list_active_devices, name="list active devices"),
+    path("user/devices/logout-all", ['POST'], logout_all_devices, name="logouts all devices"),
+    path("user/devices/<device_id>", ['DELETE'], revoke_device, name="revoke a device"),
 
     path("user/discordSettings", ['GET'], get_discord_settings, name="get discord settings"),
     path("user/discordSettings", ['PATCH'], update_attachment_name, name="update upload destination"),

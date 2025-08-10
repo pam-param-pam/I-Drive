@@ -2,7 +2,7 @@ from abc import abstractmethod, ABC
 from collections import defaultdict
 
 from .signer import sign_resource_id_with_expiry
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken
 from ..utilities.constants import API_BASE_URL
 
 
@@ -328,6 +328,23 @@ class SubtitleTrackSerializer(SimpleSerializer):
         track_dict["name"] = track.name
         track_dict["type"] = "Subtitle"
         return track_dict
+
+
+class DeviceTokenSerializer(SimpleSerializer):
+    def serialize_object(self, token: PerDeviceToken) -> dict:
+        return {
+            'device_name': token.device_name,
+            'device_id': token.device_id,
+            'created_at': token.created_at,
+            'last_used_at': token.last_used_at,
+            'expires_at': token.expires_at,
+            'ip_address': token.ip_address,
+            'user_agent': token.user_agent,
+            'country': token.country,
+            'city': token.city,
+            'device_type': token.device_type
+        }
+
 
 # class ShareSubtitleSerializer(SimpleSerializer):
 #     def serialize_object(self, track: Subtitle) -> dict:

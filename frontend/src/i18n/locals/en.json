@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "revoke": "revoke",
+    "logoutAllDevices": "Logout all devices",
     "savingFile": "Saving file...",
     "fileSaved": "File saved!",
     "saveFile": "Save file",
@@ -291,6 +293,12 @@
     "video": "Video"
   },
   "settings": {
+    "devices": "Active Devices",
+    "deviceName": "Name",
+    "country": "Country",
+    "city": "City",
+    "expiresAt": "Expires at",
+    "lastUsedAt": "Last used at",
     "autoSetup": "Auto setup",
     "enterGuildId": "Enter guild ID",
     "primaryBot": "Primary Bot",
@@ -312,7 +320,7 @@
     "webhookAdvice": "It is advised not to use more than 3 webhooks.",
     "botInfo": "Add more bots so iDrive works faster. All bots must be on the server.",
     "botAdvice": "It is advised to use at least 5 bots.",
-    "discordSettings": "Discord settings",
+    "discordSettings": "Discord Settings",
     "AES_CTR": "AES CTR",
     "ChaCha20": "ChaCha20",
     "name": "Name",
@@ -331,6 +339,7 @@
     "password": "Password",
     "passwordUpdated": "Password updated!",
     "path": "Path",
+    "profile": "Your Profile",
     "profileSettings": "Profile Settings",
     "setDateFormat": "Set exact date format",
     "settingsName": "Settings",
@@ -371,6 +380,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "deviceRevoked": "Device revoked!",
     "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",
     "autoSetupInProgress": "Auto setup in progress...",
     "autoSetupComplete": "Auto setup complete!",

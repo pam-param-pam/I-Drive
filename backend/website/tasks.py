@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from .celery import app
 from .discord.Discord import discord
-from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment, Subtitle, Channel
+from .models import File, Fragment, Folder, Preview, ShareableLink, UserZIP, Thumbnail, Webhook, Moment, Subtitle, Channel, PerDeviceToken
 from .utilities.Serializers import FolderSerializer, FileSerializer
 from .utilities.constants import EventCode, cache
 from .utilities.errors import DiscordError, NoBotsError
@@ -493,3 +493,10 @@ def delete_expired_zips():
     for zipObj in zips:
         if zipObj.is_expired():
             zipObj.delete()
+
+@app.task
+def prune_expired_tokens():
+    now = timezone.now()
+    expired_tokens = PerDeviceToken.objects.filter(expires_at__lte=now)
+    count, _ = expired_tokens.delete()
+    return f"Pruned {count} expired tokens"

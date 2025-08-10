@@ -11,7 +11,7 @@ from simple_history.admin import SimpleHistoryAdmin
 
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment, \
-    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess
+    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken
 from .tasks import smart_delete
 from .utilities.constants import cache, API_BASE_URL, EncryptionMethod
 from .utilities.signer import sign_resource_id_with_expiry
@@ -23,6 +23,7 @@ admin.site.register(VideoPosition)
 admin.site.register(VideoTrack)
 admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
+admin.site.register(PerDeviceToken)
 
 
 @admin.register(Fragment)

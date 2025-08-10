@@ -1,15 +1,23 @@
+import hashlib
 import json
 
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
+from .models import PerDeviceToken
+
+
 class UserConsumer(WebsocketConsumer):
 
     def connect(self):
+        is_standard_protocol = self.scope['is_standard_protocol']
         user = self.scope['user']
         if not user.is_anonymous:
             async_to_sync(self.channel_layer.group_add)("user", self.channel_name)
-            self.accept(self.scope['token'])
+            if is_standard_protocol:
+                self.accept()
+            else:
+                self.accept(self.scope['token'])
         else:
             self.close()
 
@@ -33,4 +41,10 @@ class UserConsumer(WebsocketConsumer):
 
     def logout(self, event):
         if self.scope['user'].id == event['user_id']:
-            self.close()
+            if event['device_id']:
+                token_hash = hashlib.sha256(self.scope['token'].encode()).hexdigest()
+                token_exists = PerDeviceToken.objects.filter(device_id=event['device_id'], token_hash=token_hash, user_id=event['user_id']).exists()
+                if token_exists:
+                    self.close()
+            else:
+                self.close()

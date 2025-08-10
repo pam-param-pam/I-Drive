@@ -124,3 +124,21 @@ export async function deleteDiscordSettings() {
    let response = await backendInstance.delete(url)
    return response.data
 }
+
+export async function getActiveDevices() {
+   let url = `/user/devices`
+   let response = await backendInstance.get(url)
+   return response.data
+}
+
+export async function revokeDevice(deviceId) {
+   let url = `/user/devices/${deviceId}`
+   let response = await backendInstance.delete(url)
+   return response.data
+}
+
+export async function logoutAllDevices() {
+   let url = `/user/devices/logout-all`
+   let response = await backendInstance.post(url)
+   return response.data
+}

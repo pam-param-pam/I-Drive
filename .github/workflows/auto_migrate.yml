@@ -22,11 +22,6 @@ jobs:
         script: |
           echo "Running Django migrations inside container..."
           
-          docker compose ps idrive-backend | grep "Up" > /dev/null
-          if [ $? -ne 0 ]; then
-            echo "❌ Service 'idrive-backend ' is not running. Aborting migrations."
-            exit 1
-          fi
           
           docker exec -T idrive-backend python manage.py migrate
           echo "Migrations completed."

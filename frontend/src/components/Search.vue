@@ -48,7 +48,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['searchFilters', 'searchActive'])
+      ...mapState(useMainStore, ['searchFilters', 'searchActive', 'currentPrompt'])
    },
    async mounted() {
       this.exited = true
@@ -69,7 +69,7 @@ export default {
             }
          }
          //allow to exit search with ESC
-         if (event.code === 'Escape' && this.searchActive) {
+         if (event.code === 'Escape' && this.searchActive && !this.currentPrompt) {
             this.exit()
          }
       })

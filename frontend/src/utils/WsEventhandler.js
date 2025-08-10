@@ -1,7 +1,7 @@
 import i18n from "@/i18n/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
-import { logout } from "@/utils/auth.js"
+import { forceLogout } from "@/utils/auth.js"
 import router from "@/router/index.js"
 
 const toast = useToast()
@@ -208,8 +208,11 @@ export async function onEvent(message) {
    }
 
    if (op_code === 11) { // force logout
-      if (store.isLogged) {
-         logout()
+      let local_device_id = localStorage.getItem("device_id")
+      let device_id = event.data[0].device_id
+
+      if (store.isLogged && (local_device_id === device_id || device_id === null || local_device_id === null)) {
+         await forceLogout()
       }
    }
 

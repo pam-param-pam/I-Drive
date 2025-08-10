@@ -111,7 +111,7 @@ const router = createRouter({
                children: [
                   {
                      path: "/settings/profile",
-                     name: "ProfileSettings",
+                     name: "Profile",
                      component: () => import("../views/settings/Profile.vue")
 
                   },
@@ -124,6 +124,11 @@ const router = createRouter({
                      path: "/settings/discord",
                      name: "DiscordSettings",
                      component: () => import("../views/settings/Discord.vue")
+                  },
+                  {
+                     path: "/settings/devices",
+                     name: "ActiveDevices",
+                     component: () => import("../views/settings/Devices.vue")
                   }
                ]
             }

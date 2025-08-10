@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "revoke": "Wycofaj",
+    "logoutAllDevices": "Wyloguj wszystkie urządzenia",
     "editSubtitles": "Edytuj napisy",
     "savingFile": "Zapisywanie pliku...",
     "fileSaved": "Plik zapisany!",
@@ -290,6 +292,12 @@
     "video": "Filmy"
   },
   "settings": {
+    "devices": "Aktywne Urządzenia",
+    "deviceName": "Nazwa",
+    "country": "Kraj",
+    "city": "Miasto",
+    "expiresAt": "Wygaza za",
+    "lastUsedAt": "Ostatnia aktywność",
     "autoSetup": "Auto konfiguracja",
     "enterGuildId": "Wpisz ID serwera",
     "primaryBot": "Głowny Bot",
@@ -330,7 +338,8 @@
     "password": "Hasło",
     "passwordUpdated": "Hasło zostało zapisane!",
     "path": "Ścieżka",
-    "profileSettings": "Twój profil",
+    "profile": "Twój profil",
+    "profileSettings": "Ustawnienia",
     "setDateFormat": "Dokładna data",
     "settingsName": "Ustawienia",
     "settingsUpdated": "Ustawienia zapisane!",
@@ -370,6 +379,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "deviceRevoked": "Urządzenie zostało wylogowane!",
     "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto rzeczy z discorda",
     "autoSetupInProgress": "Poczekaj chwile, trwa konfiguracja...",
     "autoSetupComplete": "Konfiguracja zakonczona!",

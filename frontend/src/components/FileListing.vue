@@ -433,7 +433,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['isSearchActive', 'showShell', 'sortedItems', 'lastItem', 'items', 'settings', 'perms', 'user', 'selected', 'loading', 'error', 'currentFolder', 'selectedCount', 'isLogged', 'currentPrompt', 'searchActive']),
+      ...mapState(useMainStore, ['selectedCount', 'searchActive', 'showShell', 'sortedItems', 'lastItem', 'items', 'settings', 'perms', 'user', 'selected', 'loading', 'error', 'currentFolder', 'selectedCount', 'isLogged', 'currentPrompt', 'searchActive']),
 
       viewMode() {
          if (this.settings.viewMode === 'list') return 'list'
@@ -510,8 +510,12 @@ export default {
       },
 
       showContextMenu(event, item) {
-         this.resetSelected()
-         this.addSelected(item)
+         if (this.selectedCount === 1) {
+            this.resetSelected()
+         }
+         if (this.selectedCount === 0) {
+            this.addSelected(item)
+         }
          let advanced = event.ctrlKey || event.shiftKey
 
          let max_x_size = 200
@@ -606,7 +610,7 @@ export default {
 
       async drop(event) {
          event.preventDefault()
-         if ((!this.currentFolder || this.isSearchActive) && event.dataTransfer.files.length > 0) {
+         if ((!this.currentFolder || this.searchActive) && event.dataTransfer.files.length > 0) {
             this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
             this.$emit('dragLeave')
             return

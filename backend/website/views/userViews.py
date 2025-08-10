@@ -2,23 +2,19 @@ from urllib.parse import urlparse
 
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
-from djoser import utils
-from djoser.views import TokenDestroyView, TokenCreateView
-from rest_framework.authtoken.admin import User
-from rest_framework.authtoken.models import Token
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
 from ..discord.Discord import discord
 from ..discord.DiscordHelper import DiscordHelper
-from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, UserPerms, Channel, File
+from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, UserPerms, Channel, File, PerDeviceToken
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks, CreatePerms, ModifyPerms, ReadPerms, AdminPerms
-from ..utilities.Serializers import WebhookSerializer, BotSerializer
+from ..utilities.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS
 from ..utilities.decorators import check_resource_permissions, extract_folder
 from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import logout_and_close_websockets, get_webhook, query_attachments, obtain_discord_settings
-from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, RegisterThrottle, DiscordSettingsThrottle, LoginThrottle
+from ..utilities.other import get_webhook, query_attachments, obtain_discord_settings, create_token
+from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, DiscordSettingsThrottle
 
 
 @api_view(['PATCH'])
@@ -34,27 +30,10 @@ def change_password(request):
 
     user.set_password(new_password)
     user.save()
-    utils.logout_user(request)
-    logout_and_close_websockets(request.user.id)
 
-    token, created = Token.objects.get_or_create(user=user)
-    data = {"auth_token": str(token)}
-    return JsonResponse(data, status=200)
-
-
-@api_view(['POST'])
-@throttle_classes([RegisterThrottle])
-def register_user(request):
-    raise ResourcePermissionError("This functionality is turned off.")
-    username = request.data['username']
-    password = request.data['password']
-
-    if User.objects.filter(username=username):
-        return HttpResponse("This username is taken", status=409)
-
-    user = User.objects.create_user(username=username, password=password)
-    user.save()
-    return HttpResponse(status=204)
+    request.auth.revoke()
+    raw_token, token_instance = create_token(request, user)
+    return JsonResponse({'auth_token': raw_token, 'device_id': token_instance.device_id}, status=200)
 
 
 @api_view(['GET'])
@@ -149,30 +128,11 @@ def update_settings(request):
     return HttpResponse(status=204)
 
 
-class MyTokenDestroyView(TokenDestroyView):
-    """
-    Override view to include closing websocket connection aswell as standard logout
-    """
-    throttle_classes = [LoginThrottle]
-
-    def post(self, request):
-        logout_and_close_websockets(request.user.id)
-        return super().post(request)
-
-
-class MyTokenCreateView(TokenCreateView):
-    throttle_classes = [LoginThrottle]
-
-    def post(self, request, **kwargs):
-        return super().post(request, **kwargs)
-
-
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_discord_settings(request):
     settings = obtain_discord_settings(request.user)
-
     return JsonResponse(settings)
 
 
@@ -322,7 +282,7 @@ def update_attachment_name(request):
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
+@permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms]) # todo throttle before perm class?
 def reset_discord_settings(request):
     if File.objects.filter(owner=request.user).exists():
         raise BadRequestError("Cannot reset discord settings. Remove all files first")
@@ -358,8 +318,34 @@ def reset_discord_settings(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated & AdminPerms])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([AdminPerms & IsAuthenticated])
 def reset_discord_state(request):
     discord.remove_user_state(request.user)
+    return HttpResponse(status=204)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated & ReadPerms])
+@throttle_classes([defaultAuthUserThrottle])
+def list_active_devices(request):
+    tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
+    serializer = DeviceTokenSerializer()
+    data = serializer.serialize_objects(tokens)
+    return JsonResponse(data, safe=False)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([defaultAuthUserThrottle])
+def logout_all_devices(request):
+    PerDeviceToken.objects.revoke_all_for_user(user=request.user)
+    return HttpResponse(status=204)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([defaultAuthUserThrottle])
+def revoke_device(request, device_id):
+    token = PerDeviceToken.objects.filter(user=request.user, device_id=device_id).first()
+    token.revoke()
     return HttpResponse(status=204)

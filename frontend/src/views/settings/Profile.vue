@@ -1,5 +1,7 @@
 <template>
   <div v-if="!loading" class="row">
+
+
     <div class="column">
       <form class="card" @submit.prevent="saveSettings">
         <div class="card-title">
@@ -92,6 +94,11 @@
         </div>
       </form>
     </div>
+
+
+
+
+
   </div>
 </template>
 
@@ -103,9 +110,10 @@ import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
+import dayjs from "@/utils/dayjsSetup.js"
 
 export default {
-   name: "profileSettings",
+   name: "profile",
 
    components: {
       Languages,
@@ -123,12 +131,13 @@ export default {
          locale: "",
          concurrentUploadRequests: 4,
          encryptionMethod: null,
-         keepCreationTimestamp: false,
+         keepCreationTimestamp: false
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["user", "settings", "loading"]),
+
       passwordClass() {
          const baseClass = "input input--block"
 
@@ -157,6 +166,13 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings"]),
+      humanTime(date) {
+         if (this.settings?.dateFormat) {
+            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
+         }
+
+         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
+      },
 
       savePassword: throttle(async function(event) {
          if (this.password !== this.passwordConf || this.password === "") {
@@ -165,9 +181,12 @@ export default {
 
          let data = { current_password: this.currentPassword, new_password: this.password }
 
+         localStorage.setItem("device_id", ".") // change it so force logout will not affect this tab
+
          let res = await changePassword(data)
 
          localStorage.setItem("token", res.auth_token)
+         localStorage.setItem("device_id", res.device_id)
          this.setToken(res.auth_token)
          this.$toast.success(this.$t("settings.passwordUpdated"))
          setTimeout(() => {
