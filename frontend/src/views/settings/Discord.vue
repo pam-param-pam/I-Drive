@@ -68,13 +68,13 @@
                         index + 1 + " &#8205; &#8205; &#8205; &#8205;" + webhook.name
                       }}</a>
                   </td>
-                  <td class="channel-column">
+                  <td class="share-name-column channel-column">
                     <a>{{ webhook.channel.name }}</a>
                   </td>
-                  <td class="expiry-column">
+                  <td class="share-name-column expiry-column">
                     <a>{{ humanTime(webhook.created_at) }}</a>
                   </td>
-                  <td class="small">
+                  <td class="share-name-column small">
                     <button
                       :aria-label="$t('buttons.delete')"
                       :title="$t('buttons.delete')"
@@ -194,10 +194,10 @@
                   </span>
 
                   </td>
-                  <td class="expiry-column">
+                  <td class="share-name-column expiry-column">
                     <a>{{ humanTime(bot.created_at) }}</a>
                   </td>
-                  <td class="small">
+                  <td class="share-name-column small">
                     <button
                       :aria-label="$t('buttons.delete')"
                       :title="$t('buttons.delete')"
@@ -440,6 +440,7 @@ export default {
 
 .expiry-column {
  max-width: 50px;
+ white-space: nowrap;
 }
 
 .crown-icon {

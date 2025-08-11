@@ -11,19 +11,19 @@
           <table class="devices-table" v-if="devices.length > 0">
             <thead>
             <tr>
-              <th></th>
-              <th>{{ $t("settings.deviceName") }}</th>
-              <th>{{ $t("settings.country") }}</th>
-              <th>{{ $t("settings.city") }}</th>
-              <th>{{ $t("settings.expiresAt") }}</th>
-              <th>{{ $t("settings.lastUsedAt") }}</th>
+              <th class="share-name-column icon-column"></th>
+              <th class="share-name-column">{{ $t("settings.deviceName") }}</th>
+              <th class="share-name-column">{{ $t("settings.country") }}</th>
+              <th class="share-name-column">{{ $t("settings.city") }}</th>
+              <th class="share-name-column">{{ $t("settings.expiresAt") }}</th>
+              <th class="share-name-column">{{ $t("settings.lastUsedAt") }}</th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="device in devices" :key="device.device_id">
               <td>
                 <i v-if="device.device_type === 'pc'" class="material-icons">desktop_windows</i>
-                <i v-else-if="device.device_type === 'mobile'" class="material-icons">mobile</i>
+                <i v-else-if="device.device_type === 'mobile'" class="material-icons">tablet</i>
                 <i v-else-if="device.device_type === 'code'" class="material-icons">terminal</i>
               </td>
               <td>{{ device.device_name }}</td>
@@ -32,7 +32,7 @@
               <td>{{ humanTime(device.expires_at) || "-" }}</td>
               <td>{{ humanTime(device.last_used_at) || "-" }}</td>
               <td>
-                <button @click="revokeADevice(device.device_id)" class="button button--flat button--small">
+                <button @click="revokeADevice(device.device_id)" :disabled="device.device_id === localDeviceId" class="button button--flat button--small">
                   {{ $t("buttons.revoke") }}
                 </button>
               </td>
@@ -70,6 +70,9 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["loading", "error"]),
+      localDeviceId() {
+         return localStorage.getItem("device_id")
+      }
    },
    async mounted() {
       this.devices = await getActiveDevices()
@@ -96,5 +99,8 @@ export default {
 </script>
 
 <style scoped>
-
+table th, table td {
+ padding-right: 10px;
+ white-space: nowrap;
+}
 </style>

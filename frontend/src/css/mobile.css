@@ -158,6 +158,13 @@
   .message {
     margin-right: auto !important;
   }
+  .dashboard {
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+  }
+  body {
+    font-size: 75%;
+  }
 }
 
 @media (max-width: 450px) {

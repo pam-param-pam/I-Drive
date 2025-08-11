@@ -208,10 +208,10 @@ export async function onEvent(message) {
    }
 
    if (op_code === 11) { // force logout
-      let local_device_id = localStorage.getItem("device_id")
-      let device_id = event.data[0].device_id
+      let localDeviceId = localStorage.getItem("device_id")
+      let deviceId = event.data[0].device_id
 
-      if (store.isLogged && (local_device_id === device_id || device_id === null || local_device_id === null)) {
+      if (store.isLogged && (deviceId === localDeviceId || deviceId === null || localDeviceId === null)) {
          await forceLogout()
       }
    }

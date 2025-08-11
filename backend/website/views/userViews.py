@@ -347,5 +347,7 @@ def logout_all_devices(request):
 @throttle_classes([defaultAuthUserThrottle])
 def revoke_device(request, device_id):
     token = PerDeviceToken.objects.filter(user=request.user, device_id=device_id).first()
-    token.revoke()
+    if token:
+        token.revoke()
+
     return HttpResponse(status=204)
