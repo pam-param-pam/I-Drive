@@ -23,3 +23,4 @@ pyyaml==6.0.1
 ua-parser==0.18.0
 user-agents==2.2.0
 ujson==5.10.0
+requests

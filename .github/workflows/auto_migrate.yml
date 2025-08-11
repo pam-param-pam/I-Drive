@@ -23,5 +23,5 @@ jobs:
           echo "Running Django migrations inside container..."
           
           
-          docker exec -T idrive-backend python manage.py migrate
+          docker exec idrive-backend python manage.py migrate
           echo "Migrations completed."

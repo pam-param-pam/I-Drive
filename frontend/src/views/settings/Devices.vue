@@ -1,6 +1,6 @@
 <template>
-  <div v-if="!loading" class="row">
-
+  <errors v-if="error" :error="error" />
+  <div v-else-if="!loading" class="row">
     <div class="column" style="width: 100%; margin-top: 2rem;">
       <div class="card">
         <div class="card-title">
@@ -57,17 +57,19 @@ import { mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import dayjs from "@/utils/dayjsSetup.js"
 import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/user.js"
-import { forceLogout, logout } from "@/utils/auth.js"
+import { forceLogout } from "@/utils/auth.js"
+import Errors from "@/components/Errors.vue"
 
 export default {
    name: "Devices",
+   components: { Errors },
    data() {
       return {
          devices: []
       }
    },
    computed: {
-      ...mapState(useMainStore, ["loading"]),
+      ...mapState(useMainStore, ["loading", "error"]),
    },
    async mounted() {
       this.devices = await getActiveDevices()

@@ -1,7 +1,5 @@
 <template>
   <div v-if="!loading" class="row">
-
-
     <div class="column">
       <form class="card" @submit.prevent="saveSettings">
         <div class="card-title">
@@ -94,11 +92,6 @@
         </div>
       </form>
     </div>
-
-
-
-
-
   </div>
 </template>
 
