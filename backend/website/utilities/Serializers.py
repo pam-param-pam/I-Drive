@@ -335,9 +335,9 @@ class DeviceTokenSerializer(SimpleSerializer):
         return {
             'device_name': token.device_name,
             'device_id': token.device_id,
-            'created_at': token.created_at,
-            'last_used_at': token.last_used_at,
-            'expires_at': token.expires_at,
+            'created_at': token.created_at.isoformat(),
+            'last_used_at': token.last_used_at.isoformat() if token.last_used_at else None,
+            'expires_at': token.expires_at.isoformat(),
             'ip_address': token.ip_address,
             'user_agent': token.user_agent,
             'country': token.country,

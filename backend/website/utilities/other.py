@@ -79,14 +79,14 @@ def format_wait_time(seconds: int) -> str:
         return f"{seconds} second{'s' if seconds > 1 else ''}"
 
 
-def logout_and_close_websockets(user_id: int, device_id: str = None) -> None:
+def logout_and_close_websockets(user_id: int, device_id: str = None, token_hash: str = None) -> None:
     send_event(user_id, 0, None, EventCode.FORCE_LOGOUT, {"device_id": device_id})
     queue_ws_event.delay(
         'user',
         {
             "type": "logout",
             "user_id": user_id,
-            "device_id": device_id,
+            "token_hash": token_hash,
         }
     )
 
@@ -137,6 +137,8 @@ def group_and_send_event(user_id: int, request_id: int, op_code: EventCode, reso
 
 def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
+    print("send_event")
+    print(user_id)
     if data and not isinstance(data, list):
         data = [data]
 
@@ -155,7 +157,7 @@ def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], 
         event = encrypt_message(folder_context.password, event)
 
     message['event'] = event
-
+    print("SENDING A MESSAGE!")
     queue_ws_event.delay(
         'user',
         {
@@ -684,6 +686,7 @@ def create_token(request, user) -> tuple[str, PerDeviceToken]:
         device_type=device_type
     )
     user_logged_in.send(sender=user.__class__, request=request, user=user)
-    send_event(user.id, 0, None, EventCode.FORCE_LOGOUT, DeviceTokenSerializer().serialize_object(token_instance))
+    print("aaaaaaaaaaaaaaaaa")
+    send_event(user.id, 0, None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_instance))
 
     return raw_token, token_instance

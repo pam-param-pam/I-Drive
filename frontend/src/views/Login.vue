@@ -34,7 +34,7 @@ import { logoURL, name, signup } from '@/utils/constants'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapState } from 'pinia'
 import throttle from 'lodash.throttle'
-import { isMobile } from '@/utils/common.js'
+import { isMobile, onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'login',
@@ -175,7 +175,7 @@ export default {
          }
       },
 
-      submit: throttle(async function (event) {
+      submit: onceAtATime(async function (event) {
          let redirect = this.$route.query.redirect
 
          if (this.createMode) {

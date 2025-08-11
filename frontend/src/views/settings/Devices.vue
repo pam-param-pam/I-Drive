@@ -53,7 +53,7 @@
 </template>
 
 <script>
-import { mapState } from "pinia"
+import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import dayjs from "@/utils/dayjsSetup.js"
 import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/user.js"
@@ -74,11 +74,21 @@ export default {
          return localStorage.getItem("device_id")
       }
    },
-   async mounted() {
-      this.devices = await getActiveDevices()
+   async created() {
+      this.setLoading(true)
+      try {
+         this.devices = await getActiveDevices()
+      } catch (error) {
+         console.error(error)
+         this.setError(error)
+      } finally {
+         this.setLoading(false)
+      }
    },
    methods: {
+      ...mapActions(useMainStore, ["setLoading", "setError"]),
       humanTime(date) {
+         if (!date) return null
          if (this.settings?.dateFormat) {
             return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
          }

@@ -35,7 +35,7 @@ def get_user(raw_token):
 
     hashed = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
     try:
-        token = PerDeviceToken.objects.get(token_hash=hashed)
+        token = PerDeviceToken.objects.get_token_by_hash(token_hash=hashed)
         if token.is_expired():
             return AnonymousUser()
         return token.user

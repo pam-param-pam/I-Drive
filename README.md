@@ -55,7 +55,6 @@ Credentials: `demo`/`demo`
 | load balancing with round robin for nginx              | ⛔  Coming prob never |
 | add resolution to images                               | ⛔  Coming prob never |
 | move away from cancelToken in axios to abortController | ⛔  Coming prob never |
-| add per device tokens                                  | ⛔  Coming prob never |
 
 fix urls mapping, clean Discord class, tasks, shares
 
@@ -73,7 +72,6 @@ fix urls mapping, clean Discord class, tasks, shares
 | handle empty files (upload, editor, anything else)   |
 | fix next/prev on desktop with images move            |
 | share password bugged                                |
-| esc + search context + prompt                        |
 
 > [!WARNING]  
 > This section is very much unfinished

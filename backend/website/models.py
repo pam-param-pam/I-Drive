@@ -761,8 +761,8 @@ class PerDeviceTokenManager(models.Manager):
         else:
             raise KeyError()
 
+        logout_and_close_websockets(user_id=user.id, device_id=token.device_id, token_hash=token_hash)
         token.delete()
-        logout_and_close_websockets(user_id=user.id, device_id=token.device_id)
 
     def revoke_all_for_user(self, user):
         from .utilities.other import logout_and_close_websockets
@@ -773,6 +773,12 @@ class PerDeviceTokenManager(models.Manager):
     def get_active_for_user(self, user):
         now = timezone.now()
         return self.filter(user=user).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now))
+
+    def get_token_by_hash(self, token_hash):
+        token = PerDeviceToken.objects.get(token_hash=token_hash)
+        token.last_used_at = timezone.now()
+        token.save()
+        return token
 
 class PerDeviceToken(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='device_tokens')
@@ -817,3 +823,4 @@ class PerDeviceToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.device_name} for user {self.user}"
+

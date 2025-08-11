@@ -106,7 +106,6 @@ export default {
       ...mapActions(useMainStore, ["closeHover"]),
 
       resetPrompts() {
-         console.log(this.currentPromptName)
          let promptComponent = this.$refs[this.currentPromptName]
          if (!promptComponent) {
             console.error("PROMPT RESET ERROR: Something gone wrong")

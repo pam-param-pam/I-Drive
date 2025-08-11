@@ -1,7 +1,3 @@
-# Constant for token expiry
-import datetime
-
-import shortuuid
 from django.contrib.auth import authenticate
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, permission_classes
@@ -9,11 +5,9 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import PerDeviceToken
-from ..utilities.constants import TOKEN_EXPIRY_DAYS
 from ..utilities.errors import BadRequestError, ResourcePermissionError
-from ..utilities.other import get_ip, logout_and_close_websockets, get_location_from_ip, create_token
-from ..utilities.throttle import LoginThrottle, defaultAnonUserThrottle, RegisterThrottle
+from ..utilities.other import create_token
+from ..utilities.throttle import LoginThrottle, RegisterThrottle
 
 
 @api_view(['POST'])

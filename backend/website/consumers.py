@@ -4,7 +4,7 @@ import json
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
-from .models import PerDeviceToken
+from .utilities.constants import EventCode
 
 
 class UserConsumer(WebsocketConsumer):
@@ -36,15 +36,20 @@ class UserConsumer(WebsocketConsumer):
             self.send(json.dumps(message))
 
     def send_event(self, event):
+        print(f"SENT_EVENT: {EventCode(event['message']['event']['op_code'])}")
+        print(self.scope['user'].id)
+        print(event['user_id'])
         if self.scope['user'].id == event['user_id']:
+            print("SENDING!")
             self.send(json.dumps(event['message']))
 
     def logout(self, event):
+        print("LOGOUT A WEBSOCKET")
         if self.scope['user'].id == event['user_id']:
-            if event['device_id']:
+            if event['token_hash']:
                 token_hash = hashlib.sha256(self.scope['token'].encode()).hexdigest()
-                token_exists = PerDeviceToken.objects.filter(device_id=event['device_id'], token_hash=token_hash, user_id=event['user_id']).exists()
-                if token_exists:
+                if token_hash == event['token_hash']:
+                    print("TOKEN EXISTS CLOSING")
                     self.close()
             else:
                 self.close()
