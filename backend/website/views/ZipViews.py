@@ -13,7 +13,7 @@ from ..utilities.throttle import defaultAuthUserThrottle
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms & DownloadPerms])
-@extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
 @check_bulk_permissions(default_checks)
 def create_zip_model(request, items):
     user_zip = UserZIP.objects.create(owner=request.user)
