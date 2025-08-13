@@ -153,6 +153,6 @@ urlpatterns = [
     path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
-
+    # 75 endpoints
 ]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

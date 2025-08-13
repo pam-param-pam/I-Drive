@@ -1,6 +1,6 @@
 import router from "@/router"
 import { baseURL, baseWS } from "@/utils/constants"
-import { getUser, logoutUser, registerUser } from "@/api/user.js"
+import { getUser, loginUser, logoutUser, registerUser } from "@/api/user.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
@@ -8,12 +8,11 @@ import { onEvent } from "@/utils/WsEventhandler.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
-   const mainStore = useMainStore()
-
+   let mainStore = useMainStore()
 
    let token = localStorage.getItem("token")
    if (!token) {
-      console.warn("TOKEN IS NULL ATEMPTED TO VALIDATE LOGIN")
+      console.warn("TOKEN IS NULL ATTEMPTED TO VALIDATE LOGIN")
       return
    }
    let body = await getUser(token)
@@ -29,51 +28,27 @@ export async function validateLogin() { //this isn't really validate login - mor
 
 }
 
+function saveAuth(data) {
+   let token = data.auth_token
+   let deviceId = data.device_id
+   if (!token || !deviceId) {
+      console.error("DEVICE_ID or TOKEN is null")
+   }
+   localStorage.setItem("token", token)
+   localStorage.setItem("device_id", deviceId)
+}
 
 export async function login(username, password) {
-   let data = { username, password }
-
-   let res = await fetch(`${baseURL}/auth/token/login`, {
-      method: "POST",
-      headers: {
-         "Content-Type": "application/json"
-      },
-
-      body: JSON.stringify(data)
-   })
-
-   let body = await res.text()
-
-   if (res.status === 200) {
-
-      let token = JSON.parse(body).auth_token
-      let deviceId = JSON.parse(body).device_id
-
-      localStorage.setItem("token", token)
-      localStorage.setItem("device_id", deviceId)
-
-      await validateLogin()
-
-   } else {
-      const error = new Error()
-      // Map status and headers to from fetch to look the same way as axios ones
-      error.status = res.status
-      error.response = {}
-      let headers = {}
-      res.headers.forEach((value, key) => {
-         headers[key] = value
-      })
-      error.response.headers = headers
-      throw error
-   }
-
+   let data = await loginUser({ username, password })
+   saveAuth(data)
+   await validateLogin()
 }
 
 
 export async function signup(username, password) {
-   let data = { username, password }
-   await registerUser(data)
-
+   let data = await registerUser({ username, password })
+   saveAuth(data)
+   await validateLogin()
 }
 
 

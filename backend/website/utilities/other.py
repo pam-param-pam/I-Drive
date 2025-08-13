@@ -137,8 +137,6 @@ def group_and_send_event(user_id: int, request_id: int, op_code: EventCode, reso
 
 def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
-    print("send_event")
-    print(user_id)
     if data and not isinstance(data, list):
         data = [data]
 
@@ -157,7 +155,7 @@ def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], 
         event = encrypt_message(folder_context.password, event)
 
     message['event'] = event
-    print("SENDING A MESSAGE!")
+
     queue_ws_event.delay(
         'user',
         {
@@ -213,7 +211,6 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
 
     end_time = time.perf_counter()
     elapsed = end_time - start_time
-    print(f"fetching from DATABASE took {elapsed:.4f} seconds")
 
     folder_serializer = FolderSerializer()
     file_serializer = FileSerializer()
@@ -332,26 +329,23 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
     if root_folder is None:
         root_folder = folder
 
-    # check_resource_perms("dummy request", folder, checkOwnership=False, checkRoot=False, checkFolderLock=False, checkTrash=True)
+    base_relative_path = f"{full_path}{folder.name}/"
 
     # Collect all files in the current folder
     files = folder.files.filter(ready=True, inTrash=False)
-    for file in files:
-        # Exclude root folder name from the path
-        relative_path = full_path[len(root_folder.name) + 1:] if root_folder == folder else full_path
-        file_full_path = f"{relative_path}{file.name}"
-
-        file_dict = create_zip_file_dict(file, file_full_path)
-        children.append(file_dict)
+    if not files.exists():
+        children.append({"name": base_relative_path, "isDir": True})
+    else:
+        for file in files:
+            file_full_path = f"{base_relative_path}{file.name}"
+            file_dict = create_zip_file_dict(file, file_full_path)
+            children.append(file_dict)
 
     # Recursively collect all subfolders and their children
     for subfolder in folder.subfolders.all():
-        relative_path = full_path[len(root_folder.name) + 1:] if root_folder == folder else full_path
-        subfolder_full_path = f"{relative_path}{subfolder.name}/"
-        children.extend(get_flattened_children(subfolder, subfolder_full_path, root_folder))
+        children.extend(get_flattened_children(subfolder, base_relative_path, root_folder))
 
     return children
-
 
 def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     """:return: True if the item is a subfile/subfolder of parent_folder, otherwise False."""
@@ -408,9 +402,11 @@ def get_discord_author(request, message_author_id: int) -> Webhook:
             raise BadRequestError(f"Wrong discord author ID")
 
 
-def check_if_bots_exists(user) -> None:
-    if not Bot.objects.filter(owner=user).exists():
+def check_if_bots_exists(user) -> int:
+    bots = Bot.objects.filter(owner=user)
+    if not bots.exists():
         raise NoBotsError()
+    return len(bots)
 
 
 def auto_prefetch(file_obj: File, fragment_id: str) -> None:
@@ -650,7 +646,7 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     return country, city
 
 
-def create_token(request, user) -> tuple[str, PerDeviceToken]:
+def create_token(request, user) -> tuple[str, PerDeviceToken, dict]:
     ip, _ = get_ip(request)
 
     # Get device info from django_user_agents
@@ -686,7 +682,8 @@ def create_token(request, user) -> tuple[str, PerDeviceToken]:
         device_type=device_type
     )
     user_logged_in.send(sender=user.__class__, request=request, user=user)
-    print("aaaaaaaaaaaaaaaaa")
     send_event(user.id, 0, None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_instance))
 
-    return raw_token, token_instance
+    return raw_token, token_instance, {'auth_token': raw_token, 'device_id': token_instance.device_id}
+
+

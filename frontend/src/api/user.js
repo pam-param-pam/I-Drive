@@ -15,6 +15,18 @@ export async function getUser(token) {
    return response.data
 
 }
+
+export async function loginUser(data) {
+   let url = "/auth/token/login"
+   let response = await backendInstance.post(url, data,{
+      headers: {
+         "Authorization": false,
+      },
+      __displayErrorToast: false
+   })
+   return response.data
+}
+
 export async function registerUser(data) {
    let url = "/auth/register"
    let response = await backendInstance.post(url, data,{

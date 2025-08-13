@@ -15,7 +15,6 @@ from django.utils.deprecation import MiddlewareMixin
 from httpx import ConnectError
 from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
-from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import Throttled
 
 from ..models import ShareableLink, PerDeviceToken
@@ -33,14 +32,10 @@ def get_user(raw_token):
     if not raw_token:
         return AnonymousUser()
 
-    hashed = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
-    try:
-        token = PerDeviceToken.objects.get_token_by_hash(token_hash=hashed)
-        if token.is_expired():
-            return AnonymousUser()
-        return token.user
-    except PerDeviceToken.DoesNotExist:
+    token = PerDeviceToken.objects.get_token_from_raw_token(raw_token=raw_token)
+    if not token:
         return AnonymousUser()
+    return token.user
 
 
 class TokenAuthMiddleware(BaseMiddleware):

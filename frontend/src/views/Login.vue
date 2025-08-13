@@ -189,8 +189,9 @@ export default {
             if (this.createMode) {
                await auth.signup(this.username, this.password)
             }
-
-            await auth.login(this.username, this.password)
+            else {
+               await auth.login(this.username, this.password)
+            }
             if (redirect === '' || redirect === undefined || redirect === null) {
                redirect = `/files/${this.user.root}`
             }

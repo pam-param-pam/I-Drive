@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.decorators import throttle_classes
@@ -11,8 +12,8 @@ from ..utilities.throttle import LoginThrottle, RegisterThrottle
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 @throttle_classes([LoginThrottle])
+@permission_classes([AllowAny])
 def login_per_device(request):
     username = request.data['username']
     password = request.data['password']
@@ -21,14 +22,14 @@ def login_per_device(request):
     if not user:
         raise BadRequestError('Invalid credentials')
 
-    raw_token, token_instance = create_token(request, user)
+    raw_token, token_instance, auth_dict = create_token(request, user)
 
-    return JsonResponse({'auth_token': raw_token, 'device_id': token_instance.device_id}, status=200)
+    return JsonResponse(auth_dict, status=200)
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([LoginThrottle])
+@permission_classes([IsAuthenticated])
 def logout_per_device(request):
     """
     Logs out current device by deleting the token used in this request.
@@ -39,6 +40,7 @@ def logout_per_device(request):
 
 @api_view(['POST'])
 @throttle_classes([RegisterThrottle])
+@permission_classes([AllowAny])
 def register_user(request):
     raise ResourcePermissionError("This functionality is turned off.")
     username = request.data['username']
@@ -49,4 +51,5 @@ def register_user(request):
 
     user = User.objects.create_user(username=username, password=password)
     user.save()
-    return HttpResponse(status=204)
+    auth_dict, token_instance, auth_dict = create_token(request, user)
+    return JsonResponse(auth_dict, status=200)

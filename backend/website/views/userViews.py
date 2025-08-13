@@ -32,8 +32,8 @@ def change_password(request):
     user.save()
 
     request.auth.revoke()
-    raw_token, token_instance = create_token(request, user)
-    return JsonResponse({'auth_token': raw_token, 'device_id': token_instance.device_id}, status=200)
+    raw_token, token_instance, auth_dict = create_token(request, user)
+    return JsonResponse(auth_dict, status=200)
 
 
 @api_view(['GET'])
@@ -282,7 +282,7 @@ def update_attachment_name(request):
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms]) # todo throttle before perm class?
+@permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
 def reset_discord_settings(request):
     if File.objects.filter(owner=request.user).exists():
         raise BadRequestError("Cannot reset discord settings. Remove all files first")
@@ -318,16 +318,16 @@ def reset_discord_settings(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & AdminPerms])
 @throttle_classes([DiscordSettingsThrottle])
+@permission_classes([IsAuthenticated & AdminPerms])
 def reset_discord_state(request):
     discord.remove_user_state(request.user)
     return HttpResponse(status=204)
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 def list_active_devices(request):
     tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
     serializer = DeviceTokenSerializer()
@@ -336,15 +336,15 @@ def list_active_devices(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated])
 def logout_all_devices(request):
     PerDeviceToken.objects.revoke_all_for_user(user=request.user)
     return HttpResponse(status=204)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated])
 def revoke_device(request, device_id):
     token = PerDeviceToken.objects.filter(user=request.user, device_id=device_id).first()
     if token:

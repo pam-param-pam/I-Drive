@@ -35,8 +35,8 @@ def last_modified_func(request, file_obj, sequence=None):
     return last_modified_str
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 @etag(etag_func)
@@ -55,8 +55,8 @@ def get_folder_info(request, folder_obj: Folder):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_dirs(request, folder_obj: Folder):
@@ -71,8 +71,8 @@ def get_dirs(request, folder_obj: Folder):
     return JsonResponse(folder_content)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 # @last_modified(last_modified_func)
@@ -81,8 +81,8 @@ def get_file_info(request, file_obj: File):
     return JsonResponse(file_content)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 @vary_on_headers("x-resource-password")
@@ -107,8 +107,8 @@ def get_usage(request, folder_obj: Folder):
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
 @check_resource_permissions(default_checks, resource_key="item_obj")
 def fetch_additional_info(request, item_obj):
@@ -144,8 +144,8 @@ def fetch_additional_info(request, item_obj):
         return JsonResponse(metadata_dict, status=200)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_breadcrumbs(request, folder_obj: Folder):
@@ -153,8 +153,8 @@ def get_breadcrumbs(request, folder_obj: Folder):
     return JsonResponse(breadcrumbs, safe=False)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([SearchThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 def search(request):
     user = request.user
     # todo check if this is secure
@@ -315,8 +315,8 @@ def search(request):
     return JsonResponse(file_dicts + folder_dicts, safe=False)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
         "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
@@ -332,8 +332,8 @@ def get_trash(request):
     return JsonResponse({"trash": file_dicts + folder_dicts})
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([FolderPasswordThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
 @check_resource_permissions([CheckOwnership], resource_key="item_obj")
 @disable_common_errors
@@ -346,8 +346,8 @@ def check_password(request, item_obj):
     raise ResourcePermissionError("Folder password is incorrect")
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_moments(request, file_obj: File):
@@ -360,8 +360,8 @@ def get_moments(request, file_obj: File):
     return JsonResponse(moments_list, safe=False)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_tags(request, file_obj: File):
@@ -373,8 +373,8 @@ def get_tags(request, file_obj: File):
     return JsonResponse(tags_list, safe=False)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([MediaThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):
@@ -392,8 +392,8 @@ def get_subtitles(request, file_obj: File):
 """====================================================HERE BE DRAGONS=========================================================="""
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 @extract_items(source='data')
 @check_bulk_permissions(default_checks)
 def ultra_download_metadata(request, items):
@@ -436,8 +436,8 @@ def ultra_download_metadata(request, items):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms])
 @throttle_classes([MediaThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 def get_attachment_url_view(request, attachment_id):
     # raise CannotProcessDiscordRequestError("Unable to process this request at the moment, server is too busy.")
     fragment = Fragment.objects.get(attachment_id=attachment_id)

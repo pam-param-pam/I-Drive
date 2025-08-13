@@ -2,7 +2,8 @@ import time
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-from rest_framework.decorators import api_view, throttle_classes
+from rest_framework.decorators import api_view, throttle_classes, permission_classes
+from rest_framework.permissions import AllowAny
 
 from ..discord.Discord import discord
 from ..utilities.other import get_ip
@@ -11,6 +12,7 @@ from ..utilities.throttle import defaultAuthUserThrottle
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([AllowAny])
 def get_discord_state(request):
     user = User.objects.get(id=1)
     discord._get_channel_id(user)
@@ -24,7 +26,7 @@ def get_discord_state(request):
     else:
         remaining_time = None
 
-    for token in state['tokens'].values():
+    for token in state['bots'].values():
         bots_dict.append(token)
 
     return JsonResponse({"blocked": state['blocked'], "retry_after": remaining_time, "bots": bots_dict}, safe=False)
@@ -32,6 +34,7 @@ def get_discord_state(request):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([AllowAny])
 def your_ip(request):
     ip, from_nginx = get_ip(request)
 
@@ -40,8 +43,8 @@ def your_ip(request):
 
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated & ReadPerms])
 # @throttle_classes([defaultAuthUserThrottle])
+# @permission_classes([IsAuthenticated & ReadPerms])
 def get_stats(request):
     qs = (
         File.objects
@@ -62,8 +65,8 @@ def get_stats(request):
     return JsonResponse(result, safe=False)
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated & ReadPerms])
 # @throttle_classes([defaultAuthUserThrottle])
+# @permission_classes([IsAuthenticated & ReadPerms])
 def get_discord_attachment_report(request):
     owner_id = 1  # hardcoded or use request.user.id
 

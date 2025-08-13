@@ -21,8 +21,8 @@ from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottl
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ReadPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms & SharePerms])
 def get_shares(request):
     shares = ShareableLink.objects.filter(owner=request.user)
     items = []
@@ -38,8 +38,8 @@ def get_shares(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @extract_item(source="data")
 @check_resource_permissions(default_checks, resource_key="item_obj")
 def create_share(request, item_obj):
@@ -74,8 +74,8 @@ def create_share(request, item_obj):
     return JsonResponse(item, status=200, safe=False)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @extract_share()
 @check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
 def delete_share(request, share_obj):
@@ -87,8 +87,8 @@ def delete_share(request, share_obj):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @extract_share()
 @check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
 def get_share_visits(request, share_obj):
@@ -97,8 +97,8 @@ def get_share_visits(request, share_obj):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 def check_share_password(request, share_obj):
     password = request.headers.get("X-Resource-Password")
@@ -109,8 +109,8 @@ def check_share_password(request, share_obj):
     raise ResourcePermissionError("Share password is incorrect")
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
 @extract_folder(optional=True)
@@ -141,8 +141,8 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
 def create_share_zip_model(request, share_obj):  # todo
@@ -162,8 +162,8 @@ def create_share_zip_model(request, share_obj):  # todo
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
 @extract_file_from_signed_url
@@ -179,8 +179,8 @@ def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
 @extract_file_from_signed_url
@@ -192,8 +192,8 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
 @extract_file_from_signed_url
@@ -205,8 +205,8 @@ def share_view_preview(request, share_obj: ShareableLink, file_obj: File):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
 @extract_file_from_signed_url
@@ -218,8 +218,8 @@ def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subti
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @throttle_classes([defaultAnonUserThrottle])
+@permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired], resource_key="share_obj")
 @extract_file()

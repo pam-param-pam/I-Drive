@@ -204,9 +204,9 @@ class File(models.Model):
             )
         ]
 
-    MINIMAL_VALUES = ("id", "name", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password")
+    MINIMAL_VALUES = ("id", "name", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
 
-    STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
+    STANDARD_VALUES = MINIMAL_VALUES + ("type", )
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
         "duration", "parent__id", "preview__iso", "preview__model_name", "crc",
@@ -759,7 +759,7 @@ class PerDeviceTokenManager(models.Manager):
         elif token_hash:
             token = qs.filter(token_hash=token_hash).first()
         else:
-            raise KeyError()
+            raise KeyError("device_id or token_hash must be specified")
 
         logout_and_close_websockets(user_id=user.id, device_id=token.device_id, token_hash=token_hash)
         token.delete()
@@ -774,11 +774,23 @@ class PerDeviceTokenManager(models.Manager):
         now = timezone.now()
         return self.filter(user=user).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now))
 
-    def get_token_by_hash(self, token_hash):
-        token = PerDeviceToken.objects.get(token_hash=token_hash)
-        token.last_used_at = timezone.now()
-        token.save()
-        return token
+    def get_token_from_raw_token(self, raw_token):
+        token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+
+        try:
+            token_obj = PerDeviceToken.objects.select_related('user').get(token_hash=token_hash)
+        except PerDeviceToken.DoesNotExist:
+            return None
+
+        if not token_obj.check_token(raw_token):
+            return None
+
+        if token_obj.is_expired():
+            token_obj.delete()
+            return None
+
+        token_obj.mark_used()
+        return token_obj
 
 class PerDeviceToken(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='device_tokens')

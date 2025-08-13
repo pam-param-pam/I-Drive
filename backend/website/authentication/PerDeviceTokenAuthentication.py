@@ -1,8 +1,6 @@
 # per_device_auth/authentication.py
-import hashlib
-import hmac
-from rest_framework.authentication import BaseAuthentication
 from rest_framework import exceptions
+from rest_framework.authentication import BaseAuthentication
 
 from ..models import PerDeviceToken
 
@@ -29,20 +27,12 @@ class PerDeviceTokenAuthentication(BaseAuthentication):
         if method not in (self.keyword_token, self.keyword_bearer):
             return None
 
-        token_hash = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
-        try:
-            token_obj = PerDeviceToken.objects.select_related('user').get(token_hash=token_hash)
-        except PerDeviceToken.DoesNotExist:
+        token_obj = PerDeviceToken.objects.get_token_from_raw_token(raw_token)
+        if not token_obj:
             raise exceptions.AuthenticationFailed('Invalid token')
 
-        if token_obj.is_expired():
-            raise exceptions.AuthenticationFailed('Token expired')
-
-        # constant-time check just in case
-        if not hmac.compare_digest(token_obj.token_hash, token_hash):
-            raise exceptions.AuthenticationFailed('Invalid token')
-
-        token_obj.mark_used()
+        if token_obj.user_agent != str(request.user_agent):
+            raise exceptions.AuthenticationFailed('Invalid user agent')
 
         return token_obj.user, token_obj  # request.user, request.auth
 

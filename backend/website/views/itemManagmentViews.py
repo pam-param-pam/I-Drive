@@ -18,8 +18,8 @@ from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & CreatePerms])
 @extract_folder(source="data", key="parent_id", inject_as="parent")
 @check_resource_permissions(default_checks, resource_key="parent")
 def create_folder(request, parent):
@@ -39,8 +39,8 @@ def create_folder(request, parent):
     return JsonResponse(folder_dict, status=200)
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_folder(source="data", key="new_parent_id", inject_as="new_parent_obj")
 @check_resource_permissions(default_checks, resource_key="new_parent_obj")
 @extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
@@ -60,8 +60,8 @@ def move(request, new_parent_obj, items):
     return JsonResponse(build_response(request.request_id, "Moving items..."))
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def move_to_trash(request, items):
@@ -76,8 +76,8 @@ def move_to_trash(request, items):
     return JsonResponse(build_response(request.request_id, "Moving to Trash..."))
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def restore_from_trash(request, items):
@@ -92,8 +92,8 @@ def restore_from_trash(request, items):
     return JsonResponse(build_response(request.request_id, "Restoring from Trash..."))
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & DeletePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & DeletePerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def delete(request, items):
@@ -110,8 +110,8 @@ def delete(request, items):
     return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_item()
 @check_resource_permissions(default_checks, resource_key="item_obj")
 def rename(request, item_obj):
@@ -132,8 +132,8 @@ def rename(request, item_obj):
     return HttpResponse(status=204)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms & LockPerms])
 @throttle_classes([FolderPasswordThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms & LockPerms])
 @extract_folder()
 @check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
 def change_folder_password(request, folder_obj):
@@ -153,8 +153,8 @@ def change_folder_password(request, folder_obj):
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms & ResetLockPerms])
 @throttle_classes([FolderPasswordThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms & ResetLockPerms])
 @extract_folder()
 @check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
 def reset_folder_password(request, folder_obj):
@@ -182,8 +182,8 @@ def reset_folder_password(request, folder_obj):
 
 
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def update_video_position(request, file_obj):
@@ -200,8 +200,8 @@ def update_video_position(request, file_obj):
     return HttpResponse(status=204)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_tag(request, file_obj):
@@ -229,8 +229,8 @@ def add_tag(request, file_obj):
     return JsonResponse(serializer.serialize_object(tag), status=200)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_tag(request, file_obj, tag_id):
@@ -246,8 +246,8 @@ def remove_tag(request, file_obj, tag_id):
     return HttpResponse(status=204)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_moment(request, file_obj):
@@ -291,8 +291,8 @@ def add_moment(request, file_obj):
 
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_moment(request, file_obj, timestamp):
@@ -304,8 +304,8 @@ def remove_moment(request, file_obj, timestamp):
 
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def change_crc(request, file_obj):
@@ -316,8 +316,8 @@ def change_crc(request, file_obj):
     return HttpResponse(status=204)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_subtitle(request, file_obj):
@@ -342,8 +342,8 @@ def add_subtitle(request, file_obj):
     return JsonResponse(SubtitleSerializer().serialize_object(subtitle), status=200)
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_subtitle(request, file_obj, subtitle_id):

@@ -16,11 +16,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.utils import IntegrityError
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse, HttpResponse
-from django.utils.encoding import smart_str
 from django.views.decorators.cache import cache_page
 from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
-from rest_framework.decorators import api_view, throttle_classes
+from rest_framework.decorators import api_view, throttle_classes, permission_classes
+from rest_framework.permissions import AllowAny
 from zipFly import GenFile, ZipFly
+from zipFly.EmptyFolder import EmptyFolder
 
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
@@ -37,6 +38,7 @@ from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
+@permission_classes([AllowAny])
 @cache_page(60 * 60 * 24)
 @extract_file_from_signed_url
 def stream_preview(request, file_obj: File):
@@ -154,6 +156,7 @@ def stream_preview(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
+@permission_classes([AllowAny])
 @extract_file_from_signed_url
 def stream_thumbnail(request, file_obj: File):
     size_param = request.GET.get("size", "original").lower()
@@ -234,6 +237,7 @@ def stream_thumbnail(request, file_obj: File):
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
+@permission_classes([AllowAny])
 @extract_file_from_signed_url
 def stream_subtitle(request, file_obj: File, subtitle_id):
     check_if_bots_exists(file_obj.owner)
@@ -259,6 +263,7 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
+@permission_classes([AllowAny])
 @cache_page(60 * 60 * 24 * 30)
 @extract_file_from_signed_url
 def stream_moment(request, file_obj: File, timestamp):
@@ -270,7 +275,6 @@ def stream_moment(request, file_obj: File, timestamp):
     url = discord.get_attachment_url(file_obj.owner, moment)
     discord_response = requests.get(url)
     if discord_response.ok:
-        print(len(discord_response.content))
         moment_content = decryptor.decrypt(discord_response.content)
     else:
         return JsonResponse(status=discord_response.status_code, data=discord_response.json())
@@ -285,6 +289,7 @@ def stream_moment(request, file_obj: File, timestamp):
 @api_view(['GET'])
 @no_gzip
 @throttle_classes([MediaThrottle])
+@permission_classes([AllowAny])
 @extract_file_from_signed_url
 def stream_file(request, file_obj: File):
     print(f"========={file_obj.name}=========")
@@ -405,6 +410,7 @@ def stream_file(request, file_obj: File):
 @api_view(['GET'])
 @no_gzip
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([AllowAny])
 def stream_zip_files(request, token):
     range_header = request.headers.get('Range')
     if range_header:
@@ -440,7 +446,7 @@ def stream_zip_files(request, token):
     single_root = False
     if len(files) == 0 and len(folders) == 1:
         single_root = True
-        dict_files += get_flattened_children(folders[0], root_folder=folders[0])
+        dict_files = get_flattened_children(folders[0], root_folder=folders[0])
 
     else:
         for file in files:
@@ -459,15 +465,17 @@ def stream_zip_files(request, token):
             fragments = file['fileObj'].fragments.all().order_by("sequence")
             genFile = GenFile(name=file['name'], generator=stream_file(file["fileObj"], fragments), size=file["fileObj"].size, crc=file["fileObj"].crc)
             files.append(genFile)
+        else:
+            files.append(EmptyFolder(name=file['name']))
 
-    zipFly = ZipFly(files)
+    zipFly = ZipFly(files, byte_offset=start_byte)
     if range_header:
         status = 206
     else:
         status = 200
 
     # streamed response
-    response = StreamingHttpResponse(zipFly.async_stream(start_byte), content_type="application/zip", status=status)
+    response = StreamingHttpResponse(zipFly.async_stream_parallel(), content_type="application/zip", status=status)
 
     file_size = zipFly.calculate_archive_size()
     response['Content-Length'] = file_size

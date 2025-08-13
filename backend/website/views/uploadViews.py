@@ -19,8 +19,8 @@ from ..utilities.other import send_event, check_resource_perms, get_folder, get_
 from ..utilities.throttle import defaultAuthUserThrottle
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & CreatePerms])
 def create_file(request):
     check_if_bots_exists(request.user)
 
@@ -168,8 +168,8 @@ def create_file(request):
     return JsonResponse(response_json, safe=False, status=200)
 
 @api_view(['PATCH'])
-@permission_classes([IsAuthenticated & ModifyPerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def edit_file(request, file_obj):
@@ -229,8 +229,8 @@ def edit_file(request, file_obj):
     return HttpResponse(status=204)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated & CreatePerms])
 @throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & CreatePerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def create_thumbnail(request, file_obj):

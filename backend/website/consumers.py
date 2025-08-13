@@ -37,19 +37,14 @@ class UserConsumer(WebsocketConsumer):
 
     def send_event(self, event):
         print(f"SENT_EVENT: {EventCode(event['message']['event']['op_code'])}")
-        print(self.scope['user'].id)
-        print(event['user_id'])
         if self.scope['user'].id == event['user_id']:
-            print("SENDING!")
             self.send(json.dumps(event['message']))
 
     def logout(self, event):
-        print("LOGOUT A WEBSOCKET")
         if self.scope['user'].id == event['user_id']:
-            if event['token_hash']:
+            if event['token_hash']:  # specific connection to close
                 token_hash = hashlib.sha256(self.scope['token'].encode()).hexdigest()
                 if token_hash == event['token_hash']:
-                    print("TOKEN EXISTS CLOSING")
                     self.close()
-            else:
+            else:  # close all connections
                 self.close()
