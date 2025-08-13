@@ -31,10 +31,10 @@
         <p>{{ item.name }}</p>
       </div>
       <div class="size">
-        <p :data-order="humanSize()" class="size">{{ humanSize() }}</p>
+        <p :data-order="humanSize(item.size)" class="size">{{ humanSize(item.size) }}</p>
       </div>
       <div class="created">
-        <p>{{ item.created }}</p>
+        <p>{{ humanTime(item.created) }}</p>
       </div>
     </div>
   </div>
@@ -45,8 +45,7 @@ import { filesize } from '@/utils'
 import { move } from '@/api/item.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
-import { isMobile } from '@/utils/common.js'
-import dayjs from "@/utils/dayjsSetup.js"
+import { humanTime, isMobile } from "@/utils/common.js"
 
 export default {
    name: 'item',
@@ -123,10 +122,11 @@ export default {
    },
 
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ['setLastItem', 'addSelected', 'removeSelected', 'resetSelected', 'setPopupPreviewURL', 'clearPopupPreviewURL']),
 
-      humanSize() {
-         if (this.item.isDir) return '-'
+      humanSize(size) {
+         if (!size) return '-'
          return filesize(this.item.size)
       },
 
@@ -141,15 +141,6 @@ export default {
          this.clearPopupPreviewURL()
       },
 
-
-      humanTime() {
-         const date = this.item.created
-
-         if (this.settings.dateFormat) {
-            return dayjs(date, 'YYYY-MM-DD HH:mm').format('DD/MM/YYYY, hh:mm')
-         }
-         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
-      },
 
       dragStart(event) {
          if (!this.canDrag) {

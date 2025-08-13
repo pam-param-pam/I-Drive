@@ -75,7 +75,7 @@ import { getAllShares, deleteShare, getShareVisits } from "@/api/share.js"
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
 import Errors from '@/components/Errors.vue'
-import dayjs from "@/utils/dayjsSetup.js"
+import { humanTime } from "@/utils/common.js"
 
 export default {
    name: 'shares',
@@ -117,6 +117,7 @@ export default {
    },
 
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ['setLoading', 'closeHover', 'showHover', 'setError']),
 
       async deleteLink(event, share) {
@@ -137,9 +138,6 @@ export default {
             })
          }
       },
-      humanTime(time) {
-         return dayjs(time, 'YYYY-MM-DD HH:mm').fromNow()
-      },
 
       buildLink(share) {
          let route = this.$router.resolve({ name: 'Share', params: { token: share.token } })
@@ -148,7 +146,7 @@ export default {
 
       async showInfo(event, share) {
          let visits = await getShareVisits(share.token)
-
+         visits = visits.accesses
          this.showHover({
             prompt: "shareAccesses",
             props: {share, visits},

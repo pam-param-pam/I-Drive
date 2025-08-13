@@ -201,8 +201,7 @@ import { fetchAdditionalInfo } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
-import { formatSeconds } from "@/utils/common.js"
-import dayjs from "@/utils/dayjsSetup.js"
+import { formatSeconds, humanTime } from "@/utils/common.js"
 
 export default {
    name: "info",
@@ -413,6 +412,7 @@ export default {
    },
 
    methods: {
+      humanTime,
       formatSeconds,
 
       ...mapActions(useMainStore, ["closeHover"]),
@@ -450,13 +450,6 @@ export default {
       },
       formatCrc(crc) {
          return "0x" + crc.toString(16).toUpperCase()
-      },
-      humanTime(date) {
-         if (this.settings?.dateFormat) {
-            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
-         }
-
-         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
       },
 
       async changeView(event, rawValue, formatFn, suffix = "") {

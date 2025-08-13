@@ -260,7 +260,7 @@ import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import Errors from "@/components/Errors.vue"
-import dayjs from "@/utils/dayjsSetup.js"
+import { humanTime } from "@/utils/common.js"
 
 export default {
    components: { Errors },
@@ -300,6 +300,7 @@ export default {
    },
 
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ["setError", "setLoading", "showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
 
       ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
@@ -352,12 +353,6 @@ export default {
          this.$toast.success(this.$t("toasts.botDeleted"))
       }, 1000),
 
-      humanTime(date) {
-         if (this.settings.dateFormat) {
-            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
-         }
-         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
-      },
       async resetAll() {
          let res = await deleteDiscordSettings()
          if (res.errors) {

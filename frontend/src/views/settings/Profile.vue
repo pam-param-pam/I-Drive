@@ -103,7 +103,6 @@ import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
-import dayjs from "@/utils/dayjsSetup.js"
 
 export default {
    name: "profile",
@@ -159,13 +158,6 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings"]),
-      humanTime(date) {
-         if (this.settings?.dateFormat) {
-            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
-         }
-
-         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
-      },
 
       savePassword: throttle(async function(event) {
          if (this.password !== this.passwordConf || this.password === "") {

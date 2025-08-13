@@ -107,8 +107,7 @@ import Clipboard from 'clipboard'
 import { createShare, getAllShares, deleteShare } from '@/api/share.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
-import { onceAtATime } from "@/utils/common.js"
-import dayjs from "@/utils/dayjsSetup.js"
+import { humanTime, onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'share',
@@ -141,6 +140,7 @@ export default {
    },
 
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ['closeHover', 'showHover']),
 
       async fetchShares() {
@@ -185,10 +185,6 @@ export default {
          if (this.links.length === 0) {
             this.listing = false
          }
-      },
-
-      humanTime(time) {
-         return dayjs(time, 'YYYY-MM-DD HH:mm').fromNow()
       },
 
       buildLink(share) {

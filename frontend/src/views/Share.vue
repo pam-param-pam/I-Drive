@@ -2,7 +2,7 @@
    <h4 v-if="shareState === 'error'" class="listing-notice">{{ $t('share.shareNotFound') }}</h4>
 
    <h4 v-if="shareState === 'success'" class="listing-notice">
-      {{ $t('share.info', { expiry: humanExpiry(expiry) }) }}
+      {{ $t('share.info', { expiry: humanTime(expiry) }) }}
    </h4>
 
    <breadcrumbs
@@ -31,7 +31,7 @@ import { mapActions, mapState } from 'pinia'
 import Breadcrumbs from '@/components/listing/Breadcrumbs.vue'
 import Errors from '@/components/Errors.vue'
 import FileListing from '@/components/FileListing.vue'
-import dayjs from "@/utils/dayjsSetup.js"
+import { humanTime } from "../utils/common.js"
 
 export default {
    name: 'files',
@@ -86,6 +86,7 @@ export default {
    },
 
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ['setLoading', 'setError', 'setDisabledCreation', 'setItems', 'getFolderPassword']),
 
       async download() {
@@ -164,9 +165,6 @@ export default {
          }
       },
 
-      humanExpiry(date) {
-         return dayjs(date, 'YYYY-MM-DD HH:mm').fromNow()
-      }
    }
 }
 </script>

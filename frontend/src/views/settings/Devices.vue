@@ -29,8 +29,8 @@
               <td>{{ device.device_name }}</td>
               <td>{{ device.country || "-" }}</td>
               <td>{{ device.city || "-" }}</td>
-              <td>{{ humanTime(device.expires_at) || "-" }}</td>
-              <td>{{ humanTime(device.last_used_at) || "-" }}</td>
+              <td>{{ humanTime(device.expires_at) }}</td>
+              <td>{{ humanTime(device.last_used_at) }}</td>
               <td>
                 <button @click="revokeADevice(device.device_id)" :disabled="device.device_id === localDeviceId" class="button button--flat button--small">
                   {{ $t("buttons.revoke") }}
@@ -55,10 +55,10 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import dayjs from "@/utils/dayjsSetup.js"
 import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/user.js"
 import { forceLogout } from "@/utils/auth.js"
 import Errors from "@/components/Errors.vue"
+import { humanTime } from "@/utils/common.js"
 
 export default {
    name: "Devices",
@@ -86,15 +86,9 @@ export default {
       }
    },
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ["setLoading", "setError"]),
-      humanTime(date) {
-         if (!date) return null
-         if (this.settings?.dateFormat) {
-            return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
-         }
 
-         return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
-      },
       async revokeADevice(deviceId) {
          await revokeDevice(deviceId)
          this.devices = this.devices.filter(d => d.device_id !== deviceId)

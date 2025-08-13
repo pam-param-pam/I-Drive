@@ -1,6 +1,7 @@
 import { useToast } from "vue-toastification"
 import i18n from "@/i18n/index.js"
 import throttle from "lodash.throttle"
+import dayjs from "@/utils/dayjsSetup.js"
 
 export function isMobile() {
    return window.innerWidth <= 950
@@ -52,4 +53,15 @@ export function onceAtATime(fn, onBlocked) {
          isRunning = false
       }
    }
+}
+import { useMainStore } from "@/stores/mainStore.js"
+
+export function humanTime(date) {
+   if (!date) return "-"
+
+   const store = useMainStore()
+   if (store.settings.dateFormat) {
+      return dayjs(date, "YYYY-MM-DD HH:mm").format("DD/MM/YYYY, hh:mm")
+   }
+   return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
 }
