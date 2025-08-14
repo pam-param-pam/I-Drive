@@ -172,6 +172,16 @@ class Folder(MPTTModel):
         if self.parent:
             cache.delete(self.parent_id)
 
+    def move_to_new_parent(self, new_parent: 'Folder'):
+        if new_parent.is_locked and not self.is_locked and not self.autoLock:
+            self.applyLock(new_parent, new_parent.password)
+        elif not new_parent.is_locked and self.autoLock:
+            self.removeLock()
+
+        self.refresh_from_db()
+        self.parent = new_parent
+        self.move_to(new_parent, "last-child")
+        self.save()
 
 class File(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)

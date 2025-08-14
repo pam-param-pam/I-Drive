@@ -61,7 +61,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
 
 @admin.register(Folder)
 class FolderAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id',)
+    readonly_fields = ('id', 'last_modified_at')
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock']
@@ -124,7 +124,7 @@ class FolderAdmin(SimpleHistoryAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'size', 'readable_size', 'duration', 'inTrashSince', 'ready', 'is_locked', 'created_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
+    readonly_fields = ('id', 'size', 'readable_size', 'duration', 'inTrashSince', 'ready', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'ready', 'type', 'created_at',
                     'inTrash', 'is_locked']

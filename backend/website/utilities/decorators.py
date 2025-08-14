@@ -267,3 +267,32 @@ def check_bulk_permissions(checks, resource_key="items"):
         return _wrapped_view
 
     return decorator
+
+
+def accumulate_password_errors(*decorators):
+    """
+    Wrap multiple decorators and accumulate MissingOrIncorrectResourcePasswordError
+    from all of them before raising a single exception.
+    The wrapped view will only run after all checks pass.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            password_errors = []
+
+            for dec in decorators:
+                try:
+                    # Use a dummy function to only execute the decorator checks,
+                    # without running the actual view.
+                    dec(lambda *a, **k: None)(*args, **kwargs)
+                except MissingOrIncorrectResourcePasswordError as e:
+                    password_errors.extend(e.requiredPasswords)
+
+            if password_errors:
+                raise MissingOrIncorrectResourcePasswordError(password_errors)
+
+            # Now run the actual view
+            return func(*args, **kwargs)
+
+        return wrapper
+    return decorator

@@ -10,7 +10,8 @@ from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, l
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms, default_checks, CheckRoot, CheckTrash
 from ..utilities.Serializers import FolderSerializer, FileSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
-from ..utilities.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file
+from ..utilities.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file, \
+    accumulate_password_errors
 from ..utilities.errors import BadRequestError, ResourcePermissionError
 from ..utilities.other import build_response, send_event, check_if_bots_exists, \
     delete_single_discord_attachment, get_discord_author, get_attr
@@ -42,9 +43,13 @@ def create_folder(request, parent):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_folder(source="data", key="new_parent_id", inject_as="new_parent_obj")
-@check_resource_permissions(default_checks, resource_key="new_parent_obj")
 @extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
-@check_bulk_permissions(default_checks & CheckRoot)
+@accumulate_password_errors(
+    check_resource_permissions(default_checks, resource_key="new_parent_obj"),
+    check_bulk_permissions(default_checks & CheckRoot)
+)
+# @check_resource_permissions(default_checks, resource_key="new_parent_obj")
+# @check_bulk_permissions(default_checks & CheckRoot)
 def move(request, new_parent_obj, items):
     new_parent_id = new_parent_obj.id
 

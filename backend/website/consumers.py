@@ -36,7 +36,6 @@ class UserConsumer(WebsocketConsumer):
             self.send(json.dumps(message))
 
     def send_event(self, event):
-        print(f"SENT_EVENT: {EventCode(event['message']['event']['op_code'])}")
         if self.scope['user'].id == event['user_id']:
             self.send(json.dumps(event['message']))
 

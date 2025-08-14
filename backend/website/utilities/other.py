@@ -51,7 +51,7 @@ def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
                 value = getattr(value, attribute, _SENTINEL)
                 if value is _SENTINEL or value is None:
                     if default is _SENTINEL:
-                        raise AttributeError(f"Attribute '{attr}' not found in object.")
+                        raise AttributeError(f"Attribute '{attr}' not found in object: {resource.__class__.__name__}.")
                     return default
             return value
         else:
@@ -59,12 +59,12 @@ def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
             value = getattr(resource, attr, _SENTINEL)
             if value is _SENTINEL:
                 if default is _SENTINEL:
-                    raise AttributeError(f"Attribute '{attr}' not found in object.")
+                    raise AttributeError(f"Attribute '{attr}' not found in object: {resource.__class__.__name__}.")
                 return default
             return value
     except AttributeError:
         if default is _SENTINEL:
-            raise AttributeError(f"Attribute '{attr}' not found in object.")
+            raise AttributeError(f"Attribute '{attr}' not found in object: {resource.__class__.__name__}.")
         return default
 
 
@@ -598,7 +598,7 @@ def obtain_discord_settings(user) -> dict:
 
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
             "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
-
+# todo folder move to locked not locked
 def log_share_access(request, share_obj: ShareableLink) -> None:
     ip, _ = get_ip(request)
     user_agent = request.user_agent

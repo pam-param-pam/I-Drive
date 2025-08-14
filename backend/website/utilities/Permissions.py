@@ -199,27 +199,33 @@ class CheckReady(BaseResourceCheck):
 
 
 class CheckFolderLock(BaseResourceCheck):
-    def check(self, request, *resource):
-        resource = resource[0]
+    def check(self, request, *resources):
+        resource = resources[0]
         self._require_type(resource, (File, Folder, dict, tuple))
 
         if self._is_locked(resource):
             self._check_ip(request)
-
-        if self._is_locked(resource) and not self._is_password_valid(request, resource): # todo, if not locked u can provide any password
-            raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
+            if not self._is_password_valid(request, resource):
+                raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
+        else:
+            # Resource is unlocked, but someone provided a password? validate it
+            if self._password_provided(request) and not self._is_password_valid(request, resource):
+                raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
 
     def check_bulk(self, request, resources):
         required_passwords = []
         seen_ids = set()
 
         for resource in resources:
-            if self._is_locked(resource) and not self._is_password_valid(request, resource):
-                lock_info = self._build_password_info(resource)
-                lock_id = lock_info["id"]
-                if lock_id not in seen_ids:
-                    required_passwords.append(lock_info)
-                    seen_ids.add(lock_id)
+            if self._is_locked(resource) or self._password_provided(request):
+                if not self._is_password_valid(request, resource):
+                    lock_info = self._build_password_info(resource)
+                    lock_id = lock_info["id"]
+                    if lock_id not in seen_ids:
+                        required_passwords.append(lock_info)
+                        seen_ids.add(lock_id)
+                if self._is_locked(resource):
+                    self._check_ip(request)
 
         if required_passwords:
             raise MissingOrIncorrectResourcePasswordError(required_passwords)
@@ -227,10 +233,16 @@ class CheckFolderLock(BaseResourceCheck):
     def _is_locked(self, resource):
         return self._require_attr(resource, 'is_locked')
 
+    def _password_provided(self, request):
+        # helper to check if user provided any password
+        header_pw = request.headers.get("X-Resource-Password")
+        body_pw = request.data.get('resourcePasswords') or {}
+        return bool(header_pw or body_pw)
+
     def _check_ip(self, request):
         ip, _ = get_ip(request)
-        good_ip = ip in ("127.0.0.1", "192.168.1.1")
-        if not good_ip:
+        allowed_ips = ("127.0.0.1", "192.168.1.1")
+        if ip not in allowed_ips:
             raise LockedFolderWrongIpError(ip=ip)
         return True
 
@@ -243,17 +255,21 @@ class CheckFolderLock(BaseResourceCheck):
         resource_password = self._require_attr(resource, 'password')
         lock_from_id = self._require_attr(resource, 'lockFrom_id')
 
+        # header > body
         if provided_password:
             return provided_password == resource_password
         elif passwords:
             return passwords.get(lock_from_id) == resource_password
-        return False
+        else:
+            # no password provided
+            return not self._is_locked(resource)  # ok only if resource is unlocked
 
     def _build_password_info(self, resource):
         return {
             "id": self._require_attr(resource, "lockFrom_id"),
             "name": get_attr(resource, "lockFrom__name"),
         }
+
 
 class CheckShareItemBelongings(BaseResourceCheck):
     def check(self, request, *resources):

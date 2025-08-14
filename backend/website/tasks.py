@@ -185,15 +185,18 @@ def move_group(grouped_items, new_parent, user_id, request_id, processed_count, 
 
     for old_parent_id, item_group in grouped_items.items():
         old_parent = Folder.objects.get(id=old_parent_id)
-        print(old_parent)
+
         try:
             item_dicts_batch = []
             ids = []
 
             # Perform one normal move on first item to trigger checks & on_save()
             first_item = item_group.pop(0)
-            first_item.parent = new_parent
-            first_item.save()
+            if is_folder:
+                first_item.move_to_new_parent(new_parent)
+            else:
+                first_item.parent = new_parent
+                first_item.save()
 
             send_event(user_id, request_id, old_parent, EventCode.ITEM_MOVE_OUT, [first_item.id])
 
@@ -206,12 +209,12 @@ def move_group(grouped_items, new_parent, user_id, request_id, processed_count, 
 
                 # Prepare remaining items for bulk update
                 for item in batch:
-                    item.parent = new_parent
-                    item.last_modified_at = timezone.now()
-                    # save without bulk update if it's a folder batch
                     if is_folder:
-                        item.refresh_from_db()
-                        item.move_to(new_parent, "last-child")
+                        # save without bulk update if it's a folder batch
+                        item.move_to_new_parent(new_parent)
+                    else:
+                        item.last_modified_at = timezone.now()
+                        item.parent = new_parent
 
                 # Bulk update the batch only if it's a file batch (bulk update messes up MPTT structure I think)
                 if batch and not is_folder:
