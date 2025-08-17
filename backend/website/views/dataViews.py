@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timedelta
 
 from django.db import models
-from django.db.models.aggregates import Sum
+from django.db.models.aggregates import Sum, Count
 from django.db.models.query_utils import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
@@ -447,3 +447,26 @@ def get_attachment_url_view(request, attachment_id):
 
     url = discord.get_attachment_url(request.user, fragment)
     return JsonResponse({"url": url})
+
+
+@api_view(['GET'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+def get_file_stats(request):
+    qs = (
+        File.objects
+        .filter(owner=request.user, inTrash=False)
+        .values('type')
+        .annotate(count=Count('id'), total_size=Sum('size'))
+        .order_by('type')
+    )
+
+    result = {
+        row['type']: {
+            "count": row['count'],
+            "total_size": row['total_size']
+        }
+        for row in qs
+    }
+
+    return JsonResponse(result, safe=False)

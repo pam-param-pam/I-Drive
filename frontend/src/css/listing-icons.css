@@ -162,6 +162,7 @@
 .file-icons [aria-label$=".js"] i,
 .file-icons [aria-label$=".json"] i,
 .file-icons [aria-label$=".zip"] i,
+.file-icons [aria-label$=".gz"] i,
 .file-icons [aria-label$=".bat"] i,
 .file-icons [aria-label$=".msi"] i,
 .file-icons [aria-label$=".odt"] i,

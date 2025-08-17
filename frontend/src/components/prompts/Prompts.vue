@@ -41,6 +41,7 @@ import EditThumbnail from "@/components/prompts/EditThumbnail.vue"
 import Moments from "@/components/prompts/Moments.vue"
 import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
 import shareAccesses from "@/components/prompts/ShareAccesses.vue"
+import { defineAsyncComponent } from "vue"
 
 export default {
    name: "prompts",
@@ -69,7 +70,8 @@ export default {
       EditThumbnail,
       Moments,
       EditSubtitles,
-      shareAccesses
+      shareAccesses,
+      FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
    },
    created() {
       window.addEventListener("keydown", (event) => {

@@ -149,6 +149,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "fileStats": "Statystyki plików",
     "shareVisits": "Wizyty linku",
     "totalVisits": "Wszystkie wizyty",
     "user": "Użytkownik",

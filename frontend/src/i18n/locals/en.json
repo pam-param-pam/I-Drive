@@ -147,6 +147,7 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "fileStats": "File Stats",
     "shareVisits": "Share visits",
     "totalVisits": "Total visits of",
     "user": "user",
