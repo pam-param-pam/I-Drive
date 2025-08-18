@@ -14,7 +14,7 @@ RUN apt-get update && \
 COPY requirements.txt .
 
 # Install Python packages into /install
-RUN pip install --target=/install --no-cache-dir -r requirements.txt --no-deeps
+RUN pip install --target=/install --no-cache-dir -r requirements.txt --no-deps
 
 # Copy the rest of the app
 COPY . .
