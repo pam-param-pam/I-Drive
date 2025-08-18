@@ -3,7 +3,8 @@ import re
 from datetime import datetime, timedelta
 
 from django.db import models
-from django.db.models.aggregates import Sum, Count
+from django.db.models import Count, Sum, Case, When, Value, CharField
+from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
@@ -19,7 +20,7 @@ from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioT
 from ..utilities.constants import cache
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items, disable_common_errors
-from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, CannotProcessDiscordRequestError
+from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
 
@@ -452,18 +453,37 @@ def get_attachment_url_view(request, attachment_id):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-def get_file_stats(request):
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
+def get_file_stats(request, folder_obj):
+    files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False)
+
+    # Annotate lock-related fields
+    files_qs = files_qs.annotate(
+        is_locked=Case(
+            When(parent__password__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField()
+        ),
+        lockFrom_id=F("parent__lockFrom__id")
+    )
+
+    # Annotate type: 'hidden' properly
     qs = (
-        File.objects
-        .filter(owner=request.user, inTrash=False)
-        .values('type')
+        files_qs
+        .annotate(file_type=Case(
+            When(Q(is_locked=True) & ~Q(lockFrom_id=folder_obj.id), then=Value('hidden')),
+            default=F('type'),
+            output_field=CharField()
+        ))
+        .values('file_type')
         .annotate(count=Count('id'), total_size=Sum('size'))
-        .order_by('type')
+        .order_by('file_type')
     )
 
     result = {
-        row['type']: {
-            "count": row['count'],
+        row['file_type']: {
+            "count": None if row['file_type'] == "hidden" else row['count'],
             "total_size": row['total_size']
         }
         for row in qs

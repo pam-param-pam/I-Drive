@@ -84,3 +84,10 @@ export async function resetPassword(folderId, accountPassword, newPassword) {
    return response.data
 
 }
+
+
+export async function getFileStats(folderId) {
+   let url = `/folders/${folderId}/stats`
+   let response = await backendInstance.get(url)
+   return response.data
+}

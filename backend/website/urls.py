@@ -94,6 +94,7 @@ urlpatterns = [
     path("folders/<folder_id>/breadcrumbs", ["GET"], get_breadcrumbs, name="get folder's breadcrumbs"),
     path("folders/<folder_id>/password", ["POST"], change_folder_password, name="change folder password"),
     path("folders/<folder_id>/password/reset", ["POST"], reset_folder_password, name="create folder"),
+    path("folders/<folder_id>/stats", ['GET'], get_file_stats, name="get file stats for folder"),
 
     path("items/move", ["PATCH"], move, name="bulk move items"),
     path("items/moveToTrash", ["PATCH"], move_to_trash, name="bulk move items to trash"),
@@ -151,8 +152,6 @@ urlpatterns = [
 
     path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download"),
     path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
-
-    path("users/stats", ['GET'], get_file_stats, name="download metadata for ultra download"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     # 75 endpoints

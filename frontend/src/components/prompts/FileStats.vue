@@ -1,7 +1,7 @@
 <template>
   <div class="card floating help">
     <div class="card-title">
-      <h2>{{ $t('prompts.fileStats') }}</h2>
+      <h2>{{ $t("prompts.fileStats") }}</h2>
     </div>
 
     <div class="card-content" v-if="stats">
@@ -19,21 +19,21 @@
         type="submit"
         @click="closeHover()"
       >
-        {{ $t('buttons.ok') }}
+        {{ $t("buttons.ok") }}
       </button>
     </div>
   </div>
 </template>
 
 <script>
-import { mapActions } from "pinia"
+import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { getFileStats } from "@/api/user.js"
 
 
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
-import { Pie } from 'vue-chartjs'
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from "chart.js"
+import { Pie } from "vue-chartjs"
 import { filesize } from "@/utils/index.js"
+import { getFileStats } from "@/api/folder.js"
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -52,31 +52,35 @@ export default {
                   displayColors: false,
                   callbacks: {
                      label: (tooltipItem) => {
-                        const label = this.stats.labels ? this.stats.labels[tooltipItem.dataIndex] : ''
+                        let label = this.stats.labels ? this.stats.labels[tooltipItem.dataIndex] : ""
 
                         // safely get the data from rawStats
-                        const item = this.rawStats && this.rawStats[label] ? this.rawStats[label] : { count: 0, total_size: 0 }
+                        let item = this.rawStats && this.rawStats[label] ? this.rawStats[label] : { count: 0, total_size: 0 }
 
                         return [
-                           `Count: ${item.count}`,
+                           item.count ? `Count: ${item.count}` : null,
                            `Size: ${filesize(item.total_size)}`
-                        ]
+                        ].filter(Boolean)
                      }
                   }
                }
             }
-         },
+         }
       }
    },
+   computed: {
+      ...mapState(useMainStore, ["currentFolder"])
+   },
    async created() {
-      this.rawStats = await getFileStats()
+      this.rawStats = await getFileStats(this.currentFolder.id)
       this.stats = {
-         labels: Object.keys(this.rawStats),              // ['files', 'folders']
+         labels: Object.keys(this.rawStats),
          datasets: [
             {
-               label: 'File stats',
+               label: "File stats",
                data: Object.values(this.rawStats).map(item => item.total_size),
-               backgroundColor: ['#FF6384', '#36A2EB'] // add colors
+               backgroundColor: ["#FF6384","#36A2EB","#FFCE56","#4BC0C0","#9966FF","#FF9F40","#C9CBCF","#8BC34A","#E91E63",
+                  "#00BCD4","#F44336","#3F51B5","#CDDC39","#9C27B0","#795548","#607D8B","#009688"]
             }
          ]
       }
@@ -84,7 +88,7 @@ export default {
 
    },
    methods: {
-      ...mapActions(useMainStore, ['closeHover']),
+      ...mapActions(useMainStore, ["closeHover"])
 
    }
 }

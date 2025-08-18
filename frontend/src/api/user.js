@@ -154,9 +154,3 @@ export async function logoutAllDevices() {
    let response = await backendInstance.post(url)
    return response.data
 }
-
-export async function getFileStats() {
-   let url = `/users/stats`
-   let response = await backendInstance.get(url)
-   return response.data
-}
