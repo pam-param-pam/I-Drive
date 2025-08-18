@@ -1,46 +1,47 @@
+# ----------------------------
 # Stage 1: Build Node.js application
-FROM node:latest as build
+# ----------------------------
+FROM node:20-slim AS build
 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package.json .
-COPY package-lock.json .
+# Copy only package files to leverage cache
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci --ignore-scripts
 
-# Install platform-specific dependency for ARM
+# Optional: Install platform-specific dependency for ARM
 ARG TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then npm install sass-embedded-linux-arm64; fi
 
-# Copy the rest of the application code
+# Copy app source code
 COPY . .
 
-# Build the application
+# Build the app
 RUN npm run build
 
-# Stage 2: Setup NGINX to serve the built app
-FROM nginx:latest
+# ----------------------------
+# Stage 2: Serve with NGINX
+# ----------------------------
+FROM nginx:stable-alpine
 
-# Create necessary directory for NGINX
+# Create directory for built app
 RUN mkdir -p /var/www/idrive/frontend
 
-# Copy built app from the 'build' stage
+# Copy build output
 COPY --from=build /app/dist /var/www/idrive/frontend
 
-# Copy the entrypoint script
+# Copy entrypoint
 COPY entrypoint.sh /entrypoint.sh
-
 RUN chmod +x /entrypoint.sh
 
-# todo nginx.conf should be moved back to docker, it was commented out for easier development
-# Copy nginx file
-#COPY nginx.conf /etc/nginx/nginx.conf
+# Copy optional nginx config if you want custom behavior
+# COPY nginx.conf /etc/nginx/nginx.conf
 
-# Expose port 80 (default for HTTP)
+# Expose HTTP port
 EXPOSE 80
 
-# Default command to run when container starts
-ENTRYPOINT ["./entrypoint.sh"]
+# Entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
