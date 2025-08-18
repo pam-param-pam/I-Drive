@@ -28,20 +28,24 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.MY_GITHUB_TOKEN }}
 
-    # 4 Build & push Backend image (Multi-Platform)
     - name: Build & Push Backend Image
-      run: |
-        docker buildx build \
-          --platform linux/amd64,linux/arm64 \
-          --push \
-          -t ghcr.io/${{ github.repository_owner }}/idrive-backend:latest \
-          ./backend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
+        cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-backend:cache
+        cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-backend:cache,mode=max
 
-    # 5 Build & push Nginx image (Multi-Platform)
+
     - name: Build & Push Nginx Image
-      run: |
-        docker buildx build \
-          --platform linux/amd64,linux/arm64 \
-          --push \
-          -t ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest \
-          ./frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
+        cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-nginx:cache
+        cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-nginx:cache,mode=max
+
