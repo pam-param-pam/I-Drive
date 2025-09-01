@@ -2,7 +2,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { backendInstance } from "@/utils/networker.js"
 
 export async function getFile(fileId, lockFrom) {
-   const store = useMainStore()
+   let store = useMainStore()
 
    let url = `/files/${fileId}`
    let password = store.getFolderPassword(lockFrom)
@@ -47,7 +47,7 @@ export async function editFile(fileId, data) {
 export async function updateVideoPosition(fileId, lockFrom, data) {
    let url = `/files/${fileId}/video-position`
 
-   const store = useMainStore()
+   let store = useMainStore()
    let password = store.getFolderPassword(lockFrom)
 
    let response = await backendInstance.put(url, data, {
@@ -106,21 +106,30 @@ export async function getTags(fileId) {
 }
 
 
-export async function getSubtitles(fileId) {
-   const url = `/files/${fileId}/subtitles`
-   const response = await backendInstance.get(url)
+export async function getSubtitles(fileId, lockFrom) {
+   let url = `/files/${fileId}/subtitles`
+
+   let store = useMainStore()
+   let password = store.getFolderPassword(lockFrom)
+
+   let response = await backendInstance.get(url, {
+      headers: {
+         "x-resource-password": password
+      }
+   })
+
    return response.data
 }
 
 export async function addSubtitle(fileId, data) {
-   const url = `/files/${fileId}/subtitles`
-   const response = await backendInstance.post(url, data)
+   let url = `/files/${fileId}/subtitles`
+   let response = await backendInstance.post(url, data)
    return response.data
 }
 
 export async function deleteSubtitle(fileId, subtitleId) {
-   const url = `/files/${fileId}/subtitles/${subtitleId}`
-   const response = await backendInstance.delete(url)
+   let url = `/files/${fileId}/subtitles/${subtitleId}`
+   let response = await backendInstance.delete(url)
    return response.data
 }
 

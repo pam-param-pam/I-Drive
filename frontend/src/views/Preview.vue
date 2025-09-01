@@ -558,7 +558,7 @@ export default {
 
       async fetchSubtitles() {
          if (!this.isInShareContext) {
-            this.subtitles = await getSubtitles(this.file.id)
+            this.subtitles = await getSubtitles(this.file.id, this.file.lockFrom)
          } else {
             this.subtitles = await getShareSubtitles(this.token, this.file.id)
 
