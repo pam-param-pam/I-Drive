@@ -38,6 +38,7 @@ export async function* prepareRequests() {
    const MP4Box = await getMp4Box() //todo only if video file
 
    let maxChunkSize = mainStore.user.maxDiscordMessageSize
+   let maxChunks = mainStore.user.maxAttachmentsPerMessage
 
    let totalSize = 0
    let attachments = []
@@ -137,7 +138,7 @@ export async function* prepareRequests() {
          i++
 
          // we have to yield
-         if (totalSize >= maxChunkSize || attachments.length >= 9) {
+         if (totalSize >= maxChunkSize || attachments.length >= maxChunks-1) {
             yield { "totalSize": totalSize, "attachments": attachments }
             totalSize = 0
             attachments = []

@@ -158,6 +158,10 @@ class MediaThrottle(MyUserRateThrottleBase):
     scope = 'media'
     bucket = "lMnOpQrStU"
 
+class AnonUserMediaThrottle(MyUserRateThrottleBase):
+    scope = 'media_anon'
+    bucket = "lYnOX4rStU"
+
 class SearchThrottle(MyUserRateThrottleBase):
     scope = 'search'
     bucket = "VwXyZaBcDe"

@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
-from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership
+from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..utilities.constants import cache
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
@@ -336,8 +336,7 @@ def get_trash(request):
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
-@check_resource_permissions([CheckOwnership], resource_key="item_obj")
-@disable_common_errors
+@check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="item_obj")
 def check_password(request, item_obj):
     password = request.headers.get("X-Resource-Password")
 

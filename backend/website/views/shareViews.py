@@ -12,12 +12,12 @@ from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, Chec
     CheckShareItemBelongings, CheckShareOwnership
 from ..utilities.Serializers import ShareSerializer, ShareAccessSerializer
 from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
+from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file, disable_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_breadcrumbs, get_resource, create_share_resource_dict, \
     build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms, log_share_access
 from ..utilities.signer import sign_resource_id_with_expiry
-from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle
+from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle, AnonUserMediaThrottle
 
 
 @api_view(['GET'])
@@ -145,11 +145,12 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-def create_share_zip_model(request, share_obj):  # todo
+@disable_common_errors
+def create_share_zip_model(request, share_obj: ShareableLink):  # todo
     ids = request.data['ids']
     validate_ids_as_list(ids)
 
-    user_zip = UserZIP.objects.create(owner=request.user)
+    user_zip = UserZIP.objects.create(owner=share_obj.owner)  # TODO does it make sense to have thing hack? zip owner != real owner, rather the viewie
 
     for item_id in ids:
         item = get_resource(item_id)
@@ -162,7 +163,7 @@ def create_share_zip_model(request, share_obj):  # todo
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
+@throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
@@ -179,7 +180,7 @@ def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
+@throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
@@ -192,7 +193,7 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
+@throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
@@ -205,7 +206,7 @@ def share_view_preview(request, share_obj: ShareableLink, file_obj: File):
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
+@throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
@@ -218,7 +219,7 @@ def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subti
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
+@throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired], resource_key="share_obj")

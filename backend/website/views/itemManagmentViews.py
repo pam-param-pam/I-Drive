@@ -48,8 +48,6 @@ def create_folder(request, parent):
     check_resource_permissions(default_checks, resource_key="new_parent_obj"),
     check_bulk_permissions(default_checks & CheckRoot)
 )
-# @check_resource_permissions(default_checks, resource_key="new_parent_obj")
-# @check_bulk_permissions(default_checks & CheckRoot)
 def move(request, new_parent_obj, items):
     new_parent_id = new_parent_obj.id
 

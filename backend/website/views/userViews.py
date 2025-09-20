@@ -10,7 +10,7 @@ from ..discord.DiscordHelper import DiscordHelper
 from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, UserPerms, Channel, File, PerDeviceToken
 from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks, CreatePerms, ModifyPerms, ReadPerms, AdminPerms
 from ..utilities.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS
+from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE
 from ..utilities.decorators import check_resource_permissions, extract_folder
 from ..utilities.errors import ResourcePermissionError, BadRequestError
 from ..utilities.other import get_webhook, query_attachments, obtain_discord_settings, create_token
@@ -68,7 +68,7 @@ def users_me(request):
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
 
-    response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE},
+    response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE, "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE},
                 "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
                           "lock": perms.lock,
                           "modify": perms.modify, "delete": perms.delete, "share": perms.share,

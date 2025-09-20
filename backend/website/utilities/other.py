@@ -322,6 +322,7 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
     into a flattened list with file IDs and names including folders, but excluding the root folder name.
 
     This function is used by zip.
+    This function omits the folders locked with a diff password
     """
     children = []
 
@@ -333,7 +334,7 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
 
     # Collect all files in the current folder
     files = folder.files.filter(ready=True, inTrash=False)
-    if not files.exists():
+    if not files.exists() and root_folder != folder:  # append empty folders, but only for non root
         children.append({"name": base_relative_path, "isDir": True})
     else:
         for file in files:
@@ -342,9 +343,8 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
             children.append(file_dict)
 
     # Recursively collect all subfolders and their children
-    for subfolder in folder.subfolders.all():
+    for subfolder in folder.subfolders.filter(lockFrom_id=root_folder.id):
         children.extend(get_flattened_children(subfolder, base_relative_path, root_folder))
-
     return children
 
 def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:

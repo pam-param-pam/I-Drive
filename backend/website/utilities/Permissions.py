@@ -198,7 +198,23 @@ class CheckReady(BaseResourceCheck):
             raise ResourcePermissionError("Resource is not ready")
 
 
-class CheckFolderLock(BaseResourceCheck):
+class CheckLockedFolderIP(BaseResourceCheck):
+    def check(self, request, *resources):
+        resource = resources[0]
+        self._require_type(resource, (File, Folder, dict, tuple))
+        self._check_ip(request)
+
+    def _is_locked(self, resource):
+        return self._require_attr(resource, 'is_locked')
+
+    def _check_ip(self, request):
+        ip, _ = get_ip(request)
+        allowed_ips = ("127.0.0.1", "192.168.1.1")
+        if ip not in allowed_ips:
+            raise LockedFolderWrongIpError(ip=ip)
+        return True
+
+class CheckFolderLock(CheckLockedFolderIP):
     def check(self, request, *resources):
         resource = resources[0]
         self._require_type(resource, (File, Folder, dict, tuple))
@@ -230,21 +246,11 @@ class CheckFolderLock(BaseResourceCheck):
         if required_passwords:
             raise MissingOrIncorrectResourcePasswordError(required_passwords)
 
-    def _is_locked(self, resource):
-        return self._require_attr(resource, 'is_locked')
-
     def _password_provided(self, request):
         # helper to check if user provided any password
         header_pw = request.headers.get("X-Resource-Password")
         body_pw = request.data.get('resourcePasswords') or {}
         return bool(header_pw or body_pw)
-
-    def _check_ip(self, request):
-        ip, _ = get_ip(request)
-        allowed_ips = ("127.0.0.1", "192.168.1.1")
-        if ip not in allowed_ips:
-            raise LockedFolderWrongIpError(ip=ip)
-        return True
 
     def _is_password_valid(self, request, resource):
         provided_password = request.headers.get("X-Resource-Password")

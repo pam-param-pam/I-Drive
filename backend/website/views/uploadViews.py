@@ -9,14 +9,15 @@ from rest_framework.decorators import api_view, throttle_classes, permission_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Fragment, Thumbnail
-from ..utilities.Permissions import CreatePerms, default_checks, CheckTrash, ModifyPerms
+from ..utilities.Permissions import CreatePerms, default_checks, ModifyPerms
 from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import extract_file, check_resource_permissions
 from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, check_resource_perms, get_folder, get_file, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
+from ..utilities.other import send_event, check_resource_perms, get_folder, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
     create_video_metadata, validate_ids_as_list, group_and_send_event, get_file_type
 from ..utilities.throttle import defaultAuthUserThrottle
+
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])

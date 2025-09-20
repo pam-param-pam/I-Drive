@@ -10,7 +10,10 @@ DISCORD_BASE_URL = "https://discord.com/api/v10"
 # Auth token expire time
 TOKEN_EXPIRY_DAYS = 30
 
-# Max size of 1 message in discord, aka sum of all attachment sizes in bytes: < 10Mb
+# Max attachments in 1 message in discord
+MAX_ATTACHMENTS_PER_MESSAGE = 10
+
+# Max size of 1 discord message
 MAX_DISCORD_MESSAGE_SIZE = 10 * 1023 * 1024
 
 # Max size of a file that we allow to be previewable in bytes: 50Mb

@@ -418,7 +418,6 @@ export function parseVideoMetadata(info) {
          videoMetadata.subtitle_tracks.push(track)
       }
    }
-   console.log(videoMetadata)
    return videoMetadata
 }
 

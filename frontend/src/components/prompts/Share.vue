@@ -174,6 +174,7 @@ export default {
          this.$toast.success(this.$root.$t('settings.shareCreated'))
 
          this.listing = true
+         await navigator.clipboard.writeText(this.buildLink(res))
       }),
 
       async deleteLink(event, share) {

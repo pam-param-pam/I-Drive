@@ -180,6 +180,7 @@ REST_FRAMEWORK = {
         'anon': '30/m',
         'user': '25/5s',
         'media': '1000/m',
+        'media_anon': '100/m',
         'folder_password': '20/m',
         'password_change': '10/m',
         'search': '60/m',

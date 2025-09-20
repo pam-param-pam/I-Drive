@@ -27,9 +27,10 @@ from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
 from ..utilities.Decryptor import Decryptor
+from ..utilities.Permissions import CheckLockedFolderIP
 from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
-from ..utilities.decorators import extract_file_from_signed_url, no_gzip
+from ..utilities.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
 from ..utilities.errors import DiscordError, BadRequestError, FailedToResizeImage
 from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, get_content_disposition_string
 from ..utilities.other import send_event
@@ -41,6 +42,7 @@ from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 @permission_classes([AllowAny])
 @cache_page(60 * 60 * 24)
 @extract_file_from_signed_url
+@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_preview(request, file_obj: File):
     try:
         preview = Preview.objects.get(file=file_obj)
@@ -158,6 +160,7 @@ def stream_preview(request, file_obj: File):
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
 @extract_file_from_signed_url
+@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_thumbnail(request, file_obj: File):
     size_param = request.GET.get("size", "original").lower()
 
@@ -239,6 +242,7 @@ def stream_thumbnail(request, file_obj: File):
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
 @extract_file_from_signed_url
+@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_subtitle(request, file_obj: File, subtitle_id):
     check_if_bots_exists(file_obj.owner)
 
@@ -266,6 +270,7 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
 @permission_classes([AllowAny])
 @cache_page(60 * 60 * 24 * 30)
 @extract_file_from_signed_url
+@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_moment(request, file_obj: File, timestamp):
     check_if_bots_exists(file_obj.owner)
 
@@ -291,6 +296,7 @@ def stream_moment(request, file_obj: File, timestamp):
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
 @extract_file_from_signed_url
+@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_file(request, file_obj: File):
     print(f"========={file_obj.name}=========")
 
@@ -412,6 +418,7 @@ def stream_file(request, file_obj: File):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 def stream_zip_files(request, token):
+    #todo secure for locked folders/files from wrong ip
     range_header = request.headers.get('Range')
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
