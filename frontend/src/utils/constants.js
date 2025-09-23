@@ -2,7 +2,7 @@ export const name = "I Drive"
 
 export const baseWS = import.meta.env.VITE_BACKEND_BASE_WS || "{{ VITE_BACKEND_BASE_WS }}"
 
-export const baseURL =  import.meta.env.VITE_BACKEND_BASE_URL || "{{ VITE_BACKEND_BASE_URL }}"
+export const baseURL = import.meta.env.VITE_BACKEND_BASE_URL || "{{ VITE_BACKEND_BASE_URL }}"
 
 export const author = "Pam"
 
@@ -35,23 +35,18 @@ export const fileUploadStatus = {
    encrypting: "encrypting",
    finishing: "finishing",
    uploaded: "uploaded",
+   waitingForSave: "waitingForSave",
    uploading: "uploading",
-   creating: "creating",
    failed: "failed",
-   paused: "paused",
-   pausing: "pausing",
-   resuming: "resuming",
-   canceling: "canceling",
-   canceled: "canceled"
+   fileGone: "fileGone",
+   waitingForInternet: "waitingForInternet"
 }
 
 export const uploadState = {
    idle: "idle",
    uploading: "uploading",
    paused: "paused",
-   pausing: "pausing",
-   resuming: "resuming",
    canceled: "canceled",
-   aborting: "aborting"
-
+   aborting: "aborting",
+   noInternet: "noInternet"
 }

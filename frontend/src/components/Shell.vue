@@ -220,7 +220,6 @@ export default {
             try {
                let context_folder = this.currentFolder.id ? this.currentFolder : this.user.root
                let res = await getItems(context_folder)
-               console.log(res)
                let items = res.folder.children
 
                items.forEach((item) => {

@@ -133,37 +133,25 @@ export function getWebhook() {
    const uploadStore = useUploadStore()
    const webhooks = uploadStore.webhooks
 
-   // Step 1: Group webhooks by channel ID
-   const channelMap = new Map()
-   webhooks.forEach((wh) => {
-      const channelId = wh.channel.id
-      if (!channelMap.has(channelId)) {
-         channelMap.set(channelId, [])
-      }
-      channelMap.get(channelId).push(wh)
+   if (!webhooks || webhooks.length === 0) return null
+
+   // Count webhooks per channel
+   const channelCounts = {}
+   webhooks.forEach(wh => {
+      const id = wh.channel.id
+      channelCounts[id] = (channelCounts[id] || 0) + 1
    })
 
-   // Step 2: Assign weights to each channel
-   const weightedChannels = []
-   for (const [channelId, hooks] of channelMap.entries()) {
-      const weight = 1 / hooks.length // Fewer webhooks = higher weight
-      weightedChannels.push({ channelId, webhooks: hooks, weight })
-   }
+   // Build a flat weighted array: more weight for channels with fewer webhooks
+   const weightedWebhooks = []
+   webhooks.forEach(wh => {
+      const weight = 1 / channelCounts[wh.channel.id]
+      const times = Math.ceil(weight * 100) // scale to integer
+      for (let i = 0; i < times; i++) weightedWebhooks.push(wh)
+   })
 
-   // Step 3: Weighted random selection of a channel
-   const totalWeight = weightedChannels.reduce((sum, ch) => sum + ch.weight, 0)
-   let r = Math.random() * totalWeight
-   for (let i = 0; i < weightedChannels.length; i++) {
-      r -= weightedChannels[i].weight
-      if (r <= 0) {
-         const hooks = weightedChannels[i].webhooks
-         return hooks[Math.floor(Math.random() * hooks.length)]
-      }
-   }
-
-   // Fallback
-   const last = weightedChannels[weightedChannels.length - 1]
-   return last.webhooks[Math.floor(Math.random() * last.webhooks.length)]
+   // Pick a random webhook from the weighted array
+   return weightedWebhooks[Math.floor(Math.random() * weightedWebhooks.length)]
 }
 
 
@@ -180,12 +168,10 @@ export async function makeThumbnailIfNeeded(queueFile) {
    //generating a thumbnail if needed for video file
    if (isVideoFile(queueFile.fileObj.extension)) {
       try {
-         console.log("getting video cover:")
          let data = await getVideoCover(queueFile)
          let duration = data.duration
          thumbnail = data.thumbnail
          queueFile.fileObj.duration = Math.round(duration)
-         console.log("finnished getting video cover")
 
       } catch (e) {
          console.warn(e)
@@ -431,39 +417,6 @@ export function appendMp4BoxBuffer(mp4box, chunk, offset) {
 }
 
 
-export async function getOrCreateFolder(fileObj) {
-   let uploadStore = useUploadStore()
-   let path = fileObj.path
-   if (path === "") {
-      return fileObj.folderContext
-   }
-
-   // Split path into parts (e.g., ["folder_1", "folder_2", "folder_3"])
-   let pathParts = path.split("/")
-
-   let parentFolder = fileObj.folderContext
-   for (let i = 1; i <= pathParts.length; i++) {
-      // idziemy od tyłu po liscie czyli jesli lista to np [a1, b2, c3, d4, e5, f6]
-      // to najpierw bedziemy mieli a1
-      // potem a1, b2
-      // potem a1, b2, c3
-      let path_key = fileObj.uploadId + pathParts.slice(0, i).join("/")
-      if (uploadStore.createdFolders[path_key]) {
-         parentFolder = uploadStore.createdFolders[path_key]
-      } else {
-         let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
-
-         let folder = await create({ "parent_id": parentFolder, "name": folderName }, {
-            __retry500: true
-         })
-         parentFolder = folder.id
-         uploadStore.createdFolders[path_key] = folder.id
-      }
-   }
-   return parentFolder
-}
-
-
 export function ivToBase64(iv) {
    // First, convert the Uint8Array to a regular binary string
    let binary = ""
@@ -504,19 +457,9 @@ export function generateKey(method) {
 
 
 export async function upload(formData, config) {
-   let mainStore = useMainStore()
-
-   let url
    let headers = {}
-   if (mainStore.settings.useProxy) {
-      url = baseURL + "/proxy/discord"
-      let token = localStorage.getItem("token")
-      headers["Authorization"] = `Token ${token}`
+   let url = getWebhook().url
 
-   } else {
-      url = getWebhook().url
-
-   }
    config.headers = {
       ...config.headers,
       ...headers

@@ -391,7 +391,6 @@ export default {
                   }
                }
             } catch (error) {
-               console.log("ERROR HAPPEND")
                if (error.code === "ERR_CANCELED") return
                this.setError(error)
             } finally {

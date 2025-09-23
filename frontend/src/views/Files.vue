@@ -30,14 +30,13 @@ import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { scanDataTransfer } from "@/utils/uploadHelper.js"
+import { scanDataTransfer } from "@/upload/uploadHelper.js"
 import { uploadType } from "@/utils/constants.js"
 import { name } from "@/utils/constants"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { cancelTokenMap } from "@/utils/networker.js"
-import i18n from "@/i18n/index.js"
 
 export default {
    name: "files",

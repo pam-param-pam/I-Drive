@@ -84,7 +84,6 @@ export default {
             }
          ]
       }
-      console.log(this.stats)
 
    },
    methods: {

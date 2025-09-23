@@ -116,7 +116,6 @@ export default {
             this.closeHover()
             if (confirmFunc) confirmFunc()
          } else {
-            console.log("showHovershowHovershowHover")
             let confirm = this.currentPrompt.confirm
             this.closeHover()
             this.$nextTick(() => {

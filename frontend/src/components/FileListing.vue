@@ -728,7 +728,6 @@ export default {
       },
 
       calculateGridLayout(containerWidth) {
-         console.log("calculateGridLayout")
          if (this.viewMode !== 'grid') return
 
          let maxTileWidth = 225

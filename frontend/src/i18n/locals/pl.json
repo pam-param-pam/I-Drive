@@ -462,6 +462,9 @@
     "pausing": "Zatrzymywanie...",
     "preparingUpload": "Przygotowywanie przesyłania",
     "success": "Plik zapisany",
-    "toggleUploadList": "Przełącz liste"
+    "toggleUploadList": "Przełącz liste",
+    "fatal": "Krytyczny błąd",
+    "fileGone": "Brak pliku na dysku"
+
   }
 }

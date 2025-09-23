@@ -2,7 +2,7 @@
    <div v-if="filesInUploadCount > 0" class="upload-files" v-bind:class="{ closed: !open }">
       <div class="card floating">
          <div class="card-title">
-            <h2 v-if="state === uploadState.uploading">
+            <h2 v-if="state !== uploadState.idle && state !== uploadState.paused">
                {{ $t('prompts.uploadFiles', { amount: filesInUploadCount }) }}
             </h2>
             <h2 v-if="state === uploadState.paused">
@@ -15,7 +15,16 @@
 
             <div class="action-buttons">
                <button
-                  v-if="state === uploadState.uploading"
+                 v-if="state === uploadState.noInternet && !isAllUploadsFinished"
+                 :aria-label="$t('uploadFile.retry')"
+                 :title="$t('uploadFile.retry')"
+                 class="action"
+                 @click="retry"
+               >
+                  <i class="material-icons">refresh</i>
+               </button>
+               <button
+                  v-if="state === uploadState.uploading && !isAllUploadsFinished"
                   :aria-label="$t('uploadFile.pause')"
                   :title="$t('uploadFile.pause')"
                   class="action"
@@ -24,7 +33,7 @@
                   <i class="material-icons">pause</i>
                </button>
                <button
-                  v-if="state === uploadState.paused"
+                  v-if="state === uploadState.paused && !isAllUploadsFinished"
                   :aria-label="$t('uploadFile.pause')"
                   :title="$t('uploadFile.pause')"
                   class="action"
@@ -46,12 +55,12 @@
          </div>
          <div class="card-content">
             <UploadFile
-               v-for="file in filesInUpload"
-               :key="file.frontedId"
-               :aria-label="file.name"
+               v-for="fileState in filesInUpload"
+               :key="fileState.frontedId"
+               :aria-label="fileState.fileObj.name"
                :data-dir="false"
-               :data-type="file.type"
-               :file="file"
+               :data-type="fileState.fileObj.type"
+               :fileState="fileState"
             />
          </div>
       </div>
@@ -78,7 +87,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useUploadStore, ["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta", "state"]),
+      ...mapState(useUploadStore, ["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta", "state", "isAllUploadsFinished"]),
       uploadState() {
          return uploadState
       },
@@ -104,18 +113,19 @@ export default {
    },
 
    methods: {
-      ...mapActions(useUploadStore, ['abortAll', 'pauseAll', 'resumeAll', 'forceUnstuck']),
+      ...mapActions(useUploadStore, ['abortAll', 'pauseAll', 'resumeAll', 'retryAll']),
 
       filesize,
 
       toggle() {
          this.open = !this.open
       },
-
+      retry() {
+         this.retryAll()
+      },
       pause() {
          this.pauseAll()
       },
-
       resume(event) {
          if (event.ctrlKey && event.shiftKey) {
             this.forceUnstuck()

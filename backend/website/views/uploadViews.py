@@ -23,6 +23,7 @@ from ..utilities.throttle import defaultAuthUserThrottle
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
 def create_file(request):
+    return HttpResponse(status=404)
     check_if_bots_exists(request.user)
 
     files = request.data['files']

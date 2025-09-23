@@ -4,7 +4,7 @@ import i18n from "@/i18n/index.js"
 import { logout } from "@/utils/auth.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { noWifi } from "@/utils/common.js"
 
 const toast = useToast()
 
@@ -45,16 +45,13 @@ export const uploadInstance = axios.create({
 })
 
 
-// Add a response interceptor
 uploadInstance.interceptors.response.use(
    function(response) {
-      const uploadStore = useUploadStore()
-      uploadStore.isInternet = true
       upload_429_errors--
       return response
    },
    function(error) {
-      if (error?.config?.onErrorCallback) error.config.onErrorCallback()
+      if (error?.config?.onErrorCallback) error.config.onErrorCallback(error)
       const mainStore = useMainStore()
 
       if (upload_429_errors > 5) {
@@ -63,7 +60,6 @@ uploadInstance.interceptors.response.use(
             timeout: 10000,
             position: "bottom-right"
          })
-         mainStore.settings.useProxy = !mainStore.settings.useProxy
          mainStore.settings.concurrentUploadRequests = 2
       }
 
@@ -78,11 +74,8 @@ uploadInstance.interceptors.response.use(
             console.log(`Received 429, retrying after ${waitTime} milliseconds.`)
             return retry(error, waitTime)
          }
-      } else if ((!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502) {
-         // no internet!
-         const uploadStore = useUploadStore()
-         uploadStore.isInternet = false
-         return retry(error, 5000)
+      } else if (noWifi(error)) {
+         return retry(error, 100)
       }
       //handle discord fucking itself up
       else if (error.response && error.response.status >= 500) {
@@ -122,9 +115,6 @@ backendInstance.interceptors.request.use(
 
 backendInstance.interceptors.response.use(
    function(response) {
-      //store.commit("setLoading", false)
-      const uploadStore = useUploadStore()
-      uploadStore.isInternet = true
       return response
    },
    async function(error) {
@@ -166,13 +156,9 @@ backendInstance.interceptors.response.use(
             return retry(error, waitTime)
          }
       }
-      if (((!response && error.code === "ERR_NETWORK") || response && response.status === 502) && config.__retry500) {
-         // no internet!
-         const uploadStore = useUploadStore()
-         uploadStore.isInternet = false
+      if (noWifi(error) && config.__retry500) {
          return retry(error, 5000)
       }
-
 
       if (response && response.status === 500 && config.__retry500) {
          console.warn(`Received 500, retrying after 1 seconds.`)
@@ -251,8 +237,6 @@ backendInstance.interceptors.response.use(
 
             if (passwordMissing.length > 0) {
                return new Promise((resolve, reject) => {
-                  console.log("PASSWORD IS MISSINGF")
-                  console.log(config)
                   store.showHover({
                      prompt: "FolderPassword",
                      props: { requiredFolderPasswords: response.data.requiredFolderPasswords, isInShareContext: config.__shareContext },

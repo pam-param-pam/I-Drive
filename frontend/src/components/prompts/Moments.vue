@@ -76,7 +76,7 @@
 </template>
 
 <script>
-import { captureVideoFrame, generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
+import { captureVideoFrame, generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"

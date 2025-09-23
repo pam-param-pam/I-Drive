@@ -51,7 +51,7 @@
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { encrypt } from "@/utils/encryption.js"
-import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
 import { createThumbnail } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"

@@ -52,7 +52,7 @@ import throttle from "lodash.throttle"
 import { encrypt } from "@/utils/encryption.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
-import { generateIv, generateKey, upload } from "@/utils/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
 
@@ -188,8 +188,6 @@ export default {
 
          // if editor is opened from Share
          if (this.isInShareContext) {
-            console.log("shareee")
-            console.log(this.folderId)
             let res = await getShare(this.token, this.folderId)
             this.shareObj = res
             this.setItems(res.share)
@@ -199,7 +197,6 @@ export default {
                   this.file = this.items[i]
                }
             }
-            console.log(this.file)
          }
          // if It's opened from Files, hence we know the user
          else {

@@ -109,8 +109,6 @@ export default {
             return { name: 'Share', params: { token: this.token, folderId: item.id } }
          } else {
             if ((item.type === 'Text' || item.type === "Code") && item.size < 1024 * 1024) {
-               console.log("setting shareEditor")
-               console.log(item.parent_id)
                return {
                   name: 'ShareEditor',
                   params: { folderId: item.parent_id, fileId: item.id, token: this.token }
@@ -156,7 +154,6 @@ export default {
             this.setItems(res.share)
             this.shareState = 'success'
          } catch (e) {
-            console.log(e)
             this.shareState = 'error'
             this.setItems(null)
             this.setError(e)

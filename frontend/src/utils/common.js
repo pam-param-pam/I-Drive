@@ -65,3 +65,7 @@ export function humanTime(date) {
    }
    return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
 }
+
+export function noWifi(error) {
+   return (!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502
+}

@@ -97,7 +97,6 @@ export default {
       },
 
       async exit() {
-         console.log('exiting search')
          this.resetSelected()
          this.$emit('exit')
 

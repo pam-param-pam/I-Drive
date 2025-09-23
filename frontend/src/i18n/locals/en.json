@@ -464,6 +464,8 @@
     "pausing": "Pausing...",
     "preparingUpload": "Preparing for upload",
     "success": "Uploaded",
-    "toggleUploadList": "Toggle file upload list"
+    "toggleUploadList": "Toggle file upload list",
+    "fatal": "Fatal error",
+    "fileGone": "File is gone, moved or deleted"
   }
 }
