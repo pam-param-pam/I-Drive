@@ -1,21 +1,21 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { create } from "@/api/folder.js"
-import { baseURL, encryptionMethod } from "@/utils/constants.js"
+import { encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
 import jsmediatags from "jsmediatags"
 import { uploadInstance } from "@/utils/networker.js"
-import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
 
 const toast = useToast()
 
 
 export async function checkFilesSizes(files) {
+   return false // todo
    let smallFileCount = 0
    let threshold = 100
    let maxFileSize = 0.5 * 1024 * 1024 // 0.5 MB in bytes
 
    for (let file of files) {
-      if (file.size < maxFileSize) {
+      let size = file.file?.size || file.size
+      if (size < maxFileSize) {
          smallFileCount++
          if (smallFileCount > threshold) {
             return true
@@ -463,6 +463,13 @@ export async function upload(formData, config) {
    config.headers = {
       ...config.headers,
       ...headers
-   }
+   } //+ "aaa"
    return await uploadInstance.post(url, formData, config)
+}
+
+export function isErrorStatus(status) {
+   return status === fileUploadStatus.errorOccurred ||
+      status === fileUploadStatus.uploadFailed ||
+      status === fileUploadStatus.saveFailed ||
+      status === fileUploadStatus.fileGone
 }

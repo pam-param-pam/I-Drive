@@ -35,9 +35,10 @@ export function detectType(type, extension) {
 
 self.onmessage = async (event) => {
 
-   let { typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword } = event.data
+   let { typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom } = event.data
    let files = []
 
+   let totalBytes = 0
    for (let i = 0; i < filesList.length; i++) {
       let frontendId = uuidv4()
       let file
@@ -68,10 +69,11 @@ self.onmessage = async (event) => {
       }
 
       let crc = 0
-      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt, extension, parentPassword, crc }, "systemFile": file })
+      totalBytes += size
+      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, type, name, frontendId, createdAt, extension, parentPassword, lockFrom, crc }, "systemFile": file })
    }
 
-   self.postMessage(files)
+   self.postMessage({files, totalBytes})
 
 
 }

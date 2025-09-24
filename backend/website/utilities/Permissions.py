@@ -228,24 +228,6 @@ class CheckFolderLock(CheckLockedFolderIP):
             if self._password_provided(request) and not self._is_password_valid(request, resource):
                 raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
 
-    def check_bulk(self, request, resources):
-        required_passwords = []
-        seen_ids = set()
-
-        for resource in resources:
-            if self._is_locked(resource) or self._password_provided(request):
-                if not self._is_password_valid(request, resource):
-                    lock_info = self._build_password_info(resource)
-                    lock_id = lock_info["id"]
-                    if lock_id not in seen_ids:
-                        required_passwords.append(lock_info)
-                        seen_ids.add(lock_id)
-                if self._is_locked(resource):
-                    self._check_ip(request)
-
-        if required_passwords:
-            raise MissingOrIncorrectResourcePasswordError(required_passwords)
-
     def _password_provided(self, request):
         # helper to check if user provided any password
         header_pw = request.headers.get("X-Resource-Password")

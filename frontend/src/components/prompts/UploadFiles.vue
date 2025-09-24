@@ -42,6 +42,15 @@
                   <i class="material-icons">play_arrow</i>
                </button>
                <button
+                 v-if="state === uploadState.paused && !isAllUploadsFinished"
+                 :aria-label="$t('uploadFile.abortAll')"
+                 :title="$t('uploadFile.abortAll')"
+                 class="action"
+                 @click="abortAll"
+               >
+                  <i class="material-icons">close</i>
+               </button>
+               <button
                   :aria-label="$t('uploadFile.toggleUploadList')"
                   :title="$t('uploadFile.toggleUploadList')"
                   class="action"
@@ -56,7 +65,7 @@
          <div class="card-content">
             <UploadFile
                v-for="fileState in filesInUpload"
-               :key="fileState.frontedId"
+               :key="fileState.frontendId"
                :aria-label="fileState.fileObj.name"
                :data-dir="false"
                :data-type="fileState.fileObj.type"
@@ -74,6 +83,9 @@ import { filesize } from '@/utils/index.js'
 import UploadFile from '@/components/upload/UploadFile.vue'
 import upload from '@/components/prompts/Upload.vue'
 import { uploadState } from '@/utils/constants.js'
+import router from "@/router/index.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { getUploader } from "@/upload/Uploader.js"
 
 export default {
    name: 'uploadFiles',
@@ -113,10 +125,20 @@ export default {
    },
 
    methods: {
-      ...mapActions(useUploadStore, ['abortAll', 'pauseAll', 'resumeAll', 'retryAll']),
+      ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'retryAll']),
+      ...mapActions(useMainStore, ['showHover']),
 
       filesize,
+      abortAll() {
+         getUploader().backendManager.saveFilesIfNeeded() //todo
+         this.showHover({
+            prompt: 'AbortAllWarning',
+            confirm: () => {
+               router.go(0)
 
+            }
+         })
+      },
       toggle() {
          this.open = !this.open
       },

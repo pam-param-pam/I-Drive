@@ -250,14 +250,14 @@ def check_bulk_permissions(checks, resource_key="items"):
             seen_ids = set()
 
             for check in checks:
-                try:
-                    for resource in resources:
+                for resource in resources:
+                    try:
                         check().check(request, resource)
-                except MissingOrIncorrectResourcePasswordError as e:
-                    for pwd in e.requiredPasswords:
-                        if pwd["id"] not in seen_ids:
-                            all_required_passwords.append(pwd)
-                            seen_ids.add(pwd["id"])
+                    except MissingOrIncorrectResourcePasswordError as e:
+                        for pwd in e.requiredPasswords:
+                            if pwd["id"] not in seen_ids:
+                                all_required_passwords.append(pwd)
+                                seen_ids.add(pwd["id"])
 
             if all_required_passwords:
                 raise MissingOrIncorrectResourcePasswordError(all_required_passwords)

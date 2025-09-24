@@ -149,6 +149,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "abortAll": "Anuluj przesyłanie",
+    "abortAllWarning": "Czy jesteś pewien? Cały progress zostanie utracony!",
     "fileStats": "Statystyki plików",
     "shareVisits": "Wizyty linku",
     "totalVisits": "Wszystkie wizyty",
@@ -380,6 +382,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "uploadFinished": "Przesyłanie zakończone!",
     "deviceRevoked": "Urządzenie zostało wylogowane!",
     "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto rzeczy z discorda",
     "autoSetupInProgress": "Poczekaj chwile, trwa konfiguracja...",
@@ -453,15 +456,13 @@
   "uploadFile": {
     "abortAll": "Przerwij wszystko",
     "creating": "Tworzenie...",
-    "encrypting": "szyfrowanie...",
+    "waitingForSave": "Zapisywanie...",
+    "waitingForInternet": "Brak internetu...",
+    "retrying": "Ponawianie...",
     "failed": "Wystąpił nieznany bląd",
-    "finishing": "Zapisywanie...",
-    "generatingThumbnail": "Tworzenie podglądu",
     "noInternet": "Brak internetu",
     "paused": "Zatrzymano",
-    "pausing": "Zatrzymywanie...",
-    "preparingUpload": "Przygotowywanie przesyłania",
-    "success": "Plik zapisany",
+    "success": "Plik przesłany",
     "toggleUploadList": "Przełącz liste",
     "fatal": "Krytyczny błąd",
     "fileGone": "Brak pliku na dysku"

@@ -147,6 +147,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "abortAll": "Cancel Upload",
+    "abortAllWarning": "Are you sure? All files in the queue will be lost!",
     "fileStats": "File Stats",
     "shareVisits": "Share visits",
     "totalVisits": "Total visits of",
@@ -381,6 +383,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "uploadFinished": "Upload finished!",
     "deviceRevoked": "Device revoked!",
     "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",
     "autoSetupInProgress": "Auto setup in progress...",
@@ -453,16 +456,13 @@
   },
   "uploadFile": {
     "pause": "Pause",
+    "waitingForSave": "Saving...",
+    "waitingForInternet": "Waiting for internet...",
+    "retrying": "Retrying...",
     "abortAll": "Abort all",
-    "creating": "Creating...",
-    "encrypting": "encrypting...",
     "failed": "Failed, unknown error",
-    "finishing": "Saving file...",
-    "generatingThumbnail": "Generating thumbnail",
     "noInternet": "Internet connection lost",
     "paused": "Paused",
-    "pausing": "Pausing...",
-    "preparingUpload": "Preparing for upload",
     "success": "Uploaded",
     "toggleUploadList": "Toggle file upload list",
     "fatal": "Fatal error",

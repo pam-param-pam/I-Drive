@@ -32,19 +32,20 @@ export class DiscordUploader {
    buildDiscordAxiosConfig(request, abortSignal) {
       /**Builds axios config used in DISCORD upload request*/
 
-      let bytesUploaded = 0
+      let totalBytesUploaded = 0
       const uploadStore = this.uploadStore
 
       return {
          onUploadProgress: (progressEvent) => {
-            bytesUploaded = progressEvent.loaded
+            totalBytesUploaded = progressEvent.loaded
             if (progressEvent.rate) {
                uploadStore.onUploadProgress(request, progressEvent)
             }
          },
          /**This is called internally by networker*/
          onErrorCallback: (error) => {
-            uploadStore.fixUploadTracking(request, bytesUploaded, error)
+            //todo display info like error retring...
+            uploadStore.fixUploadTracking(request, totalBytesUploaded, error)
          },
          signal: abortSignal
       }
@@ -58,20 +59,22 @@ export class DiscordUploader {
 
    handleFatalUploadError(err, request) {
       /**Handles axios error in DISCORD upload request*/
-
-      this.uploadStore.addBenchedRequest(request)
-
-      if (noWifi(err)) {
-         this.uploadStore.setState(uploadState.noInternet)
-      }
+      console.log("handleFatalUploadError")
+      this.uploadStore.addFailedRequest(request)
 
       if (!axios.isCancel(err)) {
+         if (noWifi(err)) {
+            this.uploadStore.setState(uploadState.noInternet)
+         }
          request.attachments.forEach(att => {
             if (noWifi(err)) {
                this.uploadStore.setStatus(att.fileObj.frontendId, fileUploadStatus.waitingForInternet)
 
             } else {
-               this.uploadStore.setStatus(att.fileObj.frontendId, fileUploadStatus.failed)
+               console.log(err)
+               this.uploadStore.setStatus(att.fileObj.frontendId, fileUploadStatus.uploadFailed)
+               this.uploadStore.setError(att.fileObj.frontendId, err.message)
+
             }
          })
       }
@@ -82,7 +85,7 @@ export class DiscordUploader {
       let attachmentName = this.uploadStore.attachmentName
 
       if (this.uploadStore.state === uploadState.paused) {
-         this.uploadStore.addBenchedRequest(request)
+         this.uploadStore.addPausedRequest(request)
          throw Error("Upload is paused!")
       }
 
@@ -91,21 +94,20 @@ export class DiscordUploader {
       let config = this.buildDiscordAxiosConfig(request, controller.signal)
 
       try {
-         await this.updateStatus(request)
+         await this.setUploadingStatus(request)
          let discordResponse = await upload(formData, config)
-         this.abortRequestMap.delete(controller)
-         return {request, discordResponse}
+         this.abortRequestMap.delete(request.id)
+         return { request, discordResponse }
       } catch (err) {
          this.handleFatalUploadError(err, request)
          throw err
       }
    }
-   async updateStatus(request) {
+
+   async setUploadingStatus(request) {
       for (let i = 0; i < request.attachments.length; i++) {
          let frontendId = request.attachments[i].fileObj.frontendId
-         //todo possible race conditions during pause etc
          this.uploadStore.setStatus(frontendId, fileUploadStatus.uploading)
-
       }
    }
 

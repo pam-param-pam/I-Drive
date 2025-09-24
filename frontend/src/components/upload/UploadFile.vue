@@ -1,7 +1,7 @@
 <template>
    <div
       :class="{
-         'error-border': fileState.status === fileUploadStatus.failed,
+         'error-border': isErrorStatus(fileState.status),
          'success-border': fileState.status === fileUploadStatus.uploaded,
          'warning-border': state === uploadState.paused && fileState.status !== fileUploadStatus.waitingForSave,
          'shake-animation': isShaking
@@ -32,20 +32,29 @@
                   </button>
                </div>
       </div>
-
+      <div v-if="state === uploadState.noInternet">
+         <span>
+            <b class="error">{{ $t('uploadFile.noInternet') }}</b>
+         </span>
+      </div>
+      <div v-else-if="state === uploadState.paused && fileState.status !== fileUploadStatus.waitingForSave">
+         <span>
+            <b class="warning">{{ $t('uploadFile.paused') }}</b>
+         </span>
+      </div>
       <!-- Lower -->
-      <div v-if="fileState.status && state !== uploadState.noInternet && (state !== uploadState.paused || fileState.status === fileUploadStatus.waitingForSave)">
+      <div v-else-if="fileState.status">
          <span v-if="fileState.status === fileUploadStatus.preparing">
-            <b class="info">{{ $t('uploadFile.preparingUpload') }}</b>
-         </span>
-         <span v-if="fileState.status === fileUploadStatus.finishing">
-            <b class="info">{{ $t('uploadFile.finishing') }}</b>
-         </span>
-         <span v-if="fileState.status === fileUploadStatus.encrypting">
-            <b class="info">{{ $t('uploadFile.encrypting') }}</b>
+            <b class="info">{{ $t('uploadFile.preparing') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.waitingForInternet">
-            <b class="info">{{ $t('uploadFile.waiting') }}</b>
+            <b class="info">{{ $t('uploadFile.waitingForInternet') }}</b>
+         </span>
+         <span v-if="fileState.status === fileUploadStatus.waitingForSave">
+            <b class="info">{{ $t('uploadFile.waitingForSave') }}</b>
+         </span>
+         <span v-if="fileState.status === fileUploadStatus.retrying">
+            <b class="info">{{ $t('uploadFile.retrying') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.uploaded">
             <b class="success">{{ $t('uploadFile.success') }}</b>
@@ -53,8 +62,17 @@
          <span v-if="fileState.status === fileUploadStatus.paused">
             <b class="warning">{{ $t('uploadFile.paused') }}</b>
          </span>
-         <span v-if="fileState.status === fileUploadStatus.failed">
-            <b class="error">{{ $t('uploadFile.failed') }}</b>
+         <span v-if="fileState.status === fileUploadStatus.saveFailed">
+            <b v-if="fileState.error" class="error">{{ fileState.error.details }}</b>
+            <b v-else class="error">{{ $t('uploadFile.failed') }}</b>
+         </span>
+         <span v-if="fileState.status === fileUploadStatus.uploadFailed">
+            <b v-if="fileState.error" class="error">{{ fileState.error }}</b>
+            <b v-else class="error">{{ $t('uploadFile.failed') }}</b>
+         </span>
+         <span v-if="fileState.status === fileUploadStatus.errorOccurred">
+            <b v-if="fileState.error" class="error">{{ fileState.error }}</b>
+            <b v-else class="error">{{ $t('uploadFile.failed') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.fileGone">
             <b class="error">{{ $t('uploadFile.fileGone') }}</b>
@@ -69,16 +87,7 @@
             </span>
          </div>
       </div>
-      <div v-if="state === uploadState.noInternet">
-         <span>
-            <b class="error">{{ $t('uploadFile.noInternet') }}</b>
-         </span>
-      </div>
-      <div v-if="state === uploadState.paused && fileState.status !== fileUploadStatus.waitingForSave">
-         <span>
-            <b class="warning">{{ $t('uploadFile.paused') }}</b>
-         </span>
-      </div>
+
    </div>
 </template>
 
@@ -88,6 +97,7 @@ import { mapActions, mapState } from 'pinia'
 import { useUploadStore } from '@/stores/uploadStore.js'
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { useMainStore } from '@/stores/mainStore.js'
+import { isErrorStatus } from "@/upload/uploadHelper.js"
 
 export default {
    components: { ProgressBar },
@@ -117,21 +127,28 @@ export default {
          return splitMimetype
       },
       showTryAgainButton() {
-         return (this.fileState.status === fileUploadStatus.failed || this.fileState.status === fileUploadStatus.fileGone)
+         return (this.fileState.status === fileUploadStatus.saveFailed || this.fileState.status === fileUploadStatus.uploadFailed|| this.fileState.status === fileUploadStatus.fileGone) && this.state === uploadState.uploading
       },
       showDismissButton() {
-         return (this.fileState.status === fileUploadStatus.fileGone)
+         return (this.fileState.status === fileUploadStatus.fileGone || this.fileState.status === fileUploadStatus.errorOccurred)
       },
 
    },
 
    methods: {
-      ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'dismissFile']),
+      isErrorStatus,
+      ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'dismissFile', 'retryFailSaveFile', 'retryGoneFile']),
       dismiss() {
-         this.dismissFile(this.file.frontendId)
+         this.dismissFile(this.fileState.frontendId)
       },
       retry() {
-
+         if (this.fileState.status === fileUploadStatus.saveFailed) {
+            this.retryFailSaveFile(this.fileState.frontendId)
+         } else if (this.fileState.status === fileUploadStatus.fileGone) {
+            this.retryGoneFile(this.fileState.frontendId)
+         } else {
+            this.$toast.error("Can't retry, unknown state")
+         }
       },
       startShake() {
          this.isShaking = true
@@ -139,7 +156,7 @@ export default {
 
       stopShake() {
          this.isShaking = false
-      }
+      },
    }
 }
 </script>
@@ -201,8 +218,6 @@ export default {
 .info {
    color: #a9a9a9;
 }
-
-
 
 .button-group {
    display: flex;

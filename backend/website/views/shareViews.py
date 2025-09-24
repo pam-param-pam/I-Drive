@@ -145,7 +145,6 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-@disable_common_errors
 def create_share_zip_model(request, share_obj: ShareableLink):  # todo
     ids = request.data['ids']
     validate_ids_as_list(ids)

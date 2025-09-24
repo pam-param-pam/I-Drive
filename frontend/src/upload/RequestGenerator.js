@@ -18,7 +18,7 @@ export class RequestGenerator {
       this._generatorInstance = null
       this._MP4BoxPromise = null
       this.backendManager = backendManager
-
+      this.mp4Boxes = new Map()
    }
 
    async getMp4Box() {
@@ -29,8 +29,8 @@ export class RequestGenerator {
    }
 
    async getRequest() {
-      if (this.uploadStore.benchedRequests.length > 0) {
-         return this.uploadStore.benchedRequests.shift()
+      if (this.uploadStore.pausedRequests.length > 0) {
+         return this.uploadStore.pausedRequests.shift()
       } else {
          if (!this._generatorInstance) {
             this._generatorInstance = this.makeRequests(this.backendManager)
@@ -48,20 +48,23 @@ export class RequestGenerator {
       }
    }
 
-   async* makeRequests(videoMetadataCallback) {
+   async* makeRequests() {
       /**
        this is a generator function!
        */
 
       const MP4Box = await this.getMp4Box()
 
-      let maxChunkSize = this.mainStore.user.maxDiscordMessageSize
-      let maxChunks = this.mainStore.user.maxAttachmentsPerMessage
+      const maxChunkSize = this.mainStore.user.maxDiscordMessageSize
+      const maxChunks = this.mainStore.user.maxAttachmentsPerMessage
 
       let totalSize = 0
       let attachments = []
       let queueFile
       while ((queueFile = this.uploadStore.getFileFromQueue())) {
+         console.log("talking queue file")
+         let frontendId = queueFile.fileObj.frontendId
+
          try {
             //creating folder if needed and getting it's backend ID
             queueFile.fileObj.folderId = await this.getOrCreateFolder(queueFile.fileObj)
@@ -70,11 +73,15 @@ export class RequestGenerator {
                queueFile.fileObj.key = generateKey(queueFile.fileObj.encryptionMethod)
             }
 
-            let thumbnail = await makeThumbnailIfNeeded(queueFile)
+            let thumbnail = null
+            //if this is true it means the thumbnail was already extracted, no need to do it again.
+            if (!this.uploadStore.getFileState(frontendId)?.thumbnailExtracted) {
+               thumbnail = await makeThumbnailIfNeeded(queueFile)
+            }
 
             //if thumbnail exists we generate a request with them
             if (thumbnail) {
-               this.uploadStore.markThumbnailRequired(queueFile.fileObj.frontendId)
+               this.uploadStore.markThumbnailExtracted(frontendId)
 
                //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
                if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
@@ -101,7 +108,6 @@ export class RequestGenerator {
             //If there's to little space left in the request, we yield to prevent, for example,
             // the beginning of a video having 0.5mb which would cause multiple messages
             // that have to be loaded before playback starts
-
             if (totalSize > maxChunkSize / 2 || attachments.length === 10) {
                let request = { "totalSize": totalSize, "attachments": attachments }
                totalSize = 0
@@ -111,49 +117,51 @@ export class RequestGenerator {
 
 
             //CASE 1.2 attachments are not created, we create chunked requests from the big file
-            let i = 0
-            let fileSize = queueFile.fileObj.size
-            let offset = 0
-            let mp4boxfile
+            const state = this.uploadStore.getFileState(frontendId)
 
+            let chunkSequence = state.extractedChunks
+            let offset = state.offset || 0
+
+            const fileSize = queueFile.fileObj.size
+
+            let mp4boxFile = this.mp4Boxes.get(frontendId)
             //create mp4box only if needed
-            if (isVideoFile(queueFile.fileObj.extension)) {
-               mp4boxfile = MP4Box.createFile()
-               mp4boxfile.fileObj = queueFile.fileObj
-               this.uploadStore.markVideoMetadataRequired(queueFile.fileObj.frontendId)
+            if (isVideoFile(queueFile.fileObj.extension) && !mp4boxFile) {
+               mp4boxFile = MP4Box.createFile()
+               this.mp4Boxes.set(frontendId, mp4boxFile)
+               this.uploadStore.markVideoMetadataRequired(frontendId)
 
-               mp4boxfile.onReady = function(info) {
+               mp4boxFile.onReady = function(info) {
                   let videoMetadata = parseVideoMetadata(info)
-                  this.backendManager.fillVideoMetadata(mp4boxfile.fileObj, videoMetadata)
-                  this.uploadStore.markVideoMetadataExtracted(mp4boxfile.fileObj.frontendId)
+                  this.backendManager.fillVideoMetadata(state.fileObj, videoMetadata)
+                  this.uploadStore.markVideoMetadataExtracted(frontendId)
                }.bind(this)
             }
 
             while (offset < fileSize) {
+               const remainingSpace = maxChunkSize - totalSize
+               const remainingFileSize = fileSize - offset
+               const chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
+               const chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
 
-               let remainingSpace = maxChunkSize - totalSize
-               let remainingFileSize = fileSize - offset
-               let chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
-
-               let chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
-
-               if (isVideoFile(queueFile.fileObj.extension) && !mp4boxfile.fileObj.mp4boxFinished) {
-                  appendMp4BoxBuffer(mp4boxfile, chunk, offset)
+               if (mp4boxFile && !state.videoMetadataExtracted) {
+                  appendMp4BoxBuffer(mp4boxFile, chunk, offset)
                }
 
                let attachment = {
                   "type": attachmentType.file,
                   "fileObj": queueFile.fileObj,
                   "rawBlob": chunk,
-                  "fragmentSequence": i + 1,
+                  "fragmentSequence": chunkSequence + 1,
                   "offset": offset
                }
 
                attachments.push(attachment)
                totalSize += roundUpTo64(chunk.size)
                offset += chunk.size
-               queueFile.fileObj.crc = crc32buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc)
-               i++
+               queueFile.fileObj.crc = crc32buf(new Uint8Array(await chunk.arrayBuffer()), queueFile.fileObj.crc) //todo move crc to state?
+               chunkSequence++
+               this.uploadStore.onNewFileChunk(frontendId, offset, chunkSequence)
 
                // we have to yield
                if (totalSize >= maxChunkSize || attachments.length >= maxChunks - 1) {
@@ -161,25 +169,31 @@ export class RequestGenerator {
                   totalSize = 0
                   attachments = []
                }
+
             }
             //we need to inform about totalChunks of a file
-            this.uploadStore.setTotalChunks(queueFile.fileObj.frontendId, i)
-            if (isVideoFile(queueFile.fileObj.extension)) {
-               mp4boxfile.flush()
-               this.uploadStore.markVideoMetadataExtracted(queueFile.fileObj.frontendId) //todo add new func finished?
+            this.uploadStore.setTotalChunks(frontendId, chunkSequence)
+
+            if (mp4boxFile) {
+               mp4boxFile.flush()
+               this.mp4Boxes.delete(frontendId)
+               this.uploadStore.markVideoMetadataExtracted(frontendId) //yes this needs to be here
             }
 
          } catch (err) {
             if (err.name === "NotFoundError") {
-               this.uploadStore.setStatus(queueFile.fileObj.frontendId, fileUploadStatus.fileGone)
+               this.uploadStore.setStatus(frontendId, fileUploadStatus.fileGone)
             } else {
-               throw err
+               this.uploadStore.setStatus(frontendId, fileUploadStatus.errorOccurred)
+               this.uploadStore.setError(frontendId, err)
             }
+            throw err
+
          }
       }
       //we need to handle the already created attachments after break
       if (attachments.length > 0) {
-         let request = { "totalSize": totalSize, "attachments": attachments }
+         const request = { "totalSize": totalSize, "attachments": attachments }
          yield request
       }
 

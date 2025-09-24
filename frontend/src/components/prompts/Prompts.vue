@@ -42,6 +42,7 @@ import Moments from "@/components/prompts/Moments.vue"
 import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
 import shareAccesses from "@/components/prompts/ShareAccesses.vue"
 import { defineAsyncComponent } from "vue"
+import AbortAllWarning from "@/components/prompts/AbortAllWarning.vue"
 
 export default {
    name: "prompts",
@@ -71,6 +72,7 @@ export default {
       Moments,
       EditSubtitles,
       shareAccesses,
+      AbortAllWarning,
       FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
    },
    created() {

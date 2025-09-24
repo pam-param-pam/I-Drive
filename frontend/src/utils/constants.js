@@ -32,21 +32,21 @@ export const attachmentType = {
 }
 export const fileUploadStatus = {
    preparing: "preparing",
-   encrypting: "encrypting",
-   finishing: "finishing",
+   uploading: "uploading",
    uploaded: "uploaded",
    waitingForSave: "waitingForSave",
-   uploading: "uploading",
-   failed: "failed",
+
+   uploadFailed: "uploadFailed",
+   saveFailed: "saveFailed",
+   errorOccurred: "errorOccurred",
+   waitingForInternet: "waitingForInternet",
+   retrying: "retrying",
    fileGone: "fileGone",
-   waitingForInternet: "waitingForInternet"
 }
 
 export const uploadState = {
    idle: "idle",
    uploading: "uploading",
    paused: "paused",
-   canceled: "canceled",
-   aborting: "aborting",
    noInternet: "noInternet"
 }

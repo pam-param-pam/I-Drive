@@ -8,35 +8,28 @@ import { DiscordUploader } from "@/upload/DiscordUploader.js"
 import { RequestGenerator } from "@/upload/RequestGenerator.js"
 import { BackendManager } from "@/upload/BackendManager.js"
 import { UploadEstimator } from "@/upload/UploadEstimator.js"
+import { MyMutex } from "@/utils/MyMutex.js"
 
 
 export class Uploader {
    constructor() {
-      this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
-
+      this.fileProcessorWorker = null
       this.estimator = new UploadEstimator()
-
-      this.requestGenerator = null
 
       this.discordUploader = new DiscordUploader()
       this.backendManager = new BackendManager()
       this.requestGenerator = new RequestGenerator(this.backendManager)
-      this.currentConcurrency = 0
 
       this.mainStore = useMainStore()
       this.uploadStore = useUploadStore()
+      this.mutex = new MyMutex()
 
-      this.fileProcessorWorker.onmessage = (event) => {
-         this.uploadStore.queue.push(...event.data)
-         this.uploadStore.queue.sort()
-         this.processUploads()
-      }
    }
 
    async startUpload(type, folderContext, filesList) {
       /**Entry for upload process*/
       // window.addEventListener("beforeunload", beforeUnload)
-      this.state = uploadState.uploading
+      this.uploadStore.state = uploadState.uploading
 
       let res = await canUpload(folderContext)
       if (!res.can_upload) {
@@ -51,42 +44,62 @@ export class Uploader {
       let uploadId = uuidv4()
       let encryptionMethod = this.mainStore.settings.encryptionMethod
       let parentPassword = this.mainStore.getFolderPassword(lockFrom)
-      this.fileProcessorWorker.postMessage({ typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword })
+
+      this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
+      this.fileProcessorWorker.onmessage = (event) => {
+         let {files, totalBytes} = event.data
+         this.uploadStore.queue.push(...files)
+         this.uploadStore.queue.sort()
+         this.uploadStore.allBytesToUpload += totalBytes
+         this.processUploads()
+         this.fileProcessorWorker.terminate()
+      }
+
+      this.fileProcessorWorker.postMessage({ typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom })
 
    }
 
-
    async processUploads() {
-      /** This function is the main loop of the upload process*/
-      if (!(this.uploadStore.state === uploadState.uploading || this.uploadStore.state === uploadState.idle)) {
-         console.log("WRONG STATE IN processUploads, RETURNING")
-         return
+      if (!(this.uploadStore.state === uploadState.uploading || this.uploadStore.state === uploadState.idle)) return
+
+      // Acquire the mutex before checking/modifying currentRequests
+      const unlock = await this.mutex.lock()
+      try {
+         const maxConcurrency = this.mainStore.settings.concurrentUploadRequests
+         if (this.uploadStore.currentRequests >= maxConcurrency) return
+
+         const req = await this.requestGenerator.getRequest()
+         if (!req) return
+
+         this.uploadStore.currentRequests++
+
+         // Start the upload without blocking the mutex
+         this.discordUploader.uploadRequest(req)
+            .then(({ request, discordResponse }) => this.backendManager.afterUploadRequest(request, discordResponse))
+            .finally(() => {
+               // Critical section for decrementing
+               this.mutex.lock().then(unlockInner => {
+                  this.uploadStore.currentRequests--
+                  unlockInner()
+                  this.processUploads()
+               })
+            })
+      } finally {
+         unlock() // release mutex
       }
-      const maxConcurrency = this.mainStore.settings.concurrentUploadRequests
-      if (this.currentConcurrency >= maxConcurrency) return
-
-      let req = await this.requestGenerator.getRequest()
-      if (!req) {
-         console.log("No requests, returning")
-         return
-      }
-
-      this.currentConcurrency++
-
-      this.discordUploader.uploadRequest(req)
-         .then(({ request, discordResponse }) => this.backendManager.afterUploadRequest(request, discordResponse))
-         .finally(() => {
-            this.currentConcurrency--
-            this.processUploads()
-         })
-
       this.processUploads()
    }
 
-   async pauseAllFiles() {
-      this.discordUploader.pauseAllRequests()
+   reSaveFile(frontendId) {
+      this.backendManager.reSaveFile(frontendId)
    }
-
+   cleanup() {
+      window.removeEventListener("beforeunload", beforeUnload)
+      this.estimator = new UploadEstimator()
+      this.discordUploader = new DiscordUploader()
+      this.backendManager = new BackendManager()
+      this.requestGenerator = new RequestGenerator(this.backendManager)
+   }
 
 }
 
@@ -98,4 +111,10 @@ export function getUploader() {
       _uploaderInstance = new Uploader()
    }
    return _uploaderInstance
+}
+
+
+const beforeUnload = (event) => {
+   event.preventDefault()
+   event.returnValue = ""
 }

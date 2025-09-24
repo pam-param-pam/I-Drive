@@ -1,19 +1,22 @@
 import { fileUploadStatus } from "@/utils/constants.js"
 
 export class FileStateHolder {
-   constructor(fileObj) {
-      this.frontendId = fileObj.frontendId
-      this.totalChunks = -1
+   constructor(file) {
+      this.fileObj = file.fileObj
+      this.systemFile = file.systemFile
+      this.frontendId = this.fileObj.frontendId
+      this.totalChunks = undefined
+      this.extractedChunks = 0
       this.uploadedChunks = 0
       this.thumbnailUploaded = false
       this.videoMetadataExtracted = false
-      this.thumbnailRequired = false
-      this.videoMetadataRequired = false
+      this.thumbnailExtracted = undefined
+      this.videoMetadataRequired = undefined
 
       this.status = fileUploadStatus.preparing
       this.progress = 0
-      this.fileObj = fileObj
-
+      this.uploadedBytes = 0
+      this.offset = 0
       this.error = null
    }
 
@@ -25,8 +28,8 @@ export class FileStateHolder {
       this.thumbnailUploaded = true
    }
 
-   markThumbnailRequired() {
-      this.thumbnailRequired = true
+   markThumbnailExtracted() {
+      this.thumbnailExtracted = true
    }
 
    markVideoMetadataRequired() {
@@ -41,14 +44,29 @@ export class FileStateHolder {
 
    isFullyUploaded() {
       const chunksDone = this.uploadedChunks === this.totalChunks
-      const thumbnailDone = !this.thumbnailRequired || this.thumbnailUploaded
+      const thumbnailDone = !this.thumbnailExtracted || this.thumbnailUploaded
       const videoMetadataDone = !this.videoMetadataRequired || this.videoMetadataExtracted
-      const filledInfo = this.totalChunks !== -1
+      const filledInfo = this.totalChunks !== undefined
 
       return chunksDone && thumbnailDone && videoMetadataDone && filledInfo
    }
 
    setTotalChunks(count) {
       this.totalChunks = count
+   }
+   updateUploadedBytes(bytesUploaded) {
+      this.uploadedBytes += bytesUploaded
+      this.updateProgress()
+
+   }
+   setUploadedBytes(bytesUploaded) {
+      this.uploadedBytes = bytesUploaded
+      this.updateProgress()
+   }
+   updateProgress() {
+      this.progress = Math.min(
+         100,
+         Math.floor((this.uploadedBytes / this.fileObj.size) * 100)
+      )
    }
 }

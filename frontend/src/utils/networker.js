@@ -12,7 +12,7 @@ const toast = useToast()
 
 export const cancelTokenMap = new Map()
 let upload_429_errors = 0
-function retry(error, delay, maxRetries = 5) {
+function retry(error, delay, maxRetries = 1) { //todo change maxRetrties
    if (!error.config.__retryCount) {
       error.config.__retryCount = 0
    }
@@ -75,7 +75,7 @@ uploadInstance.interceptors.response.use(
             return retry(error, waitTime)
          }
       } else if (noWifi(error)) {
-         return retry(error, 100)
+         return retry(error, 1000, 1)
       }
       //handle discord fucking itself up
       else if (error.response && error.response.status >= 500) {
@@ -92,6 +92,7 @@ backendInstance.interceptors.request.use(
 
       if (config.__cancelSignature !== undefined && cancelTokenMap.has(config.__cancelSignature)) {
          cancelTokenMap.get(config.__cancelSignature).cancel(`Request cancelled due to a new request with the same cancel signature (${config.__cancelSignature}).`)
+         cancelTokenMap.delete(config.__cancelSignature)
       }
       // Create a new cancel token for the current request
       let cancelSource = axios.CancelToken.source()

@@ -23,13 +23,10 @@ export async function createThumbnail(fileId, data) {
 }
 
 
-export async function createFile(data, password, config = {}) {
+export async function createFile(data, config = {}) {
    let url = `/files`
    let response = await backendInstance.post(url, data, {
       ...config,
-      headers: {
-         "x-resource-password": password
-      },
       __retry500: true
    })
    return response.data

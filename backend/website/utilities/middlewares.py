@@ -223,4 +223,8 @@ class CommonErrorsMiddleware(MiddlewareMixin):
         elif isinstance(exception, DiscordError):
             return JsonResponse(build_http_error_response(code=exception.status, error="errors.unexpectedDiscordResponse", details=exception.message), status=exception.status)
 
-        return None
+        else:
+            if is_dev_env:
+                traceback.print_exc()
+            return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
+

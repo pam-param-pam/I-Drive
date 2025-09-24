@@ -100,7 +100,7 @@
     "unlockFolder": "Unlock Folder",
     "upload": "Upwoad *waises paw*",
     "uploadFiles": "Uploading {files} files...",
-    "uploadMessage": "TODO"
+    "uploadMessage": ""
   },
   "search": {
     "images": "*giggles* Images",
@@ -170,9 +170,7 @@
     "trashName": ""
   },
   "uploadFile": {
-    "encrypting": "",
     "paused": "Paused",
-    "preparingUpload": "",
     "success": "Uploaded"
   }
 }

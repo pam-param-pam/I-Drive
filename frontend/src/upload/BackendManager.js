@@ -7,6 +7,7 @@ export class BackendManager {
       this.uploadStore = useUploadStore()
       this.backendState = new Map()
       this.finishedFiles = []
+      this.failedFiles = []
    }
 
    async afterUploadRequest(request, discordResponse) {
@@ -15,16 +16,15 @@ export class BackendManager {
          let discordAttachment = discordResponse.data.attachments[i]
          await this.fillAttachmentInfo(attachment, discordResponse, discordAttachment)
       }
-      this.uploadStore.finishRequest(request) //todo
+      this.uploadStore.markRequestFinished(request)
    }
 
-   addFinishedFile(file, attachment) {
+   addFinishedFile(file) {
       const exists = this.finishedFiles.some(f => f.frontend_id === file.frontend_id)
       if (!exists) {
          this.finishedFiles.push(file)
       } else {
          console.warn(`File with frontend_id ${file.frontend_id} is already in finishedFiles`)
-         console.log(attachment)
       }
    }
 
@@ -42,8 +42,11 @@ export class BackendManager {
             "duration": fileObj.duration,
             "iv": fileObj.iv,
             "key": fileObj.key,
+            "parent_password": fileObj.parentPassword, //this is later removed!
+            "lock_from": fileObj.lockFrom, //this is later removed!
             "attachments": []
          }
+
          this.backendState.set(fileObj.frontendId, file_data)
       }
       return this.backendState.get(fileObj.frontendId)
@@ -100,46 +103,79 @@ export class BackendManager {
 
       let isFinished = this.uploadStore.isFileUploaded(fileObj.frontendId)
       if (isFinished) {
-         this.addFinishedFile(state, attachment)
+         this.addFinishedFile(state)
+         this.backendState.delete(fileObj.frontendId)
          this.uploadStore.markFileUploaded(fileObj.frontendId)
       }
 
-      this.saveFilesIfNeeded(fileObj.parentPassword)
+      this.saveFilesIfNeeded()
 
    }
 
-   async saveFilesIfNeeded(parentPassword) {
+   async saveFilesIfNeeded() {
       let totalSize = 0
 
       for (const file of this.finishedFiles) {
          totalSize += file.size || 0
       }
 
-      if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || this.uploadStore.isAllUploadsFinished) {
+      if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || this.uploadStore.areAllUploadsFinished) {
          let finishedFiles = this.finishedFiles
          this.finishedFiles = []
-         createFile({ files: finishedFiles }, parentPassword, {__displayErrorToast: false})
-            .then(() => {
-               this.onBackendSave(finishedFiles)
-            })
-            .catch((error) => {
-               this.onBackendSaveError(finishedFiles, error)
-            })
-
+         this.saveFiles(finishedFiles)
       }
 
    }
-   onBackendSaveError(finishedFiles, error) {
-      console.log("ERROR")
-      console.log(error)
+
+   saveFiles(finishedFiles) {
+      const seenIds = new Set()
+      const resourcePasswords = {}
+
       for (let file of finishedFiles) {
-         this.uploadStore.setStatus(file.frontend_id, fileUploadStatus.failed)
+
+         const { lock_from, parent_password } = file
+         if (parent_password && lock_from) {
+            seenIds.add(lock_from)
+            if (parent_password) {
+               resourcePasswords[lock_from] = parent_password
+            }
+         }
+         // delete file.lock_from
+         // delete file.parent_password //todo
+
+      }
+      createFile({ files: finishedFiles, resourcePasswords: resourcePasswords }, { __displayErrorToast: false })
+         .then(() => {
+            this.onBackendSave(finishedFiles)
+         })
+         .catch((error) => {
+            this.onBackendSaveError(finishedFiles, error)
+         })
+   }
+
+   onBackendSaveError(finishedFiles, error) {
+      for (let file of finishedFiles) {
+         this.uploadStore.setStatus(file.frontend_id, fileUploadStatus.saveFailed)
+         this.uploadStore.setError(file.frontend_id, error?.response?.data)
+         this.failedFiles.push(file)
       }
    }
+
    onBackendSave(finishedFiles) {
       for (let file of finishedFiles) {
          this.uploadStore.markFileSaved(file.frontend_id)
       }
+      this.uploadStore.onUploadFinish()
 
+   }
+
+   reSaveFile(frontendId) {
+      const index = this.failedFiles.findIndex(f => f.frontend_id === frontendId)
+      if (index === -1) return
+      const failedFile = this.failedFiles.splice(index, 1)[0]
+      this.uploadStore.setStatus(frontendId, fileUploadStatus.retrying)
+      setTimeout(() => {
+         this.saveFiles([failedFile])
+      }, 1000)
    }
 }
