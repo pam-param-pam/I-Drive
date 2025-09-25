@@ -40,8 +40,6 @@ Credentials: `demo`/`demo`
 
 | TODO List                                              | Status               |
 |--------------------------------------------------------|----------------------|
-| Proper frontend networking & handling of errors        | 🛠️  in progress     |
-| Error handling in upload process                       | ⚠️  Only partial     |
 | Optimize shares                                        | ❌  Coming one day    |
 | cached docker build                                    | ❌  Coming one day    |
 | Virtual list view                                      | ⛔  Coming prob never |
@@ -54,7 +52,6 @@ Credentials: `demo`/`demo`
 | switch to a different backend framework                | ⛔  Coming prob never |
 | load balancing with round robin for nginx              | ⛔  Coming prob never |
 | add resolution to images                               | ⛔  Coming prob never |
-| move away from cancelToken in axios to abortController | ⛔  Coming prob never |
 
 fix urls mapping, clean Discord class, tasks, shares
 
@@ -76,6 +73,7 @@ fix urls mapping, clean Discord class, tasks, shares
 | fix locked folders duplicate tab                                        |
 | fix upload on frontend and make it less error prone                     |
 | fix race conditions in upload on frontend                               |
+| fix  discord failed requests in upload process                          |
 
 > [!WARNING]  
 > This section is very much unfinished

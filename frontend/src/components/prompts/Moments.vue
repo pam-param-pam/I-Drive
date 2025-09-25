@@ -145,10 +145,9 @@ export default {
             }
             this.$toast.info(this.$t("toasts.savingMoment"))
 
-            let res = await canUpload(this.file.parent_id)
-            if (!res.can_upload) {
-               return
-            }
+            let allowed = await canUpload(this.file.parent_id)
+            if (!allowed) return
+
             let fileFormList = new FormData()
 
             let method = this.file.encryption_method

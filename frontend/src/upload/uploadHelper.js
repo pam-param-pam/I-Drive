@@ -1,10 +1,8 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
 import jsmediatags from "jsmediatags"
-import { uploadInstance } from "@/utils/networker.js"
-import { useToast } from "vue-toastification"
-
-const toast = useToast()
+import { uploadInstance } from "@/axios/networker.js"
+import { showToast } from "@/utils/common.js"
 
 
 export async function checkFilesSizes(files) {
@@ -175,16 +173,16 @@ export async function makeThumbnailIfNeeded(queueFile) {
 
       } catch (e) {
          console.warn(e)
-         toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
+         showToast("error", "Couldn't get thumbnail for: " + queueFile.fileObj.name)
       }
    }
-   //generating a thumbnail if needed for video file
-   if (isImageFile(queueFile.fileObj.extension)) { // && queueFile.fileObj.size > 200 * 1024
+   //generating a thumbnail for an image
+   if (isImageFile(queueFile.fileObj.extension)) {
       try {
          thumbnail = await getImageThumbnail(queueFile)
       } catch (e) {
          console.warn(e)
-         toast.error("Couldn't get thumbnail for: " + queueFile.fileObj.name)
+         showToast("error", "Couldn't get thumbnail for: " + queueFile.fileObj.name)
       }
    }
    return thumbnail

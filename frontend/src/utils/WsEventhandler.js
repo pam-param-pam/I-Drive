@@ -1,8 +1,8 @@
 import i18n from "@/i18n/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { useToast } from "vue-toastification"
 import { forceLogout } from "@/utils/auth.js"
 import router from "@/router/index.js"
+import { useToast } from "vue-toastification"
 
 const toast = useToast()
 
@@ -11,8 +11,7 @@ async function deriveKey(variableKey) {
    let encoder = new TextEncoder()
    let keyData = encoder.encode(variableKey)
 
-   let hash = await crypto.subtle.digest("SHA-256", keyData)
-   return hash
+   return await crypto.subtle.digest("SHA-256", keyData)
 }
 
 

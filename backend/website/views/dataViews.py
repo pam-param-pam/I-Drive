@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from datetime import datetime, timedelta
 
 from django.db import models
@@ -91,11 +92,11 @@ def get_file_info(request, file_obj: File):
 def get_usage(request, folder_obj: Folder):
     total_used_size = cache.get(f"TOTAL_USED_SIZE:{request.user}")
     if not total_used_size:
-        file_used = File.objects.filter(owner=request.user, inTrash=False, ready=True).aggregate(Sum('size'))['size__sum'] or 0
-        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user).aggregate(Sum('size'))['size__sum'] or 0
-        preview_used = Preview.objects.filter(file__owner=request.user).aggregate(Sum('size'))['size__sum'] or 0
-        moment_used = Moment.objects.filter(file__owner=request.user).aggregate(Sum('size'))['size__sum'] or 0
-        subtitle_used = Subtitle.objects.filter(file__owner=request.user).aggregate(Sum('size'))['size__sum'] or 0
+        file_used = File.objects.filter(owner=request.user, inTrash=False, ready=True, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        preview_used = Preview.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        moment_used = Moment.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
 
         total_used_size = file_used + thumbnail_used + preview_used + moment_used + subtitle_used
         cache.set(f"TOTAL_USED_SIZE:{request.user}", total_used_size, 60)

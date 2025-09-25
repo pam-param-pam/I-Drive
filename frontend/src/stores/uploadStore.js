@@ -2,19 +2,17 @@ import { defineStore } from "pinia"
 import { attachmentType, fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { FileStateHolder } from "@/upload/FileStateHolder.js"
 import { getUploader } from "@/upload/Uploader.js"
-import { useToast } from "vue-toastification"
-import i18n from "@/i18n/index.js"
 import { checkFilesSizes, isErrorStatus } from "@/upload/uploadHelper.js"
 import { useMainStore } from "@/stores/mainStore.js"
-//todo add all to cleanup
+import { showToast } from "@/utils/common.js"
+
 export const useUploadStore = defineStore("upload", {
    state: () => ({
       queue: [],
       state: uploadState.idle,
       pausedRequests: [],
       failedRequests: [],
-      erroredRequests: [],
-      goneFiles: [],
+      // erroredRequests: [],
 
       currentRequests: 0,
 
@@ -23,7 +21,10 @@ export const useUploadStore = defineStore("upload", {
       allBytesUploaded: 0,
       uploadSpeedMap: new Map(),
       fileState: [],
-      eta: Infinity
+      eta: Infinity,
+
+
+      fileCache: {} // key: frontendId -> small object
    }),
 
    getters: {
@@ -42,23 +43,44 @@ export const useUploadStore = defineStore("upload", {
          return uploadSpeed
       },
       filesInUpload() {
-         return []
-         const N = 10 // maximum files to display
+         const N = 10
 
-         if (this.fileState.length < 5) {
-            // shallow copy all files if fewer than 5
-            return [...this.fileState]
-         }
-
-         // Filter first: remove waitingForSave files
+         // Filter files
          const filtered = this.fileState.filter(f => f.status !== fileUploadStatus.waitingForSave)
 
-         // Slice top N after sorting by progress
-         // only take top N files
-         return filtered
-            .slice() // make a shallow copy to avoid mutating original
-            .sort((a, b) => b.progress - a.progress) // sort descending by progress
+         // Slice top N
+         const topFiles = filtered
+            .sort((a, b) => b.progress - a.progress)
             .slice(0, N)
+
+         // Map to small objects, reusing cached versions if available
+         return topFiles.map(file => {
+            const cached = this.fileCache[file.frontendId]
+
+            if (cached) {
+               // Update values on existing small object instead of creating new one
+               cached.progress = file.progress
+               cached.status = file.status
+               cached.error = file.error
+               cached.name = file.fileObj.name
+               cached.extension = file.fileObj.extension
+               cached.type = file.fileObj.type
+               return cached
+            }
+
+            // Create new small object and store in cache
+            const smallObj = {
+               frontendId: file.frontendId,
+               progress: file.progress,
+               status: file.status,
+               error: file.error,
+               name: file.fileObj.name,
+               extension: file.fileObj.extension,
+               type: file.fileObj.type
+            }
+            this.fileCache[file.frontendId] = smallObj
+            return smallObj
+         })
       },
       remainingBytes() {
          let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
@@ -261,6 +283,7 @@ export const useUploadStore = defineStore("upload", {
 
       markFileSaved(frontendId) {
          let index = this.fileState.findIndex(f => f.frontendId === frontendId)
+         delete this.fileCache[frontendId]
          if (index !== -1) {
             this.fileState.splice(index, 1)
          } else {
@@ -328,8 +351,7 @@ export const useUploadStore = defineStore("upload", {
             this.queue = []
             this.pausedRequests = []
             this.failedRequests = []
-            this.erroredRequests = []
-            this.goneFiles = []
+            // this.erroredRequests = []
             this.currentRequests = 0
 
             //UI
@@ -340,7 +362,7 @@ export const useUploadStore = defineStore("upload", {
             this.allBytesUploaded = 0
 
             getUploader().cleanup()
-            useToast().success(i18n.global.t("toasts.uploadFinished"))
+            showToast("success", "toasts.uploadFinished")
          }
 
       }

@@ -1,7 +1,6 @@
-import {backendInstance} from "@/utils/networker.js"
+import {backendInstance} from "@/axios/networker.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { useToast } from "vue-toastification"
-import i18n from "@/i18n/index.js"
+import { showToast } from "@/utils/common.js"
 
 export async function getUser(token) {
    if (!token) return
@@ -116,13 +115,12 @@ export async function canUpload(folderContext) {
       uploadStore.setWebhooks(response.data.webhooks)
       uploadStore.setAttachmentName(response.data.attachment_name)
       uploadStore.setFileExtensions(response.data.extensions)
-
+      return true
    }
    else {
-      let toast = useToast()
-      toast.error(i18n.global.t("errors.notAllowedToUpload"), {timeout: null})
+      showToast("error", "errors.notAllowedToUpload", {timeout: null})
+      return false
    }
-   return response.data
 }
 
 export async function autoSetup(data) {

@@ -10,11 +10,11 @@
    >
       <!-- Upper -->
       <div class="fileitem-header file-icons">
-         <div :data-type="type" :aria-label="fileState.fileObj.extension">
+         <div :data-type="type" :aria-label="fileState.extension">
             <i class="material-icons file-icon"></i>
          </div>
 
-         <span class="file-name">{{ fileState.fileObj.name }}</span>
+         <span class="file-name">{{ fileState.name }}</span>
                <div class="button-group">
                  <button
                    v-if="showTryAgainButton"
@@ -81,7 +81,7 @@
             v-if="fileState.status === fileUploadStatus.uploading"
             class="fileitem-progress"
          >
-            <ProgressBar :progress="fileState.progress" />
+            <ProgressBar :progress="fileState.progress"/>
             <span>
                <b> {{ fileState.progress }}% </b>
             </span>
@@ -121,7 +121,7 @@ export default {
          return fileUploadStatus
       },
       type() {
-         let splitMimetype =  this.fileState.fileObj.type.split("/")[0]
+         let splitMimetype =  this.fileState.type.split("/")[0]
          if (splitMimetype === 'application') return 'pdf'
          if (!splitMimetype) return 'text'
          return splitMimetype

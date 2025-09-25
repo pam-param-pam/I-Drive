@@ -3,7 +3,7 @@ import { encryptAttachment } from "@/utils/encryption.js"
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { upload } from "@/upload/uploadHelper.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { noWifi } from "@/utils/common.js"
+import { noWifi } from "@/axios/helper.js"
 
 export class DiscordUploader {
    constructor() {
@@ -71,10 +71,8 @@ export class DiscordUploader {
                this.uploadStore.setStatus(att.fileObj.frontendId, fileUploadStatus.waitingForInternet)
 
             } else {
-               console.log(err)
                this.uploadStore.setStatus(att.fileObj.frontendId, fileUploadStatus.uploadFailed)
                this.uploadStore.setError(att.fileObj.frontendId, err.message)
-
             }
          })
       }

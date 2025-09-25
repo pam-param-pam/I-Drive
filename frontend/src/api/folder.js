@@ -1,5 +1,5 @@
 import {useMainStore} from "@/stores/mainStore.js"
-import {backendInstance} from "@/utils/networker.js"
+import {backendInstance} from "@/axios/networker.js"
 
 export async function getItems(folderId, lockFrom) {
    const store = useMainStore()

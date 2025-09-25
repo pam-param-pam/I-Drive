@@ -65,10 +65,9 @@
          <div class="card-content">
             <UploadFile
                v-for="fileState in filesInUpload"
-               :key="fileState.frontendId"
-               :aria-label="fileState.fileObj.name"
+               :aria-label="fileState.name"
                :data-dir="false"
-               :data-type="fileState.fileObj.type"
+               :data-type="fileState.type"
                :fileState="fileState"
             />
          </div>

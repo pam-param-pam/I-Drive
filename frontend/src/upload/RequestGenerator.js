@@ -5,10 +5,7 @@ import { attachmentType, encryptionMethod, fileUploadStatus } from "@/utils/cons
 import { appendMp4BoxBuffer, generateIv, generateKey, isVideoFile, makeThumbnailIfNeeded, parseVideoMetadata, roundUpTo64 } from "@/upload/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { v4 as uuidv4 } from "uuid"
-import { useToast } from "vue-toastification"
-
-
-const toast = useToast()
+import { showToast } from "@/utils/common.js"
 
 export class RequestGenerator {
    constructor(backendManager) {
@@ -85,7 +82,7 @@ export class RequestGenerator {
 
                //CASE 1, totalSize including thumbnail.size is > 10Mb or attachments.length == 10
                if (totalSize + thumbnail.size > maxChunkSize || attachments.length === 10) {
-                  toast.warning("Couldn't fit thumbnail with 1st fragment for file: " + queueFile.fileObj.name)
+                  showToast("warning", "Couldn't fit thumbnail with 1st fragment for file: " + queueFile.fileObj.name)
 
                   let request = { "totalSize": totalSize, "attachments": attachments }
                   totalSize = 0
@@ -221,7 +218,7 @@ export class RequestGenerator {
             let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
 
             let folder = await create({ "parent_id": parentFolder, "name": folderName }, {
-               __retry500: true
+               __retryErrors: true
             })
             parentFolder = folder.id
             this.createdFolders[path_key] = folder.id

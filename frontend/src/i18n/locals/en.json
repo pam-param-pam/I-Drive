@@ -455,6 +455,7 @@
     "trashName": "Trash"
   },
   "uploadFile": {
+    "preparing": "Preparing...",
     "pause": "Pause",
     "waitingForSave": "Saving...",
     "waitingForInternet": "Waiting for internet...",

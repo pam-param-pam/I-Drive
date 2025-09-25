@@ -1,5 +1,5 @@
 import { useMainStore } from "@/stores/mainStore.js"
-import { backendInstance } from "@/utils/networker.js"
+import { backendInstance } from "@/axios/networker.js"
 
 export async function getFile(fileId, lockFrom) {
    let store = useMainStore()
@@ -27,7 +27,7 @@ export async function createFile(data, config = {}) {
    let url = `/files`
    let response = await backendInstance.post(url, data, {
       ...config,
-      __retry500: true
+      __retryErrors: true
    })
    return response.data
 

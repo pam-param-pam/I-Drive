@@ -2,6 +2,9 @@ import { useToast } from "vue-toastification"
 import i18n from "@/i18n/index.js"
 import throttle from "lodash.throttle"
 import dayjs from "@/utils/dayjsSetup.js"
+import { useMainStore } from "@/stores/mainStore.js"
+const toast = useToast()
+
 
 export function isMobile() {
    return window.innerWidth <= 950
@@ -27,9 +30,8 @@ export function detectExtension(filename) {
 
 }
 
-const throttledToast = throttle(() => {
-   const toast = useToast()
-   toast.error(i18n.global.t("toasts.actionAlreadyInProgress"))
+const showThrottledToast = throttle(() => {
+   showToast("error", "toasts.actionAlreadyInProgress")
 }, 1000, { trailing: false })
 
 export function onceAtATime(fn, onBlocked) {
@@ -41,11 +43,10 @@ export function onceAtATime(fn, onBlocked) {
             onBlocked.call(this, ...args)
          }
          else {
-            throttledToast()
+            showThrottledToast()
          }
          return
       }
-
       isRunning = true
       try {
          return await fn.apply(this, args)
@@ -54,7 +55,6 @@ export function onceAtATime(fn, onBlocked) {
       }
    }
 }
-import { useMainStore } from "@/stores/mainStore.js"
 
 export function humanTime(date) {
    if (!date) return "-"
@@ -66,6 +66,6 @@ export function humanTime(date) {
    return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
 }
 
-export function noWifi(error) {
-   return (!error.response && error.code === "ERR_NETWORK") || error.response && error.response.status === 502
+export function showToast(type, content, options) {
+   toast(i18n.global.t(content), {type, ...options})
 }

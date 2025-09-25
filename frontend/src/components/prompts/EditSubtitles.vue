@@ -182,8 +182,8 @@ export default {
             this.uploadProgress = 0
             let file = this.selected[0]
 
-            let res = await canUpload(file.parent_id)
-            if (!res.can_upload) return
+            let allowed = await canUpload(file.parent_id)
+            if (!allowed) return
 
             let method = file.encryption_method
             let iv = generateIv(method)

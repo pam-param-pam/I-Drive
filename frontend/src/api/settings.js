@@ -1,4 +1,4 @@
-import {backendInstance} from "@/utils/networker.js"
+import {backendInstance} from "@/axios/networker.js"
 
 
 export async function update(data) {

@@ -117,12 +117,15 @@ export default {
             if (confirmFunc) confirmFunc()
          } else {
             let confirm = this.currentPrompt.confirm
+            let cancel = this.currentPrompt.cancel
+
             this.closeHover()
             this.$nextTick(() => {
                this.showHover({
                   prompt: "FolderPassword",
                   props: { requiredFolderPasswords: requiredFolderPasswordsCopy },
-                  confirm: confirm
+                  confirm: confirm,
+                  cancel: cancel
                })
             })
          }

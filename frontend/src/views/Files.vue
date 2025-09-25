@@ -36,7 +36,7 @@ import { name } from "@/utils/constants"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
-import { cancelTokenMap } from "@/utils/networker.js"
+import { cancelRequestBySignature } from "@/axios/helper.js"
 
 export default {
    name: "files",
@@ -130,12 +130,7 @@ export default {
          this.setSearchActive(false)
          this.setDisabledCreation(false)
          this.setError(null)
-         let searchRequest = cancelTokenMap.get("getItems")
-         if (searchRequest) {
-            searchRequest.cancel(
-               `Request cancelled due to a new request with the same cancel signature .`
-            )
-         }
+         cancelRequestBySignature("getItems")
          let searchDict = { ...this.searchFilters }
          searchDict["query"] = ""
          this.setSearchFilters(searchDict)

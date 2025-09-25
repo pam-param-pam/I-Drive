@@ -454,8 +454,9 @@
     "trashName": "Kosz"
   },
   "uploadFile": {
+    "pause": "Pause",
+    "preparing": "Przygotowywuje...",
     "abortAll": "Przerwij wszystko",
-    "creating": "Tworzenie...",
     "waitingForSave": "Zapisywanie...",
     "waitingForInternet": "Brak internetu...",
     "retrying": "Ponawianie...",

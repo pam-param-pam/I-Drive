@@ -223,7 +223,7 @@ import { getShare, getShareSubtitles } from "@/api/share.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { defineAsyncComponent } from "vue"
-import { backendInstance } from "@/utils/networker.js"
+import { backendInstance } from "@/axios/networker.js"
 
 export default {
    name: "preview",
