@@ -42,6 +42,7 @@ export const useUploadStore = defineStore("upload", {
          return uploadSpeed
       },
       filesInUpload() {
+         return []
          const N = 10 // maximum files to display
 
          if (this.fileState.length < 5) {
