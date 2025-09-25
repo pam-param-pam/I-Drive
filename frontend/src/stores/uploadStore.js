@@ -42,15 +42,22 @@ export const useUploadStore = defineStore("upload", {
          return uploadSpeed
       },
       filesInUpload() {
-         if (this.fileState.length < 5) {
-            return this.fileState
-         }
-         const topFiles = this.fileState
-            .sort((a, b) => b.progress - a.progress)
-            .filter(f => f.status !== fileUploadStatus.waitingForSave)
-            .slice(0, 10)
+         const N = 10 // maximum files to display
 
-         return [...topFiles]
+         if (this.fileState.length < 5) {
+            // shallow copy all files if fewer than 5
+            return [...this.fileState]
+         }
+
+         // Filter first: remove waitingForSave files
+         const filtered = this.fileState.filter(f => f.status !== fileUploadStatus.waitingForSave)
+
+         // Slice top N after sorting by progress
+         // only take top N files
+         return filtered
+            .slice() // make a shallow copy to avoid mutating original
+            .sort((a, b) => b.progress - a.progress) // sort descending by progress
+            .slice(0, N)
       },
       remainingBytes() {
          let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
@@ -81,7 +88,7 @@ export const useUploadStore = defineStore("upload", {
                confirm: () => {
                   this.state = uploadState.uploading
                   getUploader().startUpload(type, folderContext, filesList)
-               },
+               }
             })
          } else {
             this.state = uploadState.uploading
@@ -284,7 +291,7 @@ export const useUploadStore = defineStore("upload", {
          let state = this.getFileState(frontendId)
          if (!state) return
          this.setStatus(frontendId, fileUploadStatus.retrying)
-         let newFile = {systemFile: state.systemFile, fileObj: state.fileObj}
+         let newFile = { systemFile: state.systemFile, fileObj: state.fileObj }
          this.queue.unshift(newFile)
          getUploader().processUploads()
       },
@@ -332,7 +339,7 @@ export const useUploadStore = defineStore("upload", {
             this.allBytesUploaded = 0
 
             getUploader().cleanup()
-            useToast().success(i18n.global.t('toasts.uploadFinished'))
+            useToast().success(i18n.global.t("toasts.uploadFinished"))
          }
 
       }
