@@ -202,7 +202,8 @@ class CheckLockedFolderIP(BaseResourceCheck):
     def check(self, request, *resources):
         resource = resources[0]
         self._require_type(resource, (File, Folder, dict, tuple))
-        self._check_ip(request)
+        if self._is_locked(resource):
+            self._check_ip(request)
 
     def _is_locked(self, resource):
         return self._require_attr(resource, 'is_locked')
