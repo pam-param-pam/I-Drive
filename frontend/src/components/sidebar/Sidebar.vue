@@ -135,7 +135,9 @@ export default {
       return {
          name: name,
          author: author,
-         repoLink: githubUrl
+         repoLink: githubUrl,
+         lastFolderId: null
+
       }
    },
 
@@ -151,7 +153,7 @@ export default {
       version: () => version
    },
    async created() {
-       await this.fetchUsage()
+      await this.fetchUsage()
    },
    watch: {
       async currentFolder() {
@@ -189,17 +191,28 @@ export default {
       },
 
       toRoot() {
-         let folderId = this.currentFolder?.id || this.user.root
-         this.$router.push({ name: `Files`, params: { folderId: folderId } })
+         const currentId = this.currentFolder?.id || this.user.root
+
+         if (this.lastFolderId === currentId) {
+            // Called twice on same folder, go to absolute root
+            this.$router.push({ name: "Files", params: { folderId: this.user.root } })
+         } else {
+            // Normal navigation
+            this.$router.push({ name: "Files", params: { folderId: currentId } })
+         }
+
+         this.lastFolderId = currentId
          this.closeHover()
       },
 
       toTrash() {
+         this.lastFolderId = null
          this.$router.push({ name: `Trash` })
          this.closeHover()
       },
 
       toSettings() {
+         this.lastFolderId = null
          this.$router.push({ name: `Settings` })
          this.closeHover()
       },

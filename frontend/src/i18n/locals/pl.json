@@ -295,6 +295,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "popupPreview": "Podgląd obrazu",
     "devices": "Aktywne Urządzenia",
     "deviceName": "Nazwa",
     "country": "Kraj",

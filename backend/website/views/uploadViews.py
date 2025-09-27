@@ -195,7 +195,7 @@ def edit_file(request, file_obj):
 
     author = get_discord_author(request, message_author_id)
 
-    if file_obj.type != "Text":
+    if file_obj.type not in ("Text", "Code"):
         raise BadRequestError("You can only edit text files!")
 
     fragments = Fragment.objects.filter(file=file_obj)

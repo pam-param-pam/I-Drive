@@ -31,7 +31,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ['popupPreviewURL']),
+      ...mapState(useMainStore, ["popupPreviewURL"]),
       source() {
 
          return this.popupPreviewURL
@@ -51,43 +51,59 @@ export default {
       },
       positionPopup() {
          if (!this.source) return
-         let popup = this.$refs.popup
+         const popup = this.$refs.popup
          if (!popup) return
 
-         let { innerWidth, innerHeight } = window
-         let width = popup.offsetWidth
-         let height = popup.offsetHeight
-         let padding = 10
+         const { innerWidth, innerHeight } = window
+         const padding = 25
 
-         let minLeft = 320
-         let minTop = padding + 100
+         const img = new Image()
+         img.src = this.source
 
+         img.onload = () => {
+            const aspectRatio = img.naturalWidth / img.naturalHeight
 
-         let left = this.cursorX - width / 2
-         left = Math.max(minLeft, Math.min(left, innerWidth - width))
+            const maxWidth = Math.min(700, innerWidth - 2 * padding)
+            const maxHeight = Math.min(700, innerHeight - 2 * padding)
 
-         // Prefer below or above cursor based on Y position
-         let top
-         let isBottomHalf = this.cursorY > innerHeight / 2
+            let width = maxWidth
+            let height = width / aspectRatio
 
-         if (isBottomHalf) {
-            // Place above
-            top = this.cursorY - height - padding
-            top = Math.max(minTop, top)
-         } else {
-            // Place below
-            top = this.cursorY + padding
-            if (top + height > innerHeight) {
-               top = innerHeight - height
-               top = Math.max(minTop, top) // Enforce minTop again
+            if (height > maxHeight) {
+               height = maxHeight
+               width = height * aspectRatio
             }
-         }
 
-         this.popupStyle = {
-            top: `${top}px`,
-            left: `${left}px`,
-            "max-width": "800px",
-            transform: "none"
+            const minLeft = padding
+            const minTop = padding
+
+            let left = this.cursorX - width / 2
+            left = Math.max(minLeft, Math.min(left, innerWidth - width - padding))
+
+            let top
+            const isBottomHalf = this.cursorY > innerHeight / 2
+
+            if (isBottomHalf) {
+               top = this.cursorY - height - padding
+               top = Math.max(minTop, top)
+            } else {
+               top = this.cursorY + padding
+               if (top + height > innerHeight - padding) {
+                  top = innerHeight - height - padding
+                  top = Math.max(minTop, top)
+               }
+            }
+
+            this.popupStyle = {
+               top: `${top}px`,
+               left: `${left}px`,
+               width: `${width}px`,
+               height: `${height}px`,
+               maxWidth: `${maxWidth}px`,
+               maxHeight: `${maxHeight}px`,
+               transform: "none",
+               zIndex: "100000"
+            }
          }
       }
    }

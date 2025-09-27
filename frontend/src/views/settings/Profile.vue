@@ -31,7 +31,12 @@
               {{ $t("settings.keepCreationTimestamp") }}
             </label>
           </p>
-
+          <p>
+            <label>
+              <input v-model="popupPreview" type="checkbox" />
+              {{ $t("settings.popupPreview") }}
+            </label>
+          </p>
 
           <div>
             <label>
@@ -123,7 +128,8 @@ export default {
          locale: "",
          concurrentUploadRequests: 4,
          encryptionMethod: null,
-         keepCreationTimestamp: false
+         keepCreationTimestamp: false,
+         popupPreview: false
       }
    },
 
@@ -154,6 +160,7 @@ export default {
       this.concurrentUploadRequests = this.settings.concurrentUploadRequests
       this.encryptionMethod = this.settings.encryptionMethod
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
+      this.popupPreview = this.settings.popupPreview
    },
 
    methods: {
@@ -192,6 +199,7 @@ export default {
             concurrentUploadRequests: this.concurrentUploadRequests,
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
+            popupPreview: this.popupPreview,
          }
 
          await updateSettings(data)

@@ -76,7 +76,7 @@ def users_me(request):
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
-                             "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp
+                             "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp, "popupPreview": settings.popup_preview
                              }
                 }
 
@@ -97,6 +97,7 @@ def update_settings(request):
     subfoldersInShares = request.data.get('subfoldersInShares')
     encryptionMethod = request.data.get('encryptionMethod')
     keepCreationTimestamp = request.data.get('keepCreationTimestamp')
+    popupPreview = request.data.get('popupPreview')
     theme = request.data.get('theme')
 
     settings = UserSettings.objects.get(user=request.user)
@@ -104,6 +105,8 @@ def update_settings(request):
         settings.locale = locale
     if isinstance(dateFormat, bool):
         settings.date_format = dateFormat
+    if isinstance(popupPreview, bool):
+        settings.popup_preview = popupPreview
     if isinstance(hideLockedFolders, bool):
         settings.hide_locked_folders = hideLockedFolders
     if isinstance(concurrentUploadRequests, int):

@@ -247,9 +247,8 @@ export default {
             document.querySelector("#save-button").classList.add("loading")
 
             let res = await canUpload(this.file.parent_id)
-            if (!res.can_upload) {
-               return
-            }
+            if (!res.can_upload) return
+
             if (this.raw !== this.copyRaw) {
                let method = this.file.encryption_method
                let iv

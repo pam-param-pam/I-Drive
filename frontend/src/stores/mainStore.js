@@ -27,7 +27,7 @@ export const useMainStore = defineStore("main", {
       shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []},
       usage: { used: 0, total: 0 },
       popupPreviewURL: null,
-
+      isFilesActive: false
    }),
 
    getters: {
@@ -100,6 +100,9 @@ export const useMainStore = defineStore("main", {
    },
 
    actions: {
+      setIsFilesActive(value) {
+         this.isFilesActive = value
+      },
       setUsage(value) {
         this.usage = value
       },

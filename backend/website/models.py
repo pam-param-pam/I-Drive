@@ -427,6 +427,7 @@ class UserSettings(models.Model):
     subfolders_in_shares = models.BooleanField(default=False)
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
+    popup_preview = models.BooleanField(default=False)
     theme = models.CharField(default="dark", max_length=20)
 
     history = HistoricalRecords()

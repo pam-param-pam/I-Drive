@@ -23,8 +23,6 @@ export function cancelRequestBySignature(signature) {
    if (cancelTokenMap.has(signature)) {
       cancelTokenMap.get(signature).cancel(`Cancelled due to new request`)
       cancelTokenMap.delete(signature)
-   } else {
-      console.warn("Couldn't find request to cancel with signature: " + signature)
    }
 }
 

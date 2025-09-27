@@ -8,6 +8,7 @@
       :isSearchActive="false"
       :readonly="true"
       @onOpen="onOpen"
+      @dropUpload="onDropUpload"
    ></FileListing>
 </template>
 
@@ -48,11 +49,12 @@ export default {
 
    unmounted() {
       this.isActive = false
+      this.setItems(null)
    },
 
    mounted() {
       this.setItems(null)
-      this.setCurrentFolder(null)
+      // this.setCurrentFolder(null)
       this.setDisabledCreation(true)
       this.setSearchActive(false)
       this.setSearchItems(null)
@@ -84,6 +86,9 @@ export default {
          this.resetSelected()
          this.addSelected(item)
          this.showHover('restoreFromTrash')
+      },
+      onDropUpload() {
+         this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
       }
    }
 }

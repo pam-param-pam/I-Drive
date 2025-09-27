@@ -1,6 +1,6 @@
 <template>
    <div class='wrapper'>
-      <PopupPreview v-if="!isMobile() && false" />
+      <PopupPreview v-if="!isMobile() && settings.popupPreview" />
       <header-bar>
          <Search
             v-if='headerButtons.search'
@@ -503,7 +503,7 @@ export default {
    methods: {
       isMobile,
 
-      ...mapActions(useMainStore, ['setSelected', 'setLastItem', 'toggleShell', 'addSelected', 'setItems', 'resetSelected', 'showHover', 'setSortByAsc', 'setSortingBy', 'updateSettings']),
+      ...mapActions(useMainStore, ['setSelected', 'setLastItem', 'toggleShell', 'addSelected', 'resetSelected', 'showHover', 'setSortByAsc', 'setSortingBy', 'updateSettings']),
 
       async uploadInput(event) {
          this.$emit('uploadInput', event)

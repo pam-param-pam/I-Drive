@@ -32,9 +32,8 @@ export class Uploader {
       this.uploadStore.state = uploadState.uploading
 
       let res = await canUpload(folderContext)
-      if (!res.can_upload) {
-         return
-      }
+      if (!res.can_upload) return
+
       this.processNewFiles(type, folderContext, filesList, res.lockFrom)
       //todo NotOptimizedForSmallFiles
    }

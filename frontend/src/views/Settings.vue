@@ -1,5 +1,5 @@
 <template>
-   <div class="dashboard">
+   <div class="dashboard" @dragover.prevent @drop.prevent="onDrop">
       <header-bar />
 
       <div id="nav">
@@ -64,7 +64,12 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setDisabledCreation'])
+      ...mapActions(useMainStore, ['setDisabledCreation']),
+
+      onDrop() {
+         this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
+      },
+
    },
 
    mounted() {
@@ -78,7 +83,8 @@ export default {
 
    created() {
       this.setDisabledCreation(true)
-   }
+   },
+
 }
 </script>
 <style scoped>

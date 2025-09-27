@@ -145,8 +145,8 @@ export default {
             }
             this.$toast.info(this.$t("toasts.savingMoment"))
 
-            let allowed = await canUpload(this.file.parent_id)
-            if (!allowed) return
+            let res = await canUpload(this.file.parent_id)
+            if (!res.can_upload) return
 
             let fileFormList = new FormData()
 

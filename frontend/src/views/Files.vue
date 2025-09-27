@@ -103,7 +103,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setSearchFilters", "setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
+      ...mapActions(useMainStore, ["setSearchFilters", "setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
       ...mapActions(useUploadStore, ["startUpload"]),
 
       async onSearchQuery(searchParams) {
@@ -149,7 +149,7 @@ export default {
       async fetchFolder() {
          await this.onSearchClosed()
 
-         if (this.currentFolder?.id === this.folderId) {
+         if (this.currentFolder?.id === this.folderId && this.items) {
             this.folderList = this.currentFolder.breadcrumbs
          } else {
             try {

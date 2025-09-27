@@ -115,11 +115,11 @@ export async function canUpload(folderContext) {
       uploadStore.setWebhooks(response.data.webhooks)
       uploadStore.setAttachmentName(response.data.attachment_name)
       uploadStore.setFileExtensions(response.data.extensions)
-      return true
+      return response.data
    }
    else {
       showToast("error", "errors.notAllowedToUpload", {timeout: null})
-      return false
+      return response.data
    }
 }
 

@@ -129,8 +129,8 @@ export default {
             this.uploading = true
             this.uploadProgress = 0
 
-            let allowed = await canUpload(this.file.parent_id)
-            if (!allowed) {
+            let res = await canUpload(this.file.parent_id)
+            if (!res.can_upload) {
                this.uploading = false
                return
             }

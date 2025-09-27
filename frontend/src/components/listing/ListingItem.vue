@@ -19,11 +19,11 @@
     >
       <div :style="divStyle">
         <img
-          v-if="imageSrc"
+          v-if="imageSrcSmall"
           :draggable="false"
           @mouseenter="handleHoverStart"
           @mouseleave="handleHoverEnd"
-          v-lazy="{ src: imageSrc }"
+          v-lazy="{ src: imageSrcSmall }"
         />
         <i v-else :style="iconStyle" class="material-icons"></i>
       </div>
@@ -64,18 +64,22 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       imageSrc() {
-         let size = this.settings.viewMode === 'height grid' ? "512" : "128"
          if (this.type === 'Raw image') {
             if (this.item.preview_url) return this.item.preview_url
             if (this.item.download_url) return this.item.download_url
          }
          if (['Video', 'Audio', 'Image'].includes(this.type) && this.item.thumbnail_url) {
-            return this.item.thumbnail_url + "?size=" + size
+            return this.item.thumbnail_url
          }
          if (this.type === "Image") {
             return this.item.download_url
          }
          return null
+      },
+      imageSrcSmall() {
+         let size = this.settings.viewMode === 'height grid' ? "512" : "128"
+         if (!this.imageSrc) return
+         return this.imageSrc + "?size=" + size
       },
       type() {
          if (this.item.isDir) return 'folder'
