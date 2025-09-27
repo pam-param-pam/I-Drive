@@ -64,13 +64,18 @@ class FolderAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'last_modified_at')
     ordering = ["-created_at"]
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
-    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock']
+    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock', 'force_ready']
     search_fields = ["id", "name"]
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
         return form
+
+    def force_ready(self, request, queryset: QuerySet[Folder]):
+        for real_obj in queryset:
+            real_obj.ready = True
+            real_obj.save()
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
         ids = []

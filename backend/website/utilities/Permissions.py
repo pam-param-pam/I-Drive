@@ -283,6 +283,7 @@ class CheckShareExpired(BaseResourceCheck):
         self._require_type(share_obj, ShareableLink)
 
         if share_obj.is_expired():
+            print("CheckShareExpired")
             share_obj.delete()
             raise ResourceNotFoundError("Share not found or expired")
 
@@ -293,15 +294,17 @@ class CheckShareReady(BaseResourceCheck):
 
         ready = self._require_attr(share_obj.get_resource_inside(), 'ready')
         if not ready:
+            print("CheckShareReady")
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckShareTrash(BaseResourceCheck):
     def check(self, request, *resources):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
-
+        print(share_obj.get_resource_inside())
         in_trash = self._require_attr(share_obj.get_resource_inside(), 'inTrash')
         if in_trash:
+            print("CheckShareTrash")
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckSharePassword(BaseResourceCheck):
