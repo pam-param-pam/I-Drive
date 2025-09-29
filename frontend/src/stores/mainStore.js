@@ -26,7 +26,7 @@ export const useMainStore = defineStore("main", {
       items: [],
       shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []},
       usage: { used: 0, total: 0 },
-      popupPreviewURL: null,
+      popupPreviewURL: 'http://localhost:8000/files/P7JTzJpntJEKH5Ru3yJxWH:1v2dfz:vkHw8ZfxPDvYDNFibPHgRhQkI6YmePyQrHjFpnECC-4/thumbnail/stream?size=128',
       isFilesActive: false
    }),
 

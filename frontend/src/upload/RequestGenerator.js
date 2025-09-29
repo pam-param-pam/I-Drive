@@ -30,7 +30,7 @@ export class RequestGenerator {
          return this.uploadStore.pausedRequests.shift()
       } else {
          if (!this._generatorInstance) {
-            this._generatorInstance = this.makeRequests(this.backendManager)
+            this._generatorInstance = this.makeRequests()
          }
 
          const next = await this._generatorInstance.next()
@@ -65,10 +65,12 @@ export class RequestGenerator {
          try {
             //creating folder if needed and getting it's backend ID
             queueFile.fileObj.folderId = await this.getOrCreateFolder(queueFile.fileObj)
+
             if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
                queueFile.fileObj.iv = generateIv(queueFile.fileObj.encryptionMethod)
                queueFile.fileObj.key = generateKey(queueFile.fileObj.encryptionMethod)
             }
+            if (this.handleEmptyFile(queueFile)) continue
 
             let thumbnail = null
             //if this is true it means the thumbnail was already extracted, no need to do it again.
@@ -225,5 +227,16 @@ export class RequestGenerator {
          }
       }
       return parentFolder
+   }
+
+   handleEmptyFile(queueFile) {
+      if (queueFile.fileObj.size === 0) {
+         this.uploadStore.markFileUploaded(queueFile.fileObj.frontendId)
+         let file = this.backendManager.getOrCreateState(queueFile.fileObj)
+         this.backendManager.addFinishedFile(file)
+         this.backendManager.saveFilesIfNeeded()
+         return true
+      }
+      return false
    }
 }

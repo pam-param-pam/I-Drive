@@ -25,7 +25,7 @@ export function formatSeconds(seconds) {
 export function detectExtension(filename) {
    let arry = filename.split(".")
 
-   if (arry.length === 1) return ".txt" //missing extension defaults to .txt
+   if (arry.length === 1) return ".txt"
    return "." + arry[arry.length - 1]
 
 }

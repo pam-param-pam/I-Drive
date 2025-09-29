@@ -45,20 +45,9 @@ export const useUploadStore = defineStore("upload", {
       filesInUpload() {
          const N = 10
 
-         // Filter files
-         const filtered = this.fileState.filter(f => f.status !== fileUploadStatus.waitingForSave)
-
-         // Slice top N
-         const topFiles = filtered
-            .sort((a, b) => b.progress - a.progress)
-            .slice(0, N)
-
-         // Map to small objects, reusing cached versions if available
-         return topFiles.map(file => {
-            const cached = this.fileCache[file.frontendId]
-
+         const mapToSmallObj = (file) => {
+            let cached = this.fileCache[file.frontendId]
             if (cached) {
-               // Update values on existing small object instead of creating new one
                cached.progress = file.progress
                cached.status = file.status
                cached.error = file.error
@@ -67,8 +56,6 @@ export const useUploadStore = defineStore("upload", {
                cached.type = file.fileObj.type
                return cached
             }
-
-            // Create new small object and store in cache
             const smallObj = {
                frontendId: file.frontendId,
                progress: file.progress,
@@ -80,7 +67,32 @@ export const useUploadStore = defineStore("upload", {
             }
             this.fileCache[file.frontendId] = smallObj
             return smallObj
-         })
+         }
+
+         if (this.fileState.length === 1) {
+            return [mapToSmallObj(this.fileState[0])]
+         }
+
+         // Keep top N manually
+         const topFiles = []
+         for (const f of this.fileState) {
+            if (f.status === fileUploadStatus.waitingForSave) continue
+
+            // Insert into topFiles in descending order
+            let inserted = false
+            for (let i = 0; i < topFiles.length; i++) {
+               if (f.progress > topFiles[i].progress) {
+                  topFiles.splice(i, 0, f)
+                  inserted = true
+                  break
+               }
+            }
+            if (!inserted && topFiles.length < N) topFiles.push(f)
+
+            if (topFiles.length > N) topFiles.pop()
+         }
+
+         return topFiles.map(mapToSmallObj)
       },
       remainingBytes() {
          let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
@@ -353,6 +365,7 @@ export const useUploadStore = defineStore("upload", {
             this.failedRequests = []
             // this.erroredRequests = []
             this.currentRequests = 0
+            this.fileCache = {}
 
             //UI
             this.uploadSpeedMap = new Map()

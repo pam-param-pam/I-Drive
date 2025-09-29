@@ -42,6 +42,7 @@ export class BackendManager {
             "duration": fileObj.duration,
             "iv": fileObj.iv,
             "key": fileObj.key,
+            "crc": 0,
             "parent_password": fileObj.parentPassword, //this is later removed!
             "lock_from": fileObj.lockFrom, //this is later removed!
             "attachments": []
@@ -74,8 +75,8 @@ export class BackendManager {
 
       if (attachment.type === attachmentType.file) {
          this.uploadStore.incrementChunk(fileObj.frontendId)
-
-         state.crc = fileObj.crc >>> 0
+         let crc = fileObj.crc || 0
+         state.crc = crc >>> 0
          let attachment_data = {
             "fragment_sequence": attachment.fragmentSequence,
             "fragment_size": attachment.rawBlob.size,
@@ -116,7 +117,7 @@ export class BackendManager {
       let totalSize = 0
 
       for (const file of this.finishedFiles) {
-         totalSize += file.size || 0
+         totalSize += file.size
       }
 
       if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || this.uploadStore.areAllUploadsFinished) {

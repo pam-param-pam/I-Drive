@@ -2,7 +2,7 @@
    <div
       :class="{
          'error-border': isErrorStatus(fileState.status),
-         'success-border': fileState.status === fileUploadStatus.uploaded,
+         'success-border': fileState.status === fileUploadStatus.uploaded || fileState.status === fileUploadStatus.waitingForSave,
          'warning-border': state === uploadState.paused && fileState.status !== fileUploadStatus.waitingForSave,
          'shake-animation': isShaking
       }"
@@ -50,14 +50,14 @@
          <span v-if="fileState.status === fileUploadStatus.waitingForInternet">
             <b class="info">{{ $t('uploadFile.waitingForInternet') }}</b>
          </span>
-         <span v-if="fileState.status === fileUploadStatus.waitingForSave">
-            <b class="info">{{ $t('uploadFile.waitingForSave') }}</b>
-         </span>
          <span v-if="fileState.status === fileUploadStatus.retrying">
             <b class="info">{{ $t('uploadFile.retrying') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.uploaded">
             <b class="success">{{ $t('uploadFile.success') }}</b>
+         </span>
+         <span v-if="fileState.status === fileUploadStatus.waitingForSave">
+            <b class="success">{{ $t('uploadFile.waitingForSave') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.paused">
             <b class="warning">{{ $t('uploadFile.paused') }}</b>

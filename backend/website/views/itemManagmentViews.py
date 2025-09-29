@@ -15,7 +15,7 @@ from ..utilities.decorators import extract_folder, check_resource_permissions, e
     accumulate_password_errors
 from ..utilities.errors import BadRequestError, ResourcePermissionError
 from ..utilities.other import build_response, send_event, check_if_bots_exists, \
-    delete_single_discord_attachment, get_discord_author, get_attr
+    delete_single_discord_attachment, get_discord_author, get_attr, get_file_type
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -120,16 +120,19 @@ def delete(request, items):
 @check_resource_permissions(default_checks, resource_key="item_obj")
 def rename(request, item_obj):
     new_name = request.data["new_name"]
+    extension = request.data["extension"]
 
     if len(new_name) > MAX_RESOURCE_NAME_LENGTH:
         raise BadRequestError(f"Name cannot be longer than '{MAX_RESOURCE_NAME_LENGTH}' characters")
 
     item_obj.name = new_name
-    item_obj.save()
 
     if isinstance(item_obj, File):
+        item_obj.type = get_file_type(extension)
+        item_obj.save()
         data = FileSerializer().serialize_object(item_obj)
     else:
+        item_obj.save()
         data = FolderSerializer().serialize_object(item_obj)
 
     send_event(request.user.id, request.request_id, item_obj.parent, EventCode.ITEM_UPDATE, data)

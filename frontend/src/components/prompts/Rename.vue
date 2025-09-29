@@ -39,7 +39,7 @@
 import { rename } from '@/api/item.js'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
-import { onceAtATime } from "@/utils/common.js"
+import { detectExtension, onceAtATime } from "@/utils/common.js"
 
 export default {
    name: 'rename',
@@ -70,7 +70,8 @@ export default {
          if (this.canSubmit) {
             let new_name = this.name
             let fileId = this.selected[0].id
-            await rename(fileId, { "new_name": new_name })
+            let extension = detectExtension(new_name)
+            await rename(fileId, { "new_name": new_name, "extension": extension })
 
             let message = this.$t('toasts.itemRenamed')
             this.$toast.success(message)

@@ -1,6 +1,6 @@
 <template>
-  <div class="popup-preview" v-show="source" ref="popup" :style="popupStyle">
-    <img :src="source" alt="Popup image" />
+  <div class="popup-preview" v-if="source" ref="popup" :style="popupStyle">
+    <img :src="source" alt="Popup image" :style="popupStyle">
   </div>
 </template>
 
@@ -17,6 +17,7 @@ export default {
             top: "0px",
             left: "0px"
          },
+         showPopup: false,
          cursorX: 0,
          cursorY: 0
       }
@@ -24,6 +25,7 @@ export default {
    watch: {
       source(newVal) {
          if (newVal) {
+            this.popupStyle = { top: "0px", left: "0px" }
             this.$nextTick(() => {
                this.positionPopup()
             })
@@ -55,52 +57,48 @@ export default {
          if (!popup) return
 
          const { innerWidth, innerHeight } = window
-         const padding = 25
+         const padding = 50
 
          const img = new Image()
          img.src = this.source
 
          img.onload = () => {
-            const aspectRatio = img.naturalWidth / img.naturalHeight
+            let width = img.naturalWidth
+            let height = img.naturalHeight
 
-            const maxWidth = Math.min(700, innerWidth - 2 * padding)
-            const maxHeight = Math.min(700, innerHeight - 2 * padding)
+            // Determine scaling
+            const maxDim = Math.max(width, height)
 
-            let width = maxWidth
-            let height = width / aspectRatio
-
-            if (height > maxHeight) {
-               height = maxHeight
-               width = height * aspectRatio
+            if (maxDim < 700) {
+               const scale = 700 / maxDim
+               width *= scale
+               height *= scale
+            } else if (maxDim > 700) {
+               const scale = 700 / maxDim
+               width *= scale
+               height *= scale
             }
 
-            const minLeft = padding
-            const minTop = padding
+            // Keep within viewport (optional)
+            width = Math.min(width, innerWidth - 2 * padding)
+            height = Math.min(height, innerHeight - 2 * padding)
 
+            // Position centered on cursor
             let left = this.cursorX - width / 2
-            left = Math.max(minLeft, Math.min(left, innerWidth - width - padding))
+            let top = this.cursorY - height / 2
 
-            let top
-            const isBottomHalf = this.cursorY > innerHeight / 2
-
-            if (isBottomHalf) {
-               top = this.cursorY - height - padding
-               top = Math.max(minTop, top)
-            } else {
-               top = this.cursorY + padding
-               if (top + height > innerHeight - padding) {
-                  top = innerHeight - height - padding
-                  top = Math.max(minTop, top)
-               }
-            }
+            left = Math.max(padding, Math.min(left, innerWidth - width - padding))
+            top = Math.max(padding, Math.min(top, innerHeight - height - padding))
 
             this.popupStyle = {
                top: `${top}px`,
                left: `${left}px`,
                width: `${width}px`,
                height: `${height}px`,
-               maxWidth: `${maxWidth}px`,
-               maxHeight: `${maxHeight}px`,
+               minWidth: `${width}px`,
+               minHeight: `${height}px`,
+               maxWidth: `${Math.min(width, 600)}px`,
+               maxHeight: `${Math.min(height, 600)}px`,
                transform: "none",
                zIndex: "100000"
             }
@@ -133,5 +131,7 @@ export default {
  max-width: 100%;
  max-height: 100%;
  display: block;
+ object-fit: contain;
+
 }
 </style>

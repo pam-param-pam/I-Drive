@@ -6,7 +6,6 @@ import { showToast } from "@/utils/common.js"
 
 
 export async function checkFilesSizes(files) {
-   return false // todo
    let smallFileCount = 0
    let threshold = 100
    let maxFileSize = 0.5 * 1024 * 1024 // 0.5 MB in bytes
@@ -58,33 +57,32 @@ export async function scanDataTransfer(dataTransfer) {
 // Recursively process directories and collect files with their full paths
 async function processDirectory(directoryEntry) {
    let files = []
+   const reader = directoryEntry.createReader()
 
-   // Create a reader to go through the directory's entries
-   let reader = directoryEntry.createReader()
 
-   // Use the reader to read entries in the directory (files and subdirectories)
-   const readEntries = () =>
-      new Promise((resolve, reject) => {
-         reader.readEntries((entries) => {
-            resolve(entries)
-         }, reject)
+   async function readAllEntries() {
+      let batch = await new Promise((resolve, reject) => {
+         reader.readEntries(resolve, reject)
       })
-   let entries = await readEntries()
 
-   // Iterate over each entry in the directory
-   for (let entry of entries) {
-      // Construct the new path for each entry
+      while (batch.length) {
+         for (const entry of batch) {
+            if (entry.isFile) {
+               files.push(await processFile(entry))
+            } else if (entry.isDirectory) {
+               files.push(...await processDirectory(entry))
+            }
+         }
 
-      if (entry.isFile) {
-         // Process and add the file with its full path
-         files.push(await processFile(entry))
-      } else if (entry.isDirectory) {
-         // Recursively process subdirectory and add its files
-         files.push(...await processDirectory(entry))
+         batch = await new Promise((resolve, reject) => {
+            reader.readEntries(resolve, reject)
+         })
       }
    }
 
-   return files // Return all files with their full paths
+
+   await readAllEntries()
+   return files
 }
 
 
@@ -464,6 +462,7 @@ export async function upload(formData, config) {
    } //+ "aaa"
    return await uploadInstance.post(url, formData, config)
 }
+
 
 export function isErrorStatus(status) {
    return status === fileUploadStatus.errorOccurred ||

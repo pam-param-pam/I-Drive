@@ -48,7 +48,7 @@ export class FileStateHolder {
       const videoMetadataDone = !this.videoMetadataRequired || this.videoMetadataExtracted
       const filledInfo = this.totalChunks !== undefined
 
-      return chunksDone && thumbnailDone && videoMetadataDone && filledInfo
+      return (chunksDone && thumbnailDone && videoMetadataDone && filledInfo) || this.fileObj.size === 0
    }
 
    setTotalChunks(count) {

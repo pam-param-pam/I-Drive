@@ -215,7 +215,7 @@ export default {
          this.addSelected(this.file)
 
          try {
-            this.raw = await getFileRawData(this.file.download_url, {responseType: "text"})
+            this.raw = await getFileRawData(this.file.download_url, { responseType: "text" })
 
             this.setLastItem(this.file)
          } catch (error) {
@@ -250,6 +250,13 @@ export default {
             if (!res.can_upload) return
 
             if (this.raw !== this.copyRaw) {
+               if (!this.raw) {
+                  await editFile(this.file.id, {"empty": true})
+                  this.copyRaw = this.raw
+                  this.onSuccessfulSave()
+                  return
+               }
+
                let method = this.file.encryption_method
                let iv
                let key
@@ -281,14 +288,7 @@ export default {
                await editFile(this.file.id, file_data)
                this.copyRaw = this.raw
             }
-            document.querySelector("#save-button").classList.remove("loading")
-
-            document.querySelector("#save-button").classList.add("success")
-            setTimeout(() => {
-               document.querySelector("#save-button").classList.remove("success")
-            }, 2500)
-            let message = this.$t("toasts.fileSaved")
-            this.$toast.success(message)
+            this.onSuccessfulSave()
 
          } catch (e) {
             document.querySelector("#save-button").classList.remove("loading")
@@ -298,7 +298,16 @@ export default {
             this.savingFile = false
          }
       }, 1000),
+      onSuccessfulSave() {
+         document.querySelector("#save-button").classList.remove("loading")
 
+         document.querySelector("#save-button").classList.add("success")
+         setTimeout(() => {
+            document.querySelector("#save-button").classList.remove("success")
+         }, 2500)
+         let message = this.$t("toasts.fileSaved")
+         this.$toast.success(message)
+      },
       onClose() {
          try {
             if (this.isInShareContext) {

@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 
 from ..utilities.constants import SIGNED_URL_EXPIRY_SECONDS
-from ..utilities.errors import ResourcePermissionError
+from ..utilities.errors import ResourcePermissionError, CannotProcessDiscordRequestError
 
 signer = TimestampSigner()
 

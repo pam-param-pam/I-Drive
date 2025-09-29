@@ -19,7 +19,8 @@ app.use(Vue3TouchEvents)
 
 app.use(VueLazyLoad, {
    error: '/img/failed.svg',
-   throttleWait: 10000
+   throttleWait: 10000,
+   attempt: 2,
 })
 
 app.use(VueVirtualScroller)
