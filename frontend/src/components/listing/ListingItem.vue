@@ -81,7 +81,7 @@ export default {
       imageSrcSmall() {
          let size = this.settings.viewMode === "height grid" ? "512" : "128"
          if (!this.imageSrc) return
-         if (!this.fallback) return "/img/failed.svg"
+         if (this.fallback) return "/img/failed.svg"
          return this.imageSrc + "?size=" + size
       },
       type() {
@@ -208,6 +208,7 @@ export default {
          this.$emit("onLongPress", event, this.item)
       },
       async handleImageError(event) {
+         return
          const img = event.target
 
          // prevent infinite retry
@@ -216,7 +217,7 @@ export default {
 
          try {
             const res = await fetch(this.imageSrcSmall, { method: "GET", mode: "cors" })
-
+            console.log(res)
             if (res.ok) {
                const blob = await res.blob()
                img.src = URL.createObjectURL(blob)
@@ -224,6 +225,7 @@ export default {
                this.fallback = true
             }
          } catch (err) {
+            console.log(err)
             this.fallback = true
          }
       },

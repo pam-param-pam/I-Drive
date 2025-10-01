@@ -17,15 +17,16 @@ export default {
             top: "0px",
             left: "0px"
          },
-         showPopup: false,
          cursorX: 0,
-         cursorY: 0
+         cursorY: 0,
+         oldSource: null
       }
    },
    watch: {
-      source(newVal) {
-         if (newVal) {
+      source(newVal, oldVal) {
+         if (newVal && newVal !== oldVal) {
             this.popupStyle = { top: "0px", left: "0px" }
+            this.oldSource = oldVal
             this.$nextTick(() => {
                this.positionPopup()
             })
@@ -35,7 +36,6 @@ export default {
    computed: {
       ...mapState(useMainStore, ["popupPreviewURL"]),
       source() {
-
          return this.popupPreviewURL
       }
    },
@@ -49,62 +49,68 @@ export default {
       updateCursorPosition(event) {
          this.cursorX = event.clientX
          this.cursorY = event.clientY
-         this.positionPopup()
+         this.calculatePopupStyle()
       },
       positionPopup() {
          if (!this.source) return
          const popup = this.$refs.popup
          if (!popup) return
 
-         const { innerWidth, innerHeight } = window
-         const padding = 50
-
          const img = new Image()
          img.src = this.source
 
          img.onload = () => {
-            let width = img.naturalWidth
-            let height = img.naturalHeight
+            this.width = img.naturalWidth
+            this.height = img.naturalHeight
+            this.calculatePopupStyle()
+         }
+      },
+      calculatePopupStyle() {
+         const { innerWidth, innerHeight } = window
+         const padding = 50
 
-            // Determine scaling
-            const maxDim = Math.max(width, height)
+         let imageWidth = this.width
+         let imageHeight = this.height
 
-            if (maxDim < 700) {
-               const scale = 700 / maxDim
-               width *= scale
-               height *= scale
-            } else if (maxDim > 700) {
-               const scale = 700 / maxDim
-               width *= scale
-               height *= scale
-            }
+         // Determine scaling
+         const maxDim = Math.max(imageWidth, imageHeight)
 
-            // Keep within viewport (optional)
-            width = Math.min(width, innerWidth - 2 * padding)
-            height = Math.min(height, innerHeight - 2 * padding)
+         if (maxDim < 700) {
+            const scale = 700 / maxDim
+            imageWidth *= scale
+            imageHeight *= scale
+         } else if (maxDim > 700) {
+            const scale = 700 / maxDim
+            imageWidth *= scale
+            imageHeight *= scale
+         }
 
-            // Position centered on cursor
-            let left = this.cursorX - width / 2
-            let top = this.cursorY - height / 2
+         // Keep within viewport (optional)
+         imageWidth = Math.min(imageWidth, innerWidth - 2 * padding)
+         imageHeight = Math.min(imageHeight, innerHeight - 2 * padding)
 
-            left = Math.max(padding, Math.min(left, innerWidth - width - padding))
-            top = Math.max(padding, Math.min(top, innerHeight - height - padding))
+         // Position centered on cursor
+         let left = this.cursorX - imageWidth / 2
+         let top = this.cursorY - imageHeight / 2
 
-            this.popupStyle = {
-               top: `${top}px`,
-               left: `${left}px`,
-               width: `${width}px`,
-               height: `${height}px`,
-               minWidth: `${width}px`,
-               minHeight: `${height}px`,
-               maxWidth: `${Math.min(width, 600)}px`,
-               maxHeight: `${Math.min(height, 600)}px`,
-               transform: "none",
-               zIndex: "100000"
-            }
+         left = Math.max(padding, Math.min(left, innerWidth - imageWidth - padding))
+         top = Math.max(padding, Math.min(top, innerHeight - imageHeight - padding))
+
+         this.popupStyle = {
+            top: `${top}px`,
+            left: `${left}px`,
+            width: `${imageWidth}px`,
+            height: `${imageHeight}px`,
+            minWidth: `${imageWidth}px`,
+            minHeight: `${imageHeight}px`,
+            maxWidth: `${Math.min(imageWidth, 600)}px`,
+            maxHeight: `${Math.min(imageHeight, 600)}px`,
+            transform: "none",
+            zIndex: "100000"
          }
       }
    }
+
 }
 </script>
 

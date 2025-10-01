@@ -46,7 +46,7 @@ export class Uploader {
 
       this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
       this.fileProcessorWorker.onmessage = (event) => {
-         let {files, totalBytes} = event.data
+         let { files, totalBytes } = event.data
          this.uploadStore.queue.push(...files)
          this.uploadStore.queue.sort()
          this.uploadStore.allBytesToUpload += totalBytes
@@ -63,11 +63,12 @@ export class Uploader {
 
       // Acquire the mutex before checking/modifying currentRequests
       const unlock = await this.mutex.lock()
+      let req = null
       try {
          const maxConcurrency = this.mainStore.settings.concurrentUploadRequests
          if (this.uploadStore.currentRequests >= maxConcurrency) return
 
-         const req = await this.requestGenerator.getRequest()
+         req = await this.requestGenerator.getRequest()
          if (!req) return
 
          this.uploadStore.currentRequests++
@@ -75,6 +76,10 @@ export class Uploader {
          // Start the upload without blocking the mutex
          this.discordUploader.uploadRequest(req)
             .then(({ request, discordResponse }) => this.backendManager.afterUploadRequest(request, discordResponse))
+            .catch(err => {
+               console.log(err)
+               this.uploadStore.onGeneralError(err, req)
+            })
             .finally(() => {
                // Critical section for decrementing
                this.mutex.lock().then(unlockInner => {
@@ -92,6 +97,7 @@ export class Uploader {
    reSaveFile(frontendId) {
       this.backendManager.reSaveFile(frontendId)
    }
+
    cleanup() {
       window.removeEventListener("beforeunload", beforeUnload)
       this.estimator = new UploadEstimator()

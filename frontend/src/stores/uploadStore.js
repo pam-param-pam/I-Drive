@@ -164,7 +164,6 @@ export const useUploadStore = defineStore("upload", {
       setError(frontendId, error) {
          const fileState = this.getFileState(frontendId)
          if (!fileState) return
-
          fileState.error = error
       },
 
@@ -217,7 +216,15 @@ export const useUploadStore = defineStore("upload", {
             }
          }
       },
-
+      onGeneralError(error, request) {
+         for (let attachment of request.attachments) {
+            let frontendId = attachment.fileObj.frontendId
+            const fileState = this.getFileState(frontendId)
+            if (fileState.status === fileUploadStatus.uploadFailed || fileState.status === fileUploadStatus.saveFailed) return
+            this.setStatus(frontendId, fileUploadStatus.errorOccurred)
+            this.setError(frontendId, error)
+         }
+      },
       setTotalChunks(frontendId, totalChunks) {
          const fileState = this.getFileState(frontendId)
          if (!fileState) return

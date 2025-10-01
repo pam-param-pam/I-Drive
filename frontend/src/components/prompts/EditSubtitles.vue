@@ -100,9 +100,8 @@ import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { canUpload } from "@/api/user.js"
-import { generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
+import { generateIv, generateKey, upload, encryptInWorker } from "@/upload/uploadHelper.js"
 
-import { encrypt } from "@/utils/encryption.js"
 import axios from "axios"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { useUploadStore } from "@/stores/uploadStore.js"
@@ -188,7 +187,7 @@ export default {
             let method = file.encryption_method
             let iv = generateIv(method)
             let key = generateKey(method)
-            let encryptedBlob = await encrypt(this.newSubtitleFile, method, key, iv, 0)
+            let encryptedBlob = await encryptInWorker(this.newSubtitleFile, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
             let form = new FormData()

@@ -50,8 +50,7 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { encrypt } from "@/utils/encryption.js"
-import { generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
+import { encryptInWorker, generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
 import { createThumbnail } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
@@ -139,7 +138,7 @@ export default {
             let method = this.file.encryption_method
             let iv = generateIv(method)
             let key = generateKey(method)
-            let encryptedBlob = await encrypt(this.thumbnailFile, method, key, iv, 0)
+            let encryptedBlob = await encryptInWorker(this.thumbnailFile, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
 

@@ -76,12 +76,11 @@
 </template>
 
 <script>
-import { captureVideoFrame, generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
+import { captureVideoFrame, generateIv, generateKey, upload, encryptInWorker } from "@/upload/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
 import { canUpload } from "@/api/user.js"
-import { encrypt } from "@/utils/encryption.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
@@ -157,7 +156,7 @@ export default {
                iv = generateIv(method)
                key = generateKey(method)
             }
-            let encryptedBlob = await encrypt(this.currentThumbnailData, method, key, iv, 0)
+            let encryptedBlob = await encryptInWorker(this.currentThumbnailData, method, key, iv, 0)
 
             fileFormList.append("file", encryptedBlob, this.attachmentName)
 

@@ -1,9 +1,9 @@
 import axios from "axios"
-import { encryptAttachment } from "@/utils/encryption.js"
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { upload } from "@/upload/uploadHelper.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { noWifi } from "@/axios/helper.js"
+import { encryptAttachment } from "@/utils/encryption.js"
 
 export class DiscordUploader {
    constructor() {

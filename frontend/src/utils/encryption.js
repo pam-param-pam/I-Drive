@@ -1,7 +1,7 @@
 import JSChaCha20 from "js-chacha20"
 import { attachmentType, encryptionMethod } from "@/utils/constants.js"
 
-export function base64ToUint8Array(base64) {
+function base64ToUint8Array(base64) {
    let binaryString = window.atob(base64)
    let len = binaryString.length
    let bytes = new Uint8Array(len)

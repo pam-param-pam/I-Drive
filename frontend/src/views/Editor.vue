@@ -49,10 +49,9 @@ import { mapActions, mapState } from "pinia"
 import CodeEditor from "@/components/SimpleCodeEditor/CodeEditor.vue"
 import { isMobile } from "@/utils/common.js"
 import throttle from "lodash.throttle"
-import { encrypt } from "@/utils/encryption.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
-import { generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
+import { generateIv, generateKey, upload, encryptInWorker } from "@/upload/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
 
@@ -266,7 +265,7 @@ export default {
                }
                let formData = new FormData()
                let blob = new Blob([String(this.raw)])
-               let encryptedBlob = await encrypt(blob, method, key, iv, 0)
+               let encryptedBlob = await encryptInWorker(blob, method, key, iv, 0)
 
                formData.append("file", encryptedBlob, this.attachmentName)
 

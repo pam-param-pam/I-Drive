@@ -13,7 +13,7 @@ class MyUserRateThrottleBase(UserRateThrottle):
     def __init__(self):
         super().__init__()
         self.fail_block = 30
-        self.fail_limit = 15
+        self.fail_limit = 100
         self.fail_count = None
         self.request = None
 
