@@ -302,7 +302,7 @@ def stream_file(request, file_obj: File):
 
     isInline = request.GET.get('inline', False)
     isDownload = request.GET.get('download', False)
-
+    # raise BadRequestError("a")
     fragments = file_obj.fragments.all().order_by('sequence')
     user = file_obj.owner
 
@@ -395,7 +395,9 @@ def stream_file(request, file_obj: File):
         response['X-Frame-Options'] = 'DENY'
     response['Content-Length'] = file_size
     response['Content-Disposition'] = content_disposition
-    response['Accept-Ranges'] = 'bytes'
+    if not isDownload:
+        response['Accept-Ranges'] = 'bytes'
+
     response["ETag"] = file_obj.id
 
     if file_obj.type == "Text":

@@ -24,8 +24,8 @@ logger = get_task_logger(__name__)
 folder_serializer = FolderSerializer()
 file_serializer = FileSerializer()
 # thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
-@shared_task(bind=True, name='queue_ws_event', ignore_result=True, queue='wsQ')
-def queue_ws_event(self, ws_channel, ws_event: dict, group=True):  # yes this self arg is needed - no, don't ask me why
+@shared_task(name='queue_ws_event', ignore_result=True, queue='wsQ', expires=60)
+def queue_ws_event(ws_channel, ws_event: dict, group=True):
     channel_layer = get_channel_layer()
     if group:
         async_to_sync(channel_layer.group_send)(ws_channel, ws_event)
@@ -471,7 +471,7 @@ def delete_files_from_trash():
     # todo delete better using with 1 call to task with list of ids
 
 
-@app.task
+@app.task(expires=15)
 def prefetch_next_fragments(fragment_id, number_to_prefetch):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)

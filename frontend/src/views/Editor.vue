@@ -269,7 +269,8 @@ export default {
 
                formData.append("file", encryptedBlob, this.attachmentName)
 
-               let crc = crc32buf(new Uint8Array(await blob.arrayBuffer()), 0)
+               let crc = crc32buf(new Uint8Array(await blob.arrayBuffer()), 0) || 0
+               crc = crc >>> 0
                let uploadResponse = await upload(formData, {})
 
                let file_data = {
