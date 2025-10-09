@@ -25,7 +25,7 @@ export const uploadInstance = axios.create({
 
 uploadInstance.interceptors.response.use(
    function(response) {
-      upload_429_errors--
+      upload_429_errors = Math.max(upload_429_errors - 1, 0)
       return response
    },
    function(error) {
@@ -33,12 +33,17 @@ uploadInstance.interceptors.response.use(
       const mainStore = useMainStore()
 
       if (upload_429_errors > 4) {
-         upload_429_errors = 0
+         upload_429_errors = - 10
          toast.warning(`${i18n.global.t('prompts.ALotOF429')}\n${i18n.global.t('prompts.ALotOF429Explained')}`, {
             timeout: 10000,
             position: "bottom-right"
          })
-         mainStore.settings.concurrentUploadRequests = 2
+         if (mainStore.settings.concurrentUploadRequests > 6) {
+            mainStore.settings.concurrentUploadRequests = 4
+         } else {
+            mainStore.settings.concurrentUploadRequests = 2
+         }
+
       }
 
       // Check if the error is 429 Too Many Requests errors

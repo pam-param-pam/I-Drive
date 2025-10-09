@@ -137,13 +137,15 @@ export default {
 
    methods: {
       isErrorStatus,
-      ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'dismissFile', 'retryFailSaveFile', 'retryGoneFile']),
+      ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'dismissFile', 'retryFailSaveFile', 'retryGoneFile', 'retryUploadFile']),
       dismiss() {
          this.dismissFile(this.fileState.frontendId)
       },
       retry() {
          if (this.fileState.status === fileUploadStatus.saveFailed) {
             this.retryFailSaveFile(this.fileState.frontendId)
+         } else if (this.fileState.status === fileUploadStatus.uploadFailed) {
+            this.retryUploadFile(this.fileState.frontendId)
          } else if (this.fileState.status === fileUploadStatus.fileGone) {
             this.retryGoneFile(this.fileState.frontendId)
          } else {

@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import time
+import uuid
 from collections import defaultdict
 from datetime import timedelta
 from typing import Union, List, Dict, Optional
@@ -26,7 +27,7 @@ from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZ
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
-    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS
+    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS, cache
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, BadRequestError, NoBotsError
 
 _SENTINEL = object()  # Unique object to detect omitted default
@@ -645,15 +646,16 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     city = data.get('city')
     return country, city
 
-
-def create_token(request, user) -> tuple[str, PerDeviceToken, dict]:
+def get_device_metadata(request):
+    """
+    Extracts IP, user-agent, device info, and geolocation from a request.
+    """
     ip, _ = get_ip(request)
-
-    # Get device info from django_user_agents
     ua = request.user_agent
-    device_family = '' if (ua.device.family or '') == 'Other' else (ua.device.family or '')
 
+    device_family = '' if (ua.device.family or '') == 'Other' else (ua.device.family or '')
     device_name = f"{device_family} {ua.os.family or ''} {ua.os.version_string or ''}".strip()
+
     if ua.is_mobile or ua.is_tablet:
         device_type = "mobile"
     elif ua.is_pc:
@@ -663,27 +665,57 @@ def create_token(request, user) -> tuple[str, PerDeviceToken, dict]:
 
     country, city = get_location_from_ip(ip)
 
-    # Generate a backend-only device_id
+    # Generate backend-only device_id
     device_id = shortuuid.uuid()
 
-    # Expiry set to 30 days from now
-    expires = datetime.timedelta(days=TOKEN_EXPIRY_DAYS)
+    return {
+        "ip": ip,
+        "user_agent": str(ua),
+        "device_name": device_name,
+        "device_type": device_type,
+        "country": country,
+        "city": city,
+        "device_id": device_id,
+    }
 
-    # Create per-device token
+def create_token_internal(request, user,  device_info):
     raw_token, token_instance = PerDeviceToken.objects.create_token(
         user=user,
-        device_name=device_name,
-        device_id=device_id,
-        expires=expires,
-        ip_address=ip,
-        user_agent=str(ua),
-        country=country,
-        city=city,
-        device_type=device_type
+        device_name=device_info["device_name"],
+        device_id=device_info["device_id"],
+        expires=datetime.timedelta(days=TOKEN_EXPIRY_DAYS),
+        ip_address=device_info["ip"],
+        user_agent=device_info["user_agent"],
+        country=device_info["country"],
+        city=device_info["city"],
+        device_type=device_info["device_type"]
     )
+
     user_logged_in.send(sender=user.__class__, request=request, user=user)
     send_event(user.id, 0, None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_instance))
 
-    return raw_token, token_instance, {'auth_token': raw_token, 'device_id': token_instance.device_id}
+    return raw_token, token_instance, {"auth_token": raw_token, "device_id": token_instance.device_id}
 
+def create_token(request, user) -> tuple[str, PerDeviceToken, dict]:
+    metadata = get_device_metadata(request)
+    return create_token_internal(request, user, metadata)
 
+def create_token_from_qr_session(request, user, session_data):
+    return create_token_internal(request, user, session_data)
+
+def create_qr_session(request):
+    metadata = get_device_metadata(request)
+
+    session_id = str(uuid.uuid4())
+    ttl_seconds = 120
+    expire_at = int(time.time()) + ttl_seconds
+
+    session_data = {
+        **metadata,
+        "authenticated": False,
+        "expire_at": expire_at
+    }
+
+    cache.set(f"qr_session:{session_id}", json.dumps(session_data), timeout=ttl_seconds)
+
+    return {"session_id": session_id, "expire_at": expire_at}

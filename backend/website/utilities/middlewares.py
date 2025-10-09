@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import random
 import time
@@ -72,6 +73,30 @@ class TokenAuthMiddleware(BaseMiddleware):
 
         return await super().__call__(scope, receive, send)
 
+
+class QRSessionMiddleware(BaseMiddleware):
+    async def __call__(self, scope, receive, send):
+        headers = dict(scope['headers'])
+
+        try:
+            session_id = headers.get(b'sec-websocket-protocol').decode('utf-8')
+        except (KeyError, ValueError):
+            session_id = None
+
+        # Default to anonymous
+        scope['user'] = AnonymousUser()
+        scope['session_data'] = None
+        scope['session_id'] = None
+
+        if session_id:
+            session_key = f"qr_session:{session_id}"
+            session_json = await database_sync_to_async(cache.get)(session_key)
+            if session_json:
+                session_data = json.loads(session_json)
+                scope['session_data'] = session_data
+                scope['session_id'] = session_id
+
+        return await super().__call__(scope, receive, send)
 
 class ApplyRateLimitHeadersMiddleware:
     def __init__(self, get_response):

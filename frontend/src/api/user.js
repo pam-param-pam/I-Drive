@@ -26,6 +26,16 @@ export async function loginUser(data) {
    return response.data
 }
 
+export async function createQrSession() {
+   let url = "/auth/qrcode"
+   let response = await backendInstance.post(url, {},{
+      headers: {
+         "Authorization": false,
+      }
+   })
+   return response.data
+}
+
 export async function registerUser(data) {
    let url = "/auth/register"
    let response = await backendInstance.post(url, data,{
@@ -51,8 +61,19 @@ export async function changePassword(data) {
    let url = `/user/password`
    let response = await backendInstance.patch(url, data)
    return response.data
+}
 
 
+export async function getQrSessionDeviceInfo(sessionId) {
+   let url = `/auth/qrcode/get/${sessionId}`
+   let response = await backendInstance.get(url)
+   return response.data
+}
+
+export async function approveQrSession(sessionId) {
+   let url = `/auth/qrcode/${sessionId}`
+   let response = await backendInstance.post(url)
+   return response.data
 }
 
 export async function updateSettings(data) {

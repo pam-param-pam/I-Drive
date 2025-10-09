@@ -11,13 +11,14 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'website.settings')
 django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
-from .utilities.middlewares import TokenAuthMiddleware
-from .consumers import UserConsumer
+from .utilities.middlewares import TokenAuthMiddleware, QRSessionMiddleware
+from .consumers import UserConsumer, QrLoginConsumer
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
     'websocket': URLRouter([
         path('user', TokenAuthMiddleware(UserConsumer.as_asgi())),
+        path('qrcode', QRSessionMiddleware(QrLoginConsumer.as_asgi())),
     ]),
 })
 

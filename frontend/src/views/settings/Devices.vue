@@ -48,7 +48,24 @@
         </div>
       </div>
     </div>
+    <div class="column" style="width: 100%; margin-top: 2rem;">
+      <div class="card">
+        <div class="card-title">
+          <h2>{{ $t("settings.qrCode") }}</h2>
+        </div>
+        <div class="card-content">
+          <p>
+            {{ $t("settings.qrCodeWarning") }}
+          </p>
+          <div class="card-action">
+            <button @click="showHover('ScanQrCode')" class="button button--flat">
+              {{ $t("buttons.scanQrCode") }}
+            </button>
+          </div>
+        </div>
 
+      </div>
+    </div>
   </div>
 </template>
 
@@ -87,7 +104,7 @@ export default {
    },
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLoading", "setError"]),
+      ...mapActions(useMainStore, ["setLoading", "setError", 'showHover']),
 
       async revokeADevice(deviceId) {
          await revokeDevice(deviceId)

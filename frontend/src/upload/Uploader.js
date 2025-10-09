@@ -94,10 +94,6 @@ export class Uploader {
       this.processUploads()
    }
 
-   reSaveFile(frontendId) {
-      this.backendManager.reSaveFile(frontendId)
-   }
-
    cleanup() {
       window.removeEventListener("beforeunload", beforeUnload)
       this.estimator = new UploadEstimator()

@@ -9,6 +9,7 @@ export class DiscordUploader {
    constructor() {
       this.uploadStore = useUploadStore()
       this.abortRequestMap = new Map()
+      this.failedRequests = []
    }
 
 
@@ -44,7 +45,6 @@ export class DiscordUploader {
          },
          /**This is called internally by networker*/
          onErrorCallback: (error) => {
-            //todo display info like error retring...
             uploadStore.fixUploadTracking(request, totalBytesUploaded, error)
          },
          signal: abortSignal
@@ -60,7 +60,7 @@ export class DiscordUploader {
    handleFatalUploadError(err, request) {
       /**Handles axios error in DISCORD upload request*/
       console.log("handleFatalUploadError")
-      this.uploadStore.addFailedRequest(request)
+      this.failedRequests.push(request)
 
       if (!axios.isCancel(err)) {
          if (noWifi(err)) {
@@ -92,7 +92,7 @@ export class DiscordUploader {
       let config = this.buildDiscordAxiosConfig(request, controller.signal)
 
       try {
-         await this.setUploadingStatus(request)
+         await this.setStatusForRequest(request, fileUploadStatus.uploading)
          let discordResponse = await upload(formData, config)
          this.abortRequestMap.delete(request.id)
          return { request, discordResponse }
@@ -102,10 +102,10 @@ export class DiscordUploader {
       }
    }
 
-   async setUploadingStatus(request) {
+   async setStatusForRequest(request, status) {
       for (let i = 0; i < request.attachments.length; i++) {
          let frontendId = request.attachments[i].fileObj.frontendId
-         this.uploadStore.setStatus(frontendId, fileUploadStatus.uploading)
+         this.uploadStore.setStatus(frontendId, status)
       }
    }
 
@@ -115,5 +115,18 @@ export class DiscordUploader {
       }
 
       this.abortRequestMap.clear()
+   }
+
+   async reUploadRequest(frontendId) {
+      for (const request of this.failedRequests) {
+
+         for (const attachment of request.attachments) {
+            if (attachment.fileObj.frontendId === frontendId) {
+               await this.setStatusForRequest(request, fileUploadStatus.retrying)
+               await this.uploadStore.addPausedRequest(request)
+               break
+            }
+         }
+      }
    }
 }

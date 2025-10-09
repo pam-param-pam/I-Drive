@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
-from .views.authViews import login_per_device, logout_per_device, register_user
+from .views.authViews import login_per_device, logout_per_device, register_user, get_qr_session, authenticate_qr_session, get_qr_session_device_info
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats
 from .views.itemManagmentViews import rename, move_to_trash, move, \
@@ -111,6 +111,9 @@ urlpatterns = [
     django_path("auth/token/login", login_per_device, name="login"),
     django_path("auth/token/logout", logout_per_device, name="logout"),
     django_path("auth/register", register_user, name="register"),
+    django_path('auth/qrcode', get_qr_session, name='get qr code session'),
+    django_path('auth/qrcode/<session_id>', authenticate_qr_session, name='qr-auth'),
+    django_path('auth/qrcode/get/<session_id>', get_qr_session_device_info, name='qr-auth'), #todo
 
     path('user/me', ['GET'], users_me, name="get current user"),
     path('user/canUpload/<folder_id>', ['GET'], can_upload, name="check if user is allowed to upload"),

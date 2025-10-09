@@ -23,7 +23,7 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setToken(token)
    mainStore.setTheme(body.settings.theme)
 
-   app.use(VueNativeSock, baseWS + "/user", { reconnection: false, protocol: token })
+   app.use(VueNativeSock, baseWS + "/user", { reconnection: true, protocol: token, reconnectionDelay: 5000, reconnectionAttempts: 5 })
    app.config.globalProperties.$socket.onmessage = (data) => onEvent(data).then()
 
 }

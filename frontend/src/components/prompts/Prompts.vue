@@ -73,6 +73,7 @@ export default {
       EditSubtitles,
       shareAccesses,
       AbortAllWarning,
+      ScanQrCode: defineAsyncComponent(() => import('@/components/prompts/ScanQrCode.vue')),
       FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
    },
    created() {

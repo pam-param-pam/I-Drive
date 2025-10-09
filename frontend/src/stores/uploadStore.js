@@ -11,7 +11,6 @@ export const useUploadStore = defineStore("upload", {
       queue: [],
       state: uploadState.idle,
       pausedRequests: [],
-      failedRequests: [],
       // erroredRequests: [],
 
       currentRequests: 0,
@@ -22,7 +21,6 @@ export const useUploadStore = defineStore("upload", {
       uploadSpeedMap: new Map(),
       fileState: [],
       eta: Infinity,
-
 
       fileCache: {} // key: frontendId -> small object
    }),
@@ -284,9 +282,7 @@ export const useUploadStore = defineStore("upload", {
       addPausedRequest(request) {
          this.pausedRequests.push(request)
       },
-      addFailedRequest(request) {
-         this.failedRequests.push(request)
-      },
+
       markRequestFinished(request) {
          // this.allBytesUploaded += request.totalSize
          this.uploadSpeedMap.delete(request.id)
@@ -327,7 +323,12 @@ export const useUploadStore = defineStore("upload", {
       },
 
       retryFailSaveFile(frontendId) {
-         getUploader().reSaveFile(frontendId)
+         getUploader().backendManager.reSaveFile(frontendId)
+      },
+
+      async retryUploadFile(frontendId) {
+         await getUploader().discordUploader.reUploadRequest(frontendId)
+         getUploader().processUploads()
       },
 
       retryGoneFile(frontendId) {
@@ -369,8 +370,6 @@ export const useUploadStore = defineStore("upload", {
             this.state = uploadState.idle
             this.queue = []
             this.pausedRequests = []
-            this.failedRequests = []
-            // this.erroredRequests = []
             this.currentRequests = 0
             this.fileCache = {}
 

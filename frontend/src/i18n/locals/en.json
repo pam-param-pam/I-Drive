@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "confirm": "Confirm",
+    "scanQrCode": "Scan QR Code",
     "revoke": "revoke",
     "logoutAllDevices": "Logout all devices",
     "savingFile": "Saving file...",
@@ -133,6 +135,8 @@
   "login": {
     "createAnAccount": "Create an account",
     "loginInstead": "Already have an account",
+    "loginWithQrCode": "Login with QR Code",
+    "loginNormally": "Login with password",
     "notAllowed": "You are not allowed to register",
     "password": "Password",
     "passwordConfirm": "Confirm password",
@@ -147,6 +151,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "qrDecoded": "QR Code detected",
+    "scanQR": "Scan QR Code",
     "abortAll": "Cancel Upload",
     "abortAllWarning": "Are you sure? All files in the queue will be lost!",
     "fileStats": "File Stats",
@@ -182,8 +188,8 @@
     "isSubsNo": "No",
     "momentsTitle": "Moments",
     "momentsTip": "Save moments you'd like to rewatch later",
-    "ALotOF429": "429 is happening too often!",
-    "ALotOF429Explained": "Changing to different upload scheme and reducing number of concurrent requests.",
+    "ALotOF429": "Too many discord requests!",
+    "ALotOF429Explained": "Reducing number of concurrent requests.",
     "pausedFilesUpload": "Paused upload of {amount} files",
     "pausingFilesUpload": "Pausing upload of {amount} files",
     "editThumbnail": "Edit Thumbnail",
@@ -296,8 +302,10 @@
     "video": "Video"
   },
   "settings": {
+    "qrCodeWarning": "Warning! Never scan other's QR Codes",
     "popupPreview": "Image popup preview",
     "devices": "Active Devices",
+    "qrCode": "QR Code",
     "deviceName": "Name",
     "country": "Country",
     "city": "City",
@@ -384,6 +392,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "qrSessionApproved": "Urządzenie zostało zalogowane!",
     "uploadFinished": "Upload finished!",
     "deviceRevoked": "Device revoked!",
     "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",

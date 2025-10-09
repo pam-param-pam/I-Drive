@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "confirm": "Potwierdź",
+    "scanQrCode": "Skanuj kod qr",
     "revoke": "Wycofaj",
     "logoutAllDevices": "Wyloguj wszystkie urządzenia",
     "editSubtitles": "Edytuj napisy",
@@ -135,6 +137,8 @@
   "login": {
     "createAnAccount": "Utwórz konto",
     "loginInstead": "Mam już konto",
+    "loginWithQrCode": "Zaloguj za pomocą QR kodu",
+    "loginNormally": "Zaloguj za pomocą hasła",
     "notAllowed": "Nie jesteś uprawniony by utworzyć konto",
     "password": "Hasło",
     "passwordConfirm": "Potwierdzenie hasła",
@@ -149,6 +153,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "qrDecoded": "Kod QR zeskanowany",
+    "scanQR": "Zeskanuj kod QR",
     "abortAll": "Anuluj przesyłanie",
     "abortAllWarning": "Czy jesteś pewien? Cały progress zostanie utracony!",
     "fileStats": "Statystyki plików",
@@ -188,8 +194,8 @@
     "isSubsNo": "Nie",
     "momentsTitle": "Momenty",
     "momentsTip": "Zapisz momenty które chciałbyś objerzeć na pózniej!",
-    "ALotOF429": "Za dużo 429!",
-    "ALotOF429Explained": "Zmieniam na inny typ uploadu i redukuje liczbe równoległych requestów.",
+    "ALotOF429": "Za dużo zapytań do discorda!",
+    "ALotOF429Explained": "Nastąpi redukukcja liczbe równoległych requestów.",
     "editThumbnail": "Zmień podgląd",
     "orderBy": "Sortuj po",
     "orderByName": "Nazwie",
@@ -295,8 +301,10 @@
     "video": "Filmy"
   },
   "settings": {
+    "qrCodeWarning": "Uwaga. Nigdy nie skanuj kodów qr wysłanych przez kogoś!",
     "popupPreview": "Podgląd obrazu",
     "devices": "Aktywne Urządzenia",
+    "qrCode": "Kod QR",
     "deviceName": "Nazwa",
     "country": "Kraj",
     "city": "Miasto",
@@ -383,6 +391,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "qrSessionApproved": "Device logged in!",
     "uploadFinished": "Przesyłanie zakończone!",
     "deviceRevoked": "Urządzenie zostało wylogowane!",
     "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto rzeczy z discorda",
