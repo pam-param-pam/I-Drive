@@ -28,7 +28,7 @@ class UserConsumer(WebsocketConsumer):
     def send_message(self, event):
         if self.scope['user'].id == event['user_id']:
             message = {"is_encrypted": False, "event": {"op_code": event['op_code'], "message": event["message"], "args": event.get('args'), "error": event["error"],
-                       "finished": event["finished"]}}
+                                                        "finished": event["finished"]}}
 
             task_id = event.get("request_id")
             if task_id:
@@ -77,5 +77,14 @@ class QrLoginConsumer(WebsocketConsumer):
 
     def approve_session(self, event):
         if event['session_id'] == self.session_id:
+            event['message']['opcode'] = 2
             self.send(text_data=json.dumps(event['message']))
             self.close(code=4000)
+
+    def pending_session(self, event):
+        if event['session_id'] == self.session_id:
+            self.send(text_data=json.dumps({'opcode': 1, "user": event['username']}))
+
+    def cancel_pending_session(self, event):
+        if event['session_id'] == self.session_id:
+            self.send(text_data=json.dumps({'opcode': 3}))

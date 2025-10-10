@@ -133,6 +133,9 @@
     "uwu": "UwU"
   },
   "login": {
+    "QrLoginInfo": "Open iDrive on your phone and scan this QR code to login instantly!",
+    "QrCheckPhone": "Check your phone!",
+    "QrLoggingInAs": "Logging in as {user}",
     "createAnAccount": "Create an account",
     "loginInstead": "Already have an account",
     "loginWithQrCode": "Login with QR Code",

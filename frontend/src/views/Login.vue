@@ -4,8 +4,21 @@
       <h1>&#8205;{{ text }}&#8205;</h1>
       <div v-if="error" class="wrong">{{ error }}</div>
 
-      <div v-if="qrMode">
-        <VueQrcode v-if="qrSessionId" :value=qrCodeData :options="{ width: 250 }"></VueQrcode>
+      <div v-if="qrMode && !createMode" class="qr-container">
+        <div v-if="qrSessionId" class="qr-box">
+          <VueQrcode
+            :value="qrCodeData"
+            :options="{ width: 200, margin: 2}"
+          />
+          <h2 v-if="!qrSessionUser" class="qr-instruction">
+            {{$t('login.QrLoginInfo')}}
+
+          </h2>
+          <div v-if="qrSessionUser" class="qr-login-status">
+            <h3>{{$t('login.QrCheckPhone')}}</h3>
+            <h4>{{$t('login.QrLoggingInAs', {'user': qrSessionUser})}}</h4>
+          </div>
+        </div>
       </div>
       <div v-else>
         <input
@@ -67,8 +80,9 @@ export default {
       return {
          createMode: false,
          qrMode: false,
-         qrSessionId: false,
-         qrExpireAt: false,
+         qrSessionId: null,
+         qrExpireAt: null,
+         qrSessionUser: "",
          error: "",
          username: "",
          password: "",
@@ -103,6 +117,9 @@ export default {
       this.setBackgroundImage()
       this.throttledResizeHandler = throttle(this.setBackgroundImage, 100)
       window.addEventListener("resize", this.throttledResizeHandler)
+      window.addEventListener("visibilitychange", this.visibilityChangeListener)
+      await this.refreshQrSession()
+
       setTimeout(() => {
          this.typeAndErase()
       }, 60000)
@@ -110,6 +127,7 @@ export default {
 
    unmounted() {
       window.removeEventListener("resize", this.throttledResizeHandler)
+      window.removeEventListener("visibilitychange", this.visibilityChangeListener)
    },
 
    methods: {
@@ -118,65 +136,75 @@ export default {
       },
       async toggleQRMode() {
          this.qrMode = !this.qrMode
-         if (!this.qrMode) return
-
-         const now = Math.floor(Date.now() / 1000)
-         if (this.qrSessionId && this.qrExpireAt && now < this.qrExpireAt) {
-            return
+         if (this.qrMode) {
+            await this.refreshQrSession()
          }
-
-         await this.refreshQrSession()
-
-
       },
+
       async refreshQrSession() {
+         let now = Math.floor(Date.now() / 1000)
+
+         if (this.qrSessionId && this.qrExpireAt && now < this.qrExpireAt && this.qrMode) return
+         this.qrSessionId = null
+         this.qrExpireAt = null
+         this.qrSessionUser = null
+
+         // Clear any previous timeout
+         if (this.qrRefreshTimeout) clearTimeout(this.qrRefreshTimeout)
+
          // Create new QR session
          let data = await createQrSession()
          this.qrSessionId = data.session_id
          this.qrExpireAt = data.expire_at
 
+         // Close previous socket
+         this.closeQrWebsocket()
+
+         // Open new WebSocket
          this.qrSocket = new WebSocket(`${baseWS}/qrcode`, this.qrSessionId)
-
-         this.qrSocket.onmessage = (event) => {
-            this.onQRWebSocketMessage(event)
-         }
-
+         this.qrSocket.onmessage = (event) => this.onQRWebSocketMessage(event)
          this.qrSocket.onerror = (error) => {
             this.$toast.error("Failed to open a websocket connection for QR login, report this")
-            console.log("QR WebSocket error", error)
+            console.error("QR WebSocket error", error)
          }
 
          console.log("New QR session created:", this.qrSessionId, "expires at", this.qrExpireAt)
 
-         const now = Math.floor(Date.now() / 1000)
-         let delay = (this.qrExpireAt - now) * 1000
-         delay = Math.max(delay - 1000, 0) //refresh 1 second before
+         // Calculate delay until next refresh
+         let delay = Math.max((this.qrExpireAt - now) * 1000 - 1000, 0)
 
-         // Only schedule next refresh if tab is visible
-         const scheduleNext = () => {
+         // Schedule next refresh only if tab is visible
+         const schedule = () => {
             if (!document.hidden) {
-               setTimeout(() => this.refreshQrSession(), delay)
-            } else {
-               // Retry later when tab becomes active
-               document.addEventListener("visibilitychange", function onVisible() {
-                  if (!document.hidden) {
-                     document.removeEventListener("visibilitychange", onVisible)
-                     this.refreshQrSession()
-                  }
-               }.bind(this))
+               this.qrRefreshTimeout = setTimeout(() => this.refreshQrSession(), delay)
             }
          }
 
-         scheduleNext()
+         schedule()
+      },
+      visibilityChangeListener() {
+         if (!document.hidden && this.qrMode) {
+            this.refreshQrSession()
+         }
+      },
+      closeQrWebsocket() {
+         console.log("closing ws")
+         if (this.qrSocket) this.qrSocket.close()
       },
       async onQRWebSocketMessage(event) {
          const data = JSON.parse(event.data)
 
-         localStorage.setItem("token", data.auth_token)
-         localStorage.setItem("device_id", data.device_id)
-         await validateLogin()
-         await this.$router.push({ path: `/files/${this.user.root}` })
-         this.$disconnect()
+         if (data.opcode === 1) {
+            this.qrSessionUser = data.user
+         } else if (data.opcode === 2) {
+            localStorage.setItem("token", data.auth_token)
+            localStorage.setItem("device_id", data.device_id)
+            await validateLogin()
+            this.closeQrWebsocket()
+            await this.$router.push({ path: `/files/${this.user.root}` })
+         } else if (data.opcode === 3) {
+            this.qrSessionUser = null
+         }
 
       },
 
@@ -277,6 +305,8 @@ export default {
             if (redirect === "" || redirect === undefined || redirect === null) {
                redirect = `/files/${this.user.root}`
             }
+            this.closeQrWebsocket()
+
             await this.$router.push({ path: redirect })
          } catch (e) {
             if (e.status === 409) {
@@ -415,5 +445,65 @@ select:-webkit-autofill:focus {
  -webkit-text-fill-color: white;
  transition: background-color 900000s ease-in-out 0s;
  -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+
+.qr-container {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ margin: 1em 0;
+}
+
+.qr-box {
+ padding: 1em;
+ background: rgba(0, 0, 0, 0.4);
+ border-radius: 12px;
+ text-align: center;
+ -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.qr-info {
+ color: white;
+ margin-top: 0.5em;
+ font-size: 0.9rem;
+}
+
+.qr-loading {
+ color: white;
+ font-style: italic;
+ text-align: center;
+ padding: 1em;
+}
+
+
+.qr-instruction {
+ color: #fff;
+ font-size: 0.95rem;
+ margin-top: 0.6em;
+ line-height: 1.3;
+ font-weight: 500;
+}
+
+.qr-login-status {
+ margin-top: 1em;
+ padding: 0.8em;
+ background: rgba(0, 0, 0, 0.3);
+ border-radius: 10px;
+ text-align: center;
+ color: #fff;
+ -webkit-box-shadow: 0 0 8px rgba(131, 130, 130, 0.6);
+}
+
+.qr-login-status h3 {
+ margin: 0 0 0.4em 0;
+ font-size: 1.1rem;
+ color: #fc2f99;
+}
+
+.qr-login-status h4 {
+ margin: 0;
+ font-size: 0.95rem;
+ font-weight: 500;
 }
 </style>

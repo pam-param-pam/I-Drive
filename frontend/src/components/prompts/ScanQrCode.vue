@@ -28,7 +28,7 @@
         <p v-if="deviceInfo.city"><b>City:</b> {{ deviceInfo.city }}</p>
 
         <p>
-          <b>Device Type:</b> {{"&#8205;"}}
+          <b>Device Type:</b> {{ "&#8205;" }}
           <i v-if="deviceInfo.device_type === 'pc'" class="material-icons">desktop_windows</i>
           <i v-else-if="deviceInfo.device_type === 'mobile'" class="material-icons">tablet</i>
           <i v-else-if="deviceInfo.device_type === 'code'" class="material-icons">terminal</i>
@@ -45,18 +45,24 @@
         :aria-label="$t('buttons.cancel')"
         :title="$t('buttons.cancel')"
         class="button button--flat button--grey"
-        @click="closeHover()"
+        @click="cancel"
       >
         {{ $t("buttons.cancel") }}
       </button>
       <button
-        :disabled="!deviceInfo"
+        :disabled="!deviceInfo || !canApprove"
         :aria-label="$t('buttons.confirm')"
         :title="$t('buttons.confirm')"
         class="button button--flat"
         @click="confirm"
       >
-        {{ $t("buttons.confirm") }}
+        <!-- Show countdown if user must wait -->
+        <span v-if="deviceInfo && !canApprove">
+    {{ $t("buttons.confirm") }} ({{ countdown }}s)
+  </span>
+        <span v-else>
+    {{ $t("buttons.confirm") }}
+  </span>
       </button>
     </div>
   </div>
@@ -66,7 +72,7 @@
 import { QrcodeStream } from "vue-qrcode-reader"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { approveQrSession, getQrSessionDeviceInfo } from "@/api/user.js"
+import { approveQrSession, closePendingQrSession, getQrSessionDeviceInfo } from "@/api/user.js"
 
 export default {
    name: "scan-qr-prompt",
@@ -80,19 +86,9 @@ export default {
          fetching: false,
          sessionId: null,
          deviceInfo: null,
-         // deviceInfo: {
-         //    authenticated: false,
-         //    city: null,
-         //    country: null,
-         //    device_id: "euuys3ycGEvEn3sqSzXiY8",
-         //    device_name: "Windows 10",
-         //    device_type: "code",
-         //    expire_at: 1760098290,
-         //    ip: "192.168.1.15",
-         //    user_agent: "PC / Windows 10 / Chrome 140.0.0"
-         // }
-
-   }
+         countdown: 0,
+         canApprove: false
+      }
    },
 
    computed: {
@@ -112,7 +108,6 @@ export default {
       },
 
       async onDetect(detectedCodes) {
-         // Extract the first raw value from QR
          const qrData = detectedCodes[0]?.rawValue
          if (!qrData) {
             this.error = "No QR code detected"
@@ -124,13 +119,13 @@ export default {
          this.deviceInfo = null
          this.fetchError = null
          this.fetching = true
+         this.canApprove = false
 
-         // Extract session ID from URL
          try {
             const url = new URL(qrData)
             const pathParts = url.pathname.split("/")
             this.sessionId = pathParts[pathParts.length - 1]
-            // Call backend to fetch device info
+
             const data = await getQrSessionDeviceInfo(this.sessionId)
             this.deviceInfo = {
                device_name: data.device_name,
@@ -141,6 +136,17 @@ export default {
                city: data.city,
                device_type: data.device_type
             }
+
+            // Start 3-second countdown
+            this.countdown = 2
+            const interval = setInterval(() => {
+               this.countdown--
+               if (this.countdown <= 0) {
+                  clearInterval(interval)
+                  this.canApprove = true
+               }
+            }, 1000)
+
          } catch (err) {
             console.error(err)
             this.fetchError = "Invalid QR code or session"
@@ -168,6 +174,14 @@ export default {
          if (!this.sessionId) return
          await approveQrSession(this.sessionId)
          this.$toast.success(this.$t("toasts.qrSessionApproved"))
+         this.closeHover()
+      },
+      async cancel() {
+         console.log("CANCEL")
+         console.log(this.sessionId)
+         try {
+            if (this.sessionId) await closePendingQrSession(this.sessionId)
+         } catch (e) {}
          this.closeHover()
       }
    }

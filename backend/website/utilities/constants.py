@@ -31,8 +31,8 @@ MAX_RESOURCE_NAME_LENGTH = 75
 # How long the resource urls are valid for
 SIGNED_URL_EXPIRY_SECONDS = 7200
 
-# How long the QR code session is valid for in seconds: 2 mins
-QR_CODE_SESSION_EXPIRY = 120
+# How long the QR code session is valid for in seconds: 5 mins
+QR_CODE_SESSION_EXPIRY = 300
 
 ALLOWED_THUMBNAIL_SIZES = {"64", "128", "512", "1024", "original"}
 

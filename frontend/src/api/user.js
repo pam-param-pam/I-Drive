@@ -72,6 +72,14 @@ export async function getQrSessionDeviceInfo(sessionId) {
    return response.data
 }
 
+export async function closePendingQrSession(sessionId) {
+   let url = `/auth/qrcode/cancel/${sessionId}`
+   let response = await backendInstance.get(url, {
+      __displayErrorToast: false
+   })
+   return response.data
+}
+
 export async function approveQrSession(sessionId) {
    let url = `/auth/qrcode/${sessionId}`
    let response = await backendInstance.post(url)

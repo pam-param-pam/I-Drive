@@ -115,4 +115,35 @@ def get_qr_session_device_info(request, session_id):
         raise ResourceNotFoundError("Invalid or expired session")
 
     session_data = json.loads(session_json)
+
+    queue_ws_event.delay(
+        'qrcode',
+        {
+            'type': 'pending_session',
+            'session_id': session_id,
+            'username': request.user.username
+        }
+    )
+
     return JsonResponse(session_data, status=200)
+
+
+@api_view(['GET'])
+@throttle_classes([LoginThrottle])
+@permission_classes([IsAuthenticated])
+def cancel_pending_qr_session(request, session_id):
+    key = f"qr_session:{session_id}"
+    session_json = cache.get(key)
+
+    if not session_json:
+        raise ResourceNotFoundError("Invalid or expired session")
+
+    queue_ws_event.delay(
+        'qrcode',
+        {
+            'type': 'cancel_pending_session',
+            'session_id': session_id,
+        }
+    )
+
+    return HttpResponse(status=200)
