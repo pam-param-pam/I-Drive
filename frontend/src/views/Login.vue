@@ -47,11 +47,11 @@ import { createQrSession } from "@/api/user.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
 import { validateLogin } from "@/utils/auth"
-import VueQrcode from '@chenfengyuan/vue-qrcode'
+import VueQrcode from "@chenfengyuan/vue-qrcode"
 
 export default {
    name: "login",
-   components: {VueQrcode},
+   components: { VueQrcode },
 
    computed: {
       ...mapState(useMainStore, ["user"]),
@@ -76,9 +76,9 @@ export default {
          refreshKey1: 0,
          text: "I Drive",
          sentences: [
-            ["You look lonely", 25000, 0], // [sentence, erase delay, next sentence delay]
+            ["You look lonely", 5000, 0],
             ["I can fix that", 5000, 0],
-            ["I Drive", 40000, 0]
+            ["I Drive", 20000, 0]
          ],
          currentSentenceIndex: 0,
          typingDelay: 100, // Delay between typing characters (ms)
@@ -105,7 +105,7 @@ export default {
       window.addEventListener("resize", this.throttledResizeHandler)
       setTimeout(() => {
          this.typeAndErase()
-      }, 10000)
+      }, 60000)
    },
 
    unmounted() {
@@ -118,23 +118,57 @@ export default {
       },
       async toggleQRMode() {
          this.qrMode = !this.qrMode
-
          if (!this.qrMode) return
 
          const now = Math.floor(Date.now() / 1000)
-
          if (this.qrSessionId && this.qrExpireAt && now < this.qrExpireAt) {
             return
          }
 
+         await this.refreshQrSession()
+
+
+      },
+      async refreshQrSession() {
+         // Create new QR session
          let data = await createQrSession()
          this.qrSessionId = data.session_id
          this.qrExpireAt = data.expire_at
 
-         app.use(VueNativeSock, baseWS + "/qrcode", { reconnection: false, protocol: this.qrSessionId, reconnectionDelay: 5000, reconnectionAttempts: 5 })
-         app.config.globalProperties.$socket.onmessage = (data) => this.onQRWebSocketMessage(data)
-      },
+         this.qrSocket = new WebSocket(`${baseWS}/qrcode`, this.qrSessionId)
 
+         this.qrSocket.onmessage = (event) => {
+            this.onQRWebSocketMessage(event)
+         }
+
+         this.qrSocket.onerror = (error) => {
+            this.$toast.error("Failed to open a websocket connection for QR login, report this")
+            console.log("QR WebSocket error", error)
+         }
+
+         console.log("New QR session created:", this.qrSessionId, "expires at", this.qrExpireAt)
+
+         const now = Math.floor(Date.now() / 1000)
+         let delay = (this.qrExpireAt - now) * 1000
+         delay = Math.max(delay - 1000, 0) //refresh 1 second before
+
+         // Only schedule next refresh if tab is visible
+         const scheduleNext = () => {
+            if (!document.hidden) {
+               setTimeout(() => this.refreshQrSession(), delay)
+            } else {
+               // Retry later when tab becomes active
+               document.addEventListener("visibilitychange", function onVisible() {
+                  if (!document.hidden) {
+                     document.removeEventListener("visibilitychange", onVisible)
+                     this.refreshQrSession()
+                  }
+               }.bind(this))
+            }
+         }
+
+         scheduleNext()
+      },
       async onQRWebSocketMessage(event) {
          const data = JSON.parse(event.data)
 

@@ -27,7 +27,7 @@ from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZ
 from ..tasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Resource, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
-    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS, cache
+    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS, cache, QR_CODE_SESSION_EXPIRY
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, BadRequestError, NoBotsError
 
 _SENTINEL = object()  # Unique object to detect omitted default
@@ -707,8 +707,7 @@ def create_qr_session(request):
     metadata = get_device_metadata(request)
 
     session_id = str(uuid.uuid4())
-    ttl_seconds = 120
-    expire_at = int(time.time()) + ttl_seconds
+    expire_at = int(time.time()) + QR_CODE_SESSION_EXPIRY
 
     session_data = {
         **metadata,
@@ -716,6 +715,6 @@ def create_qr_session(request):
         "expire_at": expire_at
     }
 
-    cache.set(f"qr_session:{session_id}", json.dumps(session_data), timeout=ttl_seconds)
+    cache.set(f"qr_session:{session_id}", json.dumps(session_data), timeout=QR_CODE_SESSION_EXPIRY)
 
     return {"session_id": session_id, "expire_at": expire_at}

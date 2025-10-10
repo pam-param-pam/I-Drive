@@ -1,14 +1,16 @@
 <template>
   <div class="card floating">
     <div class="card-title">
-      <h2>{{ $t('prompts.scanQR') }}</h2>
+      <h2>{{ $t("prompts.scanQR") }}</h2>
     </div>
 
     <div class="card-content">
-      <p>{{ $t('settings.qrCodeWarning') }}</p>
+      <p v-if="!deviceInfo">{{ $t("settings.qrCodeWarning") }}</p>
+      <p v-else>{{ $t("settings.qrDeviceInfo") }}</p>
 
       <!-- QR Code Scanner -->
       <qrcode-stream
+        v-if="!deviceInfo"
         @detect="onDetect"
         @error="onError"
         :track="paintBoundingBox"
@@ -24,7 +26,14 @@
         <p><b>User Agent:</b> {{ deviceInfo.user_agent }}</p>
         <p v-if="deviceInfo.country"><b>Country:</b> {{ deviceInfo.country }}</p>
         <p v-if="deviceInfo.city"><b>City:</b> {{ deviceInfo.city }}</p>
-        <p><b>Device Type:</b> {{ deviceInfo.device_type }}</p>
+
+        <p>
+          <b>Device Type:</b> {{"&#8205;"}}
+          <i v-if="deviceInfo.device_type === 'pc'" class="material-icons">desktop_windows</i>
+          <i v-else-if="deviceInfo.device_type === 'mobile'" class="material-icons">tablet</i>
+          <i v-else-if="deviceInfo.device_type === 'code'" class="material-icons">terminal</i>
+          {{ deviceInfo.device_type }}
+        </p>
       </div>
 
       <p v-if="fetching">Fetching device info...</p>
@@ -38,7 +47,7 @@
         class="button button--flat button--grey"
         @click="closeHover()"
       >
-        {{ $t('buttons.cancel') }}
+        {{ $t("buttons.cancel") }}
       </button>
       <button
         :disabled="!deviceInfo"
@@ -47,45 +56,57 @@
         class="button button--flat"
         @click="confirm"
       >
-        {{ $t('buttons.confirm') }}
+        {{ $t("buttons.confirm") }}
       </button>
     </div>
   </div>
 </template>
 
 <script>
-import { QrcodeStream } from 'vue-qrcode-reader'
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import { QrcodeStream } from "vue-qrcode-reader"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 import { approveQrSession, getQrSessionDeviceInfo } from "@/api/user.js"
 
 export default {
-   name: 'scan-qr-prompt',
+   name: "scan-qr-prompt",
    components: { QrcodeStream },
 
    data() {
       return {
          decodedValue: null,
          error: null,
-         deviceInfo: null,
          fetchError: null,
          fetching: false,
-         sessionId: null
-      }
+         sessionId: null,
+         deviceInfo: null,
+         // deviceInfo: {
+         //    authenticated: false,
+         //    city: null,
+         //    country: null,
+         //    device_id: "euuys3ycGEvEn3sqSzXiY8",
+         //    device_name: "Windows 10",
+         //    device_type: "code",
+         //    expire_at: 1760098290,
+         //    ip: "192.168.1.15",
+         //    user_agent: "PC / Windows 10 / Chrome 140.0.0"
+         // }
+
+   }
    },
 
    computed: {
-      ...mapState(useMainStore, ['currentPrompt'])
+      ...mapState(useMainStore, ["currentPrompt"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover']),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       paintBoundingBox(detectedCodes, ctx) {
          for (const detectedCode of detectedCodes) {
             const { boundingBox: { x, y, width, height } } = detectedCode
             ctx.lineWidth = 2
-            ctx.strokeStyle = '#007bff'
+            ctx.strokeStyle = "#007bff"
             ctx.strokeRect(x, y, width, height)
          }
       },
@@ -94,7 +115,7 @@ export default {
          // Extract the first raw value from QR
          const qrData = detectedCodes[0]?.rawValue
          if (!qrData) {
-            this.error = 'No QR code detected'
+            this.error = "No QR code detected"
             return
          }
 
@@ -107,7 +128,7 @@ export default {
          // Extract session ID from URL
          try {
             const url = new URL(qrData)
-            const pathParts = url.pathname.split('/')
+            const pathParts = url.pathname.split("/")
             this.sessionId = pathParts[pathParts.length - 1]
             // Call backend to fetch device info
             const data = await getQrSessionDeviceInfo(this.sessionId)
@@ -122,7 +143,7 @@ export default {
             }
          } catch (err) {
             console.error(err)
-            this.fetchError = 'Invalid QR code or session'
+            this.fetchError = "Invalid QR code or session"
          } finally {
             this.fetching = false
          }
@@ -130,14 +151,14 @@ export default {
 
       onError(err) {
          this.error = `[${err.name}]: `
-         if (err.name === 'NotAllowedError') {
-            this.error += 'you need to grant camera access permission'
-         } else if (err.name === 'NotFoundError') {
-            this.error += 'no camera on this device'
-         } else if (err.name === 'NotSupportedError') {
-            this.error += 'secure context required (HTTPS or localhost)'
-         } else if (err.name === 'NotReadableError') {
-            this.error += 'is the camera already in use?'
+         if (err.name === "NotAllowedError") {
+            this.error += "you need to grant camera access permission"
+         } else if (err.name === "NotFoundError") {
+            this.error += "no camera on this device"
+         } else if (err.name === "NotSupportedError") {
+            this.error += "secure context required (HTTPS or localhost)"
+         } else if (err.name === "NotReadableError") {
+            this.error += "is the camera already in use?"
          } else {
             this.error += err.message
          }
@@ -146,7 +167,7 @@ export default {
       async confirm() {
          if (!this.sessionId) return
          await approveQrSession(this.sessionId)
-         this.$toast.success(this.$t('toasts.qrSessionApproved'))
+         this.$toast.success(this.$t("toasts.qrSessionApproved"))
          this.closeHover()
       }
    }
@@ -164,18 +185,26 @@ export default {
  overflow: hidden;
  position: relative;
 }
+
 .text-error {
  color: red;
  margin-top: 0.5rem;
  text-align: center;
 }
+
 .device-info {
  border: 1px solid #ccc;
  padding: 0.5rem;
  margin-top: 1rem;
  border-radius: 8px;
 }
+
 .device-info p {
  margin: 0.25rem 0;
+}
+
+.material-icons {
+ font-size: 20px !important;
+ vertical-align: -5px; /* moves it lower */
 }
 </style>

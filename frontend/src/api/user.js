@@ -66,7 +66,9 @@ export async function changePassword(data) {
 
 export async function getQrSessionDeviceInfo(sessionId) {
    let url = `/auth/qrcode/get/${sessionId}`
-   let response = await backendInstance.get(url)
+   let response = await backendInstance.get(url, {
+      __displayErrorToast: false
+   })
    return response.data
 }
 

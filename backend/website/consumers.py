@@ -5,6 +5,9 @@ import threading
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
+from .utilities.constants import QR_CODE_SESSION_EXPIRY
+
+
 class UserConsumer(WebsocketConsumer):
 
     def connect(self):
@@ -66,9 +69,8 @@ class QrLoginConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_add)("qrcode", self.channel_name)
         self.accept(self.scope['session_id'])
 
-        # # Schedule automatic close after 3 minutes (180 seconds)
-        # self.close_timer = threading.Timer(180, lambda: self.close(code=4000))
-        # self.close_timer.start()
+        self.close_timer = threading.Timer(QR_CODE_SESSION_EXPIRY + 5, lambda: self.close(code=4000))
+        self.close_timer.start()
 
     def disconnect(self, close_code):
         async_to_sync(self.channel_layer.group_discard)("qrcode", self.channel_name)

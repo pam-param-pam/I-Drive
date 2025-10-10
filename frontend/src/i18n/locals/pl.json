@@ -301,6 +301,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "qrDeviceInfo": "Zweryfikuj dane urządzenia przed potwierdzeniem!",
     "qrCodeWarning": "Uwaga. Nigdy nie skanuj kodów qr wysłanych przez kogoś!",
     "popupPreview": "Podgląd obrazu",
     "devices": "Aktywne Urządzenia",

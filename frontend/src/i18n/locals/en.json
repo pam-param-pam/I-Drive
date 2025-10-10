@@ -302,6 +302,7 @@
     "video": "Video"
   },
   "settings": {
+    "qrDeviceInfo": "Verify device's information before confirming the login!",
     "qrCodeWarning": "Warning! Never scan other's QR Codes",
     "popupPreview": "Image popup preview",
     "devices": "Active Devices",
