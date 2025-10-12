@@ -440,7 +440,6 @@ def ultra_download_metadata(request, items):
 @throttle_classes([MediaThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_attachment_url_view(request, attachment_id):
-    # raise CannotProcessDiscordRequestError("Unable to process this request at the moment, server is too busy.")
     fragment = Fragment.objects.get(attachment_id=attachment_id)
 
     file = fragment.file
@@ -456,7 +455,7 @@ def get_attachment_url_view(request, attachment_id):
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_file_stats(request, folder_obj):
-    files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False)
+    files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False)  # todo this is broken due to how items are moved to trash
 
     # Annotate lock-related fields
     files_qs = files_qs.annotate(

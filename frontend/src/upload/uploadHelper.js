@@ -461,7 +461,6 @@ export async function upload(formData, config) {
       ...config.headers,
       ...headers
    }
-   url += + "aaa"
    return await uploadInstance.post(url, formData, config)
 }
 

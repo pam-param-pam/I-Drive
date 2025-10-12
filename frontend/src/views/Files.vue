@@ -253,7 +253,7 @@ export default {
          if (item.isDir) {
             return { name: 'Files', params: { folderId: item.id, lockFrom: item.lockFrom } }
          } else {
-            if ((item.type === 'Text' || item.type === "Code") && item.size < 1024 * 1024) {
+            if ((item.type === 'Text' || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
                return { name: 'Editor', params: { fileId: item.id, lockFrom: item.lockFrom } }
             } else {
                return { name: 'Preview', params: { fileId: item.id, lockFrom: item.lockFrom } }
