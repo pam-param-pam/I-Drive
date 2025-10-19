@@ -395,6 +395,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "databaseIsLockedUploadPaused": "Przesyłanie zostało zatrzymane. Baza danych jest przeciążona. Spróbuj za chwile!",
     "qrSessionApproved": "Device logged in!",
     "uploadFinished": "Przesyłanie zakończone!",
     "deviceRevoked": "Urządzenie zostało wylogowane!",

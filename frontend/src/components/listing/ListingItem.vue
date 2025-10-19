@@ -79,7 +79,7 @@ export default {
          return null
       },
       imageSrcSmall() {
-         let size = this.settings.viewMode === "height grid" ? "512" : "128"
+         let size = this.settings.viewMode === "height grid" ? "512" : "256"
          if (!this.imageSrc) return
          if (this.fallback) return "/img/failed.svg"
          return this.imageSrc + "?size=" + size
@@ -208,7 +208,6 @@ export default {
          this.$emit("onLongPress", event, this.item)
       },
       async handleImageError(event) {
-         return
          const img = event.target
 
          // prevent infinite retry

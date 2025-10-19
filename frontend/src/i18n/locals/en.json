@@ -396,6 +396,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "databaseIsLockedUploadPaused": "Upload paused, backend db is overwhelmed!",
     "qrSessionApproved": "Urządzenie zostało zalogowane!",
     "uploadFinished": "Upload finished!",
     "deviceRevoked": "Device revoked!",
@@ -469,6 +470,8 @@
     "trashName": "Trash"
   },
   "uploadFile": {
+    "uploadFailed": "Uploading to discord failed",
+    "saveFailed": "Saving file to backend failed",
     "preparing": "Preparing...",
     "pause": "Pause",
     "waitingForSave": "Saving...",

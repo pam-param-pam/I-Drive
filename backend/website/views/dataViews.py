@@ -1,6 +1,5 @@
 import json
 import re
-import time
 from datetime import datetime, timedelta
 
 from django.db import models
@@ -18,17 +17,18 @@ from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
-from ..utilities.constants import cache
+from ..utilities.constants import cache, ALLOWED_IPS_LOCKED
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
-    extract_items, disable_common_errors
+    extract_items
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms
+from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms, get_ip
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
 
 
 def etag_func(request, folder_obj):
     folder_content = cache.get(folder_obj.id)
     if folder_content:
+        ip, _ = get_ip(request)
         return str(hash(str(folder_content)))
 
 
@@ -298,7 +298,6 @@ def search(request):
         if order_by == 'size':
             # Sort folders by calculated size
             folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
-
 
     folder_dicts = []
     file_dicts = []

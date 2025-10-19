@@ -10,6 +10,14 @@ export default defineConfig({
   worker: {
     format: 'es'
   },
+  optimizeDeps: {
+    exclude: [
+      '@ffmpeg/ffmpeg',
+      '@ffmpeg/util',
+      '@ffmpeg/core',
+      '@ffmpeg/core-mt'
+    ]
+  },
   plugins: [
     vue(),
     vueDevTools(),

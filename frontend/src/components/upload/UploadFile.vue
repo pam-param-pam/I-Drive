@@ -64,11 +64,11 @@
          </span>
          <span v-if="fileState.status === fileUploadStatus.saveFailed">
             <b v-if="fileState.error" class="error">{{ fileState.error.details }}</b>
-            <b v-else class="error">{{ $t('uploadFile.failed') }}</b>
+            <b v-else class="error">{{ $t('uploadFile.saveFailed') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.uploadFailed">
             <b v-if="fileState.error" class="error">{{ fileState.error }}</b>
-            <b v-else class="error">{{ $t('uploadFile.failed') }}</b>
+            <b v-else class="error">{{ $t('uploadFile.uploadFailed') }}</b>
          </span>
          <span v-if="fileState.status === fileUploadStatus.errorOccurred">
             <b v-if="fileState.error" class="error">{{ fileState.error }}</b>

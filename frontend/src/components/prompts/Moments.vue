@@ -215,7 +215,7 @@ export default {
       },
       async getCurrentThumbnail() {
          if (this.video) {
-            let data = await captureVideoFrame(this.video, this.currentTimestamp, 0.5, 1000, 1000)
+            let data = await captureVideoFrame(this.video, this.currentTimestamp, false)
             this.currentThumbnailData = data.thumbnail
             return URL.createObjectURL(data.thumbnail)
          }

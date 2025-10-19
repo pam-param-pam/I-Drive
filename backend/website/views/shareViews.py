@@ -14,7 +14,7 @@ from ..utilities.Serializers import ShareSerializer, ShareAccessSerializer
 from ..utilities.constants import API_BASE_URL
 from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file, disable_common_errors
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..utilities.other import create_share_breadcrumbs, get_resource, create_share_resource_dict, \
+from ..utilities.other import create_share_breadcrumbs, get_item, create_share_resource_dict, \
     build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms, log_share_access
 from ..utilities.signer import sign_resource_id_with_expiry
 from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle, AnonUserMediaThrottle
@@ -79,9 +79,6 @@ def create_share(request, item_obj):
 @extract_share()
 @check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
 def delete_share(request, share_obj):
-    if share_obj.owner != request.user:
-        raise ResourcePermissionError("You have no access to this resource!")
-
     share_obj.delete()
     return HttpResponse("Share deleted!", status=204)
 
@@ -120,7 +117,7 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     log_share_access(request, share_obj)
 
     settings = UserSettings.objects.get(user=share_obj.owner)
-    obj_in_share = share_obj.get_resource_inside()
+    obj_in_share = share_obj.get_item_inside()
 
     if share_obj.get_type() == "folder":
         breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
@@ -152,7 +149,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):  # todo
     user_zip = UserZIP.objects.create(owner=share_obj.owner)  # TODO does it make sense to have thing hack? zip owner != real owner, rather the viewie
 
     for item_id in ids:
-        item = get_resource(item_id)
+        item = get_item(item_id)
         check_if_item_belongs_to_share(request, share_obj, item)
         check_resource_perms(request, item, [CheckTrash, CheckReady])
         validate_and_add_to_zip(user_zip, item)

@@ -166,7 +166,7 @@ def stream_thumbnail(request, file_obj: File):
 
     # Only allow specific sizes
     if size_param not in ALLOWED_THUMBNAIL_SIZES:
-        return JsonResponse({"error": f"Invalid size: must be one of {', '.join(ALLOWED_THUMBNAIL_SIZES)}"}, status=400)
+        raise BadRequestError(f"Invalid size: must be one of {', '.join(ALLOWED_THUMBNAIL_SIZES)}")
 
     cache_key = f"thumbnail:{file_obj.id}:{size_param}"
     thumbnail_content = cache.get(cache_key)
@@ -302,7 +302,7 @@ def stream_file(request, file_obj: File):
 
     isInline = request.GET.get('inline', False)
     isDownload = request.GET.get('download', False)
-    # raise BadRequestError("a")
+
     fragments = file_obj.fragments.all().order_by('sequence')
     user = file_obj.owner
 

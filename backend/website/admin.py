@@ -364,22 +364,31 @@ class TagAdmin(SimpleHistoryAdmin):
 class ChannelAdmin(admin.ModelAdmin):
     search_fields = ('id', 'name')
     list_display = ['name', 'id', 'guild_id', 'created_at']
-    readonly_fields = ('id', 'guild_id', 'owner')
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return 'id', 'guild_id', 'owner'
+        return ()
 
 @admin.register(Webhook)
 class WebhookAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
-    readonly_fields = ('url', 'owner', 'discord_id', 'guild_id', 'channel')
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return 'url', 'owner', 'discord_id', 'guild_id', 'channel'
+        return ()
 
 @admin.register(Bot)
 class BotAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
-    readonly_fields = ('token', 'owner', 'discord_id')
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return 'token', 'owner', 'discord_id'
+        return ()
 
 @admin.register(Moment)
 class MomentAdmin(admin.ModelAdmin):

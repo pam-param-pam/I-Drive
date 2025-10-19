@@ -146,8 +146,7 @@ def extract_resources(*rules):
                 return model.objects.get(**{model_field: obj_id})
             except ObjectDoesNotExist:
                 continue
-        model_names = ", ".join(m.__name__ for m in models)
-        raise ResourceNotFoundError(f"No resource with {model_field.upper()} '{obj_id}' found in models: {model_names}")
+        raise ResourceNotFoundError()
 
     def decorator(view_func):
         @wraps(view_func)

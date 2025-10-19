@@ -22,16 +22,18 @@ from django.utils.encoding import smart_str
 
 from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer, DeviceTokenSerializer
 from ..discord.Discord import discord
-from ..models import File, Folder, ShareableLink, Thumbnail, UserSettings, UserZIP, Webhook, Bot, Preview, Fragment, Moment, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken
+from ..models import File, Folder, ShareableLink, UserSettings, UserZIP, Webhook, Bot, DiscordAttachmentMixin, \
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, ShareAccess, PerDeviceToken
+from ..safety.helper import get_classes_extending_discordAttachmentMixin
 from ..tasks import queue_ws_event, prefetch_next_fragments
-from ..utilities.TypeHinting import Resource, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
+from ..utilities.TypeHinting import Item, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
     EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS, cache, QR_CODE_SESSION_EXPIRY
 from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, BadRequestError, NoBotsError
 
 _SENTINEL = object()  # Unique object to detect omitted default
 
+DiscordAttachmentClasses = get_classes_extending_discordAttachmentMixin()
 
 def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
     """Helper function to get attribute from either an object or a dictionary.
@@ -182,7 +184,7 @@ def create_breadcrumbs(folder_obj: Folder) -> List[dict]:
     return breadcrumbs
 
 
-def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, is_folder_id: bool = False) -> List[Breadcrumbs]:
+def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id: bool = False) -> List[Breadcrumbs]:
     subfolders = folder_obj.get_ancestors(include_self=True, ascending=True)
 
     breadcrumbs = []
@@ -198,9 +200,8 @@ def create_share_breadcrumbs(folder_obj: Folder, obj_in_share: Resource, is_fold
 
 def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
     from .Serializers import FileSerializer
-
     file_children = []
-    start_time = time.perf_counter()
+
     if include_files:
         file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
             "parent", "videoposition", "thumbnail", "preview", "videometadata"
@@ -209,9 +210,6 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     folder_children = []
     if include_folders:
         folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
-
-    end_time = time.perf_counter()
-    elapsed = end_time - start_time
 
     folder_serializer = FolderSerializer()
     file_serializer = FileSerializer()
@@ -224,7 +222,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     return folder_dict
 
 
-def create_share_resource_dict(share: ShareableLink, resource_in_share: Resource) -> Dict:
+def create_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> Dict:
     folder_serializer = ShareFolderSerializer()
     file_serializer = ShareFileSerializer(share)
 
@@ -279,7 +277,7 @@ def get_folder(folder_id: str) -> Folder:
     return folder
 
 
-def get_resource(obj_id: str) -> Resource:
+def get_item(obj_id: str) -> Item:
     try:
         item = get_folder(obj_id)
     except ResourceNotFoundError:
@@ -290,7 +288,7 @@ def get_resource(obj_id: str) -> Resource:
     return item
 
 
-def check_resource_perms(request, resource: Union[Resource, dict], checks) -> None:
+def check_resource_perms(request, resource: Union[Item, dict], checks) -> None:
     for Check in checks:
         Check().check(request, resource)
 
@@ -348,6 +346,7 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
         children.extend(get_flattened_children(subfolder, base_relative_path, root_folder))
     return children
 
+
 def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     """:return: True if the item is a subfile/subfolder of parent_folder, otherwise False."""
 
@@ -368,7 +367,7 @@ def validate_and_add_to_zip(user_zip: UserZIP, item: Union[File, Folder]):
 
 
 def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:  # todo
-    obj_in_share = get_resource(share.object_id)
+    obj_in_share = get_item(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
 
     if requested_item != obj_in_share:
@@ -385,6 +384,7 @@ def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item
 
         if obj_in_share.lockFrom != requested_item.lockFrom:
             raise ResourcePermissionError("This resource is locked. Ask the owner of this resource to share it separately")
+
 
 def get_webhook(request, discord_id: str) -> Webhook:
     try:
@@ -424,7 +424,7 @@ def auto_prefetch(file_obj: File, fragment_id: str) -> None:
     prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)
 
 
-def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None) -> list[Fragment, Thumbnail, Preview, Moment, Subtitle]:
+def query_attachments(channel_id=None, message_id=None, attachment_id=None, author_id=None, owner=None) -> list[DiscordAttachmentMixin]:
     # Create a Q object to build the query
     query = Q()
 
@@ -441,14 +441,9 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
         query &= Q(file__owner=owner)
 
     # Query each model and filter based on the query
-    fragments = Fragment.objects.filter(query)
-    thumbnails = Thumbnail.objects.filter(query)
-    previews = Preview.objects.filter(query)
-    moments = Moment.objects.filter(query)
-    subtitle = Subtitle.objects.filter(query)
-
-    # Combine all the QuerySets using union()
-    combined_results = list(fragments) + list(thumbnails) + list(previews) + list(moments) + list(subtitle)
+    combined_results = []
+    for cls in DiscordAttachmentClasses:
+        combined_results.extend(cls.objects.filter(query))
 
     return combined_results
 
@@ -599,6 +594,8 @@ def obtain_discord_settings(user) -> dict:
 
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
             "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
+
+
 # todo folder move to locked not locked
 def log_share_access(request, share_obj: ShareableLink) -> None:
     ip, _ = get_ip(request)
@@ -629,10 +626,12 @@ def log_share_access(request, share_obj: ShareableLink) -> None:
             accessed_by=user
         )
 
+
 def get_content_disposition_string(name: str) -> tuple[str, str]:
     name_ascii = quote(smart_str(name))
     encoded_name = quote(name)
     return name_ascii, encoded_name
+
 
 def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     response = requests.get(f'https://ipapi.co/{ip}/json/')
@@ -645,6 +644,7 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     country = data.get('country_name')
     city = data.get('city')
     return country, city
+
 
 def get_device_metadata(request):
     """
@@ -678,7 +678,8 @@ def get_device_metadata(request):
         "device_id": device_id,
     }
 
-def create_token_internal(request, user,  device_info):
+
+def create_token_internal(request, user, device_info):
     raw_token, token_instance = PerDeviceToken.objects.create_token(
         user=user,
         device_name=device_info["device_name"],
@@ -696,12 +697,15 @@ def create_token_internal(request, user,  device_info):
 
     return raw_token, token_instance, {"auth_token": raw_token, "device_id": token_instance.device_id}
 
+
 def create_token(request, user) -> tuple[str, PerDeviceToken, dict]:
     metadata = get_device_metadata(request)
     return create_token_internal(request, user, metadata)
 
+
 def create_token_from_qr_session(request, user, session_data):
     return create_token_internal(request, user, session_data)
+
 
 def create_qr_session(request):
     metadata = get_device_metadata(request)

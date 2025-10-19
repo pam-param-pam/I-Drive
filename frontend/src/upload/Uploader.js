@@ -77,7 +77,6 @@ export class Uploader {
          this.discordUploader.uploadRequest(req)
             .then(({ request, discordResponse }) => this.backendManager.afterUploadRequest(request, discordResponse))
             .catch(err => {
-               console.log(err)
                this.uploadStore.onGeneralError(err, req)
             })
             .finally(() => {
@@ -101,7 +100,6 @@ export class Uploader {
       this.backendManager = new BackendManager()
       this.requestGenerator = new RequestGenerator(this.backendManager)
    }
-
 }
 
 let _uploaderInstance = null

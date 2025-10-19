@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
-from ..models import DiscordSettings, Bot, Webhook, Channel
+from ..models import DiscordSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError
 
@@ -261,18 +261,6 @@ class Discord:
         response = self._make_bot_request(user, 'POST', url, headers=headers, json=payload)
         return response
 
-    # def send_file(self, user, files: dict, json=None) -> httpx.Response:
-    #     channel_id = self._get_channel_id(user)
-    #
-    #     url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
-    #
-    #     response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
-    #     message = response.json()
-    #     expiry = self._calculate_expiry(message)
-    #     cache.set(message["id"], response, timeout=expiry)
-    #
-    #     return message
-
     def send_file(self, user, files: dict, json=None) -> httpx.Response:
         channel_id = self._get_channel_id(user)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
@@ -284,7 +272,7 @@ class Discord:
 
         return message
 
-    def get_attachment_url(self, user, resource: Union['Fragment', 'Thumbnail', 'Preview', 'Moment', 'Subtitle']) -> str:
+    def get_attachment_url(self, user, resource: DiscordAttachmentMixin) -> str:
         start = time.perf_counter()
         result = self.get_file_url(user, resource.message_id, resource.attachment_id, resource.channel_id)
         logger.debug(f"⏱ get_attachment_url took {time.perf_counter() - start:.4f} seconds")

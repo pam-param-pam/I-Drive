@@ -35,7 +35,6 @@ export const fileUploadStatus = {
    uploading: "uploading",
    uploaded: "uploaded",
    waitingForSave: "waitingForSave",
-
    uploadFailed: "uploadFailed",
    saveFailed: "saveFailed",
    errorOccurred: "errorOccurred",

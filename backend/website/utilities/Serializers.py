@@ -205,7 +205,7 @@ class ShareFolderSerializer(SimpleSerializer):
 
 class ShareSerializer(SimpleSerializer):
     def serialize_object(self, share: ShareableLink) -> dict:
-        obj = share.get_resource_inside()
+        obj = share.get_item_inside()
 
         isDir = True if isinstance(obj, Folder) else False
 

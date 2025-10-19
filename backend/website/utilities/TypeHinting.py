@@ -2,12 +2,11 @@ from typing import Union, TypedDict, Optional, List, Any
 
 from django.db.models import PositiveBigIntegerField
 from shortuuidfield import ShortUUIDField
-
-from ..models import Folder, File
 from typing_extensions import NotRequired
 
-Resource = Union[Folder, File]
+from ..models import Folder, File
 
+Item = Union[Folder, File]
 
 class Breadcrumbs(TypedDict):
     name: str

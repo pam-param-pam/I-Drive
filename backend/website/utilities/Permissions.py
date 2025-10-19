@@ -4,6 +4,7 @@ from urllib.parse import unquote
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
+from .constants import ALLOWED_IPS_LOCKED
 from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError, LockedFolderWrongIpError
 from .other import get_attr, get_ip, check_if_item_belongs_to_share
 from ..models import UserPerms, File, Folder, ShareableLink
@@ -165,7 +166,7 @@ class CheckOwnership(BaseResourceCheck):
 
         owner_id = self._require_attr(resource, 'owner_id')
         if owner_id != request.user.id:
-            raise ResourcePermissionError("You have no access to this resource!")
+            raise ResourceNotFoundError()
 
 
 class CheckRoot(BaseResourceCheck):
@@ -210,9 +211,8 @@ class CheckLockedFolderIP(BaseResourceCheck):
 
     def _check_ip(self, request):
         ip, _ = get_ip(request)
-        allowed_ips = ("127.0.0.1", "192.168.1.1")
-        if ip not in allowed_ips:
-            raise LockedFolderWrongIpError(ip=ip)
+        if ip not in ALLOWED_IPS_LOCKED:
+            raise ResourceNotFoundError()
         return True
 
 class CheckFolderLock(CheckLockedFolderIP):
@@ -275,7 +275,7 @@ class CheckShareOwnership(BaseResourceCheck):
         self._require_type(share_obj, ShareableLink)
 
         if share_obj.owner.id != request.user.id:
-            raise ResourcePermissionError("You have no access to this resource!")
+            raise ResourceNotFoundError("Share not found or expired")
 
 class CheckShareExpired(BaseResourceCheck):
     def check(self, request, *resources):
@@ -292,7 +292,7 @@ class CheckShareReady(BaseResourceCheck):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
 
-        ready = self._require_attr(share_obj.get_resource_inside(), 'ready')
+        ready = self._require_attr(share_obj.get_item_inside(), 'ready')
         if not ready:
             print("CheckShareReady")
             raise ResourceNotFoundError("Share not found or expired")
@@ -301,8 +301,8 @@ class CheckShareTrash(BaseResourceCheck):
     def check(self, request, *resources):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
-        print(share_obj.get_resource_inside())
-        in_trash = self._require_attr(share_obj.get_resource_inside(), 'inTrash')
+        print(share_obj.get_item_inside())
+        in_trash = self._require_attr(share_obj.get_item_inside(), 'inTrash')
         if in_trash:
             print("CheckShareTrash")
             raise ResourceNotFoundError("Share not found or expired")

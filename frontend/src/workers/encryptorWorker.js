@@ -11,7 +11,6 @@ function base64ToUint8Array(base64) {
    return bytes
 }
 
-
 function incrementIV(iv, bytesToSkip) {
    if (bytesToSkip === 0) return iv
 

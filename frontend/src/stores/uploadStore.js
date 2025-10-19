@@ -215,6 +215,7 @@ export const useUploadStore = defineStore("upload", {
          }
       },
       onGeneralError(error, request) {
+         if (error.handled) return
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId
             const fileState = this.getFileState(frontendId)
@@ -347,7 +348,6 @@ export const useUploadStore = defineStore("upload", {
          } else {
             console.warn("Failed to find file: " + frontendId + " in fileState")
          }
-
          this.onUploadFinish()
       },
 

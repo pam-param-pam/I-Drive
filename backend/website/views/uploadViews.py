@@ -25,7 +25,7 @@ from ..utilities.throttle import defaultAuthUserThrottle
 @disable_common_errors
 def create_file(request):
     # raise KeyError("aaa")
-    # return HttpResponse(status=404)
+    # return HttpResponse(status=503)
     check_if_bots_exists(request.user)
 
     files = request.data['files']

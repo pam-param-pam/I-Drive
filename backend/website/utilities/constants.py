@@ -7,6 +7,9 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 DISCORD_BASE_URL = "https://discord.com/api/v10"
 
+# A set of IPS that locked resources can be accessed from. Default is local ips only
+ALLOWED_IPS_LOCKED = ("127.0.0.1", "192.168.1.1")
+
 # Auth token expire time
 TOKEN_EXPIRY_DAYS = 30
 
@@ -34,7 +37,7 @@ SIGNED_URL_EXPIRY_SECONDS = 7200
 # How long the QR code session is valid for in seconds: 5 mins
 QR_CODE_SESSION_EXPIRY = 300
 
-ALLOWED_THUMBNAIL_SIZES = {"64", "128", "512", "1024", "original"}
+ALLOWED_THUMBNAIL_SIZES = {"64", "256", "512", "1024", "original"}
 
 cache = caches["default"]
 

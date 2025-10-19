@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid"
 import { uploadType } from "@/utils/constants.js"
 import { detectExtension } from "@/utils/common.js"
 export function detectType(type, extension) {
-   //todo
+   
    extension = extension.toUpperCase()
    const RAW_IMAGE_EXTENSIONS = [
       ".IIQ", ".3FR", ".DCR", ".K25", ".KDC",

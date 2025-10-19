@@ -1,6 +1,7 @@
 import { attachmentType, fileUploadStatus } from "@/utils/constants.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { createFile } from "@/api/files.js"
+import { showToast } from "@/utils/common.js"
 
 export class BackendManager {
    constructor() {
@@ -8,6 +9,7 @@ export class BackendManager {
       this.backendState = new Map()
       this.finishedFiles = []
       this.failedFiles = []
+      this.databaseErrors = 0
    }
 
    async afterUploadRequest(request, discordResponse) {
@@ -141,8 +143,6 @@ export class BackendManager {
                resourcePasswords[lock_from] = parent_password
             }
          }
-         // delete file.lock_from
-         // delete file.parent_password //todo
 
       }
       createFile({ files: finishedFiles, resourcePasswords: resourcePasswords }, { __displayErrorToast: false })
@@ -160,23 +160,34 @@ export class BackendManager {
          this.uploadStore.setError(file.frontend_id, error?.response?.data)
          this.failedFiles.push(file)
       }
+      if (this.databaseErrors > 2) {
+         showToast("error", "toasts.databaseIsLockedUploadPaused")
+
+         this.uploadStore.pauseAll()
+         this.databaseErrors = 0
+      }
+      this.databaseErrors++
+
    }
 
    onBackendSave(finishedFiles) {
       for (let file of finishedFiles) {
          this.uploadStore.markFileSaved(file.frontend_id)
       }
+      this.databaseErrors = Math.max(this.databaseErrors - 1, 0)
       this.uploadStore.onUploadFinish()
-
    }
 
    reSaveFile(frontendId) {
-      const index = this.failedFiles.findIndex(f => f.frontend_id === frontendId)
-      if (index === -1) return
-      const failedFile = this.failedFiles.splice(index, 1)[0]
-      this.uploadStore.setStatus(frontendId, fileUploadStatus.retrying)
+      const filesToResave = this.failedFiles.slice(0, Math.min(20, this.failedFiles.length))
+
+      // Retry each file after a delay
+      filesToResave.forEach((failedFile) => {
+         const frontendId = failedFile.frontend_id
+         this.uploadStore.setStatus(frontendId, fileUploadStatus.retrying)
+      })
       setTimeout(() => {
-         this.saveFiles([failedFile])
+         this.saveFiles(filesToResave)
       }, 1000)
    }
 }

@@ -64,7 +64,7 @@ class DiscordHelper:
 
             # Create channels
             channels = []
-            for i in range(3):
+            for i in range(4):
                 channel_payload = {
                     'name': f"Files_{i + 1}",
                     'type': 0,
@@ -84,7 +84,7 @@ class DiscordHelper:
             # Create webhooks
             webhooks = []
             for channel in channels:
-                for i in range(3):
+                for i in range(2):
                     webhook_payload = {'name': f'Captain Hook v{i + 1}'}
                     webhook_id, webhook_url, webhook_name, channel_id = self._create_webhook(bot_token, channel, webhook_payload)
                     webhooks.append((webhook_id, webhook_url, webhook_name, channel_id))

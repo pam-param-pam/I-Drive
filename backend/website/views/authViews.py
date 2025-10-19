@@ -46,7 +46,7 @@ def logout_per_device(request):
 @throttle_classes([RegisterThrottle])
 @permission_classes([AllowAny])
 def register_user(request):
-    raise ResourcePermissionError("This functionality is turned off.")
+    # raise ResourcePermissionError("This functionality is turned off.")
     username = request.data['username']
     password = request.data['password']
 

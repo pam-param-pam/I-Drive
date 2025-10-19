@@ -1,7 +1,7 @@
 import { backendInstance, uploadInstance } from "@/axios/networker.js"
 import { useMainStore } from "@/stores/mainStore.js"
 
-export async function retryRequest(instance, error, delay, maxRetries = 3) {
+export async function retryRequest(instance, error, delay, maxRetries = 5) {
    const config = error.config
 
    if (!config) return Promise.reject(error)

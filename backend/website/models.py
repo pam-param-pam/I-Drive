@@ -400,7 +400,7 @@ class Preview(DiscordAttachmentMixin):
         return f"Preview=[{self.file.name}]"
 
 class Moment(DiscordAttachmentMixin):
-    # id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    # id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False) todo
     file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
     created_at = models.DateTimeField(auto_now_add=True)
     timestamp = models.IntegerField(default=0)
@@ -423,7 +423,7 @@ class UserSettings(models.Model):
     view_mode = models.CharField(max_length=20, null=False, default="width grid")
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
-    concurrent_upload_requests = models.SmallIntegerField(default=2)
+    concurrent_upload_requests = models.SmallIntegerField(default=4)
     subfolders_in_shares = models.BooleanField(default=False)
     encryption_method = models.SmallIntegerField(default=2)
     keep_creation_timestamp = models.BooleanField(default=False)
@@ -487,7 +487,7 @@ class ShareableLink(models.Model):
     resource = GenericForeignKey('content_type', 'object_id')
 
     def __str__(self):
-        return f"Share[owner={self.owner.username}, resource={self.get_resource_inside().name}]"
+        return f"Share[owner={self.owner.username}, resource={self.get_item_inside().name}]"
 
     def save(self, *args, **kwargs):
         if self.token is None or self.token == '':
@@ -508,15 +508,15 @@ class ShareableLink(models.Model):
         else:
             raise KeyError("Wrong content_type in share")
 
-    def get_resource_inside(self):
-        from .utilities.other import get_resource
+    def get_item_inside(self):
+        from .utilities.other import get_item
 
         if self.is_expired():
             self.delete()
             raise ResourceNotFoundError()
 
         try:
-            obj = get_resource(self.object_id)
+            obj = get_item(self.object_id)
             return obj
         except ResourceNotFoundError:
             # looks like folder/file no longer exist, deleting time!
@@ -706,7 +706,7 @@ class ShareAccess(models.Model):
     access_time = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Access to {self.share.get_resource_inside().name} from {self.ip} at {self.access_time} ({self.accessed_by})"
+        return f"Access to {self.share.get_item_inside().name} from {self.ip} at {self.access_time} ({self.accessed_by})"
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):
@@ -736,8 +736,6 @@ post_save.connect(DiscordSettings._create_user_discord_settings, sender=User)
 
 # Modify audit entry
 # todo Add file type, encryptionMethod audit type
-
-"""HERE BE DRAGONS"""
 
 class PerDeviceTokenManager(models.Manager):
     def _hash(self, raw_token: str) -> str:

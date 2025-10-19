@@ -76,7 +76,6 @@ export class DiscordUploader {
             }
          })
       }
-      throw err
    }
 
    async uploadRequest(request) {
@@ -84,7 +83,9 @@ export class DiscordUploader {
 
       if (this.uploadStore.state === uploadState.paused) {
          this.uploadStore.addPausedRequest(request)
-         throw Error("Upload is paused!")
+         let err =  Error("Upload is paused!")
+         err.handled = true
+         throw err
       }
 
       let formData = await this.buildFormData(request, attachmentName)
@@ -98,6 +99,7 @@ export class DiscordUploader {
          return { request, discordResponse }
       } catch (err) {
          this.handleFatalUploadError(err, request)
+         err.handled = true
          throw err
       }
    }
@@ -118,12 +120,14 @@ export class DiscordUploader {
    }
 
    async reUploadRequest(frontendId) {
-      for (const request of this.failedRequests) {
+      for (let i = 0; i < this.failedRequests.length; i++) {
+         const request = this.failedRequests[i]
 
          for (const attachment of request.attachments) {
             if (attachment.fileObj.frontendId === frontendId) {
                await this.setStatusForRequest(request, fileUploadStatus.retrying)
                await this.uploadStore.addPausedRequest(request)
+               this.failedRequests.splice(i, 1) // Remove the request from failedRequests
                break
             }
          }

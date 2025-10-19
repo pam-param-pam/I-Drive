@@ -1,10 +1,11 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { attachmentType, encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
+import { encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
 import jsmediatags from "jsmediatags"
 import { uploadInstance } from "@/axios/networker.js"
 import { showToast } from "@/utils/common.js"
 
 const worker = new Worker(new URL("../workers/encryptorWorker.js", import.meta.url), { type: "module" })
+
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -154,6 +155,7 @@ export function getWebhook() {
 
 export async function makeThumbnailIfNeeded(queueFile) {
    let thumbnail
+
    //extracting thumbnail if needed for audio file
    if (isAudioFile(queueFile.fileObj.extension)) {
       try {
@@ -166,6 +168,7 @@ export async function makeThumbnailIfNeeded(queueFile) {
    if (isVideoFile(queueFile.fileObj.extension)) {
       try {
          let data = await getVideoCover(queueFile)
+         console.log(data)
          let duration = data.duration
          thumbnail = data.thumbnail
          queueFile.fileObj.duration = Math.round(duration)
@@ -188,11 +191,75 @@ export async function makeThumbnailIfNeeded(queueFile) {
 }
 
 
+export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
+   return new Promise((resolve, reject) => {
+      const videoPlayer = document.createElement("video")
+      videoPlayer.src = URL.createObjectURL(file.systemFile)
+
+      videoPlayer.addEventListener("error", () => {
+         reject(new Error("Error when loading video file"))
+      })
+
+      videoPlayer.addEventListener("loadedmetadata", () => {
+         captureVideoFrame(videoPlayer, seekTo, true)
+            .then((frames) => {
+               if (frames.length === 1) {
+                  if (isPitchBlack(frames[0].canvas) && retryTimes < 5) {
+                     resolve(getVideoCover(file, seekTo + 2, retryTimes + 1))
+                  }
+               }
+               console.log(frames)
+               createThumbnails(frames)
+                  .then((thumbnails) => {
+                     const largestThumbnail = findLargestThumbnail(thumbnails)
+                     resolve({
+                        thumbnail: largestThumbnail,
+                        duration: frames[0].duration
+                     })
+                  })
+                  .catch(reject)
+            })
+            .catch(reject)
+      })
+
+      videoPlayer.load()
+   })
+}
+
+
+function createThumbnails(frames) {
+   const thumbnailPromises = frames.map(frame => createThumbnail(frame.canvas))
+   return Promise.all(thumbnailPromises)
+}
+
+
+function findLargestThumbnail(thumbnails) {
+   console.log(thumbnails)
+   thumbnails.sort((a, b) => b.size - a.size)
+   return thumbnails[0]
+}
+
+
+function isPitchBlack(canvas) {
+   console.log("isPitchBlack")
+   console.log(canvas)
+   const testCanvas = document.createElement("canvas")
+   testCanvas.width = testCanvas.height = 1
+   const tinyCtx = testCanvas.getContext("2d")
+   tinyCtx.drawImage(canvas, 0, 0, 1, 1)
+
+   const data = tinyCtx.getImageData(0, 0, 1, 1).data
+   const totalColor = data[0] + data[1] + data[2] + data[3]
+
+   return totalColor === 255
+}
+
+
 function createThumbnail(source, options = {}) {
    const {
       quality = 0.65,
-      maxWidth = 1920,
-      maxHeight = 1080,
+      maxWidth = 1280,
+      maxHeight = 720,
       mimeType = "image/webp"
    } = options
 
@@ -225,6 +292,53 @@ function createThumbnail(source, options = {}) {
       canvas.toBlob((blob) => {
          resolve(blob)
       }, mimeType, quality)
+   })
+}
+
+
+export function captureVideoFrame(videoPlayer, seekTo, multiple, options = {}) {
+   return new Promise((resolve, reject) => {
+      const width = videoPlayer.videoWidth
+      const height = videoPlayer.videoHeight
+      const frames = []
+
+      const captureAndCheckThumbnail = (seekPosition, attempt) => {
+         videoPlayer.currentTime = seekPosition
+
+         videoPlayer.addEventListener("seeked", () => {
+            const frameCanvas = document.createElement("canvas")
+            frameCanvas.width = width
+            frameCanvas.height = height
+            const ctx = frameCanvas.getContext("2d")
+            ctx.drawImage(videoPlayer, 0, 0, width, height)
+
+            frameCanvas.toBlob(blob => {
+               if (!blob) {
+                  reject(new Error(`Failed to create Blob from canvas at seek position ${seekPosition}`))
+                  return
+               }
+
+               frames.push({
+                  thumbnail: blob,
+                  canvas: frameCanvas,
+                  duration: videoPlayer.duration,
+                  seekPosition: seekPosition
+               })
+
+               if (attempt < (multiple ? 5 : 1) - 1) {
+                  const nextSeekPosition = seekPosition + (videoPlayer.duration * 0.1)
+                  captureAndCheckThumbnail(nextSeekPosition, attempt + 1)
+               } else {
+                  resolve(frames)
+               }
+            }, options.type, options.quality)
+
+         }, { once: true })
+
+         videoPlayer.currentTime = seekPosition
+      }
+
+      captureAndCheckThumbnail(seekTo, 0)
    })
 }
 
@@ -277,81 +391,6 @@ export async function getAudioCover(file, options = {}) {
             reject(new Error("Failed to read audio file"))
          }
       })
-   })
-}
-
-
-export function captureVideoFrame(videoPlayer, seekTo = 0, options = {}) {
-   return new Promise((resolve, reject) => {
-      setTimeout(() => {
-         videoPlayer.currentTime = seekTo
-      }, 20)
-
-      videoPlayer.addEventListener("seeked", () => {
-         // Draw current video frame on canvas first
-         const width = videoPlayer.videoWidth
-         const height = videoPlayer.videoHeight
-
-         const frameCanvas = document.createElement("canvas")
-         frameCanvas.width = width
-         frameCanvas.height = height
-         const ctx = frameCanvas.getContext("2d")
-         ctx.drawImage(videoPlayer, 0, 0, width, height)
-
-         // Pass canvas to createThumbnail for resizing/compression
-         createThumbnail(frameCanvas, options).then(blob => {
-            resolve({
-               thumbnail: blob,
-               canvas: frameCanvas,
-               duration: videoPlayer.duration
-            })
-         }).catch(reject)
-
-         videoPlayer.pause()
-         URL.revokeObjectURL(videoPlayer.src)
-      }, { once: true })
-   })
-}
-
-
-export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
-   return new Promise((resolve, reject) => {
-      const videoPlayer = document.createElement("video")
-      videoPlayer.src = URL.createObjectURL(file.systemFile)
-
-      videoPlayer.addEventListener("error", () => {
-         reject(new Error("Error when loading video file"))
-      })
-
-      videoPlayer.addEventListener("loadedmetadata", () => {
-         captureVideoFrame(videoPlayer, seekTo)
-            .then((result) => {
-               // Downscale to 1x1 and check brightness
-               const testCanvas = document.createElement("canvas")
-               testCanvas.width = testCanvas.height = 1
-               const tinyCtx = testCanvas.getContext("2d")
-               tinyCtx.drawImage(result.canvas, 0, 0, 1, 1)
-
-               const data = tinyCtx.getImageData(0, 0, 1, 1).data
-               const totalColor = data[0] + data[1] + data[2] + data[3]
-
-               if (totalColor === 255 && retryTimes <= 10) {
-                  let nextSeek = seekTo < 0 ? 0 : seekTo + 2
-                  if (nextSeek > videoPlayer.duration) {
-                     nextSeek = videoPlayer.duration / 2
-                  }
-                  resolve(getVideoCover(file, nextSeek, retryTimes + 1))
-               } else {
-                  resolve({
-                     thumbnail: result.thumbnail,
-                     duration: result.duration
-                  })
-               }
-            })
-            .catch(reject)
-      })
-
-      videoPlayer.load()
    })
 }
 
@@ -472,22 +511,22 @@ export function isErrorStatus(status) {
       status === fileUploadStatus.fileGone
 }
 
-export async function encryptAttachment(attachment) {
-   let fileObj = attachment.fileObj
-   let bytesToSkip = 0
-   if (attachment.type === attachmentType.file) {
-      bytesToSkip = attachment.offset
-   }
-   let iv = fileObj.iv
-   let key = fileObj.key
 
-   if (attachment.type === attachmentType.thumbnail) {
-      iv = attachment.iv
-      key = attachment.key
-   }
-   return await encryptInWorker(attachment.rawBlob, fileObj.encryptionMethod, key, iv, bytesToSkip)
-
-}
+// export async function encryptAttachment(attachment) {
+//    let fileObj = attachment.fileObj
+//    let bytesToSkip = 0
+//    if (attachment.type === attachmentType.file) {
+//       bytesToSkip = attachment.offset
+//    }
+//    let iv = fileObj.iv
+//    let key = fileObj.key
+//
+//    if (attachment.type === attachmentType.thumbnail) {
+//       iv = attachment.iv
+//       key = attachment.key
+//    }
+//    return await encryptInWorker(attachment.rawBlob, fileObj.encryptionMethod, key, iv, bytesToSkip)
+// }
 
 export async function encryptInWorker(rawBlob, method, key, iv, bytesToSkip) {
    return new Promise((resolve, reject) => {

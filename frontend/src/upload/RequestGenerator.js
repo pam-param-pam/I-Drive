@@ -33,7 +33,10 @@ export class RequestGenerator {
             this._generatorInstance = this.makeRequests()
          }
 
+         const start = Date.now()
          const next = await this._generatorInstance.next()
+         console.log(`Request took ${Date.now() - start} ms to complete.`)
+
          if (next.done) {
             this._generatorInstance = null
             return null
@@ -59,7 +62,6 @@ export class RequestGenerator {
       let attachments = []
       let queueFile
       while ((queueFile = this.uploadStore.getFileFromQueue())) {
-         console.log("talking queue file")
          let frontendId = queueFile.fileObj.frontendId
 
          try {
@@ -104,16 +106,6 @@ export class RequestGenerator {
                totalSize += roundUpTo64(thumbnail.size)
             }
 
-            //If there's to little space left in the request, we yield to prevent, for example,
-            // the beginning of a video having 0.5mb which would cause multiple messages
-            // that have to be loaded before playback starts
-            if (totalSize > maxChunkSize / 2 || attachments.length === 10) {
-               let request = { "totalSize": totalSize, "attachments": attachments }
-               totalSize = 0
-               attachments = []
-               yield request
-            }
-
 
             //CASE 1.2 attachments are not created, we create chunked requests from the big file
             const state = this.uploadStore.getFileState(frontendId)
@@ -142,6 +134,18 @@ export class RequestGenerator {
                const remainingFileSize = fileSize - offset
                const chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
                const chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
+
+
+               //If there's to little space left in the request, we yield to prevent, for example,
+               // the beginning of a video having 0.5mb which would cause multiple messages
+               // that have to be loaded before playback starts
+               if ((remainingSpace < maxChunkSize / 3 && remainingFileSize > maxChunkSize / 3) || attachments.length === 10) {
+                  let request = { "totalSize": totalSize, "attachments": attachments }
+                  totalSize = 0
+                  attachments = []
+                  yield request
+               }
+
 
                if (mp4boxFile && !state.videoMetadataExtracted) {
                   appendMp4BoxBuffer(mp4boxFile, chunk, offset)
