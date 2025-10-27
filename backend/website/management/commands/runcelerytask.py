@@ -1,7 +1,7 @@
 
 from django.core.management.base import BaseCommand
 
-from ...tasks import delete_dangling_discord_files
+from ...tasks.cleanupTasks import delete_dangling_discord_files
 
 
 class Command(BaseCommand):

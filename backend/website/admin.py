@@ -12,7 +12,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken
-from .tasks import smart_delete
+from .tasks.deleteTasks import smart_delete_task
 from .utilities.constants import cache, API_BASE_URL, EncryptionMethod
 from .utilities.signer import sign_resource_id_with_expiry
 
@@ -82,11 +82,11 @@ class FolderAdmin(SimpleHistoryAdmin):
         for real_obj in queryset:
             ids.append(real_obj.id)
 
-        smart_delete.delay(request.user.id, request.request_id, ids)
+        smart_delete_task.delay(request.user.id, request.request_id, ids)
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
         if isinstance(obj, File):
-            smart_delete.delay(request.user.id, request.request_id, [obj.id])
+            smart_delete_task.delay(request.user.id, request.request_id, [obj.id])
 
             obj.force_delete()
         else:
@@ -94,7 +94,7 @@ class FolderAdmin(SimpleHistoryAdmin):
 
             for real_obj in obj:
                 ids.append(real_obj.id)
-            smart_delete.delay(request.user.id, request.request_id, ids)
+            smart_delete_task.delay(request.user.id, request.request_id, ids)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
         for real_obj in queryset:
@@ -200,11 +200,11 @@ class FileAdmin(SimpleHistoryAdmin):
         for real_obj in queryset:
             ids.append(real_obj.id)
 
-        smart_delete.delay(request.user.id, request.request_id, ids)
+        smart_delete_task.delay(request.user.id, request.request_id, ids)
 
     def delete_model(self, request, obj: Union[File, List[File]]):
         if isinstance(obj, File):
-            smart_delete.delay(request.user.id, request.request_id, [obj.id])
+            smart_delete_task.delay(request.user.id, request.request_id, [obj.id])
 
             obj.force_delete()
         else:
@@ -213,7 +213,7 @@ class FileAdmin(SimpleHistoryAdmin):
             for real_obj in obj:
                 ids.append(real_obj.id)
 
-            smart_delete.delay(request.user.id, request.request_id, ids)
+            smart_delete_task.delay(request.user.id, request.request_id, ids)
 
     def force_ready(self, request, queryset: QuerySet[File]):
         for real_obj in queryset:

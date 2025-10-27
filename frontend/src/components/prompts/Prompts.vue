@@ -43,6 +43,7 @@ import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
 import shareAccesses from "@/components/prompts/ShareAccesses.vue"
 import { defineAsyncComponent } from "vue"
 import AbortAllWarning from "@/components/prompts/AbortAllWarning.vue"
+import NewFile from "@/components/prompts/newFile.vue"
 
 export default {
    name: "prompts",
@@ -73,6 +74,7 @@ export default {
       EditSubtitles,
       shareAccesses,
       AbortAllWarning,
+      NewFile,
       ScanQrCode: defineAsyncComponent(() => import('@/components/prompts/ScanQrCode.vue')),
       FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
    },

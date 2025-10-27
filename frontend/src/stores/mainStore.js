@@ -26,7 +26,7 @@ export const useMainStore = defineStore("main", {
       items: [],
       shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []},
       usage: { used: 0, total: 0 },
-      popupPreviewURL: '',
+      popupPreview: {},
       isFilesActive: false
    }),
 
@@ -321,11 +321,11 @@ export const useMainStore = defineStore("main", {
          document.body.classList.toggle("dark-mode", isDarkMode)
 
       },
-      setPopupPreviewURL(url) {
-         this.popupPreviewURL = url
+      setPopupPreview(url) {
+         this.popupPreview = url
       },
-      clearPopupPreviewURL() {
-         this.popupPreviewURL = null
+      clearPopupPreview() {
+         this.popupPreview = null
       }
    }
 })

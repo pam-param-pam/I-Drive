@@ -1,3 +1,4 @@
+import ipaddress
 from typing import Union, Type, Tuple
 from urllib.parse import unquote
 
@@ -209,11 +210,25 @@ class CheckLockedFolderIP(BaseResourceCheck):
     def _is_locked(self, resource):
         return self._require_attr(resource, 'is_locked')
 
+    def _is_ip_allowed(self, ip):
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            # Check if the IP is in the private address ranges
+            return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED
+        except ValueError:
+            # If the IP address is invalid, return False
+            return False
+
     def _check_ip(self, request):
         ip, _ = get_ip(request)
-        if ip not in ALLOWED_IPS_LOCKED:
-            raise ResourceNotFoundError()
-        return True
+        if self._is_ip_allowed(ip) or self._is_in_share_context(request):
+            return True
+        raise ResourceNotFoundError()
+
+    def _is_in_share_context(self, request):
+        print(request.META)
+        return request.META.get('share_context')
+
 
 class CheckFolderLock(CheckLockedFolderIP):
     def check(self, request, *resources):
@@ -283,7 +298,6 @@ class CheckShareExpired(BaseResourceCheck):
         self._require_type(share_obj, ShareableLink)
 
         if share_obj.is_expired():
-            print("CheckShareExpired")
             share_obj.delete()
             raise ResourceNotFoundError("Share not found or expired")
 
@@ -294,17 +308,14 @@ class CheckShareReady(BaseResourceCheck):
 
         ready = self._require_attr(share_obj.get_item_inside(), 'ready')
         if not ready:
-            print("CheckShareReady")
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckShareTrash(BaseResourceCheck):
     def check(self, request, *resources):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
-        print(share_obj.get_item_inside())
         in_trash = self._require_attr(share_obj.get_item_inside(), 'inTrash')
         if in_trash:
-            print("CheckShareTrash")
             raise ResourceNotFoundError("Share not found or expired")
 
 class CheckSharePassword(BaseResourceCheck):

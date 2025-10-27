@@ -130,7 +130,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected", "setPopupPreviewURL", "clearPopupPreviewURL"]),
+      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview"]),
 
       humanSize(size) {
          if (!size) return "-"
@@ -138,14 +138,14 @@ export default {
       },
 
       handleHoverStart() {
+         if (this.item.isDir) return
          this.hoverTimer = setTimeout(() => {
-
-            this.setPopupPreviewURL(this.imageSrc)
+            this.setPopupPreview({"url": this.imageSrc, "file_id": this.item.id})
          }, 500)
       },
       handleHoverEnd() {
          clearTimeout(this.hoverTimer)
-         this.clearPopupPreviewURL()
+         this.clearPopupPreview()
       },
 
 

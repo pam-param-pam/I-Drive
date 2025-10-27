@@ -23,7 +23,7 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES, ALLOWED_THUMBNAIL_SIZES
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES, ALLOWED_THUMBNAIL_SIZES, MAX_FOLDER_DEPTH, MAX_FILES_IN_FOLDER
 from .utilities.errors import ResourceNotFoundError
 from .utilities.helpers import chop_long_file_name
 
@@ -55,16 +55,12 @@ class Folder(MPTTModel):
 
     is_locked = property(_is_locked)
 
-    def clean(self):
-        if self.parent == self:
-            raise ValidationError("A folder cannot be it's own parent.")
-
     def _create_user_root(sender, instance, created, **kwargs):
         if created:
             folder, created = Folder.objects.get_or_create(owner=instance, name="root")
 
     def save(self, *args, **kwargs):
-
+        self._check_depth()
         self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
 
         self.last_modified_at = timezone.now()
@@ -87,7 +83,6 @@ class Folder(MPTTModel):
 
     def delete(self, *args, **kwargs):
         self.remove_cache()
-
         super(Folder, self).delete()
 
     def moveToTrash(self):
@@ -173,22 +168,32 @@ class Folder(MPTTModel):
             cache.delete(self.parent_id)
 
     def move_to_new_parent(self, new_parent: 'Folder'):
+        self._check_depth(new_parent=new_parent)
+
         if new_parent.is_locked and not self.is_locked and not self.autoLock:
             self.applyLock(new_parent, new_parent.password)
         elif not new_parent.is_locked and self.autoLock:
             self.removeLock()
 
         self.refresh_from_db()
+
         self.parent = new_parent
         self.move_to(new_parent, "last-child")
         self.save()
+
+    def _check_depth(self, new_parent=None):
+        parent = new_parent or self.parent
+        if (len(parent.get_ancestors())+1) > MAX_FOLDER_DEPTH:
+            raise ValidationError(f"Folder nested too deep! Max depth = {MAX_FOLDER_DEPTH}")
+        pass
+
 
 class File(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)
     name = models.TextField(max_length=255, null=False, blank=False)
     extension = models.CharField(max_length=10, null=False, blank=False)
     size = models.PositiveBigIntegerField()
-    mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")
+    mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")  # todo remove this
     type = models.CharField(max_length=15, null=False, blank=False, default="text", choices=FILE_TYPE_CHOICES)
     inTrash = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -263,6 +268,7 @@ class File(models.Model):
     lockFrom__name = property(_lockFrom__name)
 
     def save(self, *args, **kwargs):
+        self._check_folder_file_limit()
         self.name = chop_long_file_name(self.name)
 
         # invalidate any cache
@@ -323,6 +329,9 @@ class File(models.Model):
     def __str__(self):
         return self.name
 
+    def _check_folder_file_limit(self):
+        if (self.parent.files.count() + self.parent.subfolders.count() + 1) > MAX_FILES_IN_FOLDER:
+            raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
 
 class DiscordAttachmentMixin(models.Model):
     message_id = models.CharField(max_length=32, db_index=True)

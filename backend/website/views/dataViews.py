@@ -17,7 +17,7 @@ from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..utilities.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP
 from ..utilities.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
-from ..utilities.constants import cache, ALLOWED_IPS_LOCKED
+from ..utilities.constants import cache
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError

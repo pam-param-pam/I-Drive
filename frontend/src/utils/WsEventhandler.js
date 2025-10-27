@@ -67,8 +67,8 @@ function addToUsage(store, item) {
 function removeFromUsage(store, item) {
    if (item.isDir) return
    let usage = store.usage
-   usage.used -= item.size
-   usage.total -= item.size
+   usage.used = Math.max(0, usage.used - item.size)
+   usage.total = Math.max(0, usage.total - item.size)
    store.setUsage(usage)
 }
 
@@ -149,7 +149,7 @@ export async function onEvent(message) {
          return
       }
       for (let item of event.data) {
-          if (item.parent_id === currentFolder?.id) {
+         if (item.parent_id === currentFolder?.id) {
             store.pushToItems(item)
             addToUsage(store, item)
          }

@@ -22,6 +22,17 @@
           <i class="material-icons">create_new_folder</i>
           <span>{{ $t("sidebar.newFolder") }}</span>
         </button>
+
+        <button
+          :aria-label="$t('sidebar.newFile')"
+          :disabled="disabledCreation || !currentFolder"
+          :title="$t('sidebar.newFile')"
+          class="action"
+          @click="showHover('newFile')"
+        >
+          <i class="material-icons">note_add</i>
+          <span>{{ $t("sidebar.newFile") }}</span>
+        </button>
       </div>
 
       <button

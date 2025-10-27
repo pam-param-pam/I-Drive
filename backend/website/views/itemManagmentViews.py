@@ -1,5 +1,4 @@
 import base64
-import time
 
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
@@ -7,7 +6,10 @@ from rest_framework.decorators import permission_classes, api_view, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 
 from ..models import File, Folder, VideoPosition, Tag, Moment, Subtitle
-from ..tasks import smart_delete, move_to_trash_task, restore_from_trash_task, lock_folder, unlock_folder, move_task
+from ..tasks.deleteTasks import smart_delete_task
+from ..tasks.moveTasks import move_task
+from ..tasks.otherTasks import lock_folder_task, unlock_folder_task
+from ..tasks.trashTasks import restore_from_trash_task, move_to_trash_task
 from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms, default_checks, CheckRoot, CheckTrash
 from ..utilities.Serializers import FolderSerializer, FileSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
@@ -40,6 +42,7 @@ def create_folder(request, parent):
     send_event(request.user.id, request.request_id, parent, EventCode.ITEM_CREATE, folder_dict)
     return JsonResponse(folder_dict, status=200)
 
+
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
@@ -63,6 +66,7 @@ def move(request, new_parent_obj, items):
 
     return JsonResponse(build_response(request.request_id, "Moving items..."))
 
+
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
@@ -75,9 +79,11 @@ def move_to_trash(request, items):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
 
     ids = [get_attr(item, 'id') for item in items]
+
     move_to_trash_task.delay(request.user.id, request.request_id, ids)
 
     return JsonResponse(build_response(request.request_id, "Moving to Trash..."))
+
 
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -95,6 +101,7 @@ def restore_from_trash(request, items):
 
     return JsonResponse(build_response(request.request_id, "Restoring from Trash..."))
 
+
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & DeletePerms])
@@ -109,9 +116,10 @@ def delete(request, items):
             raise BadRequestError("Cannot delete. At least one item is not ready.")
 
     ids = [get_attr(item, 'id') for item in items]
-    smart_delete.delay(request.user.id, request.request_id, ids)
+    smart_delete_task.delay(request.user.id, request.request_id, ids)
 
     return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
+
 
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -138,6 +146,7 @@ def rename(request, item_obj):
     send_event(request.user.id, request.request_id, item_obj.parent, EventCode.ITEM_UPDATE, data)
     return HttpResponse(status=204)
 
+
 @api_view(['POST'])
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & LockPerms])
@@ -146,9 +155,9 @@ def rename(request, item_obj):
 def change_folder_password(request, folder_obj):
     newPassword = request.data['new_password']
     if newPassword:
-        lock_folder.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
+        lock_folder_task.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
     else:
-        unlock_folder.delay(request.user.id, request.request_id, folder_obj.id)
+        unlock_folder_task.delay(request.user.id, request.request_id, folder_obj.id)
 
     isLocked = True if newPassword else False
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
@@ -158,6 +167,7 @@ def change_folder_password(request, folder_obj):
     if isLocked:
         return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
     return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
+
 
 @api_view(['POST'])
 @throttle_classes([FolderPasswordThrottle])
@@ -172,9 +182,9 @@ def reset_folder_password(request, folder_obj):
         raise ResourcePermissionError("Account password is incorrect")
 
     if new_folder_password:
-        lock_folder.delay(request.user.id, request.request_id, folder_obj.id, new_folder_password)
+        lock_folder_task.delay(request.user.id, request.request_id, folder_obj.id, new_folder_password)
     else:
-        unlock_folder.delay(request.user.id, request.request_id, folder_obj.id)
+        unlock_folder_task.delay(request.user.id, request.request_id, folder_obj.id)
 
     isLocked = True if new_folder_password else False
 
@@ -206,6 +216,7 @@ def update_video_position(request, file_obj):
 
     return HttpResponse(status=204)
 
+
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
@@ -235,6 +246,7 @@ def add_tag(request, file_obj):
     serializer = TagSerializer()
     return JsonResponse(serializer.serialize_object(tag), status=200)
 
+
 @api_view(['DELETE'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
@@ -251,6 +263,7 @@ def remove_tag(request, file_obj, tag_id):
         tag.delete()
 
     return HttpResponse(status=204)
+
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -322,6 +335,7 @@ def change_crc(request, file_obj):
 
     return HttpResponse(status=204)
 
+
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
@@ -347,6 +361,7 @@ def add_subtitle(request, file_obj):
                                        content_type=ContentType.objects.get_for_model(author), object_id=author.discord_id, size=size, key=key, iv=iv)
 
     return JsonResponse(SubtitleSerializer().serialize_object(subtitle), status=200)
+
 
 @api_view(['DELETE'])
 @throttle_classes([defaultAuthUserThrottle])

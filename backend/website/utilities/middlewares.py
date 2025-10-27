@@ -22,7 +22,7 @@ from ..models import ShareableLink, PerDeviceToken
 from ..utilities.constants import cache
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, \
-    FailedToResizeImage, LockedFolderWrongIpError
+    FailedToResizeImage, LockedFolderWrongIpError, DiscordErrorText
 from ..utilities.other import build_http_error_response, get_attr
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -167,7 +167,10 @@ class CommonErrorsMiddleware(MiddlewareMixin):
             return None
 
         #  400 BAD REQUEST
-        if isinstance(exception, (ValidationError, BadRequestError)):
+        if isinstance(exception, ValidationError):
+            return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception.message)), status=400)
+
+        elif isinstance(exception, BadRequestError):
             return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception)), status=400)
 
         elif isinstance(exception, NoBotsError):
@@ -245,7 +248,7 @@ class CommonErrorsMiddleware(MiddlewareMixin):
             return JsonResponse(build_http_error_response(code=503, error="errors.databaseError", details=str(exception)), status=503)
 
         # OTHER
-        elif isinstance(exception, DiscordError):
+        elif isinstance(exception, (DiscordErrorText, DiscordError)):
             return JsonResponse(build_http_error_response(code=exception.status, error="errors.unexpectedDiscordResponse", details=exception.message), status=exception.status)
 
         else:

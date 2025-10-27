@@ -168,7 +168,6 @@ export async function makeThumbnailIfNeeded(queueFile) {
    if (isVideoFile(queueFile.fileObj.extension)) {
       try {
          let data = await getVideoCover(queueFile)
-         console.log(data)
          let duration = data.duration
          thumbnail = data.thumbnail
          queueFile.fileObj.duration = Math.round(duration)
@@ -208,7 +207,6 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
                      resolve(getVideoCover(file, seekTo + 2, retryTimes + 1))
                   }
                }
-               console.log(frames)
                createThumbnails(frames)
                   .then((thumbnails) => {
                      const largestThumbnail = findLargestThumbnail(thumbnails)
@@ -234,15 +232,12 @@ function createThumbnails(frames) {
 
 
 function findLargestThumbnail(thumbnails) {
-   console.log(thumbnails)
    thumbnails.sort((a, b) => b.size - a.size)
    return thumbnails[0]
 }
 
 
 function isPitchBlack(canvas) {
-   console.log("isPitchBlack")
-   console.log(canvas)
    const testCanvas = document.createElement("canvas")
    testCanvas.width = testCanvas.height = 1
    const tinyCtx = testCanvas.getContext("2d")
@@ -494,13 +489,14 @@ export function generateKey(method) {
 
 export async function upload(formData, config) {
    let headers = {}
-   let url = getWebhook().url
+   let webhook = getWebhook()
 
    config.headers = {
       ...config.headers,
       ...headers
    }
-   return await uploadInstance.post(url, formData, config)
+   config.__webhook = webhook
+   return await uploadInstance.post(webhook.url, formData, config)
 }
 
 

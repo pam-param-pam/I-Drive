@@ -162,7 +162,16 @@ def create_file(request):
         if video_metadata:
             create_video_metadata(file_obj, video_metadata)
 
-        file_response_dict = {"frontend_id": frontend_id, "file_id": file_obj.id, "parent_id": parent_id, "name": file_obj.name, "type": file_type, "encryption_method": file_obj.encryption_method}
+        file_response_dict = {
+            "frontend_id": frontend_id,
+            "file_id": file_obj.id,
+            "parent_id": parent_id,
+            "name": file_obj.name,
+            "type": file_type,
+            "encryption_method": file_obj.encryption_method,
+            "lockFrom": file_obj.lockFrom
+        }
+
         file_objs.append(file_obj)
         response_json.append(file_response_dict)
 
@@ -171,13 +180,13 @@ def create_file(request):
 
     return JsonResponse(response_json, safe=False, status=200)
 
+
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def edit_file(request, file_obj):
-
     check_if_bots_exists(request.user)
 
     fragments = Fragment.objects.filter(file=file_obj)
@@ -208,7 +217,7 @@ def edit_file(request, file_obj):
 
         author = get_discord_author(request, message_author_id)
 
-        if file_obj.type not in ("Text", "Code"):
+        if file_obj.type not in ("Text", "Code", "Database"):
             raise BadRequestError("You can only edit text files!")
 
     if fragments.exists():
@@ -243,6 +252,7 @@ def edit_file(request, file_obj):
     send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
 
     return HttpResponse(status=204)
+
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])

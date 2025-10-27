@@ -7,10 +7,22 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 DISCORD_BASE_URL = "https://discord.com/api/v10"
 
-# A set of IPS that locked resources can be accessed from. Default is local ips only
-ALLOWED_IPS_LOCKED = ("127.0.0.1", "192.168.1.1")
+# Amount of channels to be created during auto setup
+NUMBER_OF_CHANNELS = 5
 
-# Auth token expire time
+# Amount of webhooks in each channel to be created during auto setup
+NUMBER_OF_WEBHOOKS_PER_CHANNEL = 2
+
+# A set of IPS that locked resources can be accessed from. Default is local ips only
+ALLOWED_IPS_LOCKED = ()
+
+# Max folder depth allowed
+MAX_FOLDER_DEPTH = 10
+
+# Max files allowed in 1 folder
+MAX_FILES_IN_FOLDER = 10_000
+
+# Auth token expire time in days
 TOKEN_EXPIRY_DAYS = 30
 
 # Max attachments in 1 message in discord

@@ -25,7 +25,7 @@ from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, UserSettings, UserZIP, Webhook, Bot, DiscordAttachmentMixin, \
     VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, ShareAccess, PerDeviceToken
 from ..safety.helper import get_classes_extending_discordAttachmentMixin
-from ..tasks import queue_ws_event, prefetch_next_fragments
+from ..tasks.otherTasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Item, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
 from ..utilities.constants import EventCode, RAW_IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
     EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, CODE_EXTENSIONS, TOKEN_EXPIRY_DAYS, cache, QR_CODE_SESSION_EXPIRY
@@ -34,6 +34,7 @@ from ..utilities.errors import ResourcePermissionError, ResourceNotFoundError, B
 _SENTINEL = object()  # Unique object to detect omitted default
 
 DiscordAttachmentClasses = get_classes_extending_discordAttachmentMixin()
+
 
 def get_attr(resource: Union[dict, object], attr: str, default=_SENTINEL):
     """Helper function to get attribute from either an object or a dictionary.
@@ -464,7 +465,7 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
         # we find message author
         author = resource.get_author()
         if isinstance(author, Webhook):
-            discord.edit_webhook_attachments(user, author.url, resource.message_id, attachment_ids_to_keep)
+            discord.edit_webhook_attachments(author.url, resource.message_id, attachment_ids_to_keep)
         else:
             discord.edit_attachments(user, author.token, resource.message_id, attachment_ids_to_keep)
     else:

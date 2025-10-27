@@ -156,6 +156,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "newFile": "Nowy plik",
+    "newFileMessage": "Podaj nazwę tworzonego pliku.",
     "qrDecoded": "Kod QR zeskanowany",
     "scanQR": "Zeskanuj kod QR",
     "abortAll": "Anuluj przesyłanie",
@@ -197,8 +199,6 @@
     "isSubsNo": "Nie",
     "momentsTitle": "Momenty",
     "momentsTip": "Zapisz momenty które chciałbyś objerzeć na pózniej!",
-    "ALotOF429": "Za dużo zapytań do discorda!",
-    "ALotOF429Explained": "Nastąpi redukukcja liczbe równoległych requestów.",
     "editThumbnail": "Zmień podgląd",
     "orderBy": "Sortuj po",
     "orderByName": "Nazwie",
@@ -385,7 +385,9 @@
     "register": "Rejestracja",
     "settings": "Ustawienia",
     "toggleDarkMode": "Przełącz tryb nocny",
-    "trash": "Kosz"
+    "trash": "Kosz",
+    "newFile": "Nowy plik"
+
   },
   "time": {
     "days": "Dni",
@@ -395,6 +397,9 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "ALotOF429": "Za dużo zapytań do discorda!",
+    "ALotOF429Explained": "Nastąpi redukukcja liczbe równoległych requestów.",
+    "unknownWebhook": "Webhook nie istnieje: {webhook}",
     "databaseIsLockedUploadPaused": "Przesyłanie zostało zatrzymane. Baza danych jest przeciążona. Spróbuj za chwile!",
     "qrSessionApproved": "Device logged in!",
     "uploadFinished": "Przesyłanie zakończone!",

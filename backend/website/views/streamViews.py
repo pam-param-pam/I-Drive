@@ -50,7 +50,7 @@ def stream_preview(request, file_obj: File):
 
         res = requests.get(url, timeout=20)
         if not res.ok:
-            raise DiscordError(res.text, res.status_code)
+            raise DiscordError(res)
 
         file_content = res.content
         fernet = Fernet(preview.key)
@@ -82,7 +82,7 @@ def stream_preview(request, file_obj: File):
         url = discord.get_attachment_url(file_obj.owner, fragment)
         response = requests.get(url, timeout=20)
         if not response.ok:
-            raise DiscordError(response.text, response.status_code)
+            raise DiscordError(response)
 
         decrypted_data = decryptor.decrypt(response.content)
         file_content += decrypted_data
@@ -121,7 +121,7 @@ def stream_preview(request, file_obj: File):
     attachment_name = user.discordsettings.attachment_name
     files = {'file': (attachment_name, encrypted_data)}
 
-    message = discord.send_file(user, files)
+    message = discord.send_file(user, files) # todo migrate to webhooks
 
     size = data.getbuffer().nbytes
     encrypted_size = encrypted_data.__sizeof__()
@@ -325,12 +325,12 @@ def stream_file(request, file_obj: File):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
                 headers = {'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
 
-                async with session.get(url, headers=headers) as response:
-                    response.raise_for_status()
+                async with session.get(url, headers=headers) as dc_res:
+                    dc_res.raise_for_status()
 
                     total_decryption_time = 0
                     total_bytes = 0
-                    async for raw_data in response.content.iter_chunked(chunk_size):
+                    async for raw_data in res.content.iter_chunked(chunk_size):
                         start_time = time.perf_counter()
                         decrypted_data = decryptor.decrypt(raw_data)
                         end_time = time.perf_counter()

@@ -6,7 +6,7 @@
 
 <script>
 
-import { mapState } from "pinia"
+import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
@@ -34,9 +34,9 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["popupPreviewURL"]),
+      ...mapState(useMainStore, ["popupPreview", "items"]),
       source() {
-         return this.popupPreviewURL
+         return this.popupPreview?.url
       }
    },
    mounted() {
@@ -46,7 +46,15 @@ export default {
       window.removeEventListener("mousemove", this.updateCursorPosition)
    },
    methods: {
+      ...mapActions(useMainStore, ["clearPopupPreview"]),
+
       updateCursorPosition(event) {
+         let foundItem = this.items.find(item => item.id === this.popupPreview?.file_id)
+         if (!foundItem) {
+            this.clearPopupPreview()
+            return
+         }
+
          this.cursorX = event.clientX
          this.cursorY = event.clientY
          this.calculatePopupStyle()

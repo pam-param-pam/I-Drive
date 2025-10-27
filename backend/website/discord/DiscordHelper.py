@@ -2,8 +2,8 @@ import httpx
 
 from ..discord.constants import *
 from ..models import DiscordSettings, Channel, Bot
-from ..utilities.constants import DISCORD_BASE_URL
-from ..utilities.errors import BadRequestError, DiscordError
+from ..utilities.constants import DISCORD_BASE_URL, NUMBER_OF_CHANNELS, NUMBER_OF_WEBHOOKS_PER_CHANNEL
+from ..utilities.errors import BadRequestError, DiscordErrorText
 from ..utilities.other import query_attachments
 
 ALL_BOTS_ROLE_PERMS = (
@@ -64,7 +64,7 @@ class DiscordHelper:
 
             # Create channels
             channels = []
-            for i in range(4):
+            for i in range(NUMBER_OF_CHANNELS):
                 channel_payload = {
                     'name': f"Files_{i + 1}",
                     'type': 0,
@@ -84,7 +84,7 @@ class DiscordHelper:
             # Create webhooks
             webhooks = []
             for channel in channels:
-                for i in range(2):
+                for i in range(NUMBER_OF_WEBHOOKS_PER_CHANNEL):
                     webhook_payload = {'name': f'Captain Hook v{i + 1}'}
                     webhook_id, webhook_url, webhook_name, channel_id = self._create_webhook(bot_token, channel, webhook_payload)
                     webhooks.append((webhook_id, webhook_url, webhook_name, channel_id))
@@ -132,14 +132,14 @@ class DiscordHelper:
         # Step 1.2: Get bot's member object in guild
         member_resp = self.client.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}", headers=self._get_headers(bot_token))
         if not member_resp.is_success:
-            raise DiscordError(member_resp.text, member_resp.status_code)
+            raise DiscordErrorText("Failed to verify bot perms in step 1.2", member_resp.status_code)
         member_data = member_resp.json()
         bot_role_ids = member_data['roles']
 
         # Step 1.3: Get all roles in the guild
         roles_resp = self.client.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles", headers=self._get_headers(bot_token))
         if not roles_resp.is_success:
-            raise DiscordError(roles_resp.text, roles_resp.status_code)
+            raise DiscordErrorText("Failed to get bots roles in step 1.3", member_resp.status_code)
         roles = roles_resp.json()
 
         # Step 1.4: Compute combined permissions of all roles the bot has
@@ -168,7 +168,7 @@ class DiscordHelper:
     def _create_role(self, guild_id, bot_token, role_payload):
         res = self.client.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles", headers=self._get_headers(bot_token), json=role_payload)
         if not res.is_success:
-            raise DiscordError(f"Failed to create role in step 4", res.status_code)
+            raise DiscordErrorText(f"Failed to create role in step 4", res.status_code)
 
         return res.json()['id']
 
@@ -183,12 +183,12 @@ class DiscordHelper:
     def _assign_role_to_bot(self, guild_id, bot_token, bot_id, role_id):
         res = self.client.put(f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}/roles/{role_id}", headers=self._get_headers(bot_token))
         if not res.is_success:
-            raise DiscordError("Failed to assign role in step 5", res.status_code)
+            raise DiscordErrorText("Failed to assign role in step 5", res.status_code)
 
     def _create_category(self, guild_id, bot_token, category_payload):
         res = self.client.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/channels", headers=self._get_headers(bot_token), json=category_payload)
         if not res.is_success:
-            raise DiscordError("Failed to create a category in step 6", res.status_code)
+            raise DiscordErrorText("Failed to create a category in step 6", res.status_code)
         return res.json()['id']
 
     def _create_category_cleanup(self, bot_token, category_id):
@@ -202,7 +202,7 @@ class DiscordHelper:
     def _create_channel_in_category(self, guild_id, bot_token, channel_payload):
         res = self.client.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/channels", headers=self._get_headers(bot_token), json=channel_payload)
         if not res.is_success:
-            raise DiscordError("Failed to create a channel in step 7", res.status_code)
+            raise DiscordErrorText("Failed to create a channel in step 7", res.status_code)
 
         return res.json()['id'], res.json()['name']
 
@@ -218,7 +218,7 @@ class DiscordHelper:
 
         res = self.client.post(f"{DISCORD_BASE_URL}/channels/{channel[0]}/webhooks", headers=self._get_headers(bot_token), json=webhook_payload)
         if not res.is_success:
-            raise DiscordError(f"Failed to create webhook in channel {channel[0]}", res.status_code)
+            raise DiscordErrorText(f"Failed to create webhook in channel {channel[0]}", res.status_code)
 
         return res.json()['id'], res.json()['url'], res.json()['name'], channel[0]
 

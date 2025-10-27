@@ -1,3 +1,6 @@
+from httpx import Response
+
+
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
@@ -40,10 +43,21 @@ class LockedFolderWrongIpError(IDriveException):
     def __init__(self, ip):
         self.ip = ip
 
-class DiscordError(IDriveException):
-    def __init__(self, message="Unexpected Discord Error.", status=0):
+class DiscordErrorText(IDriveException):
+    def __init__(self, message, status):
         self.status = status
         self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return f'Discord error-> {self.status}: {self.message}'
+
+class DiscordError(IDriveException):
+    def __init__(self, response: Response):
+        self.status = response.status_code
+        self._json_error = response.json()
+        self.message = self._json_error['message']
+        self.code = self._json_error['code']
         super().__init__(self.message)
 
     def __str__(self):

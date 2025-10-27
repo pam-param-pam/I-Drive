@@ -34,7 +34,7 @@ uploadInstance.interceptors.response.use(
 
       if (upload_429_errors > 4) {
          upload_429_errors = - 10
-         toast.warning(`${i18n.global.t('prompts.ALotOF429')}\n${i18n.global.t('prompts.ALotOF429Explained')}`, {
+         toast.warning(`${i18n.global.t('toasts.ALotOF429')}\n${i18n.global.t('toasts.ALotOF429Explained')}`, {
             timeout: 10000,
             position: "bottom-right"
          })

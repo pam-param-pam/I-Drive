@@ -172,6 +172,7 @@ def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
     # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
     # request is changed into rest's framework's request with the decorators,
     # so wee need to access the django's request using _request
+    request._request.META['share_context'] = True
     return stream_file(request._request, signed_file_id)
 
 
@@ -185,6 +186,7 @@ def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
 def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
     signed_file_id = request.META['signed_file_id']
+    request._request.META['share_context'] = True
     return stream_thumbnail(request._request, signed_file_id)
 
 
@@ -198,6 +200,7 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
 def share_view_preview(request, share_obj: ShareableLink, file_obj: File):
     signed_file_id = request.META['signed_file_id']
+    request._request.META['share_context'] = True
     return stream_preview(request._request, signed_file_id)
 
 
@@ -211,6 +214,7 @@ def share_view_preview(request, share_obj: ShareableLink, file_obj: File):
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
 def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
     signed_file_id = request.META['signed_file_id']
+    request._request.META['share_context'] = True
     return stream_subtitle(request._request, signed_file_id, subtitle_id)
 
 

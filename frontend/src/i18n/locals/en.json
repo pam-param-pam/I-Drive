@@ -153,7 +153,10 @@
     "usernameTaken": "Username already taken",
     "wrongCredentials": "Wrong credentials"
   },
+
   "prompts": {
+    "newFile": "New File",
+    "newFileMessage": "Name your new file.",
     "qrDecoded": "QR Code detected",
     "scanQR": "Scan QR Code",
     "abortAll": "Cancel Upload",
@@ -191,8 +194,6 @@
     "isSubsNo": "No",
     "momentsTitle": "Moments",
     "momentsTip": "Save moments you'd like to rewatch later",
-    "ALotOF429": "Too many discord requests!",
-    "ALotOF429Explained": "Reducing number of concurrent requests.",
     "pausedFilesUpload": "Paused upload of {amount} files",
     "pausingFilesUpload": "Pausing upload of {amount} files",
     "editThumbnail": "Edit Thumbnail",
@@ -386,7 +387,8 @@
     "register": "Register",
     "settings": "Settings",
     "toggleDarkMode": "Toggle dark mode",
-    "trash": "Trash"
+    "trash": "Trash",
+    "newFile": "New File"
   },
   "time": {
     "days": "Days",
@@ -396,6 +398,9 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "ALotOF429": "Too many discord requests!",
+    "ALotOF429Explained": "Reducing number of concurrent requests.",
+    "unknownWebhook": "Unknown webhook: {webhook}",
     "databaseIsLockedUploadPaused": "Upload paused, backend db is overwhelmed!",
     "qrSessionApproved": "Urządzenie zostało zalogowane!",
     "uploadFinished": "Upload finished!",

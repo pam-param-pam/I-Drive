@@ -1,4 +1,5 @@
 import logging
+import random
 import time
 import traceback
 from datetime import datetime, timezone
@@ -11,7 +12,7 @@ from httpx import Response
 
 from ..models import DiscordSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
 from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
-from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError
+from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordErrorText
 
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.INFO)
@@ -69,14 +70,18 @@ class Discord:
             except KeyError:
                 pass
 
-    def _get_channel_id(self, user, message_id=None):
+    def _get_channel_id(self, message_id):
         from ..utilities.other import query_attachments
 
         attachments = query_attachments(message_id=message_id)
         if len(attachments) > 0:
             return attachments[0].channel_id
 
-        raise DiscordError(f"Unable to find channel id associated with message ID={message_id}")
+        raise DiscordErrorText(f"Unable to find channel id associated with message ID={message_id}", 404)
+
+    def _get_channel_for_user(self, user):
+        channels = Channel.objects.filter(owner=user).all()
+        return random.choice(channels)
 
     def _handle_discord_block(self, user, response):
         logger.debug("HANDLING DISCORD BLOCK")
@@ -221,8 +226,9 @@ class Discord:
 
                 return self._make_bot_request(user, method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
 
-            if response.status_code in (403, 401):
-                raise DiscordError(response.text, response.status_code)
+            if not response.is_success:
+                raise DiscordError(response)
+
         except httpx.RequestError as e:
             raise HttpxError(str(e))
         finally:
@@ -234,26 +240,19 @@ class Discord:
                 logger.error(traceback.print_exc())
                 self.remove_user_state(user)
 
-    def _make_webhook_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
-
+    def _make_webhook_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         logger.debug(f"Making webhook request: {url}")
 
         response = self._make_request(method, url, headers=headers, params=params, json=json, files=files, timeout=timeout)
         # todo implement ratelimit for webhooks
 
         if not response.is_success:
-            if response.status_code in (403, 401):
-                from ..tasks import queue_ws_event
-                webhook = Webhook.objects.get(owner=user, url=url)
-                queue_ws_event.delay('user', {'type': 'send_message', 'op_code': EventCode.MESSAGE_SENT.value, 'user_id': user.id, 'message': "toasts.webhook403",
-                                              'args': {"name": webhook.name}, 'finished': True, 'error': True})
-
-            raise DiscordError(response.text, response.status_code)
+            raise DiscordError(response)
 
         return response
 
     def send_message(self, user, message: str) -> httpx.Response:
-        channel_id = self._get_channel_id(user)
+        channel_id = self._get_channel_for_user(user)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
         payload = {'content': message}
         headers = {"Content-Type": 'application/json'}
@@ -262,7 +261,7 @@ class Discord:
         return response
 
     def send_file(self, user, files: dict, json=None) -> httpx.Response:
-        channel_id = self._get_channel_id(user)
+        channel_id = self._get_channel_for_user(user)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
         response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
 
@@ -296,7 +295,6 @@ class Discord:
 
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'GET', url)
-
         message = response.json()
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
@@ -304,21 +302,21 @@ class Discord:
         return response
 
     def remove_message(self, user, message_id: str) -> httpx.Response:
-        channel_id = self._get_channel_id(user, message_id)
+        channel_id = self._get_channel_id(message_id)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'DELETE', url)
         return response
 
-    def edit_webhook_attachments(self, user, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
+    def edit_webhook_attachments(self, webhook, message_id, attachment_ids_to_keep) -> httpx.Response:
         attachments_to_keep = []
         for attachment_id in attachment_ids_to_keep:
             attachments_to_keep.append({"id": attachment_id})
         url = f"{webhook}/messages/{message_id}"
-        response = self._make_webhook_request(user, 'PATCH', url, json={"attachments": attachments_to_keep})
+        response = self._make_webhook_request('PATCH', url, json={"attachments": attachments_to_keep})
         return response
 
     def edit_attachments(self, user, token, message_id, attachment_ids_to_keep) -> httpx.Response:
-        channel_id = self._get_channel_id(user, message_id)
+        channel_id = self._get_channel_id(message_id)
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
 
         attachments_to_keep = []

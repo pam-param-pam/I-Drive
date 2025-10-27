@@ -4,7 +4,10 @@ import { upload } from "@/upload/uploadHelper.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { noWifi } from "@/axios/helper.js"
 import { encryptAttachment } from "@/utils/encryption.js"
+import i18n from "@/i18n/index.js"
+import { useToast } from "vue-toastification"
 
+const toast = useToast()
 export class DiscordUploader {
    constructor() {
       this.uploadStore = useUploadStore()
@@ -66,6 +69,12 @@ export class DiscordUploader {
          if (noWifi(err)) {
             this.uploadStore.setState(uploadState.noInternet)
          }
+
+         if (err.response?.data?.code === 10015) {
+            toast.error(`${i18n.global.t('toasts.unknownWebhook', {"webhook": err.config.__webhook.name})}`, {timeout: null})
+            this.uploadStore.pauseAll()
+         }
+
          request.attachments.forEach(att => {
             if (noWifi(err)) {
                this.uploadStore.setStatus(att.fileObj.frontendId, fileUploadStatus.waitingForInternet)

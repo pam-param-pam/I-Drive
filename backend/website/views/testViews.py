@@ -15,7 +15,7 @@ from ..utilities.throttle import defaultAuthUserThrottle
 @permission_classes([AllowAny])
 def get_discord_state(request):
     user = User.objects.get(id=1)
-    discord._get_channel_id(user)
+    discord._get_channel_for_user(user)
 
     bots_dict = []
 

@@ -162,7 +162,6 @@ export class BackendManager {
       }
       if (this.databaseErrors > 2) {
          showToast("error", "toasts.databaseIsLockedUploadPaused")
-
          this.uploadStore.pauseAll()
          this.databaseErrors = 0
       }
