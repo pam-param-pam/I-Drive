@@ -397,6 +397,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "failedToConnectToWebsocket": "Nie udało sie polączyć z websocketem!",
     "ALotOF429": "Za dużo zapytań do discorda!",
     "ALotOF429Explained": "Nastąpi redukukcja liczbe równoległych requestów.",
     "unknownWebhook": "Webhook nie istnieje: {webhook}",

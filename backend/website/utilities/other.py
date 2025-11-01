@@ -138,7 +138,7 @@ def group_and_send_event(user_id: int, request_id: int, op_code: EventCode, reso
         parent = parent_mapping[parent_id]
         send_event(user_id, request_id, parent, op_code, file_dicts)
 
-
+# todo add class event_context to hold user_id, request_id and device_id
 def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
     if data and not isinstance(data, list):

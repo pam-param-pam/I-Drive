@@ -330,7 +330,7 @@ def stream_file(request, file_obj: File):
 
                     total_decryption_time = 0
                     total_bytes = 0
-                    async for raw_data in res.content.iter_chunked(chunk_size):
+                    async for raw_data in dc_res.content.iter_chunked(chunk_size):
                         start_time = time.perf_counter()
                         decrypted_data = decryptor.decrypt(raw_data)
                         end_time = time.perf_counter()

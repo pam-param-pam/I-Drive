@@ -10,6 +10,10 @@ from .utilities.constants import QR_CODE_SESSION_EXPIRY
 
 class UserConsumer(WebsocketConsumer):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.device_id = None
+
     def connect(self):
         is_standard_protocol = self.scope['is_standard_protocol']
         user = self.scope['user']
@@ -36,8 +40,15 @@ class UserConsumer(WebsocketConsumer):
 
             self.send(json.dumps(message))
 
+    def receive(self, text_data=None, bytes_data=None):
+        json_data = json.loads(text_data)
+        op_code = json_data['opcode']
+        if op_code == 1:  # device id code
+            self.device_id = json_data['message']['device_id']
+
     def send_event(self, event):
-        if self.scope['user'].id == event['user_id']:
+        if self.scope['user'].id == event['user_id'] and (not self.device_id or not event.get('device_id') or self.device_id == event.get('device_id')):
+            print("send_event")
             self.send(json.dumps(event['message']))
 
     def logout(self, event):
