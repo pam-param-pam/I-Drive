@@ -30,13 +30,12 @@ class UserConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_discard)("user", self.channel_name)
 
     def send_message(self, event):
-        if self.scope['user'].id == event['user_id']:
+        context = event['context']
+        if self.scope['user'].id == context['user_id']:
             message = {"is_encrypted": False, "event": {"op_code": event['op_code'], "message": event["message"], "args": event.get('args'), "error": event["error"],
                                                         "finished": event["finished"]}}
 
-            task_id = event.get("request_id")
-            if task_id:
-                message['event']['task_id'] = task_id
+            message['event']['task_id'] = context["request_id"]
 
             self.send(json.dumps(message))
 
@@ -47,12 +46,11 @@ class UserConsumer(WebsocketConsumer):
             self.device_id = json_data['message']['device_id']
 
     def send_event(self, event):
-        if self.scope['user'].id == event['user_id'] and (not self.device_id or not event.get('device_id') or self.device_id == event.get('device_id')):
-            print("send_event")
+        if self.scope['user'].id == event['context']['user_id'] and (not self.device_id or not event['context'].get('device_id') or self.device_id == event['context'].get('device_id')):
             self.send(json.dumps(event['message']))
 
     def logout(self, event):
-        if self.scope['user'].id == event['user_id']:
+        if self.scope['user'].id == event['context']['user_id']:
             if event['token_hash']:  # specific connection to close
                 token_hash = hashlib.sha256(self.scope['token'].encode()).hexdigest()
                 if token_hash == event['token_hash']:

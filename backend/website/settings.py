@@ -62,7 +62,6 @@ MIDDLEWARE = [
     'django.middleware.gzip.GZipMiddleware',                     # Can be late but before clickjacking (optional)
     'django_user_agents.middleware.UserAgentMiddleware',        # Custom user agent detection; OK here
     'website.utilities.middlewares.CommonErrorsMiddleware',     # Custom middlewares; keep after core Django middleware
-    'website.utilities.middlewares.RequestIdMiddleware',
     'website.utilities.middlewares.FailedRequestLoggerMiddleware',
     'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',       # History tracking middleware; typically last but before clickjacking

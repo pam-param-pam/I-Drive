@@ -226,7 +226,6 @@ class CheckLockedFolderIP(BaseResourceCheck):
         raise ResourceNotFoundError()
 
     def _is_in_share_context(self, request):
-        print(request.META)
         return request.META.get('share_context')
 
 

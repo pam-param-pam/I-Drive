@@ -10,8 +10,8 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
-from ..models import DiscordSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
-from ..utilities.constants import cache, DISCORD_BASE_URL, EventCode
+from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin
+from ..utilities.constants import cache, DISCORD_BASE_URL
 from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordErrorText
 
 logger = logging.getLogger("Discord")
@@ -79,7 +79,7 @@ class Discord:
 
         raise DiscordErrorText(f"Unable to find channel id associated with message ID={message_id}", 404)
 
-    def _get_channel_for_user(self, user):
+    def _get_channel_for_user(self, user) -> Channel:
         channels = Channel.objects.filter(owner=user).all()
         return random.choice(channels)
 
@@ -252,7 +252,7 @@ class Discord:
         return response
 
     def send_message(self, user, message: str) -> httpx.Response:
-        channel_id = self._get_channel_for_user(user)
+        channel_id = self._get_channel_for_user(user).id
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
         payload = {'content': message}
         headers = {"Content-Type": 'application/json'}
@@ -261,7 +261,7 @@ class Discord:
         return response
 
     def send_file(self, user, files: dict, json=None) -> httpx.Response:
-        channel_id = self._get_channel_for_user(user)
+        channel_id = self._get_channel_for_user(user).id
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
         response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
 
@@ -284,7 +284,8 @@ class Discord:
             if attachment["id"] == attachment_id:
                 logger.debug(f"⏱ get_file_url took {time.perf_counter() - start:.4f} seconds")
                 return attachment["url"]
-        raise DiscordError(f"File with {attachment_id} not found")
+
+        raise BadRequestError(f"File with {attachment_id} not found in the db")
 
     def get_message(self, user, message_id: str, channel_id: str) -> httpx.Response:
         start = time.perf_counter()

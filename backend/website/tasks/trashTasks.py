@@ -11,14 +11,14 @@ from ..utilities.other import group_and_send_event, send_event
 
 
 @app.task
-def move_to_trash_task(user_id, request_id, ids):
+def move_to_trash_task(context, ids):
     files = File.objects.filter(id__in=ids).select_related("parent")
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
         files.update(inTrash=True, inTrashSince=timezone.now())
 
-        group_and_send_event(user_id, request_id, EventCode.ITEM_MOVE_TO_TRASH, files)
+        group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, files)
 
     for file in files:
         file.remove_cache()
@@ -27,25 +27,25 @@ def move_to_trash_task(user_id, request_id, ids):
     last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = folder_serializer.serialize_object(folder)
-        send_event(user_id, request_id, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
+        send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
         folder.moveToTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:
-            send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, context=context)
             last_percentage = percentage
 
-    send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
+    send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, context=context)
 
 
 @app.task
-def restore_from_trash_task(user_id, request_id, ids):
+def restore_from_trash_task(context, ids):
 
     files = File.objects.filter(id__in=ids).select_related("parent")
     folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
     if files.exists():
         files.update(inTrash=False, inTrashSince=None)
-        group_and_send_event(user_id, request_id, EventCode.ITEM_RESTORE_FROM_TRASH, files)
+        group_and_send_event(context, EventCode.ITEM_RESTORE_FROM_TRASH, files)
 
     for file in files:
         file.remove_cache()
@@ -54,11 +54,11 @@ def restore_from_trash_task(user_id, request_id, ids):
     last_percentage = 0
     for index, folder in enumerate(folders):
         folder_dict = folder_serializer.serialize_object(folder)
-        send_event(user_id, request_id, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
+        send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
         folder.restoreFromTrash()
         percentage = round((index + 1) / total_length * 100)
         if percentage != last_percentage:
-            send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, context=context)
             last_percentage = percentage
 
-    send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, user_id=user_id, request_id=request_id)
+    send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, context=context)

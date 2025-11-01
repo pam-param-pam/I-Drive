@@ -20,32 +20,31 @@ def queue_ws_event(ws_channel, ws_event: dict, group=True):
         async_to_sync(channel_layer.send)(ws_channel, ws_event)
 
 
-def send_message(message, args, finished, user_id, request_id, isError=False):
+def send_message(message, args, finished, context, isError=False):
     queue_ws_event.delay(
         'user',
         {
             'type': 'send_message',
             'op_code': EventCode.MESSAGE_UPDATE.value,
-            'user_id': user_id,
             'message': message,
             'args': args,
             'finished': finished,
             'error': isError,
-            'request_id': request_id
+            'context': context
         }
     )
 
 @app.task
-def lock_folder_task(user_id, request_id, folder_id, password):
+def lock_folder_task(context, folder_id, password):
     folder = Folder.objects.get(id=folder_id)
     folder.applyLock(folder, password)
-    send_message("toasts.passwordUpdated", args=None, finished=True, user_id=user_id, request_id=request_id)
+    send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
 
 @app.task
-def unlock_folder_task(user_id, request_id, folder_id):
+def unlock_folder_task(context, folder_id):
     folder = Folder.objects.get(id=folder_id)
     folder.removeLock()
-    send_message("toasts.passwordUpdated", args=None, finished=True, user_id=user_id, request_id=request_id)
+    send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
 
 @app.task(expires=10)
 def prefetch_next_fragments(fragment_id, number_to_prefetch):

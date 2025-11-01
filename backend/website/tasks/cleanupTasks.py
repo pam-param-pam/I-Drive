@@ -10,6 +10,7 @@ from ..celery import app
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder, Webhook
 from ..tasks.deleteTasks import delete_files, smart_delete_task
+from ..utilities.dataModels import RequestContext
 from ..utilities.errors import NoBotsError
 from ..utilities.other import check_if_bots_exists, query_attachments
 
@@ -50,14 +51,13 @@ def delete_unready_files():
             owner_files_map[file.owner.id].append(file)
 
     for owner_id, files in owner_files_map.items():
-        user = User.objects.get(id=owner_id)
         # pass a list of all files in batches(batched by owner_id)
-        delete_files(user, 0, files)
+        delete_files(RequestContext.from_user(owner_id), files)
 
 
 @app.task
 def delete_dangling_discord_files(days=3):
-
+    return
     deleted_attachments = defaultdict(int)
     users = User.objects.filter().all()
     for user in users:
@@ -130,20 +130,18 @@ def delete_files_from_trash():
 
     current_datetime = timezone.now()
 
-    request_id = str(random.randint(0, 100000))
-
     for file in files:
         elapsed_time = current_datetime - file.inTrashSince
         # if file is in trash for at least 30 days
         # remove the file
         if elapsed_time >= timedelta(days=30):
-            smart_delete_task.delay(file.owner.id, request_id, [file.id])
+            smart_delete_task.delay(RequestContext.from_user(file.owner_id), [file.id])
 
     for folder in folders:
         elapsed_time = current_datetime - folder.inTrashSince
         # if file is in trash for at least 30 days
         # remove the file
         if elapsed_time >= timedelta(days=30):
-            smart_delete_task.delay(folder.owner.id, request_id, [folder.id])
+            smart_delete_task.delay(RequestContext.from_user(folder.owner_id), [folder.id])
 
     # todo delete better using with 1 call to task with list of ids

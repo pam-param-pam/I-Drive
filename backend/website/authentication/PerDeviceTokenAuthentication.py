@@ -1,15 +1,13 @@
-# per_device_auth/authentication.py
+import random
+
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 
 from ..models import PerDeviceToken
+from ..utilities.dataModels import RequestContext
 
 
 class PerDeviceTokenAuthentication(BaseAuthentication):
-    """
-    DRF authentication class for per-device tokens.
-    Looks for `Authorization: Token <token>` or `Bearer <token>`.
-    """
 
     keyword_token = 'token'
     keyword_bearer = 'bearer'
@@ -34,7 +32,10 @@ class PerDeviceTokenAuthentication(BaseAuthentication):
         if token_obj.user_agent != str(request.user_agent):
             raise exceptions.AuthenticationFailed('Invalid user agent')
 
-        return token_obj.user, token_obj  # request.user, request.auth
+        request_id = random.randint(0, 100000)
+        request.context = RequestContext(user_id=token_obj.user_id, device_id=token_obj.device_id, request_id=request_id)
+
+        return token_obj.user, token_obj
 
     def authenticate_header(self, request):
         # So DRF knows what to send in WWW-Authenticate

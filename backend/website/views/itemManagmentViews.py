@@ -39,7 +39,7 @@ def create_folder(request, parent):
     folder_obj.save()
 
     folder_dict = FolderSerializer().serialize_object(folder_obj)
-    send_event(request.user.id, request.request_id, parent, EventCode.ITEM_CREATE, folder_dict)
+    send_event(request.context, parent, EventCode.ITEM_CREATE, folder_dict)
     return JsonResponse(folder_dict, status=200)
 
 
@@ -62,9 +62,9 @@ def move(request, new_parent_obj, items):
             raise BadRequestError("errors.invalidMove")
 
     ids = request.data['ids']
-    move_task.delay(request.user.id, request.request_id, ids, new_parent_id)
+    move_task.delay(request.context, ids, new_parent_id)
 
-    return JsonResponse(build_response(request.request_id, "Moving items..."))
+    return JsonResponse(build_response(request.context.request_id, "Moving items..."))
 
 
 @api_view(['PATCH'])
@@ -80,9 +80,9 @@ def move_to_trash(request, items):
 
     ids = [get_attr(item, 'id') for item in items]
 
-    move_to_trash_task.delay(request.user.id, request.request_id, ids)
+    move_to_trash_task.delay(request.context, ids)
 
-    return JsonResponse(build_response(request.request_id, "Moving to Trash..."))
+    return JsonResponse(build_response(request.context.request_id, "Moving to Trash..."))
 
 
 @api_view(['PATCH'])
@@ -97,9 +97,9 @@ def restore_from_trash(request, items):
             raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
 
     ids = [get_attr(item, 'id') for item in items]
-    restore_from_trash_task.delay(request.user.id, request.request_id, ids)
+    restore_from_trash_task.delay(request.context, ids)
 
-    return JsonResponse(build_response(request.request_id, "Restoring from Trash..."))
+    return JsonResponse(build_response(request.context.request_id, "Restoring from Trash..."))
 
 
 @api_view(['POST'])
@@ -116,9 +116,9 @@ def delete(request, items):
             raise BadRequestError("Cannot delete. At least one item is not ready.")
 
     ids = [get_attr(item, 'id') for item in items]
-    smart_delete_task.delay(request.user.id, request.request_id, ids)
+    smart_delete_task.delay(request.context, ids)
 
-    return JsonResponse(build_response(request.request_id, f"{len(items)} items are being deleted..."))
+    return JsonResponse(build_response(request.context.request_id, f"{len(items)} items are being deleted..."))
 
 
 @api_view(['PATCH'])
@@ -143,7 +143,7 @@ def rename(request, item_obj):
         item_obj.save()
         data = FolderSerializer().serialize_object(item_obj)
 
-    send_event(request.user.id, request.request_id, item_obj.parent, EventCode.ITEM_UPDATE, data)
+    send_event(request.context, item_obj.parent, EventCode.ITEM_UPDATE, data)
     return HttpResponse(status=204)
 
 
@@ -155,18 +155,18 @@ def rename(request, item_obj):
 def change_folder_password(request, folder_obj):
     newPassword = request.data['new_password']
     if newPassword:
-        lock_folder_task.delay(request.user.id, request.request_id, folder_obj.id, newPassword)
+        lock_folder_task.delay(request.context, folder_obj.id, newPassword)
     else:
-        unlock_folder_task.delay(request.user.id, request.request_id, folder_obj.id)
+        unlock_folder_task.delay(request.context, folder_obj.id)
 
     isLocked = True if newPassword else False
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(request.user.id, request.request_id, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(request.user.id, request.context, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
     if isLocked:
-        return JsonResponse(build_response(request.request_id, "Folder is being locked..."))
-    return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
+        return JsonResponse(build_response(request.context.request_id, "Folder is being locked..."))
+    return JsonResponse(build_response(request.context.request_id, "Folder is being unlocked..."))
 
 
 @api_view(['POST'])
@@ -182,20 +182,20 @@ def reset_folder_password(request, folder_obj):
         raise ResourcePermissionError("Account password is incorrect")
 
     if new_folder_password:
-        lock_folder_task.delay(request.user.id, request.request_id, folder_obj.id, new_folder_password)
+        lock_folder_task.delay(request.context, folder_obj.id, new_folder_password)
     else:
-        unlock_folder_task.delay(request.user.id, request.request_id, folder_obj.id)
+        unlock_folder_task.delay(request.context, folder_obj.id)
 
     isLocked = True if new_folder_password else False
 
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(request.user.id, request.request_id, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(request.context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
 
     if isLocked:
-        return JsonResponse(build_response(request.request_id, "Folder password is being changed..."))
-    return JsonResponse(build_response(request.request_id, "Folder is being unlocked..."))
+        return JsonResponse(build_response(request.context.request_id, "Folder password is being changed..."))
+    return JsonResponse(build_response(request.context.request_id, "Folder is being unlocked..."))
 
 
 @api_view(['PUT'])

@@ -176,7 +176,7 @@ def create_file(request):
         response_json.append(file_response_dict)
 
     if file_objs:
-        group_and_send_event(request.user.id, request.request_id, EventCode.ITEM_CREATE, file_objs)
+        group_and_send_event(request.context, EventCode.ITEM_CREATE, file_objs)
 
     return JsonResponse(response_json, safe=False, status=200)
 
@@ -249,7 +249,7 @@ def edit_file(request, file_obj):
         file_obj.key = None
 
     file_obj.save()
-    send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
+    send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
 
     return HttpResponse(status=204)
 
@@ -299,6 +299,6 @@ def create_thumbnail(request, file_obj):
     file_obj.remove_cache()
 
     file_dict = FileSerializer().serialize_object(file_obj)
-    send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
+    send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     return HttpResponse(status=204)

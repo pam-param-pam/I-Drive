@@ -21,6 +21,7 @@ from django.utils import timezone
 from django.utils.encoding import smart_str
 
 from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer, DeviceTokenSerializer
+from .dataModels import RequestContext
 from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, UserSettings, UserZIP, Webhook, Bot, DiscordAttachmentMixin, \
     VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, ShareAccess, PerDeviceToken
@@ -119,7 +120,7 @@ def encrypt_message(key: str, data: Union[str, List, Dict]) -> str:
     return base64.b64encode(iv + encrypted).decode('utf-8')
 
 
-def group_and_send_event(user_id: int, request_id: int, op_code: EventCode, resources: List[Union[File, Folder]]) -> None:
+def group_and_send_event(context: RequestContext, op_code: EventCode, resources: List[Union[File, Folder]]) -> None:
     """Group files by parent object and send event for each parent"""
     grouped_files = defaultdict(list)
     parent_mapping = {}
@@ -136,10 +137,9 @@ def group_and_send_event(user_id: int, request_id: int, op_code: EventCode, reso
 
     for parent_id, file_dicts in grouped_files.items():
         parent = parent_mapping[parent_id]
-        send_event(user_id, request_id, parent, op_code, file_dicts)
+        send_event(context, parent, op_code, file_dicts)
 
-# todo add class event_context to hold user_id, request_id and device_id
-def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
+def send_event(context: RequestContext, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
     if data and not isinstance(data, list):
         data = [data]
@@ -164,8 +164,7 @@ def send_event(user_id: int, request_id: int, folder_context: Optional[Folder], 
         'user',
         {
             'type': 'send_event',
-            'user_id': user_id,
-            'request_id': request_id,
+            'context': context,
             'message': message
         }
     )
@@ -694,7 +693,7 @@ def create_token_internal(request, user, device_info):
     )
 
     user_logged_in.send(sender=user.__class__, request=request, user=user)
-    send_event(user.id, 0, None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_instance))
+    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_instance))
 
     return raw_token, token_instance, {"auth_token": raw_token, "device_id": token_instance.device_id}
 

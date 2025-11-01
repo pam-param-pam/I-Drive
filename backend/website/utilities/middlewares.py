@@ -121,18 +121,6 @@ class ApplyRateLimitHeadersMiddleware:
         return response
 
 
-class RequestIdMiddleware:
-    def __init__(self, get_response=None):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        request_id = str(random.randint(0, 100000))
-        request.request_id = request_id
-
-        response = self.get_response(request)
-        return response
-
-
 class FailedRequestLoggerMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response

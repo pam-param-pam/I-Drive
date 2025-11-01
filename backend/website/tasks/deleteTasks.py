@@ -9,6 +9,7 @@ from ..celery import app
 from ..discord.Discord import discord
 from ..models import File, Folder, Fragment, Preview, Thumbnail, Subtitle, Moment, Webhook
 from ..utilities.constants import EventCode, cache
+from ..utilities.dataModels import RequestContext
 from ..utilities.errors import DiscordError
 from ..utilities.other import group_and_send_event, query_attachments
 
@@ -49,13 +50,15 @@ def gather_message_structure(files: list) -> dict[str, list[str]]:
 
     return message_structure
 
-def delete_files(user, request_id, files: list):
+def delete_files(context, files: list):
     skipped_webhooks = []
     skipped_channels = []
 
     message_structure = gather_message_structure(files)
     total = len(message_structure)
     done = 0
+
+    user = context.get_user()
 
     def process_message(message_id):
         author = None
@@ -95,9 +98,9 @@ def delete_files(user, request_id, files: list):
                 if author:
                     skipped_webhooks.append(author.url)
 
-            send_message(e.message, True, user.id, request_id, True)
+            send_message(e.message, True, user.id, context.request_id, True)
         except Exception as e:
-            send_message(str(e), True, user.id, request_id, True)
+            send_message(str(e), True, user.id, context.request_id, True)
 
         # local per-message pacing (keeps per-thread Discord happy)
         time.sleep(0.5)
@@ -112,23 +115,21 @@ def delete_files(user, request_id, files: list):
             yield done, total
 
 
-
 @app.task
-def smart_delete_task(user_id, request_id, ids):
-    send_message(message="toasts.deleting", args={"percentage": 0}, finished=False, user_id=user_id, request_id=request_id)
+def smart_delete_task(context: RequestContext, ids):
+    send_message(message="toasts.deleting", args={"percentage": 0}, finished=False, context=context)
     try:
-        user = User.objects.get(id=user_id)
 
         top_files = File.objects.filter(id__in=ids).select_related("parent", "thumbnail", "preview")
         top_folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
         if top_files.exists():
             top_files.update(ready=False)
-            group_and_send_event(user_id, request_id, EventCode.ITEM_DELETE, top_files)
+            group_and_send_event(context, EventCode.ITEM_DELETE, top_files)
 
         if top_folders.exists():
             top_folders.update(ready=False)
-            group_and_send_event(user_id, request_id, EventCode.ITEM_DELETE, top_folders)
+            group_and_send_event(context, EventCode.ITEM_DELETE, top_folders)
 
         items = list(top_files) + list(top_folders)
         for item in items:
@@ -140,49 +141,15 @@ def smart_delete_task(user_id, request_id, ids):
         for folder in top_folders:
             all_files.extend(folder.get_all_files())
 
-        for done, total in delete_files(user, request_id, all_files):
+        for done, total in delete_files(context, all_files):
             percentage = round(done / total * 100)
-            send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
+            send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, context=context)
 
         top_files.delete()
         top_folders.delete()
-        send_message(message="toasts.itemsDeleted", args=None, finished=True, user_id=user_id, request_id=request_id)
+        send_message(message="toasts.itemsDeleted", args=None, finished=True, context=context)
 
     except Exception as e:
-        send_message(message=str(e), args=None, finished=True, user_id=user_id, request_id=request_id, isError=True)
+        send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
-    #     fol
-    #
-    #     try:
-    #         delete_files(user, request_id, files)
-    #     finally:
-    #         files.delete()
-    #         processed_items += files.count()
-    #         percentage = round((processed_items / total_items) * 100)
-    #         send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
-    #
-    #     # Delete files in folders and those folders
-    #     for index, folder in enumerate(folders):
-    #         files = folder.get_all_files()
-    #         primary_keys = [file.pk for file in files]
-    #
-    #         File.objects.filter(pk__in=primary_keys).update(ready=False)
-    #         try:
-    #             delete_files(user, request_id, files)
-    #         finally:
-    #             folder.delete()
-    #             processed_items += 1
-    #             percentage = round((processed_items / total_items) * 100)
-    #
-    #             if percentage != last_percentage:
-    #                 send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, user_id=user_id, request_id=request_id)
-    #                 last_percentage = percentage
-    #
-    #     # Finalize deletion
-    #     send_message(message="toasts.itemsDeleted", args=None, finished=True, user_id=user_id, request_id=request_id)
-    #
-    # except Exception as e:
-    #     # Handle exceptions
-    #     send_message(str(e), True, user_id, request_id, True)
-    #     traceback.print_exc()
 

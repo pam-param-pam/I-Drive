@@ -146,7 +146,7 @@ def stream_preview(request, file_obj: File):
         )
 
         file_dict = FileSerializer().serialize_object(file_obj)
-        send_event(file_obj.owner.id, request.request_id, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
+        send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     except IntegrityError:
         pass
@@ -375,10 +375,16 @@ def stream_file(request, file_obj: File):
             start_byte -= fragment.size
     # if range header was given then to allow seeking in the browser we need to return 206 - partial response.
     # Otherwise, the response was probably called by download browser function, and we need to return 200
-    if range_header:
+    if range_header and not isDownload:
         status = 206
     else:
         status = 200
+
+    if request.META.get('share_context') and (status == 200 or isDownload):
+        discord.send_message(file_obj.owner, f"{file_obj.name} has been downloaded!")
+
+    elif request.META.get('share_context'):
+        discord.send_message(file_obj.owner, f"{file_obj.name} has been watched!")
 
     response = StreamingHttpResponse(file_iterator(selected_fragment_index - 1, start_byte, end_byte, real_start_byte), content_type=file_obj.mimetype, status=status)
 
