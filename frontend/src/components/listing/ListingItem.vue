@@ -199,7 +199,7 @@ export default {
       },
 
       open() {
-         if (this.item.isDir) this.setLastItem(null)
+         if (this.item.isDir) this.setLastItem(this.item)
 
          this.$emit("onOpen", this.item)
       },

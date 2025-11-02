@@ -169,7 +169,7 @@ def create_file(request):
             "name": file_obj.name,
             "type": file_type,
             "encryption_method": file_obj.encryption_method,
-            "lockFrom": file_obj.lockFrom
+            "lockFrom": file_obj.lockFrom.id if file_obj.lockFrom else None
         }
 
         file_objs.append(file_obj)
