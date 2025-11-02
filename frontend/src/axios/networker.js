@@ -26,6 +26,7 @@ export const uploadInstance = axios.create({
 uploadInstance.interceptors.response.use(
    function(response) {
       upload_429_errors = Math.max(upload_429_errors - 1, 0)
+      if (response?.config?.onRequestFinish) response.config.onRequestFinish(response)
       return response
    },
    function(error) {

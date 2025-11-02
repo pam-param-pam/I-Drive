@@ -214,6 +214,20 @@ export const useUploadStore = defineStore("upload", {
             }
          }
       },
+      fixMissingBytesFromRequest(request, missingBytes) {
+         this.allBytesUploaded += missingBytes
+
+         for (let attachment of request.attachments) {
+            const fileObj = attachment.fileObj
+            const fileState = this.getFileState(fileObj.frontendId)
+
+            const estimatedUploaded = Math.floor((missingBytes / request.attachments.length))
+
+            if (attachment.type === attachmentType.file) {
+               fileState.updateUploadedBytes(estimatedUploaded)
+            }
+         }
+      },
       onGeneralError(error, request) {
          if (error.handled) return
          for (let attachment of request.attachments) {

@@ -79,8 +79,10 @@ def move_group(context: RequestContext, grouped_items, new_parent, processed_cou
     return processed_count, last_percentage
 
 @app.task
-def move_task(context, ids, new_parent_id):
+def move_task(context: dict, ids: list[str], new_parent_id: str):
     try:
+        context = RequestContext.deserialize(context)
+
         files = File.objects.filter(id__in=ids).select_related("parent")
         folders = Folder.objects.filter(id__in=ids).select_related("parent")
         total_length = len(files) + len(folders)
@@ -114,12 +116,10 @@ def move_task(context, ids, new_parent_id):
             processed_count, last_percentage, total_length, is_folder=True
         )
 
+        send_message(message="toasts.movedItems", args=None, finished=True, context=context)
+
     except ValidationError as e:
         send_message(message=e.message, args=None, finished=True, context=context, isError=True)
-        return
 
     except Exception as e:
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
-        return
-
-    send_message(message="toasts.movedItems", args=None, finished=True, context=context)

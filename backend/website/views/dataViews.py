@@ -21,7 +21,7 @@ from ..utilities.constants import cache
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms, get_ip
+from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms, get_ip, query_attachments
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
 
 
@@ -488,3 +488,13 @@ def get_file_stats(request, folder_obj):
     }
 
     return JsonResponse(result, safe=False)
+
+
+@api_view(['GET'])
+@throttle_classes([MediaThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+def check_attachment_id(request, attachment_id):
+    database_attachments = query_attachments(attachment_id=attachment_id)
+    if database_attachments:
+        return HttpResponse(status=200)
+    return HttpResponse(status=404)

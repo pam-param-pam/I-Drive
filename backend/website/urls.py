@@ -9,7 +9,7 @@ from django.views.static import serve
 from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device, logout_per_device, register_user, get_qr_session, authenticate_qr_session, get_qr_session_device_info, cancel_pending_qr_session
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id
 from .views.itemManagmentViews import rename, move_to_trash, move, \
     delete, change_folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
     remove_subtitle
@@ -156,6 +156,7 @@ urlpatterns = [
 
     path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download"),
     path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
+    path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     # 75 endpoints

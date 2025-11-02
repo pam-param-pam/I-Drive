@@ -1,8 +1,7 @@
 import time
+import traceback
 from collections import defaultdict
 from concurrent.futures import as_completed, ThreadPoolExecutor
-
-from django.contrib.auth.models import User
 
 from .otherTasks import send_message
 from ..celery import app
@@ -116,7 +115,8 @@ def delete_files(context, files: list):
 
 
 @app.task
-def smart_delete_task(context: RequestContext, ids):
+def smart_delete_task(context: dict, ids):
+    context = RequestContext.deserialize(context)
     send_message(message="toasts.deleting", args={"percentage": 0}, finished=False, context=context)
     try:
 
@@ -150,6 +150,7 @@ def smart_delete_task(context: RequestContext, ids):
         send_message(message="toasts.itemsDeleted", args=None, finished=True, context=context)
 
     except Exception as e:
+        traceback.print_exc()
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 

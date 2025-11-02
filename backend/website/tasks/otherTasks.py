@@ -1,3 +1,5 @@
+import traceback
+
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -7,6 +9,7 @@ from ..discord.Discord import discord
 from ..models import Folder, Fragment
 from ..utilities.constants import EventCode
 from ..celery import app
+from ..utilities.dataModels import RequestContext
 
 logger = get_task_logger(__name__)
 
@@ -35,19 +38,29 @@ def send_message(message, args, finished, context, isError=False):
     )
 
 @app.task
-def lock_folder_task(context, folder_id, password):
-    folder = Folder.objects.get(id=folder_id)
-    folder.applyLock(folder, password)
-    send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
+def lock_folder_task(context: dict, folder_id: str, password: str):
+    try:
+        context = RequestContext.deserialize(context)
+        folder = Folder.objects.get(id=folder_id)
+        folder.applyLock(folder, password)
+        send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
+    except Exception as e:
+        traceback.print_exc()
+        send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task
-def unlock_folder_task(context, folder_id):
-    folder = Folder.objects.get(id=folder_id)
-    folder.removeLock()
-    send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
+def unlock_folder_task(context: dict, folder_id: str):
+    try:
+        context = RequestContext.deserialize(context)
+        folder = Folder.objects.get(id=folder_id)
+        folder.removeLock()
+        send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
+    except Exception as e:
+        traceback.print_exc()
+        send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task(expires=10)
-def prefetch_next_fragments(fragment_id, number_to_prefetch):
+def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)
 

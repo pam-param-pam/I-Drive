@@ -8,6 +8,7 @@ import i18n from "@/i18n/index.js"
 import { useToast } from "vue-toastification"
 
 const toast = useToast()
+
 export class DiscordUploader {
    constructor() {
       this.uploadStore = useUploadStore()
@@ -34,22 +35,27 @@ export class DiscordUploader {
    }
 
    buildDiscordAxiosConfig(request, abortSignal) {
-      /**Builds axios config used in DISCORD upload request*/
-
-      let totalBytesUploaded = 0
       const uploadStore = this.uploadStore
+      let totalBytesUploaded = 0
 
       return {
          onUploadProgress: (progressEvent) => {
             totalBytesUploaded = progressEvent.loaded
-            if (progressEvent.rate) {
-               uploadStore.onUploadProgress(request, progressEvent)
-            }
+            if (!progressEvent.rate) progressEvent.rate = 0
+            uploadStore.onUploadProgress(request, progressEvent)
          },
-         /**This is called internally by networker*/
+
          onErrorCallback: (error) => {
             uploadStore.fixUploadTracking(request, totalBytesUploaded, error)
          },
+
+         onRequestFinish: () => {
+            let missing = request.totalSize - totalBytesUploaded
+            if (missing < 0) missing = 0
+            console.log("Missing bytes:", missing)
+            uploadStore.fixMissingBytesFromRequest(request, missing)
+         },
+
          signal: abortSignal
       }
    }
@@ -71,7 +77,7 @@ export class DiscordUploader {
          }
 
          if (err.response?.data?.code === 10015) {
-            toast.error(`${i18n.global.t('toasts.unknownWebhook', {"webhook": err.config.__webhook.name})}`, {timeout: null})
+            toast.error(`${i18n.global.t("toasts.unknownWebhook", { "webhook": err.config.__webhook.name })}`, { timeout: null })
             this.uploadStore.pauseAll()
          }
 
@@ -92,7 +98,7 @@ export class DiscordUploader {
 
       if (this.uploadStore.state === uploadState.paused) {
          this.uploadStore.addPausedRequest(request)
-         let err =  Error("Upload is paused!")
+         let err = Error("Upload is paused!")
          err.handled = true
          throw err
       }

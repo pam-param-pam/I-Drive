@@ -1,3 +1,4 @@
+import traceback
 from datetime import timezone
 
 from django.utils import timezone
@@ -7,58 +8,69 @@ from .otherTasks import send_message
 from ..celery import app
 from ..models import File, Folder
 from ..utilities.constants import EventCode
+from ..utilities.dataModels import RequestContext
 from ..utilities.other import group_and_send_event, send_event
 
 
 @app.task
-def move_to_trash_task(context, ids):
-    files = File.objects.filter(id__in=ids).select_related("parent")
-    folders = Folder.objects.filter(id__in=ids).select_related("parent")
+def move_to_trash_task(context: dict, ids: list[str]):
+    try:
+        context = RequestContext.deserialize(context)
 
-    if files.exists():
-        files.update(inTrash=True, inTrashSince=timezone.now())
+        files = File.objects.filter(id__in=ids).select_related("parent")
+        folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
-        group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, files)
+        if files.exists():
+            files.update(inTrash=True, inTrashSince=timezone.now())
 
-    for file in files:
-        file.remove_cache()
+            group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, files)
 
-    total_length = len(folders)
-    last_percentage = 0
-    for index, folder in enumerate(folders):
-        folder_dict = folder_serializer.serialize_object(folder)
-        send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
-        folder.moveToTrash()
-        percentage = round((index + 1) / total_length * 100)
-        if percentage != last_percentage:
-            send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, context=context)
-            last_percentage = percentage
+        for file in files:
+            file.remove_cache()
 
-    send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, context=context)
+        total_length = len(folders)
+        last_percentage = 0
+        for index, folder in enumerate(folders):
+            folder_dict = folder_serializer.serialize_object(folder)
+            send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
+            folder.moveToTrash()
+            percentage = round((index + 1) / total_length * 100)
+            if percentage != last_percentage:
+                send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, context=context)
+                last_percentage = percentage
 
+        send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, context=context)
+    except Exception as e:
+        traceback.print_exc()
+        send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task
-def restore_from_trash_task(context, ids):
+def restore_from_trash_task(context: dict, ids: list[str]):
+    try:
+        context = RequestContext.deserialize(context)
 
-    files = File.objects.filter(id__in=ids).select_related("parent")
-    folders = Folder.objects.filter(id__in=ids).select_related("parent")
+        files = File.objects.filter(id__in=ids).select_related("parent")
+        folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
-    if files.exists():
-        files.update(inTrash=False, inTrashSince=None)
-        group_and_send_event(context, EventCode.ITEM_RESTORE_FROM_TRASH, files)
+        if files.exists():
+            files.update(inTrash=False, inTrashSince=None)
+            group_and_send_event(context, EventCode.ITEM_RESTORE_FROM_TRASH, files)
 
-    for file in files:
-        file.remove_cache()
+        for file in files:
+            file.remove_cache()
 
-    total_length = len(folders)
-    last_percentage = 0
-    for index, folder in enumerate(folders):
-        folder_dict = folder_serializer.serialize_object(folder)
-        send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
-        folder.restoreFromTrash()
-        percentage = round((index + 1) / total_length * 100)
-        if percentage != last_percentage:
-            send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, context=context)
-            last_percentage = percentage
+        total_length = len(folders)
+        last_percentage = 0
+        for index, folder in enumerate(folders):
+            folder_dict = folder_serializer.serialize_object(folder)
+            send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
+            folder.restoreFromTrash()
+            percentage = round((index + 1) / total_length * 100)
+            if percentage != last_percentage:
+                send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, context=context)
+                last_percentage = percentage
 
-    send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, context=context)
+        send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, context=context)
+    except Exception as e:
+        traceback.print_exc()
+        send_message(message=str(e), args=None, finished=True, context=context, isError=True)

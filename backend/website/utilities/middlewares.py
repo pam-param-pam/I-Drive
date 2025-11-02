@@ -22,7 +22,7 @@ from ..models import ShareableLink, PerDeviceToken
 from ..utilities.constants import cache
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, \
-    FailedToResizeImage, LockedFolderWrongIpError, DiscordErrorText
+    FailedToResizeImage, LockedFolderWrongIpError, DiscordErrorText, IDriveException
 from ..utilities.other import build_http_error_response, get_attr
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -153,6 +153,9 @@ class CommonErrorsMiddleware(MiddlewareMixin):
         # Check if error handling is disabled for this view
         if getattr(request._view_func, 'disable_common_errors', False):
             return None
+
+        if not isinstance(exception, IDriveException):
+            traceback.print_exc()
 
         #  400 BAD REQUEST
         if isinstance(exception, ValidationError):
