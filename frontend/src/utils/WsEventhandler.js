@@ -72,6 +72,7 @@ function removeFromUsage(store, item) {
    store.setUsage(usage)
 }
 
+//todo currentFolder is no longer indicative of if the files route is currently active
 
 export async function onEvent(message) {
    const store = useMainStore()

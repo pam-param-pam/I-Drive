@@ -702,6 +702,13 @@ class Subtitle(DiscordAttachmentMixin):
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # forced = models.BooleanField(default=False) todo
+
+    def get_base64_key(self):
+        return base64.b64encode(self.key).decode('utf-8')
+
+    def get_base64_iv(self):
+        return base64.b64encode(self.iv).decode('utf-8')
 
     def __str__(self):
         return f"Subtitle file ({self.language}) for {self.file}"

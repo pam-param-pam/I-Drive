@@ -606,7 +606,7 @@ export default {
          this.$toast.success(message)
       },
       videoTimeUpdate() {
-         if (!this.isLogged) return
+         if (this.isInShareContext) return
          if (!this.$refs.video) {
             console.warn("this.$refs.video is falsy")
             return

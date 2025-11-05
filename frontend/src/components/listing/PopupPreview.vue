@@ -1,7 +1,7 @@
 <template>
-  <div class="popup-preview" v-if="source" ref="popup" :style="popupStyle">
-    <img :src="source" alt="Popup image" :style="popupStyle">
-  </div>
+   <div class="popup-preview" v-if="source" ref="popup" :style="popupStyle">
+      <img :src="source" alt="Popup image" :style="popupStyle">
+   </div>
 </template>
 
 <script>

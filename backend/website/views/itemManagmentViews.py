@@ -17,7 +17,7 @@ from ..utilities.decorators import extract_folder, check_resource_permissions, e
     accumulate_password_errors
 from ..utilities.errors import BadRequestError, ResourcePermissionError
 from ..utilities.other import build_response, send_event, check_if_bots_exists, \
-    delete_single_discord_attachment, get_discord_author, get_attr, get_file_type
+    delete_single_discord_attachment, get_discord_author, get_attr, get_file_type, create_subtitle
 from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 
 
@@ -277,7 +277,7 @@ def add_moment(request, file_obj):
     attachment_id = request.data['attachment_id']
     size = request.data['size']
     message_author_id = request.data['message_author_id']
-    author = get_discord_author(request, message_author_id)
+    author = get_discord_author(request.user, message_author_id)
     iv = request.data.get('iv')
     key = request.data.get('key')
 
@@ -342,24 +342,7 @@ def change_crc(request, file_obj):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_subtitle(request, file_obj):
-    language = request.data['language']
-    channel_id = request.data['channel_id']
-    message_id = request.data['message_id']
-    attachment_id = request.data['attachment_id']
-    size = request.data['size']
-    message_author_id = request.data['message_author_id']
-    author = get_discord_author(request, message_author_id)
-    iv = request.data.get('iv')
-    key = request.data.get('key')
-
-    if iv:
-        iv = base64.b64decode(iv)
-    if key:
-        key = base64.b64decode(key)
-
-    subtitle = Subtitle.objects.create(language=language, file=file_obj, channel_id=channel_id, message_id=message_id, attachment_id=attachment_id,
-                                       content_type=ContentType.objects.get_for_model(author), object_id=author.discord_id, size=size, key=key, iv=iv)
-
+    subtitle = create_subtitle(file_obj, request.data)
     return JsonResponse(SubtitleSerializer().serialize_object(subtitle), status=200)
 
 

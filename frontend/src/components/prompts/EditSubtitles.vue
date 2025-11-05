@@ -29,15 +29,11 @@
       </div>
 
       <div class="file-input-wrapper">
-        <input
-          id="subtitleInput"
-          accept=".vtt"
-          type="file"
-          @change="onSubtitleInput"
+        <SmartFileInput
+          accept=".vtt,.srt"
+          :label="$t('buttons.addSubtitleFile')"
+          @file-selected="onSubtitleInput"
         />
-        <label class="file-label" for="subtitleInput">
-          {{ newSubtitleFile ? newSubtitleFile.name : $t("buttons.addSubtitleFile") }}
-        </label>
       </div>
 
       <div v-if="uploading" class="prompts-progress-bar-wrapper">
@@ -86,7 +82,7 @@
       <button
         class="button button--flat"
         :disabled="!canSubmit"
-        @click="addSubtitle"
+        @click="submit"
       >
         {{ $t("buttons.save") }}
       </button>
@@ -100,15 +96,20 @@ import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { canUpload } from "@/api/user.js"
-import { generateIv, generateKey, upload, encryptInWorker } from "@/upload/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
 
 import axios from "axios"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { useUploadStore } from "@/stores/uploadStore.js"
+import { encrypt } from "@/upload/utils/encryption.js"
+import { detectExtension } from "@/utils/common.js"
+import { capitalize } from "vue"
+import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"
+import SmartFileInput from "@/components/SmartFileInput.vue"
 
 export default {
    name: "manage-subtitles",
-   components: { ProgressBar },
+   components: { SmartFileInput, ProgressBar },
    data() {
       return {
          subtitles: [],
@@ -156,83 +157,131 @@ export default {
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
-      onSubtitleInput(event) {
-         let file = event.target.files[0]
-         if (!file) return
 
-         if (!file.name.endsWith(".vtt")) {
-            this.$toast.error(this.$t("toasts.invalidSubtitleFormat"))
-            return
-         }
-         let maxSize = this.user.maxDiscordMessageSize
-         if (file.size >= maxSize) {
-            this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(maxSize) }))
-            return
-         }
+      async onSubtitleInput(file) {
+         if (!this.validateSubtitleFile(file)) return
 
-         this.newSubtitleFile = file
+         let processedFile = await this.prepareSubtitleFile(file)
+         this.newSubtitleFile = processedFile
+         this.newLanguage = this.extractLanguageName(processedFile.name)
       },
 
-      async addSubtitle() {
+      validateSubtitleFile(file) {
+         if (!file) return false
+         let valid = file.name.endsWith(".vtt") || file.name.endsWith(".srt")
+         if (!valid) {
+            this.$toast.error(this.$t("toasts.invalidSubtitleFormat"))
+            return false
+         }
+
+         if (file.size >= this.user.maxDiscordMessageSize) {
+            this.$toast.error(this.$t("toasts.fileTooBig", { max: filesize(this.user.maxDiscordMessageSize) }))
+            return false
+         }
+         return true
+      },
+
+      async prepareSubtitleFile(file) {
+         if (!file.name.endsWith(".srt")) return file
+         let text = await file.text()
+         let vttText = buildVttFromSrt(text)
+         return new File([vttText], file.name)
+      },
+
+      extractLanguageName(filename) {
+         const ext = detectExtension(filename)
+         return capitalize(filename.replace(ext, ""))
+      },
+
+      async submit() {
          if (!this.canSubmit || this.uploading) return
 
+         this.uploading = true
+         this.uploadProgress = 0
+
          try {
-            this.uploading = true
-            this.uploadProgress = 0
-            let file = this.selected[0]
+            const file = this.selected[0]
 
-            let res = await canUpload(file.parent_id)
-            if (!res.can_upload) return
+            if (!(await this.checkUploadPermission(file.parent_id))) return
 
-            let method = file.encryption_method
-            let iv = generateIv(method)
-            let key = generateKey(method)
-            let encryptedBlob = await encryptInWorker(this.newSubtitleFile, method, key, iv, 0)
+            const encrypted = await this.encryptSubtitleFile(file.encryption_method)
+            const uploadResponse = await this.uploadEncryptedSubtitle(encrypted)
+            const subtitleData = this.buildSubtitleReq(file, encrypted, uploadResponse)
+            const subtitleRes = await this.saveSubtitle(file.id, subtitleData)
 
-            this.cancelTokenSource = axios.CancelToken.source()
-            let form = new FormData()
-            form.append("file", encryptedBlob, this.attachmentName)
-
-            let config = {
-               onUploadProgress: (progressEvent) => {
-                  if (progressEvent.total) {
-                     this.uploadProgress = Math.round(
-                        (progressEvent.loaded / progressEvent.total) * 100
-                     )
-                  }
-               },
-               cancelToken: this.cancelTokenSource.token
-            }
-
-            let uploadResponse = await upload(form, config)
-
-            let subtitle_data = {
-               language: this.newLanguage,
-               size: encryptedBlob.size,
-               channel_id: uploadResponse.data.channel_id,
-               message_id: uploadResponse.data.id,
-               attachment_id: uploadResponse.data.attachments[0].id,
-               iv: iv,
-               key: key,
-               message_author_id: uploadResponse.data.author.id
-            }
-
-            let subtitle_res = await addSubtitle(file.id, subtitle_data)
-
-            this.$toast.success(this.$t("toasts.subtitleAdded"))
-            this.subtitles.push(subtitle_res)
-            this.newLanguage = ""
-            this.newSubtitleFile = null
-
+            this.onSubtitleUploadSuccess(subtitleRes)
          } catch (error) {
-            if (error.code === "ERR_CANCELED") return
-            this.$toast.error(this.$t("toasts.subtitleUploadFailed"))
+            this.handleSubtitleUploadError(error)
          } finally {
             this.uploading = false
             this.uploadProgress = 0
          }
       },
+      async checkUploadPermission(parentId) {
+         const res = await canUpload(parentId)
+         if (!res.can_upload) {
+            this.$toast.error(this.$t("toasts.cannotUpload"))
+            return false
+         }
+         return true
+      },
 
+      async encryptSubtitleFile(method) {
+         const iv = generateIv(method)
+         const key = generateKey(method)
+         const encryptedBlob = await encrypt(this.newSubtitleFile, method, key, iv, 0)
+         return { iv, key, blob: encryptedBlob }
+      },
+
+      async uploadEncryptedSubtitle({ blob }) {
+         this.cancelTokenSource = axios.CancelToken.source()
+         const form = new FormData()
+         form.append("file", blob, this.attachmentName)
+
+         const config = {
+            onUploadProgress: this.trackUploadProgress,
+            cancelToken: this.cancelTokenSource.token
+         }
+
+         return await upload(form, config)
+      },
+
+      trackUploadProgress(progressEvent) {
+         if (progressEvent.total) {
+            this.uploadProgress = Math.round((progressEvent.loaded / progressEvent.total) * 100)
+         }
+      },
+
+      buildSubtitleReq(file, { iv, key, blob }, uploadResponse) {
+         let data = uploadResponse.data
+         return {
+            language: this.newLanguage,
+            size: blob.size,
+            channel_id: data.channel_id,
+            message_id: data.id,
+            attachment_id: data.attachments[0].id,
+            iv: iv,
+            key: key,
+            message_author_id: data.author.id
+         }
+      },
+
+      async saveSubtitle(fileId, subtitleData) {
+         return await addSubtitle(fileId, subtitleData)
+      },
+
+      onSubtitleUploadSuccess(subtitleRes) {
+         this.subtitles = [...this.subtitles, subtitleRes]
+         this.$toast.success(this.$t("toasts.subtitleAdded"))
+         this.newLanguage = ""
+         this.newSubtitleFile = null
+      },
+
+      handleSubtitleUploadError(error) {
+         if (error.code === "ERR_CANCELED") return
+         console.error(error)
+         this.$toast.error(this.$t("toasts.subtitleUploadFailed"))
+      },
       async removeSubtitle(subtitle_id) {
          await deleteSubtitle(this.selected[0].id, subtitle_id)
          this.subtitles = this.subtitles.filter(subtitle => subtitle.id !== subtitle_id)
@@ -262,32 +311,6 @@ export default {
  margin: 0.5em 0;
 }
 
-.file-input-wrapper {
- position: relative;
- display: flex;
- align-items: center;
- width: 100%;
-}
-
-input[type="file"] {
- opacity: 0;
- width: 0;
- height: 0;
- position: absolute;
-}
-
-.file-label {
- display: inline-block;
- padding: 10px 15px;
- background-color: var(--divider);
- color: var(--textPrimary);
- border-radius: 5px;
- cursor: pointer;
- text-align: center;
- width: 100%;
- font-size: 14px;
- margin-top: 2em;
-}
 
 .input-group.input {
  background: transparent;

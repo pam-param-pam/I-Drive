@@ -1,11 +1,9 @@
 <template>
-  <button @click="action" :aria-label="label" :title="label" class="action">
-
-    <i class="material-icons">{{ icon }}</i>
-    <span>{{ label }}</span>
-
-    <span v-if="counter > 0" class="counter">{{ counter }}</span>
-  </button>
+   <button @click="action" :aria-label="label" :title="label" class="action">
+      <i class="material-icons">{{ icon }}</i>
+      <span>{{ label }}</span>
+      <span v-if="counter > 0" class="counter">{{ counter }}</span>
+   </button>
 </template>
 
 <script>
@@ -26,8 +24,7 @@ export default {
                   "prompt": this.show,
                   "props": this.promptProps
                })
-            }
-            else {
+            } else {
                this.showHover(this.show)
 
             }
@@ -37,5 +34,4 @@ export default {
    }
 }
 </script>
-
 <style></style>

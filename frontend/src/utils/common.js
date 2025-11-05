@@ -69,3 +69,7 @@ export function humanTime(date) {
 export function showToast(type, content, options) {
    toast(i18n.global.t(content), {type, ...options})
 }
+
+function capitalize(str) {
+   return str.charAt(0).toUpperCase() + str.slice(1);
+}

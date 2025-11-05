@@ -12,10 +12,13 @@
         <img :src="imagePreview" alt="Selected Thumbnail" />
       </div>
       <div class="file-input-wrapper">
-        <input id="fileInput" accept="image/*" type="file" @change="onFileInput" />
-        <label class="file-label" for="fileInput">
-          {{ thumbnailFile ? thumbnailFile.name : $t("buttons.addSubtitleFile") }}
-        </label>
+        <div class="file-input-wrapper">
+          <SmartFileInput
+            accept="image/*"
+            :label="$t('buttons.addSubtitleFile')"
+            @file-selected="processFile"
+          />
+        </div>
       </div>
       <div v-if="uploading" class="prompts-progress-bar-wrapper">
         <ProgressBar :progress="uploadProgress" />
@@ -50,18 +53,20 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { encryptInWorker, generateIv, generateKey, upload } from "@/upload/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
 import { createThumbnail } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import axios from "axios"
 import { filesize } from "@/utils/index.js"
+import { encrypt } from "@/upload/utils/encryption.js"
+import SmartFileInput from "@/components/SmartFileInput.vue"
 
 export default {
    name: "edit-thumbnail",
 
-   components: { ProgressBar },
+   components: { SmartFileInput, ProgressBar },
 
    data() {
       return {
@@ -84,10 +89,6 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["closeHover", "updateItem"]),
-
-      onFileInput(event) {
-         this.processFile(event.target.files[0])
-      },
 
       onPaste(event) {
          let items = (event.clipboardData || window.clipboardData).items
@@ -138,7 +139,7 @@ export default {
             let method = this.file.encryption_method
             let iv = generateIv(method)
             let key = generateKey(method)
-            let encryptedBlob = await encryptInWorker(this.thumbnailFile, method, key, iv, 0)
+            let encryptedBlob = await encrypt(this.thumbnailFile, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
 

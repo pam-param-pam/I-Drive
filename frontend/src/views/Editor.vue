@@ -51,9 +51,10 @@ import { isMobile } from "@/utils/common.js"
 import throttle from "lodash.throttle"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
-import { generateIv, generateKey, upload, encryptInWorker } from "@/upload/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
+import { encrypt } from "@/upload/utils/encryption.js"
 
 export default {
    name: "editor",
@@ -172,7 +173,7 @@ export default {
             ino: "arduino",
             xml: "xml"
          }
-         let name = this.file.name || ""
+         let name = this.file?.name || ""
          let ext = ""
 
          if (name.includes(".")) {
@@ -184,36 +185,36 @@ export default {
 
       async fetchData() {
          this.setLoading(true)
+         try {
+            // if editor is opened from Share
+            if (this.isInShareContext) {
+               let res = await getShare(this.token, this.folderId)
+               this.shareObj = res
+               this.setItems(res.share)
 
-         // if editor is opened from Share
-         if (this.isInShareContext) {
-            let res = await getShare(this.token, this.folderId)
-            this.shareObj = res
-            this.setItems(res.share)
-
-            for (let i = 0; i < this.items.length; i++) {
-               if (this.items[i].id === this.fileId) {
-                  this.file = this.items[i]
-               }
-            }
-         }
-         // if It's opened from Files, hence we know the user
-         else {
-            if (this.items) {
                for (let i = 0; i < this.items.length; i++) {
                   if (this.items[i].id === this.fileId) {
                      this.file = this.items[i]
                   }
                }
             }
-            if (!this.file) {
-               this.file = await getFile(this.fileId)
+            // if It's opened from Files, hence we know the user
+            else {
+               if (this.items) {
+                  for (let i = 0; i < this.items.length; i++) {
+                     if (this.items[i].id === this.fileId) {
+                        this.file = this.items[i]
+                     }
+                  }
+               }
+               if (!this.file) {
+                  this.file = await getFile(this.fileId)
+               }
             }
-         }
 
-         this.addSelected(this.file)
+            this.addSelected(this.file)
 
-         try {
+
             this.raw = await getFileRawData(this.file.download_url, { responseType: "text" })
 
             this.setLastItem(this.file)
@@ -250,7 +251,7 @@ export default {
 
             if (this.raw !== this.copyRaw) {
                if (!this.raw) {
-                  await editFile(this.file.id, {"empty": true})
+                  await editFile(this.file.id, { "empty": true })
                   this.copyRaw = this.raw
                   this.onSuccessfulSave()
                   return
@@ -265,7 +266,7 @@ export default {
                }
                let formData = new FormData()
                let blob = new Blob([String(this.raw)])
-               let encryptedBlob = await encryptInWorker(blob, method, key, iv, 0)
+               let encryptedBlob = await encrypt(blob, method, key, iv, 0)
 
                formData.append("file", encryptedBlob, this.attachmentName)
 

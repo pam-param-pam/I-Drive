@@ -76,7 +76,7 @@
 </template>
 
 <script>
-import { captureVideoFrame, generateIv, generateKey, upload, encryptInWorker } from "@/upload/uploadHelper.js"
+import { captureVideoFrame, generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
@@ -85,6 +85,7 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
+import { encrypt } from "@/upload/utils/encryption.js"
 
 export default {
    name: "moments",
@@ -156,7 +157,7 @@ export default {
                iv = generateIv(method)
                key = generateKey(method)
             }
-            let encryptedBlob = await encryptInWorker(this.currentThumbnailData, method, key, iv, 0)
+            let encryptedBlob = await encrypt(this.currentThumbnailData, method, key, iv, 0)
 
             fileFormList.append("file", encryptedBlob, this.attachmentName)
 

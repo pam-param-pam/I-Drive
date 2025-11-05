@@ -8,14 +8,14 @@ from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..models import File, Fragment, Thumbnail
+from ..models import File, Fragment, Thumbnail, Subtitle
 from ..utilities.Permissions import CreatePerms, default_checks, ModifyPerms
 from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
 from ..utilities.decorators import extract_file, check_resource_permissions, disable_common_errors
 from ..utilities.errors import BadRequestError
 from ..utilities.other import send_event, check_resource_perms, get_folder, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
-    create_video_metadata, validate_ids_as_list, group_and_send_event, get_file_type
+    create_video_metadata, validate_ids_as_list, group_and_send_event, get_file_type, create_thumbnail, create_subtitle
 from ..utilities.throttle import defaultAuthUserThrottle
 
 
@@ -51,6 +51,10 @@ def create_file(request):
         key = file.get('key')
         iv = file.get('iv')
         video_metadata = file.get('videoMetadata')
+        subtitles = file.get('subtitles') or []
+
+        if not isinstance(subtitles, list):
+            raise BadRequestError("Subtitles must be a list")
 
         if EncryptionMethod(encryption_method) != EncryptionMethod.Not_Encrypted and (not iv or not key):
             raise BadRequestError("Encryption key and/or iv not provided")
@@ -115,7 +119,7 @@ def create_file(request):
             offset = attachment['offset']
             message_author_id = attachment['message_author_id']
 
-            author = get_discord_author(request, message_author_id)
+            author = get_discord_author(request.user, message_author_id)
 
             Fragment.objects.create(
                 sequence=fragment_sequence,
@@ -130,37 +134,13 @@ def create_file(request):
             )
 
         if thumbnail:
-            channel_id = thumbnail['channel_id']
-            message_id = thumbnail['message_id']
-            attachment_id = thumbnail['attachment_id']
-            size = thumbnail['size']
-            message_author_id = thumbnail['message_author_id']
-            iv = thumbnail.get('iv')
-            key = thumbnail.get('key')
+            create_thumbnail(file_obj, thumbnail)
 
-            author = get_discord_author(request, message_author_id)
-
-            if file_obj.is_encrypted() and not (iv and key):
-                raise BadRequestError("Encryption key and/or iv not provided")
-
-            if iv:
-                iv = base64.b64decode(iv)
-            if key:
-                key = base64.b64decode(key)
-
-            Thumbnail.objects.create(
-                file=file_obj,
-                size=size,
-                iv=iv,
-                key=key,
-                channel_id=channel_id,
-                message_id=message_id,
-                attachment_id=attachment_id,
-                content_type=ContentType.objects.get_for_model(author),
-                object_id=author.discord_id,
-            )
         if video_metadata:
             create_video_metadata(file_obj, video_metadata)
+
+        for sub in subtitles:
+            create_subtitle(file_obj, sub)
 
         file_response_dict = {
             "frontend_id": frontend_id,
@@ -215,7 +195,7 @@ def edit_file(request, file_obj):
         if key:
             key = base64.b64decode(key)
 
-        author = get_discord_author(request, message_author_id)
+        author = get_discord_author(request.user, message_author_id)
 
         if file_obj.type not in ("Text", "Code", "Database"):
             raise BadRequestError("You can only edit text files!")
@@ -259,42 +239,17 @@ def edit_file(request, file_obj):
 @permission_classes([IsAuthenticated & CreatePerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def create_thumbnail(request, file_obj):
+def create_or_edit_thumbnail(request, file_obj):
     check_if_bots_exists(request.user)
 
-    channel_id = request.data['channel_id']
-    message_id = request.data['message_id']
-    attachment_id = request.data['attachment_id']
-    size = request.data['size']
-    message_author_id = request.data['message_author_id']
-    author = get_discord_author(request, message_author_id)
-
-    iv = request.data.get('iv')
-    key = request.data.get('key')
-
-    if iv:
-        iv = base64.b64decode(iv)
-    if key:
-        key = base64.b64decode(key)
-
     try:
-        # todo sadly i dont remember what should i do here???
+        # todo switch the attachments if possible
         delete_single_discord_attachment(request.user, file_obj.thumbnail)
         file_obj.thumbnail.delete()
     except Thumbnail.DoesNotExist:
         pass
 
-    Thumbnail.objects.create(
-        file=file_obj,
-        size=size,
-        key=key,
-        iv=iv,
-        channel_id=channel_id,
-        message_id=message_id,
-        attachment_id=attachment_id,
-        content_type=ContentType.objects.get_for_model(author),
-        object_id=author.discord_id
-    )
+    create_thumbnail(file_obj, request.data)
 
     file_obj.remove_cache()
 

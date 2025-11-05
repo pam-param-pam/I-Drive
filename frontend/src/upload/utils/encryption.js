@@ -1,5 +1,6 @@
 import JSChaCha20 from "js-chacha20"
 import { attachmentType, encryptionMethod } from "@/utils/constants.js"
+import { generateIv, generateKey } from "@/upload/utils/uploadHelper.js"
 
 function base64ToUint8Array(base64) {
    let binaryString = window.atob(base64)
@@ -97,16 +98,22 @@ export async function encryptAttachment(attachment) {
    let fileObj = attachment.fileObj
 
    let bytesToSkip = 0
+   let iv
+   let key
    if (attachment.type === attachmentType.file) {
       bytesToSkip = attachment.offset
+      iv = fileObj.iv
+      key = fileObj.key
    }
-   let iv = fileObj.iv
-   let key = fileObj.key
+   else {
+      if (fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
+         iv = generateIv(fileObj.encryptionMethod)
+         key = generateKey(fileObj.encryptionMethod)
+         attachment.iv = iv
+         attachment.key = key
+      }
+   }
 
-   if (attachment.type === attachmentType.thumbnail) {
-      iv = attachment.iv
-      key = attachment.key
-   }
    return await encrypt(attachment.rawBlob, fileObj.encryptionMethod, key, iv, bytesToSkip)
 
 }

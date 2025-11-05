@@ -432,12 +432,12 @@ class VideoMetadataAdmin(admin.ModelAdmin):
 class SubtitleAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id', 'file__owner__username')
     list_display = ['file_name', 'language', 'owner', 'readable_size']
-    readonly_fields = ('file', 'iv', 'key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'preview')
+    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'preview')
     exclude = ['size']
 
     def preview(self, obj):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/subtitle/{signed_file_id}/{obj.id}/stream"
+        url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{obj.id}/stream"
         return format_html('<a href="{}" target="_blank">Preview Subtitle</a>', url)
 
     preview.short_description = "Subtitle Preview"
@@ -453,6 +453,12 @@ class SubtitleAdmin(admin.ModelAdmin):
 
     def owner(self, obj):
         return obj.file.owner.username
+
+    def formatted_key(self, obj: File):
+        return obj.get_base64_key()
+
+    def formatted_iv(self, obj: File):
+        return obj.get_base64_iv()
 
     file_name.admin_order_field = 'file__name'
     file_name.short_description = 'File Name'

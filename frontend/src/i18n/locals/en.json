@@ -398,6 +398,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "tooManySubtitlesOrTooBig": "Subtitles > 10 or too big, can't auto upload!",
+    "invalidFileFormat": "Invalid file format!",
     "failedToConnectToWebsocket": "Failed to establish a websocket connection!",
     "ALotOF429": "Too many discord requests!",
     "ALotOF429Explained": "Reducing number of concurrent requests.",

@@ -17,7 +17,7 @@ from .views.shareViews import get_shares, delete_share, create_share, view_share
     share_get_subtitles, check_share_password, get_share_visits
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import your_ip, get_discord_state
-from .views.uploadViews import create_file, create_thumbnail, edit_file
+from .views.uploadViews import create_file, create_or_edit_thumbnail, edit_file
 from .views.userViews import change_password, users_me, update_settings, get_discord_settings, add_webhook, delete_webhook, add_bot, \
     delete_bot, \
     update_attachment_name, can_upload, discord_settings_start, reset_discord_settings, list_active_devices, revoke_device, logout_all_devices
@@ -73,7 +73,7 @@ urlpatterns = [
     path("files", ["POST"], create_file, name="create file"),
     path("files/<file_id>", ["PATCH"], edit_file, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
-    path("files/<file_id>/thumbnail", ["POST"], create_thumbnail, name="create a thumbnail"),
+    path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail, name="create a thumbnail"),
     path("files/<file_id>/video-position", ["PUT"], update_video_position, name="update video position"),
 
     path("files/<file_id>/tags", ["POST"], add_tag, name="add a tag"),

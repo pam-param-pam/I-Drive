@@ -15,6 +15,7 @@ import shortuuid
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from django.contrib.auth import user_logged_in
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 from django.utils import timezone
@@ -24,7 +25,7 @@ from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, Bo
 from .dataModels import RequestContext
 from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, UserSettings, UserZIP, Webhook, Bot, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, ShareAccess, PerDeviceToken
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, ShareAccess, PerDeviceToken, Thumbnail, Subtitle
 from ..safety.helper import get_classes_extending_discordAttachmentMixin
 from ..tasks.otherTasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Item, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
@@ -84,13 +85,14 @@ def format_wait_time(seconds: int) -> str:
         return f"{seconds} second{'s' if seconds > 1 else ''}"
 
 
-def logout_and_close_websockets(user_id: int, device_id: str = None, token_hash: str = None) -> None:
-    send_event(user_id, 0, None, EventCode.FORCE_LOGOUT, {"device_id": device_id})
+def logout_and_close_websockets(user_id: str, device_id: str = None, token_hash: str = None) -> None:
+    context = RequestContext.from_user(user_id)
+    send_event(context, None, EventCode.FORCE_LOGOUT, {"device_id": device_id})
     queue_ws_event.delay(
         'user',
         {
             "type": "logout",
-            "user_id": user_id,
+            "context": context,
             "token_hash": token_hash,
         }
     )
@@ -138,6 +140,7 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
     for parent_id, file_dicts in grouped_files.items():
         parent = parent_mapping[parent_id]
         send_event(context, parent, op_code, file_dicts)
+
 
 def send_event(context: RequestContext, folder_context: Optional[Folder], op_code: EventCode, data: Union[List, dict, str, None] = None) -> None:
     """Wrapper method that encrypts data if needed using folder_context password and sends it to a websocket consumer"""
@@ -342,7 +345,8 @@ def get_flattened_children(folder: Folder, full_path="", root_folder=None) -> Li
             children.append(file_dict)
 
     # Recursively collect all subfolders and their children
-    for subfolder in folder.subfolders.filter(lockFrom_id=root_folder.id):
+    filter_condition = Q(lockFrom_id=root_folder.lockFrom_id) if root_folder and root_folder.lockFrom_id is not None else Q(lockFrom_id__isnull=True)
+    for subfolder in folder.subfolders.filter(filter_condition):
         children.extend(get_flattened_children(subfolder, base_relative_path, root_folder))
     return children
 
@@ -393,12 +397,12 @@ def get_webhook(request, discord_id: str) -> Webhook:
         raise BadRequestError(f"Could not find webhook with id: {discord_id}")
 
 
-def get_discord_author(request, message_author_id: int) -> Webhook:
+def get_discord_author(user, message_author_id: int) -> Webhook:
     try:
-        return Bot.objects.get(discord_id=message_author_id, owner=request.user)
+        return Bot.objects.get(discord_id=message_author_id, owner=user)
     except Bot.DoesNotExist:
         try:
-            return Webhook.objects.get(discord_id=message_author_id, owner=request.user)
+            return Webhook.objects.get(discord_id=message_author_id, owner=user)
         except Webhook.DoesNotExist:
             raise BadRequestError(f"Wrong discord author ID")
 
@@ -679,7 +683,7 @@ def get_device_metadata(request):
     }
 
 
-def create_token_internal(request, user, device_info):
+def create_token_internal(request, user, device_info: dict):
     raw_token, token_instance = PerDeviceToken.objects.create_token(
         user=user,
         device_name=device_info["device_name"],
@@ -722,3 +726,66 @@ def create_qr_session(request):
     cache.set(f"qr_session:{session_id}", json.dumps(session_data), timeout=QR_CODE_SESSION_EXPIRY)
 
     return {"session_id": session_id, "expire_at": expire_at}
+
+
+def create_thumbnail(file_obj: File, data: dict):
+    channel_id = data['channel_id']
+    message_id = data['message_id']
+    attachment_id = data['attachment_id']
+    size = data['size']
+    message_author_id = data['message_author_id']
+    author = get_discord_author(file_obj.owner, message_author_id)
+
+    iv = data.get('iv')
+    key = data.get('key')
+
+    if file_obj.is_encrypted() and not (iv and key):
+        raise BadRequestError("Encryption key and/or iv not provided")
+
+    if iv:
+        iv = base64.b64decode(iv)
+    if key:
+        key = base64.b64decode(key)
+
+    return Thumbnail.objects.create(
+        file=file_obj,
+        size=size,
+        key=key,
+        iv=iv,
+        channel_id=channel_id,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        content_type=ContentType.objects.get_for_model(author),
+        object_id=author.discord_id
+    )
+
+
+def create_subtitle(file_obj, data):
+    language = data['language']
+    channel_id = data['channel_id']
+    message_id = data['message_id']
+    attachment_id = data['attachment_id']
+    size = data['size']
+    message_author_id = data['message_author_id']
+    author = get_discord_author(file_obj.owner, message_author_id)
+
+    iv = data.get('iv')
+    key = data.get('key')
+
+    if iv:
+        iv = base64.b64decode(iv)
+    if key:
+        key = base64.b64decode(key)
+
+    return Subtitle.objects.create(
+        language=language,
+        file=file_obj,
+        channel_id=channel_id,
+        message_id=message_id,
+        attachment_id=attachment_id,
+        content_type=ContentType.objects.get_for_model(author),
+        object_id=author.discord_id,
+        size=size,
+        key=key,
+        iv=iv
+    )

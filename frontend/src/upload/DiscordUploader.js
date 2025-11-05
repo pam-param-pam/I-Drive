@@ -1,11 +1,11 @@
 import axios from "axios"
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
-import { upload } from "@/upload/uploadHelper.js"
+import { upload } from "@/upload/utils/uploadHelper.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { noWifi } from "@/axios/helper.js"
-import { encryptAttachment } from "@/utils/encryption.js"
 import i18n from "@/i18n/index.js"
 import { useToast } from "vue-toastification"
+import { encryptAttachment } from "@/upload//utils/encryption.js"
 
 const toast = useToast()
 

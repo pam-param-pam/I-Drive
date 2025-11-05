@@ -2,7 +2,7 @@ import { defineStore } from "pinia"
 import { attachmentType, fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { FileStateHolder } from "@/upload/FileStateHolder.js"
 import { getUploader } from "@/upload/Uploader.js"
-import { checkFilesSizes, isErrorStatus } from "@/upload/uploadHelper.js"
+import { checkFilesSizes, isErrorStatus } from "@/upload/utils/uploadHelper.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { showToast } from "@/utils/common.js"
 
@@ -230,6 +230,7 @@ export const useUploadStore = defineStore("upload", {
       },
       onGeneralError(error, request) {
          if (error.handled) return
+         console.error(error)
          for (let attachment of request.attachments) {
             let frontendId = attachment.fileObj.frontendId
             const fileState = this.getFileState(frontendId)
@@ -287,6 +288,27 @@ export const useUploadStore = defineStore("upload", {
          fileState.markVideoMetadataExtracted()
       },
 
+      markSubtitlesRequired(frontendId) {
+         const fileState = this.getFileState(frontendId)
+         if (!fileState) return
+
+         fileState.markSubtitlesRequired()
+      },
+
+      markSubtitlesExtracted(frontendId) {
+         const fileState = this.getFileState(frontendId)
+         if (!fileState) return
+
+         fileState.markSubtitlesExtracted()
+      },
+
+      markSubtitlesUploaded(frontendId) {
+         const fileState = this.getFileState(frontendId)
+         if (!fileState) return
+
+         fileState.markSubtitlesUploaded()
+      },
+
       isFileUploaded(frontendId) {
          const fileState = this.getFileState(frontendId)
          if (!fileState) return
@@ -299,7 +321,6 @@ export const useUploadStore = defineStore("upload", {
       },
 
       markRequestFinished(request) {
-         // this.allBytesUploaded += request.totalSize
          this.uploadSpeedMap.delete(request.id)
       },
 
@@ -377,6 +398,7 @@ export const useUploadStore = defineStore("upload", {
       resumeAll() {
          this.state = uploadState.uploading
          getUploader().processUploads()
+         getUploader().backendManager.saveFilesIfNeeded()
       },
 
       onUploadFinish() {

@@ -40,7 +40,7 @@ import { detectExtension, onceAtATime } from "@/utils/common.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { createFile } from "@/api/files.js"
 import { v4 as uuidv4 } from "uuid"
-import { generateIv, generateKey } from "@/upload/uploadHelper.js"
+import { generateIv, generateKey } from "@/upload/utils/uploadHelper.js"
 
 export default {
    name: 'new-file',

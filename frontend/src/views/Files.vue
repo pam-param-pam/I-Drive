@@ -30,7 +30,7 @@ import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { scanDataTransfer } from "@/upload/uploadHelper.js"
+import { scanDataTransfer } from "@/upload/utils/uploadHelper.js"
 import { uploadType } from "@/utils/constants.js"
 import { name } from "@/utils/constants"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
@@ -66,7 +66,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["searchItems", "searchFilters", "breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
+      ...mapState(useMainStore, ["currentPrompt", "searchItems", "searchFilters", "breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
       headerButtons() {
          return {
             info: !this.disabledCreation,
@@ -173,6 +173,7 @@ export default {
       },
 
       onDragEnter() {
+         if (this.currentPrompt) return
          this.dragCounter++
 
          // When the user starts dragging an item, put every
@@ -215,6 +216,8 @@ export default {
       },
 
       async onDropUpload(event) {
+         if (this.currentPrompt) return
+
          event.preventDefault()
 
          this.dragCounter = 0

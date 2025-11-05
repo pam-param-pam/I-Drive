@@ -1,24 +1,24 @@
 <template>
-  <div
-    ref="container"
-    class="image-ex-container"
-    @dblclick="zoomAuto"
-    @mousedown="mousedownStart"
-    @mousemove="mouseMove"
-    @mouseup="mouseUp"
-    @touchmove="touchMove"
-    @touchstart="touchStart"
-    @wheel="wheelMove"
-  >
-    <img
-      ref="imgex"
-      alt="Failed to load image"
-      class="image-ex-img image-ex-img-center"
-      @load="onLoad"
-      @error="onError"
-      :draggable="!turnedOFF"
-    />
-  </div>
+   <div
+      ref="container"
+      class="image-ex-container"
+      @dblclick="zoomAuto"
+      @mousedown="mousedownStart"
+      @mousemove="mouseMove"
+      @mouseup="mouseUp"
+      @touchmove="touchMove"
+      @touchstart="touchStart"
+      @wheel="wheelMove"
+   >
+      <img
+         ref="imgex"
+         alt="Failed to load image"
+         class="image-ex-img image-ex-img-center"
+         @load="onLoad"
+         @error="onError"
+         :draggable="!turnedOFF"
+      />
+   </div>
 </template>
 <script>
 import throttle from "lodash.throttle"
@@ -64,7 +64,7 @@ export default {
          minScale: 0.25,
 
          turnedOFF: false,
-         requestController: null,
+         requestController: null
       }
    },
 
@@ -144,18 +144,18 @@ export default {
             percentage = Math.round(percentage * 100)
             this.$toast.update("progress-image", {
 
-               content: this.$t('toasts.loadingImage', {percentage}),
+               content: this.$t("toasts.loadingImage", { percentage }),
 
                options: { timeout: null, type: "info", draggable: false, closeOnClick: false }
 
             }, true)
-            if (percentage >=100) {
+            if (percentage >= 100) {
                this.endToast()
             }
          }
       },
       endToast() {
-        this.$toast.dismiss("progress-image")
+         this.$toast.dismiss("progress-image")
       },
       next(event) {
          event.preventDefault()

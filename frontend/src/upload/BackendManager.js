@@ -90,8 +90,6 @@ export class BackendManager {
          }
          state.attachments.push(attachment_data)
       } else if (attachment.type === attachmentType.thumbnail) {
-         this.uploadStore.markThumbnailUploaded(fileObj.frontendId)
-
          state.thumbnail = {
             "size": attachment.rawBlob.size,
             "channel_id": discordResponse.data.channel_id,
@@ -101,6 +99,23 @@ export class BackendManager {
             "key": attachment.key,
             "message_author_id": discordResponse.data.author.id
          }
+         this.uploadStore.markThumbnailUploaded(fileObj.frontendId)
+
+      } else if (attachment.type === attachmentType.subtitle) {
+         console.log("SUBTITLE")
+         state.subtitles = state.subtitles || []
+         state.subtitles.push({
+            "size": attachment.rawBlob.size,
+            "channel_id": discordResponse.data.channel_id,
+            "message_id": discordResponse.data.id,
+            "attachment_id": discordAttachment.id,
+            "language": attachment.subName,
+            "iv": attachment.iv,
+            "key": attachment.key,
+            "message_author_id": discordResponse.data.author.id
+         })
+         this.uploadStore.markSubtitlesUploaded(fileObj.frontendId)
+
       }
       this.backendState.set(fileObj.frontendId, state)
 
@@ -116,6 +131,8 @@ export class BackendManager {
    }
 
    async saveFilesIfNeeded() {
+      console.log("saveFilesIfNeeded")
+
       let totalSize = 0
 
       for (const file of this.finishedFiles) {
@@ -178,6 +195,7 @@ export class BackendManager {
    }
 
    reSaveFile(frontendId) {
+      //tdodo this is buggy
       const filesToResave = this.failedFiles.slice(0, Math.min(20, this.failedFiles.length))
 
       // Retry each file after a delay

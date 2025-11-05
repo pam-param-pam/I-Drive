@@ -4,8 +4,6 @@ import jsmediatags from "jsmediatags"
 import { uploadInstance } from "@/axios/networker.js"
 import { showToast } from "@/utils/common.js"
 
-const worker = new Worker(new URL("../workers/encryptorWorker.js", import.meta.url), { type: "module" })
-
 
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
@@ -507,32 +505,3 @@ export function isErrorStatus(status) {
       status === fileUploadStatus.fileGone
 }
 
-
-// export async function encryptAttachment(attachment) {
-//    let fileObj = attachment.fileObj
-//    let bytesToSkip = 0
-//    if (attachment.type === attachmentType.file) {
-//       bytesToSkip = attachment.offset
-//    }
-//    let iv = fileObj.iv
-//    let key = fileObj.key
-//
-//    if (attachment.type === attachmentType.thumbnail) {
-//       iv = attachment.iv
-//       key = attachment.key
-//    }
-//    return await encryptInWorker(attachment.rawBlob, fileObj.encryptionMethod, key, iv, bytesToSkip)
-// }
-
-export async function encryptInWorker(rawBlob, method, key, iv, bytesToSkip) {
-   return new Promise((resolve, reject) => {
-      worker.onmessage = (e) => {
-         if (e.data.error) return reject(e.data.error)
-         resolve(e.data.encryptedBlob)
-      }
-      worker.onerror = (err) => {
-         reject(err)
-      }
-      worker.postMessage({ rawBlob, method, key, iv, bytesToSkip })
-   })
-}

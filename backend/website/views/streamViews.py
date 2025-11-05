@@ -126,7 +126,7 @@ def stream_preview(request, file_obj: File):
     size = data.getbuffer().nbytes
     encrypted_size = encrypted_data.__sizeof__()
 
-    author = get_discord_author(request, message['author']['id'])
+    author = get_discord_author(request.user, message['author']['id'])
 
     try:
         preview = Preview.objects.create(

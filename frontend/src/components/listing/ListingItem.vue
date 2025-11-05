@@ -1,44 +1,44 @@
 <template>
-  <div class="item-wrapper">
-    <div
-      ref="wrapper"
-      :aria-label="item.name"
-      :aria-selected="isSelected"
-      :data-dir="item.isDir"
-      :data-id="item.id"
-      :data-type="type"
-      :draggable="isDraggable"
-      class="item"
-      role="button"
-      tabindex="0"
-      @click="click"
-      @dblclick="open"
-      @dragover="dragOver"
-      @dragstart="dragStart"
-      @drop="drop"
-    >
-      <div :style="divStyle">
-        <img
-          v-if="imageSrcSmall"
-          :draggable="false"
-          @mouseenter="handleHoverStart"
-          @mouseleave="handleHoverEnd"
-          @error="handleImageError"
-          v-lazy="{ src: imageSrcSmall }"
-        />
-        <i v-else :style="iconStyle" class="material-icons"></i>
+   <div class="item-wrapper">
+      <div
+         ref="wrapper"
+         :aria-label="item.name"
+         :aria-selected="isSelected"
+         :data-dir="item.isDir"
+         :data-id="item.id"
+         :data-type="type"
+         :draggable="isDraggable"
+         class="item"
+         role="button"
+         tabindex="0"
+         @click="click"
+         @dblclick="open"
+         @dragover="dragOver"
+         @dragstart="dragStart"
+         @drop="drop"
+      >
+         <div :style="divStyle">
+            <img
+               v-if="imageSrcSmall"
+               :draggable="false"
+               @mouseenter="handleHoverStart"
+               @mouseleave="handleHoverEnd"
+               @error="handleImageError"
+               v-lazy="{ src: imageSrcSmall }"
+            />
+            <i v-else :style="iconStyle" class="material-icons"></i>
+         </div>
+         <div class="name">
+            <p>{{ item.name }}</p>
+         </div>
+         <div class="size">
+            <p :data-order="humanSize(item.size)" class="size">{{ humanSize(item.size) }}</p>
+         </div>
+         <div class="created">
+            <p>{{ humanTime(item.created) }}</p>
+         </div>
       </div>
-      <div class="name">
-        <p>{{ item.name }}</p>
-      </div>
-      <div class="size">
-        <p :data-order="humanSize(item.size)" class="size">{{ humanSize(item.size) }}</p>
-      </div>
-      <div class="created">
-        <p>{{ humanTime(item.created) }}</p>
-      </div>
-    </div>
-  </div>
+   </div>
 </template>
 
 <script>
@@ -140,7 +140,7 @@ export default {
       handleHoverStart() {
          if (this.item.isDir) return
          this.hoverTimer = setTimeout(() => {
-            this.setPopupPreview({"url": this.imageSrc, "file_id": this.item.id})
+            this.setPopupPreview({ "url": this.imageSrc, "file_id": this.item.id })
          }, 500)
       },
       handleHoverEnd() {

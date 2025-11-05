@@ -397,6 +397,8 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "tooManySubtitlesOrTooBig": "Napisów > 10 albo za duże, nie udało sie wysłać automatycznie!",
+    "invalidFileFormat": "Format pliku nie jest obsługiwany!!",
     "failedToConnectToWebsocket": "Nie udało sie polączyć z websocketem!",
     "ALotOF429": "Za dużo zapytań do discorda!",
     "ALotOF429Explained": "Nastąpi redukukcja liczbe równoległych requestów.",

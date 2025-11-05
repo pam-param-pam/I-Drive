@@ -26,9 +26,9 @@ export const uploadType = {
 }
 
 export const attachmentType = {
-   thumbnail: "thumbnail",
    file: "file",
-   videoMetadata: "videoMetadata"
+   thumbnail: "thumbnail",
+   subtitle: "subtitle"
 }
 export const fileUploadStatus = {
    preparing: "preparing",

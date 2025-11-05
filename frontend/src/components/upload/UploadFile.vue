@@ -97,7 +97,7 @@ import { mapActions, mapState } from 'pinia'
 import { useUploadStore } from '@/stores/uploadStore.js'
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { useMainStore } from '@/stores/mainStore.js'
-import { isErrorStatus } from "@/upload/uploadHelper.js"
+import { isErrorStatus } from "@/upload/utils/uploadHelper.js"
 
 export default {
    components: { ProgressBar },
