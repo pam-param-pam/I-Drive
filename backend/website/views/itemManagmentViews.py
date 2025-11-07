@@ -162,7 +162,7 @@ def change_folder_password(request, folder_obj):
     isLocked = True if newPassword else False
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(request.user.id, request.context, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(request.context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': isLocked, 'lockFrom': lockFrom}])
     if isLocked:
         return JsonResponse(build_response(request.context.request_id, "Folder is being locked..."))

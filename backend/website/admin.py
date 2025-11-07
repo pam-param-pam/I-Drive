@@ -150,7 +150,7 @@ class FileAdmin(SimpleHistoryAdmin):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
 
         if obj.type == "Raw image":
-            url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}/stream"
+            url = f"{API_BASE_URL}/files/{signed_file_id}/preview/stream"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
         elif obj.type == "Image":
@@ -170,17 +170,17 @@ class FileAdmin(SimpleHistoryAdmin):
             )
         elif obj.type == "Audio":
             url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            # poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
+            poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
 
             return format_html(
                 '<div style="display: flex; align-items: center;">'
-                # '<img src="{}" alt="Audio Thumbnail" style="width: 100px; height: 100px; margin-right: 10px;">'
+                '<img src="{}" alt="Audio Thumbnail" style="width: 100px; height: 100px; margin-right: 10px;">'
                 '<audio controls ">'
                 '<source src="{}" type="audio/mpeg">'
                 'Your browser does not support the audio element.'
                 '</audio>'
                 '</div>',
-                # poster_url,
+                poster_url,
                 url
             )
         else:
@@ -287,7 +287,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 
     def thumbnail_media(self, obj: Thumbnail):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
+        url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
     def encryption_method(self, obj: Subtitle):
@@ -400,7 +400,7 @@ class MomentAdmin(admin.ModelAdmin):
 
     def preview(self, obj: Moment):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/moment/{signed_file_id}/{obj.timestamp}"
+        url = f"{API_BASE_URL}/files/{signed_file_id}/moment/{obj.timestamp}/stream"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
 
     def owner(self, obj: Moment):

@@ -121,7 +121,6 @@ export default {
 
       removeTag: onceAtATime(async function (tag) {
          await removeTag(this.file.id, tag.id)
-
          this.tags = this.tags.filter(t => t.id !== tag.id)
       })
    }

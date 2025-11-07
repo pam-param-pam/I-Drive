@@ -282,7 +282,7 @@
             />
             <action
                v-if='headerButtons.lock'
-               :label="$t('buttons.lockFolder')"
+               :label="selected[0].isLocked ? $t('buttons.editLockFolder') : $t('buttons.lockFolder')"
                icon='lock'
                show='editFolderPassword'
             />

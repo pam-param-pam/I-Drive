@@ -8,6 +8,7 @@ export class FileStateHolder {
       this.totalChunks = undefined
       this.extractedChunks = 0
       this.uploadedChunks = 0
+      this.secretsGenerated = undefined
 
       this.thumbnailExtracted = undefined
       this.thumbnailUploaded = false
@@ -26,6 +27,9 @@ export class FileStateHolder {
       this.error = null
    }
 
+   setMarkSecretsGenerated() {
+      this.secretsGenerated = true
+   }
    incrementChunk() {
       this.uploadedChunks += 1
    }

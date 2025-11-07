@@ -131,8 +131,6 @@ export class BackendManager {
    }
 
    async saveFilesIfNeeded() {
-      console.log("saveFilesIfNeeded")
-
       let totalSize = 0
 
       for (const file of this.finishedFiles) {
@@ -183,7 +181,6 @@ export class BackendManager {
          this.databaseErrors = 0
       }
       this.databaseErrors++
-
    }
 
    onBackendSave(finishedFiles) {

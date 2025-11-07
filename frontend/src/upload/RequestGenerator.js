@@ -68,7 +68,6 @@ export class RequestGenerator {
       /**
        this is a generator function!
        */
-
       const MP4Box = await this.getMp4Box()
 
       const maxChunkSize = this.mainStore.user.maxDiscordMessageSize
@@ -81,18 +80,22 @@ export class RequestGenerator {
          let frontendId = queueFile.fileObj.frontendId
 
          try {
+            const state = this.uploadStore.getFileState(frontendId)
+
             //creating folder if needed and getting it's backend ID
             queueFile.fileObj.folderId = await this.getOrCreateFolder(queueFile.fileObj)
 
-            if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
+            // Generate iv and key only if we haven't done that before
+            if (queueFile.fileObj.encryptionMethod !== encryptionMethod.NotEncrypted && !state.secretsGenerated) {
                queueFile.fileObj.iv = generateIv(queueFile.fileObj.encryptionMethod)
                queueFile.fileObj.key = generateKey(queueFile.fileObj.encryptionMethod)
+               state.setMarkSecretsGenerated()
             }
             if (this.handleEmptyFile(queueFile)) continue
 
             let thumbnail = null
             //if this is true it means the thumbnail was already extracted, no need to do it again.
-            if (!this.uploadStore.getFileState(frontendId)?.thumbnailExtracted) {
+            if (!state?.thumbnailExtracted) {
                thumbnail = await makeThumbnailIfNeeded(queueFile)
             }
 
@@ -120,8 +123,7 @@ export class RequestGenerator {
 
 
             //CASE 1.2 attachments are not created, we create chunked requests from the big file
-            const state = this.uploadStore.getFileState(frontendId)
-
+            console.log("state EXISTS!!!!!!!!!!!")
             let chunkSequence = state.extractedChunks
             let offset = state.offset || 0
 

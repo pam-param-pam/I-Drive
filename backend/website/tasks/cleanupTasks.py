@@ -57,6 +57,7 @@ def delete_unready_files():
 @app.task
 def delete_dangling_discord_files(days=3):
     return
+    # todo
     deleted_attachments = defaultdict(int)
     users = User.objects.filter().all()
     for user in users:

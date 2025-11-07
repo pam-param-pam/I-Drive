@@ -496,5 +496,5 @@ def get_file_stats(request, folder_obj):
 def check_attachment_id(request, attachment_id):
     database_attachments = query_attachments(attachment_id=attachment_id)
     if database_attachments:
-        return HttpResponse(status=200)
+        return HttpResponse(status=204)
     return HttpResponse(status=404)

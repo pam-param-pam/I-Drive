@@ -1,4 +1,4 @@
-import { backendInstance, uploadInstance } from "@/axios/networker.js"
+import { backendInstance } from "@/axios/networker.js"
 import { useMainStore } from "@/stores/mainStore.js"
 
 export async function retryRequest(instance, error, delay, maxRetries = 5) {
@@ -111,5 +111,4 @@ export async function retry469Error(instance, error, maxTries=2) {
          return retry469Request()
       }
    }
-
 }

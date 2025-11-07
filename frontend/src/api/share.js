@@ -6,6 +6,7 @@ export async function getAllShares() {
    return response.data
 }
 
+
 export async function getShare(token, folderId = "") {
    let url = `/shares/${token}`
    if (folderId) url = url + `/folders/${folderId}`
@@ -13,7 +14,7 @@ export async function getShare(token, folderId = "") {
 
    let response = await backendInstance.get(url, {
       headers: {
-         "Authorization": false,
+         "Authorization": false
       },
       __shareContext: true
 
@@ -21,11 +22,13 @@ export async function getShare(token, folderId = "") {
    return response.data
 }
 
+
 export async function deleteShare(token) {
    let url = `/shares/${token}`
    let response = await backendInstance.delete(url)
    return response.data
 }
+
 
 export async function getShareVisits(token) {
    let url = `/shares/${token}/visits`
@@ -33,17 +36,20 @@ export async function getShareVisits(token) {
    return response.data
 }
 
+
 export async function createShare(data) {
    let url = `/shares`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
+
 export async function createShareZIP(token, data) {
    let url = `/shares/${token}/zip`
    let response = await backendInstance.post(url, data)
    return response.data
 }
+
 
 export async function getShareSubtitles(token, fileId) {
    let url = `/shares/${token}/files/${fileId}/subtitles`
@@ -58,7 +64,7 @@ export async function isSharePasswordCorrect(token, password) {
       let response = await backendInstance.get(url, {
          headers: {
             "X-resource-Password": password
-         },
+         }
       })
       return response.status === 204
    } catch (e) {

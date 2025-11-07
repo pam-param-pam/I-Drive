@@ -59,8 +59,7 @@ export default {
 
    data() {
       return {
-         logoURL,
-         isDark: true
+         logoURL
       }
    },
    computed: {

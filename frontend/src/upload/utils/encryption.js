@@ -13,7 +13,6 @@ function base64ToUint8Array(base64) {
 }
 
 export async function encryptWithAesCtr(file, base64Key, base64IV, bytesToSkip) {
-
    let key = base64ToUint8Array(base64Key)
    let iv = base64ToUint8Array(base64IV)
 

@@ -3,9 +3,8 @@ import { baseURL } from "@/utils/constants.js"
 import i18n from "@/i18n/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
-import { displayErrorToastIfNeeded, noWifi, shouldRetry469 } from "@/axios/helper.js"
+import { attachCancelSignature, displayErrorToastIfNeeded, noWifi, parseBinaryJsonResponse, shouldRetry469 } from "@/axios/helper.js"
 import { retry469Error, retryRequest } from "@/axios/retry.js"
-import { attachCancelSignature, parseBinaryJsonResponse } from "@/axios/helper.js"
 
 const toast = useToast()
 let upload_429_errors = 0
@@ -34,8 +33,8 @@ uploadInstance.interceptors.response.use(
       const mainStore = useMainStore()
 
       if (upload_429_errors > 4) {
-         upload_429_errors = - 10
-         toast.warning(`${i18n.global.t('toasts.ALotOF429')}\n${i18n.global.t('toasts.ALotOF429Explained')}`, {
+         upload_429_errors = -10
+         toast.warning(`${i18n.global.t("toasts.ALotOF429")}\n${i18n.global.t("toasts.ALotOF429Explained")}`, {
             timeout: 10000,
             position: "bottom-right"
          })

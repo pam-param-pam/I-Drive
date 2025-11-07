@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "editLockFolder": "Edit folder lock",
     "confirm": "Confirm",
     "scanQrCode": "Scan QR Code",
     "revoke": "revoke",

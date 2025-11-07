@@ -30,7 +30,6 @@ export async function createFile(data, config = {}) {
       __retryErrors: true
    })
    return response.data
-
 }
 
 
@@ -38,7 +37,6 @@ export async function editFile(fileId, data) {
    let url = `/files/${fileId}`
    let response = await backendInstance.patch(url, data)
    return response.data
-
 }
 
 
@@ -54,7 +52,6 @@ export async function updateVideoPosition(fileId, lockFrom, data) {
       }
    })
    return response.data
-
 }
 
 
@@ -62,7 +59,6 @@ export async function addTag(fileId, data) {
    let url = `/files/${fileId}/tags`
    let response = await backendInstance.post(url, data)
    return response.data
-
 }
 
 
@@ -70,7 +66,6 @@ export async function removeTag(fileId, tagId) {
    let url = `/files/${fileId}/tags/${tagId}`
    let response = await backendInstance.delete(url)
    return response.data
-
 }
 
 
@@ -78,7 +73,6 @@ export async function addMoment(fileId, data) {
    let url = `/files/${fileId}/moments`
    let response = await backendInstance.post(url, data)
    return response.data
-
 }
 
 
@@ -86,7 +80,6 @@ export async function removeMoment(fileId, timestamp) {
    let url = `/files/${fileId}/moments/${timestamp}`
    let response = await backendInstance.delete(url)
    return response.data
-
 }
 
 
@@ -119,17 +112,20 @@ export async function getSubtitles(fileId, lockFrom) {
    return response.data
 }
 
+
 export async function addSubtitle(fileId, data) {
    let url = `/files/${fileId}/subtitles`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
+
 export async function deleteSubtitle(fileId, subtitleId) {
    let url = `/files/${fileId}/subtitles/${subtitleId}`
    let response = await backendInstance.delete(url)
    return response.data
 }
+
 
 export async function getFileRawData(fileUrl, config = {}) {
    let response = await backendInstance.get(fileUrl, config)

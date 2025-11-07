@@ -51,8 +51,8 @@
 import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { isPasswordCorrect } from "@/api/resource.js"
 import { isSharePasswordCorrect } from "@/api/share.js"
+import { isPasswordCorrect } from "@/api/item.js"
 
 export default {
    name: "folder-password",

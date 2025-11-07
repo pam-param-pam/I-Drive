@@ -84,11 +84,9 @@ export default {
             }
          ]
       }
-
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"])
-
    }
 }
 </script>

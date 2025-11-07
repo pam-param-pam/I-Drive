@@ -240,7 +240,7 @@ class CheckFolderLock(CheckLockedFolderIP):
                 raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
         else:
             # Resource is unlocked, but someone provided a password? validate it
-            if self._password_provided(request):
+            if self._password_provided(request) and not self._is_password_valid(request, resource):
                 raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
 
     def _password_provided(self, request):

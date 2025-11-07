@@ -69,9 +69,10 @@ export class DiscordUploader {
    handleFatalUploadError(err, request) {
       /**Handles axios error in DISCORD upload request*/
       console.log("handleFatalUploadError")
-      this.failedRequests.push(request)
 
       if (!axios.isCancel(err)) {
+         this.failedRequests.push(request)
+
          if (noWifi(err)) {
             this.uploadStore.setState(uploadState.noInternet)
          }
@@ -90,6 +91,9 @@ export class DiscordUploader {
                this.uploadStore.setError(att.fileObj.frontendId, err.message)
             }
          })
+      } else {
+         this.uploadStore.pausedRequests.push(request)
+
       }
    }
 

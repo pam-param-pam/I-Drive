@@ -1,4 +1,4 @@
-import {backendInstance} from "@/axios/networker.js"
+import { backendInstance } from "@/axios/networker.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { showToast } from "@/utils/common.js"
 
@@ -8,54 +8,58 @@ export async function getUser(token) {
    let url = "/user/me"
    let response = await backendInstance.get(url, {
       headers: {
-         "Authorization": `Token ${token}`,
+         "Authorization": `Token ${token}`
       }
    })
    return response.data
-
 }
+
 
 export async function loginUser(data) {
    let url = "/auth/token/login"
-   let response = await backendInstance.post(url, data,{
+   let response = await backendInstance.post(url, data, {
       headers: {
-         "Authorization": false,
+         "Authorization": false
       },
       __displayErrorToast: false
    })
    return response.data
 }
 
+
 export async function createQrSession() {
    let url = "/auth/qrcode"
-   let response = await backendInstance.post(url, {},{
+   let response = await backendInstance.post(url, {}, {
       headers: {
-         "Authorization": false,
+         "Authorization": false
       }
    })
    return response.data
 }
 
+
 export async function registerUser(data) {
    let url = "/auth/register"
-   let response = await backendInstance.post(url, data,{
+   let response = await backendInstance.post(url, data, {
       headers: {
-         "Authorization": false,
+         "Authorization": false
       },
       __displayErrorToast: false
    })
    return response.data
 }
+
 
 export async function logoutUser(token) {
    let url = "/auth/token/logout"
    let response = await backendInstance.post(url, {}, {
       headers: {
-         "Authorization": "token " + token,
+         "Authorization": "token " + token
       }
    })
    return response.data
 }
+
 
 export async function changePassword(data) {
    let url = `/user/password`
@@ -72,6 +76,7 @@ export async function getQrSessionDeviceInfo(sessionId) {
    return response.data
 }
 
+
 export async function closePendingQrSession(sessionId) {
    let url = `/auth/qrcode/cancel/${sessionId}`
    let response = await backendInstance.get(url, {
@@ -80,11 +85,13 @@ export async function closePendingQrSession(sessionId) {
    return response.data
 }
 
+
 export async function approveQrSession(sessionId) {
    let url = `/auth/qrcode/${sessionId}`
    let response = await backendInstance.post(url)
    return response.data
 }
+
 
 export async function updateSettings(data) {
    let url = `/user/settings`
@@ -92,15 +99,16 @@ export async function updateSettings(data) {
 
 }
 
+
 export async function getTrash() {
    let url = `/trash`
    let response = await backendInstance.get(url, {
-      __cancelSignature: 'getItems',
+      __cancelSignature: "getItems"
 
    })
    return response.data
-
 }
+
 
 export async function getDiscordSettings() {
    let url = `/user/discordSettings`
@@ -108,11 +116,13 @@ export async function getDiscordSettings() {
    return response.data
 }
 
+
 export async function addDiscordWebhook(data) {
    let url = `/user/discordSettings/webhooks`
    let response = await backendInstance.post(url, data)
    return response.data
 }
+
 
 export async function deleteDiscordWebhook(discordId) {
    let url = `/user/discordSettings/webhooks/${discordId}`
@@ -120,11 +130,13 @@ export async function deleteDiscordWebhook(discordId) {
    return response.data
 }
 
+
 export async function addDiscordBot(data) {
    let url = `/user/discordSettings/bots`
    let response = await backendInstance.post(url, data)
    return response.data
 }
+
 
 export async function deleteDiscordBot(discordId) {
    let url = `/user/discordSettings/bots/${discordId}`
@@ -132,11 +144,13 @@ export async function deleteDiscordBot(discordId) {
    return response.data
 }
 
+
 export async function updateDiscordSettings(data) {
    let url = `/user/discordSettings`
    let response = await backendInstance.patch(url, data)
    return response.data
 }
+
 
 export async function canUpload(folderContext) {
    let url = `/user/canUpload/${folderContext}`
@@ -147,12 +161,12 @@ export async function canUpload(folderContext) {
       uploadStore.setAttachmentName(response.data.attachment_name)
       uploadStore.setFileExtensions(response.data.extensions)
       return response.data
-   }
-   else {
-      showToast("error", "errors.notAllowedToUpload", {timeout: null})
+   } else {
+      showToast("error", "errors.notAllowedToUpload", { timeout: null })
       return response.data
    }
 }
+
 
 export async function autoSetup(data) {
    let url = `/user/discordSettings/autoSetup`
@@ -160,11 +174,13 @@ export async function autoSetup(data) {
    return response.data
 }
 
+
 export async function deleteDiscordSettings() {
    let url = `/user/discordSettings`
    let response = await backendInstance.delete(url)
    return response.data
 }
+
 
 export async function getActiveDevices() {
    let url = `/user/devices`
@@ -172,11 +188,13 @@ export async function getActiveDevices() {
    return response.data
 }
 
+
 export async function revokeDevice(deviceId) {
    let url = `/user/devices/${deviceId}`
    let response = await backendInstance.delete(url)
    return response.data
 }
+
 
 export async function logoutAllDevices() {
    let url = `/user/devices/logout-all`
