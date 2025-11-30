@@ -91,7 +91,16 @@ export async function onEvent(message) {
       event = await decryptMessage(password, event)
    }
 
-   let op_code = event?.op_code
+   let op_code = event.op_code
+
+   if (op_code === 0) { // error from server
+      let error_code = event.data[0].error_code
+      if (error_code === "rate_limit_exceeded") {
+         toast.error(`${i18n.global.t("errors.websocketError")}\n${i18n.global.t("errors.rateLimit")}`)
+      } else if (error_code === "internal_websocket_error") {
+         toast.error(`${i18n.global.t("errors.websocketError")}\n${i18n.global.t("errors.internal")}`)
+      }
+   }
 
    if (op_code === 1) { // items created event
       if (folder_context_id !== currentFolder?.id) return
@@ -213,6 +222,28 @@ export async function onEvent(message) {
 
       if (store.isLogged && (deviceId === localDeviceId || deviceId === null || localDeviceId === null)) {
          await forceLogout()
+      }
+   }
+   if (op_code === 13) { // device control request
+      let device = event.data[0].master_device
+
+      store.showHover({
+         "prompt": "ControlConsentPrompt",
+         "props": {"masterDevice": device}
+      })
+   }
+   if (op_code === 15) { // device control status
+      let type = event.data[0].type
+      let args = event.data[0].args
+      if (type === "route_change") {
+         await router.push(args.route)
+      }
+   }
+
+   if (op_code === 16) { // device control status
+      store.deviceControlStatus = event.data[0].status
+      if (store.deviceControlStatus.status === "idle" && store.currentPromptName === "ControlConsentPrompt") {
+         store.closeHover()
       }
    }
 

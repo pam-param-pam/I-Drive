@@ -21,7 +21,8 @@ from ..utilities.constants import cache
 from ..utilities.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms, get_ip, query_attachments
+from ..utilities.other import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, check_resource_perms, query_attachments
+from ..utilities.helpers import get_ip
 from ..utilities.throttle import SearchThrottle, FolderPasswordThrottle, defaultAuthUserThrottle, MediaThrottle
 
 
@@ -410,7 +411,8 @@ def ultra_download_metadata(request, items):
             "id": str(file_obj.id),
             "name": file_obj.name,
             "encryption_method": file_obj.get_encryption_method().value,
-            "crc": file_obj.crc
+            "crc": file_obj.crc,
+            "size": file_obj.size
         }
         if file_obj.is_encrypted():
             file_dict["key"] = file_obj.get_base64_key()
@@ -424,6 +426,7 @@ def ultra_download_metadata(request, items):
                 "attachment_id": fragment.attachment_id,
                 "offset": fragment.offset,
                 "sequence": fragment.sequence,
+                "size": fragment.size
             }
             fragment_dicts.append(fragment_dict)
 

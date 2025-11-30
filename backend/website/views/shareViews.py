@@ -7,15 +7,15 @@ from rest_framework.decorators import permission_classes, throttle_classes, api_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_subtitle
-from ..models import UserSettings, ShareableLink, UserZIP, Subtitle, File
+from ..models import UserSettings, ShareableLink, UserZIP, Subtitle, File, ShareAccessEvent
 from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady, ReadPerms, ModifyPerms, CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady, \
     CheckShareItemBelongings, CheckShareOwnership
 from ..utilities.Serializers import ShareSerializer, ShareAccessSerializer
 from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file, disable_common_errors
+from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..utilities.other import create_share_breadcrumbs, get_item, create_share_resource_dict, \
-    build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms, log_share_access
+    build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms, parse_range_header
 from ..utilities.signer import sign_resource_id_with_expiry
 from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle, AnonUserMediaThrottle
 
@@ -114,7 +114,7 @@ def check_share_password(request, share_obj):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "folder_obj"], optional=True)
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="folder_obj", optional=True)
 def view_share(request, share_obj: ShareableLink, folder_obj=None):
-    log_share_access(request, share_obj)
+    ShareAccessEvent.log(share_obj, request, "share_view", share_id=share_obj.id)
 
     settings = UserSettings.objects.get(user=share_obj.owner)
     obj_in_share = share_obj.get_item_inside()
@@ -128,6 +128,8 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     del response_dict["parent_id"]
 
     if folder_obj:
+        ShareAccessEvent.log(share_obj, request, "folder_open", folder_id=folder_obj.id)
+
         breadcrumbs = create_share_breadcrumbs(folder_obj, obj_in_share, True)
         folder_content = build_share_folder_content(share_obj, folder_obj, include_folders=settings.subfolders_in_shares)["children"]
 
@@ -142,11 +144,11 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-def create_share_zip_model(request, share_obj: ShareableLink):  # todo
+def create_share_zip_model(request, share_obj: ShareableLink):
     ids = request.data['ids']
     validate_ids_as_list(ids)
 
-    user_zip = UserZIP.objects.create(owner=share_obj.owner)  # TODO does it make sense to have thing hack? zip owner != real owner, rather the viewie
+    user_zip = UserZIP.objects.create(owner=share_obj.owner)
 
     for item_id in ids:
         item = get_item(item_id)
@@ -167,11 +169,14 @@ def create_share_zip_model(request, share_obj: ShareableLink):  # todo
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
 def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
-    signed_file_id = request.META['signed_file_id']
+    range_header = request.headers.get('Range')
+    is_range_header, start_byte, end_byte = parse_range_header(range_header)
+    # ShareAccessEvent.log(share_obj, request, "file_stream", file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte) # todo
     # Extremely hacky way,
     # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
     # request is changed into rest's framework's request with the decorators,
     # so wee need to access the django's request using _request
+    signed_file_id = request.META['signed_file_id']
     request._request.META['share_context'] = True
     return stream_file(request._request, signed_file_id)
 

@@ -26,17 +26,15 @@ export async function validateLogin() { //this isn't really validate login - mor
 
 
    app.use(VueNativeSock, baseWS + "/user", { reconnection: true, protocol: token, reconnectionDelay: 5000, reconnectionAttempts: 5 })
-   app.config.globalProperties.$socket.onopen = (event) => {
-      let deviceId = localStorage.getItem("device_id")
-      console.log(app.config.globalProperties.$socket)
-      app.config.globalProperties.$socket.send(JSON.stringify({ opcode: 1, message: { device_id: deviceId } }))
-   }
-
-   app.config.globalProperties.$socket.onmessage = (data) => onEvent(data).then()
+   app.config.globalProperties.$socket.addEventListener("message", (message) => {
+      onEvent(message).then()
+   })
    app.config.globalProperties.$socket.onerror = (error) => {
       showToast("error", "toasts.failedToConnectToWebsocket")
    }
-
+   app.config.globalProperties.$socket.send_obj = function(obj) {
+      app.config.globalProperties.$socket.send(JSON.stringify(obj))
+   }
 
 }
 

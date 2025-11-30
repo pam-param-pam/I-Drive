@@ -104,6 +104,7 @@ export async function getSubtitles(fileId, lockFrom) {
    let password = store.getFolderPassword(lockFrom)
 
    let response = await backendInstance.get(url, {
+      __cancelSignature: "getSubtitles",
       headers: {
          "x-resource-password": password
       }

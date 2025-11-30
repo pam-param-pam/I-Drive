@@ -27,7 +27,8 @@ export const useMainStore = defineStore("main", {
       shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []},
       usage: { used: 0, total: 0 },
       popupPreview: {},
-      isFilesActive: false
+      isFilesActive: false,
+      deviceControlStatus: {}
    }),
 
    getters: {

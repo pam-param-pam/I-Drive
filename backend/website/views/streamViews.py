@@ -32,7 +32,7 @@ from ..utilities.Serializers import FileSerializer
 from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
 from ..utilities.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
 from ..utilities.errors import DiscordError, BadRequestError, FailedToResizeImage
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, get_content_disposition_string
+from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, get_content_disposition_string, parse_range_header
 from ..utilities.other import send_event
 from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
 
@@ -121,7 +121,7 @@ def stream_preview(request, file_obj: File):
     attachment_name = user.discordsettings.attachment_name
     files = {'file': (attachment_name, encrypted_data)}
 
-    message = discord.send_file(user, files) # todo migrate to webhooks
+    message = discord.send_file(user, files)  # todo migrate to webhooks
 
     size = data.getbuffer().nbytes
     encrypted_size = encrypted_data.__sizeof__()
@@ -129,7 +129,7 @@ def stream_preview(request, file_obj: File):
     author = get_discord_author(request.user, message['author']['id'])
 
     try:
-        preview = Preview.objects.create(
+        Preview.objects.create(
             file=file_obj,
             size=size,
             encrypted_size=encrypted_size,
@@ -352,17 +352,7 @@ def stream_file(request, file_obj: File):
 
     # parse range header to get start byte and end byte
     range_header = request.headers.get('Range')
-    if range_header:
-        range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
-        if range_match:
-            start_byte = int(range_match.group(1))
-            end_byte = int(range_match.group(2)) if range_match.group(2) else None
-        else:
-            return HttpResponse(status=400)
-
-    else:
-        start_byte = 0
-        end_byte = None
+    is_range_header, start_byte, end_byte = parse_range_header(range_header)
 
     # Find the appropriate file fragment based on byte range request
     real_start_byte = start_byte
@@ -373,9 +363,10 @@ def stream_file(request, file_obj: File):
             break
         else:
             start_byte -= fragment.size
+
     # if range header was given then to allow seeking in the browser we need to return 206 - partial response.
     # Otherwise, the response was probably called by download browser function, and we need to return 200
-    if range_header and not isDownload:
+    if is_range_header and not isDownload:
         status = 206
     else:
         status = 200

@@ -22,3 +22,15 @@ def chop_long_file_name(file_name: str) -> str:
             shortened_file_name += "." + file_extension
         return shortened_file_name
     return file_name
+
+
+def get_ip(request) -> tuple:
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        from_nginx = True
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        from_nginx = False
+        ip = request.META.get('REMOTE_ADDR')
+
+    return ip, from_nginx

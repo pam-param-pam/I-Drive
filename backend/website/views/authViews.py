@@ -79,14 +79,9 @@ def authenticate_qr_session(request, session_id):
 
     session_data = json.loads(session_json)
 
-    session_data["authenticated"] = True
-    session_data["approved_by_user_id"] = request.user.id
-    session_data["approved_by_username"] = request.user.username
-
     desktop_user = request.user
     raw_token, token_instance, token_info = create_token_from_qr_session(request, desktop_user, session_data)
 
-    # Save updated session data back to cache
     session_data["token"] = token_info
     cache.delete(key)
 

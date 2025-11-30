@@ -8,7 +8,6 @@ from typing import Union
 
 import shortuuid
 from django.contrib.auth import user_logged_out, user_logged_in, get_user_model
-from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -23,9 +22,11 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES, ALLOWED_THUMBNAIL_SIZES, MAX_FOLDER_DEPTH, MAX_FILES_IN_FOLDER
+from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES, ALLOWED_THUMBNAIL_SIZES, MAX_FOLDER_DEPTH, MAX_FILES_IN_FOLDER, \
+    ShareEventType
+from .utilities.dataModels import *
 from .utilities.errors import ResourceNotFoundError
-from .utilities.helpers import chop_long_file_name
+from .utilities.helpers import chop_long_file_name, get_ip
 
 
 class Folder(MPTTModel):
@@ -183,7 +184,7 @@ class Folder(MPTTModel):
 
     def _check_depth(self, new_parent=None):
         parent = new_parent or self.parent
-        if (len(parent.get_ancestors())+1) > MAX_FOLDER_DEPTH:
+        if (len(parent.get_ancestors()) + 1) > MAX_FOLDER_DEPTH:
             raise ValidationError(f"Folder nested too deep! Max depth = {MAX_FOLDER_DEPTH}")
         pass
 
@@ -333,6 +334,7 @@ class File(models.Model):
         if (self.parent.files.count() + self.parent.subfolders.count() + 1) > MAX_FILES_IN_FOLDER:
             raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
 
+
 class DiscordAttachmentMixin(models.Model):
     message_id = models.CharField(max_length=32, db_index=True)
     attachment_id = models.CharField(max_length=32, null=True, unique=True, db_index=True)
@@ -360,6 +362,7 @@ class DiscordAttachmentMixin(models.Model):
             except Webhook.DoesNotExist:
                 raise KeyError(f"Wrong discord author ID")
 
+
 class Fragment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     sequence = models.SmallIntegerField()
@@ -369,6 +372,7 @@ class Fragment(DiscordAttachmentMixin):
 
     def __str__(self):
         return f"Fragment[file={self.file.name}, sequence={self.sequence}, size={self.size}, owner={self.file.owner.username}]"
+
 
 class Thumbnail(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -408,8 +412,9 @@ class Preview(DiscordAttachmentMixin):
     def __str__(self):
         return f"Preview=[{self.file.name}]"
 
+
 class Moment(DiscordAttachmentMixin):
-    # id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False) todo
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
     created_at = models.DateTimeField(auto_now_add=True)
     timestamp = models.IntegerField(default=0)
@@ -423,6 +428,7 @@ class Moment(DiscordAttachmentMixin):
 
     def __str__(self):
         return f"Moment[File={self.file}, Starts-At={self.timestamp}"
+
 
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
@@ -478,6 +484,7 @@ class UserPerms(models.Model):
         if created:
             profile, created = UserPerms.objects.get_or_create(user=instance)
 
+
 class ShareableLink(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     token = models.CharField(max_length=255, unique=True)
@@ -531,6 +538,7 @@ class ShareableLink(models.Model):
             # looks like folder/file no longer exist, deleting time!
             self.delete()
             raise ResourceNotFoundError()
+
 
 class UserZIP(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -623,6 +631,7 @@ class Bot(models.Model):
     def __str__(self):
         return f"Bot[name={self.name}]"
 
+
 class Channel(models.Model):
     name = models.CharField(max_length=20)
     id = models.CharField(primary_key=True, max_length=50)
@@ -632,6 +641,7 @@ class Channel(models.Model):
 
     def __str__(self):
         return f"Channel({self.name})"
+
 
 class DiscordSettings(models.Model):
     auto_setup_complete = models.BooleanField(default=False)
@@ -663,6 +673,7 @@ class VideoMetadata(models.Model):
     def __str__(self):
         return f"Metadata for {self.file}"
 
+
 class VideoMetadataTrackMixin(models.Model):
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
     bitrate = models.IntegerField()
@@ -672,6 +683,7 @@ class VideoMetadataTrackMixin(models.Model):
     language = models.CharField(max_length=50, null=True)
     track_number = models.IntegerField()
 
+
 class VideoTrack(VideoMetadataTrackMixin):
     height = models.IntegerField()
     width = models.IntegerField()
@@ -679,6 +691,7 @@ class VideoTrack(VideoMetadataTrackMixin):
 
     def __str__(self):
         return f"Video Track ({self.width}x{self.height}) for {self.video_metadata.file}"
+
 
 class AudioTrack(VideoMetadataTrackMixin):
     name = models.CharField(max_length=20)
@@ -689,11 +702,13 @@ class AudioTrack(VideoMetadataTrackMixin):
     def __str__(self):
         return f"Audio Track({self.language}) for {self.video_metadata.file}"
 
+
 class SubtitleTrack(VideoMetadataTrackMixin):
     name = models.CharField(max_length=20)
 
     def __str__(self):
         return f"Subtitle Track({self.language}) for {self.video_metadata.file}"
+
 
 class Subtitle(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -702,7 +717,7 @@ class Subtitle(DiscordAttachmentMixin):
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    # forced = models.BooleanField(default=False) todo
+    forced = models.BooleanField(default=False)
 
     def get_base64_key(self):
         return base64.b64encode(self.key).decode('utf-8')
@@ -713,16 +728,6 @@ class Subtitle(DiscordAttachmentMixin):
     def __str__(self):
         return f"Subtitle file ({self.language}) for {self.file}"
 
-
-class ShareAccess(models.Model):
-    share = models.ForeignKey(ShareableLink, on_delete=models.CASCADE)
-    ip = models.GenericIPAddressField(null=True)
-    user_agent = models.TextField()
-    accessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    access_time = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Access to {self.share.get_item_inside().name} from {self.ip} at {self.access_time} ({self.accessed_by})"
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):
@@ -757,7 +762,8 @@ class PerDeviceTokenManager(models.Manager):
     def _hash(self, raw_token: str) -> str:
         return hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
 
-    def create_token(self, user, device_name: str, device_id: str, expires: datetime.timedelta, ip_address: str, user_agent: str, country: str = None, city: str = None, device_type: str = None):
+    def create_token(self, user, device_name: str, device_id: str, expires: datetime.timedelta, ip_address: str, user_agent: str, country: str = None, city: str = None,
+                     device_type: str = None):
         raw = secrets.token_urlsafe(32)
         hashed = self._hash(raw)
         expires_at = timezone.now() + expires if expires else None
@@ -817,6 +823,7 @@ class PerDeviceTokenManager(models.Manager):
         token_obj.mark_used()
         return token_obj
 
+
 class PerDeviceToken(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='device_tokens')
     token_hash = models.CharField(max_length=64, db_index=True)
@@ -861,3 +868,102 @@ class PerDeviceToken(models.Model):
     def __str__(self):
         return f"Token for {self.device_name} for user {self.user}"
 
+
+class ShareAccess(models.Model):
+    share = models.ForeignKey(ShareableLink, on_delete=models.CASCADE)
+    ip = models.GenericIPAddressField(null=True)
+    user_agent = models.TextField()
+    accessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    access_time = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def get_or_create_recent(cls, share, request) -> 'ShareAccess':
+        ip, _ = get_ip(request)
+        user_agent = request.user_agent
+        user = request.user if request.user.is_authenticated else None
+
+        ten_minutes_ago = timezone.now() - datetime.timedelta(minutes=10)
+        existing = cls.objects.filter(
+            share=share,
+            ip=ip,
+            user_agent=user_agent,
+            access_time__gte=ten_minutes_ago
+        ).order_by('-access_time').first()
+
+        if existing:
+            return existing
+        return cls.objects.create(
+            share=share,
+            ip=ip,
+            user_agent=user_agent,
+            accessed_by=user
+        )
+
+    def __str__(self):
+        return f"Access to {self.share.get_item_inside().name} from {self.ip} at {self.access_time} ({self.accessed_by})"
+
+
+class ShareAccessEvent(models.Model):
+    access = models.ForeignKey(ShareAccess, on_delete=models.CASCADE, related_name='events')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    event_type = models.CharField(max_length=64)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["event_type"]),
+            models.Index(fields=["timestamp"]),
+        ]
+
+    EVENT_SCHEMAS: dict[ShareEventType, type] = {
+        ShareEventType.SHARE_VIEW: ViewShare,
+
+        # File
+        ShareEventType.FILE_OPEN: FileOpenEvent,
+        ShareEventType.FILE_CLOSE: FileCloseEvent,
+        ShareEventType.FILE_DOWNLOAD_START: FileDownloadStartEvent,
+        ShareEventType.FILE_DOWNLOAD_SUCCESSFUL: FileDownloadSuccessfulEvent,
+        ShareEventType.FILE_STREAM: FileStreamEvent,
+
+        # Folder
+        ShareEventType.FOLDER_OPEN: FolderOpenEvent,
+        ShareEventType.FOLDER_CLOSE: FolderCloseEvent,
+
+        # Movie
+        ShareEventType.MOVIE_WATCH: MovieWatchEvent,
+        ShareEventType.MOVIE_SEEK: MovieSeekEvent,
+        ShareEventType.MOVIE_PAUSE: MoviePauseEvent,
+
+        # Zip
+        ShareEventType.ZIP_DOWNLOAD_START: ZipDownloadStartEvent,
+        ShareEventType.ZIP_DOWNLOAD_SUCCESSFUL: ZipDownloadSuccessfulEvent,
+    }
+
+    @staticmethod
+    def log(share: ShareableLink, request, event_type: ShareEventType, **metadata):
+
+        access = ShareAccess.get_or_create_recent(share, request)
+
+        schema_cls = ShareAccessEvent.EVENT_SCHEMAS[event_type]
+
+        # Validate metadata against schema
+        schema_cls(**metadata)
+
+        return ShareAccessEvent.objects.create(
+            access=access,
+            event_type=event_type.value,
+            metadata=metadata
+        )
+
+    def clean(self):
+        try:
+            event_enum = ShareEventType(self.event_type)
+        except ValueError:
+            raise ValidationError(f"Unknown event_type: {self.event_type}")
+
+        schema_cls = self.EVENT_SCHEMAS[event_enum]
+
+        try:
+            schema_cls(**self.metadata)
+        except Exception as e:
+            raise ValidationError(f"Invalid metadata for {self.event_type}: {e}")

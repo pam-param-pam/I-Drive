@@ -4,6 +4,7 @@ import Layout from "@/views/Layout.vue"
 
 import { useMainStore } from "@/stores/mainStore.js"
 import { validateLogin } from "@/utils/auth.js"
+import { send_route_change_event } from "@/utils/deviceControl.js"
 
 const router = createRouter({
 
@@ -166,15 +167,24 @@ async function initAuth() {
    }
 }
 
+
 router.beforeEach((to, from, next) => {
    const store = useMainStore()
    store.setLoading(true)
    next()
 })
-router.afterEach(() => {
+
+router.afterEach((to, from) => {
    const store = useMainStore()
    store.setLoading(false)
-});
+   const routeForPush = {
+      name: to.name,
+      params: { ...to.params },
+      query: { ...to.query }
+   }
+   send_route_change_event(routeForPush)
+})
+
 router.beforeResolve(async (to, from, next) => {
    const store = useMainStore()
    store.closeHovers()

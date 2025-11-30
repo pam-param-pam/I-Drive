@@ -44,6 +44,8 @@ import shareAccesses from "@/components/prompts/ShareAccesses.vue"
 import { defineAsyncComponent } from "vue"
 import AbortAllWarning from "@/components/prompts/AbortAllWarning.vue"
 import NewFile from "@/components/prompts/newFile.vue"
+import ControlDevice from "@/components/prompts/ControlDevice.vue"
+import ControlConsentPrompt from "@/components/prompts/ControlConsentPrompt.vue"
 
 export default {
    name: "prompts",
@@ -75,6 +77,8 @@ export default {
       shareAccesses,
       AbortAllWarning,
       NewFile,
+      ControlDevice,
+      ControlConsentPrompt,
       ScanQrCode: defineAsyncComponent(() => import('@/components/prompts/ScanQrCode.vue')),
       FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
    },

@@ -1,6 +1,5 @@
 import os
 import time
-import traceback
 from functools import wraps
 from typing import Callable, Union
 
@@ -78,12 +77,12 @@ def check_resource_permissions(checks: list, resource_key: Union[str, list[str]]
                     print(kwargs)
                     raise ValueError(f"[check_resource_permissions] Missing required resource(s) {missing_keys} in kwargs")
 
-            print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
+            # print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
             for Check in checks:
                 Check().check(request, *resources)
 
             end_time = time.perf_counter()
-            print(f"[check_resource_permissions] Checks took {end_time - start_time:.4f}s")
+            # print(f"[check_resource_permissions] Checks took {end_time - start_time:.4f}s")
 
             return view_func(request, *args, **kwargs)
 
@@ -254,16 +253,12 @@ def check_bulk_permissions(checks, resource_key="items"):
                     try:
                         check().check(request, resource)
                     except MissingOrIncorrectResourcePasswordError as e:
-                        traceback.print_exc()
-                        print("EXCEPTION")
                         for pwd in e.requiredPasswords:
                             if pwd["id"] not in seen_ids:
                                 all_required_passwords.append(pwd)
                                 seen_ids.add(pwd["id"])
 
             if all_required_passwords:
-                print("all_required_passwords")
-                print(all_required_passwords)
                 raise MissingOrIncorrectResourcePasswordError(all_required_passwords)
 
             return view_func(request, *args, **kwargs)

@@ -7,7 +7,8 @@ from rest_framework.permissions import BasePermission
 
 from .constants import ALLOWED_IPS_LOCKED
 from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError, LockedFolderWrongIpError
-from .other import get_attr, get_ip, check_if_item_belongs_to_share
+from .other import get_attr, check_if_item_belongs_to_share
+from .helpers import get_ip
 from ..models import UserPerms, File, Folder, ShareableLink
 
 
@@ -213,10 +214,8 @@ class CheckLockedFolderIP(BaseResourceCheck):
     def _is_ip_allowed(self, ip):
         try:
             ip_obj = ipaddress.ip_address(ip)
-            # Check if the IP is in the private address ranges
             return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED
         except ValueError:
-            # If the IP address is invalid, return False
             return False
 
     def _check_ip(self, request):

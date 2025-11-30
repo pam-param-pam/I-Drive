@@ -13,7 +13,7 @@ NUMBER_OF_CHANNELS = 5
 # Amount of webhooks in each channel to be created during auto setup
 NUMBER_OF_WEBHOOKS_PER_CHANNEL = 2
 
-# A set of IPS that locked resources can be accessed from. Default is local ips only
+# A set of IPS that locked resources can be accessed from on top of the local ip
 ALLOWED_IPS_LOCKED = ()
 
 # Max folder depth allowed
@@ -87,6 +87,7 @@ FILE_TYPE_CHOICES = [
 ]
 
 class EventCode(Enum):
+    WEBSOCKET_ERROR = 0
     ITEM_CREATE = 1
     ITEM_DELETE = 2
     ITEM_UPDATE = 3
@@ -99,6 +100,10 @@ class EventCode(Enum):
     FOLDER_LOCK_STATUS_CHANGE = 10
     FORCE_LOGOUT = 11
     NEW_DEVICE_LOG_IN = 12
+    DEVICE_CONTROL_REQUEST = 13
+    DEVICE_CONTROL_REPLY = 14
+    DEVICE_CONTROL_COMMAND = 15
+    DEVICE_CONTROL_STATUS = 16
 
 class EncryptionMethod(Enum):
     Not_Encrypted = 0
@@ -110,3 +115,27 @@ class AuditAction(Enum):
     USER_LOGGED_IN = 1
     USER_LOGGED_OUT = 2
     USER_LOGIN_FAILED = 3
+
+class ShareEventType(str, Enum):
+    # Share
+    SHARE_VIEW = "share_view"
+
+    # File
+    FILE_OPEN = "file_open"
+    FILE_CLOSE = "file_close"
+    FILE_DOWNLOAD_START = "file_download_start"
+    FILE_DOWNLOAD_SUCCESSFUL = "file_download_successful"
+    FILE_STREAM = "file_stream"
+
+    # Folder
+    FOLDER_OPEN = "folder_open"
+    FOLDER_CLOSE = "folder_close"
+
+    # Movie
+    MOVIE_WATCH = "movie_watch"
+    MOVIE_SEEK = "movie_seek"
+    MOVIE_PAUSE = "movie_pause"
+
+    # Zip
+    ZIP_DOWNLOAD_START = "zip_download_start"
+    ZIP_DOWNLOAD_SUCCESSFUL = "zip_download_successful"

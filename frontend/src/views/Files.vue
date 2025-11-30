@@ -1,26 +1,26 @@
 <template>
-  <div style="height: 100%">
-    <breadcrumbs v-if="!searchActive" :folderList="breadcrumbs" base="/files" />
-    <errors v-if="error" :error="error" />
+   <div style="height: 100%">
+      <breadcrumbs v-if="!searchActive" :folderList="breadcrumbs" base="/files" />
+      <errors v-if="error" :error="error" />
 
-    <h4 v-if="!error && searchActive && !loading">
-      {{ $t("files.searchItemsFound", { amount: searchItems.length }) }}
-    </h4>
-    <FileListing
-      ref="listing"
-      :headerButtons="headerButtons"
-      @download="download"
-      @dragEnter="onDragEnter"
-      @dragLeave="onDragLeave"
-      @dropUpload="onDropUpload"
-      @onOpen="onOpen"
-      @onSearchClosed="onSearchClosed"
-      @onSearchQuery="onSearchQuery"
-      @openInNewWindow="openInNewWindow"
-      @upload="upload"
-      @uploadInput="onUploadInput"
-    ></FileListing>
-  </div>
+      <h4 v-if="!error && searchActive && !loading">
+         {{ $t("files.searchItemsFound", { amount: searchItems.length }) }}
+      </h4>
+      <FileListing
+         ref="listing"
+         :headerButtons="headerButtons"
+         @download="download"
+         @dragEnter="onDragEnter"
+         @dragLeave="onDragLeave"
+         @dropUpload="onDropUpload"
+         @onOpen="onOpen"
+         @onSearchClosed="onSearchClosed"
+         @onSearchQuery="onSearchQuery"
+         @openInNewWindow="openInNewWindow"
+         @upload="upload"
+         @uploadInput="onUploadInput"
+      ></FileListing>
+   </div>
 </template>
 
 <script>
@@ -37,6 +37,7 @@ import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { cancelRequestBySignature } from "@/axios/helper.js"
+import { send_route_change_event } from "@/utils/deviceControl.js"
 
 export default {
    name: "files",
@@ -61,7 +62,7 @@ export default {
       return {
          folderList: [],
          dragCounter: 0,
-         isActive: true,
+         isActive: true
       }
    },
 
@@ -254,12 +255,12 @@ export default {
 
       getNewRoute(item) {
          if (item.isDir) {
-            return { name: 'Files', params: { folderId: item.id, lockFrom: item.lockFrom } }
+            return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
          } else {
-            if ((item.type === 'Text' || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
-               return { name: 'Editor', params: { fileId: item.id, lockFrom: item.lockFrom } }
+            if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
+               return { name: "Editor", params: { fileId: item.id, lockFrom: item.lockFrom } }
             } else {
-               return { name: 'Preview', params: { fileId: item.id, lockFrom: item.lockFrom } }
+               return { name: "Preview", params: { fileId: item.id, lockFrom: item.lockFrom } }
             }
          }
       },
@@ -279,22 +280,21 @@ export default {
             return
          }
          let route = this.getNewRoute(item)
-         if (item.isDir) {
-            if (item.isLocked === true) {
-               let password = this.getFolderPassword(item.lockFrom)
-               if (!password) {
-                  this.showHover({
-                     prompt: "FolderPassword",
+         if (item.isLocked === true) {
+            let password = this.getFolderPassword(item.lockFrom)
+            if (!password) {
+               this.showHover({
+                  prompt: "FolderPassword",
 
-                     props: { requiredFolderPasswords: [{ id: item.lockFrom, name: item.name }] },
-                     confirm: () => {
-                        this.$router.push(route)
-                     }
-                  })
-                  return
-               }
+                  props: { requiredFolderPasswords: [{ id: item.lockFrom, name: item.name }] },
+                  confirm: () => {
+                     this.$router.push(route)
+                  }
+               })
+               return
             }
          }
+
          this.$router.push(route)
       }
    }

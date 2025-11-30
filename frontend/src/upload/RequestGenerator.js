@@ -60,6 +60,7 @@ export class RequestGenerator {
          return request
       }
    }
+
    //todo clean this, make this function not be 180 lines long
    //todo check for possible race conditions with fileObj / state missing in mp4box callback functions
 
@@ -123,11 +124,10 @@ export class RequestGenerator {
 
 
             //CASE 1.2 attachments are not created, we create chunked requests from the big file
-            console.log("state EXISTS!!!!!!!!!!!")
-            let chunkSequence = state.extractedChunks
+            let chunkSequence = state.extractedChunks || 0
             let offset = state.offset || 0
 
-            const fileSize = queueFile.fileObj.size
+            let fileSize = queueFile.fileObj.size
 
             let mp4boxFile = this.mp4Boxes.get(frontendId)
             //create mp4box only if needed
@@ -136,13 +136,8 @@ export class RequestGenerator {
 
                this.mp4Boxes.set(frontendId, mp4boxFile)
                this.uploadStore.markVideoMetadataRequired(frontendId)
-               mp4boxFile.onError = function (e) {
-                  console.log('Received Error Message ' + e);
-               };
-               mp4boxFile.onReady = function(info) {
-                  console.log("ON READY")
-                  console.log(info)
 
+               mp4boxFile.onReady = function(info) {
                   let videoMetadata = parseVideoMetadata(info)
                   this.backendManager.fillVideoMetadata(state.fileObj, videoMetadata)
                   this.uploadStore.markVideoMetadataExtracted(frontendId)
@@ -150,7 +145,6 @@ export class RequestGenerator {
                   let subtitleTracks = info.tracks.filter(t => t.type === "subtitles") || []
                   this.setSubsNumber(frontendId, subtitleTracks.length)
                   if (subtitleTracks.length > 0) {
-                     console.log("markSubtitlesRequired")
                      this.uploadStore.markSubtitlesRequired(frontendId)
                   }
 
@@ -162,7 +156,6 @@ export class RequestGenerator {
                }.bind(this)
 
                mp4boxFile.onSamples = function(id, subTrack, samples) {
-                  console.log("ON SAMPLES")
                   if (!samples?.length) return
 
                   if (!mp4boxFile.collectedSamples) mp4boxFile.collectedSamples = []
@@ -176,9 +169,9 @@ export class RequestGenerator {
                      if (vttBlob.size > maxChunkSize) return
                      mp4boxFile.collectedSamples = []
                      let name = subTrack.name || subTrack.language || id
-                     this.createAndPushSubtitleAttachment(frontendId, vttBlob, name)
+                     let isForced = subTrack.kind?.value === "forced-subtitle"
+                     this.createAndPushSubtitleAttachment(frontendId, vttBlob, name, isForced)
                   }
-                  mp4boxFile.start()
                }.bind(this)
             }
 
@@ -187,7 +180,6 @@ export class RequestGenerator {
                const remainingFileSize = fileSize - offset
                const chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
                const chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
-
 
                //If there's to little space left in the request, we yield to prevent, for example,
                // the beginning of a video having 0.5mb which would cause multiple messages
@@ -199,11 +191,9 @@ export class RequestGenerator {
                   yield request
                }
 
-
                if (mp4boxFile && (!state.videoMetadataExtracted || !state.subtitlesExtracted)) {
                   appendMp4BoxBuffer(mp4boxFile, chunk, offset)
-               }
-               else {
+               } else {
                   //todo flush... and unsetExtractionOptions
                }
 
@@ -230,14 +220,12 @@ export class RequestGenerator {
                }
 
             }
-            console.log("setTotalChunks")
+            //we need to inform about totalChunks of a file, we wait 25 secs for onReady to be able to fire first in mp4boxjs
             setTimeout(() => {
-               //we need to inform about totalChunks of a file
                this.uploadStore.setTotalChunks(frontendId, chunkSequence)
-               this.cleanMp4Box(mp4boxFile, frontendId)
+               this.cleanMp4Box(frontendId)
 
             }, 25)
-
 
          } catch (err) {
             if (err.name === "NotFoundError") {
@@ -247,7 +235,6 @@ export class RequestGenerator {
                this.uploadStore.setError(frontendId, err)
             }
             throw err
-
          }
       }
       //we need to handle the already created attachments after break
@@ -255,7 +242,6 @@ export class RequestGenerator {
          const request = { "totalSize": totalSize, "attachments": attachments }
          yield request
       }
-
    }
 
    async getOrCreateFolder(fileObj) {
@@ -303,11 +289,11 @@ export class RequestGenerator {
    setSubsNumber(frontendId, number) {
       this.subsNumTracker.set(frontendId, number)
    }
-   createAndPushSubtitleAttachment(frontendId, blob, subName) {
-      console.log("createAndPushSubtitleAttachment")
+
+   createAndPushSubtitleAttachment(frontendId, blob, subName, isForced) {
       const state = this.uploadStore.getFileState(frontendId)
       const fileObj = state.fileObj
-      let attachment = { "type": attachmentType.subtitle, "fileObj": fileObj, "rawBlob": blob, "subName": subName }
+      let attachment = { "type": attachmentType.subtitle, "fileObj": fileObj, "rawBlob": blob, "subName": subName, "isForced": isForced}
 
       if (!this.subtitleAttachments.has(frontendId)) {
          this.subtitleAttachments.set(frontendId, [])
@@ -317,6 +303,7 @@ export class RequestGenerator {
       this.addSubsToUploadIfNeeded(frontendId)
 
    }
+
    addSubsToUploadIfNeeded(frontendId) {
       const maxMessageSize = this.mainStore.user.maxDiscordMessageSize
       const maxAttachments = this.mainStore.user.maxAttachmentsPerMessage
@@ -331,6 +318,7 @@ export class RequestGenerator {
       if (totalSize >= maxMessageSize || attachments.length > maxAttachments) {
          showToast("error", "toasts.tooManySubtitlesOrTooBig")
          this.uploadStore.markSubtitlesUploaded(frontendId)
+         this.cleanMp4Box(frontendId)
          return
       }
 
@@ -343,12 +331,14 @@ export class RequestGenerator {
 
 
    }
-   cleanMp4Box(mp4boxFile, frontendId) {
+
+   cleanMp4Box(frontendId) {
+      let mp4boxFile = this.mp4Boxes.get(frontendId)
       if (mp4boxFile) {
          mp4boxFile.flush()
          this.mp4Boxes.delete(frontendId)
-         this.subsNumTracker.delete(frontendId)
-         this.subtitleAttachments.delete(frontendId)
       }
+      this.subsNumTracker.delete(frontendId)
+      this.subtitleAttachments.delete(frontendId)
    }
 }

@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "controlDevice": "Control device",
+    "control": "control",
     "editLockFolder": "Edit folder lock",
     "confirm": "Confirm",
     "scanQrCode": "Scan QR Code",
@@ -64,6 +66,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "websocketError": "Websocket error",
     "notImplementedError": "Not implemented",
     "resourceInaccessibleFromIP": "Invalid IP",
     "invalidMove": "Invalid move",
@@ -307,6 +310,8 @@
     "video": "Video"
   },
   "settings": {
+    "deviceControl": "Device Control",
+    "deviceControlMessage": "You can request control of a device and act as a pilot to control another device",
     "qrDeviceInfo": "Verify device's information before confirming the login!",
     "qrCodeWarning": "Warning! Never scan other's QR Codes",
     "popupPreview": "Image popup preview",

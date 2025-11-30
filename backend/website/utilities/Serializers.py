@@ -287,7 +287,7 @@ class SubtitleSerializer(SimpleSerializer):
         signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{subtitle.id}/stream"
 
-        return {"file_id": subtitle.file.id, "id": subtitle.id, "language": subtitle.language, "url": url}
+        return {"file_id": subtitle.file.id, "id": subtitle.id, "language": subtitle.language, "url": url, "is_forced": subtitle.forced}
 
 
 def create_track_dict(track: VideoMetadataTrackMixin) -> dict:

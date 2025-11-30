@@ -132,7 +132,7 @@ class Discord:
             self._release_token_lock(bot_dict)
             if requests_remaining and reset_time:
                 bot_dict['reset_time'] = reset_time
-                bot_dict['requests_remaining'] = min(int(requests_remaining), int(bot_dict['requests_remaining']-1))
+                bot_dict['requests_remaining'] = min(int(requests_remaining), int(bot_dict['requests_remaining'] - 1))
             else:
                 logger.warning("Missing ratelimit headers in response")
 
@@ -268,7 +268,6 @@ class Discord:
         message = response.json()
         expiry = self._calculate_expiry(message)
         cache.set(message["id"], response, timeout=expiry)
-
         return message
 
     def get_attachment_url(self, user, resource: DiscordAttachmentMixin) -> str:

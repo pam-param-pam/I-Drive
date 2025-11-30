@@ -51,7 +51,7 @@ export async function createShareZIP(token, data) {
 }
 
 
-export async function getShareSubtitles(token, fileId) {
+export async function getShareSubtitles(token, fileId, signal) {
    let url = `/shares/${token}/files/${fileId}/subtitles`
    let response = await backendInstance.get(url)
    return response.data
@@ -62,9 +62,10 @@ export async function isSharePasswordCorrect(token, password) {
    let url = `/shares/${token}/password`
    try {
       let response = await backendInstance.get(url, {
+         __cancelSignature: "getSubtitles",
          headers: {
             "X-resource-Password": password
-         }
+         },
       })
       return response.status === 204
    } catch (e) {

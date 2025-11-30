@@ -3,14 +3,17 @@ from typing import Union, TypedDict, Optional, List, Any
 from django.db.models import PositiveBigIntegerField
 from shortuuidfield import ShortUUIDField
 from typing_extensions import NotRequired
-
+from pydantic import BaseModel, Field
+from typing import Optional
 from ..models import Folder, File
 
 Item = Union[Folder, File]
 
+
 class Breadcrumbs(TypedDict):
     name: str
     id: ShortUUIDField
+
 
 class FileDict(TypedDict):
     isDir: bool

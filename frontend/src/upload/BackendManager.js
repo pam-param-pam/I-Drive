@@ -102,7 +102,6 @@ export class BackendManager {
          this.uploadStore.markThumbnailUploaded(fileObj.frontendId)
 
       } else if (attachment.type === attachmentType.subtitle) {
-         console.log("SUBTITLE")
          state.subtitles = state.subtitles || []
          state.subtitles.push({
             "size": attachment.rawBlob.size,
@@ -110,6 +109,7 @@ export class BackendManager {
             "message_id": discordResponse.data.id,
             "attachment_id": discordAttachment.id,
             "language": attachment.subName,
+            "is_forced": attachment.isForced,
             "iv": attachment.iv,
             "key": attachment.key,
             "message_author_id": discordResponse.data.author.id

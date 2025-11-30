@@ -1,14 +1,8 @@
-import hashlib
-import json
 import os
-import random
 import time
 import traceback
 
 import httpx
-from channels.db import database_sync_to_async
-from channels.middleware import BaseMiddleware
-from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import OperationalError
 from django.http import JsonResponse
@@ -18,7 +12,7 @@ from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
 from rest_framework.exceptions import Throttled
 
-from ..models import ShareableLink, PerDeviceToken
+from ..models import ShareableLink
 from ..utilities.constants import cache
 from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
     RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, \
@@ -27,76 +21,6 @@ from ..utilities.other import build_http_error_response, get_attr
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
-
-@database_sync_to_async
-def get_user(raw_token):
-    if not raw_token:
-        return AnonymousUser()
-
-    token = PerDeviceToken.objects.get_token_from_raw_token(raw_token=raw_token)
-    if not token:
-        return AnonymousUser()
-    return token.user
-
-
-class TokenAuthMiddleware(BaseMiddleware):
-    def __init__(self, inner):
-        super().__init__(inner)
-
-    async def __call__(self, scope, receive, send):
-        headers = dict(scope['headers'])
-        token_key = None
-        is_standard_protocol = False
-
-        # Try authorization header first
-        auth_header = headers.get(b'authorization')
-        if auth_header:
-            try:
-                auth_str = auth_header.decode('utf-8')
-                if auth_str.lower().startswith('bearer '):
-                    token_key = auth_str[7:]
-                    is_standard_protocol = True
-            except (KeyError, ValueError):
-                pass
-
-        # Fallback to sec-websocket-protocol header
-        if token_key is None:
-            try:
-                token_key = headers[b'sec-websocket-protocol'].decode('utf-8')
-                is_standard_protocol = False
-            except (KeyError, ValueError):
-                token_key = None
-
-        scope['user'] = AnonymousUser() if token_key is None else await get_user(token_key)
-        scope['token'] = token_key
-        scope['is_standard_protocol'] = is_standard_protocol
-
-        return await super().__call__(scope, receive, send)
-
-
-class QRSessionMiddleware(BaseMiddleware):
-    async def __call__(self, scope, receive, send):
-        headers = dict(scope['headers'])
-
-        try:
-            session_id = headers.get(b'sec-websocket-protocol').decode('utf-8')
-        except (KeyError, ValueError):
-            session_id = None
-
-        # Default to anonymous
-        scope['user'] = AnonymousUser()
-        scope['session_data'] = None
-        scope['session_id'] = None
-
-        if session_id:
-            session_key = f"qr_session:{session_id}"
-            session_json = await database_sync_to_async(cache.get)(session_key)
-            if session_json:
-                session_data = json.loads(session_json)
-                scope['session_data'] = session_data
-                scope['session_id'] = session_id
-
-        return await super().__call__(scope, receive, send)
 
 class ApplyRateLimitHeadersMiddleware:
     def __init__(self, get_response):

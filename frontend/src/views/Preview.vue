@@ -1,216 +1,221 @@
 <template>
-  <div
-    id="previewer"
-    v-touch:swipe.left="onSwipeLeft"
-    v-touch:swipe.right="onSwipeRight"
-    @mousemove="toggleNavigation"
-    @touchstart="toggleNavigation"
-  >
-    <header-bar :showLogo="false">
-      <action :label="$t('buttons.close')" icon="close" @action="close()" />
-      <title v-if="file">{{ file?.name }}</title>
-      <title v-else></title>
+   <div
+      id="previewer"
+      v-touch:swipe.left="onSwipeLeft"
+      v-touch:swipe.right="onSwipeRight"
+      @mousemove="toggleNavigation"
+      @touchstart="toggleNavigation"
+   >
+      <header-bar :showLogo="false">
+         <action :label="$t('buttons.close')" icon="close" @action="close()" />
+         <title v-if="file">{{ file?.name }}</title>
+         <title v-else></title>
 
-      <template #actions>
-        <action
-          v-if="isEpub"
-          :label="$t('buttons.decreaseFontSize')"
-          icon="remove"
-          @action="decreaseFontSize"
-        />
-        <action
-          v-if="file?.type === 'Image' && file?.thumbnail_url"
-          :label="$t('buttons.toggleSize')"
-          :icon="imageFullSize ? 'fullscreen_exit' : 'fullscreen'"
-          @action="imageFullSize = !imageFullSize"
-        />
-        <action
-          v-if="isEpub"
-          :label="$t('buttons.increaseFontSize')"
-          icon="add"
-          @action="increaseFontSize"
-        />
-        <action
-          v-if="file?.type === 'Video' && file?.size > 0 && !isInShareContext"
-          :disabled="disabledMoments"
-          :label="$t('buttons.moments')"
-          icon="bookmarks"
-          @action="showMoments"
-        />
-        <action
-          v-if="perms?.modify && !isInShareContext"
-          :disabled="loading || error"
-          :label="$t('buttons.rename')"
-          icon="mode_edit"
-          @action="rename()"
-        />
-        <action
-          v-if="perms?.delete && !isInShareContext"
-          id="delete-button"
-          :disabled="loading || error"
-          :label="$t('buttons.moveToTrash')"
-          icon="delete"
-          @action="moveToTrash"
-        />
-        <action
-          v-if="perms?.download || isInShareContext"
-          :disabled="loading || error"
-          :label="$t('buttons.download')"
-          icon="file_download"
-          @action="download"
-        />
-        <action
-          :disabled="loading || error"
-          :label="$t('buttons.info')"
-          icon="info"
-          show="info" />
-      </template>
-    </header-bar>
+         <template #actions>
+            <action
+               v-if="isEpub"
+               :label="$t('buttons.decreaseFontSize')"
+               icon="remove"
+               @action="decreaseFontSize"
+            />
+            <action
+               v-if="file?.type === 'Image' && file?.thumbnail_url"
+               :label="$t('buttons.toggleSize')"
+               :icon="imageFullSize ? 'fullscreen_exit' : 'fullscreen'"
+               @action="imageFullSize = !imageFullSize"
+            />
+            <action
+               v-if="isEpub"
+               :label="$t('buttons.increaseFontSize')"
+               icon="add"
+               @action="increaseFontSize"
+            />
+            <action
+               v-if="file?.type === 'Video' && file?.size > 0 && !isInShareContext"
+               :disabled="disabledMoments"
+               :label="$t('buttons.moments')"
+               icon="bookmarks"
+               @action="showMoments"
+            />
+            <action
+               v-if="perms?.modify && !isInShareContext"
+               :disabled="loading || error"
+               :label="$t('buttons.rename')"
+               icon="mode_edit"
+               @action="rename()"
+            />
+            <action
+               v-if="perms?.delete && !isInShareContext"
+               id="delete-button"
+               :disabled="loading || error"
+               :label="$t('buttons.moveToTrash')"
+               icon="delete"
+               @action="moveToTrash"
+            />
+            <action
+               v-if="perms?.download || isInShareContext"
+               :disabled="loading || error"
+               :label="$t('buttons.download')"
+               icon="file_download"
+               @action="download"
+            />
+            <action
+               :disabled="loading || error"
+               :label="$t('buttons.info')"
+               icon="info"
+               show="info" />
+         </template>
+      </header-bar>
 
-    <div v-if="loading" class="loading delayed">
-      <div class="spinner">
-        <div class="bounce1"></div>
-        <div class="bounce2"></div>
-        <div class="bounce3"></div>
+      <div v-if="loading" class="loading delayed">
+         <div class="spinner">
+            <div class="bounce1"></div>
+            <div class="bounce2"></div>
+            <div class="bounce3"></div>
+         </div>
       </div>
-    </div>
-    <template v-else>
-      <div class="preview">
-        <div v-if="error" class="info">
+      <template v-else>
+         <div class="preview">
+            <div v-if="error" class="info">
 
-          <div v-if="error.status === 404" class="title">
-            <i class="material-icons">feedback</i>
-            {{ $t("errors.resourceNotFound") }}
-          </div>
-          <div v-else-if="error.status === 469" class="title">
-            <i class="material-icons">block</i>
-            {{ $t("errors.folderPasswordRequired") }}
-          </div>
-          <div v-else-if="error.status === 403" class="title">
-            <i class="material-icons">block</i>
-            {{ $t("errors.permissionDenied") }}
-          </div>
-          <div v-else class="title">
-            <i class="material-icons">error_outline</i>
-            {{ $t("errors.unknownError", { code: error?.status, response: error?.response?.data?.details }) }}
-          </div>
+               <div v-if="error.status === 404" class="title">
+                  <i class="material-icons">feedback</i>
+                  {{ $t("errors.resourceNotFound") }}
+               </div>
+               <div v-else-if="error.status === 469" class="title">
+                  <i class="material-icons">block</i>
+                  {{ $t("errors.folderPasswordRequired") }}
+               </div>
+               <div v-else-if="error.status === 403" class="title">
+                  <i class="material-icons">block</i>
+                  {{ $t("errors.permissionDenied") }}
+               </div>
+               <div v-else class="title">
+                  <i class="material-icons">error_outline</i>
+                  {{ $t("errors.unknownError", { code: error?.status, response: error?.response?.data?.details }) }}
+               </div>
 
-          <div>
-            <a class="button button--flat">
-              <div>
-                <i class="material-icons" @click="close">arrow_back</i>{{ $t("errors.goBack") }}
-              </div>
-            </a>
-          </div>
-        </div>
-        <video
-          v-else-if="file?.type === 'Video' && file?.size > 0"
-          id="video"
-          ref="video"
-          :autoplay="true"
-          :poster="file?.thumbnail_url"
-          :src="fileSrcUrl"
-          controls
-          loop
-          @timeupdate="videoTimeUpdate"
-          @loadedmetadata="onVideoLoaded"
-          @error="onVideoError"
-          crossorigin="anonymous"
-        >
-          <track
-            v-for="(sub) in subtitles"
-            :key="sub.id"
-            kind="subtitles"
-            :label="sub.language"
-            :src="sub.url"
-          />
-        </video>
-
-        <div v-else-if="isEpub" class="epub-reader">
-          <vue-reader
-            :epubInitOptions="{ openAs: 'epub' }"
-            :getRendition="getRendition"
-            :location="bookLocation"
-            :tocChanged="tocChanged"
-            :url="fileSrcUrl"
-            @update:location="locationChange"
-          >
-          </vue-reader>
-          <div class="page">
-            {{ page }}
-          </div>
-        </div>
-
-        <ExtendedImage v-else-if="file?.type === 'Image' && file?.size > 0" :src="fileSrcUrl" />
-        <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
-          <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
-          <audio
-            ref="player"
-            :autoplay="true"
-            :src="fileSrcUrl"
-            controls
-          ></audio>
-        </div>
-
-        <object
-          v-else-if="file?.name.endsWith('.pdf') && file?.size > 0"
-          :data="fileSrcUrl"
-          class="pdf"
-        ></object>
-
-        <OfficePreview
-          v-else-if="file?.name.endsWith('.docx') && file?.size > 0"
-          :file="file"
-          :file-url="fileSrcUrl"
-        />
-        <div v-else-if="file" class="info">
-          <div class="title">
-            <i class="material-icons">feedback</i>
-            {{ $t("files.noPreview") }}
-          </div>
-          <div>
-            <a
-              :href="file?.download_url"
-              class="button button--flat"
-              download
-              target="_blank"
+               <div>
+                  <a class="button button--flat">
+                     <div>
+                        <i class="material-icons" @click="close">arrow_back</i>{{ $t("errors.goBack") }}
+                     </div>
+                  </a>
+               </div>
+            </div>
+            <video
+               v-else-if="file?.type === 'Video' && file?.size > 0"
+               id="video"
+               ref="video"
+               :autoplay="true"
+               :poster="file?.thumbnail_url"
+               :src="fileSrcUrl"
+               controls
+               loop
+               @seeked="onMovieSeek"
+               @volumechange="onMovieVolumeChange"
+               @play="onMoviePlay"
+               @pause="onMoviePause"
+               @timeupdate="videoTimeUpdate"
+               @loadedmetadata="onVideoLoaded"
+               @error="onVideoError"
+               crossorigin="anonymous"
             >
-              <div>
-                <i class="material-icons">file_download</i>{{ $t("buttons.download") }}
-              </div>
-            </a>
-            <a :href="fileSrcUrl" class="button button--flat" target="_blank">
-              <div>
-                <i class="material-icons">open_in_new</i>{{ $t("buttons.openFile") }}
-              </div>
-            </a>
-          </div>
-        </div>
+               <track
+                  v-for="(sub) in subtitles"
+                  :key="sub.id"
+                  kind="subtitles"
+                  :label="sub.language"
+                  :src="sub.url"
+                  :default="sub.is_forced"
+               />
+            </video>
 
-      </div>
-    </template>
+            <div v-else-if="isEpub" class="epub-reader">
+               <vue-reader
+                  :epubInitOptions="{ openAs: 'epub' }"
+                  :getRendition="getRendition"
+                  :location="bookLocation"
+                  :tocChanged="tocChanged"
+                  :url="fileSrcUrl"
+                  @update:location="locationChange"
+               >
+               </vue-reader>
+               <div class="page">
+                  {{ page }}
+               </div>
+            </div>
 
-    <button
-      :aria-label="$t('buttons.previous')"
-      :class="{ hidden: !hasPrevious || !showNav }"
-      :title="$t('buttons.previous')"
-      @click="prev"
-      @mouseleave="hoverNav = false"
-      @mouseover="hoverNav = true"
-    >
-      <i class="material-icons">chevron_left</i>
-    </button>
-    <button
-      :aria-label="$t('buttons.next')"
-      :class="{ hidden: !hasNext || !showNav }"
-      :title="$t('buttons.next')"
-      @click="next"
-      @mouseleave="hoverNav = false"
-      @mouseover="hoverNav = true"
-    >
-      <i class="material-icons">chevron_right</i>
-    </button>
-  </div>
+            <ExtendedImage v-else-if="file?.type === 'Image' && file?.size > 0" :src="fileSrcUrl" />
+            <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
+               <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
+               <audio
+                  ref="player"
+                  :autoplay="true"
+                  :src="fileSrcUrl"
+                  controls
+               ></audio>
+            </div>
+
+            <object
+               v-else-if="file?.name.endsWith('.pdf') && file?.size > 0"
+               :data="fileSrcUrl"
+               class="pdf"
+            ></object>
+
+            <OfficePreview
+               v-else-if="file?.name.endsWith('.docx') && file?.size > 0"
+               :file="file"
+               :file-url="fileSrcUrl"
+            />
+            <div v-else-if="file" class="info">
+               <div class="title">
+                  <i class="material-icons">feedback</i>
+                  {{ $t("files.noPreview") }}
+               </div>
+               <div>
+                  <a
+                     :href="file?.download_url"
+                     class="button button--flat"
+                     download
+                     target="_blank"
+                  >
+                     <div>
+                        <i class="material-icons">file_download</i>{{ $t("buttons.download") }}
+                     </div>
+                  </a>
+                  <a :href="fileSrcUrl" class="button button--flat" target="_blank">
+                     <div>
+                        <i class="material-icons">open_in_new</i>{{ $t("buttons.openFile") }}
+                     </div>
+                  </a>
+               </div>
+            </div>
+
+         </div>
+      </template>
+
+      <button
+         :aria-label="$t('buttons.previous')"
+         :class="{ hidden: !hasPrevious || !showNav }"
+         :title="$t('buttons.previous')"
+         @click="prev"
+         @mouseleave="hoverNav = false"
+         @mouseover="hoverNav = true"
+      >
+         <i class="material-icons">chevron_left</i>
+      </button>
+      <button
+         :aria-label="$t('buttons.next')"
+         :class="{ hidden: !hasNext || !showNav }"
+         :title="$t('buttons.next')"
+         @click="next"
+         @mouseleave="hoverNav = false"
+         @mouseover="hoverNav = true"
+      >
+         <i class="material-icons">chevron_right</i>
+      </button>
+   </div>
 </template>
 
 <script>
@@ -224,6 +229,8 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { defineAsyncComponent } from "vue"
 import { backendInstance } from "@/axios/networker.js"
+import { send_movie_seek_event, send_movie_toggle_event, send_movie_volume_change_event } from "@/utils/deviceControl.js"
+import router from "@/router/index.js"
 
 export default {
    name: "preview",
@@ -280,7 +287,7 @@ export default {
          disabledMoments: true,
 
          subtitles: [],
-         imageFullSize: false,
+         imageFullSize: false
       }
    },
 
@@ -325,7 +332,7 @@ export default {
          return this.files.length > 1 && this.currentIndex > 0
       },
       disableSwipe() {
-         return this.file?.type === 'Image'
+         return this.file?.type === "Image"
       }
    },
 
@@ -427,8 +434,8 @@ export default {
          this.disabledMoments = false
       },
       async onVideoError() {
-          await backendInstance.get(this.file.download_url)
-          this.$toast.error(this.$t("toasts.videoUnplayable"))
+         await backendInstance.get(this.file.download_url)
+         this.$toast.error(this.$t("toasts.videoUnplayable"))
       },
 
       showMoments() {
@@ -535,7 +542,7 @@ export default {
                   videoPlayer.src = video_url
                }
             }
-         }, 50)
+         }, 250)
       },
 
       key(event) {
@@ -556,11 +563,18 @@ export default {
       },
 
       async fetchSubtitles() {
-         if (!this.isInShareContext) {
-            this.subtitles = await getSubtitles(this.file.id, this.file.lockFrom)
-         } else {
-            this.subtitles = await getShareSubtitles(this.token, this.file.id)
-
+         try {
+            if (!this.isInShareContext) {
+               this.subtitles = await getSubtitles(this.file.id, this.file.lockFrom)
+            } else {
+               this.subtitles = await getShareSubtitles(this.token, this.file.id)
+            }
+         } catch (err) {
+            if (err.name === "CanceledError" || err.name === "AbortError") {
+               console.log("Subtitle fetch cancelled")
+            } else {
+               console.error("Subtitle fetch failed", err)
+            }
          }
       },
       toggleNavigation: throttle(function() {
@@ -620,6 +634,45 @@ export default {
             this.lastSentVideoPosition = position
          }
       },
+      onMovieSeek() {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         let toSecond = Math.floor(this.$refs.video.currentTime)
+         send_movie_seek_event(toSecond)
+      },
+      onMovieVolumeChange: throttle(function() {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         let volume = Math.floor(this.$refs.video.volume)
+         send_movie_volume_change_event(volume)
+      }, 500),
+      onMoviePlay() {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         send_movie_toggle_event(false)
+         let toSecond = Math.floor(this.$refs.video.currentTime)
+         send_movie_seek_event(toSecond)
+      },
+      onMoviePause() {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         send_movie_toggle_event(true)
+         let toSecond = Math.floor(this.$refs.video.currentTime)
+         send_movie_seek_event(toSecond)
+      },
+
       loadSubtitleStyle() {
          let style = localStorage.getItem("subtitleStyle")
          if (!style) {
@@ -740,6 +793,34 @@ export default {
 
          localStorage.setItem("book-progress-" + this.file.id, epubcifi)
          this.bookLocation = epubcifi
+      }
+   },
+   sockets: {
+      onmessage(message_event) {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         let jsonObject = JSON.parse(message_event.data)
+         let event = jsonObject.event
+         let op_code = event.op_code
+         if (op_code === 15) { //device control
+            let type = event.data[0].type
+            let args = event.data[0].args
+
+            if (type === "movie_seek") {
+               this.$refs.video.currentTime = args.seconds
+            }
+            if (type === "movie_toggle") {
+               let isPaused = args.isPaused
+               if (isPaused) this.$refs.video.pause()
+               else  this.$refs.video.play()
+            }
+            if (type === "movie_volume_change") {
+               this.$refs.video.volume = args.volume
+            }
+         }
       }
    }
 }

@@ -133,6 +133,7 @@ export default {
    methods: {
       toggleMode() {
          this.createMode = !this.createMode
+         this.error = ""
       },
       async toggleQRMode() {
          this.qrMode = !this.qrMode

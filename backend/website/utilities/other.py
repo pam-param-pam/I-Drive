@@ -3,10 +3,10 @@ import datetime
 import hashlib
 import json
 import os
+import re
 import time
 import uuid
 from collections import defaultdict
-from datetime import timedelta
 from typing import Union, List, Dict, Optional
 from urllib.parse import quote
 
@@ -18,14 +18,14 @@ from django.contrib.auth import user_logged_in
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.db.models.aggregates import Sum
-from django.utils import timezone
 from django.utils.encoding import smart_str
 
 from .Serializers import FolderSerializer, FileSerializer, WebhookSerializer, BotSerializer, ShareFileSerializer, ShareFolderSerializer, DeviceTokenSerializer
 from .dataModels import RequestContext
+from .helpers import get_ip
 from ..discord.Discord import discord
 from ..models import File, Folder, ShareableLink, UserSettings, UserZIP, Webhook, Bot, DiscordAttachmentMixin, \
-    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, ShareAccess, PerDeviceToken, Thumbnail, Subtitle
+    VideoTrack, AudioTrack, VideoMetadata, SubtitleTrack, Channel, PerDeviceToken, Thumbnail, Subtitle
 from ..safety.helper import get_classes_extending_discordAttachmentMixin
 from ..tasks.otherTasks import queue_ws_event, prefetch_next_fragments
 from ..utilities.TypeHinting import Item, Breadcrumbs, FolderDict, ResponseDict, ZipFileDict, ErrorDict
@@ -561,18 +561,6 @@ def get_file_type(extension: str) -> str:
         return "Other"
 
 
-def get_ip(request) -> tuple:
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        from_nginx = True
-        ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        from_nginx = False
-        ip = request.META.get('REMOTE_ADDR')
-
-    return ip, from_nginx
-
-
 def obtain_discord_settings(user) -> dict:
     settings = user.discordsettings
     webhooks = Webhook.objects.filter(owner=user).order_by('created_at')
@@ -598,37 +586,6 @@ def obtain_discord_settings(user) -> dict:
 
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
             "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
-
-
-# todo folder move to locked not locked
-def log_share_access(request, share_obj: ShareableLink) -> None:
-    ip, _ = get_ip(request)
-    user_agent = request.user_agent
-    user = request.user if request.user.is_authenticated else None
-    now = timezone.now()
-    one_hour_ago = now - timedelta(minutes=30)
-
-    # Prepare filters based on user or IP
-    filters = {
-        "share": share_obj,
-        "access_time__gte": one_hour_ago,
-    }
-
-    if user:
-        filters["accessed_by"] = user
-    else:
-        filters["ip"] = ip
-        filters["accessed_by__isnull"] = True
-
-    recent_access = ShareAccess.objects.filter(**filters).exists()
-
-    if not recent_access:
-        ShareAccess.objects.create(
-            share=share_obj,
-            ip=ip,
-            user_agent=user_agent,
-            accessed_by=user
-        )
 
 
 def get_content_disposition_string(name: str) -> tuple[str, str]:
@@ -762,6 +719,7 @@ def create_thumbnail(file_obj: File, data: dict):
 
 def create_subtitle(file_obj, data):
     language = data['language']
+    is_forced = data['is_forced']
     channel_id = data['channel_id']
     message_id = data['message_id']
     attachment_id = data['attachment_id']
@@ -780,6 +738,7 @@ def create_subtitle(file_obj, data):
     return Subtitle.objects.create(
         language=language,
         file=file_obj,
+        forced=is_forced,
         channel_id=channel_id,
         message_id=message_id,
         attachment_id=attachment_id,
@@ -789,3 +748,17 @@ def create_subtitle(file_obj, data):
         key=key,
         iv=iv
     )
+
+def parse_range_header(range_header: str) -> tuple[bool, int, Optional[int]]:
+    if range_header:
+        range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
+        if range_match:
+            start_byte = int(range_match.group(1))
+            end_byte = int(range_match.group(2)) if range_match.group(2) else None
+        else:
+            raise ValueError("Invalid range header")
+    else:
+        start_byte = 0
+        end_byte = None
+
+    return bool(range_header), start_byte, end_byte

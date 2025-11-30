@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "controlDevice": "Kontroluj urządzenie",
+    "control": "control",
     "confirm": "Potwierdź",
     "scanQrCode": "Skanuj kod qr",
     "revoke": "Wycofaj",
@@ -65,6 +67,7 @@
 
   },
   "errors": {
+    "websocketError": "Błąd w websocketcie",
     "notImplementedError": "Ta funkcja jeszcze nie działa",
     "resourceInaccessibleFromIP": "Błędne IP",
     "invalidMove": "Błedne przeniesienie folderu",
@@ -305,6 +308,8 @@
     "video": "Filmy"
   },
   "settings": {
+    "deviceControl": "Zdalna Kontrola Urządzenia",
+    "deviceControlMessage": "Możesz użyć tego urządzenia jako pilot do kontrolowania innego",
     "qrDeviceInfo": "Zweryfikuj dane urządzenia przed potwierdzeniem!",
     "qrCodeWarning": "Uwaga. Nigdy nie skanuj kodów qr wysłanych przez kogoś!",
     "popupPreview": "Podgląd obrazu",

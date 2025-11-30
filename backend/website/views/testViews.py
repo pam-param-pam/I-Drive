@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, throttle_classes, permission_cla
 from rest_framework.permissions import AllowAny
 
 from ..discord.Discord import discord
-from ..utilities.other import get_ip
+from ..utilities.helpers import get_ip
 from ..utilities.throttle import defaultAuthUserThrottle
 
 

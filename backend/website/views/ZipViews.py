@@ -39,6 +39,3 @@ def create_zip_model(request, items):
         folder_through.objects.bulk_create(folder_relations, ignore_conflicts=True)
 
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
-
-
-

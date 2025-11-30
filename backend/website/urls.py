@@ -154,7 +154,7 @@ urlpatterns = [
     path('ip', ['POST'], your_ip, name='get ip'),
     path('ip', ['GET'], your_ip, name='get ip'),
 
-    path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download"),
+    path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
     path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
     path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
 
