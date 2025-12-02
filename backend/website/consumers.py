@@ -174,6 +174,7 @@ class UserConsumer(RateLimitedWebsocketConsumer):
 
         self.user = token.user
         self.token_obj = token
+        self.token = token_key
         self.device_id = self.token_obj.device_id
         return token.user.is_authenticated, is_standard_protocol, token_key
 
