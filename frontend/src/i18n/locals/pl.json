@@ -501,6 +501,8 @@
     "trashName": "Kosz"
   },
   "uploadFile": {
+    "uploadFailed": "Błąd w przesyłaniu pliku na discorda",
+    "saveFailed": "Błąd w zapisywaniu pliku na backendzie",
     "pause": "Pause",
     "preparing": "Przygotowywuje...",
     "abortAll": "Przerwij wszystko",
@@ -514,6 +516,5 @@
     "toggleUploadList": "Przełącz liste",
     "fatal": "Krytyczny błąd",
     "fileGone": "Brak pliku na dysku"
-
   }
 }
