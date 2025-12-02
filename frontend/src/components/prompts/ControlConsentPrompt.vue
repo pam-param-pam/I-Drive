@@ -5,7 +5,9 @@
       </div>
 
       <div class="card-content">
-
+         <p>
+            {{ $t("prompts.controlRequestExplained") }}
+         </p>
          <!-- Device info preview -->
          <div class="device-info">
             <p><b>Device Name:</b> {{ masterDevice.device_name }}</p>
@@ -27,7 +29,7 @@
       </div>
 
       <!-- Buttons -->
-      <div class="card-action" v-if="mode === 'idle'">
+      <div class="card-action">
          <button
             :aria-label="$t('buttons.reject')"
             :title="$t('buttons.reject')"
@@ -51,8 +53,9 @@
 </template>
 
 <script>
-import { mapActions } from "pinia"
+import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
+import throttle from "lodash.throttle"
 
 export default {
    name: "ControlConsentPrompt",
@@ -61,30 +64,62 @@ export default {
       masterDevice: {
          type: Object,
          required: true,
+      },
+      expiry: {
+         type: Number,
+         required: true,
       }
    },
 
    data() {
       return {
-         mode: "idle" // idle | approved | rejected
+         _expiryTimer: null,
       }
+   },
+   mounted() {
+      this.startExpiryClock()
+   },
+
+   unmounted() {
+      this.stopExpiryClock()
    },
 
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
 
-      approveRequest() {
+      approveRequest: throttle( function() {
          this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "approve"}}))
+         this.$toast.success(this.$t("toasts.deviceControlActive"))
          this.closeHover()
-      },
-
-      rejectRequest() {
+      }, 1000),
+      rejectRequest: throttle( function() {
          this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "reject"}}))
          this.closeHover()
-      },
-      close() {
+      }, 1000),
+      cancel() {
          this.rejectRequest()
-      }
+      },
+      startExpiryClock() {
+         this.stopExpiryClock()
+
+         this._expiryTimer = setInterval(() => {
+
+            let now = Date.now()
+            let expiryMs = Number(this.expiry) * 1000
+
+            if (now >= expiryMs) {
+               this.$toast.info(this.$t("toasts.deviceControlPendingExpired"))
+               this.closeHover()
+            }
+         }, 1000)
+      },
+
+      stopExpiryClock() {
+         if (this._expiryTimer) {
+            clearInterval(this._expiryTimer)
+            this._expiryTimer = null
+         }
+      },
 
    }
 }
@@ -93,10 +128,12 @@ export default {
 <style scoped>
 
 .device-info {
-   border: 1px solid #ccc;
+   border: 1px solid #ffffff;
    padding: 0.5rem;
    margin-top: 1rem;
    border-radius: 8px;
+   font-size: 0.9rem;
+   color: var(--textSecondary);
 }
 
 .device-info p {

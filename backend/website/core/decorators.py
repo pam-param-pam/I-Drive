@@ -5,11 +5,12 @@ from typing import Callable, Union
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from .Permissions import CheckGroup
-from .signer import verify_signed_resource_id
+from .crypto.signer import verify_signed_resource_id
+from .helpers import validate_ids_as_list
+from .queries.utils import get_file
+from ..auth.Permissions import CheckGroup
 from ..models import File, Folder, ShareableLink
-from ..utilities.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
-from ..utilities.other import get_file, validate_ids_as_list
+from ..core.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 

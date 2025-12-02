@@ -28,11 +28,10 @@ export const useMainStore = defineStore("main", {
       usage: { used: 0, total: 0 },
       popupPreview: {},
       isFilesActive: false,
-      deviceControlStatus: {}
+      deviceControlStatus: {"status": "expired"}
    }),
 
    getters: {
-
       isLogged() {
          return this.user !== null
       },

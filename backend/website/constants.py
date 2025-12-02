@@ -13,6 +13,9 @@ NUMBER_OF_CHANNELS = 5
 # Amount of webhooks in each channel to be created during auto setup
 NUMBER_OF_WEBHOOKS_PER_CHANNEL = 2
 
+# Name template for the webhooks during auto setup
+WEBHOOK_NAME_TEMPLATE = "Captain Hook v{n}"
+
 # A set of IPS that locked resources can be accessed from on top of the local ip
 ALLOWED_IPS_LOCKED = ()
 
@@ -49,7 +52,17 @@ SIGNED_URL_EXPIRY_SECONDS = 7200
 # How long the QR code session is valid for in seconds: 5 mins
 QR_CODE_SESSION_EXPIRY = 300
 
-ALLOWED_THUMBNAIL_SIZES = {"64", "256", "512", "1024", "original"}
+# Set of allowed sizes as a param on the thumbnail endpoint
+ALLOWED_THUMBNAIL_SIZES = ("64", "256", "512", "1024", "original")
+
+# How long a device control pending request is valid for
+DEVICE_CONTROL_PENDING_TTL = 60
+
+# How long a device control session is valid for
+DEVICE_CONTROL_ACTIVE_TTL = 7200
+
+# How long a device control reject state is
+DEVICE_CONTROL_REJECTED_TTL = 5
 
 cache = caches["default"]
 

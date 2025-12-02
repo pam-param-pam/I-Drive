@@ -6,12 +6,11 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from ..celery import app
+from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder, Webhook
 from ..tasks.deleteTasks import delete_files, smart_delete_task
-from ..utilities.dataModels import RequestContext
-from ..utilities.errors import NoBotsError
-from ..utilities.other import check_if_bots_exists, query_attachments
+from ..core.errors import NoBotsError
 
 
 @app.task

@@ -8,15 +8,17 @@ from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms
+from ..auth.throttle import defaultAuthUserThrottle
+from ..auth.utils import check_resource_perms
+from ..constants import EncryptionMethod, EventCode, MAX_DISCORD_MESSAGE_SIZE
+from ..core.helpers import validate_ids_as_list, get_file_type
+from ..core.queries.utils import check_if_bots_exists, get_folder, get_discord_author, create_thumbnail, create_video_metadata, create_subtitle, delete_single_discord_attachment
+from ..core.websocket.utils import group_and_send_event, send_event
 from ..models import File, Fragment, Thumbnail, Subtitle
-from ..utilities.Permissions import CreatePerms, default_checks, ModifyPerms
-from ..utilities.Serializers import FileSerializer
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode, EncryptionMethod
-from ..utilities.decorators import extract_file, check_resource_permissions, disable_common_errors
-from ..utilities.errors import BadRequestError
-from ..utilities.other import send_event, check_resource_perms, get_folder, check_if_bots_exists, get_discord_author, delete_single_discord_attachment, \
-    create_video_metadata, validate_ids_as_list, group_and_send_event, get_file_type, create_thumbnail, create_subtitle
-from ..utilities.throttle import defaultAuthUserThrottle
+from ..core.Serializers import FileSerializer
+from ..core.decorators import extract_file, check_resource_permissions, disable_common_errors
+from ..core.errors import BadRequestError
 
 
 @api_view(['POST'])

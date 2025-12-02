@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from django.core.exceptions import ImproperlyConfigured
 from rest_framework.throttling import UserRateThrottle
 
-from ..utilities.constants import cache
+from ..constants import cache
 
 
 class MyUserRateThrottleBase(UserRateThrottle):

@@ -2,12 +2,12 @@ from django.http import JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
+from ..auth.Permissions import ReadPerms, DownloadPerms, default_checks
+from ..auth.throttle import defaultAuthUserThrottle
+from ..constants import API_BASE_URL
+from ..core.helpers import get_attr
 from ..models import UserZIP, File
-from ..utilities.Permissions import DownloadPerms, default_checks, ReadPerms
-from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import check_bulk_permissions, extract_items_from_ids_annotated
-from ..utilities.other import get_attr
-from ..utilities.throttle import defaultAuthUserThrottle
+from ..core.decorators import check_bulk_permissions, extract_items_from_ids_annotated
 
 
 @api_view(['POST'])

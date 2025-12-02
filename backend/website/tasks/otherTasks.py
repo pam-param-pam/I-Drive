@@ -1,41 +1,14 @@
 import traceback
 
-from asgiref.sync import async_to_sync
-from celery import shared_task
 from celery.utils.log import get_task_logger
-from channels.layers import get_channel_layer
 
+from .helper import send_message
+from ..celery import app
+from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
 from ..models import Folder, Fragment
-from ..utilities.constants import EventCode
-from ..celery import app
-from ..utilities.dataModels import RequestContext
 
 logger = get_task_logger(__name__)
-
-# thanks to this genius - https://github.com/django/channels/issues/1799#issuecomment-1219970560
-@shared_task(name='queue_ws_event', ignore_result=True, queue='wsQ', expires=60)
-def queue_ws_event(ws_channel, ws_event: dict, group=True):
-    channel_layer = get_channel_layer()
-    if group:
-        async_to_sync(channel_layer.group_send)(ws_channel, ws_event)
-    else:
-        async_to_sync(channel_layer.send)(ws_channel, ws_event)
-
-
-def send_message(message, args, finished, context, isError=False):
-    queue_ws_event.delay(
-        'user',
-        {
-            'type': 'send_message',
-            'op_code': EventCode.MESSAGE_UPDATE.value,
-            'message': message,
-            'args': args,
-            'finished': finished,
-            'error': isError,
-            'context': context
-        }
-    )
 
 @app.task
 def lock_folder_task(context: dict, folder_id: str, password: str):

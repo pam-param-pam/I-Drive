@@ -5,9 +5,9 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 
+from ..auth.throttle import defaultAuthUserThrottle
 from ..discord.Discord import discord
-from ..utilities.helpers import get_ip
-from ..utilities.throttle import defaultAuthUserThrottle
+from ..core.helpers import get_ip
 
 
 @api_view(['GET'])

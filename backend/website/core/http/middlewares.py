@@ -12,12 +12,12 @@ from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
 from rest_framework.exceptions import Throttled
 
-from ..models import ShareableLink
-from ..utilities.constants import cache
-from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, \
-    RootPermissionError, DiscordError, DiscordBlockError, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, NoBotsError, \
-    FailedToResizeImage, LockedFolderWrongIpError, DiscordErrorText, IDriveException
-from ..utilities.other import build_http_error_response, get_attr
+from .utils import build_http_error_response
+from ..errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, ResourceNotFoundError, \
+    MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, FailedToResizeImageError, DiscordBlockError, DiscordTextError, DiscordError
+from ..helpers import get_attr
+from ...constants import cache
+from ...models import ShareableLink
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
@@ -144,7 +144,7 @@ class CommonErrorsMiddleware(MiddlewareMixin):
             return JsonResponse(json_error, status=469)
 
         # 500 INTERNAL SERVER ERROR
-        elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord, FailedToResizeImage)):
+        elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord, FailedToResizeImageError)):
             return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
 
         # 503 SERVICE UNAVAILABLE
@@ -163,7 +163,7 @@ class CommonErrorsMiddleware(MiddlewareMixin):
             return JsonResponse(build_http_error_response(code=503, error="errors.databaseError", details=str(exception)), status=503)
 
         # OTHER
-        elif isinstance(exception, (DiscordErrorText, DiscordError)):
+        elif isinstance(exception, (DiscordTextError, DiscordError)):
             return JsonResponse(build_http_error_response(code=exception.status, error="errors.unexpectedDiscordResponse", details=exception.message), status=exception.status)
 
         else:

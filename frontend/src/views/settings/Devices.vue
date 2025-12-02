@@ -74,6 +74,9 @@
             </div>
             <div class="card-content">
                <p>
+                  {{ $t("settings.qrCodeExplained") }}
+               </p>
+               <p class="text--red">
                   {{ $t("settings.qrCodeWarning") }}
                </p>
                <div class="card-action">
@@ -112,19 +115,21 @@ export default {
    },
    async created() {
       this.setLoading(true)
-      try {
-         this.devices = await getActiveDevices()
-      } catch (error) {
-         console.error(error)
-         this.setError(error)
-      } finally {
-         this.setLoading(false)
-      }
+      await this.fetchDevices()
    },
    methods: {
       humanTime,
       ...mapActions(useMainStore, ["setLoading", "setError", "showHover"]),
-
+      async fetchDevices() {
+         try {
+            this.devices = await getActiveDevices()
+         } catch (error) {
+            console.error(error)
+            this.setError(error)
+         } finally {
+            this.setLoading(false)
+         }
+      },
       async revokeADevice(deviceId) {
          await revokeDevice(deviceId)
          this.devices = this.devices.filter(d => d.device_id !== deviceId)
@@ -136,7 +141,9 @@ export default {
       },
       showDeviceControlPrompt() {
          this.showHover({ prompt: "ControlDevice", "props": { "devices": this.devices, "currentDeviceId": this.localDeviceId } })
+         this.fetchDevices()
       }
+
    }
 }
 </script>
@@ -145,5 +152,8 @@ export default {
 table th, table td {
  padding-right: 10px;
  white-space: nowrap;
+}
+.text--red {
+   color: var(--dark-red);
 }
 </style>

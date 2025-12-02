@@ -1,5 +1,9 @@
 {
   "buttons": {
+    "clearActive": "Usuń kontrole urządzenia",
+    "accept": "Potwierdź",
+    "reject": "Odzrzuć",
+    "clearPending": "Anuluj",
     "controlDevice": "Kontroluj urządzenie",
     "control": "control",
     "confirm": "Potwierdź",
@@ -160,6 +164,15 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "controlRequestExplained": "Inne urządzenie prosi cie o zgode o kontrolowanie",
+    "noWebsocketConnection": "Brak połączenia z websocketem. Odswierz strone i spróbuj jeszcze raz.",
+    "noOtherDevices": "Nie ma żadnych urządzeń które możesz kontrolować. Zaloguj sie na innym urządzeniu i spróbuj jeszcze raz.",
+    "controlRequest": "Prośba o zdalne kontrolowanie",
+    "deviceControl": "Zdalna kontrola",
+    "deviceControlActive": "Zdalna kontrola jest aktywna",
+    "selectDevice": "Wybierz urządzenie do kontrolowania",
+    "deviceControlPending": "Oczekiwanie na potwierdzenie kontroli...",
+    "deviceControlRejected": "Żądanie kontroli zostało odrzucone",
     "newFile": "Nowy plik",
     "newFileMessage": "Podaj nazwę tworzonego pliku.",
     "qrDecoded": "Kod QR zeskanowany",
@@ -311,6 +324,7 @@
     "deviceControl": "Zdalna Kontrola Urządzenia",
     "deviceControlMessage": "Możesz użyć tego urządzenia jako pilot do kontrolowania innego",
     "qrDeviceInfo": "Zweryfikuj dane urządzenia przed potwierdzeniem!",
+    "qrCodeExplained": "Zeskanuj kod QR by zalogować drugie urządzenie",
     "qrCodeWarning": "Uwaga. Nigdy nie skanuj kodów qr wysłanych przez kogoś!",
     "popupPreview": "Podgląd obrazu",
     "devices": "Aktywne Urządzenia",
@@ -403,6 +417,9 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "deviceControlActive": "Kontrola urządzenia jest aktywna!",
+    "deviceControlPendingExpired": "Czas na potwierdzenie minął. Spróbuj jeszcze raz.",
+    "deviceControlApprovedFailed": "Nie udało sie to potwierdzić zdalnej kontroli. Spróbuj jeszcze raz.",
     "tooManySubtitlesOrTooBig": "Napisów > 10 albo za duże, nie udało sie wysłać automatycznie!",
     "invalidFileFormat": "Format pliku nie jest obsługiwany!!",
     "failedToConnectToWebsocket": "Nie udało sie polączyć z websocketem!",
@@ -413,7 +430,8 @@
     "qrSessionApproved": "Device logged in!",
     "uploadFinished": "Przesyłanie zakończone!",
     "deviceRevoked": "Urządzenie zostało wylogowane!",
-    "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto rzeczy z discorda",
+    "discordSettingsDeleting": "Resetowanie ustawień i usuwanie struktur z discorda...",
+    "discordSettingsDeleted": "Zresetowano ustawienia, i usunięto struktury z discorda",
     "autoSetupInProgress": "Poczekaj chwile, trwa konfiguracja...",
     "autoSetupComplete": "Konfiguracja zakonczona!",
     "fillAllFields": "Uzupełnij wszystkie pola najpierw!",

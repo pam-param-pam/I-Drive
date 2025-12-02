@@ -1,191 +1,191 @@
 <template>
-  <errors v-if="error" :error="error" />
-  <div v-else-if="!loading" class="row">
-    <!-- COLUMN 1 -->
-    <div class="column">
-      <div class="cards-wrapper">
+   <errors v-if="error" :error="error" />
+   <div v-else-if="!loading" class="row">
+      <!-- COLUMN 1 -->
+      <div class="column">
+         <div class="cards-wrapper">
 
-        <!-- AUTO SETUP CARD -->
-        <div v-if="!autoSetupComplete" class="card">
-          <div class="card-title">
-            <h2>{{ $t("settings.autoSetup") }}</h2>
-          </div>
-          <div class="card-content">
-            <h3>{{ $t("settings.guildId") }}</h3>
-            <input
-              v-model="guildId"
-              :placeholder="$t('settings.enterGuildId')"
-              class="input"
-              type="text"
-              @keyup.enter="doAutoSetup"
-            />
-            <h3>{{ $t("settings.primaryBot") }}</h3>
-            <input
-              v-model="botToken"
-              :placeholder="$t('settings.enterBotToken')"
-              class="input"
-              type="text"
-              @keyup.enter="doAutoSetup"
-            />
-            <h3>{{ $t("settings.attachmentName") }}</h3>
-            <input
-              v-model="attachmentName"
-              :placeholder="$t('settings.enterAttachmentName')"
-              class="input"
-              type="text"
-              @keyup.enter="doAutoSetup"
-            />
-          </div>
-          <div class="card-action">
-            <button
-              :aria-label="$t('buttons.autoSetup')"
-              :title="$t('buttons.autoSetup')"
-              class="button button--flat"
-              @click="doAutoSetup"
-            >
-              {{ $t("buttons.autoSetup") }}
-            </button>
-          </div>
-        </div>
-        <!--        START OF WEBHOOKS CARD-->
-        <div v-if="autoSetupComplete" class="card">
-          <div class="card-title">
-            <h2>{{ $t("settings.webhooks") }}</h2>
-          </div>
-          <div class="card-content">
-            <div v-if="webhooks.length > 0" class="table-wrapper">
-              <table>
-                <tr>
-                  <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
-                  <th class="channel-column">{{ $t("settings.channel") }}</th>
-                  <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
-                  <th></th>
-                </tr>
-
-                <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id">
-                  <td class="share-name-column">
-                    <a>{{
-                        index + 1 + " &#8205; &#8205; &#8205; &#8205;" + webhook.name
-                      }}</a>
-                  </td>
-                  <td class="share-name-column channel-column">
-                    <a>{{ webhook.channel.name }}</a>
-                  </td>
-                  <td class="share-name-column expiry-column">
-                    <a>{{ humanTime(webhook.created_at) }}</a>
-                  </td>
-                  <td class="share-name-column small">
-                    <button
-                      :aria-label="$t('buttons.delete')"
-                      :title="$t('buttons.delete')"
-                      class="action"
-                      @click="deleteWebhook(webhook.discord_id)"
-                    >
-                      <i class="material-icons">delete</i>
-                    </button>
-                  </td>
-                </tr>
-              </table>
+            <!-- AUTO SETUP CARD -->
+            <div v-if="!autoSetupComplete" class="card">
+               <div class="card-title">
+                  <h2>{{ $t("settings.autoSetup") }}</h2>
+               </div>
+               <div class="card-content">
+                  <h3>{{ $t("settings.guildId") }}</h3>
+                  <input
+                     v-model="guildId"
+                     :placeholder="$t('settings.enterGuildId')"
+                     class="input"
+                     type="text"
+                     @keyup.enter="doAutoSetup"
+                  />
+                  <h3>{{ $t("settings.primaryBot") }}</h3>
+                  <input
+                     v-model="botToken"
+                     :placeholder="$t('settings.enterBotToken')"
+                     class="input"
+                     type="text"
+                     @keyup.enter="doAutoSetup"
+                  />
+                  <h3>{{ $t("settings.attachmentName") }}</h3>
+                  <input
+                     v-model="attachmentName"
+                     :placeholder="$t('settings.enterAttachmentName')"
+                     class="input"
+                     type="text"
+                     @keyup.enter="doAutoSetup"
+                  />
+               </div>
+               <div class="card-action">
+                  <button
+                     :aria-label="$t('buttons.autoSetup')"
+                     :title="$t('buttons.autoSetup')"
+                     class="button button--flat"
+                     @click="doAutoSetup"
+                  >
+                     {{ $t("buttons.autoSetup") }}
+                  </button>
+               </div>
             </div>
-            <div v-else class="info">
+            <!--        START OF WEBHOOKS CARD-->
+            <div v-if="autoSetupComplete" class="card">
+               <div class="card-title">
+                  <h2>{{ $t("settings.webhooks") }}</h2>
+               </div>
+               <div class="card-content">
+                  <div v-if="webhooks.length > 0" class="table-wrapper">
+                     <table>
+                        <tr>
+                           <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
+                           <th class="channel-column">{{ $t("settings.channel") }}</th>
+                           <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
+                           <th></th>
+                        </tr>
+
+                        <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id">
+                           <td class="share-name-column">
+                              <a>{{
+                                  index + 1 + " &#8205; &#8205; &#8205; &#8205;" + webhook.name
+                                 }}</a>
+                           </td>
+                           <td class="share-name-column channel-column">
+                              <a>{{ webhook.channel.name }}</a>
+                           </td>
+                           <td class="share-name-column expiry-column">
+                              <a>{{ humanTime(webhook.created_at) }}</a>
+                           </td>
+                           <td class="share-name-column small">
+                              <button
+                                 :aria-label="$t('buttons.delete')"
+                                 :title="$t('buttons.delete')"
+                                 class="action"
+                                 @click="deleteWebhook(webhook.discord_id)"
+                              >
+                                 <i class="material-icons">delete</i>
+                              </button>
+                           </td>
+                        </tr>
+                     </table>
+                  </div>
+                  <div v-else class="info">
              <span>
                 {{ $t("settings.webhookInfo") }}
                 <br />
                 <br />
                 {{ $t("settings.webhookAdvice") }}
              </span>
+                  </div>
+                  <input
+                     v-if="showWebhookInput || webhooks.length === 0"
+                     v-model="webhookUrl"
+                     :placeholder="$t('settings.newWebhookPlaceholder')"
+                     class="input"
+                     type="text"
+                     @keyup.enter="addWebhook"
+                  />
+               </div>
+               <div class="card-action">
+                  <button
+                     :aria-label="$t('buttons.add')"
+                     :title="$t('buttons.add')"
+                     class="button button--flat"
+                     @click="addWebhook"
+                  >
+                     {{ $t("buttons.add") }}
+                  </button>
+               </div>
             </div>
-            <input
-              v-if="showWebhookInput || webhooks.length === 0"
-              v-model="webhookUrl"
-              :placeholder="$t('settings.newWebhookPlaceholder')"
-              class="input"
-              type="text"
-              @keyup.enter="addWebhook"
-            />
-          </div>
-          <div class="card-action">
-            <button
-              :aria-label="$t('buttons.add')"
-              :title="$t('buttons.add')"
-              class="button button--flat"
-              @click="addWebhook"
-            >
-              {{ $t("buttons.add") }}
-            </button>
-          </div>
-        </div>
 
-        <!--        START OF UPLOAD DEST CARD-->
-        <div v-if="autoSetupComplete" class="card">
-          <div class="card-title">
-            <h2>{{ $t("settings.uploadDestination") }}</h2>
-          </div>
-          <div class="card-content">
-            <h3>{{ $t("settings.guildId") }}</h3>
-            <input
-              v-model="guildId"
-              :disabled="autoSetupComplete"
-              class="input"
-              type="text"
-            />
+            <!--        START OF UPLOAD DEST CARD-->
+            <div v-if="autoSetupComplete" class="card">
+               <div class="card-title">
+                  <h2>{{ $t("settings.uploadDestination") }}</h2>
+               </div>
+               <div class="card-content">
+                  <h3>{{ $t("settings.guildId") }}</h3>
+                  <input
+                     v-model="guildId"
+                     :disabled="autoSetupComplete"
+                     class="input"
+                     type="text"
+                  />
 
-            <h3>{{ $t("settings.attachmentName") }}</h3>
-            <input
-              v-model="attachmentName"
-              class="input"
-              type="text"
-              @keyup.enter="updateAttachmentName"
-            />
-          </div>
-          <div class="card-action">
-            <button
-              :aria-label="$t('buttons.reset')"
-              :title="$t('buttons.reset')"
-              class="button button--flat button--red"
-              @click="resetAll"
-            >
-              {{ $t("buttons.reset") }}
-            </button>
+                  <h3>{{ $t("settings.attachmentName") }}</h3>
+                  <input
+                     v-model="attachmentName"
+                     class="input"
+                     type="text"
+                     @keyup.enter="updateAttachmentName"
+                  />
+               </div>
+               <div class="card-action">
+                  <button
+                     :aria-label="$t('buttons.reset')"
+                     :title="$t('buttons.reset')"
+                     class="button button--flat button--red"
+                     @click="resetAll"
+                  >
+                     {{ $t("buttons.reset") }}
+                  </button>
 
-            <button
-              :aria-label="$t('buttons.save')"
-              :title="$t('buttons.save')"
-              class="button button--flat"
-              @click="updateAttachmentName"
-            >
-              {{ $t("buttons.save") }}
-            </button>
+                  <button
+                     :aria-label="$t('buttons.save')"
+                     :title="$t('buttons.save')"
+                     class="button button--flat"
+                     @click="updateAttachmentName"
+                  >
+                     {{ $t("buttons.save") }}
+                  </button>
 
-          </div>
-        </div>
+               </div>
+            </div>
+         </div>
       </div>
-    </div>
-    <!-- COLUMN 2 -->
-    <div v-if="autoSetupComplete" class="column">
-      <div class="cards-wrapper">
+      <!-- COLUMN 2 -->
+      <div v-if="autoSetupComplete" class="column">
+         <div class="cards-wrapper">
 
-        <!--        START OF BOTS CARD      -->
-        <div class="card">
-          <div class="card-title">
-            <h2>{{ $t("settings.bots") }}</h2>
-          </div>
-          <div class="card-content">
-            <div v-if="bots.length > 0" class="table-wrapper">
-              <table>
-                <tr>
-                  <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
-                  <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
-                  <th></th>
-                </tr>
+            <!--        START OF BOTS CARD      -->
+            <div class="card">
+               <div class="card-title">
+                  <h2>{{ $t("settings.bots") }}</h2>
+               </div>
+               <div class="card-content">
+                  <div v-if="bots.length > 0" class="table-wrapper">
+                     <table>
+                        <tr>
+                           <th>{{ "# &#8205; &#8205; &#8205; &#8205;" + $t("settings.name") }}</th>
+                           <th class="expiry-column">{{ $t("settings.addedAt") }}</th>
+                           <th></th>
+                        </tr>
 
-                <tr
-                  v-for="(bot, index) in bots"
-                  :key="bot.discord_id"
-                >
-                  <td class="share-name-column">
-                    <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
-                    <span v-if="bot.primary" :title="$t('settings.primaryBot')">
+                        <tr
+                           v-for="(bot, index) in bots"
+                           :key="bot.discord_id"
+                        >
+                           <td class="share-name-column">
+                              <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
+                              <span v-if="bot.primary" :title="$t('settings.primaryBot')">
                      <svg class="crown-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
                           style="vertical-align: text-bottom;">
                       <path fill="currentColor"
@@ -193,55 +193,55 @@
                     </svg>
                   </span>
 
-                  </td>
-                  <td class="share-name-column expiry-column">
-                    <a>{{ humanTime(bot.created_at) }}</a>
-                  </td>
-                  <td class="share-name-column small">
-                    <button
-                      :aria-label="$t('buttons.delete')"
-                      :title="$t('buttons.delete')"
-                      :disabled="bot.primary"
-                      class="action"
-                      @click="deleteBot(bot.discord_id)"
-                    >
-                      <i class="material-icons">delete</i>
-                    </button>
-                  </td>
-                </tr>
-              </table>
-            </div>
-            <div v-if="bots.length < 5" class="info">
+                           </td>
+                           <td class="share-name-column expiry-column">
+                              <a>{{ humanTime(bot.created_at) }}</a>
+                           </td>
+                           <td class="share-name-column small">
+                              <button
+                                 :aria-label="$t('buttons.delete')"
+                                 :title="$t('buttons.delete')"
+                                 :disabled="bot.primary"
+                                 class="action"
+                                 @click="deleteBot(bot.discord_id)"
+                              >
+                                 <i class="material-icons">delete</i>
+                              </button>
+                           </td>
+                        </tr>
+                     </table>
+                  </div>
+                  <div v-if="bots.length < 5" class="info">
                   <span>
                      {{ $t("settings.botInfo") }}
                      <br />
                      <br />
                      {{ $t("settings.botAdvice") }}
                   </span>
+                  </div>
+                  <input
+                     v-if="showBotInput || bots.length === 0"
+                     v-model="botToken"
+                     :placeholder="$t('settings.newBotPlaceholder')"
+                     class="input"
+                     type="text"
+                     @keyup.enter="addBot"
+                  />
+               </div>
+               <div class="card-action">
+                  <button
+                     :aria-label="$t('buttons.add')"
+                     :title="$t('buttons.add')"
+                     class="button button--flat"
+                     @click="addBot"
+                  >
+                     {{ $t("buttons.add") }}
+                  </button>
+               </div>
             </div>
-            <input
-              v-if="showBotInput || bots.length === 0"
-              v-model="botToken"
-              :placeholder="$t('settings.newBotPlaceholder')"
-              class="input"
-              type="text"
-              @keyup.enter="addBot"
-            />
-          </div>
-          <div class="card-action">
-            <button
-              :aria-label="$t('buttons.add')"
-              :title="$t('buttons.add')"
-              class="button button--flat"
-              @click="addBot"
-            >
-              {{ $t("buttons.add") }}
-            </button>
-          </div>
-        </div>
+         </div>
       </div>
-    </div>
-  </div>
+   </div>
 </template>
 
 <script>
@@ -354,12 +354,28 @@ export default {
       }, 1000),
 
       async resetAll() {
-         let res = await deleteDiscordSettings()
-         if (res.errors) {
-            this.$toast.info(res.errors, { timeout: null })
+         const toastId = this.$toast.info(this.$t("toasts.discordSettingsDeleting"),
+           { type: "info", timeout: null, draggable: false, closeOnClick: false, closeButton: false }
+         )
+
+         try {
+            let res = await deleteDiscordSettings()
+
+            let isError = res.errors != null
+            let content = isError ? res.errors : this.$t("toasts.discordSettingsDeleted")
+            let type    = isError ? "error" : "success"
+            let timeout = isError ? null : 3000
+
+            this.$toast.update(toastId, {
+               content,
+               options: { type, timeout }
+            }, true)
+
+            this.setDiscordSettings(res.settings)
+         } catch (err) {
+            console.error(err)
+            this.$toast.dismiss(toastId)
          }
-         this.setDiscordSettings(res.settings)
-         this.$toast.success(this.$t("toasts.discordSettingsDeleted"))
       },
       async doAutoSetup() {
          if (!this.guildId || !this.botToken || !this.attachmentName) {
@@ -369,7 +385,9 @@ export default {
          this.showHover({
             prompt: "UploadDestinationWarning",
             confirm: async () => {
-               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"), { type: "info", timeout: null, draggable: false, closeOnClick: false })
+               let toastId = this.$toast.info(this.$t("toasts.autoSetupInProgress"), {
+                  type: "info", timeout: null, draggable: false, closeOnClick: false, closeButton: false
+               })
                try {
                   let res = await autoSetup({ "guild_id": this.guildId, "bot_token": this.botToken, "attachment_name": this.attachmentName })
 

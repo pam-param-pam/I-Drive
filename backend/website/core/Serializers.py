@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABC
 from collections import defaultdict
 
-from .signer import sign_resource_id_with_expiry
+from .crypto.signer import sign_resource_id_with_expiry
+from ..constants import API_BASE_URL
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken
-from ..utilities.constants import API_BASE_URL
 
 
 class SimpleSerializer(ABC):

@@ -1,11 +1,11 @@
-from typing import Union, TypedDict, Optional, List, Any
+from typing import Optional
+from typing import Union, TypedDict, List, Any
 
 from django.db.models import PositiveBigIntegerField
 from shortuuidfield import ShortUUIDField
 from typing_extensions import NotRequired
-from pydantic import BaseModel, Field
-from typing import Optional
-from ..models import Folder, File
+
+from ...models import Folder, File
 
 Item = Union[Folder, File]
 

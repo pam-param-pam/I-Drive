@@ -3,8 +3,8 @@ import random
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 
+from ..core.dataModels.http import RequestContext
 from ..models import PerDeviceToken
-from ..utilities.dataModels import RequestContext
 
 
 class PerDeviceTokenAuthentication(BaseAuthentication):

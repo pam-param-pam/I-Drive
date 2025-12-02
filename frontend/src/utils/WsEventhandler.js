@@ -166,47 +166,29 @@ export async function onEvent(message) {
       }
    }
 
+   //todo migrate this event to the general scheme
+   if (op_code === 8 || op_code === 9) { // message update event, for example, when deleting items
+      let message_data = event.data[0]
 
-   if (op_code === 8) { // message update event, for example, when deleting items
+      console.log("11111")
       let timeout = 0
       let type = "info"
-
-      if (event.finished) {
-         timeout = 3000
-
+      if (message_data.isFinished) {
          type = "success"
       }
-      if (event.error) {
-         timeout = 0
+
+      if (message_data.isError) {
          type = "error"
       }
+      if (message_data.isFinished) {
+         timeout = 3000
+      }
 
-      toast.update(event.task_id, {
-
-         content: i18n.global.t(event.message, event.args),
+      toast.update(message_data.task_id, {
+         content: i18n.global.t(message_data.message, message_data.args),
 
          options: { timeout: timeout, type: type, draggable: true, closeOnClick: true }
-
       }, true)
-   }
-
-
-   if (op_code === 9) { // message sent event, for example, when bot is being disabled
-      let timeout = 0
-      let type = "info"
-      if (event.finished) {
-         timeout = 3000
-         type = "success"
-      }
-
-      if (event.error) {
-         timeout = 0
-         type = "error"
-      }
-      toast(i18n.global.t(event.message, event.args), {
-         timeout: timeout, type: type, draggable: true, closeOnClick: true
-
-      })
    }
 
    if (op_code === 10) { // folder lock status change event
@@ -226,13 +208,14 @@ export async function onEvent(message) {
    }
    if (op_code === 13) { // device control request
       let device = event.data[0].master_device
+      let expiry = event.data[0].expiry
 
       store.showHover({
          "prompt": "ControlConsentPrompt",
-         "props": {"masterDevice": device}
+         "props": {"masterDevice": device, "expiry": expiry}
       })
    }
-   if (op_code === 15) { // device control status
+   if (op_code === 15) { // device control command
       let type = event.data[0].type
       let args = event.data[0].args
       if (type === "route_change") {
@@ -241,7 +224,10 @@ export async function onEvent(message) {
    }
 
    if (op_code === 16) { // device control status
-      store.deviceControlStatus = event.data[0].status
+      store.deviceControlStatus = {
+         ...event.data[0],
+         _receivedAt: Date.now()
+      }
       if (store.deviceControlStatus.status === "idle" && store.currentPromptName === "ControlConsentPrompt") {
          store.closeHover()
       }

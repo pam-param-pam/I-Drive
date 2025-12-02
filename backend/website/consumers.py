@@ -11,12 +11,15 @@ from channels.generic.websocket import WebsocketConsumer
 from django.core.cache import cache
 from django.utils import timezone
 
+from .constants import EventCode, QR_CODE_SESSION_EXPIRY
+from .core.dataModels.http import RequestContext
+from .core.dataModels.websocket import WebsocketEvent, WebsocketLogoutEvent
+from .core.deviceControl.DeviceControlState import DeviceControlState
+from .core.errors import DeviceControlBadStateError
+from .core.websocket.utils import send_event
 from .models import PerDeviceToken
-from .utilities.DeviceControlState import DeviceControlState
-from .utilities.Serializers import DeviceTokenSerializer
-from .utilities.constants import QR_CODE_SESSION_EXPIRY, EventCode
-from .utilities.dataModels import RequestContext
-from .utilities.other import send_event
+from .tasks.otherTasks import send_message
+from .core.Serializers import DeviceTokenSerializer
 
 
 class RateLimitedWebsocketConsumer(WebsocketConsumer):
@@ -197,21 +200,11 @@ class UserConsumer(RateLimitedWebsocketConsumer):
 
         self.send_device_control_status()
 
-    def send_message(self, event):  # todo typehint event type
-        context = event['context']
-        if self.user.id == context['user_id']:
-            message = {"is_encrypted": False, "event": {"op_code": event['op_code'], "message": event["message"], "args": event.get('args'), "error": event["error"],
-                                                        "finished": event["finished"]}}
-
-            message['event']['task_id'] = context["request_id"]
-
-            self.send(json.dumps(message))
-
-    def send_event(self, event):
+    def send_event(self, event: WebsocketEvent):
         if self.user.id == event['context']['user_id'] and (not self.device_id or not event['context'].get('device_id') or self.device_id == event['context'].get('device_id')):
-            self.send(json.dumps(event['message']))
+            self.send(json.dumps(event['ws_payload']))
 
-    def logout(self, event):
+    def logout(self, event: WebsocketLogoutEvent):
         if self.user.id == event['context']['user_id']:
             if event['token_hash']:  # specific connection to close
                 token_hash = hashlib.sha256(self.token.encode()).hexdigest()
@@ -220,38 +213,43 @@ class UserConsumer(RateLimitedWebsocketConsumer):
             else:  # close all connections
                 self.close()
 
-    def handle_device_control_request(self, json_data: dict):
-        print("handle_device_control_request")
-        slave_device_id = json_data['message']['device_id']
-        try:
-            DeviceControlState.create_pending(master_id=self.device_id, slave_id=slave_device_id)
-        except ValueError as e:
-            return self.send_error(str(e))
+    def get_context(self, device_id: str) -> RequestContext:
+        context = RequestContext.from_user(self.user.id)
+        context.device_id = device_id
+        return context
 
+    def handle_device_control_request(self, json_data: dict) -> None:
+        slave_device_id = json_data['message']['device_id']
+        DeviceControlState.create_pending(master_id=self.device_id, slave_id=slave_device_id)
         self.send_device_control_status(device_id=self.device_id)
         self.send_device_control_pending(slave_device_id)
 
-    def send_device_control_pending(self, slave_device_id: str):
-        print("send_device_control_pending")
-        """Sends a pending request from this device(master) to slave device"""
-        context = RequestContext.from_user(self.user.id)
-        context.device_id = slave_device_id
-        device = DeviceTokenSerializer().serialize_object(self.token_obj)
-        send_event(context, None, EventCode.DEVICE_CONTROL_REQUEST, {"master_device": device})
+    def handle_device_control_command(self, json_data: dict) -> None:
+        if not DeviceControlState.master_has_active(master_id=self.device_id):
+            raise DeviceControlBadStateError("not_active_master")
 
-    def send_device_control_status(self, device_id=None):
+        slave_id = DeviceControlState.get_active_slave_for_master(master_id=self.device_id)
+
+        context = self.get_context(slave_id)
+        send_event(context, None, EventCode.DEVICE_CONTROL_COMMAND, json_data['message'])
+
+    def send_device_control_pending(self, slave_device_id: str) -> None:
+        """Sends a pending request from this device(master) to slave device"""
+        context = self.get_context(slave_device_id)
+        device = DeviceTokenSerializer().serialize_object(self.token_obj)
+        expiry = DeviceControlState.get_status(slave_device_id)["expiry"]
+        send_event(context, None, EventCode.DEVICE_CONTROL_REQUEST, {"master_device": device, "expiry": expiry})
+
+    def send_device_control_status(self, device_id=None) -> None:
         """Sends current device control status to this device"""
-        context = RequestContext.from_user(self.user.id)
         if not device_id:
             device_id = self.device_id
-        context.device_id = device_id
-        send_event(context, None, EventCode.DEVICE_CONTROL_STATUS, {"status": DeviceControlState.get_status(device_id)})
+        context = self.get_context(device_id)
+        send_event(context, None, EventCode.DEVICE_CONTROL_STATUS, DeviceControlState.get_status(device_id))
 
-    def handle_device_control_reply(self, json_data: dict):
+    def handle_device_control_reply(self, json_data: dict) -> None:
         device_id = self.device_id
         reply_type = json_data["message"]["type"]
-
-        print("handle_device_control_reply:", reply_type, "from", device_id)
 
         pending_master = DeviceControlState.master_has_pending(device_id)
         pending_slave = DeviceControlState.slave_has_pending(device_id)
@@ -261,71 +259,33 @@ class UserConsumer(RateLimitedWebsocketConsumer):
         peer = DeviceControlState.get_status(device_id=self.device_id)["peer"]
 
         # --- 1) REJECT (slave rejects pending request) ---
-        if reply_type == "reject":
-            # slave rejects → device_id is slave
-            if pending_slave:
-                print("Reject: clearing pending for", pending_slave, "<->", device_id)
-                DeviceControlState.clear_pending(master_id=pending_slave, slave_id=device_id)
-            else:
-                print("Reject ignored: no pending request involving", device_id)
+        if reply_type == "reject" and pending_slave:
+            DeviceControlState.reject_pending(master_id=pending_slave, slave_id=device_id)
 
         # --- 2) APPROVE (slave approves pending request) ---
         elif reply_type == "approve":
-            # slave approves → device_id is slave
             if pending_slave:
-                print("Approve: promoting pending to active", pending_slave, "<->", device_id)
-                try:
-                    DeviceControlState.approve_pending(master_id=pending_slave, slave_id=device_id)
-                except Exception as e:
-                    print("Approve failed:", e)
+                DeviceControlState.approve_pending(master_id=pending_slave, slave_id=device_id)
             else:
-                print("Approve ignored: no pending request for", device_id)
+                send_message(message="toasts.deviceControlApprovedFailed", args=None, finished=True, context=self.get_context(device_id), isError=True)
 
         # --- 3) CANCEL (master cancels pending) ---
         elif reply_type == "cancel":
-            # device_id may be master or slave cancelling
             if pending_master:
-                print("Cancel: master cancels pending", device_id, "<->", pending_master)
                 DeviceControlState.clear_pending(master_id=device_id, slave_id=pending_master)
-            if pending_slave:
-                print("Cancel: slave cancels pending", pending_slave, "<->", device_id)
-                DeviceControlState.clear_pending(master_id=pending_slave, slave_id=device_id)
-
-            if not pending_master and not pending_slave:
-                print("Cancel ignored: nothing pending.")
 
         # --- 4) CLEAR (end active session) ---
         elif reply_type == "clear":
             # End active session regardless of direction
             if active_master:
-                print("Clear active session", device_id, "<->", active_master)
                 DeviceControlState.clear_active(master_id=device_id, slave_id=active_master)
 
             if active_slave:
-                print("Clear active session", active_slave, "<->", device_id)
                 DeviceControlState.clear_active(master_id=active_slave, slave_id=device_id)
 
-            if not active_master and not active_slave:
-                print("Clear ignored: no active session.")
-
-        # --- 5) Unknown type ---
-        else:
-            print("Unknown reply_type:", reply_type)
-            return
-
+        # send current status to both
         self.send_device_control_status(device_id=device_id)
         self.send_device_control_status(device_id=peer)
-
-    def handle_device_control_command(self, json_data: dict):
-        if not DeviceControlState.master_has_active(master_id=self.device_id):
-            self.send_error("bad_state")
-            return
-
-        slave_id = DeviceControlState.get_active_slave_for_master(master_id=self.device_id)
-
-        context = RequestContext.from_user(self.user.id)
-        context.device_id = slave_id
-        send_event(context, None, EventCode.DEVICE_CONTROL_COMMAND, json_data['message'])
 
 
 class QrLoginConsumer(RateLimitedWebsocketConsumer):

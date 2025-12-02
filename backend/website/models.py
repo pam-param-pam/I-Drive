@@ -8,6 +8,7 @@ from typing import Union
 
 import shortuuid
 from django.contrib.auth import user_logged_out, user_logged_in, get_user_model
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -22,11 +23,10 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
-from .utilities.constants import cache, MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, AuditAction, FILE_TYPE_CHOICES, ALLOWED_THUMBNAIL_SIZES, MAX_FOLDER_DEPTH, MAX_FILES_IN_FOLDER, \
-    ShareEventType
-from .utilities.dataModels import *
-from .utilities.errors import ResourceNotFoundError
-from .utilities.helpers import chop_long_file_name, get_ip
+from .constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH, FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER, ALLOWED_THUMBNAIL_SIZES, AuditAction, ShareEventType
+from .core.dataModels.dataModels import *
+from .core.errors import ResourceNotFoundError
+from .core.helpers import chop_long_file_name, get_ip
 
 
 class Folder(MPTTModel):
@@ -184,6 +184,8 @@ class Folder(MPTTModel):
 
     def _check_depth(self, new_parent=None):
         parent = new_parent or self.parent
+        if not parent:
+            return
         if (len(parent.get_ancestors()) + 1) > MAX_FOLDER_DEPTH:
             raise ValidationError(f"Folder nested too deep! Max depth = {MAX_FOLDER_DEPTH}")
         pass
@@ -525,7 +527,7 @@ class ShareableLink(models.Model):
             raise KeyError("Wrong content_type in share")
 
     def get_item_inside(self):
-        from .utilities.other import get_item
+        from .core.queries.utils import get_item
 
         if self.is_expired():
             self.delete()
@@ -731,7 +733,6 @@ class Subtitle(DiscordAttachmentMixin):
 
 @receiver(user_logged_in)
 def user_logged_in_callback(sender, request, user, **kwargs):
-    from .utilities.other import get_ip
     ip, _ = get_ip(request)
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_IN.name, ip=ip, user=user, user_agent=request.user_agent)
 
@@ -744,7 +745,6 @@ def user_logged_in_callback(sender, request, user, **kwargs):
 
 @receiver(user_logged_out)
 def user_logged_out_callback(sender, request, user, **kwargs):
-    from .utilities.other import get_ip
     ip, _ = get_ip(request)
     AuditEntry.objects.create(action=AuditAction.USER_LOGGED_OUT.name, ip=ip, user=user, user_agent=request.user_agent)
 
@@ -782,7 +782,7 @@ class PerDeviceTokenManager(models.Manager):
         return raw, instance
 
     def revoke_device(self, user, device_id: str = None, token_hash: str = None):
-        from .utilities.other import logout_and_close_websockets
+        from .core.websocket.utils import logout_and_close_websockets
 
         qs = self.filter(user=user)
         if device_id:
@@ -796,7 +796,8 @@ class PerDeviceTokenManager(models.Manager):
         token.delete()
 
     def revoke_all_for_user(self, user):
-        from .utilities.other import logout_and_close_websockets
+        from .core.websocket.utils import logout_and_close_websockets
+
         deleted_count, _ = self.filter(user=user).delete()
         logout_and_close_websockets(user_id=user.id)
         return deleted_count

@@ -8,11 +8,11 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from ..tasks.otherTasks import queue_ws_event
-from ..utilities.constants import cache
-from ..utilities.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
-from ..utilities.other import create_token, create_qr_session, create_token_from_qr_session
-from ..utilities.throttle import LoginThrottle, RegisterThrottle
+from ..auth.throttle import LoginThrottle, RegisterThrottle
+from ..constants import cache
+from ..core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from ..core.queries.utils import create_token, create_qr_session, create_token_from_qr_session
+from ..tasks.queueTasks import queue_ws_event
 
 
 @api_view(['POST'])
@@ -46,7 +46,7 @@ def logout_per_device(request):
 @throttle_classes([RegisterThrottle])
 @permission_classes([AllowAny])
 def register_user(request):
-    raise ResourcePermissionError("This functionality is turned off.")
+    # raise ResourcePermissionError("This functionality is turned off.")
     username = request.data['username']
     password = request.data['password']
 

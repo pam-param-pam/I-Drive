@@ -5,20 +5,22 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
+from ..auth.Permissions import CreatePerms, ModifyPerms, default_checks, CheckRoot, CheckTrash, DeletePerms, LockPerms, ResetLockPerms
+from ..auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
+from ..constants import EventCode, MAX_RESOURCE_NAME_LENGTH, cache
+from ..core.helpers import get_attr, get_file_type
+from ..core.http.utils import build_response
+from ..core.queries.utils import check_if_bots_exists, get_discord_author, delete_single_discord_attachment, create_subtitle
+from ..core.websocket.utils import send_event
 from ..models import File, Folder, VideoPosition, Tag, Moment, Subtitle
 from ..tasks.deleteTasks import smart_delete_task
 from ..tasks.moveTasks import move_task
 from ..tasks.otherTasks import lock_folder_task, unlock_folder_task
 from ..tasks.trashTasks import restore_from_trash_task, move_to_trash_task
-from ..utilities.Permissions import CreatePerms, ModifyPerms, DeletePerms, LockPerms, ResetLockPerms, default_checks, CheckRoot, CheckTrash
-from ..utilities.Serializers import FolderSerializer, FileSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
-from ..utilities.constants import cache, EventCode, MAX_RESOURCE_NAME_LENGTH
-from ..utilities.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file, \
+from ..core.Serializers import FolderSerializer, FileSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
+from ..core.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file, \
     accumulate_password_errors
-from ..utilities.errors import BadRequestError, ResourcePermissionError
-from ..utilities.other import build_response, send_event, check_if_bots_exists, \
-    delete_single_discord_attachment, get_discord_author, get_attr, get_file_type, create_subtitle
-from ..utilities.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
+from ..core.errors import BadRequestError, ResourcePermissionError
 
 
 @api_view(['POST'])

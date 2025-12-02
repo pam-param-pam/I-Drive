@@ -25,6 +25,20 @@ class RootPermissionError(IDriveException):
 class HttpxError(IDriveException):
     """Raised when httpx fails"""
 
+class CannotProcessDiscordRequestError(IDriveException):
+    """Raised when we are unable to make requests to discord due to being overloaded"""
+
+class FailedToResizeImageError(IDriveException):
+    """Raised when we are unable to resize an image for unknown reasons"""
+
+class DeviceControlBadStateError(IDriveException):
+    """Raised when attempted to do something illegal with device control state"""
+
+class LockedFolderWrongIpError(IDriveException):
+    """Raised when locked folder is trying to be accessed from wrong IP"""
+    def __init__(self, ip):
+        self.ip = ip
+
 class DiscordBlockError(IDriveException):
     """Raised when discord blocks us for whatever reason"""
     def __init__(self, message, retry_after):
@@ -32,18 +46,7 @@ class DiscordBlockError(IDriveException):
         self.retry_after = retry_after
         super().__init__(self.message)
 
-class CannotProcessDiscordRequestError(IDriveException):
-    """Raised when we are unable to make requests to discord due to being overloaded"""
-
-class FailedToResizeImage(IDriveException):
-    """Raised when we are unable to resize an image for unknown reasons"""
-
-class LockedFolderWrongIpError(IDriveException):
-    """Raised when locked folder is trying to be accessed from wrong IP"""
-    def __init__(self, ip):
-        self.ip = ip
-
-class DiscordErrorText(IDriveException):
+class DiscordTextError(IDriveException):
     def __init__(self, message, status):
         self.status = status
         self.message = message

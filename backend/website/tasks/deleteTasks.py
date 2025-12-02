@@ -3,14 +3,16 @@ import traceback
 from collections import defaultdict
 from concurrent.futures import as_completed, ThreadPoolExecutor
 
-from .otherTasks import send_message
+from .helper import send_message
 from ..celery import app
+from ..constants import EventCode, cache
+from ..core.dataModels.http import RequestContext
+from ..core.queries.utils import query_attachments
+from ..core.websocket.utils import group_and_send_event
 from ..discord.Discord import discord
 from ..models import File, Folder, Fragment, Preview, Thumbnail, Subtitle, Moment, Webhook
-from ..utilities.constants import EventCode, cache
-from ..utilities.dataModels import RequestContext
-from ..utilities.errors import DiscordError
-from ..utilities.other import group_and_send_event, query_attachments
+from ..core.errors import DiscordError
+
 
 
 def gather_message_structure(files: list) -> dict[str, list[str]]:
@@ -97,9 +99,9 @@ def delete_files(context, files: list):
                 if author:
                     skipped_webhooks.append(author.url)
 
-            send_message(e.message, True, user.id, context.request_id, True)
+            send_message(message=e.message, finished=True, args=None, context=context.request_id, isError=True)
         except Exception as e:
-            send_message(str(e), True, user.id, context.request_id, True)
+            send_message(message=str(e), finished=True, args=None, context=context.request_id, isError=True)
 
         # local per-message pacing (keeps per-thread Discord happy)
         time.sleep(0.5)

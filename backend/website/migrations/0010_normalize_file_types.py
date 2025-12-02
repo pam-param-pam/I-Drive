@@ -1,7 +1,7 @@
 # Generated manually
 from django.db import migrations
 
-from ..utilities.other import get_file_type
+from ..core.helpers import get_file_type
 
 def populate_file_type(apps, schema_editor):
     File = apps.get_model('website', 'File')

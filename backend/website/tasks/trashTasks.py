@@ -3,13 +3,12 @@ from datetime import timezone
 
 from django.utils import timezone
 
-from .helper import folder_serializer
-from .otherTasks import send_message
+from .helper import folder_serializer, send_message
 from ..celery import app
+from ..constants import EventCode
+from ..core.dataModels.http import RequestContext
+from ..core.websocket.utils import group_and_send_event, send_event
 from ..models import File, Folder
-from ..utilities.constants import EventCode
-from ..utilities.dataModels import RequestContext
-from ..utilities.other import group_and_send_event, send_event
 
 
 @app.task

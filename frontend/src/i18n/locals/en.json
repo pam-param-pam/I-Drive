@@ -1,5 +1,9 @@
 {
   "buttons": {
+    "clearActive": "Clear device control",
+    "accept": "Accept",
+    "reject": "Reject",
+    "clearPending": "Clear pending",
     "controlDevice": "Control device",
     "control": "control",
     "editLockFolder": "Edit folder lock",
@@ -159,6 +163,15 @@
   },
 
   "prompts": {
+    "controlRequestExplained": "Another device is asking for permission to act as your pilot.",
+    "noWebsocketConnection": "No websocket connection, please refresh the page and try again!",
+    "noOtherDevices": "There are no other devices that you can control. Log in first on another device and try again.",
+    "controlRequest": "Control Request",
+    "deviceControl": "Device Control",
+    "deviceControlActive": "Device control is active",
+    "selectDevice": "Select device to control",
+    "deviceControlPending": "Device control pending...",
+    "deviceControlRejected": "Device control rejected",
     "newFile": "New File",
     "newFileMessage": "Name your new file.",
     "qrDecoded": "QR Code detected",
@@ -313,6 +326,7 @@
     "deviceControl": "Device Control",
     "deviceControlMessage": "You can request control of a device and act as a pilot to control another device",
     "qrDeviceInfo": "Verify device's information before confirming the login!",
+    "qrCodeExplained": "Scan QR code to instantly log in another device!",
     "qrCodeWarning": "Warning! Never scan other's QR Codes",
     "popupPreview": "Image popup preview",
     "devices": "Active Devices",
@@ -404,6 +418,9 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "deviceControlActive": "Device Control is active!",
+    "deviceControlPendingExpired": "Pending expired. Try again",
+    "deviceControlApprovedFailed": "Failed to approve device control, try again.",
     "tooManySubtitlesOrTooBig": "Subtitles > 10 or too big, can't auto upload!",
     "invalidFileFormat": "Invalid file format!",
     "failedToConnectToWebsocket": "Failed to establish a websocket connection!",
@@ -414,6 +431,7 @@
     "qrSessionApproved": "Urządzenie zostało zalogowane!",
     "uploadFinished": "Upload finished!",
     "deviceRevoked": "Device revoked!",
+    "discordSettingsDeleting": "Deleting discord settings and cleaning discord structures...",
     "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",
     "autoSetupInProgress": "Auto setup in progress...",
     "autoSetupComplete": "Auto setup complete!",

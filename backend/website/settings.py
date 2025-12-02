@@ -61,9 +61,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',     # Message framework depends on auth
     'django.middleware.gzip.GZipMiddleware',                     # Can be late but before clickjacking (optional)
     'django_user_agents.middleware.UserAgentMiddleware',        # Custom user agent detection; OK here
-    'website.utilities.middlewares.CommonErrorsMiddleware',     # Custom middlewares; keep after core Django middleware
-    'website.utilities.middlewares.FailedRequestLoggerMiddleware',
-    'website.utilities.middlewares.ApplyRateLimitHeadersMiddleware',
+    'website.core.http.middlewares.CommonErrorsMiddleware',     # Custom middlewares; keep after core Django middleware
+    'website.core.http.middlewares.FailedRequestLoggerMiddleware',
+    'website.core.http.middlewares.ApplyRateLimitHeadersMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',       # History tracking middleware; typically last but before clickjacking
     'django.middleware.clickjacking.XFrameOptionsMiddleware',   # Usually last; sets security headers
 ]
@@ -108,7 +108,7 @@ TEMPLATES = [
 ]
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}",
     }
 }
@@ -169,13 +169,13 @@ CHANNEL_LAYERS = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'website.authentication.PerDeviceTokenAuthentication',
+        'website.auth.PerDeviceTokenAuthentication',
     ),
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
 
     ],
-    'EXCEPTION_HANDLER': 'website.utilities.CustomExceptionHandler.custom_exception_handler',
+    'EXCEPTION_HANDLER': 'website.core.http.CustomExceptionHandler.custom_exception_handler',
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/m',

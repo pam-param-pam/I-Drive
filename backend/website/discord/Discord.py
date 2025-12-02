@@ -10,9 +10,9 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
+from ..constants import DISCORD_BASE_URL, cache
 from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin
-from ..utilities.constants import cache, DISCORD_BASE_URL
-from ..utilities.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordErrorText
+from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordTextError
 
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.INFO)
@@ -71,13 +71,14 @@ class Discord:
                 pass
 
     def _get_channel_id(self, message_id):
-        from ..utilities.other import query_attachments
+        #todo circular
+        from ..core.queries.utils import query_attachments
 
         attachments = query_attachments(message_id=message_id)
         if len(attachments) > 0:
             return attachments[0].channel_id
 
-        raise DiscordErrorText(f"Unable to find channel id associated with message ID={message_id}", 404)
+        raise DiscordTextError(f"Unable to find channel id associated with message ID={message_id}", 404)
 
     def _get_channel_for_user(self, user) -> Channel:
         channels = Channel.objects.filter(owner=user).all()

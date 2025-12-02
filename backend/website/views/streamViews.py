@@ -23,18 +23,20 @@ from rest_framework.permissions import AllowAny
 from zipFly import GenFile, ZipFly
 from zipFly.EmptyFolder import EmptyFolder
 
+from ..auth.Permissions import CheckLockedFolderIP
+from ..auth.throttle import MediaThrottle, defaultAuthUserThrottle
+from ..constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
+from ..core.crypto.Decryptor import Decryptor
+from ..core.http.utils import get_content_disposition_string, parse_range_header
+from ..core.queries.utils import check_if_bots_exists, get_discord_author, get_flattened_children, create_zip_file_dict
+from ..core.websocket.utils import send_event
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
-from ..utilities.Decryptor import Decryptor
-from ..utilities.Permissions import CheckLockedFolderIP
-from ..utilities.Serializers import FileSerializer
-from ..utilities.constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, cache, MAX_MEDIA_CACHE_AGE, ALLOWED_THUMBNAIL_SIZES
-from ..utilities.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
-from ..utilities.errors import DiscordError, BadRequestError, FailedToResizeImage
-from ..utilities.other import get_flattened_children, create_zip_file_dict, check_if_bots_exists, auto_prefetch, get_discord_author, get_content_disposition_string, parse_range_header
-from ..utilities.other import send_event
-from ..utilities.throttle import MediaThrottle, defaultAuthUserThrottle
+from ..core.Serializers import FileSerializer
+from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
+from ..core.errors import DiscordError, BadRequestError, FailedToResizeImageError
+from ..tasks.helper import auto_prefetch
 
 
 @api_view(['GET'])
@@ -72,7 +74,7 @@ def stream_preview(request, file_obj: File):
         raise BadRequestError(f"Resource of type {file_obj.type} is not previewable")
 
     if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
-        raise BadRequestError("File too big: size > 100mb")
+        raise BadRequestError("File too big: size > 100mb") # todo
 
     check_if_bots_exists(file_obj.owner)
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
@@ -218,7 +220,7 @@ def stream_thumbnail(request, file_obj: File):
                 print(f"[resize] Resized {file_obj.id} to {new_width}x{new_height} in {resize_duration:.3f}s")
 
             except Exception:
-                raise FailedToResizeImage("Failed to resize image")
+                raise FailedToResizeImageError("Failed to resize image")
 
         cache.set(cache_key, thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 

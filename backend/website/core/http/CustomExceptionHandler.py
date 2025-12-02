@@ -1,7 +1,7 @@
 from rest_framework.views import exception_handler
 from rest_framework.exceptions import Throttled, PermissionDenied, ValidationError
 
-from ..utilities.other import format_wait_time
+from ..helpers import format_wait_time
 
 
 def custom_exception_handler(exc, context):

@@ -5,10 +5,10 @@ from urllib.parse import unquote
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from .constants import ALLOWED_IPS_LOCKED
-from .errors import ResourcePermissionError, RootPermissionError, MissingOrIncorrectResourcePasswordError, ResourceNotFoundError, LockedFolderWrongIpError
-from .other import get_attr, check_if_item_belongs_to_share
-from .helpers import get_ip
+from ..constants import ALLOWED_IPS_LOCKED
+from ..core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
+from ..core.helpers import get_ip, get_attr
+from ..core.queries.utils import check_if_item_belongs_to_share
 from ..models import UserPerms, File, Folder, ShareableLink
 
 

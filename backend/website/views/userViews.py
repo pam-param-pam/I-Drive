@@ -5,16 +5,16 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
+from ..auth.Permissions import ChangePassword, CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms, AdminPerms
+from ..auth.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, DiscordSettingsThrottle
+from ..constants import VIDEO_EXTENSIONS, IMAGE_EXTENSIONS, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, AUDIO_EXTENSIONS
+from ..core.queries.utils import create_token, obtain_discord_settings, get_webhook, query_attachments
 from ..discord.Discord import discord
 from ..discord.DiscordHelper import DiscordHelper
 from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, UserPerms, Channel, File, PerDeviceToken
-from ..utilities.Permissions import ChangePassword, SettingsModifyPerms, DiscordModifyPerms, default_checks, CreatePerms, ModifyPerms, ReadPerms, AdminPerms
-from ..utilities.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer
-from ..utilities.constants import MAX_DISCORD_MESSAGE_SIZE, EncryptionMethod, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, MAX_ATTACHMENTS_PER_MESSAGE
-from ..utilities.decorators import check_resource_permissions, extract_folder
-from ..utilities.errors import ResourcePermissionError, BadRequestError
-from ..utilities.other import get_webhook, query_attachments, obtain_discord_settings, create_token
-from ..utilities.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, DiscordSettingsThrottle
+from ..core.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer
+from ..core.decorators import check_resource_permissions, extract_folder
+from ..core.errors import ResourcePermissionError, BadRequestError
 
 
 @api_view(['PATCH'])

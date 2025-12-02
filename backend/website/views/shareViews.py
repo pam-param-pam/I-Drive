@@ -7,17 +7,19 @@ from rest_framework.decorators import permission_classes, throttle_classes, api_
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_subtitle
+from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
+    CheckShareItemBelongings, CheckTrash, CheckReady
+from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
+from ..auth.utils import check_resource_perms
+from ..constants import API_BASE_URL
+from ..core.crypto.signer import sign_resource_id_with_expiry
+from ..core.helpers import validate_ids_as_list
+from ..core.http.utils import parse_range_header
+from ..core.queries.utils import create_share_breadcrumbs, create_share_resource_dict, build_share_folder_content, get_item, check_if_item_belongs_to_share, validate_and_add_to_zip
 from ..models import UserSettings, ShareableLink, UserZIP, Subtitle, File, ShareAccessEvent
-from ..utilities.Permissions import SharePerms, default_checks, CheckTrash, CheckReady, ReadPerms, ModifyPerms, CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady, \
-    CheckShareItemBelongings, CheckShareOwnership
-from ..utilities.Serializers import ShareSerializer, ShareAccessSerializer
-from ..utilities.constants import API_BASE_URL
-from ..utilities.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
-from ..utilities.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..utilities.other import create_share_breadcrumbs, get_item, create_share_resource_dict, \
-    build_share_folder_content, validate_and_add_to_zip, check_if_item_belongs_to_share, validate_ids_as_list, check_resource_perms, parse_range_header
-from ..utilities.signer import sign_resource_id_with_expiry
-from ..utilities.throttle import defaultAnonUserThrottle, defaultAuthUserThrottle, AnonUserMediaThrottle
+from ..core.Serializers import ShareSerializer, ShareAccessSerializer
+from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
+from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 
 
 @api_view(['GET'])
@@ -114,7 +116,7 @@ def check_share_password(request, share_obj):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "folder_obj"], optional=True)
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="folder_obj", optional=True)
 def view_share(request, share_obj: ShareableLink, folder_obj=None):
-    ShareAccessEvent.log(share_obj, request, "share_view", share_id=share_obj.id)
+    # ShareAccessEvent.log(share_obj, request, "share_view", share_id=share_obj.id) # todo
 
     settings = UserSettings.objects.get(user=share_obj.owner)
     obj_in_share = share_obj.get_item_inside()
@@ -169,9 +171,10 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
 def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
-    range_header = request.headers.get('Range')
-    is_range_header, start_byte, end_byte = parse_range_header(range_header)
+    # range_header = request.headers.get('Range')
+    # is_range_header, start_byte, end_byte = parse_range_header(range_header)
     # ShareAccessEvent.log(share_obj, request, "file_stream", file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte) # todo
+
     # Extremely hacky way,
     # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
     # request is changed into rest's framework's request with the decorators,
