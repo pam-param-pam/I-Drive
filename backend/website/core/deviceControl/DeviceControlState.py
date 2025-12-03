@@ -1,9 +1,9 @@
 import time
 from typing import Optional, Dict
 
-from discord.types.activity import StatusType
 from django.core.cache import cache
 
+from .constants import StatusType
 from ..errors import DeviceControlBadStateError
 from ...constants import DEVICE_CONTROL_PENDING_TTL, DEVICE_CONTROL_ACTIVE_TTL, DEVICE_CONTROL_REJECTED_TTL
 
