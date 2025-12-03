@@ -1,6 +1,6 @@
 {
   "buttons": {
-    "clearActive": "Clear device control",
+    "stopActive": "Stop device control",
     "accept": "Accept",
     "reject": "Reject",
     "clearPending": "Clear pending",
@@ -70,6 +70,15 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "badDeviceId": "Device doesn't exist. Refresh the page",
+    "masterRecentlyRejected": "Wait a bit before sending another request",
+    "slaveRecentlyRejected": "Slave device was recently rejected",
+    "masterIsBusy": "Master device is currently busy",
+    "slaveIsBusy": "Slave device is currently busy",
+    "pendingExists": "A pending request already exists",
+    "noPendingRequest": "No pending request found",
+    "noActivePair": "No active device control pair found",
+    "notActiveMaster": "You are not an active master!",
     "websocketError": "Websocket error",
     "notImplementedError": "Not implemented",
     "resourceInaccessibleFromIP": "Invalid IP",
@@ -163,6 +172,13 @@
   },
 
   "prompts": {
+    "peerDevice": "Peer",
+    "roleMaster": "Master",
+    "roleSlavePending": "Pending slave",
+    "roleMasterPending": "Pending master",
+    "roleSlave": "Slave",
+    "rejectedMaster": "Rejected",
+    "deviceControlRole": "Role",
     "controlRequestExplained": "Another device is asking for permission to act as your pilot.",
     "noWebsocketConnection": "No websocket connection, please refresh the page and try again!",
     "noOtherDevices": "There are no other devices that you can control. Log in first on another device and try again.",

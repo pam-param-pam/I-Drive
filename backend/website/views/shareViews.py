@@ -130,7 +130,7 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     del response_dict["parent_id"]
 
     if folder_obj:
-        ShareAccessEvent.log(share_obj, request, "folder_open", folder_id=folder_obj.id)
+        # ShareAccessEvent.log(share_obj, request, "folder_open", folder_id=folder_obj.id) todo
 
         breadcrumbs = create_share_breadcrumbs(folder_obj, obj_in_share, True)
         folder_content = build_share_folder_content(share_obj, folder_obj, include_folders=settings.subfolders_in_shares)["children"]

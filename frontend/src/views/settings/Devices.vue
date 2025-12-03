@@ -26,8 +26,10 @@
                         <i v-else-if="device.device_type === 'mobile'" class="material-icons">tablet</i>
                         <i v-else-if="device.device_type === 'code'" class="material-icons">terminal</i>
                      </td>
-                     <td>{{ device.device_name }}</td>
-                     <td>{{ device.country || "-" }}</td>
+                     <td>
+                        {{ device.device_name }}
+                        <span class="device-id">({{ device.device_id }})</span>
+                     </td>                     <td>{{ device.country || "-" }}</td>
                      <td>{{ device.city || "-" }}</td>
                      <td>{{ humanTime(device.expires_at) }}</td>
                      <td>{{ humanTime(device.last_used_at) }}</td>
@@ -155,5 +157,10 @@ table th, table td {
 }
 .text--red {
    color: var(--dark-red);
+}
+.device-id {
+   font-size: 0.85em;
+   color: var(--textSecondary);
+   margin-left: 4px;
 }
 </style>

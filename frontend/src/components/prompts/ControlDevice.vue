@@ -44,8 +44,8 @@
                 ]"
             >
                <i
-                 class="material-icons status-icon"
-                 :class="{ 'hourglass-flip': currentDeviceControlStatus.status === 'pending_master'}"
+                  class="material-icons status-icon"
+                  :class="{ 'hourglass-flip': currentDeviceControlStatus.status === 'pending_master'}"
                >
                   {{ statusIconMap[currentDeviceControlStatus.status] || "info" }}
                </i>
@@ -54,10 +54,21 @@
                   <p class="status-title">
                      {{ statusTitleMap[currentDeviceControlStatus.status] }}
                   </p>
-                  <p class="status-code">({{ currentDeviceControlStatus.status }})</p>
-               </div>
-            </div>
+                  <p class="status-code">
+                     {{ $t("prompts.deviceControlRole") }}:
+                     <strong>{{ roleTitle }}</strong>
+                  </p>
+                  <div v-if="peerInfo">
 
+                     <p class="status-code">
+                        {{ $t("prompts.peerDevice") }}:
+                        <strong>{{ peerInfo.device_name }}</strong>
+                        ({{ peerInfo.device_id }})
+                     </p>
+                  </div>
+               </div>
+
+            </div>
          </div>
       </div>
 
@@ -73,12 +84,12 @@
          </button>
          <button
             v-if="currentDeviceControlStatus.status === 'active_master' || currentDeviceControlStatus.status === 'active_slave'"
-            :aria-label="$t('buttons.clearActive')"
-            :title="$t('buttons.clearActive')"
+            :aria-label="$t('buttons.stopActive')"
+            :title="$t('buttons.stopActive')"
             class="button button--flat button--red"
-            @click="clearActive"
+            @click="stopActive"
          >
-            {{ $t("buttons.clearActive") }}
+            {{ $t("buttons.stopActive") }}
          </button>
          <button
             :aria-label="$t('buttons.ok')"
@@ -130,6 +141,27 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["deviceControlStatus"]),
+      peerInfo() {
+         const st = this.currentDeviceControlStatus
+         if (!st || !st.peer) return null
+
+         const peerId = st.peer
+
+         const peer = this.devices.find(d => d.device_id === peerId)
+         return peer
+            ? { device_id: peer.device_id, device_name: peer.device_name }
+            : { device_id: peerId, device_name: "Unknown" }
+      },
+
+      roleTitle() {
+         const s = this.currentDeviceControlStatus.status
+         if (s === "active_master") return this.$t("prompts.roleMaster")
+         if (s === "active_slave") return this.$t("prompts.roleSlave")
+         if (s === "pending_master") return this.$t("prompts.roleMasterPending")
+         if (s === "pending_slave") return this.$t("prompts.roleSlavePending")
+         if (s === "rejected_master") return this.$t("prompts.rejectedMaster")
+         return null
+      },
       currentDeviceControlStatus() {
          const _ = this.nowTick
 
@@ -167,7 +199,7 @@ export default {
             pending_master: "hourglass_empty",
             active_master: "check_circle",
             active_slave: "check_circle",
-            rejected_master: "cancel",
+            rejected_master: "cancel"
          }
       },
 
@@ -186,20 +218,20 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
       fetchStatus() {
-         this.$socket.send(JSON.stringify({ op_code: 16}))
+         this.$socket.send(JSON.stringify({ op_code: 16 }))
       },
       requestControl() {
          if (!this.selectedDevice) return
          this.$socket.send(JSON.stringify({ op_code: 13, message: { device_id: this.selectedDevice.device_id } }))
       },
       cancelPending() {
-         this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "cancel"}}))
+         this.$socket.send(JSON.stringify({ op_code: 14, "message": { "type": "cancel" } }))
       },
-      clearActive() {
-         this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "clear"}}))
+      stopActive() {
+         this.$socket.send(JSON.stringify({ op_code: 14, "message": { "type": "stop" } }))
       },
       rejectPending() {
-         this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "reject"}}))
+         this.$socket.send(JSON.stringify({ op_code: 14, "message": { "type": "reject" } }))
       },
       close() {
          this.closeHover()
@@ -209,6 +241,9 @@ export default {
 }
 </script>
 <style>
+.card.floating {
+   max-width: 26em !important;
+}
 .status-panel {
  margin-top: 1rem;
 }
@@ -227,6 +262,7 @@ export default {
 }
 
 .status-text .status-title {
+ padding-bottom: 0.3em;
  font-weight: 600;
  margin: 0;
 }
@@ -256,27 +292,43 @@ export default {
 .status-neutral {
  background: var(--surfacePrimary);
 }
+
 .hourglass-flip {
-   display: inline-block;
-   animation: hourglassFlip 4s ease-in-out infinite;
-   transform-origin: center;
+ display: inline-block;
+ animation: hourglassFlip 4s ease-in-out infinite;
+ transform-origin: center;
 }
 
 @keyframes hourglassFlip {
-   0% {
-      transform: rotate(0deg);
-   }
-   10% {
-      transform: rotate(180deg);
-   }
-   45% {
-      transform: rotate(180deg);
-   }
-   55% {
-      transform: rotate(0deg);
-   }
-   100% {
-      transform: rotate(0deg);
-   }
+ 0% {
+  transform: rotate(0deg);
+ }
+ 10% {
+  transform: rotate(180deg);
+ }
+ 45% {
+  transform: rotate(180deg);
+ }
+ 55% {
+  transform: rotate(0deg);
+ }
+ 100% {
+  transform: rotate(0deg);
+ }
 }
+
+.role-peer-info {
+ margin-top: 0.8rem;
+ padding-left: 0.3rem;
+}
+
+.role-peer-info .role-line {
+ margin: 0 0 0.3rem 0;
+}
+
+.role-peer-info .peer-line {
+ margin: 0;
+ color: var(--textSecondary);
+}
+
 </style>

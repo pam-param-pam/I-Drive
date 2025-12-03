@@ -1,10 +1,12 @@
 from httpx import Response
 
+from ..core.deviceControl.constants import ErrorType
+
 
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
-class MalformedDatabaseRecord(Exception):
+class MalformedDatabaseRecord(IDriveException):
     """Raised when data is malformed in the database."""
 
 class ResourceNotFoundError(IDriveException):
@@ -31,9 +33,6 @@ class CannotProcessDiscordRequestError(IDriveException):
 class FailedToResizeImageError(IDriveException):
     """Raised when we are unable to resize an image for unknown reasons"""
 
-class DeviceControlBadStateError(IDriveException):
-    """Raised when attempted to do something illegal with device control state"""
-
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""
     def __init__(self, ip):
@@ -45,6 +44,14 @@ class DiscordBlockError(IDriveException):
         self.message = message
         self.retry_after = retry_after
         super().__init__(self.message)
+
+class DeviceControlBadStateError(IDriveException):
+    """Raised when attempted to do something illegal with device control state"""
+    def __init__(self, code: ErrorType):
+        self.code = code
+
+    def __str__(self):
+        return self.code
 
 class DiscordTextError(IDriveException):
     def __init__(self, message, status):

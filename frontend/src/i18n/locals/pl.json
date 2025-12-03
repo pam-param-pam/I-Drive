@@ -1,6 +1,6 @@
 {
   "buttons": {
-    "clearActive": "Usuń kontrole urządzenia",
+    "stopActive": "Usuń kontrole urządzenia",
     "accept": "Potwierdź",
     "reject": "Odzrzuć",
     "clearPending": "Anuluj",
@@ -71,6 +71,15 @@
 
   },
   "errors": {
+    "badDeviceId": "To urządzenie nie istnieje. Spróbuj odswierzyć strone",
+    "masterRecentlyRejected": "Poczekaj chwile przed kolejną prośbą",
+    "slaveRecentlyRejected": "Urządzenie slave zostało ostatnio odrzucone",
+    "masterIsBusy": "Urządzenie master jest obecnie zajęte",
+    "slaveIsBusy": "Urządzenie slave jest obecnie zajęte",
+    "pendingExists": "Żądanie oczekujące już istnieje",
+    "noPendingRequest": "Brak oczekującego żądania",
+    "noActivePair": "Brak aktywnej pary kontroli urządzeń",
+    "notActiveMaster": "Nie jesteś aktywnym masterem!",
     "websocketError": "Błąd w websocketcie",
     "notImplementedError": "Ta funkcja jeszcze nie działa",
     "resourceInaccessibleFromIP": "Błędne IP",
@@ -164,6 +173,13 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "peerDevice": "Peer",
+    "roleMaster": "Master",
+    "roleSlavePending": "Pending slave",
+    "roleMasterPending": "Pending master",
+    "roleSlave": "Slave",
+    "rejectedMaster": "Rejected",
+    "deviceControlRole": "Role",
     "controlRequestExplained": "Inne urządzenie prosi cie o zgode o kontrolowanie",
     "noWebsocketConnection": "Brak połączenia z websocketem. Odswierz strone i spróbuj jeszcze raz.",
     "noOtherDevices": "Nie ma żadnych urządzeń które możesz kontrolować. Zaloguj sie na innym urządzeniu i spróbuj jeszcze raz.",

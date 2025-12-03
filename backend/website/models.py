@@ -25,6 +25,7 @@ from simple_history.models import HistoricalRecords
 
 from .constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH, FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER, ALLOWED_THUMBNAIL_SIZES, AuditAction, ShareEventType
 from .core.dataModels.dataModels import *
+from .core.deviceControl.DeviceControlState import DeviceControlState
 from .core.errors import ResourceNotFoundError
 from .core.helpers import chop_long_file_name, get_ip
 
@@ -792,11 +793,15 @@ class PerDeviceTokenManager(models.Manager):
         else:
             raise KeyError("device_id or token_hash must be specified")
 
+        DeviceControlState.clear_all(token.device_id)
         logout_and_close_websockets(user_id=user.id, device_id=token.device_id, token_hash=token_hash)
         token.delete()
 
     def revoke_all_for_user(self, user):
         from .core.websocket.utils import logout_and_close_websockets
+
+        for device in self.filter(user=user):
+            DeviceControlState.clear_all(device.device_id)
 
         deleted_count, _ = self.filter(user=user).delete()
         logout_and_close_websockets(user_id=user.id)

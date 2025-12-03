@@ -99,6 +99,8 @@ export async function onEvent(message) {
          toast.error(`${i18n.global.t("errors.websocketError")}\n${i18n.global.t("errors.rateLimit")}`)
       } else if (error_code === "internal_websocket_error") {
          toast.error(`${i18n.global.t("errors.websocketError")}\n${i18n.global.t("errors.internal")}`)
+      } else {
+         toast.error(`${i18n.global.t(error_code)}`)
       }
    }
 

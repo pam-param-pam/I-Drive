@@ -108,9 +108,10 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer):
         # 2) Pass to subclass handler
         try:
             self.on_message(text_data, bytes_data)
-        except Exception:
+        except Exception as e:
             traceback.print_exc()
-            self.send_error('internal_websocket_error')
+            if not self.on_error(e):
+                self.send_error('internal_websocket_error')
 
     def send_json(self, data: dict):
         self.send(json.dumps(data))
@@ -140,6 +141,9 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer):
                 token_key = None
 
         return token_key, is_standard_protocol
+
+    def on_error(self, exception: Exception) -> bool:
+        return False
 
 
 class UserConsumer(RateLimitedWebsocketConsumer):
@@ -214,6 +218,12 @@ class UserConsumer(RateLimitedWebsocketConsumer):
             else:  # close all connections
                 self.close()
 
+    def on_error(self, exception: Exception) -> bool:
+        if isinstance(exception, DeviceControlBadStateError):
+            self.send_error("errors." + str(exception))
+            return True
+        return False
+
     def get_context(self, device_id: str) -> RequestContext:
         context = RequestContext.from_user(self.user.id)
         context.device_id = device_id
@@ -227,7 +237,7 @@ class UserConsumer(RateLimitedWebsocketConsumer):
 
     def handle_device_control_command(self, json_data: dict) -> None:
         if not DeviceControlState.master_has_active(master_id=self.device_id):
-            raise DeviceControlBadStateError("not_active_master")
+            raise DeviceControlBadStateError("notActiveMaster")
 
         slave_id = DeviceControlState.get_active_slave_for_master(master_id=self.device_id)
 
@@ -275,14 +285,14 @@ class UserConsumer(RateLimitedWebsocketConsumer):
             if pending_master:
                 DeviceControlState.clear_pending(master_id=device_id, slave_id=pending_master)
 
-        # --- 4) CLEAR (end active session) ---
-        elif reply_type == "clear":
+        # --- 4) STOP (end active session) ---
+        elif reply_type == "stop":
             # End active session regardless of direction
             if active_master:
-                DeviceControlState.clear_active(master_id=device_id, slave_id=active_master)
+                DeviceControlState.stop_active(master_id=device_id, slave_id=active_master)
 
             if active_slave:
-                DeviceControlState.clear_active(master_id=active_slave, slave_id=device_id)
+                DeviceControlState.stop_active(master_id=active_slave, slave_id=device_id)
 
         # send current status to both
         self.send_device_control_status(device_id=device_id)

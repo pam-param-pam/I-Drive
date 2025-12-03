@@ -1,6 +1,7 @@
 import time
-from typing import Optional, Dict, Literal
+from typing import Optional, Dict
 
+from discord.types.activity import StatusType
 from django.core.cache import cache
 
 from ..errors import DeviceControlBadStateError
@@ -8,7 +9,6 @@ from ...constants import DEVICE_CONTROL_PENDING_TTL, DEVICE_CONTROL_ACTIVE_TTL, 
 
 
 class DeviceControlState:
-    StatusType = Literal["idle", "pending_master", "pending_slave", "active_master", "active_slave"]
 
     @staticmethod
     def _pending_key_master(master_id: str) -> str:
@@ -50,48 +50,45 @@ class DeviceControlState:
     def slave_has_pending(cls, slave_id: str) -> Optional[str]:
         return cache.get(cls._pending_key_slave(slave_id))
 
+    @staticmethod
+    def validate_device_id(device_id: str) -> None:
+        from ...models import PerDeviceToken
+        if not PerDeviceToken.objects.filter(device_id=device_id).exists():
+            raise DeviceControlBadStateError("badDeviceId")
+
     @classmethod
     def create_pending(cls, master_id: str, slave_id: str) -> None:
+        cls.validate_device_id(master_id)
+        cls.validate_device_id(slave_id)
+
         # Rejected state check ----
         rejected_slave = cache.get(cls._rejected_key_master(master_id))
         if rejected_slave:
-            raise DeviceControlBadStateError("master_recently_rejected")
+            raise DeviceControlBadStateError("masterRecentlyRejected")
 
         rejected_master = cache.get(cls._rejected_key_slave(slave_id))
         if rejected_master:
-            raise DeviceControlBadStateError("slave_recently_rejected")
-
-        # If one side was recently rejected, the other must be idle
-        # In master → slave direction
-        if rejected_slave:
-            # master was rejected by someone -> slave must be idle
-            if (cls.master_has_active(slave_id)
-                    or cls.slave_has_active(slave_id)
-                    or cls.master_has_pending(slave_id)
-                    or cls.slave_has_pending(slave_id)):
-                raise DeviceControlBadStateError("peer_not_idle_after_reject")
-
-        if rejected_master:
-            # slave was rejected by someone -> master must be idle
-            if (cls.master_has_active(master_id)
-                    or cls.slave_has_active(master_id)
-                    or cls.master_has_pending(master_id)
-                    or cls.slave_has_pending(master_id)):
-                raise DeviceControlBadStateError("peer_not_idle_after_reject")
+            raise DeviceControlBadStateError("slaveRecentlyRejected")
 
         # Check active conflicts
         if cls.master_has_active(master_id) or cls.slave_has_active(master_id):
-            raise DeviceControlBadStateError("master_is_busy")
+            raise DeviceControlBadStateError("masterIsBusy")
 
         if cls.master_has_active(slave_id) or cls.slave_has_active(slave_id):
-            raise DeviceControlBadStateError("slave_is_busy")
+            raise DeviceControlBadStateError("slaveIsBusy")
 
         # Check existing pending
         if cls.master_has_pending(master_id):
-            raise DeviceControlBadStateError("pending_exists")
+            raise DeviceControlBadStateError("pendingExists")
 
         if cls.slave_has_pending(slave_id):
-            raise DeviceControlBadStateError("slave_already_pending")
+            raise DeviceControlBadStateError("pendingExists")
+
+        if cls.master_has_pending(slave_id):
+            raise DeviceControlBadStateError("pendingExists")
+
+        if cls.slave_has_pending(master_id):
+            raise DeviceControlBadStateError("pendingExists")
 
         # Create links
         cache.set(cls._pending_key_master(master_id), slave_id, timeout=DEVICE_CONTROL_PENDING_TTL)
@@ -99,13 +96,16 @@ class DeviceControlState:
 
     @classmethod
     def approve_pending(cls, master_id: str, slave_id: str) -> None:
+        cls.validate_device_id(master_id)
+        cls.validate_device_id(slave_id)
+
         # Validate pending(master → slave)
         if cls.master_has_pending(master_id) != slave_id:
-            raise DeviceControlBadStateError("no_pending_request")
+            raise DeviceControlBadStateError("noPendingRequest")
 
         # Validate pending(slave → master)
         if cls.slave_has_pending(slave_id) != master_id:
-            raise DeviceControlBadStateError("no_pending_request")
+            raise DeviceControlBadStateError("noPendingRequest")
 
         # Promote to active (two-way)
         cache.set(cls._active_key_master(master_id), slave_id, timeout=DEVICE_CONTROL_ACTIVE_TTL)
@@ -118,11 +118,11 @@ class DeviceControlState:
     def clear_pending(cls, master_id: str, slave_id: str) -> None:
         # Check that pending(master) → slave matches
         if cls.master_has_pending(master_id) != slave_id:
-            raise DeviceControlBadStateError("no_pending_request")
+            raise DeviceControlBadStateError("noPendingRequest")
 
         # Check that pending(slave) → master matches
         if cls.slave_has_pending(slave_id) != master_id:
-            raise DeviceControlBadStateError("no_pending_request")
+            raise DeviceControlBadStateError("noPendingRequest")
 
         # Clear both sides
         cache.delete(cls._pending_key_master(master_id))
@@ -132,11 +132,11 @@ class DeviceControlState:
     def reject_pending(cls, master_id: str, slave_id: str) -> None:
         # Validate pending(master → slave)
         if cls.master_has_pending(master_id) != slave_id:
-            raise DeviceControlBadStateError("no_pending_request")
+            raise DeviceControlBadStateError("noPendingRequest")
 
         # Validate pending(slave → master)
         if cls.slave_has_pending(slave_id) != master_id:
-            raise DeviceControlBadStateError("no_pending_request")
+            raise DeviceControlBadStateError("noPendingRequest")
 
         # Clear pending using strict version
         cls.clear_pending(master_id, slave_id)
@@ -146,18 +146,53 @@ class DeviceControlState:
         cache.set(cls._rejected_key_slave(slave_id), master_id, timeout=DEVICE_CONTROL_REJECTED_TTL)
 
     @classmethod
-    def clear_active(cls, master_id: str, slave_id: str) -> None:
+    def stop_active(cls, master_id: str, slave_id: str) -> None:
         # Validate master → slave
         if cls.master_has_active(master_id) != slave_id:
-            raise DeviceControlBadStateError("no_active_pair")
+            raise DeviceControlBadStateError("noActivePair")
 
         # Validate slave → master
         if cls.slave_has_active(slave_id) != master_id:
-            raise DeviceControlBadStateError("no_active_pair")
+            raise DeviceControlBadStateError("noActivePair")
 
         # Clear both sides
         cache.delete(cls._active_key_master(master_id))
         cache.delete(cls._active_key_slave(slave_id))
+
+    @classmethod
+    def clear_all(cls, device_id: str) -> None:
+        # --- Active ---
+        slave = cls.master_has_active(device_id)
+        if slave:
+            cache.delete(cls._active_key_master(device_id))
+            cache.delete(cls._active_key_slave(slave))
+
+        master = cls.slave_has_active(device_id)
+        if master:
+            cache.delete(cls._active_key_slave(device_id))
+            cache.delete(cls._active_key_master(master))
+
+        # --- Pending ---
+        pending_slave = cls.master_has_pending(device_id)
+        if pending_slave:
+            cache.delete(cls._pending_key_master(device_id))
+            cache.delete(cls._pending_key_slave(pending_slave))
+
+        pending_master = cls.slave_has_pending(device_id)
+        if pending_master:
+            cache.delete(cls._pending_key_slave(device_id))
+            cache.delete(cls._pending_key_master(pending_master))
+
+        # --- Rejected ---
+        rejected_slave = cache.get(cls._rejected_key_master(device_id))
+        if rejected_slave:
+            cache.delete(cls._rejected_key_master(device_id))
+            cache.delete(cls._rejected_key_slave(rejected_slave))
+
+        rejected_master = cache.get(cls._rejected_key_slave(device_id))
+        if rejected_master:
+            cache.delete(cls._rejected_key_slave(device_id))
+            cache.delete(cls._rejected_key_master(rejected_master))
 
     @classmethod
     def get_active_slave_for_master(cls, master_id: str) -> Optional[str]:
@@ -219,3 +254,4 @@ class DeviceControlState:
 
         # 6) Nothing
         return {"status": "idle", "peer": None, "expiry": None}
+
