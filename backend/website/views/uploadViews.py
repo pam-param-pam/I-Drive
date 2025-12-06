@@ -1,164 +1,32 @@
-import base64
-from datetime import datetime
-
-from django.contrib.contenttypes.models import ContentType
-from django.db.utils import IntegrityError
 from django.http import JsonResponse, HttpResponse
-from django.utils import timezone
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms
 from ..auth.throttle import defaultAuthUserThrottle
-from ..auth.utils import check_resource_perms
-from ..constants import EncryptionMethod, EventCode, MAX_DISCORD_MESSAGE_SIZE
-from ..core.helpers import validate_ids_as_list, get_file_type
-from ..core.queries.utils import check_if_bots_exists, get_folder, get_discord_author, create_thumbnail, create_video_metadata, create_subtitle, delete_single_discord_attachment
-from ..core.websocket.utils import group_and_send_event, send_event
-from ..models import File, Fragment, Thumbnail, Subtitle
-from ..core.Serializers import FileSerializer
-from ..core.decorators import extract_file, check_resource_permissions, disable_common_errors
-from ..core.errors import BadRequestError
+from ..core.decorators import extract_file, check_resource_permissions
+from ..services import create_file_service
 
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
-@disable_common_errors
-def create_file(request):
-    # raise KeyError("aaa")
-    # return HttpResponse(status=503)
-    check_if_bots_exists(request.user)
-
-    files = request.data['files']
-    validate_ids_as_list(files, max_length=25)
+def create_file_view(request):
+    files_data = request.data['files']
+    file_objs = create_file_service.create_files(request, request.user, files_data)
 
     response_json = []
-    file_objs = []
-
-    for file in files:
-        file_name = file['name']
-        parent_id = file['parent_id']
-        extension = file['extension']
-        mimetype = file['mimetype']
-        file_size = file['size']
-        frontend_id = file['frontend_id']
-        encryption_method = file['encryption_method']
-        crc = file['crc']
-        attachments = file['attachments']
-
-        thumbnail = file.get('thumbnail')
-        duration = file.get('duration')
-        created_at = file.get('created_at')
-        key = file.get('key')
-        iv = file.get('iv')
-        video_metadata = file.get('videoMetadata')
-        subtitles = file.get('subtitles') or []
-
-        if not isinstance(subtitles, list):
-            raise BadRequestError("Subtitles must be a list")
-
-        if EncryptionMethod(encryption_method) != EncryptionMethod.Not_Encrypted and (not iv or not key):
-            raise BadRequestError("Encryption key and/or iv not provided")
-
-        if iv:
-            iv = base64.b64decode(iv)
-        if key:
-            key = base64.b64decode(key)
-
-        if not mimetype:
-            raise BadRequestError("'mimetype' cannot be empty")
-
-        if not file_name:
-            raise BadRequestError("'name' cannot be empty")
-
-        file_type = get_file_type(extension)
-
-        parent = get_folder(parent_id)
-        check_resource_perms(request, parent, default_checks)
-
-        if File.objects.filter(frontend_id=frontend_id).exists():
-            continue
-
-        if created_at:
-            try:
-                timestamp_in_seconds = int(created_at) / 1000
-                created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
-            except (ValueError, OverflowError):
-                raise BadRequestError("Invalid 'created_at' timestamp format.")
-
-        file_obj = File(
-            extension=extension,
-            name=file_name,
-            size=file_size,
-            mimetype=mimetype,
-            type=file_type,
-            owner_id=request.user.id,
-            parent=parent,
-            key=key,
-            iv=iv,
-            frontend_id=frontend_id,
-            encryption_method=encryption_method,
-            created_at=created_at,
-            crc=crc,
-            ready=True
-        )
-
-        if duration:
-            file_obj.duration = duration
-
-        try:
-            file_obj.save()
-        except IntegrityError:
-            raise BadRequestError("This file already exists!")
-
-        for attachment in attachments:
-            fragment_sequence = attachment['fragment_sequence']
-            channel_id = attachment['channel_id']
-            message_id = attachment['message_id']
-            attachment_id = attachment['attachment_id']
-            fragment_size = attachment['fragment_size']
-            offset = attachment['offset']
-            message_author_id = attachment['message_author_id']
-
-            author = get_discord_author(request.user, message_author_id)
-
-            Fragment.objects.create(
-                sequence=fragment_sequence,
-                file=file_obj,
-                size=fragment_size,
-                offset=offset,
-                channel_id=channel_id,
-                message_id=message_id,
-                attachment_id=attachment_id,
-                content_type=ContentType.objects.get_for_model(author),
-                object_id=author.discord_id
-            )
-
-        if thumbnail:
-            create_thumbnail(file_obj, thumbnail)
-
-        if video_metadata:
-            create_video_metadata(file_obj, video_metadata)
-
-        for sub in subtitles:
-            create_subtitle(file_obj, sub)
-
+    for file in file_objs:
         file_response_dict = {
-            "frontend_id": frontend_id,
-            "file_id": file_obj.id,
-            "parent_id": parent_id,
-            "name": file_obj.name,
-            "type": file_type,
-            "encryption_method": file_obj.encryption_method,
-            "lockFrom": file_obj.lockFrom.id if file_obj.lockFrom else None
+            "frontend_id": file.frontend_id,
+            "file_id": file.id,
+            "parent_id": file.parent.id,
+            "name": file.name,
+            "type": file.type,
+            "encryption_method": file.encryption_method,
+            "lockFrom": file.lockFrom.id if file.lockFrom else None
         }
-
-        file_objs.append(file_obj)
         response_json.append(file_response_dict)
-
-    if file_objs:
-        group_and_send_event(request.context, EventCode.ITEM_CREATE, file_objs)
 
     return JsonResponse(response_json, safe=False, status=200)
 
@@ -168,71 +36,9 @@ def create_file(request):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def edit_file(request, file_obj):
-    check_if_bots_exists(request.user)
-
-    fragments = Fragment.objects.filter(file=file_obj)
-
-    if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
-        raise BadRequestError("You cannot edit a file larger than 10Mb!")
-
-    if len(fragments) > 1:
-        raise BadRequestError("Fragments > 1")
-
-    isEmpty = request.data.get('empty')
-
-    if not isEmpty:
-        fragment_size = request.data['fragment_size']
-        channel_id = request.data['channel_id']
-        message_id = request.data['message_id']
-        attachment_id = request.data['attachment_id']
-        offset = request.data['offset']
-        message_author_id = request.data['message_author_id']
-        crc = request.data['crc']
-        iv = request.data.get('iv')
-        key = request.data.get('key')
-
-        if iv:
-            iv = base64.b64decode(iv)
-        if key:
-            key = base64.b64decode(key)
-
-        author = get_discord_author(request.user, message_author_id)
-
-        if file_obj.type not in ("Text", "Code", "Database"):
-            raise BadRequestError("You can only edit text files!")
-
-    if fragments.exists():
-        fragment = fragments[0]
-        delete_single_discord_attachment(request.user, fragment)
-        fragment.delete()
-
-    if not isEmpty:
-        Fragment.objects.create(
-            sequence=1,
-            file=file_obj,
-            size=fragment_size,
-            offset=offset,
-            channel_id=channel_id,
-            message_id=message_id,
-            attachment_id=attachment_id,
-            content_type=ContentType.objects.get_for_model(author),
-            object_id=author.discord_id
-        )
-
-        file_obj.key = key
-        file_obj.iv = iv
-        file_obj.size = fragment_size
-        file_obj.crc = crc
-    else:
-        file_obj.crc = 0
-        file_obj.size = 0
-        file_obj.iv = None
-        file_obj.key = None
-
-    file_obj.save()
-    send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
-
+def edit_file_view(request, file_obj):
+    file_data = request.data['file_data']
+    create_file_service.edit_file(request, request.user, file_obj, file_data)
     return HttpResponse(status=204)
 
 
@@ -241,21 +47,6 @@ def edit_file(request, file_obj):
 @permission_classes([IsAuthenticated & CreatePerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def create_or_edit_thumbnail(request, file_obj):
-    check_if_bots_exists(request.user)
-
-    try:
-        # todo switch the attachments if possible
-        delete_single_discord_attachment(request.user, file_obj.thumbnail)
-        file_obj.thumbnail.delete()
-    except Thumbnail.DoesNotExist:
-        pass
-
-    create_thumbnail(file_obj, request.data)
-
-    file_obj.remove_cache()
-
-    file_dict = FileSerializer().serialize_object(file_obj)
-    send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
-
+def create_or_edit_thumbnail_view(request, file_obj):
+    create_file_service.create_or_edit_thumbnail(request, request.user, file_obj, request.data)
     return HttpResponse(status=204)

@@ -251,7 +251,7 @@ export default {
 
             if (this.raw !== this.copyRaw) {
                if (!this.raw) {
-                  await editFile(this.file.id, { "empty": true })
+                  await editFile(this.file.id, {"file_data": null})
                   this.copyRaw = this.raw
                   this.onSuccessfulSave()
                   return
@@ -274,19 +274,23 @@ export default {
                crc = crc >>> 0
                let uploadResponse = await upload(formData, {})
 
-               let file_data = {
+               let attachment_data = {
                   offset: 0,
+                  fragment_sequence: 1,
                   fragment_size: encryptedBlob.size,
                   channel_id: uploadResponse.data.channel_id,
                   message_id: uploadResponse.data.id,
                   attachment_id: uploadResponse.data.attachments[0].id,
-                  message_author_id: uploadResponse.data.author.id,
-                  iv: iv,
-                  key: key,
-                  crc: crc
+                  message_author_id: uploadResponse.data.author.id
                }
 
-               await editFile(this.file.id, file_data)
+               let file_data = {
+                  iv: iv,
+                  key: key,
+                  crc: crc,
+                  attachment: attachment_data
+               }
+               await editFile(this.file.id, {"file_data": file_data})
                this.copyRaw = this.raw
             }
             this.onSuccessfulSave()

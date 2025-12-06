@@ -12,6 +12,8 @@ logger = get_task_logger(__name__)
 
 @app.task
 def lock_folder_task(context: dict, folder_id: str, password: str):
+    if not password:
+        raise ValueError("Password cannot be None")
     try:
         context = RequestContext.deserialize(context)
         folder = Folder.objects.get(id=folder_id)

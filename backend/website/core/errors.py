@@ -33,6 +33,9 @@ class CannotProcessDiscordRequestError(IDriveException):
 class FailedToResizeImageError(IDriveException):
     """Raised when we are unable to resize an image for unknown reasons"""
 
+class UsernameTakenError(IDriveException):
+    """Raised on register, when a user with this username already exists"""
+
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""
     def __init__(self, ip):

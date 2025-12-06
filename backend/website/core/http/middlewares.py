@@ -4,7 +4,7 @@ import traceback
 
 import httpx
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db import OperationalError
+from django.db import OperationalError, IntegrityError
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from httpx import ConnectError
@@ -14,7 +14,8 @@ from rest_framework.exceptions import Throttled
 
 from .utils import build_http_error_response
 from ..errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, ResourceNotFoundError, \
-    MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, FailedToResizeImageError, DiscordBlockError, DiscordTextError, DiscordError
+    MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, FailedToResizeImageError, DiscordBlockError, DiscordTextError, DiscordError, \
+    UsernameTakenError
 from ..helpers import get_attr
 from ...constants import cache
 from ...models import ShareableLink
@@ -130,6 +131,9 @@ class CommonErrorsMiddleware(MiddlewareMixin):
         elif isinstance(exception, ResourceNotFoundError):
             return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(exception)), status=404)
 
+        elif isinstance(exception, UsernameTakenError):
+            return JsonResponse(build_http_error_response(code=409, error="errors.usernameTakenError", details=""), status=409)
+
         # 429 RATE LIMIT
         elif isinstance(exception, Throttled):
             return JsonResponse(build_http_error_response(code=429, error="errors.rateLimit", details=str(exception)), status=429)
@@ -144,6 +148,9 @@ class CommonErrorsMiddleware(MiddlewareMixin):
             return JsonResponse(json_error, status=469)
 
         # 500 INTERNAL SERVER ERROR
+        elif isinstance(exception, IntegrityError):
+            return JsonResponse(build_http_error_response(code=500, error="errors.integrityError", details=str(exception)), status=500)
+
         elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord, FailedToResizeImageError)):
             return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
 

@@ -63,7 +63,7 @@ def delete_dangling_discord_files(days=3):
         print(f"delete_dangling_discord_files for user: {user}")
         channels = Channel.objects.filter(owner=user)
         for channel in channels:
-            print(f"Checking channel: {channel.id}")
+            print(f"Checking channel: {channel.discord_id}")
             try:
                 check_if_bots_exists(user)
             except NoBotsError:

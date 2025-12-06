@@ -1,10 +1,10 @@
 import httpx
 
 from ..constants import NUMBER_OF_CHANNELS, DISCORD_BASE_URL, NUMBER_OF_WEBHOOKS_PER_CHANNEL, WEBHOOK_NAME_TEMPLATE
-from ..core.queries.utils import query_attachments
 from ..discord.constants import *
 from ..models import DiscordSettings, Channel, Bot
 from ..core.errors import BadRequestError, DiscordTextError
+from ..queries.selectors import query_attachments
 
 ALL_BOTS_ROLE_PERMS = (
         VIEW_CHANNEL |

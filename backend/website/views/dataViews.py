@@ -17,7 +17,6 @@ from ..auth.Permissions import ReadPerms, default_checks, CheckOwnership, CheckL
 from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from ..auth.utils import check_resource_perms
 from ..constants import cache
-from ..core.queries.utils import build_folder_content, create_breadcrumbs, calculate_size, calculate_file_and_folder_count, query_attachments
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
@@ -25,6 +24,8 @@ from ..core.decorators import check_resource_permissions, extract_folder, extrac
     extract_items
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..core.helpers import get_ip
+from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
+from ..queries.selectors import query_attachments
 
 
 def etag_func(request, folder_obj):
@@ -50,7 +51,7 @@ def get_folder_info(request, folder_obj: Folder):
         folder_content = build_folder_content(folder_obj)
         cache.set(folder_obj.id, folder_content)
 
-    breadcrumbs = create_breadcrumbs(folder_obj)
+    breadcrumbs = build_breadcrumbs(folder_obj)
     return HttpResponse(
         json.dumps({"folder": folder_content, "breadcrumbs": breadcrumbs}),
         content_type="application/json",
@@ -65,7 +66,7 @@ def get_folder_info(request, folder_obj: Folder):
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_dirs(request, folder_obj: Folder):
     folder_content = build_folder_content(folder_obj, include_files=False)
-    breadcrumbs = create_breadcrumbs(folder_obj)
+    breadcrumbs = build_breadcrumbs(folder_obj)
 
     folder_path = "root"
     for folder in breadcrumbs:
@@ -153,7 +154,7 @@ def fetch_additional_info(request, item_obj):
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_breadcrumbs(request, folder_obj: Folder):
-    breadcrumbs = create_breadcrumbs(folder_obj)
+    breadcrumbs = build_breadcrumbs(folder_obj)
     return JsonResponse(breadcrumbs, safe=False)
 
 @api_view(['GET'])

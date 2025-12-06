@@ -37,7 +37,6 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     return country, city
 
 
-
 def get_device_metadata(request):
     """
     Extracts IP, user-agent, device info, and geolocation from a request.

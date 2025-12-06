@@ -13,7 +13,7 @@ from .constants import API_BASE_URL, cache, EncryptionMethod
 from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
 from .discord.Discord import discord
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, AuditEntry, Tag, Webhook, Bot, DiscordSettings, Moment, \
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
 from .tasks.deleteTasks import smart_delete_task
 
@@ -334,11 +334,6 @@ class UserZIPAdmin(admin.ModelAdmin):
         return obj.owner.username
 
 
-@admin.register(AuditEntry)
-class AuditEntryAdmin(admin.ModelAdmin):
-    list_display = ['action', 'user', 'ip', 'user_agent', 'datetime']
-
-
 @admin.register(Tag)
 class TagAdmin(SimpleHistoryAdmin):
     list_display = ['name', 'owner', 'amount_of_files']
@@ -364,12 +359,12 @@ class TagAdmin(SimpleHistoryAdmin):
 
 @admin.register(Channel)
 class ChannelAdmin(admin.ModelAdmin):
-    search_fields = ('id', 'name')
-    list_display = ['name', 'id', 'guild_id', 'created_at']
+    search_fields = ('discord_id', 'name')
+    list_display = ['name', 'discord_id', 'guild_id', 'created_at']
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
-            return 'id', 'guild_id', 'owner'
+            return 'discord_id', 'guild_id', 'owner'
         return ()
 
 @admin.register(Webhook)

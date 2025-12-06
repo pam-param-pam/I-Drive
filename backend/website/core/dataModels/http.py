@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 
 
 class RequestContext:
-    def __init__(self, user_id: str, device_id: Optional[str], request_id: int):
+    def __init__(self, user_id: int, device_id: Optional[str], request_id: int):
         self.user_id = user_id
         self.device_id = device_id
         self.request_id = request_id
@@ -16,7 +16,7 @@ class RequestContext:
         return {"user_id": self.user_id, "request_id": self.request_id, "device_id": self.device_id}
 
     @classmethod
-    def from_user(cls, user_id: str) -> 'RequestContext':
+    def from_user(cls, user_id: int) -> 'RequestContext':
         return cls(user_id, None, 0)
 
     @classmethod

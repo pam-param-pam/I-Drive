@@ -1,5 +1,4 @@
 import os
-import time
 from functools import wraps
 from typing import Callable, Union
 
@@ -7,10 +6,10 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from .crypto.signer import verify_signed_resource_id
 from .helpers import validate_ids_as_list
-from .queries.utils import get_file
 from ..auth.Permissions import CheckGroup
 from ..models import File, Folder, ShareableLink
 from ..core.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
+from ..queries.selectors import get_file
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
@@ -47,7 +46,7 @@ def extract_file_from_signed_url(view_func):
     return wrapper
 
 
-def check_resource_permissions(checks: list, resource_key: Union[str, list[str]], optional: bool = False): #todo rename to keys
+def check_resource_permissions(checks: list, resource_key: Union[str, list[str]], optional: bool = False):
     if not isinstance(checks, CheckGroup):
         if isinstance(checks, list):
             checks = CheckGroup(*checks)
@@ -60,8 +59,6 @@ def check_resource_permissions(checks: list, resource_key: Union[str, list[str]]
     def decorator(view_func: Callable):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            start_time = time.perf_counter()
-
             resources = []
             missing_keys = []
             for key in resource_key:
@@ -72,18 +69,12 @@ def check_resource_permissions(checks: list, resource_key: Union[str, list[str]]
 
             if missing_keys:
                 if optional:
-                    print(f"[check_resource_permissions] Skipping checks: missing or None resource(s) {missing_keys} with optional=True")
                     return view_func(request, *args, **kwargs)
                 else:
-                    print(kwargs)
                     raise ValueError(f"[check_resource_permissions] Missing required resource(s) {missing_keys} in kwargs")
 
-            # print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
             for Check in checks:
                 Check().check(request, *resources)
-
-            end_time = time.perf_counter()
-            # print(f"[check_resource_permissions] Checks took {end_time - start_time:.4f}s")
 
             return view_func(request, *args, **kwargs)
 

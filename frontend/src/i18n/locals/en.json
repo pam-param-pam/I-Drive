@@ -70,6 +70,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "integrityError": "Integrity Error!",
     "badDeviceId": "Device doesn't exist. Refresh the page",
     "masterRecentlyRejected": "Wait a bit before sending another request",
     "slaveRecentlyRejected": "Slave device was recently rejected",

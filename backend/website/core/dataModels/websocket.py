@@ -1,7 +1,5 @@
 from typing import List, Dict, Union, Optional, Any, TypedDict
 
-from ..dataModels.http import RequestContext
-
 EventData = Union[Dict[str, Any], str, None]
 
 class InnerEvent(TypedDict, total=False):
@@ -27,4 +25,4 @@ class WebsocketEvent(TypedDict):
 class WebsocketLogoutEvent(TypedDict):
     type: str
     context: RequestContextDict
-    token_hash: str
+    device_id: str

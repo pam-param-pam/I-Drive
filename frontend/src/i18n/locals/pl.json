@@ -71,6 +71,7 @@
 
   },
   "errors": {
+    "integrityError": "Błąd spójności danych!",
     "badDeviceId": "To urządzenie nie istnieje. Spróbuj odswierzyć strone",
     "masterRecentlyRejected": "Poczekaj chwile przed kolejną prośbą",
     "slaveRecentlyRejected": "Urządzenie slave zostało ostatnio odrzucone",

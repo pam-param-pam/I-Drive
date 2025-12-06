@@ -7,20 +7,20 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
-from .views.authViews import login_per_device, logout_per_device, register_user, get_qr_session, authenticate_qr_session, get_qr_session_device_info, cancel_pending_qr_session
+from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
+    cancel_pending_qr_session_view, change_password_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id
-from .views.itemManagmentViews import rename, move_to_trash, move, \
-    delete, change_folder_password, restore_from_trash, create_folder, reset_folder_password, update_video_position, add_tag, remove_tag, remove_moment, add_moment, change_crc, add_subtitle, \
-    remove_subtitle
+from .views.itemManagmentViews import rename_view, move_to_trash, move, \
+    delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_video_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
+    add_moment_view, change_crc_view, add_subtitle_view, remove_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import your_ip, get_discord_state
-from .views.uploadViews import create_file, create_or_edit_thumbnail, edit_file
-from .views.userViews import change_password, users_me, update_settings, get_discord_settings, add_webhook, delete_webhook, add_bot, \
-    delete_bot, \
-    update_attachment_name, can_upload, discord_settings_start, reset_discord_settings, list_active_devices, revoke_device, logout_all_devices
+from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
+from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
+    delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, list_active_devices_view, revoke_device_view, logout_all_devices_view
 
 _route_registry = {}
 _registered_routes = set()
@@ -70,30 +70,30 @@ urlpatterns = [
     path("files/<signed_file_id>/subtitles/<subtitle_id>/stream", ["GET"], stream_subtitle, name="stream_subtitle"),
     path("files/<signed_file_id>/stream", ["GET"], stream_file, name="stream_subtitle"),
 
-    path("files", ["POST"], create_file, name="create file"),
-    path("files/<file_id>", ["PATCH"], edit_file, name="edit file"),
+    path("files", ["POST"], create_file_view, name="create file"),
+    path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
-    path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail, name="create a thumbnail"),
-    path("files/<file_id>/video-position", ["PUT"], update_video_position, name="update video position"),
+    path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail_view, name="create a thumbnail"),
+    path("files/<file_id>/video-position", ["PUT"], update_video_position_view, name="update video position"),
 
-    path("files/<file_id>/tags", ["POST"], add_tag, name="add a tag"),
+    path("files/<file_id>/tags", ["POST"], add_tag_view, name="add a tag"),
     path("files/<file_id>/tags", ["GET"], get_tags, name="get file moments"),
-    path("files/<file_id>/tags/<tag_id>", ["DELETE"], remove_tag, name="remove a tag"),
+    path("files/<file_id>/tags/<tag_id>", ["DELETE"], remove_tag_view, name="remove a tag"),
     path("files/<file_id>/moments", ["GET"], get_moments, name="add a moment"),
-    path("files/<file_id>/moments", ["POST"], add_moment, name="get all moments"),
-    path("files/<file_id>/moments/<timestamp>", ["DELETE"], remove_moment, name="remove a moment"),
-    path("files/<file_id>/subtitles", ["POST"], add_subtitle, name="add subtitle"),
+    path("files/<file_id>/moments", ["POST"], add_moment_view, name="get all moments"),
+    path("files/<file_id>/moments/<moment_id>", ["DELETE"], remove_moment_view, name="remove a moment"),
+    path("files/<file_id>/subtitles", ["POST"], add_subtitle_view, name="add subtitle"),
     path("files/<file_id>/subtitles", ["GET"], get_subtitles, name="get file subtitles"),
-    path("files/<file_id>/subtitles/<subtitle_id>", ["DELETE"], remove_subtitle, name="remove subtitle"),
-    path('files/<file_id>/changecrc', ['PATCH'], change_crc, name='change crc'),
+    path("files/<file_id>/subtitles/<subtitle_id>", ["DELETE"], remove_subtitle_view, name="remove subtitle"),
+    path('files/<file_id>/changecrc', ['PATCH'], change_crc_view, name='change crc'),
 
-    path("folders", ["POST"], create_folder, name="create folder"),
+    path("folders", ["POST"], create_folder_view, name="create folder"),
     path('folders/<folder_id>', ["GET"], get_folder_info, name="get files and folders from a folder id"),
     path('folders/<folder_id>/dirs', ["GET"], get_dirs, name="get folders from a folder id"),
     path('folders/<folder_id>/usage', ["GET"], get_usage, name="get size of all files in that folder to all user's files"),
     path("folders/<folder_id>/breadcrumbs", ["GET"], get_breadcrumbs, name="get folder's breadcrumbs"),
-    path("folders/<folder_id>/password", ["POST"], change_folder_password, name="change folder password"),
-    path("folders/<folder_id>/password/reset", ["POST"], reset_folder_password, name="create folder"),
+    path("folders/<folder_id>/password", ["POST"], change_folder_password_view, name="change folder password"),
+    path("folders/<folder_id>/password/reset", ["POST"], reset_folder_password_view, name="create folder"),
     path("folders/<folder_id>/stats", ['GET'], get_file_stats, name="get file stats for folder"),
 
     path("items/move", ["PATCH"], move, name="bulk move items"),
@@ -102,37 +102,37 @@ urlpatterns = [
     path("items/delete", ["POST"], delete, name="bulk delete items"),
     path("items/zip", ["POST"], create_zip_model, name="create zip model"),
 
-    path('zip/<token>', ['GET'], stream_zip_files),
-
     path("items/<item_id>/moreinfo", ["GET"], fetch_additional_info, name="fetch more info about an item"),
-    path("items/<item_id>/rename", ["PATCH"], rename, name="rename an item"),
+    path("items/<item_id>/rename", ["PATCH"], rename_view, name="rename an item"),
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 
-    django_path("auth/token/login", login_per_device, name="login"),
-    django_path("auth/token/logout", logout_per_device, name="logout"),
-    django_path("auth/register", register_user, name="register"),
-    django_path('auth/qrcode', get_qr_session, name='get qr code session'),
-    django_path('auth/qrcode/<session_id>', authenticate_qr_session, name='authenticate a qr session'),
-    django_path('auth/qrcode/get/<session_id>', get_qr_session_device_info, name='get new device info by session id'), #todo
-    django_path('auth/qrcode/cancel/<session_id>', cancel_pending_qr_session, name='cancel new device pending session'),
+    path('zip/<token>', ['GET'], stream_zip_files),
+
+    django_path("auth/token/login", login_per_device_view, name="login"),
+    django_path("auth/token/logout", logout_per_device_view, name="logout"),
+    django_path("auth/register", register_user_view, name="register"),
+    django_path('auth/qrcode', get_qr_session_view, name='get qr code session'),
+    django_path('auth/qrcode/<session_id>', authenticate_qr_session_view, name='authenticate a qr session'),
+    django_path('auth/qrcode/get/<session_id>', get_qr_session_device_info_view, name='get new device info by session id'),
+    django_path('auth/qrcode/cancel/<session_id>', cancel_pending_qr_session_view, name='cancel new device pending session'),
+    django_path("auth/password", change_password_view, name="change password"),
 
     path('user/me', ['GET'], users_me, name="get current user"),
     path('user/canUpload/<folder_id>', ['GET'], can_upload, name="check if user is allowed to upload"),
-    path("user/password", ['PATCH'], change_password, name="change password"),
     path("user/settings", ['PUT'], update_settings, name="update settings"),
 
-    path("user/devices", ['GET'], list_active_devices, name="list active devices"),
-    path("user/devices/logout-all", ['POST'], logout_all_devices, name="logouts all devices"),
-    path("user/devices/<device_id>", ['DELETE'], revoke_device, name="revoke a device"),
+    path("user/devices", ['GET'], list_active_devices_view, name="list active devices"),
+    path("user/devices/logout-all", ['POST'], logout_all_devices_view, name="logouts all devices"),
+    path("user/devices/<device_id>", ['DELETE'], revoke_device_view, name="revoke a device"),
 
-    path("user/discordSettings", ['GET'], get_discord_settings, name="get discord settings"),
-    path("user/discordSettings", ['PATCH'], update_attachment_name, name="update upload destination"),
-    path("user/discordSettings", ['DELETE'], reset_discord_settings, name="reset discord settings"),
-    path("user/discordSettings/autoSetup", ['POST'], discord_settings_start, name="do auto setup"),
-    path("user/discordSettings/webhooks", ['POST'], add_webhook, name="add a webhook"),
-    path("user/discordSettings/webhooks/<webhook_id>", ['DELETE'], delete_webhook, name="delete a webhook"),
-    path("user/discordSettings/bots", ['POST'], add_bot, name="add a bot"),
-    path("user/discordSettings/bots/<bot_id>", ['DELETE'], delete_bot, name="delete a bot"),
+    path("user/discordSettings", ['GET'], get_discord_settings_view, name="get discord settings"),
+    path("user/discordSettings", ['PATCH'], update_attachment_name_view, name="update upload destination"),
+    path("user/discordSettings", ['DELETE'], reset_discord_settings_view, name="reset discord settings"),
+    path("user/discordSettings/autoSetup", ['POST'], discord_settings_start_view, name="do auto setup"),
+    path("user/discordSettings/webhooks", ['POST'], add_webhook_view, name="add a webhook"),
+    path("user/discordSettings/webhooks/<webhook_id>", ['DELETE'], delete_webhook_view, name="delete a webhook"),
+    path("user/discordSettings/bots", ['POST'], add_bot_view, name="add a bot"),
+    path("user/discordSettings/bots/<bot_id>", ['DELETE'], delete_bot_view, name="delete a bot"),
 
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),
@@ -159,6 +159,6 @@ urlpatterns = [
     path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
-    # 75 endpoints
+    # 80 endpoints
 ]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

@@ -1,39 +1,16 @@
-from urllib.parse import urlparse
-
-from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import ChangePassword, CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms, AdminPerms
-from ..auth.throttle import PasswordChangeThrottle, defaultAuthUserThrottle, DiscordSettingsThrottle
+from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms, AdminPerms
+from ..auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
 from ..constants import VIDEO_EXTENSIONS, IMAGE_EXTENSIONS, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, AUDIO_EXTENSIONS
-from ..core.queries.utils import create_token, obtain_discord_settings, get_webhook, query_attachments
-from ..discord.Discord import discord
-from ..discord.DiscordHelper import DiscordHelper
-from ..models import UserSettings, Folder, DiscordSettings, Webhook, Bot, UserPerms, Channel, File, PerDeviceToken
 from ..core.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer
 from ..core.decorators import check_resource_permissions, extract_folder
-from ..core.errors import ResourcePermissionError, BadRequestError
-
-
-@api_view(['PATCH'])
-@throttle_classes([PasswordChangeThrottle])
-@permission_classes([IsAuthenticated & ChangePassword])
-def change_password(request):
-    current_password = request.data['current_password']
-    new_password = request.data['new_password']
-    user = request.user
-
-    if not user.check_password(current_password):
-        raise ResourcePermissionError("Password is incorrect!")
-
-    user.set_password(new_password)
-    user.save()
-
-    request.auth.revoke()
-    raw_token, token_instance, auth_dict = create_token(request, user)
-    return JsonResponse(auth_dict, status=200)
+from ..discord.Discord import discord
+from ..models import UserSettings, Folder, Webhook, Bot, UserPerms, Channel, PerDeviceToken
+from ..queries.builders import build_discord_settings
+from ..services import user_service, auth_service
 
 
 @api_view(['GET'])
@@ -134,137 +111,55 @@ def update_settings(request):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-def get_discord_settings(request):
-    settings = obtain_discord_settings(request.user)
+def get_discord_settings_view(request):
+    settings = build_discord_settings(request.user)
     return JsonResponse(settings)
 
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def add_webhook(request):
+def add_webhook_view(request):
     url = request.data.get('webhook_url')
-    if urlparse(url).netloc != "discord.com":
-        raise BadRequestError("Webhook URL is invalid")
-
-    if Webhook.objects.filter(url=url, owner=request.user).exists():
-        raise BadRequestError("Webhook with this URL already exists!")
-
-    guild_id, channel, discord_id, name = DiscordHelper().get_and_check_webhook(request.user, url)
-
-    webhook = Webhook(
-        url=url,
-        owner=request.user,
-        guild_id=guild_id,
-        channel=channel,
-        discord_id=discord_id,
-        name=name,
-    )
-    webhook.save()
-    discord.remove_user_state(request.user)
-
+    webhook = user_service.create_webhook(request.user, url)
     return JsonResponse(WebhookSerializer().serialize_object(webhook), status=200)
 
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def delete_webhook(request, webhook_id):
-    webhook = get_webhook(request, webhook_id)
-
-    if query_attachments(author_id=webhook.discord_id):
-        raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
-
-    webhook.delete()
-    discord.remove_user_state(request.user)
-
+def delete_webhook_view(request, webhook_id):
+    user_service.delete_webhook(request.user, webhook_id)
     return HttpResponse(status=204)
 
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def add_bot(request):
+def add_bot_view(request):
     token = request.data.get('token')
-
-    if Bot.objects.filter(token=token, owner=request.user).exists():
-        raise BadRequestError("Bot with this token already exists!")
-
-    settings = DiscordSettings.objects.get(user=request.user)
-
-    primary_bot = Bot.objects.filter(owner=request.user, primary=True).first()
-    if not primary_bot:
-        raise BadRequestError("No primary bot found.")
-
-    bot_id, bot_name = DiscordHelper().check_bot(settings.guild_id, primary_bot.token, settings.role_id, token)
-    bot = Bot(
-        token=token,
-        discord_id=bot_id,
-        name=bot_name,
-        owner=request.user,
-    )
-
-    bot.save()
-    discord.remove_user_state(request.user)
-
+    bot = user_service.add_bot(request.user, token)
     return JsonResponse(BotSerializer().serialize_object(bot), status=200)
 
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def delete_bot(request, bot_id):
-    try:
-        bot = Bot.objects.get(discord_id=bot_id, owner=request.user)
-    except Bot.DoesNotExist:
-        raise BadRequestError("Bot with this token doesn't exists!")
-
-    if bot.primary:
-        raise BadRequestError("Cannot remove primary bot.")
-
-    if query_attachments(author_id=bot.discord_id):
-        raise BadRequestError("Cannot remove bot. There are files associated with this bot")
-
-    bot.delete()
-    discord.remove_user_state(request.user)
-
+def delete_bot_view(request, bot_id):
+    user_service.delete_bot(request.user, bot_id)
     return HttpResponse(status=204)
 
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def discord_settings_start(request):
+def discord_settings_start_view(request):
     guild_id = request.data['guild_id']
     bot_token = request.data['bot_token']
     attachment_name = request.data['attachment_name']
 
-    settings = DiscordSettings.objects.get(user=request.user)
-
-    if settings.auto_setup_complete:
-        raise BadRequestError("Auto setup was already done")
-
-    bot, role_id, category_id, channels, webhooks = DiscordHelper().start(guild_id, bot_token)
-
-    with transaction.atomic():
-        settings.guild_id = guild_id
-        settings.role_id = role_id
-        settings.category_id = category_id
-        settings.attachment_name = attachment_name
-
-        Bot.objects.create(token=bot_token, discord_id=bot[0], name=bot[1], owner=request.user, primary=True)
-
-        for channel in channels:
-            Channel.objects.create(id=channel[0], name=channel[1], owner=request.user, guild_id=guild_id)
-
-        for webhook in webhooks:
-            Webhook.objects.create(discord_id=webhook[0], url=webhook[1], name=webhook[2], owner=request.user, guild_id=guild_id, channel=Channel.objects.get(id=webhook[3]))
-
-        settings.auto_setup_complete = True
-        settings.save()
-
-    discord.remove_user_state(request.user)
-    settings = obtain_discord_settings(request.user)
+    user_service.auto_setup_discord_settings(request.user, guild_id, bot_token, attachment_name)
+    settings = build_discord_settings(request.user)
 
     return JsonResponse(settings, status=200)
 
@@ -272,58 +167,26 @@ def discord_settings_start(request):
 @api_view(['PATCH'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def update_attachment_name(request):
+def update_attachment_name_view(request):
     attachment_name = request.data['attachment_name']
-
-    discord_settings = DiscordSettings.objects.get(user=request.user)
-    discord_settings.attachment_name = attachment_name
-    discord_settings.save()
-
-    settings = obtain_discord_settings(request.user)
+    user_service.change_attachment_name(request.user, attachment_name)
+    settings = build_discord_settings(request.user)
     return JsonResponse(settings, status=200)
 
 
 @api_view(['DELETE'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def reset_discord_settings(request):
-    if File.objects.filter(owner=request.user).exists():
-        raise BadRequestError("Cannot reset discord settings. Remove all files first")
-
-    discord_settings = DiscordSettings.objects.get(user=request.user)
-
-    bots = Bot.objects.filter(owner=request.user)
-    primary_bot = bots.filter(primary=True).first()
-    if not primary_bot:
-        raise BadRequestError("No bot found, please remove state manually via admin page")
-
-    errors = DiscordHelper().remove_all(user=request.user)
-    error_string = ", ".join(e for e in errors if e)
-
-    # Delete webhooks
-    Webhook.objects.filter(owner=request.user).delete()
-
-    # Delete channels
-    Channel.objects.filter(owner=request.user).delete()
-
-    # Delete bots
-    Bot.objects.filter(owner=request.user).delete()
-
-    # Delete and recreate settings
-    discord_settings.delete()
-    DiscordSettings.objects.create(user=request.user)
-
-    discord.remove_user_state(request.user)
-
-    settings = obtain_discord_settings(request.user)
-
+def reset_discord_settings_view(request):
+    error_string = user_service.reset_discord_settings(request.user)
+    settings = build_discord_settings(request.user)
     return JsonResponse({"errors": error_string, "settings": settings}, status=200)
 
 
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & AdminPerms])
-def reset_discord_state(request):
+def reset_discord_state_view(request):
     discord.remove_user_state(request.user)
     return HttpResponse(status=204)
 
@@ -331,7 +194,7 @@ def reset_discord_state(request):
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-def list_active_devices(request):
+def list_active_devices_view(request):
     tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
     serializer = DeviceTokenSerializer()
     data = serializer.serialize_objects(tokens)
@@ -341,16 +204,14 @@ def list_active_devices(request):
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
-def logout_all_devices(request):
-    PerDeviceToken.objects.revoke_all_for_user(user=request.user)
+def logout_all_devices_view(request):
+    auth_service.logout_all_devices_for_user(request, request.user)
     return HttpResponse(status=204)
+
 
 @api_view(['DELETE'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
-def revoke_device(request, device_id):
-    token = PerDeviceToken.objects.filter(user=request.user, device_id=device_id).first()
-    if token:
-        token.revoke()
-
+def revoke_device_view(request, device_id):
+    auth_service.logout_device(request, request.user, device_id)
     return HttpResponse(status=204)

@@ -262,7 +262,7 @@ class ShareAccessSerializer(SimpleSerializer):
 class WebhookSerializer(SimpleSerializer):
     def serialize_object(self, webhook: Webhook) -> dict:
         return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url, "channel":
-                {"id": webhook.channel.id, "name": webhook.channel.name}}
+                {"id": webhook.channel.discord_id, "name": webhook.channel.name}}
 
 
 class BotSerializer(SimpleSerializer):
@@ -275,7 +275,7 @@ class MomentSerializer(SimpleSerializer):
         signed_file_id = sign_resource_id_with_expiry(moment.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.timestamp}/stream"
 
-        return {"file_id": moment.file.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
+        return {"file_id": moment.file.id, "moment_id": moment.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
 
 
 class TagSerializer(SimpleSerializer):

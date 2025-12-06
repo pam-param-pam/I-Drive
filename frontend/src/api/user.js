@@ -38,6 +38,12 @@ export async function createQrSession() {
 }
 
 
+export async function changePassword(data) {
+   let url = `/auth/password`
+   let response = await backendInstance.patch(url, data)
+   return response.data
+}
+
 export async function registerUser(data) {
    let url = "/auth/register"
    let response = await backendInstance.post(url, data, {
@@ -59,14 +65,6 @@ export async function logoutUser(token) {
    })
    return response.data
 }
-
-
-export async function changePassword(data) {
-   let url = `/user/password`
-   let response = await backendInstance.patch(url, data)
-   return response.data
-}
-
 
 export async function getQrSessionDeviceInfo(sessionId) {
    let url = `/auth/qrcode/get/${sessionId}`

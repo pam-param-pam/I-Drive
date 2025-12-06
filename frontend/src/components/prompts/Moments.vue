@@ -197,7 +197,7 @@ export default {
          }
       }, 1000),
       async deleteMoment(event, moment) {
-         await removeMoment(this.file.id, moment.timestamp)
+         await removeMoment(this.file.id, moment.id)
          this.moments = this.moments.filter(m => m !== moment)
          this.$toast.success(this.$t("toasts.momentRemoved"))
 

@@ -8,9 +8,9 @@ from .helper import file_serializer, folder_serializer, send_message
 from ..celery import app
 from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
-from ..core.queries.utils import get_folder
 from ..core.websocket.utils import send_event
 from ..models import File, Folder
+from ..queries.selectors import get_folder
 
 
 def move_group(context: RequestContext, grouped_items, new_parent, processed_count, last_percentage, total_length, is_folder):

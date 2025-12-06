@@ -13,6 +13,7 @@ from httpx import Response
 from ..constants import DISCORD_BASE_URL, cache
 from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin
 from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordTextError
+from ..queries.selectors import query_attachments
 
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.INFO)
@@ -58,7 +59,7 @@ class Discord:
             }
             for bot in bots
         }
-        channels = [channel.id for channel in channels]
+        channels = [channel.discord_id for channel in channels]
         with self.lock:
             self.users_state[user.id] = {"channels": channels, "guild_id": settings.guild_id, "bots": bots_dict, "blocked": False}
 
@@ -71,9 +72,6 @@ class Discord:
                 pass
 
     def _get_channel_id(self, message_id):
-        #todo circular
-        from ..core.queries.utils import query_attachments
-
         attachments = query_attachments(message_id=message_id)
         if len(attachments) > 0:
             return attachments[0].channel_id
@@ -163,7 +161,7 @@ class Discord:
             url = message["attachments"][0]["url"]
             parsed_url = urlparse(url)
             query_params = parse_qs(parsed_url.query)
-            ex_param = query_params.get('ex', [None])[0]
+            ex_param = query_params.get(b'ex', [None])[0]
             if ex_param is None:
                 raise ValueError("The 'ex' parameter is missing in the URL")
             expiry_timestamp = int(ex_param, 16)

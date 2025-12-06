@@ -1,4 +1,3 @@
-import hashlib
 import json
 import threading
 import traceback
@@ -147,10 +146,10 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer):
 
 
 class UserConsumer(RateLimitedWebsocketConsumer):
-    connection_limit = 15        # how many new connections allowed
+    connection_limit = 10        # how many new connections allowed
 
-    message_limit = 101  # todo
-    message_window = 60
+    message_limit = 30
+    message_window = 30
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
@@ -211,9 +210,8 @@ class UserConsumer(RateLimitedWebsocketConsumer):
 
     def logout(self, event: WebsocketLogoutEvent):
         if self.user.id == event['context']['user_id']:
-            if event['token_hash']:  # specific connection to close
-                token_hash = hashlib.sha256(self.token.encode()).hexdigest()
-                if token_hash == event['token_hash']:
+            if event['device_id']:  # specific connection to close
+                if self.device_id == event['device_id']:
                     self.close()
             else:  # close all connections
                 self.close()

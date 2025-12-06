@@ -8,8 +8,8 @@ from rest_framework.permissions import BasePermission
 from ..constants import ALLOWED_IPS_LOCKED
 from ..core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..core.helpers import get_ip, get_attr
-from ..core.queries.utils import check_if_item_belongs_to_share
 from ..models import UserPerms, File, Folder, ShareableLink
+from ..queries.selectors import check_if_item_belongs_to_share
 
 
 class BasePermissionWithMessage(BasePermission):

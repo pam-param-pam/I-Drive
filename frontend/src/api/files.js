@@ -33,9 +33,9 @@ export async function createFile(data, config = {}) {
 }
 
 
-export async function editFile(fileId, data) {
+export async function editFile(fileId, file_data) {
    let url = `/files/${fileId}`
-   let response = await backendInstance.patch(url, data)
+   let response = await backendInstance.patch(url, file_data)
    return response.data
 }
 
@@ -76,8 +76,8 @@ export async function addMoment(fileId, data) {
 }
 
 
-export async function removeMoment(fileId, timestamp) {
-   let url = `/files/${fileId}/moments/${timestamp}`
+export async function removeMoment(fileId, moment_id) {
+   let url = `/files/${fileId}/moments/${moment_id}`
    let response = await backendInstance.delete(url)
    return response.data
 }

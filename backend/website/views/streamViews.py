@@ -2,7 +2,6 @@ import io
 import re
 import time
 from io import BytesIO
-from urllib.parse import quote
 
 import aiohttp
 import exifread
@@ -28,7 +27,6 @@ from ..auth.throttle import MediaThrottle, defaultAuthUserThrottle
 from ..constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.http.utils import get_content_disposition_string, parse_range_header
-from ..core.queries.utils import check_if_bots_exists, get_discord_author, get_flattened_children, create_zip_file_dict
 from ..core.websocket.utils import send_event
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
@@ -36,6 +34,8 @@ from ..models import Fragment, Preview
 from ..core.Serializers import FileSerializer
 from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
 from ..core.errors import DiscordError, BadRequestError, FailedToResizeImageError
+from ..queries.builders import build_flattened_children, build_zip_file_dict
+from ..queries.selectors import check_if_bots_exists, get_discord_author
 from ..tasks.helper import auto_prefetch
 
 
@@ -454,15 +454,15 @@ def stream_zip_files(request, token):
     single_root = False
     if len(files) == 0 and len(folders) == 1:
         single_root = True
-        dict_files = get_flattened_children(folders[0], root_folder=folders[0])
+        dict_files = build_flattened_children(folders[0], root_folder=folders[0])
 
     else:
         for file in files:
-            file_dict = create_zip_file_dict(file, file.name)
+            file_dict = build_zip_file_dict(file, file.name)
             dict_files.append(file_dict)
 
         for folder in folders:
-            folder_tree = get_flattened_children(folder, root_folder=folder)
+            folder_tree = build_flattened_children(folder, root_folder=folder)
             dict_files += folder_tree
 
     zip_name = user_zip.name if not single_root else folders[0].name

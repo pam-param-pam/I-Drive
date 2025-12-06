@@ -1,8 +1,4 @@
-from datetime import timedelta
-
-from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, JsonResponse
-from django.utils import timezone
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -10,16 +6,14 @@ from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_s
 from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
     CheckShareItemBelongings, CheckTrash, CheckReady
 from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
-from ..auth.utils import check_resource_perms
 from ..constants import API_BASE_URL
-from ..core.crypto.signer import sign_resource_id_with_expiry
-from ..core.helpers import validate_ids_as_list
-from ..core.http.utils import parse_range_header
-from ..core.queries.utils import create_share_breadcrumbs, create_share_resource_dict, build_share_folder_content, get_item, check_if_item_belongs_to_share, validate_and_add_to_zip
-from ..models import UserSettings, ShareableLink, UserZIP, Subtitle, File, ShareAccessEvent
 from ..core.Serializers import ShareSerializer, ShareAccessSerializer
+from ..core.crypto.signer import sign_resource_id_with_expiry
 from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
-from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
+from ..core.errors import ResourceNotFoundError, ResourcePermissionError
+from ..models import UserSettings, ShareableLink, Subtitle, File
+from ..queries.builders import build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content
+from ..services import share_service
 
 
 @api_view(['GET'])
@@ -46,34 +40,12 @@ def get_shares(request):
 @check_resource_permissions(default_checks, resource_key="item_obj")
 def create_share(request, item_obj):
     value = abs(int(request.data['value']))
-
     unit = request.data['unit']
     password = request.data.get('password')
-
-    current_time = timezone.now()
-
-    if unit == 'minutes':
-        expiration_time = current_time + timedelta(minutes=value)
-    elif unit == 'hours':
-        expiration_time = current_time + timedelta(hours=value)
-    elif unit == 'days':
-        expiration_time = current_time + timedelta(days=value)
-    else:
-        raise BadRequestError("Invalid unit. Supported units are 'minutes', 'hours', and 'days'.")
-
-    share = ShareableLink.objects.create(
-        expiration_time=expiration_time,
-        owner=request.user,
-        content_type=ContentType.objects.get_for_model(item_obj),
-        object_id=item_obj.id
-    )
-    if password:
-        share.password = password
-
-    share.save()
+    share = share_service.create_share(request.user, item_obj, unit, value, password)
     item = ShareSerializer().serialize_object(share)
-
     return JsonResponse(item, status=200, safe=False)
+
 
 @api_view(['DELETE'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -81,8 +53,8 @@ def create_share(request, item_obj):
 @extract_share()
 @check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
 def delete_share(request, share_obj):
-    share_obj.delete()
-    return HttpResponse("Share deleted!", status=204)
+    share_service.delete_share(share_obj)
+    return HttpResponse(status=204)
 
 
 @api_view(['GET'])
@@ -107,6 +79,7 @@ def check_share_password(request, share_obj):
 
     raise ResourcePermissionError("Share password is incorrect")
 
+
 @api_view(['GET'])
 @throttle_classes([defaultAnonUserThrottle])
 @permission_classes([AllowAny])
@@ -122,17 +95,17 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     obj_in_share = share_obj.get_item_inside()
 
     if share_obj.get_type() == "folder":
-        breadcrumbs = create_share_breadcrumbs(obj_in_share, obj_in_share)
+        breadcrumbs = build_share_breadcrumbs(obj_in_share, obj_in_share)
     else:
         breadcrumbs = []
 
-    response_dict = create_share_resource_dict(share_obj, obj_in_share)
+    response_dict = build_share_resource_dict(share_obj, obj_in_share)
     del response_dict["parent_id"]
 
     if folder_obj:
         # ShareAccessEvent.log(share_obj, request, "folder_open", folder_id=folder_obj.id) todo
 
-        breadcrumbs = create_share_breadcrumbs(folder_obj, obj_in_share, True)
+        breadcrumbs = build_share_breadcrumbs(folder_obj, obj_in_share, True)
         folder_content = build_share_folder_content(share_obj, folder_obj, include_folders=settings.subfolders_in_shares)["children"]
 
     else:
@@ -148,17 +121,7 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
 def create_share_zip_model(request, share_obj: ShareableLink):
     ids = request.data['ids']
-    validate_ids_as_list(ids)
-
-    user_zip = UserZIP.objects.create(owner=share_obj.owner)
-
-    for item_id in ids:
-        item = get_item(item_id)
-        check_if_item_belongs_to_share(request, share_obj, item)
-        check_resource_perms(request, item, [CheckTrash, CheckReady])
-        validate_and_add_to_zip(user_zip, item)
-
-    user_zip.save()
+    user_zip = share_service.create_share_zip(request, share_obj, ids)
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
 
 

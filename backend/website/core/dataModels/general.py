@@ -1,5 +1,5 @@
 from typing import Optional
-from typing import Union, TypedDict, List, Any
+from typing import Union, TypedDict, List
 
 from django.db.models import PositiveBigIntegerField
 from shortuuidfield import ShortUUIDField
@@ -19,7 +19,7 @@ class FileDict(TypedDict):
     isDir: bool
     id: ShortUUIDField
     name: str
-    parent_id: Union[ShortUUIDField, None]
+    parent_id: Optional[ShortUUIDField]
     extension: str
     size: PositiveBigIntegerField
     type: str
@@ -43,7 +43,7 @@ class FolderDict(TypedDict):
     isDir: bool
     id: ShortUUIDField
     name: str
-    parent_id: Union[ShortUUIDField, None, Any]
+    parent_id: Optional[ShortUUIDField]
     created: str
     last_modified: str
     isLocked: bool

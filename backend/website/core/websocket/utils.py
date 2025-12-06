@@ -20,7 +20,7 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
     for resource in resources:
         parent_mapping[resource.parent_id] = resource.parent
         if isinstance(resource, Folder):
-            grouped_files[resource.parent_id].append(folder_serializer.serialize_object(resource))
+            grouped_files[resource.parent.id].append(folder_serializer.serialize_object(resource))
         else:
             grouped_files[resource.parent_id].append(file_serializer.serialize_object(resource))
 
@@ -70,14 +70,4 @@ def send_event(context: RequestContext, folder_context: Optional[Folder], op_cod
     )
 
 
-def logout_and_close_websockets(user_id: str, device_id: str = None, token_hash: str = None) -> None:
-    context = RequestContext.from_user(user_id)
-    send_event(context, None, EventCode.FORCE_LOGOUT, {"device_id": device_id})
-    queue_ws_event.delay(
-        'user',
-        {
-            "type": "logout",
-            "context": context,
-            "token_hash": token_hash,
-        }
-    )
+
