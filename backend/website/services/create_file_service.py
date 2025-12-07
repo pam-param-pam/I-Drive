@@ -8,7 +8,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from . import file_service
-from .attachments import delete_single_discord_attachment
+from .attachment_service import delete_single_discord_attachment
 from ..auth.Permissions import default_checks
 from ..auth.utils import check_resource_perms
 from ..constants import EncryptionMethod, EventCode, MAX_DISCORD_MESSAGE_SIZE
@@ -85,7 +85,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     check_resource_perms(request, parent, default_checks)
 
     if File.objects.filter(frontend_id=frontend_id).exists():
-        return
+        return None
 
     if created_at:
         try:
@@ -93,6 +93,10 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
             created_at = timezone.make_aware(datetime.fromtimestamp(timestamp_in_seconds))
         except (ValueError, OverflowError):
             raise BadRequestError("Invalid 'created_at' timestamp format.")
+
+    total_attachments_size = sum(att.size for att in attachments)
+    if total_attachments_size != file_size:
+        raise BadRequestError(f"Attachment sizes ({total_attachments_size}) do not match declared file size ({file_size}).")
 
     file_obj = File(
         extension=extension,
@@ -206,7 +210,6 @@ def create_or_edit_thumbnail(request, user: User, file_obj: File, data: dict) ->
     check_if_bots_exists(user)
 
     try:
-        # todo switch the attachments if possible
         delete_single_discord_attachment(user, file_obj.thumbnail)
         file_obj.thumbnail.delete()
     except Thumbnail.DoesNotExist:

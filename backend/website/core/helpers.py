@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Type, Tuple
 
 from .errors import BadRequestError
 from ..constants import MAX_RESOURCE_NAME_LENGTH, CODE_EXTENSIONS, RAW_IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
@@ -87,13 +87,23 @@ def get_ip(request) -> tuple[str, bool]:
     return ip, from_nginx
 
 
-def validate_ids_as_list(ids: list, max_length: int = 1000) -> None:
+def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Type, Tuple[Type, ...]] = (str, )) -> None:
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
+
     if len(ids) == 0:
         raise BadRequestError("'ids' length cannot be 0.")
+
     if len(ids) > max_length:
         raise BadRequestError(f"'ids' length cannot > {max_length}.")
+
+    for x in ids:
+        if not isinstance(x, child_type):
+            types_tuple = child_type if isinstance(child_type, tuple) else (child_type,)
+            expected_types = ", ".join(f"'{t.__name__}'" for t in types_tuple)
+
+            raise BadRequestError(f"All ids must be of type=[{expected_types}], got type='{type(x).__name__}'")
+
 
 
 def get_file_type(extension: str) -> str:

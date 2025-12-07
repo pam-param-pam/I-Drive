@@ -4,6 +4,7 @@ from collections import defaultdict
 from .crypto.signer import sign_resource_id_with_expiry
 from ..constants import API_BASE_URL
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken
+from ..queries.selectors import get_item_inside_share
 
 
 class SimpleSerializer(ABC):
@@ -176,7 +177,7 @@ class FolderSerializer(SimpleSerializer):
             'isDir': True,
             'id': folder_obj.id,
             'name': folder_obj.name,
-            'parent_id': folder_obj.parent_id,
+            'parent_id': folder_obj.parent.id if folder_obj.parent else None,
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
             'isLocked': folder_obj.is_locked,
@@ -205,7 +206,7 @@ class ShareFolderSerializer(SimpleSerializer):
 
 class ShareSerializer(SimpleSerializer):
     def serialize_object(self, share: ShareableLink) -> dict:
-        obj = share.get_item_inside()
+        obj = get_item_inside_share(share)
 
         isDir = True if isinstance(obj, Folder) else False
 
@@ -344,9 +345,3 @@ class DeviceTokenSerializer(SimpleSerializer):
             'city': token.city,
             'device_type': token.device_type
         }
-
-
-# class ShareSubtitleSerializer(SimpleSerializer):
-#     def serialize_object(self, track: Subtitle) -> dict:
-#         url = f"{API_BASE_URL}/shares/{token}/files/{file_id}/subtitles/{subtitle.id}/stream"
-#         return {"id": subtitle.id, "language": subtitle.language, "url": url}

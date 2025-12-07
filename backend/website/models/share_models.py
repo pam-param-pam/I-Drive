@@ -54,7 +54,7 @@ class ShareableLink(models.Model):
         ]
 
     def __str__(self):
-        return f"Share[owner={self.owner.username}, resource={self.get_item_inside().name}]"
+        return f"Share[owner={self.owner.username}]"
 
     def save(self, *args, **kwargs):
         if self.token is None or self.token == '':
@@ -75,21 +75,6 @@ class ShareableLink(models.Model):
         else:
             raise KeyError("Wrong content_type in share")
 
-    def get_item_inside(self):
-        # todo move to queries
-        from ..services.utils import get_item
-
-        if self.is_expired():
-            self.delete()
-            raise ResourceNotFoundError()
-
-        try:
-            obj = get_item(self.object_id)
-            return obj
-        except ResourceNotFoundError:
-            # looks like folder/file no longer exist, deleting time!
-            self.delete()
-            raise ResourceNotFoundError()
 
 class ShareAccess(models.Model):
     share = models.ForeignKey(ShareableLink, on_delete=models.CASCADE)
@@ -122,7 +107,7 @@ class ShareAccess(models.Model):
         )
 
     def __str__(self):
-        return f"Access to {self.share.get_item_inside().name} from {self.ip} at {self.access_time} ({self.accessed_by})"
+        return f"Access to {self.share} from {self.ip} at {self.access_time} ({self.accessed_by})"
 
 
 class ShareAccessEvent(models.Model):

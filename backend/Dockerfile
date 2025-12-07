@@ -1,7 +1,7 @@
 # ----------------------------
 # 1️⃣ Builder stage
 # ----------------------------
-FROM python:3.10-slim AS builder
+FROM python:3.12-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -23,7 +23,7 @@ COPY . .
 # ----------------------------
 # 2️⃣ Final stage (runtime)
 # ----------------------------
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 WORKDIR /app/backend
 

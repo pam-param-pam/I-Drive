@@ -1,10 +1,10 @@
 import base64
 from typing import Type
 
-from discord import User
+from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 
-from .attachments import delete_single_discord_attachment
+from .attachment_service import delete_single_discord_attachment
 from ..constants import cache
 from ..core.errors import BadRequestError
 from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment
@@ -21,6 +21,9 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
 
     iv = data.get('iv')
     key = data.get('key')
+
+    if file_obj.type not in ("Video", "Audio", "Image"):
+        raise BadRequestError(f"Cannot create thumbnail for file type: {file_obj.type}.")
 
     if file_obj.is_encrypted() and not (iv and key):
         raise BadRequestError("Encryption key and/or iv not provided")
@@ -55,6 +58,12 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
 
     iv = data.get('iv')
     key = data.get('key')
+
+    if file_obj.type != "Video":
+        raise BadRequestError("Must be a video.")
+
+    if file_obj.is_encrypted() and not (iv and key):
+        raise BadRequestError("Encryption key and/or iv not provided")
 
     if iv:
         iv = base64.b64decode(iv)
@@ -109,6 +118,9 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
 
 
 def create_video_metadata(file: File, metadata: dict) -> VideoMetadata:
+    if file.type != "Video":
+        raise BadRequestError("Must be a video.")
+
     video_metadata = VideoMetadata.objects.create(
         file=file,
         is_fragmented=metadata["is_fragmented"],
@@ -203,6 +215,9 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
         iv = base64.b64decode(iv)
     if key:
         key = base64.b64decode(key)
+
+    if file_obj.is_encrypted() and not (iv and key):
+        raise BadRequestError("Encryption key and/or iv not provided")
 
     if file_obj.type != "Video":
         raise BadRequestError("Must be a video.")

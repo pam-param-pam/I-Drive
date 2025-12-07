@@ -154,7 +154,6 @@ export const useUploadStore = defineStore("upload", {
          if (!fileState) return
          /**We must filter statuses*/
          if (isErrorStatus(fileState.status) && status === fileUploadStatus.uploading) return
-         // if (fileState.status === fileUploadStatus.paused && status === fileUploadStatus.uploading) return
          fileState.error = null
          fileState.status = status
       },
@@ -175,7 +174,6 @@ export const useUploadStore = defineStore("upload", {
       },
 
       fixUploadTracking(request, bytesUploaded) {
-         /** This fixes the progress ui tracking */
          this.uploadSpeedMap.delete(request.id)
          this.allBytesUploaded -= bytesUploaded
 

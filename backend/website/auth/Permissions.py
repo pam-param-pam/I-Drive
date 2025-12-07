@@ -9,7 +9,7 @@ from ..constants import ALLOWED_IPS_LOCKED
 from ..core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..core.helpers import get_ip, get_attr
 from ..models import UserPerms, File, Folder, ShareableLink
-from ..queries.selectors import check_if_item_belongs_to_share
+from ..queries.selectors import check_if_item_belongs_to_share, get_item_inside_share
 
 
 class BasePermissionWithMessage(BasePermission):
@@ -304,7 +304,7 @@ class CheckShareReady(BaseResourceCheck):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
 
-        ready = self._require_attr(share_obj.get_item_inside(), 'ready')
+        ready = self._require_attr(get_item_inside_share(share_obj), 'ready')
         if not ready:
             raise ResourceNotFoundError("Share not found or expired")
 
@@ -312,7 +312,7 @@ class CheckShareTrash(BaseResourceCheck):
     def check(self, request, *resources):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
-        in_trash = self._require_attr(share_obj.get_item_inside(), 'inTrash')
+        in_trash = self._require_attr(get_item_inside_share(share_obj), 'inTrash')
         if in_trash:
             raise ResourceNotFoundError("Share not found or expired")
 

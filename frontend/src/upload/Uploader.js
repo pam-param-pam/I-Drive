@@ -28,14 +28,14 @@ export class Uploader {
 
    async startUpload(type, folderContext, filesList) {
       /**Entry for upload process*/
-      // window.addEventListener("beforeunload", beforeUnload)
+      window.addEventListener("beforeunload", beforeUnload)
+
       this.uploadStore.state = uploadState.uploading
 
       let res = await canUpload(folderContext)
       if (!res.can_upload) return
 
       this.processNewFiles(type, folderContext, filesList, res.lockFrom)
-      //todo NotOptimizedForSmallFiles
    }
 
    processNewFiles(typeOfUpload, folderContext, filesList, lockFrom) {

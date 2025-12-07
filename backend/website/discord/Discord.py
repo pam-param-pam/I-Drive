@@ -161,7 +161,7 @@ class Discord:
             url = message["attachments"][0]["url"]
             parsed_url = urlparse(url)
             query_params = parse_qs(parsed_url.query)
-            ex_param = query_params.get(b'ex', [None])[0]
+            ex_param = query_params.get('ex', [None])[0]
             if ex_param is None:
                 raise ValueError("The 'ex' parameter is missing in the URL")
             expiry_timestamp = int(ex_param, 16)
@@ -325,7 +325,7 @@ class Discord:
         headers = {'Authorization': f'Bot {token}'}
         response = self._make_bot_request(user, 'PATCH', url, json={"attachments": attachments_to_keep}, headers=headers)
         return response
-
+    
     def fetch_messages(self, user, channel_id):
         # todo
         url = f"{DISCORD_BASE_URL}/channels/{channel_id}/messages"

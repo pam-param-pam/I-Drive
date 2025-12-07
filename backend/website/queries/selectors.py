@@ -47,7 +47,7 @@ def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     return False
 
 
-def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:  # todo
+def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:  # todo check safety
     obj_in_share = get_item(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
 
@@ -116,3 +116,17 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
         combined_results.extend(cls.objects.filter(query))
 
     return combined_results
+
+
+def get_item_inside_share(share: ShareableLink):
+    if share.is_expired():
+        share.delete()
+        raise ResourceNotFoundError()
+
+    try:
+        obj = get_item(share.object_id)
+        return obj
+    except ResourceNotFoundError:
+        # looks like folder/file no longer exist, deleting time!
+        share.delete()
+        raise ResourceNotFoundError()

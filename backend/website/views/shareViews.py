@@ -13,6 +13,7 @@ from ..core.decorators import extract_item, check_resource_permissions, extract_
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError
 from ..models import UserSettings, ShareableLink, Subtitle, File
 from ..queries.builders import build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content
+from ..queries.selectors import get_item_inside_share
 from ..services import share_service
 
 
@@ -92,7 +93,7 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     # ShareAccessEvent.log(share_obj, request, "share_view", share_id=share_obj.id) # todo
 
     settings = UserSettings.objects.get(user=share_obj.owner)
-    obj_in_share = share_obj.get_item_inside()
+    obj_in_share = get_item_inside_share(share_obj)
 
     if share_obj.get_type() == "folder":
         breadcrumbs = build_share_breadcrumbs(obj_in_share, obj_in_share)
