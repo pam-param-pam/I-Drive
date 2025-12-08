@@ -4,7 +4,7 @@ import traceback
 
 import httpx
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db import OperationalError, IntegrityError
+from django.db import OperationalError, IntegrityError, ProgrammingError
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from httpx import ConnectError
@@ -153,6 +153,9 @@ class CommonErrorsMiddleware(MiddlewareMixin):
 
         elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord, FailedToResizeImageError)):
             return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
+
+        elif isinstance(exception, ProgrammingError):
+            return JsonResponse(build_http_error_response(code=500, error="errors.internal", details="Database schema error"), status=500)
 
         # 503 SERVICE UNAVAILABLE
         elif isinstance(exception, CannotProcessDiscordRequestError):

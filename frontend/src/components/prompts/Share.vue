@@ -160,7 +160,7 @@ export default {
          if (this.listing) return
          let res = await createShare({
             item_id: this.selected[0].id,
-            password: this.password,
+            password: this.password || null,
             value: this.time,
             unit: this.unit
          })

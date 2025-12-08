@@ -37,9 +37,17 @@ jobs:
           cat <<EOF > .env
           IS_DEV_ENV=False
           DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
-          I_DRIVE_BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
           NGINX_PORT=8080
           PROTOCOL=https
+          
+          BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
+          BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api
+          
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+
           EOF
           
           echo "Pulling docker-compose.yml..."
@@ -54,4 +62,4 @@ jobs:
           
           echo "Docker Compose started successfully."
 
-         
+          

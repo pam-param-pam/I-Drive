@@ -8,7 +8,7 @@ from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
-    cancel_pending_qr_session_view, change_password_view
+    cancel_pending_qr_session_view, change_password_view, healthcheck_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id
 from .views.itemManagmentViews import rename_view, move_to_trash, move, \
@@ -151,8 +151,7 @@ urlpatterns = [
     django_path('admin', admin.site.urls),
     django_path('test', get_discord_state),
 
-    path('ip', ['POST'], your_ip, name='get ip'),
-    path('ip', ['GET'], your_ip, name='get ip'),
+    path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 
     path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
     path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),

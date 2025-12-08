@@ -14,17 +14,17 @@ from ..constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH
 
 class Folder(MPTTModel):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
-    name = models.TextField(max_length=255, null=False)
-    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subfolders')
+    name = models.CharField(max_length=100)
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders')
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now_add=True)
     inTrash = models.BooleanField(default=False)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    inTrashSince = models.DateTimeField(null=True, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    inTrashSince = models.DateTimeField(null=True)
     ready = models.BooleanField(default=True)
-    password = models.CharField(max_length=255, null=True, blank=True)
+    password = models.CharField(max_length=50, null=True)
     autoLock = models.BooleanField(default=False)
-    lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='+')
 
     class MPTTMeta:
         order_insertion_by = ['-created_at']

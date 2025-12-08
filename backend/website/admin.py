@@ -87,7 +87,7 @@ class FolderAdmin(SimpleHistoryAdmin):
         smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
-        if isinstance(obj, File):
+        if isinstance(obj, Folder):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
 
             obj.force_delete()

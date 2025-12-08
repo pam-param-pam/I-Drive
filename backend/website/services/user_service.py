@@ -84,23 +84,30 @@ def auto_setup_discord_settings(user: User, guild_id: str, bot_token: str, attac
         raise BadRequestError("Auto setup was already done")
 
     bot, role_id, category_id, channels, webhooks = DiscordHelper().start(guild_id, bot_token)
+    try:
+        with transaction.atomic():
+            settings.guild_id = guild_id
+            settings.role_id = role_id
+            settings.category_id = category_id
+            settings.attachment_name = attachment_name
 
-    with transaction.atomic():
-        settings.guild_id = guild_id
-        settings.role_id = role_id
-        settings.category_id = category_id
-        settings.attachment_name = attachment_name
+            Bot.objects.create(token=bot_token, discord_id=bot[0], name=bot[1], owner=user, primary=True)
 
-        Bot.objects.create(token=bot_token, discord_id=bot[0], name=bot[1], owner=user, primary=True)
+            for channel in channels:
+                Channel.objects.create(discord_id=channel[0], name=channel[1], owner=user, guild_id=guild_id)
 
+            for webhook in webhooks:
+                Webhook.objects.create(discord_id=webhook[0], url=webhook[1], name=webhook[2], owner=user, guild_id=guild_id, channel=Channel.objects.get(discord_id=webhook[3]))
+
+            settings.auto_setup_complete = True
+            settings.save()
+    except Exception as e:
+        DiscordHelper()._create_role_cleanup(guild_id, bot_token, role_id)
+        DiscordHelper()._create_category_cleanup(bot_token, category_id)
         for channel in channels:
-            Channel.objects.create(id=channel[0], name=channel[1], owner=user, guild_id=guild_id)
+            DiscordHelper()._create_channel_in_category_cleanup(bot_token, channel[0])
 
-        for webhook in webhooks:
-            Webhook.objects.create(discord_id=webhook[0], url=webhook[1], name=webhook[2], owner=user, guild_id=guild_id, channel=Channel.objects.get(id=webhook[3]))
-
-        settings.auto_setup_complete = True
-        settings.save()
+        raise e
 
     discord.remove_user_state(user)
 

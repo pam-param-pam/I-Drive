@@ -24,7 +24,7 @@ class ShareableLink(models.Model):
     token = models.CharField(max_length=255, unique=True)
     expiration_time = models.DateTimeField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    password = models.TextField(max_length=100, null=True, blank=True)
+    password = models.TextField(max_length=100, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     # GenericForeignKey to point to either Folder or File
@@ -80,7 +80,7 @@ class ShareAccess(models.Model):
     share = models.ForeignKey(ShareableLink, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True)
     user_agent = models.TextField()
-    accessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    accessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     access_time = models.DateTimeField(auto_now_add=True)
 
     @classmethod
@@ -114,7 +114,7 @@ class ShareAccessEvent(models.Model):
     access = models.ForeignKey(ShareAccess, on_delete=models.CASCADE, related_name='events')
     timestamp = models.DateTimeField(auto_now_add=True)
     event_type = models.CharField(max_length=64)
-    metadata = models.JSONField(default=dict, blank=True)
+    metadata = models.JSONField(default=dict)
 
     class Meta:
         indexes = [

@@ -12,7 +12,7 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = 'static/'
 
-SECRET_KEY = os.environ['I_DRIVE_BACKEND_SECRET_KEY']
+SECRET_KEY = os.environ['BACKEND_SECRET_KEY']
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTOCOL', 'https')
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -52,25 +52,24 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',           # Must be first for security-related headers
-    'django.contrib.sessions.middleware.SessionMiddleware',    # Sessions need to come before auth and CSRF
-    'corsheaders.middleware.CorsMiddleware',                   # CORS middleware should be early, before CommonMiddleware
-    'django.middleware.common.CommonMiddleware',                # Handles common tasks like URL normalization
-    'django.middleware.csrf.CsrfViewMiddleware',                # CSRF protection after sessions and before auth
-    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Auth depends on sessions and CSRF
-    'django.contrib.messages.middleware.MessageMiddleware',     # Message framework depends on auth
-    'django.middleware.gzip.GZipMiddleware',                     # Can be late but before clickjacking (optional)
-    'django_user_agents.middleware.UserAgentMiddleware',        # Custom user agent detection; OK here
-    'website.core.http.middlewares.CommonErrorsMiddleware',     # Custom middlewares; keep after core Django middleware
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
+    'website.core.http.middlewares.CommonErrorsMiddleware',
     'website.core.http.middlewares.FailedRequestLoggerMiddleware',
     'website.core.http.middlewares.ApplyRateLimitHeadersMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',       # History tracking middleware; typically last but before clickjacking
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',   # Usually last; sets security headers
+    'simple_history.middleware.HistoryRequestMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 CORS_ALLOW_HEADERS = "*"
 CORS_ALLOW_PRIVATE_NETWORK = True
-
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'http:\\localhost',
@@ -109,7 +108,11 @@ TEMPLATES = [
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}",
+        "LOCATION": f"redis://{os.environ['REDIS_ADDRESS']}",
+        "OPTIONS": {
+             "PASSWORD": os.environ['REDIS_PASSWORD'],
+             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
     }
 }
 WSGI_APPLICATION = 'website.wsgi.application'
@@ -117,15 +120,24 @@ WSGI_APPLICATION = 'website.wsgi.application'
 ASGI_APPLICATION = 'website.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': os.path.join(os.environ["I_DRIVE_BACKEND_STORAGE_DIR"], 'db.sqlite3'),
+#         'CONN_MAX_AGE': None
+#
+#     }
+# }
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(os.environ["I_DRIVE_BACKEND_STORAGE_DIR"], 'db.sqlite3'),
-        'CONN_MAX_AGE': None
-
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ["POSTGRES_NAME"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_ADDRESS"],
+        "PORT": os.environ["POSTGRES_PORT"],
     }
 }
-
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -161,7 +173,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(os.environ["I_DRIVE_REDIS_ADDRESS"], os.environ["I_DRIVE_REDIS_PORT"])],
+            "hosts": [f"redis://:{os.environ['REDIS_PASSWORD']}@{os.environ['REDIS_ADDRESS']}:{os.environ['REDIS_PORT']}"],
 
         },
     },
@@ -196,8 +208,8 @@ REST_FRAMEWORK = {
 }
 
 # Celery settings
-CELERY_BROKER_URL = f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}"
-CELERY_RESULT_BACKEND = f"redis://{os.environ['I_DRIVE_REDIS_ADDRESS']}"
+CELERY_BROKER_URL = f"redis://:{os.environ['REDIS_PASSWORD']}@{os.environ['REDIS_ADDRESS']}:{os.environ['REDIS_PORT']}/0"
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # use json format for everything
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

@@ -180,7 +180,7 @@ export class BackendManager {
          this.uploadStore.pauseAll()
          this.databaseErrors = 0
       }
-      this.databaseErrors++
+      if (error.response.status >= 500) this.databaseErrors++
    }
 
    onBackendSave(finishedFiles) {

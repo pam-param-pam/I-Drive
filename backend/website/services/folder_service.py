@@ -3,14 +3,16 @@ from django.contrib.auth.models import User
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer
 from ..core.errors import BadRequestError, ResourcePermissionError
+from ..core.helpers import validate_value
+from ..core.validators.GeneralChecks import NotEmpty
 from ..core.websocket.utils import send_event
 from ..models import Folder
 from ..tasks.otherTasks import unlock_folder_task, lock_folder_task
 
 
 def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
-    if name == "":
-        raise BadRequestError("Folder name cannot be empty")
+    validate_value(name, str, checks=[NotEmpty])
+
     folder_obj = Folder(name=name, parent=parent, owner=user)
 
     # apply lock if needed
@@ -24,6 +26,8 @@ def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
 
 
 def change_folder_password(request, folder_obj: Folder, new_password: str) -> bool:
+    validate_value(new_password, str)
+
     lock_folder_task()
     unlock_folder_task()
     if new_password:
@@ -41,6 +45,8 @@ def change_folder_password(request, folder_obj: Folder, new_password: str) -> bo
 
 
 def reset_folder_password(request, folder_obj: Folder, account_password: str, new_folder_password: str) -> bool:
+    validate_value(new_folder_password, str)
+
     if not request.user.check_password(account_password):
         raise ResourcePermissionError("Account password is incorrect")
 

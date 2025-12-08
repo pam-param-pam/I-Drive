@@ -7,13 +7,13 @@ from simple_history.models import HistoricalRecords
 
 
 class Webhook(models.Model):
-    discord_id = models.CharField(primary_key=True, max_length=100)
-    url = models.CharField(max_length=150)
+    discord_id = models.CharField(primary_key=True, max_length=19)
+    url = models.URLField(max_length=150)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    guild_id = models.CharField(max_length=100)
+    guild_id = models.CharField(max_length=19)
     channel = models.ForeignKey("Channel", on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     history = HistoricalRecords()
 
     class Meta:
@@ -51,12 +51,12 @@ class Webhook(models.Model):
 
 class Bot(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    discord_id = models.CharField(max_length=100)
+    discord_id = models.CharField(max_length=19)
     primary = models.BooleanField(default=False)
-    token = models.CharField(max_length=100)
+    token = models.CharField(max_length=150)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
     disabled = models.BooleanField(default=False)
     history = HistoricalRecords()
 
@@ -90,10 +90,10 @@ class Bot(models.Model):
 
 
 class Channel(models.Model):
-    discord_id = models.CharField(primary_key=True, max_length=50)
-    name = models.CharField(max_length=20)
+    discord_id = models.CharField(primary_key=True, max_length=19)
+    name = models.CharField(max_length=50)
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
-    guild_id = models.CharField(max_length=100, default="", blank=True)
+    guild_id = models.CharField(max_length=19)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

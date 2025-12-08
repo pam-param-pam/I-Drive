@@ -3,10 +3,12 @@ import hashlib
 import hmac
 import secrets
 
+import shortuuid
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint, F
 from django.utils import timezone
+from shortuuidfield import ShortUUIDField
 
 
 class PerDeviceTokenManager(models.Manager):
@@ -58,16 +60,16 @@ class PerDeviceTokenManager(models.Manager):
 class PerDeviceToken(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='device_tokens')
     token_hash = models.CharField(max_length=64, db_index=True)
-    device_name = models.CharField(max_length=200)
-    device_id = models.CharField(max_length=200, db_index=True)
+    device_name = models.CharField(max_length=50)
+    device_id = ShortUUIDField(default=shortuuid.uuid, db_index=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_used_at = models.DateTimeField(blank=True, null=True)
-    expires_at = models.DateTimeField(blank=True, null=True)
+    last_used_at = models.DateTimeField(null=True)
+    expires_at = models.DateTimeField()
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
-    country = models.CharField(max_length=100, null=True)
-    city = models.CharField(max_length=100, null=True)
-    device_type = models.CharField(max_length=10, choices=[("mobile", "Mobile"), ("pc", "PC"), ("code", "Code")], null=True, blank=True)
+    country = models.CharField(max_length=50, null=True)
+    city = models.CharField(max_length=50, null=True)
+    device_type = models.CharField(max_length=10, choices=[("mobile", "Mobile"), ("pc", "PC"), ("code", "Code")])
     objects = PerDeviceTokenManager()
 
     class Meta:

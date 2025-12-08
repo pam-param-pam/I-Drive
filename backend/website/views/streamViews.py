@@ -24,6 +24,7 @@ from zipFly.EmptyFolder import EmptyFolder
 
 from ..auth.Permissions import CheckLockedFolderIP
 from ..auth.throttle import MediaThrottle, defaultAuthUserThrottle
+from ..auth.utils import check_resource_perms
 from ..constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.http.utils import get_content_disposition_string, parse_range_header
@@ -419,7 +420,6 @@ def stream_file(request, file_obj: File):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 def stream_zip_files(request, token):
-    #todo secure for locked folders/files from wrong ip
     range_header = request.headers.get('Range')
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
@@ -433,6 +433,8 @@ def stream_zip_files(request, token):
     user_zip = UserZIP.objects.get(token=token)
     user = user_zip.owner
     check_if_bots_exists(user)
+    #todo secure for locked folders/files from wrong ip, exctract range header
+    check_resource_perms(request, user_zip.files.first(), [CheckLockedFolderIP])
 
     async def stream_file(file_obj, fragments, chunk_size=8192 * 16):
         async with aiohttp.ClientSession() as session:

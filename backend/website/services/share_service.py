@@ -8,12 +8,16 @@ from ..auth.Permissions import CheckTrash, CheckReady
 from ..auth.utils import check_resource_perms
 from ..core.dataModels.general import Item
 from ..core.errors import BadRequestError
-from ..core.helpers import validate_ids_as_list
+from ..core.helpers import validate_ids_as_list, validate_value
+from ..core.validators.GeneralChecks import IsPositive, MaxLength, NotEmpty
 from ..models import ShareableLink, UserZIP, Folder
 from ..queries.selectors import check_if_item_belongs_to_share, get_item
 
 
 def create_share(user: User, item_obj: Item, unit: str, value: int, password: str) -> ShareableLink:
+    validate_value(value, int, checks=[IsPositive])
+    validate_value(password, int, checks=[NotEmpty, MaxLength(100)])
+
     units = {
         "minutes": timedelta(minutes=value),
         "hours": timedelta(hours=value),
@@ -32,7 +36,7 @@ def create_share(user: User, item_obj: Item, unit: str, value: int, password: st
         owner=user,
         content_type=content_type,
         object_id=item_obj.pk,
-        password=password or None,
+        password=password,
     )
 
     return share

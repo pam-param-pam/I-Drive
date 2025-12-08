@@ -1,8 +1,10 @@
-from typing import Union, Type, Tuple
+import base64
+from typing import Union, Type, Tuple, Optional, Any
 
 from .errors import BadRequestError
+from .validators.Check import Check
 from ..constants import MAX_RESOURCE_NAME_LENGTH, CODE_EXTENSIONS, RAW_IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
-    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS
+    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EncryptionMethod
 
 _SENTINEL = object()  # Unique object to detect omitted default
 
@@ -87,7 +89,7 @@ def get_ip(request) -> tuple[str, bool]:
     return ip, from_nginx
 
 
-def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Type, Tuple[Type, ...]] = (str, )) -> None:
+def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Type, Tuple[Type, ...]] = (str, dict)) -> None:
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
 
@@ -103,7 +105,6 @@ def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Ty
             expected_types = ", ".join(f"'{t.__name__}'" for t in types_tuple)
 
             raise BadRequestError(f"All ids must be of type=[{expected_types}], got type='{type(x).__name__}'")
-
 
 
 def get_file_type(extension: str) -> str:
@@ -134,3 +135,110 @@ def get_file_type(extension: str) -> str:
         return "Raw image"
     else:
         return "Other"
+
+
+def validate_value(value: Any, expected_type: Type, *, required: bool = False, checks: list = None):
+    # Handle None
+    if value is None:
+        if not required:
+            return None
+        raise BadRequestError("Value cannot be null.")
+
+    # ---- AUTO-SANITIZE NUL CHARACTERS ----
+    # Strings
+    if expected_type is str and isinstance(value, str):
+        if "\x00" in value:
+            value = value.replace("\x00", "")
+
+    # Type check
+    if not isinstance(value, expected_type):
+        raise BadRequestError(f"Value must be of type {expected_type}, got {type(value).__name__}")
+
+    # Normalize checks
+    if checks is None:
+        checks = []
+
+    normalized_checks = []
+    for chk in checks:
+        if isinstance(chk, type) and issubclass(chk, Check):
+            chk = chk()  # auto-instantiate class
+        normalized_checks.append(chk)
+
+    # Run checks
+    for check in normalized_checks:
+        if not check.check(value):
+            raise BadRequestError(f"Validation failed on {type(check).__name__} with value '{value}'")
+
+    return value
+
+
+def validate_key(data: Optional[dict], key: str, expected_type, *, required: bool = True, default=None, checks: list = None):
+    if not data:
+        if required:
+            raise BadRequestError("'data' cannot be None.")
+        return default
+
+    if not isinstance(data, dict):
+        raise BadRequestError("'data' must be a dict.")
+
+    if key not in data:
+        if required:
+            raise BadRequestError(f"Missing required field '{key}'.")
+        return default
+
+    value = data[key]
+
+    try:
+        return validate_value(
+            value,
+            expected_type,
+            required=required,
+            checks=checks
+        )
+    except BadRequestError as e:
+        raise BadRequestError(f"Field '{key}': {e}")
+
+
+def validate_encryption_fields(encryption_method: int, key_b64: str, iv_b64: str) -> tuple[Optional[bytes], Optional[bytes]]:
+    method = EncryptionMethod(encryption_method)
+
+    if method == EncryptionMethod.Not_Encrypted:
+        if key_b64 or iv_b64:
+            raise BadRequestError("Unencrypted files must NOT provide 'key' or 'iv'.")
+        return None, None
+
+    if not key_b64 or not iv_b64:
+        raise BadRequestError("Encrypted files must provide both 'key' and 'iv'.")
+
+    try:
+        key = base64.b64decode(key_b64)
+        iv = base64.b64decode(iv_b64)
+    except Exception:
+        raise BadRequestError("Invalid base64 for 'key' or 'iv'.")
+
+    if len(key) == 0 or len(iv) == 0:
+        raise BadRequestError("'key' or 'iv' decoded to empty bytes.")
+
+    if method == EncryptionMethod.AES_CTR:
+        expected_iv = 16
+        expected_key = 32
+
+    elif method == EncryptionMethod.CHA_CHA_20:
+        expected_iv = 12
+        expected_key = 32
+
+    else:
+        raise BadRequestError(f"Unsupported encryption method: {method.value}")
+
+    if len(key) != expected_key:
+        raise BadRequestError(f"Invalid key length for {method.name}: expected {expected_key} bytes, got {len(key)}.")
+
+    if len(iv) != expected_iv:
+        raise BadRequestError(f"Invalid IV length for {method.name}: expected {expected_iv} bytes, got {len(iv)}.")
+
+    return key, iv
+
+
+def validate_crc(file_size: int, crc: int) -> None:
+    if not crc and file_size:
+        raise BadRequestError("Bad crc value")

@@ -1,3 +1,5 @@
+import ipaddress
+
 from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.decorators import throttle_classes
@@ -6,8 +8,13 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..auth.Permissions import ChangePassword
 from ..auth.throttle import LoginThrottle, RegisterThrottle, PasswordChangeThrottle
+from ..core.errors import ResourcePermissionError
 from ..services import auth_service
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def healthcheck_view(request):
+    return HttpResponse(status=200)
 
 @api_view(['POST'])
 @throttle_classes([LoginThrottle])
@@ -33,7 +40,7 @@ def logout_per_device_view(request):
 @throttle_classes([RegisterThrottle])
 @permission_classes([AllowAny])
 def register_user_view(request):
-    # raise ResourcePermissionError("This functionality is turned off.")
+    raise ResourcePermissionError("This functionality is turned off.")
     username = request.data['username']
     password = request.data['password']
 

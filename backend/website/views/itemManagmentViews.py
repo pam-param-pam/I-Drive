@@ -40,6 +40,7 @@ def create_folder_view(request, parent):
     check_bulk_permissions(default_checks & CheckRoot)
 )
 def move(request, new_parent_obj, items):
+    # todo move to service layer
     """This view uses values instead of ORM objects for files"""
     new_parent_id = new_parent_obj.id
 
@@ -62,6 +63,8 @@ def move(request, new_parent_obj, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def move_to_trash(request, items):
     """This view uses values instead of ORM objects for files"""
+    # todo move to service layer
+
     for item in items:
         if get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot move to Trash. At least one item is already in Trash.")
@@ -80,6 +83,8 @@ def move_to_trash(request, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def restore_from_trash(request, items):
     """This view uses values instead of ORM objects for files"""
+    # todo move to service layer
+
     for item in items:
         if not get_attr(item, 'inTrash'):
             raise BadRequestError("Cannot restore from Trash. At least one item is not in Trash.")
@@ -97,6 +102,8 @@ def restore_from_trash(request, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def delete(request, items):
     """This view uses values instead of ORM objects for files"""
+    # todo move to service layer
+
     check_if_bots_exists(request.user)
 
     for item in items:
@@ -167,8 +174,7 @@ def update_video_position_view(request, file_obj):
 def add_tag_view(request, file_obj):
     tag_name = request.data['tag_name']
     tag = file_service.add_tag(file_obj, tag_name)
-    serializer = TagSerializer()
-    return JsonResponse(serializer.serialize_object(tag), status=200)
+    return JsonResponse(TagSerializer().serialize_object(tag), status=200)
 
 
 @api_view(['DELETE'])
@@ -207,7 +213,7 @@ def remove_moment_view(request, file_obj, moment_id):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def change_crc_view(request, file_obj):
-    crc = int(request.data['crc'])
+    crc = request.data['crc']
     file_service.change_crc(file_obj, crc)
     return HttpResponse(status=204)
 

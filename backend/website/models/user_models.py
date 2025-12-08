@@ -1,14 +1,18 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import CheckConstraint, Q
+from django.db.models.signals import post_save
 from simple_history.models import HistoricalRecords
+
+from .folder_models import Folder
+
 
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
-    sorting_by = models.CharField(max_length=50, null=False, default="name")
+    sorting_by = models.CharField(max_length=50, default="name")
     sort_by_asc = models.BooleanField(default=False)
-    locale = models.CharField(max_length=20, null=False, default="en")
-    view_mode = models.CharField(max_length=20, null=False, default="width grid")
+    locale = models.CharField(max_length=20, default="en")
+    view_mode = models.CharField(max_length=20, default="width grid")
     date_format = models.BooleanField(default=False)
     hide_locked_folders = models.BooleanField(default=False)
     concurrent_upload_requests = models.SmallIntegerField(default=4)
@@ -55,14 +59,13 @@ class UserPerms(models.Model):
             profile, created = UserPerms.objects.get_or_create(user=instance)
 
 
-
 class DiscordSettings(models.Model):
     auto_setup_complete = models.BooleanField(default=False)
-    category_id = models.CharField(max_length=100, default="", blank=True)
-    role_id = models.CharField(max_length=100, default="", blank=True)
+    category_id = models.CharField(max_length=19, null=True)
+    role_id = models.CharField(max_length=19, null=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
-    guild_id = models.CharField(max_length=100, default="", blank=True)
-    attachment_name = models.CharField(max_length=20, default="", blank=True)
+    guild_id = models.CharField(max_length=19, null=True)
+    attachment_name = models.CharField(max_length=20, null=True)
 
     history = HistoricalRecords()
 
@@ -111,3 +114,8 @@ class DiscordSettings(models.Model):
     def _create_user_discord_settings(sender, instance, created, **kwargs):
         if created:
             settings, created = DiscordSettings.objects.get_or_create(user=instance)
+
+post_save.connect(UserPerms._create_user_perms, sender=User)
+post_save.connect(UserSettings._create_user_settings, sender=User)
+post_save.connect(Folder._create_user_root, sender=User)
+post_save.connect(DiscordSettings._create_user_discord_settings, sender=User)

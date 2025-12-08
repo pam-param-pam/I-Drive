@@ -20,8 +20,8 @@ jobs:
         username: ${{ secrets.CI_RPI_USERNAME }}
         key: ${{ secrets.CI_RPI_SSH_KEY }}
         script: |
+          set -e
           echo "Running Django migrations inside container..."
-          
           
           docker exec idrive-backend python manage.py migrate
           echo "Migrations completed."

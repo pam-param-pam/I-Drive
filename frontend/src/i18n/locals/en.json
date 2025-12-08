@@ -435,6 +435,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "illegalMove": "You cannot move those items here",
     "deviceControlActive": "Device Control is active!",
     "deviceControlPendingExpired": "Pending expired. Try again",
     "deviceControlApprovedFailed": "Failed to approve device control, try again.",

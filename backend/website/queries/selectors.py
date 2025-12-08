@@ -74,7 +74,7 @@ def get_webhook(user, discord_id: str) -> Webhook:
         raise BadRequestError(f"Could not find webhook with id: {discord_id}")
 
 
-def get_discord_author(user, message_author_id: int) -> Webhook:
+def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
     try:
         return Bot.objects.get(discord_id=message_author_id, owner=user)
     except Bot.DoesNotExist:

@@ -15,8 +15,8 @@ from ..constants import ALLOWED_THUMBNAIL_SIZES, cache
 
 class Thumbnail(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    created_at = models.DateTimeField(default=timezone.now)
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
+    created_at = models.DateTimeField(default=timezone.now)
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
 
@@ -82,7 +82,7 @@ class Moment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    timestamp = models.IntegerField(default=0)
+    timestamp = models.IntegerField()
     iv = models.BinaryField(null=True)
     key = models.BinaryField(null=True)
 
@@ -93,13 +93,11 @@ class Moment(DiscordAttachmentMixin):
                 fields=['file', 'timestamp'],
                 name='%(class)s_unique_file_timestamp'
             ),
-
             # timestamp >= 0
             CheckConstraint(
                 check=Q(timestamp__gte=0),
                 name="%(class)s_timestamp_non_negative",
             ),
-
             # encryption consistency
             CheckConstraint(
                 check=(
@@ -133,7 +131,7 @@ class VideoPosition(models.Model):
 
 class Tag(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=20, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     history = HistoricalRecords()
@@ -189,7 +187,7 @@ class VideoMetadata(models.Model):
     is_fragmented = models.BooleanField()
     has_moov = models.BooleanField()
     has_IOD = models.BooleanField()
-    brands = models.CharField(max_length=50)
+    brands = models.CharField(max_length=100)
     mime = models.CharField(max_length=100)
 
     def __str__(self):
@@ -199,10 +197,10 @@ class VideoMetadata(models.Model):
 class VideoMetadataTrackMixin(models.Model):
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
     bitrate = models.IntegerField()
-    codec = models.CharField(max_length=50)
-    size = models.IntegerField()
+    codec = models.CharField(max_length=100)
+    size = models.PositiveBigIntegerField()
     duration = models.IntegerField()
-    language = models.CharField(max_length=50, null=True)
+    language = models.CharField(max_length=100, null=True)
     track_number = models.IntegerField()
 
 
@@ -216,7 +214,7 @@ class VideoTrack(VideoMetadataTrackMixin):
 
 
 class AudioTrack(VideoMetadataTrackMixin):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
     channel_count = models.IntegerField()
     sample_rate = models.IntegerField()
     sample_size = models.IntegerField()
@@ -226,7 +224,7 @@ class AudioTrack(VideoMetadataTrackMixin):
 
 
 class SubtitleTrack(VideoMetadataTrackMixin):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return f"Subtitle Track({self.language}) for {self.video_metadata.file}"

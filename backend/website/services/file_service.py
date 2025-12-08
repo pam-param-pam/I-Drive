@@ -7,31 +7,24 @@ from django.contrib.contenttypes.models import ContentType
 from .attachment_service import delete_single_discord_attachment
 from ..constants import cache
 from ..core.errors import BadRequestError
+from ..core.helpers import validate_key, validate_encryption_fields, validate_value, validate_crc
+from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
 from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment
 from ..queries.selectors import get_discord_author
 
 
 def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
-    channel_id = data['channel_id']
-    message_id = data['message_id']
-    attachment_id = data['attachment_id']
-    size = data['size']
-    message_author_id = data['message_author_id']
+    channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
+    message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
+    attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
+    message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
+    key_b64 = validate_key(data, "key", str, required=False)
+    iv_b64 = validate_key(data, "iv", str, required=False)
+    size = validate_key(data, "size", int, required=False, checks=[IsPositive])
+
     author = get_discord_author(file_obj.owner, message_author_id)
 
-    iv = data.get('iv')
-    key = data.get('key')
-
-    if file_obj.type not in ("Video", "Audio", "Image"):
-        raise BadRequestError(f"Cannot create thumbnail for file type: {file_obj.type}.")
-
-    if file_obj.is_encrypted() and not (iv and key):
-        raise BadRequestError("Encryption key and/or iv not provided")
-
-    if iv:
-        iv = base64.b64decode(iv)
-    if key:
-        key = base64.b64decode(key)
+    key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
 
     return Thumbnail.objects.create(
         file=file_obj,
@@ -47,28 +40,18 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
 
 
 def create_subtitle(file_obj: File, data: dict) -> Subtitle:
-    language = data['language']
-    is_forced = data['is_forced']
-    channel_id = data['channel_id']
-    message_id = data['message_id']
-    attachment_id = data['attachment_id']
-    size = data['size']
-    message_author_id = data['message_author_id']
+    language = validate_key(data, "language", str, checks=[NotEmpty])
+    is_forced = validate_key(data, "is_forced", bool)
+    channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
+    message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
+    attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
+    message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
+    size = validate_key(data, "size", int, checks=[IsPositive])
+    key_b64 = validate_key(data, "key", str, required=False)
+    iv_b64 = validate_key(data, "iv", str, required=False)
+
+    key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
     author = get_discord_author(file_obj.owner, message_author_id)
-
-    iv = data.get('iv')
-    key = data.get('key')
-
-    if file_obj.type != "Video":
-        raise BadRequestError("Must be a video.")
-
-    if file_obj.is_encrypted() and not (iv and key):
-        raise BadRequestError("Encryption key and/or iv not provided")
-
-    if iv:
-        iv = base64.b64decode(iv)
-    if key:
-        key = base64.b64decode(key)
 
     return Subtitle.objects.create(
         language=language,
@@ -89,29 +72,29 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
     for index, track in enumerate(metadata[track_type]):
         kwargs = {
             "video_metadata": video_metadata,
-            "bitrate": track["bitrate"],
-            "codec": track["codec"],
-            "size": track["size"],
-            "duration": track["duration"],
-            "language": track["language"],
+            "bitrate": validate_key(track, "bitrate", (int, float), checks=[IsPositive]),
+            "codec": validate_key(track, "codec", str, checks=[MaxLength(100)]),
+            "size": validate_key(track, "size", (int, float), checks=[IsPositive]),
+            "duration": validate_key(track, "duration", (int, float), checks=[IsPositive]),
+            "language": validate_key(track, "language", str, required=False, checks=[MaxLength(100)]),
             "track_number": index + 1,
         }
         if track_type == "video_tracks":
             kwargs.update({
-                "height": track["height"],
-                "width": track["width"],
-                "fps": track["fps"],
+                "height": validate_key(track, "height", int, checks=[IsPositive]),
+                "width": validate_key(track, "width", int, checks=[IsPositive]),
+                "fps": validate_key(track, "fps", int, checks=[IsPositive]),
             })
         elif track_type == "audio_tracks":
             kwargs.update({
-                "name": track["name"],
-                "channel_count": track["channel_count"],
-                "sample_rate": track["sample_rate"],
-                "sample_size": track["sample_size"],
+                "name": validate_key(track, "name", str, checks=[MaxLength(100)]),
+                "channel_count": validate_key(track, "channel_count", int, checks=[IsPositive]),
+                "sample_rate": validate_key(track, "sample_rate", int, checks=[IsPositive]),
+                "sample_size": validate_key(track, "sample_size", int, checks=[IsPositive]),
             })
         elif track_type == "subtitle_tracks":
             kwargs.update({
-                "name": track["name"],
+                "name": validate_key(track, "name", str, checks=[MaxLength(100)]),
             })
 
         model_class.objects.create(**kwargs)
@@ -123,12 +106,12 @@ def create_video_metadata(file: File, metadata: dict) -> VideoMetadata:
 
     video_metadata = VideoMetadata.objects.create(
         file=file,
-        is_fragmented=metadata["is_fragmented"],
-        is_progressive=metadata["is_progressive"],
-        has_moov=metadata["has_moov"],
-        has_IOD=metadata["has_IOD"],
-        brands=metadata["brands"],
-        mime=metadata["mime"],
+        is_fragmented=validate_key(metadata, "is_fragmented", bool),
+        is_progressive=validate_key(metadata, "is_progressive", bool),
+        has_moov=validate_key(metadata, "has_moov", bool),
+        has_IOD=validate_key(metadata, "has_IOD", bool),
+        brands=validate_key(metadata, "brands", str, checks=[NotEmpty, MaxLength(100)]),
+        mime=validate_key(metadata, "mime", str, checks=[NotEmpty, MaxLength(100)]),
     )
     _create_tracks(metadata, "video_tracks", VideoTrack, video_metadata)
     _create_tracks(metadata, "audio_tracks", AudioTrack, video_metadata)
@@ -151,14 +134,7 @@ def update_video_position(file_obj: File, new_position) -> None:
 
 
 def add_tag(file_obj: File, tag_name: str) -> Tag:
-    if not tag_name:
-        raise BadRequestError("Tag cannot be empty")
-
-    if " " in tag_name:
-        raise BadRequestError("Tag cannot contain spaces")
-
-    if len(tag_name) > 15:
-        raise BadRequestError("Tag length cannot be > 15")
+    validate_value(tag_name, str, checks=[NotEmpty, NoSpaces, MaxLength(15)])
 
     tag, created = Tag.objects.get_or_create(name=tag_name, owner=file_obj.owner)
 
@@ -186,10 +162,12 @@ def remove_tag(file_obj: File, tag_id: str) -> None:
 def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
     delete_single_discord_attachment(user, subtitle)
-    subtitle.delete()
 
 
 def change_crc(file_obj: File, new_crc: int) -> None:
+    validate_value(new_crc, int, checks=[NotNegative])
+    validate_crc(file_obj.size, new_crc)
+
     file_obj.crc = new_crc
     file_obj.save()
 
@@ -197,7 +175,6 @@ def change_crc(file_obj: File, new_crc: int) -> None:
 def remove_moment(user, file_obj, moment_id) -> None:
     moment = Moment.objects.get(file=file_obj, id=moment_id)
     delete_single_discord_attachment(user, moment)
-    moment.delete()
 
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:

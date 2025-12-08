@@ -57,7 +57,7 @@
       <p v-if="last_modified">
         <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime(last_modified) }}
       </p>
-      <p v-if="crc != null">
+      <p v-if="crc">
         <strong>{{ $t("prompts.crc32") }}: </strong>
         <code @dblclick="changeView($event, crc, formatCrc)">
           {{ formatCrc(crc) }}

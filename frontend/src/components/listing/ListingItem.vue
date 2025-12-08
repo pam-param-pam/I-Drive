@@ -66,6 +66,7 @@ export default {
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       imageSrc() {
+         if (this.item.size === 0) return null
          if (this.type === "Raw image") {
             if (this.item.preview_url) return this.item.preview_url
             if (this.item.download_url) return this.item.download_url
@@ -183,7 +184,10 @@ export default {
 
       async drop(event) {
          if (event.dataTransfer.files.length > 0) return
-         if (!this.canDrop) return
+         if (!this.canDrop) {
+            this.$toast.error(this.$t("toasts.illegalMove"))
+            return
+         }
          if (this.selectedCount === 0) return
 
          let listOfIds = this.selected.map((obj) => obj.id)

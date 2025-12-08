@@ -101,7 +101,7 @@ def get_qr_session_device_info(user: User, session_id: str) -> dict:
     )
     return session_data
 
-def create_qr_session(request) -> tuple[str, str]:
+def create_qr_session(request) -> tuple[str, int]:
     ip, _ = get_ip(request)
     metadata = get_device_metadata(request)
 

@@ -434,6 +434,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "illegalMove": "Nie możesz tu przenieść tych rzeczy",
     "deviceControlActive": "Kontrola urządzenia jest aktywna!",
     "deviceControlPendingExpired": "Czas na potwierdzenie minął. Spróbuj jeszcze raz.",
     "deviceControlApprovedFailed": "Nie udało sie to potwierdzić zdalnej kontroli. Spróbuj jeszcze raz.",

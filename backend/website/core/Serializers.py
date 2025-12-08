@@ -113,7 +113,6 @@ class FileSerializer(AdvancedSerializer):
                 d["preview_url"] = f"{API_BASE_URL}/files/{signed_id}/preview/stream"
 
             d["download_url"] = f"{API_BASE_URL}/files/{signed_id}/stream"
-
             if thumbnail:
                 d["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_id}/thumbnail/stream"
 

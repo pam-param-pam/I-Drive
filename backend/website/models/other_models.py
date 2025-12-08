@@ -14,11 +14,11 @@ from .folder_models import Folder
 class UserZIP(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     created_at = models.DateTimeField(default=timezone.now)
-    files = models.ManyToManyField(File, related_name='user_zips', blank=True)
-    folders = models.ManyToManyField(Folder, related_name='user_zips', blank=True)
+    files = models.ManyToManyField(File, related_name='user_zips')
+    folders = models.ManyToManyField(Folder, related_name='user_zips')
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    token = models.CharField(max_length=255, unique=True, blank=True)
-    name = models.CharField(max_length=255, blank=True)
+    token = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
 
     constraints = [
         # token must not be empty

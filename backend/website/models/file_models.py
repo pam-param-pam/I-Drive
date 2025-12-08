@@ -17,26 +17,26 @@ from ..core.helpers import chop_long_file_name
 
 
 class File(models.Model):
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False, null=False, blank=False)
-    name = models.TextField(max_length=255, null=False, blank=False)
-    extension = models.CharField(max_length=10, null=False, blank=False)
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    name = models.CharField(max_length=100)
+    extension = models.CharField(max_length=20)
     size = models.PositiveBigIntegerField()
-    mimetype = models.CharField(max_length=15, null=False, blank=False, default="text/plain")  # todo remove this
-    type = models.CharField(max_length=15, null=False, blank=False, default="text", choices=FILE_TYPE_CHOICES)
+    mimetype = models.CharField(max_length=100, default="text/plain")
+    type = models.CharField(max_length=50, default="text", choices=FILE_TYPE_CHOICES)
     inTrash = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_modified_at = models.DateTimeField(auto_now_add=True)
+    last_modified_at = models.DateTimeField(auto_now=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files')
     ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    inTrashSince = models.DateTimeField(null=True, blank=True)
+    inTrashSince = models.DateTimeField(null=True)
     key = models.BinaryField(null=True)
     iv = models.BinaryField(null=True)
     encryption_method = models.SmallIntegerField()
-    duration = models.IntegerField(null=True, blank=True)
+    duration = models.IntegerField(null=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     frontend_id = models.CharField(max_length=40, unique=True)
-    crc = models.BigIntegerField()
+    crc = models.BigIntegerField(null=True)
     history = HistoricalRecords()
 
     class Meta:
@@ -52,6 +52,14 @@ class File(models.Model):
             CheckConstraint(
                 check=Q(duration__gte=0) | Q(duration__isnull=True),
                 name="%(class)s_duration_non_negative"
+            ),
+            CheckConstraint(
+                check=~Q(name__exact=""),
+                name="%(class)s_name_not_empty",
+            ),
+            CheckConstraint(
+                check=~Q(extension__exact=""),
+                name="%(class)s_extension_not_empty",
             ),
             CheckConstraint(
                 check=(
@@ -74,8 +82,16 @@ class File(models.Model):
                 name="%(class)s_last_modified_after_created"
             ),
             CheckConstraint(
-                check=Q(crc__gte=0),
-                name="%(class)s_crc_non_negative"
+                check=Q(crc__gte=0) | Q(crc__isnull=True),
+                name="%(class)s_crc_non_negative_or_null"
+            ),
+            CheckConstraint(
+                check=(
+                        Q(size__lte=0, crc=0) |
+                        Q(size__gt=0, crc__gt=0) |
+                        Q(crc__isnull=True)
+                ),
+                name="%(class)s_crc_valid_based_on_size"
             )
         ]
 
@@ -199,7 +215,7 @@ class Fragment(DiscordAttachmentMixin):
     sequence = models.SmallIntegerField()
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
     created_at = models.DateTimeField(default=timezone.now)
-    offset = models.IntegerField()
+    offset = models.PositiveBigIntegerField()
 
     class Meta:
         constraints = [
