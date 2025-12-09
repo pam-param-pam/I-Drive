@@ -35,7 +35,7 @@ services:
       timeout: 3s
       retries: 5
     environment:
-      POSTGRES_DB: ${POSTGRES_NAME}
+      POSTGRES_DB: idrive-postgres
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
