@@ -12,8 +12,9 @@ export async function validateLogin() { //this isn't really validate login - mor
    let mainStore = useMainStore()
 
    let token = localStorage.getItem("token")
-   if (!token) {
-      console.warn("TOKEN IS NULL ATTEMPTED TO VALIDATE LOGIN")
+   let deviceId = localStorage.getItem("device_id")
+   if (!token || !deviceId) {
+      console.warn("TOKEN or DEVICE ID IS NULL ATTEMPTED TO VALIDATE LOGIN")
       return
    }
    let body = await getUser(token)
@@ -22,6 +23,8 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setSettings(body.settings)
    mainStore.setPerms(body.perms)
    mainStore.setToken(token)
+   mainStore.setDeviceId(deviceId)
+
    mainStore.setTheme(body.settings.theme)
 
 
@@ -47,6 +50,7 @@ function saveAuth(data) {
    }
    localStorage.setItem("token", token)
    localStorage.setItem("device_id", deviceId)
+
 }
 
 

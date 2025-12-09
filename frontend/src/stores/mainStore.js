@@ -9,6 +9,7 @@ export const useMainStore = defineStore("main", {
       settings: null,
       progress: 0,
       token: "",
+      deviceId: "",
       loading: false,
       reload: false,
       selected: [],
@@ -28,7 +29,16 @@ export const useMainStore = defineStore("main", {
       usage: { used: 0, total: 0 },
       popupPreview: {},
       isFilesActive: false,
-      deviceControlStatus: {"status": "expired"}
+      deviceControlStatus: {"status": "unknown"},
+      deviceControlOptions: {
+         isVideoFullscreenActive: true,
+         isVideoSubtitlesActive: true,
+         isVideoSeekActive: true,
+         isVideoToggleActive: true,
+         isNavigationActive: true,
+         isDeviceControlActive: true,
+         isVideoVolumeChangeActive: true,
+      }
    }),
 
    getters: {
@@ -188,6 +198,9 @@ export const useMainStore = defineStore("main", {
       },
       setToken(value) {
          this.token = value
+      },
+      setDeviceId(value) {
+         this.deviceId = value
       },
       setUser(value) {
          if (value === null) {

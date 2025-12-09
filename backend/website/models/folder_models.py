@@ -80,9 +80,9 @@ class Folder(MPTTModel):
 
     is_locked = property(_is_locked)
 
-    def _create_user_root(sender, instance, created, **kwargs):
-        if created:
-            folder, created = Folder.objects.get_or_create(owner=instance, name="root")
+    @staticmethod
+    def _create_user_root(user):
+        Folder.objects.get_or_create(owner=user, name="root")
 
     def save(self, *args, **kwargs):
         self._check_depth()

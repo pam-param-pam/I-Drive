@@ -4,13 +4,9 @@
          <h2>{{ $t("prompts.deviceControl") }}</h2>
       </div>
 
-      <div class="card-content">
-         <div v-if="!currentDeviceControlStatus.status">
-            {{ $t("prompts.noWebsocketConnection") }}
-         </div>
-
+      <div v-if="!isControlExpanded" class="card-content">
          <!-- Device selector (only if idle) -->
-         <div v-else-if="currentDeviceControlStatus.status === 'idle'">
+         <div v-if="currentDeviceControlStatus.status === 'idle'">
             <div v-if="filteredDevices.length === 0" class="empty-msg">
                {{ $t("prompts.noOtherDevices") }}
             </div>
@@ -54,12 +50,11 @@
                   <p class="status-title">
                      {{ statusTitleMap[currentDeviceControlStatus.status] }}
                   </p>
-                  <p class="status-code">
+                  <p v-if="roleTitle" class="status-code">
                      {{ $t("prompts.deviceControlRole") }}:
                      <strong>{{ roleTitle }}</strong>
                   </p>
                   <div v-if="peerInfo">
-
                      <p class="status-code">
                         {{ $t("prompts.peerDevice") }}:
                         <strong>{{ peerInfo.device_name }}</strong>
@@ -67,11 +62,60 @@
                      </p>
                   </div>
                </div>
-
             </div>
          </div>
       </div>
 
+      <div>
+         <!-- EXPANDABLE DEVICE CONTROL SECTION -->
+         <div v-if="currentDeviceControlStatus.status === 'active_master'" class="expandable-section card-content">
+            <div class="expandable-header" @click="isControlExpanded = !isControlExpanded">
+               <strong>{{ $t("prompts.controlOptions") }}</strong>
+               <i class="material-icons expand-icon" :class="{ expanded: isControlExpanded }">
+                  keyboard_arrow_down
+               </i>
+            </div>
+
+            <div v-if="isControlExpanded" class="expandable-content">
+               <p>
+                  <label>
+                     <input v-model="deviceControlOptions.isDeviceControlActive" type="checkbox" />
+                     {{ $t("prompts.isDeviceControlActive") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="deviceControlOptions.isNavigationActive" type="checkbox" />
+                     {{ $t("prompts.isNavigationActive") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="deviceControlOptions.isVideoToggleActive" type="checkbox" />
+                     {{ $t("prompts.isVideoToggleActive") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="deviceControlOptions.isVideoSeekActive" type="checkbox" />
+                     {{ $t("prompts.isVideoSeekActive") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="deviceControlOptions.isVideoSubtitlesActive" type="checkbox" />
+                     {{ $t("prompts.isVideoSubtitlesActive") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="deviceControlOptions.isVideoFullscreenActive" type="checkbox" />
+                     {{ $t("prompts.isVideoFullscreenActive") }}
+                  </label>
+               </p>
+            </div>
+         </div>
+      </div>
       <div class="card-action">
          <button
             v-if="currentDeviceControlStatus.status === 'pending_master'"
@@ -114,24 +158,23 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
+import { getActiveDevices } from "@/api/user.js"
 
 export default {
    name: "ControlDevice",
 
-   props: {
-      devices: { type: Array, required: true },
-      currentDeviceId: { type: String, required: true }
-   },
-
    data() {
       return {
+         devices: [],
          selectedDeviceId: "",
          _tickInterval: null,
-         nowTick: null
+         nowTick: null,
+         isControlExpanded: false,
       }
    },
    created() {
       this.fetchStatus()
+      this.fetchDevices()
       this._tickInterval = setInterval(() => {
          this.nowTick = Date.now()
       }, 500)
@@ -140,7 +183,7 @@ export default {
       clearInterval(this._tickInterval)
    },
    computed: {
-      ...mapState(useMainStore, ["deviceControlStatus"]),
+      ...mapState(useMainStore, ["deviceControlStatus", "deviceId", "deviceControlOptions"]),
       peerInfo() {
          const st = this.currentDeviceControlStatus
          if (!st || !st.peer) return null
@@ -178,7 +221,8 @@ export default {
          return st
       },
       filteredDevices() {
-         return this.devices.filter(d => d.device_id !== this.currentDeviceId)
+         console.log(this.deviceId)
+         return this.devices.filter(d => d.device_id !== this.deviceId)
       },
 
       selectedDevice() {
@@ -190,7 +234,8 @@ export default {
             pending_master: this.$t("prompts.deviceControlPending"),
             active_master: this.$t("prompts.deviceControlActive"),
             active_slave: this.$t("prompts.deviceControlActive"),
-            rejected_master: this.$t("prompts.deviceControlRejected")
+            rejected_master: this.$t("prompts.deviceControlRejected"),
+            unknown: this.$t("prompts.deviceControlUnknown")
          }
       },
 
@@ -199,7 +244,8 @@ export default {
             pending_master: "hourglass_empty",
             active_master: "check_circle",
             active_slave: "check_circle",
-            rejected_master: "cancel"
+            rejected_master: "cancel",
+            unknown: "dangerous"
          }
       },
 
@@ -217,6 +263,9 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
+      async fetchDevices() {
+         this.devices = await getActiveDevices()
+      },
       fetchStatus() {
          this.$socket.send(JSON.stringify({ op_code: 16 }))
       },
@@ -242,8 +291,9 @@ export default {
 </script>
 <style>
 .card.floating {
-   max-width: 26em !important;
+ max-width: 26em !important;
 }
+
 .status-panel {
  margin-top: 1rem;
 }

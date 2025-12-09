@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "deviceControl": "Device control",
     "stopActive": "Stop device control",
     "accept": "Accept",
     "reject": "Reject",
@@ -71,6 +72,7 @@
   },
   "errors": {
     "integrityError": "Integrity Error!",
+    "masterSlaveEqual": "You cannot control yourself...",
     "badDeviceId": "Device doesn't exist. Refresh the page",
     "masterRecentlyRejected": "Wait a bit before sending another request",
     "slaveRecentlyRejected": "Slave device was recently rejected",
@@ -173,6 +175,13 @@
   },
 
   "prompts": {
+    "isDeviceControlActive": "Device control active",
+    "isNavigationActive": "Navigation event",
+    "isVideoToggleActive": "Video toggle event",
+    "isVideoSeekActive": "Video seek event",
+    "isVideoSubtitlesActive": "Video subtitles event",
+    "isVideoFullscreenActive": "Video fullscreen event",
+    "deviceControlUnknown": "Status unknown. Please try again!",
     "peerDevice": "Peer",
     "roleMaster": "Master",
     "roleSlavePending": "Pending slave",

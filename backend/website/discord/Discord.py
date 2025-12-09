@@ -287,10 +287,10 @@ class Discord:
 
     def get_message(self, user, message_id: str, channel_id: str) -> httpx.Response:
         start = time.perf_counter()
-        # cached_message = cache.get(message_id)
-        # if cached_message:
-        #     logger.debug(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
-        #     return cached_message
+        cached_message = cache.get(message_id)
+        if cached_message:
+            logger.debug(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
+            return cached_message
 
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'GET', url)

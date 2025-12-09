@@ -1,4 +1,5 @@
 <template>
+
    <div v-if="progress" class="progress">
       <div v-bind:style="{ width: this.progress + '%' }"></div>
    </div>
@@ -7,6 +8,7 @@
       <router-view></router-view>
       <shell v-if="isExecEnabled"></shell>
    </main>
+
    <upload-files></upload-files>
    <prompts></prompts>
 </template>

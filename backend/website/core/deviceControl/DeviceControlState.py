@@ -58,6 +58,9 @@ class DeviceControlState:
 
     @classmethod
     def create_pending(cls, master_id: str, slave_id: str) -> None:
+        if master_id == slave_id:
+            raise DeviceControlBadStateError("masterSlaveEqual")
+
         cls.validate_device_id(master_id)
         cls.validate_device_id(slave_id)
 

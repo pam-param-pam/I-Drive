@@ -148,10 +148,6 @@ export default {
          this.pauseAll()
       },
       resume(event) {
-         if (event.ctrlKey && event.shiftKey) {
-            this.forceUnstuck()
-            return
-         }
          this.resumeAll()
       }
    }

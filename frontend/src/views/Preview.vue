@@ -229,7 +229,13 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { defineAsyncComponent } from "vue"
 import { backendInstance } from "@/axios/networker.js"
-import { send_movie_seek_event, send_movie_toggle_event, send_movie_volume_change_event } from "@/utils/deviceControl.js"
+import {
+   send_movie_fullscreen_toggle_event,
+   send_movie_seek_event,
+   send_movie_subtitles_change_event,
+   send_movie_toggle_event,
+   send_movie_volume_change_event
+} from "@/utils/deviceControl.js"
 import router from "@/router/index.js"
 
 export default {
@@ -287,7 +293,9 @@ export default {
          disabledMoments: true,
 
          subtitles: [],
-         imageFullSize: false
+         imageFullSize: false,
+
+         isFullscreen: false
       }
    },
 
@@ -351,10 +359,13 @@ export default {
 
    async mounted() {
       window.addEventListener("keydown", this.key)
+      window.addEventListener("fullscreenchange", this.fullscreenChange)
    },
 
    beforeUnmount() {
       window.removeEventListener("keydown", this.key)
+      window.removeEventListener("fullscreenchange", this.fullscreenChange)
+      this.$refs.video.textTracks.removeEventListener("change", this.onSubtitleChanged)
    },
 
    methods: {
@@ -413,7 +424,7 @@ export default {
             this.lastSentVideoPosition = this.file.video_position || 0
             await this.fetchSubtitles()
             this.loadSubtitleStyle()
-
+            this.$refs.video.textTracks.addEventListener("change", this.onSubtitleChanged)
          }
 
          if (!this.isEpub) return
@@ -460,12 +471,7 @@ export default {
          })
       },
       isVideoFullScreen() {
-         if (this.file.type !== "Video") return false
-         let videoElement = this.$refs.video
-         return document.fullscreenElement === videoElement ||
-            document.webkitFullscreenElement === videoElement ||
-            document.mozFullScreenElement === videoElement ||
-            document.msFullscreenElement === videoElement
+         return this.isFullscreen
       },
       prev() {
          if (this.isVideoFullScreen()) return
@@ -640,7 +646,7 @@ export default {
             console.warn("this.$refs.video is falsy")
             return
          }
-         let toSecond = Math.floor(this.$refs.video.currentTime)
+         let toSecond = this.$refs.video.currentTime
          send_movie_seek_event(toSecond)
       },
       onMovieVolumeChange: throttle(function() {
@@ -659,7 +665,7 @@ export default {
             return
          }
          send_movie_toggle_event(false)
-         let toSecond = Math.floor(this.$refs.video.currentTime)
+         let toSecond = this.$refs.video.currentTime
          send_movie_seek_event(toSecond)
       },
       onMoviePause() {
@@ -669,8 +675,58 @@ export default {
             return
          }
          send_movie_toggle_event(true)
-         let toSecond = Math.floor(this.$refs.video.currentTime)
+         let toSecond = this.$refs.video.currentTime
          send_movie_seek_event(toSecond)
+      },
+
+      fullscreenChange() {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         this.isFullscreen = !this.isFullscreen
+         send_movie_fullscreen_toggle_event(this.isFullscreen)
+      },
+
+      onSubtitleChanged() {
+         if (this.isInShareContext) return
+         if (!this.$refs.video) {
+            console.warn("this.$refs.video is falsy")
+            return
+         }
+         let tracks = this.$refs.video.textTracks
+
+         for (let i = 0; i < tracks.length; i++) {
+            let t = tracks[i]
+            if (t.mode === "showing") {
+               send_movie_subtitles_change_event(i)
+               return
+            }
+         }
+         send_movie_subtitles_change_event(null)
+      },
+
+      toggleFullscreen(isFullscreen) {
+         if (isFullscreen) {
+            this.$refs.video.requestFullscreen()
+         } else if (this.isFullscreen) {
+            document.exitFullscreen()
+         }
+      },
+
+      setSubtitleTrack(index) {
+         console.log("setSubtitleTrack")
+         if (index === null || index === undefined) return
+         let tracks = this.$refs.video.textTracks
+
+         for (let i = 0; i < tracks.length; i++) {
+            tracks[i].mode = "disabled"
+         }
+
+         if (index >= 0 && index < tracks.length) {
+            tracks[index].mode = "showing"
+         }
       },
 
       loadSubtitleStyle() {
@@ -811,14 +867,16 @@ export default {
 
             if (type === "movie_seek") {
                this.$refs.video.currentTime = args.seconds
-            }
-            if (type === "movie_toggle") {
+            } else if (type === "movie_toggle") {
                let isPaused = args.isPaused
                if (isPaused) this.$refs.video.pause()
-               else  this.$refs.video.play()
-            }
-            if (type === "movie_volume_change") {
+               else this.$refs.video.play()
+            } else if (type === "movie_volume_change") {
                this.$refs.video.volume = args.volume
+            } else if (type === "movie_fullscreen_toggle") {
+               this.toggleFullscreen(args.is_fullscreen)
+            } else if (type === "movie_subtitle_change") {
+               this.setSubtitleTrack(args.subtitle_id)
             }
          }
       }

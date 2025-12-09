@@ -11,5 +11,6 @@ ErrorType = Literal[
     "noPendingRequest",
     "noActivePair",
     "notActiveMaster",
-    "badDeviceId"
+    "badDeviceId",
+    "masterSlaveEqual"
 ]

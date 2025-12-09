@@ -9,10 +9,13 @@
 It's basically like Google Drive, but instead it stores all files in Discord.
 
 
-<img src="public/images/1e.jpg" width="2560" alt="Kocham altki">
-<img src="public/images/2e.jpg" width="2558" alt="Kocham altki">
-<img src="public/images/4e.jpg" width="2560" alt="Kocham altki">
-<img src="public/images/5e.jpg" width="2560" alt="Kocham altki">
+[//]: # (<img src="public/images/1e.jpg" width="2560" alt="">)
+
+[//]: # (<img src="public/images/2e.jpg" width="2558" alt="">)
+
+[//]: # (<img src="public/images/4e.jpg" width="2560" alt="">)
+
+[//]: # (<img src="public/images/5e.jpg" width="2560" alt="">)
 
 
 # Demo
@@ -172,53 +175,75 @@ POSTGRES_PASSWORD=1234
 
 # Building from source
 
+**You need python version 3.11 installed. 
+Tested on Node v20.10.0**
+
+
 1) Clone this repository
 * `git clone https://github.com/pam-param-pam/I-Drive`
 
 2) Start redis.
-* `docker run -d --name redis -p 6379:6379 redis:latest redis-server --requirepass 1234`
+* `docker run -d --name dev_idrive_redis -p 6379:6379 redis:latest redis-server --requirepass 1234`
 
 3) Start postgres
-* `docker run -d --name postgres -e POSTGRES_DB=dev_idrive-postgres -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=1234 -p 5432:5432 -v dev_idrive_postgres_data:/var/lib/postgresql/data postgres:16`
+* `docker run -d --name dev_idrive_postgres -e POSTGRES_DB=dev_idrive_postgres -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=1234 -p 5432:5432 -v dev_idrive_postgres_data:/var/lib/postgresql/data postgres:16`
 
 4) Navigate to the cloned repo. Find `frontend` dir. In it create `.env` file and put these variables:
 ````
-* VITE_BACKEND_BASE_URL=http://localhost:8000
-* VITE_BACKEND_BASE_WS=ws://localhost:8000
+VITE_BACKEND_BASE_URL=http://localhost:8000
+VITE_BACKEND_BASE_WS=ws://localhost:8000
 ````
 
 5) Inside the `frontend` dir run these commands:
 * `npm install` to install all requirements
-* `npm run dev -- --host` to start the frontend dev server
+* `npm run dev -- --host 0.0.0.0 --port 5173` to start the frontend dev server
 
 6) Navigate back to the cloned repo root. Find `backend` dir. In it create `.env` file and put these variables:
 ```
-* IS_DEV_ENV=True
-* PROTOCOL=http
-* DEPLOYMENT_HOST=localhost
-* NGINX_PORT=80
+IS_DEV_ENV=True
+PROTOCOL=http
+DEPLOYMENT_HOST=localhost
+NGINX_PORT=80
 
-* BACKEND_SECRET_KEY=very_secret_key
-* BACKEND_BASE_URL=http://localhost:8000
+BACKEND_SECRET_KEY=very_secret_key
+BACKEND_BASE_URL=http://localhost:8000
 
-* REDIS_PASSWORD=1234
-* REDIS_ADDRESS=localhost
-* REDIS_PORT=6379
+REDIS_PASSWORD=1234
+REDIS_ADDRESS=localhost
+REDIS_PORT=6379
 
-* POSTGRES_ADDRESS=localhost
-* POSTGRES_PORT=5432
-* POSTGRES_NAME=dev_idrive-postgres
-* POSTGRES_USER=admin
-* POSTGRES_PASSWORD=1234
+POSTGRES_ADDRESS=localhost
+POSTGRES_PORT=5432
+POSTGRES_NAME=dev_idrive_postgres
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=1234
 ```
-7) Inside `backend` dir run these commands:
+7) Inside `backend` dir run these commands.
 
-* `pip install -r requirements.txt` to install all requirements
-* `python manage.py migrate` to setup a database 
-* `python manage.py createsuperuser` to create admin user
-* `python manage.py runserver 0.0.0.0:8000` to start the backend dev server
+If on windows:
+```
+# 1. Create virtual environment
+py -3.11 -m venv .venv
 
-8) Everything should work now, head over to `localhost` to see the website
+# 2. Activate the virtual environment
+.venv\Scripts\activate 
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Run migrations
+python manage.py migrate
+
+# 5. Create admin user
+python manage.py createsuperuser
+
+# 6. Start backend dev server
+python manage.py runserver 0.0.0.0:8000
+```
+
+If on MacOc/Linux
+
+8) Everything should work now, head over to `localhost:5173` to see the website
 
 
 # PS

@@ -2,15 +2,22 @@
    <header>
       <img v-if="showLogo" :src="logoURL" />
       <action
-         v-if="showMenu"
-         class="menu-button hideMobileTap"
-         icon="menu"
-         :label="$t('buttons.toggleSidebar')"
-         @action="openSidebar()"
-
+        v-if="showMenu"
+        class="menu-button hideMobileTap"
+        icon="menu"
+        :label="$t('buttons.toggleSidebar')"
+        @action="openSidebar()"
       />
-
       <slot />
+
+      <action
+        v-if="this.deviceControlStatus.status === 'active_master' || this.deviceControlStatus.status === 'active_slave'"
+        id="deviceControl"
+        class="hide-mobile-tap"
+        icon="cast"
+        :label="$t('buttons.deviceControl')"
+        @action="showHover('controlDevice')"
+      />
 
       <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
          <slot name="actions" />
@@ -23,7 +30,6 @@
          icon="more_vert"
          :label="$t('buttons.more')"
          @action="showHover('more')"
-
       />
       <div
          class="overlay"
@@ -63,7 +69,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["settings", "currentPromptName"])
+      ...mapState(useMainStore, ["settings", "currentPromptName", "deviceControlStatus"])
    },
    methods: {
       ...mapActions(useMainStore, ["showHover", "closeHover"]),

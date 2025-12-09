@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.db.models import CheckConstraint, Q
 from django.db.models.signals import post_save
+from django.dispatch import receiver
 from simple_history.models import HistoricalRecords
 
 from .folder_models import Folder
@@ -27,9 +28,9 @@ class UserSettings(models.Model):
     def __str__(self):
         return self.user.username + "'s settings"
 
-    def _create_user_settings(sender, instance, created, **kwargs):
-        if created:
-            settings, created = UserSettings.objects.get_or_create(user=instance)
+    @staticmethod
+    def _create_user_settings(user):
+        UserSettings.objects.get_or_create(user=user)
 
 
 class UserPerms(models.Model):
@@ -54,9 +55,9 @@ class UserPerms(models.Model):
     def __str__(self):
         return self.user.username + "'s perms"
 
-    def _create_user_perms(sender, instance, created, **kwargs):
-        if created:
-            profile, created = UserPerms.objects.get_or_create(user=instance)
+    @staticmethod
+    def _create_user_perms(user):
+        UserPerms.objects.get_or_create(user=user)
 
 
 class DiscordSettings(models.Model):
@@ -111,11 +112,6 @@ class DiscordSettings(models.Model):
     def __str__(self):
         return self.user.username + "'s discord settings"
 
-    def _create_user_discord_settings(sender, instance, created, **kwargs):
-        if created:
-            settings, created = DiscordSettings.objects.get_or_create(user=instance)
-
-post_save.connect(UserPerms._create_user_perms, sender=User)
-post_save.connect(UserSettings._create_user_settings, sender=User)
-post_save.connect(Folder._create_user_root, sender=User)
-post_save.connect(DiscordSettings._create_user_discord_settings, sender=User)
+    @staticmethod
+    def _create_user_discord_settings(user):
+        DiscordSettings.objects.get_or_create(user=user)

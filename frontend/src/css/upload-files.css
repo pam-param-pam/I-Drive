@@ -15,8 +15,8 @@
 
 }
 .upload-files {
-  position: relative; /* Ensure the z-index takes effect */
-  z-index: 9995; /* Set this lower than the Toasts */
+  position: relative;
+  z-index: 9995;
 }
 .upload-files h2{
   padding-right: 1em;

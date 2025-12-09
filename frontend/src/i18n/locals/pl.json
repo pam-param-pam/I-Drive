@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "deviceControl": "Kontrola urządzenia",
     "stopActive": "Usuń kontrole urządzenia",
     "accept": "Potwierdź",
     "reject": "Odzrzuć",
@@ -72,6 +73,7 @@
   },
   "errors": {
     "integrityError": "Błąd spójności danych!",
+    "masterSlaveEqual": "Nie możesz kontrolować samego siebie...",
     "badDeviceId": "To urządzenie nie istnieje. Spróbuj odswierzyć strone",
     "masterRecentlyRejected": "Poczekaj chwile przed kolejną prośbą",
     "slaveRecentlyRejected": "Urządzenie slave zostało ostatnio odrzucone",
@@ -174,6 +176,13 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "isDeviceControlActive": "Kontrola urządzenia aktywna",
+    "isNavigationActive": "Navigation event",
+    "isVideoToggleActive": "Video toggle event",
+    "isVideoSeekActive": "Video seek event",
+    "isVideoSubtitlesActive": "Video subtitles event",
+    "isVideoFullscreenActive": "Video fullscreen event",
+    "deviceControlUnknown": "Status nieznany. Spróbuj ponownie!",
     "peerDevice": "Peer",
     "roleMaster": "Master",
     "roleSlavePending": "Pending slave",

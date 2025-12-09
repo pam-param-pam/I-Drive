@@ -6,6 +6,7 @@ import uuid
 from django.contrib.auth import authenticate
 from django.contrib.auth import user_logged_in, user_logged_out
 from django.contrib.auth.models import User
+from django.db import transaction
 
 from ..constants import TOKEN_EXPIRY_DAYS, QR_CODE_SESSION_EXPIRY, cache, EventCode
 from ..core.Serializers import DeviceTokenSerializer
@@ -15,7 +16,7 @@ from ..core.errors import BadRequestError, UsernameTakenError, ResourceNotFoundE
 from ..core.helpers import get_ip
 from ..core.http.utils import get_device_metadata
 from ..core.websocket.utils import send_event
-from ..models import PerDeviceToken
+from ..models import PerDeviceToken, UserPerms, UserSettings, Folder, DiscordSettings
 from ..tasks.queueTasks import queue_ws_event
 
 
@@ -176,8 +177,7 @@ def register_user(request, username: str, password: str) -> tuple[str, PerDevice
     if User.objects.filter(username=username):
         raise UsernameTakenError()
 
-    user = User.objects.create_user(username=username, password=password)
-    user.save()
+    create_new_user(username, password, is_staff=False)
     return login_device(request, username, password)
 
 def change_password(request, user: User, current_password: str, new_password: str) -> tuple[str, PerDeviceToken]:
@@ -190,3 +190,12 @@ def change_password(request, user: User, current_password: str, new_password: st
     logout_all_devices_for_user(request, user)
     raw_token, token_obj = login_device(request, user.username, new_password)
     return raw_token, token_obj
+
+
+def create_new_user(username: str, password: str, is_staff: bool):
+    with transaction.atomic():
+        user = User.objects.create_user(username=username, password=password, is_staff=is_staff)
+        UserPerms._create_user_perms(user=user)
+        UserSettings._create_user_settings(user=user)
+        Folder._create_user_root(user=user)
+        DiscordSettings._create_user_discord_settings(user=user)

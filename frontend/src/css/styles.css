@@ -135,26 +135,29 @@ main .spinner .bounce2 {
 }
 
 .action .counter {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  position: absolute;
-  bottom: 0;
-  right: 0;
+
   background: var(--blue);
-  color: #fff;
+  color: white;
+
   border-radius: 50%;
-  font-size: 0.75em;
-  font-weight: bold;
   border: 2px solid white;
 
-  min-width: 1.8em;
-  min-height: 1.8em;
-  padding-top: 0.2em;
-  padding-left: 0.5em;
-  padding-right: 0.5em;
+  width: 1.8em;
+  height: 1.8em;
+
+  font-size: 0.75em;
+  font-weight: bold;
+
   line-height: 1;
   box-sizing: border-box;
+  padding: 0;
 }
 
 /* PREVIEWER */

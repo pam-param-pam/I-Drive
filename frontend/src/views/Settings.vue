@@ -1,6 +1,8 @@
 <template>
    <div class="dashboard" @dragover.prevent @drop.prevent="onDrop">
-      <header-bar />
+      <header-bar>
+         <title></title>
+      </header-bar>
 
       <div id="nav">
          <div class="wrapper">

@@ -116,7 +116,6 @@ export default {
       }
    },
    async created() {
-      this.setLoading(true)
       await this.fetchDevices()
    },
    methods: {
@@ -124,6 +123,7 @@ export default {
       ...mapActions(useMainStore, ["setLoading", "setError", "showHover"]),
       async fetchDevices() {
          try {
+            this.setLoading(true)
             this.devices = await getActiveDevices()
          } catch (error) {
             console.error(error)
@@ -142,8 +142,7 @@ export default {
          await forceLogout()
       },
       showDeviceControlPrompt() {
-         this.showHover({ prompt: "ControlDevice", "props": { "devices": this.devices, "currentDeviceId": this.localDeviceId } })
-         this.fetchDevices()
+         this.showHover({ prompt: "ControlDevice" })
       }
 
    }

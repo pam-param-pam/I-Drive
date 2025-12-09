@@ -138,7 +138,7 @@ def extract_resources(*rules):
                 return model.objects.get(**{model_field: obj_id})
             except ObjectDoesNotExist:
                 continue
-        raise ResourceNotFoundError()
+        raise ResourceNotFoundError(f"Couldn't find resource with id={obj_id!r}")
 
     def decorator(view_func):
         @wraps(view_func)
@@ -161,14 +161,17 @@ def extract_resources(*rules):
                         kwargs[inject_as] = None if not many else []
                         continue
                     else:
-                        print(container)
-                        raise ValueError(f"Missing key '{key}' in request.{source}")
+                        raise BadRequestError(f"Missing key '{key}' in request.{source}")
 
                 ids = container[key]
 
                 if many:
                     if not isinstance(ids, (list, tuple)):
-                        raise ValueError(f"Expected list of IDs for key '{key}', got {type(ids).__name__}")
+                        raise BadRequestError(f"Expected list of IDs for key '{key}', got {type(ids).__name__}")
+
+                    # if len(ids) != len(set(ids)):
+                    #     raise BadRequestError(f"Duplicate IDs provided for '{key}'")
+
                     found_resources = []
                     for obj_id in ids:
                         resource = _get_resource_from_models(models, obj_id, model_field)
@@ -176,7 +179,7 @@ def extract_resources(*rules):
                     kwargs[inject_as] = found_resources
                 else:
                     if isinstance(ids, (list, tuple)):
-                        raise ValueError(f"Expected single ID for key '{key}', got multiple")
+                        raise BadRequestError(f"Expected single ID for key '{key}', got multiple")
                     resource = _get_resource_from_models(models, ids, model_field)
                     kwargs[inject_as] = resource
 
@@ -204,6 +207,8 @@ def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_mod
 
             validate_ids_as_list(ids, max_length=max_length)
 
+            if len(ids) != len(set(ids)):
+                raise BadRequestError(f"Duplicate IDs provided for '{key}'")
             files_qs = (
                 file_model.objects
                 .filter(id__in=ids)

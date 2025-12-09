@@ -138,10 +138,6 @@
     margin: 0 0;
     width: 100%;
   }
-  #search {
-    max-width: 15em;
-
-  }
   .listing-notice {
     margin-left: 0.5em;
     margin-right: 0.5em;
@@ -168,6 +164,9 @@
 }
 
 @media (max-width: 450px) {
+  #search {
+    max-width: 15em;
+  }
   #listing.list .item .created {
     display: none;
   }
