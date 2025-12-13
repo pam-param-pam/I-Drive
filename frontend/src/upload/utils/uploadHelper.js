@@ -2,7 +2,7 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 import { encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
 import jsmediatags from "jsmediatags"
 import { uploadInstance } from "@/axios/networker.js"
-import { showToast } from "@/utils/common.js"
+import { detectExtension, showToast } from "@/utils/common.js"
 
 
 export async function checkFilesSizes(files) {
@@ -106,21 +106,21 @@ function processFile(fileEntry) {
 export function isAudioFile(extension) {
    extension = extension.toLowerCase()
    let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.audio.includes(extension)
+   return uploadStore.fileExtensions.Audio.includes(extension)
 }
 
 
 export function isVideoFile(extension) {
    extension = extension.toLowerCase()
    let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.video.includes(extension)
+   return uploadStore.fileExtensions.Video.includes(extension)
 }
 
 
 export function isImageFile(extension) {
    extension = extension.toLowerCase()
    let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.image.includes(extension)
+   return uploadStore.fileExtensions.Image.includes(extension)
 }
 
 
@@ -503,5 +503,21 @@ export function isErrorStatus(status) {
       status === fileUploadStatus.uploadFailed ||
       status === fileUploadStatus.saveFailed ||
       status === fileUploadStatus.fileGone
+}
+
+
+export function getFileType(fileName) {
+   let uploadStore = useUploadStore()
+
+   let ext = detectExtension(fileName)
+
+   for (const [type, exts] of Object.entries(uploadStore.fileExtensions)) {
+      if (exts.includes(ext)) {
+         console.log(type)
+         return type
+      }
+   }
+
+   return "Other"
 }
 

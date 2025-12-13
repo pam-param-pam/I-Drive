@@ -21,7 +21,6 @@ class File(models.Model):
     name = models.CharField(max_length=100)
     extension = models.CharField(max_length=20)
     size = models.PositiveBigIntegerField()
-    mimetype = models.CharField(max_length=100, default="text/plain")
     type = models.CharField(max_length=50, default="text", choices=FILE_TYPE_CHOICES)
     inTrash = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -170,10 +169,10 @@ class File(models.Model):
         return EncryptionMethod(self.encryption_method)
 
     def get_base64_key(self):
-        return base64.b64encode(self.key).decode('utf-8')
+        return base64.b64encode(self.key).decode()
 
     def get_base64_iv(self):
-        return base64.b64encode(self.iv).decode('utf-8')
+        return base64.b64encode(self.iv).decode()
 
     def is_encrypted(self):
         return self.get_encryption_method() != EncryptionMethod.Not_Encrypted

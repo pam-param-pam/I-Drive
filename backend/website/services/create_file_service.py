@@ -15,9 +15,9 @@ from ..core.Serializers import FileSerializer
 from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc
 from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
-from ..core.websocket.utils import group_and_send_event, send_event
 from ..models import File, Fragment, Thumbnail
 from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists
+from ..websockets.utils import group_and_send_event, send_event
 
 
 def _create_fragment(file_obj: File, attachment: dict) -> Fragment:
@@ -49,7 +49,6 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     file_name = validate_key(file, "name", str, checks=[NotEmpty])
     parent_id = validate_key(file, "parent_id", str)
     extension = validate_key(file, "extension", str, checks=[MaxLength(50), NotEmpty])
-    mimetype = validate_key(file, "mimetype", str, checks=[MaxLength(100), NotEmpty])
     file_size = validate_key(file, "size", int, checks=[NotNegative])
     frontend_id = validate_key(file, "frontend_id", str, checks=[MaxLength(50), NotEmpty])
     encryption_method = validate_key(file, "encryption_method", int)
@@ -66,15 +65,6 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
 
     key, iv = validate_encryption_fields(encryption_method, key_b64, iv_b64)
     validate_crc(file_size, crc)
-
-    if not isinstance(subtitles, list):
-        raise BadRequestError("Subtitles must be a list")
-
-    if not mimetype:
-        raise BadRequestError("'mimetype' cannot be empty")
-
-    if not file_name:
-        raise BadRequestError("'name' cannot be empty")
 
     file_type = get_file_type(extension)
 
@@ -100,7 +90,6 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
             extension=extension,
             name=file_name,
             size=file_size,
-            mimetype=mimetype,
             type=file_type,
             owner=user,
             parent=parent,

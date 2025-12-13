@@ -73,6 +73,7 @@ def check_resource_permissions(checks: list, resource_key: Union[str, list[str]]
                 else:
                     raise ValueError(f"[check_resource_permissions] Missing required resource(s) {missing_keys} in kwargs")
 
+            print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
             for Check in checks:
                 Check().check(request, *resources)
 
@@ -138,7 +139,9 @@ def extract_resources(*rules):
                 return model.objects.get(**{model_field: obj_id})
             except ObjectDoesNotExist:
                 continue
-        raise ResourceNotFoundError(f"Couldn't find resource with id={obj_id!r}")
+        model_names = ", ".join(m.__name__ for m in models)
+
+        raise ResourceNotFoundError(f"Couldn't find [{model_names}] with id={obj_id!r}")
 
     def decorator(view_func):
         @wraps(view_func)

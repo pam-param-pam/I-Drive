@@ -7,8 +7,8 @@ from .helper import folder_serializer, send_message
 from ..celery import app
 from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
-from ..core.websocket.utils import group_and_send_event, send_event
 from ..models import File, Folder
+from ..websockets.utils import send_event
 
 
 @app.task

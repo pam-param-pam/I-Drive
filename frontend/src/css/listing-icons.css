@@ -6,9 +6,9 @@
 .file-icons [data-type=Blob] i::before { content: 'insert_drive_file' }
 .file-icons [data-type=Image] i::before { content: 'image' }
 .file-icons [data-type=Text] i::before { content: 'description' }
-.file-icons [data-type=Other] i::before { content: 'description' }
 .file-icons [data-type=Database] i::before { content: 'sd_card' }
 .file-icons [data-type=Video] i::before { content: 'movie' }
+.file-icons [data-type=Other] i::before { content: 'description' }
 
 /* #f90 - Image */
 

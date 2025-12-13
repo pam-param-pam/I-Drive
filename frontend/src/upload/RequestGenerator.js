@@ -220,7 +220,7 @@ export class RequestGenerator {
                }
 
             }
-            //we need to inform about totalChunks of a file, we wait 25 secs for onReady to be able to fire first in mp4boxjs
+            //we need to inform about totalChunks of a file, we wait 25 ms for onReady to be able to fire first in mp4boxjs
             setTimeout(() => {
                this.uploadStore.setTotalChunks(frontendId, chunkSequence)
                this.cleanMp4Box(frontendId)

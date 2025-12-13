@@ -2,12 +2,12 @@ from django.contrib.auth.models import User
 
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer
-from ..core.errors import BadRequestError, ResourcePermissionError
+from ..core.errors import ResourcePermissionError
 from ..core.helpers import validate_value
 from ..core.validators.GeneralChecks import NotEmpty
-from ..core.websocket.utils import send_event
 from ..models import Folder
 from ..tasks.otherTasks import unlock_folder_task, lock_folder_task
+from ..websockets.utils import send_event
 
 
 def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
@@ -28,8 +28,6 @@ def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
 def change_folder_password(request, folder_obj: Folder, new_password: str) -> bool:
     validate_value(new_password, str)
 
-    lock_folder_task()
-    unlock_folder_task()
     if new_password:
         lock_folder_task.delay(request.context, folder_obj.id, new_password)
     else:

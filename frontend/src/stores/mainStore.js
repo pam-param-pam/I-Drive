@@ -163,8 +163,8 @@ export const useMainStore = defineStore("main", {
       updateFolderPassword(payload) {
          this.folderPasswords[payload.folderId] = payload.password
       },
-      setDisabledCreation(payload) {
-         this.disabledCreation = payload
+      setDisabledCreation(value) {
+         this.disabledCreation = value
       },
       closeHover() {
          this.prompts.pop()

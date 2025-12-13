@@ -13,37 +13,32 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP
+from ..auth.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP, CheckTrash
 from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from ..auth.utils import check_resource_perms
 from ..constants import cache
-from ..discord.Discord import discord
-from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..core.helpers import get_ip
+from ..discord.Discord import discord
+from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
-from ..queries.selectors import query_attachments
+from ..queries.selectors import query_attachments, check_if_bots_exists
 
 
 def etag_func(request, folder_obj):
     folder_content = cache.get(folder_obj.id)
     if folder_content:
-        ip, _ = get_ip(request)
         return str(hash(str(folder_content)))
+    return None
 
-
-def last_modified_func(request, file_obj, sequence=None):
-    last_modified_str = file_obj.last_modified_at
-    return last_modified_str
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
+@check_resource_permissions(default_checks - CheckTrash, resource_key="folder_obj")
 @etag(etag_func)
 def get_folder_info(request, folder_obj: Folder):
     folder_content = cache.get(folder_obj.id)
@@ -79,8 +74,7 @@ def get_dirs(request, folder_obj: Folder):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-# @last_modified(last_modified_func)
+@check_resource_permissions(default_checks - CheckTrash, resource_key="file_obj")
 def get_file_info(request, file_obj: File):
     file_content = FileSerializer().serialize_object(file_obj)
     return JsonResponse(file_content)
@@ -397,16 +391,16 @@ def get_subtitles(request, file_obj: File):
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-@extract_items(source='data')
-@check_bulk_permissions(default_checks)
-def ultra_download_metadata(request, items):
+@extract_item()
+def ultra_download_metadata(request, item_obj):
+    check_if_bots_exists(request.user)
+
     files = []
 
-    for item in items:
-        if isinstance(item, File):
-            files.append(item)
-        else:
-            files.extend(item.get_all_files())
+    if isinstance(item_obj, File):
+        files.append(item_obj)
+    else:
+        files.extend(item_obj.get_all_files())
 
     def file_metadata(file_obj: File):
         file_dict = {
@@ -444,6 +438,8 @@ def ultra_download_metadata(request, items):
 @throttle_classes([MediaThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_attachment_url_view(request, attachment_id):
+    check_if_bots_exists(request.user)
+
     fragment = Fragment.objects.get(attachment_id=attachment_id)
 
     file = fragment.file

@@ -10,7 +10,7 @@
    >
       <!-- Upper -->
       <div class="fileitem-header file-icons">
-         <div :data-type="type" :aria-label="fileState.extension">
+         <div :data-type="getFileType(this.fileState.name)" :aria-label="fileState.extension">
             <i class="material-icons file-icon"></i>
          </div>
 
@@ -97,7 +97,7 @@ import { mapActions, mapState } from 'pinia'
 import { useUploadStore } from '@/stores/uploadStore.js'
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { useMainStore } from '@/stores/mainStore.js'
-import { isErrorStatus } from "@/upload/utils/uploadHelper.js"
+import { getFileType, isErrorStatus } from "@/upload/utils/uploadHelper.js"
 
 export default {
    components: { ProgressBar },
@@ -120,12 +120,6 @@ export default {
       fileUploadStatus() {
          return fileUploadStatus
       },
-      type() {
-         let splitMimetype =  this.fileState.type.split("/")[0]
-         if (splitMimetype === 'application') return 'pdf'
-         if (!splitMimetype) return 'text'
-         return splitMimetype
-      },
       showTryAgainButton() {
          return (this.fileState.status === fileUploadStatus.saveFailed || this.fileState.status === fileUploadStatus.uploadFailed|| this.fileState.status === fileUploadStatus.fileGone) && this.state === uploadState.uploading
       },
@@ -136,6 +130,7 @@ export default {
    },
 
    methods: {
+      getFileType,
       isErrorStatus,
       ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'dismissFile', 'retryFailSaveFile', 'retryGoneFile', 'retryUploadFile']),
       dismiss() {

@@ -153,8 +153,8 @@ urlpatterns = [
 
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 
-    path("items/ultraDownload", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
-    path("items/ultraDownload/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
+    path("items/ultraDownload/items/<item_id>", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
+    path("items/ultraDownload/attachments/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
     path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),

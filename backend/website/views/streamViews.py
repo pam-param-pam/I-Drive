@@ -1,4 +1,5 @@
 import io
+import mimetypes
 import re
 import time
 from io import BytesIO
@@ -28,7 +29,6 @@ from ..auth.utils import check_resource_perms
 from ..constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.http.utils import get_content_disposition_string, parse_range_header
-from ..core.websocket.utils import send_event
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
 from ..models import Fragment, Preview
@@ -38,6 +38,7 @@ from ..core.errors import DiscordError, BadRequestError, FailedToResizeImageErro
 from ..queries.builders import build_flattened_children, build_zip_file_dict
 from ..queries.selectors import check_if_bots_exists, get_discord_author
 from ..tasks.helper import auto_prefetch
+from ..websockets.utils import send_event
 
 
 @api_view(['GET'])
@@ -380,7 +381,8 @@ def stream_file(request, file_obj: File):
     elif request.META.get('share_context'):
         discord.send_message(file_obj.owner, f"{file_obj.name} has been watched!")
 
-    response = StreamingHttpResponse(file_iterator(selected_fragment_index - 1, start_byte, end_byte, real_start_byte), content_type=file_obj.mimetype, status=status)
+    mime, _ = mimetypes.guess_type(file_obj.name)
+    response = StreamingHttpResponse(file_iterator(selected_fragment_index - 1, start_byte, end_byte, real_start_byte), content_type=mime, status=status)
 
     file_size = file_obj.size
     real_end_byte = 0

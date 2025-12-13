@@ -33,11 +33,9 @@
 </template>
 
 <script>
-import { create } from '@/api/folder.js'
 import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
 import { detectExtension, onceAtATime } from "@/utils/common.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { createFile } from "@/api/files.js"
 import { v4 as uuidv4 } from "uuid"
 import { generateIv, generateKey } from "@/upload/utils/uploadHelper.js"

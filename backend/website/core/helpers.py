@@ -3,8 +3,7 @@ from typing import Union, Type, Tuple, Optional, Any
 
 from .errors import BadRequestError
 from .validators.Check import Check
-from ..constants import MAX_RESOURCE_NAME_LENGTH, CODE_EXTENSIONS, RAW_IMAGE_EXTENSIONS, EXECUTABLE_EXTENSIONS, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, TEXT_EXTENSIONS, DOCUMENT_EXTENSIONS, \
-    EBOOK_EXTENSIONS, SYSTEM_EXTENSIONS, DATABASE_EXTENSIONS, ARCHIVE_EXTENSIONS, IMAGE_EXTENSIONS, EncryptionMethod
+from ..constants import MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, EXTENSION_TO_FILE_TYPE
 
 _SENTINEL = object()  # Unique object to detect omitted default
 
@@ -108,61 +107,30 @@ def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Ty
 
 
 def get_file_type(extension: str) -> str:
-    extension = extension.lower()
-    if extension in VIDEO_EXTENSIONS:
-        return "Video"
-    elif extension in AUDIO_EXTENSIONS:
-        return "Audio"
-    elif extension in TEXT_EXTENSIONS:
-        return "Text"
-    elif extension in DOCUMENT_EXTENSIONS:
-        return "Document"
-    elif extension in EBOOK_EXTENSIONS:
-        return "Ebook"
-    elif extension in SYSTEM_EXTENSIONS:
-        return "System"
-    elif extension in DATABASE_EXTENSIONS:
-        return "Database"
-    elif extension in ARCHIVE_EXTENSIONS:
-        return "Archive"
-    elif extension in IMAGE_EXTENSIONS:
-        return "Image"
-    elif extension in EXECUTABLE_EXTENSIONS:
-        return "Executable"
-    elif extension in CODE_EXTENSIONS:
-        return "Code"
-    elif extension in RAW_IMAGE_EXTENSIONS:
-        return "Raw image"
-    else:
-        return "Other"
+    return EXTENSION_TO_FILE_TYPE.get(extension.lower(), "Other")
 
 
 def validate_value(value: Any, expected_type: Type, *, required: bool = False, checks: list = None):
-    # Handle None
     if value is None:
         if not required:
             return None
         raise BadRequestError("Value cannot be null.")
 
-    # ---- AUTO-SANITIZE NUL CHARACTERS ----
-    # Strings
     if expected_type is str and isinstance(value, str):
         if "\x00" in value:
             value = value.replace("\x00", "")
 
-    # Type check
     if not isinstance(value, expected_type):
         raise BadRequestError(f"Value must be of type {expected_type}, got {type(value).__name__}")
 
-    # Normalize checks
     if checks is None:
         checks = []
 
     normalized_checks = []
-    for chk in checks:
-        if isinstance(chk, type) and issubclass(chk, Check):
-            chk = chk()  # auto-instantiate class
-        normalized_checks.append(chk)
+    for check in checks:
+        if isinstance(check, type) and issubclass(check, Check):
+            check = check()
+        normalized_checks.append(check)
 
     # Run checks
     for check in normalized_checks:

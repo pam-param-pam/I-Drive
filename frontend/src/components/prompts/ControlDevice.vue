@@ -184,6 +184,7 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["deviceControlStatus", "deviceId", "deviceControlOptions"]),
+      //todo store deviceControlOptions in local storage to be persistant
       peerInfo() {
          const st = this.currentDeviceControlStatus
          if (!st || !st.peer) return null

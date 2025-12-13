@@ -35,7 +35,6 @@ export class BackendManager {
          let file_data = {
             "name": fileObj.name,
             "parent_id": fileObj.folderId,
-            "mimetype": fileObj.type,
             "extension": fileObj.extension,
             "size": fileObj.size,
             "frontend_id": fileObj.frontendId,

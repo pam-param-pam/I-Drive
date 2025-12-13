@@ -30,4 +30,3 @@ def encrypt_message(key: str, data: Union[str, List, Dict]) -> str:
 
     encrypted = encryptor.update(padded_data) + encryptor.finalize()
     return base64.b64encode(iv + encrypted).decode('utf-8')
-

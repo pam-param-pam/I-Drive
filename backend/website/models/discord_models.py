@@ -57,7 +57,6 @@ class Bot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
-    disabled = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     class Meta:

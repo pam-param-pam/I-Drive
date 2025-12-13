@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms, AdminPerms
 from ..auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
-from ..constants import VIDEO_EXTENSIONS, IMAGE_EXTENSIONS, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, AUDIO_EXTENSIONS
+from ..constants import EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, FILE_TYPES
 from ..core.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer
 from ..core.decorators import check_resource_permissions, extract_folder
 from ..discord.Discord import discord
@@ -31,7 +31,7 @@ def can_upload(request, folder_obj: Folder):
 
     allowed_to_upload = bool(discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and bots.exists() and channels.exists())
     return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id,
-                         "extensions": {"video": VIDEO_EXTENSIONS, "audio": AUDIO_EXTENSIONS, "image": IMAGE_EXTENSIONS}})
+                         "extensions": FILE_TYPES})
 
 
 @api_view(['GET'])

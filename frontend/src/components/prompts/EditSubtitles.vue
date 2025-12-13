@@ -260,6 +260,7 @@ export default {
             channel_id: data.channel_id,
             message_id: data.id,
             attachment_id: data.attachments[0].id,
+            is_forced: false,
             iv: iv,
             key: key,
             message_author_id: data.author.id

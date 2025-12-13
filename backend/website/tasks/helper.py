@@ -3,8 +3,8 @@ from typing import Optional
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
 from ..core.dataModels.http import RequestContext
-from ..core.websocket.utils import send_event
 from ..models import File
+from ..websockets.utils import send_event
 
 folder_serializer = FolderSerializer()
 file_serializer = FileSerializer()

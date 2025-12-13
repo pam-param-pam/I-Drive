@@ -7,11 +7,11 @@ from .helper import send_message
 from ..celery import app
 from ..constants import EventCode, cache
 from ..core.dataModels.http import RequestContext
-from ..core.websocket.utils import group_and_send_event
 from ..discord.Discord import discord
 from ..models import File, Folder, Fragment, Preview, Thumbnail, Subtitle, Moment, Webhook
 from ..core.errors import DiscordError
 from ..queries.selectors import query_attachments
+from ..websockets.utils import group_and_send_event
 
 
 def gather_message_structure(files: list) -> dict[str, list[str]]:

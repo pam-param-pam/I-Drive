@@ -164,6 +164,8 @@ REDIS_PASSWORD=1234
 
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=1234
+
+BACKEND_PORT=8001
 ```
 
 5) Run `docker-compose up`
@@ -239,6 +241,8 @@ python manage.py createsuperuser
 
 # 6. Start backend dev server
 python manage.py runserver 0.0.0.0:8000
+
+# 7. start both celeries #todo
 ```
 
 If on MacOc/Linux

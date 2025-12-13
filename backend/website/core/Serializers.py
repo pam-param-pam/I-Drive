@@ -267,7 +267,7 @@ class WebhookSerializer(SimpleSerializer):
 
 class BotSerializer(SimpleSerializer):
     def serialize_object(self, bot: Bot) -> dict:
-        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "disabled": bot.disabled, "primary": bot.primary}
+        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "primary": bot.primary}
 
 
 class MomentSerializer(SimpleSerializer):

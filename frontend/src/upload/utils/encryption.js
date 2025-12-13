@@ -34,7 +34,7 @@ export async function encryptWithAesCtr(file, base64Key, base64IV, bytesToSkip) 
       arrayBuffer
    )
 
-   return new Blob([new Uint8Array(encryptedArrayBuffer)], { type: file.type })
+   return new Blob([new Uint8Array(encryptedArrayBuffer)])
 }
 
 export async function encryptWithChaCha20(file, base64Key, base64IV, bytesToSkip) {
@@ -48,7 +48,7 @@ export async function encryptWithChaCha20(file, base64Key, base64IV, bytesToSkip
    let encryptedData = new JSChaCha20(key, iv, counter).encrypt(new Uint8Array(arrayBuffer))
 
 
-   return new Blob([new Uint8Array(encryptedData)], { type: file.type })
+   return new Blob([new Uint8Array(encryptedData)])
 }
 
 // Calculate iv for AES CTR

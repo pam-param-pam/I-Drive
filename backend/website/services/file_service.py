@@ -40,7 +40,7 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
 
 
 def create_subtitle(file_obj: File, data: dict) -> Subtitle:
-    language = validate_key(data, "language", str, checks=[NotEmpty])
+    language = validate_key(data, "language", str, checks=[NotEmpty, MaxLength(20)])
     is_forced = validate_key(data, "is_forced", bool)
     channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
     message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])

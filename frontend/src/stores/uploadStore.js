@@ -51,7 +51,6 @@ export const useUploadStore = defineStore("upload", {
                cached.error = file.error
                cached.name = file.fileObj.name
                cached.extension = file.fileObj.extension
-               cached.type = file.fileObj.type
                return cached
             }
             const smallObj = {
@@ -61,7 +60,6 @@ export const useUploadStore = defineStore("upload", {
                error: file.error,
                name: file.fileObj.name,
                extension: file.fileObj.extension,
-               type: file.fileObj.type
             }
             this.fileCache[file.frontendId] = smallObj
             return smallObj

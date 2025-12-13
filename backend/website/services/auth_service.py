@@ -15,9 +15,9 @@ from ..core.deviceControl.DeviceControlState import DeviceControlState
 from ..core.errors import BadRequestError, UsernameTakenError, ResourceNotFoundError, ResourcePermissionError
 from ..core.helpers import get_ip
 from ..core.http.utils import get_device_metadata
-from ..core.websocket.utils import send_event
 from ..models import PerDeviceToken, UserPerms, UserSettings, Folder, DiscordSettings
 from ..tasks.queueTasks import queue_ws_event
+from ..websockets.utils import send_event
 
 
 def _create_token_internal(user: User, device_info: dict) -> tuple[str, PerDeviceToken]:

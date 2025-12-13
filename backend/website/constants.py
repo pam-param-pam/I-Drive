@@ -66,38 +66,60 @@ DEVICE_CONTROL_REJECTED_TTL = 5
 
 cache = caches["default"]
 
-RAW_IMAGE_EXTENSIONS = ('.IIQ', '.3FR', '.DCR', '.K25', '.KDC', '.CRW', '.CR2', '.CR3', '.ERF', '.MEF', '.MOS', '.NEF', '.NRW', '.ORF', '.PEF', '.RW2', '.ARW', '.SRF', '.SR2')
-VIDEO_EXTENSIONS = (".mp4", ".avi", ".mkv", ".mov", ".wmv", ".m4v", ".webm", ".ts", ".ogv")
-AUDIO_EXTENSIONS = (".mp3", ".wav", ".flac", ".aac")
-TEXT_EXTENSIONS = (".txt", '.text')
-DOCUMENT_EXTENSIONS = (".doc", ".docx", ".odt", ".xls", ".xlsx", ".ods", ".ppt", ".pptx", ".odp", ".pdf")
-EBOOK_EXTENSIONS = (".epub", ".mobi", ".azw", ".fb2")
-SYSTEM_EXTENSIONS = (".dll", ".sys", ".ini", ".log", ".cfg", "sqlite", "sqlite3")
-DATABASE_EXTENSIONS = (".sql", ".db", ".sqlite", ".mdb", ".accdb")
-ARCHIVE_EXTENSIONS = (".zip", ".rar", ".7z", ".tar", ".gz", ".bz2")
-IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp")
-EXECUTABLE_EXTENSIONS = (".exe", ".msi", ".apk", ".bat", ".sh", ".bin", ".ps1")
-CODE_EXTENSIONS = (
-    ".py", ".js", ".ts", ".java", ".cpp", ".c", ".cs", ".rb", ".php", ".html", ".css", ".xml", ".json", ".yaml", ".yml", ".go", ".rs", ".tsconfig", ".babelrc",
-    ".eslintrc", ".prettierrc", ".editorconfig", ".md", ".gitignore", ".vue", ".scss", ".swift", ".zig", ".dart", ".kts", ".kt", ".lua", ".conf", ".srs", ".vtt",
-    ".sql", ".svg"
-)
+FILE_TYPES = {
+    "Video": (
+        ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".m4v", ".webm", ".ts", ".ogv",
+    ),
+    "Audio": (
+        ".mp3", ".wav", ".flac", ".aac",
+    ),
+    "Image": (
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp",
+    ),
+    "Raw image": (
+        ".iiq", ".3fr", ".dcr", ".k25", ".kdc", ".crw", ".cr2", ".cr3",
+        ".erf", ".mef", ".mos", ".nef", ".nrw", ".orf", ".pef", ".rw2",
+        ".arw", ".srf", ".sr2",
+    ),
+    "Text": (
+        ".txt", ".text",
+    ),
+    "Document": (
+        ".doc", ".docx", ".odt", ".xls", ".xlsx", ".ods", ".ppt", ".pptx", ".odp", ".pdf",
+    ),
+    "Ebook": (
+        ".epub", ".mobi", ".azw", ".fb2",
+    ),
+    "System": (
+        ".dll", ".sys", ".ini", ".log", ".cfg", ".sqlite", ".sqlite3",
+    ),
+    "Database": (
+        ".sql", ".db", ".sqlite", ".mdb", ".accdb",
+    ),
+    "Archive": (
+        ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2",
+    ),
+    "Executable": (
+        ".exe", ".msi", ".apk", ".bat", ".sh", ".bin", ".ps1",
+    ),
+    "Code": (
+        ".py", ".js", ".ts", ".java", ".cpp", ".c", ".cs", ".rb", ".php",
+        ".html", ".css", ".xml", ".json", ".yaml", ".yml",
+        ".go", ".rs", ".swift", ".zig", ".dart", ".kts", ".kt",
+        ".lua", ".conf", ".md", ".gitignore", ".vue", ".scss",
+        ".editorconfig", ".tsconfig", ".babelrc", ".eslintrc", ".prettierrc",
+        ".srs", ".vtt", ".svg",
+    )
+}
 
-FILE_TYPE_CHOICES = [
-    ("Video", "Video"),
-    ("Audio", "Audio"),
-    ("Text", "Text"),
-    ("Document", "Document"),
-    ("Ebook", "Ebook"),
-    ("System", "System"),
-    ("Database", "Database"),
-    ("Archive", "Archive"),
-    ("Image", "Image"),
-    ("Executable", "Executable"),
-    ("Code", "Code"),
-    ("Raw image", "Raw image"),
-    ("Other", "Other"),
-]
+
+FILE_TYPE_CHOICES = [(key, key) for key in FILE_TYPES] + [("Other", "Other")]
+
+EXTENSION_TO_FILE_TYPE = {
+    ext: file_type
+    for file_type, extensions in FILE_TYPES.items()
+    for ext in extensions
+}
 
 class EventCode(Enum):
     WEBSOCKET_ERROR = 0

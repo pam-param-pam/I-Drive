@@ -47,7 +47,8 @@ services:
     build:
       context: ./backend
     restart: unless-stopped
-
+    ports:
+      - ${BACKEND_PORT}:8000
     depends_on:
       postgres:
         condition: service_healthy

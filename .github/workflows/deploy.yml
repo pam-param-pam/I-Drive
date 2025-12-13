@@ -47,7 +47,9 @@ jobs:
           
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-
+          
+          BACKEND_PORT=8001
+          
           EOF
           
           echo "Pulling docker-compose.yml..."

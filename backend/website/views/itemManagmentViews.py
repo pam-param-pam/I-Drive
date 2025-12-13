@@ -120,7 +120,7 @@ def delete(request, items):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_item()
-@check_resource_permissions(default_checks, resource_key="item_obj")
+@check_resource_permissions(default_checks & CheckRoot, resource_key="item_obj")
 def rename_view(request, item_obj):
     new_name = request.data["new_name"]
     extension = request.data["extension"]
