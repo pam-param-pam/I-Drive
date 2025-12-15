@@ -494,6 +494,15 @@ def get_file_stats(request, folder_obj):
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+def check_message_id(request, message_id):
+    database_attachments = query_attachments(message_id=message_id)
+    if database_attachments:
+        return HttpResponse(status=204)
+    return HttpResponse(status=404)
+
+@api_view(['GET'])
+@throttle_classes([MediaThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
 def check_attachment_id(request, attachment_id):
     database_attachments = query_attachments(attachment_id=attachment_id)
     if database_attachments:

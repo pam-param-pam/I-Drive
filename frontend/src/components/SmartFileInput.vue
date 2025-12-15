@@ -51,6 +51,10 @@ export default {
             this.$toast.error(this.$t("toasts.invalidFileFormat"))
          }
       },
+      reset() {
+         this.$refs.input.value = null
+         this.fileName = ""
+      },
       isFileAccepted(file) {
          if (!this.accept) return true
 

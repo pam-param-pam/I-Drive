@@ -443,6 +443,8 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "subtitleRenamed": "Zmieniono język!",
+    "subtitleRenameFailed": "Nie udało sie zmienić języka napisu",
     "illegalMove": "Nie możesz tu przenieść tych rzeczy",
     "deviceControlActive": "Kontrola urządzenia jest aktywna!",
     "deviceControlPendingExpired": "Czas na potwierdzenie minął. Spróbuj jeszcze raz.",

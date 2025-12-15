@@ -105,10 +105,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
         if duration:
             file_obj.duration = duration
 
-        try:
-            file_obj.save()
-        except IntegrityError:
-            raise BadRequestError("This file already exists!")
+        file_obj.save()
 
         for attachment in attachments:
             _create_fragment(file_obj, attachment)

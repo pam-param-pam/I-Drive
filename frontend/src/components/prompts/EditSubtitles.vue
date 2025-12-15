@@ -1,97 +1,124 @@
 <template>
-  <div class="card floating subtitle-manager">
-    <div class="card-title">
-      <h2>{{ $t("prompts.manageSubtitles") }}</h2>
-    </div>
-
-    <div class="card-content">
-      <p v-if="subtitles.length !== 0">{{ $t("prompts.existingSubtitles") }}: </p>
-      <ul class="subtitle-list">
-        <li v-for="(sub) in subtitles" :key="sub.id">
-          <label class="subtitle-lang">{{ sub.language }}</label>
-          <button class="action remove" @click="removeSubtitle(sub.id)">
-            <i class="material-icons">delete</i>
-          </button>
-        </li>
-      </ul>
-
-      <hr v-if="subtitles.length !== 0" />
-
-      <p><strong>{{ $t("prompts.addSubtitle") }}</strong></p>
-      <div class="input-group input">
-        <label for="langInput">{{ $t("prompts.subtitleLanguage") }}</label>
-        <input
-          id="langInput"
-          v-model.trim="newLanguage"
-          placeholder="English"
-          class="input input--block"
-        />
+   <div class="card floating subtitle-manager">
+      <div class="card-title">
+         <h2>{{ $t("prompts.manageSubtitles") }}</h2>
       </div>
 
-      <div class="file-input-wrapper">
-        <SmartFileInput
-          accept=".vtt,.srt"
-          :label="$t('buttons.addSubtitleFile')"
-          @file-selected="onSubtitleInput"
-        />
+      <div class="card-content">
+         <p v-if="subtitles.length !== 0">{{ $t("prompts.existingSubtitles") }}: </p>
+         <ul class="subtitle-list">
+            <li v-for="sub in subtitles" :key="sub.id">
+               <!-- DISPLAY MODE -->
+               <label
+                  v-if="editingId !== sub.id"
+                  class="subtitle-lang"
+               >
+                  {{ sub.language }}
+               </label>
+
+               <!-- EDIT MODE -->
+               <input
+                  v-else
+                  class="subtitle-lang-input"
+                  v-model.trim="editingValue"
+                  @blur="commitEdit(sub)"
+                  @keydown.enter.prevent="commitEdit(sub)"
+               />
+
+               <div class="subtitle-actions">
+                  <button
+                     class="action"
+                     @click="startEdit(sub)"
+                     :disabled="editingId === sub.id"
+                  >
+                     <i class="material-icons">edit</i>
+                  </button>
+
+                  <button class="action remove" @click="removeSubtitle(sub.id)">
+                     <i class="material-icons">delete</i>
+                  </button>
+               </div>
+            </li>
+         </ul>
+
+         <hr v-if="subtitles.length !== 0" />
+
+         <p><strong>{{ $t("prompts.addSubtitle") }}</strong></p>
+         <div class="input-group input">
+            <label for="langInput">{{ $t("prompts.subtitleLanguage") }}</label>
+            <input
+               id="langInput"
+               v-model.trim="newLanguage"
+               placeholder="English"
+               class="input input--block"
+            />
+         </div>
+
+         <div class="file-input-wrapper">
+            <SmartFileInput
+               ref="subtitleFileInput"
+               accept=".vtt,.srt"
+               :label="$t('buttons.addSubtitleFile')"
+               @file-selected="onSubtitleInput"
+            />
+         </div>
+
+         <div v-if="uploading" class="prompts-progress-bar-wrapper">
+            <ProgressBar :progress="uploadProgress" />
+            <span><b>{{ uploadProgress }}%</b></span>
+         </div>
+
+         <!-- Expandable section -->
+         <div class="expandable-section">
+            <div class="expandable-header" @click="isExpanded = !isExpanded">
+               <strong>{{ $t("prompts.advanced") }}</strong>
+               <i :class="{ expanded: isExpanded }" class="material-icons expand-icon">
+                  keyboard_arrow_down
+               </i>
+            </div>
+
+            <div v-if="isExpanded" class="expandable-content  advanced-settings">
+
+               <div class="input-group">
+                  <label>Font Size (px)</label>
+                  <input type="number" v-model.number="subtitleStyle.fontSize" min="10" />
+               </div>
+               <div class="input-group input-color">
+                  <label>Font Color</label>
+                  <input type="color" v-model="subtitleStyle.color" />
+               </div>
+               <div class="input-group input-color">
+                  <label>Background Color</label>
+                  <input type="color" v-model="subtitleStyle.backgroundColor" />
+               </div>
+               <div class="input-group">
+                  <label>Text Shadow</label>
+                  <input type="text" v-model="subtitleStyle.textShadow" placeholder="e.g. 2px 2px 4px #000000" />
+               </div>
+               <div class="input-group">
+                  <label>Default</label>
+                  <input type="checkbox" v-model="subtitleStyle.default" />
+               </div>
+            </div>
+         </div>
       </div>
-
-      <div v-if="uploading" class="prompts-progress-bar-wrapper">
-        <ProgressBar :progress="uploadProgress" />
-        <span><b>{{ uploadProgress }}%</b></span>
+      <div class="card-action">
+         <button class="button button--flat button--grey" @click="cancel">
+            {{ $t("buttons.cancel") }}
+         </button>
+         <button
+            class="button button--flat"
+            :disabled="!canSubmit"
+            @click="submit"
+         >
+            {{ $t("buttons.save") }}
+         </button>
       </div>
-
-      <!-- Expandable section -->
-      <div class="expandable-section">
-        <div class="expandable-header" @click="isExpanded = !isExpanded">
-          <strong>{{ $t("prompts.advanced") }}</strong>
-          <i :class="{ expanded: isExpanded }" class="material-icons expand-icon">
-            keyboard_arrow_down
-          </i>
-        </div>
-
-        <div v-if="isExpanded" class="expandable-content  advanced-settings">
-
-          <div class="input-group">
-            <label>Font Size (px)</label>
-            <input type="number" v-model.number="subtitleStyle.fontSize" min="10" />
-          </div>
-          <div class="input-group input-color">
-            <label>Font Color</label>
-            <input type="color" v-model="subtitleStyle.color" />
-          </div>
-          <div class="input-group input-color">
-            <label>Background Color</label>
-            <input type="color" v-model="subtitleStyle.backgroundColor" />
-          </div>
-          <div class="input-group">
-            <label>Text Shadow</label>
-            <input type="text" v-model="subtitleStyle.textShadow" placeholder="e.g. 2px 2px 4px #000000" />
-          </div>
-          <div class="input-group">
-            <label>Default</label>
-            <input type="checkbox" v-model="subtitleStyle.default"/>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="card-action">
-      <button class="button button--flat button--grey" @click="cancel">
-        {{ $t("buttons.cancel") }}
-      </button>
-      <button
-        class="button button--flat"
-        :disabled="!canSubmit"
-        @click="submit"
-      >
-        {{ $t("buttons.save") }}
-      </button>
-    </div>
-  </div>
+   </div>
 </template>
 
 <script>
-import { addSubtitle, getSubtitles, deleteSubtitle } from "@/api/files.js"
+import { addSubtitle, getSubtitles, deleteSubtitle, renameSubtitle } from "@/api/files.js"
 import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
@@ -119,12 +146,14 @@ export default {
          uploadProgress: 0,
          uploading: false,
          isExpanded: false,
+         editingId: null,
+         editingValue: "",
          subtitleStyle: {
             fontSize: 50,
             color: "#fbeda5",
             backgroundColor: "rgba(0, 0, 0, 0.4)",
             textShadow: "2px 2px 4px #000000",
-            default: true,
+            default: true
          }
       }
    },
@@ -138,32 +167,71 @@ export default {
    async mounted() {
       this.subtitles = await getSubtitles(this.selected[0]?.id)
 
-      let savedStyle = localStorage.getItem('subtitleStyle');
+      let savedStyle = localStorage.getItem("subtitleStyle")
       if (savedStyle) {
          try {
-            this.subtitleStyle = JSON.parse(savedStyle);
+            this.subtitleStyle = JSON.parse(savedStyle)
          } catch (e) {
-            console.warn("Failed to parse subtitleStyle from localStorage");
+            console.warn("Failed to parse subtitleStyle from localStorage")
          }
       }
    },
    watch: {
       subtitleStyle: {
          handler(newValue) {
-            localStorage.setItem('subtitleStyle', JSON.stringify(newValue))
+            localStorage.setItem("subtitleStyle", JSON.stringify(newValue))
          },
          deep: true
       }
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
+      startEdit(sub) {
+         this.editingId = sub.id
+         this.editingValue = sub.language
+
+         this.$nextTick(() => {
+            const input = document.querySelector(".subtitle-lang-input")
+            input?.focus()
+         })
+      },
+
+      async commitEdit(sub) {
+         if (this.editingId !== sub.id) return
+
+         const newLanguage = this.editingValue.trim()
+
+         // cancel if unchanged or empty
+         if (!newLanguage || newLanguage === sub.language) {
+            this.resetEdit()
+            return
+         }
+
+         try {
+            await renameSubtitle(this.selected[0].id, sub.id, newLanguage)
+            sub.language = newLanguage
+            this.$toast.success(this.$t("toasts.subtitleRenamed"))
+         } catch (e) {
+            console.error(e)
+            this.$toast.error(this.$t("toasts.subtitleRenameFailed"))
+         } finally {
+            this.resetEdit()
+         }
+      },
+
+      resetEdit() {
+         this.editingId = null
+         this.editingValue = ""
+      },
 
       async onSubtitleInput(file) {
          if (!this.validateSubtitleFile(file)) return
 
          let processedFile = await this.prepareSubtitleFile(file)
          this.newSubtitleFile = processedFile
-         this.newLanguage = this.extractLanguageName(processedFile.name)
+         if (!this.newLanguage.trim()) {
+            this.newLanguage = this.extractLanguageName(processedFile.name)
+         }
       },
 
       validateSubtitleFile(file) {
@@ -202,7 +270,8 @@ export default {
          try {
             const file = this.selected[0]
 
-            if (!(await this.checkUploadPermission(file.parent_id))) return
+            let res = await canUpload(file.parent_id)
+            if (!res.can_upload) return
 
             const encrypted = await this.encryptSubtitleFile(file.encryption_method)
             const uploadResponse = await this.uploadEncryptedSubtitle(encrypted)
@@ -216,14 +285,6 @@ export default {
             this.uploading = false
             this.uploadProgress = 0
          }
-      },
-      async checkUploadPermission(parentId) {
-         const res = await canUpload(parentId)
-         if (!res.can_upload) {
-            this.$toast.error(this.$t("toasts.cannotUpload"))
-            return false
-         }
-         return true
       },
 
       async encryptSubtitleFile(method) {
@@ -273,9 +334,9 @@ export default {
 
       onSubtitleUploadSuccess(subtitleRes) {
          this.subtitles = [...this.subtitles, subtitleRes]
+         this.$refs.subtitleFileInput.reset()
          this.$toast.success(this.$t("toasts.subtitleAdded"))
          this.newLanguage = ""
-         this.newSubtitleFile = null
       },
 
       handleSubtitleUploadError(error) {
@@ -341,7 +402,7 @@ export default {
  margin-bottom: 1em;
 }
 
-.advanced-settings .input-color input{
+.advanced-settings .input-color input {
  padding: 0.20em 0.20em !important;
  height: 25px;
 }
@@ -363,5 +424,28 @@ export default {
 .subtitle-lang {
  color: var(--textSecondary);
  padding-left: 0.5em;
+}
+
+.subtitle-list li {
+ display: flex;
+ align-items: center;
+}
+
+.subtitle-lang {
+ margin-right: auto;
+}
+
+.subtitle-actions {
+ display: flex;
+ gap: 0.5em;
+}
+
+.subtitle-lang-input {
+ font-size: inherit;
+ background: var(--surfaceSecondary);
+ color: var(--textPrimary);
+ border: 1px solid var(--divider);
+ border-radius: 4px;
+ padding: 0.2em 0.4em;
 }
 </style>

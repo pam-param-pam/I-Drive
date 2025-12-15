@@ -444,6 +444,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "subtitleRenamed": "Subtitle renamed!",
+    "subtitleRenameFailed": "Failed to rename subtitle",
     "illegalMove": "You cannot move those items here",
     "deviceControlActive": "Device Control is active!",
     "deviceControlPendingExpired": "Pending expired. Try again",

@@ -53,6 +53,9 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
     key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
     author = get_discord_author(file_obj.owner, message_author_id)
 
+    if Subtitle.objects.filter(language=language).exists():
+        raise BadRequestError("Subtitle with this language already exists")
+
     return Subtitle.objects.create(
         language=language,
         file=file_obj,
@@ -158,6 +161,12 @@ def remove_tag(file_obj: File, tag_id: str) -> None:
     if len(tag.files.all()) == 0:
         tag.delete()
 
+
+def rename_subtitle(file_obj: File, subtitle_id: str, new_language: str) -> None:
+    new_language = validate_value(new_language, str, checks=[NotEmpty, MaxLength(20)])
+    subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
+    subtitle.language = new_language
+    subtitle.save()
 
 def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)

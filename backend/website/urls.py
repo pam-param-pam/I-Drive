@@ -10,10 +10,11 @@ from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
     cancel_pending_qr_session_view, change_password_view, healthcheck_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id, \
+    check_message_id
 from .views.itemManagmentViews import rename_view, move_to_trash, move, \
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_video_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
-    add_moment_view, change_crc_view, add_subtitle_view, remove_subtitle_view
+    add_moment_view, change_crc_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
@@ -84,6 +85,7 @@ urlpatterns = [
     path("files/<file_id>/moments/<moment_id>", ["DELETE"], remove_moment_view, name="remove a moment"),
     path("files/<file_id>/subtitles", ["POST"], add_subtitle_view, name="add subtitle"),
     path("files/<file_id>/subtitles", ["GET"], get_subtitles, name="get file subtitles"),
+    path("files/<file_id>/subtitles/<subtitle_id>", ["PATCH"], rename_subtitle_view, name="rename subtitle"),
     path("files/<file_id>/subtitles/<subtitle_id>", ["DELETE"], remove_subtitle_view, name="remove subtitle"),
     path('files/<file_id>/changecrc', ['PATCH'], change_crc_view, name='change crc'),
 
@@ -156,8 +158,9 @@ urlpatterns = [
     path("items/ultraDownload/items/<item_id>", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
     path("items/ultraDownload/attachments/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
     path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
+    path("cleanup/<check_message_id>", ['GET'], check_message_id, name="check if message id is used"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
-    # 80 endpoints
+    # 85 endpoints
 ]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

@@ -228,6 +228,17 @@ def add_subtitle_view(request, file_obj):
     return JsonResponse(SubtitleSerializer().serialize_object(subtitle), status=200)
 
 
+@api_view(['PATCH'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ModifyPerms])
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
+def rename_subtitle_view(request, file_obj, subtitle_id):
+    new_language = request.data['new_language']
+    file_service.rename_subtitle(file_obj, subtitle_id, new_language)
+    return HttpResponse(status=204)
+
+
 @api_view(['DELETE'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
