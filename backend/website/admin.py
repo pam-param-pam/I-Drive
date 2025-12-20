@@ -15,6 +15,8 @@ from .core.dataModels.http import RequestContext
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
+
+# from .models.file_related_models import FragmentLinker, FragmentLink
 from .tasks.deleteTasks import smart_delete_task
 
 admin.site.register(UserSettings, SimpleHistoryAdmin)
@@ -26,6 +28,8 @@ admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
 admin.site.register(PerDeviceToken)
 admin.site.register(ShareAccessEvent)
+# admin.site.register(FragmentLinker)
+# admin.site.register(FragmentLink)
 
 
 @admin.register(Fragment)

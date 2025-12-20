@@ -37,7 +37,7 @@ import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { cancelRequestBySignature } from "@/axios/helper.js"
-import { send_route_change_event } from "@/utils/deviceControl.js"
+import { getUploader } from "@/upload/Uploader.js"
 
 export default {
    name: "files",
@@ -105,7 +105,6 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setSearchFilters", "setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
-      ...mapActions(useUploadStore, ["startUpload"]),
 
       async onSearchQuery(searchParams) {
          this.setLoading(true)
@@ -242,7 +241,7 @@ export default {
          }
          let files = await scanDataTransfer(dt)
 
-         await this.startUpload(uploadType.dragAndDropInput, folderContextId, files)
+         await getUploader().startUploadWithChecks(uploadType.dragAndDropInput, folderContextId, files)
       },
 
       async onUploadInput(event) {
@@ -250,7 +249,7 @@ export default {
 
          let files = event.currentTarget.files
          let folderContextId = this.currentFolder.id
-         await this.startUpload(uploadType.browserInput, folderContextId, files)
+         await getUploader().startUploadWithChecks(uploadType.browserInput, folderContextId, files)
       },
 
       getNewRoute(item) {

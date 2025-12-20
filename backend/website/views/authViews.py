@@ -7,14 +7,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
 from ..auth.Permissions import ChangePassword
-from ..auth.throttle import LoginThrottle, RegisterThrottle, PasswordChangeThrottle
+from ..auth.throttle import LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAnonUserThrottle
 from ..core.errors import ResourcePermissionError
 from ..services import auth_service
 
 @api_view(['GET'])
+@throttle_classes([defaultAnonUserThrottle])
 @permission_classes([AllowAny])
 def healthcheck_view(request):
-    return HttpResponse(status=200)
+    return HttpResponse(status=204)
 
 @api_view(['POST'])
 @throttle_classes([LoginThrottle])

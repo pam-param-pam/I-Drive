@@ -172,7 +172,6 @@ export async function onEvent(message) {
    if (op_code === 8 || op_code === 9) { // message update event, for example, when deleting items
       let message_data = event.data[0]
 
-      console.log("11111")
       let timeout = 0
       let type = "info"
       if (message_data.isFinished) {

@@ -150,6 +150,94 @@ export function getWebhook() {
    return weightedWebhooks[Math.floor(Math.random() * weightedWebhooks.length)]
 }
 
+export async function fastVideoThumbnail(file, seekTo = 0.1, maxWidth = 1280, maxHeight = 720) {
+   const video = document.createElement('video')
+   const url = URL.createObjectURL(file)
+
+   return new Promise((resolve, reject) => {
+      // Timeout after 5 seconds
+      const timeout = setTimeout(() => {
+         cleanup()
+         reject(new Error('Timeout generating thumbnail'))
+      }, 5000)
+
+      const cleanup = () => {
+         clearTimeout(timeout)
+         video.onerror = null
+         video.onloadedmetadata = null
+         video.onseeked = null
+         URL.revokeObjectURL(url)
+         video.src = ''
+      }
+
+      video.onerror = () => {
+         cleanup()
+         reject(new Error('Failed to load video'))
+      }
+
+      video.onloadedmetadata = () => {
+         // Save duration
+         const duration = video.duration || 0
+
+         // Seek to requested time (clamp between 0 and duration)
+         video.currentTime = Math.max(0, Math.min(seekTo, duration - 0.1))
+      }
+
+      video.onseeked = () => {
+         // Create canvas for this thumbnail only
+         const canvas = document.createElement('canvas')
+         const ctx = canvas.getContext('2d')
+
+         if (!ctx) {
+            cleanup()
+            reject(new Error('Canvas context not available'))
+            return
+         }
+         let width = video.videoWidth
+         let height = video.videoHeight
+
+         // Set canvas to video dimensions (max 400px for speed)
+         if (width > height) {
+            if (width > maxWidth) {
+               height *= maxWidth / width
+               width = maxWidth
+            }
+         } else {
+            if (height > maxHeight) {
+               width *= maxHeight / height
+               height = maxHeight
+            }
+         }
+
+         canvas.width = Math.round(width)
+         canvas.height = Math.round(height)
+
+         // Draw and create blob
+         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+         canvas.toBlob(blob => {
+            cleanup()
+
+            if (!blob) {
+               reject(new Error('Failed to create thumbnail blob'))
+               return
+            }
+
+            resolve({
+               thumbnail: blob,
+               duration: video.duration || 0
+            })
+         }, 'image/webp', 0.6)
+      }
+
+      // Setup video
+      video.src = url
+      video.muted = true
+      video.crossOrigin = 'anonymous'
+      video.preload = 'metadata'
+      video.load()
+   })
+}
+
 
 export async function makeThumbnailIfNeeded(queueFile) {
    let thumbnail
@@ -165,7 +253,13 @@ export async function makeThumbnailIfNeeded(queueFile) {
    //generating a thumbnail if needed for video file
    if (isVideoFile(queueFile.fileObj.extension)) {
       try {
-         let data = await getVideoCover(queueFile)
+         let data
+         if (queueFile.fileObj.size > 25 * 1024 * 1024) {
+            data = await getVideoCover(queueFile)
+         } else {
+            data = await fastVideoThumbnail(queueFile.systemFile)
+         }
+
          let duration = data.duration
          thumbnail = data.thumbnail
          queueFile.fileObj.duration = Math.round(duration)
@@ -502,7 +596,8 @@ export function isErrorStatus(status) {
    return status === fileUploadStatus.errorOccurred ||
       status === fileUploadStatus.uploadFailed ||
       status === fileUploadStatus.saveFailed ||
-      status === fileUploadStatus.fileGone
+      status === fileUploadStatus.fileGoneInUpload ||
+      status === fileUploadStatus.fileGoneInRequestProducer
 }
 
 
@@ -513,7 +608,6 @@ export function getFileType(fileName) {
 
    for (const [type, exts] of Object.entries(uploadStore.fileExtensions)) {
       if (exts.includes(ext)) {
-         console.log(type)
          return type
       }
    }

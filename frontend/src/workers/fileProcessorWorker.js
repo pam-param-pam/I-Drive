@@ -2,46 +2,85 @@ import { v4 as uuidv4 } from "uuid"
 import { uploadType } from "@/utils/constants.js"
 import { detectExtension } from "@/utils/common.js"
 
+let ctx = null
+let index = 0
+const BATCH_SIZE = 1
+
 self.onmessage = async (event) => {
+   const msg = event.data
 
-   let { typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom } = event.data
-   let files = []
-
-   let totalBytes = 0
-   for (let i = 0; i < filesList.length; i++) {
-      let frontendId = uuidv4()
-      let file
-      let size
-      let name
-      let type
-      let path
-      let createdAt
-
-      if (typeOfUpload === uploadType.dragAndDropInput) {
-         file = filesList[i].file
-         path = filesList[i].path
-      } else if (typeOfUpload === uploadType.browserInput) {
-         file = filesList[i]
-         path = file.webkitRelativePath
-      } else {
-         console.error("convertUploadInput: invalid type: " + typeOfUpload)
-      }
-
-      size = file.size
-      name = file.name
-      createdAt = file.lastModified
-      let extension = detectExtension(file.name)
-      // Remove filename from path if it exists at the end
-      if (path && path.endsWith(file.name)) {
-         path = path.slice(0, -file.name.length - 1)
-      }
-
-      let crc = 0
-      totalBytes += size
-      files.push({ fileObj: { folderContext, uploadId, path, encryptionMethod, size, name, frontendId, createdAt, extension, parentPassword, lockFrom, crc }, "systemFile": file })
+   // one-time init
+   if (msg.type === "init") {
+      ctx = msg
+      index = 0
+      return
    }
 
-   self.postMessage({files, totalBytes})
+   if (msg.type !== "produce") return
 
+   const {
+      typeOfUpload,
+      folderContext,
+      filesList,
+      uploadId,
+      encryptionMethod,
+      parentPassword,
+      lockFrom
+   } = ctx
 
+   let files = []
+   let totalBytes = 0
+
+   while (files.length < BATCH_SIZE && index < filesList.length) {
+      let frontendId = uuidv4()
+      let file
+      let path
+
+      if (typeOfUpload === uploadType.dragAndDropInput) {
+         file = filesList[index].file
+         path = filesList[index].path
+      } else if (typeOfUpload === uploadType.browserInput) {
+         file = filesList[index]
+         path = file.webkitRelativePath
+      } else {
+         throw new Error("invalid upload type")
+      }
+
+      const size = file.size
+      const name = file.name
+      const createdAt = file.lastModified
+      const extension = detectExtension(name)
+
+      if (path && path.endsWith(name)) {
+         path = path.slice(0, -name.length - 1)
+      }
+
+      totalBytes += size
+
+      files.push({
+         fileObj: {
+            folderContext,
+            uploadId,
+            path,
+            encryptionMethod,
+            size,
+            name,
+            frontendId,
+            createdAt,
+            extension,
+            parentPassword,
+            lockFrom,
+            crc: 0
+         },
+         systemFile: file
+      })
+
+      index++
+   }
+
+   self.postMessage({
+      files,
+      totalBytes,
+      done: index >= filesList.length
+   })
 }

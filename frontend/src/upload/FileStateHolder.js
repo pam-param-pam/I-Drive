@@ -1,14 +1,25 @@
 import { fileUploadStatus } from "@/utils/constants.js"
+import { isErrorStatus } from "@/upload/utils/uploadHelper.js"
+
+const AUTO_SYNC_FIELDS = [
+   "status",
+   "progress",
+   "error",
+   "fileObj",
+   "totalChunks",
+   "extractedChunks",
+   "uploadedChunks"
+]
 
 export class FileStateHolder {
-   constructor(file) {
+
+   constructor(file, notifyCallback) {
       this.fileObj = file.fileObj
       this.systemFile = file.systemFile
       this.frontendId = this.fileObj.frontendId
       this.totalChunks = undefined
       this.extractedChunks = 0
       this.uploadedChunks = 0
-      this.secretsGenerated = undefined
 
       this.thumbnailExtracted = undefined
       this.thumbnailUploaded = false
@@ -25,45 +36,136 @@ export class FileStateHolder {
       this.uploadedBytes = 0
       this.offset = 0
       this.error = null
+
+      this.crc = 0
+      this.videMetadata = null
+      this.iv = undefined
+      this.key = undefined
+
+      this._notifyCallback = notifyCallback
    }
 
-   setMarkSecretsGenerated() {
-      this.secretsGenerated = true
+   toStoreSnapshot() {
+      const snapshot = {
+         frontendId: this.frontendId
+      }
+
+      for (const field of AUTO_SYNC_FIELDS) {
+         snapshot[field] = this[field]
+      }
+
+      return snapshot
    }
+
+   _notify() {
+      if (this._notifyCallback) {
+         this._notifyCallback(this.toStoreSnapshot())
+      }
+   }
+
+   _set(field, value) {
+      if (this[field] === value) return
+      this[field] = value
+      if (AUTO_SYNC_FIELDS.includes(field)) {
+         this._notify()
+      }
+   }
+
    incrementChunk() {
-      this.uploadedChunks += 1
+      this._set("uploadedChunks", this.uploadedChunks + 1)
    }
 
    markThumbnailUploaded() {
-      this.thumbnailUploaded = true
+      this._set("thumbnailUploaded", true)
    }
 
    markThumbnailExtracted() {
-      this.thumbnailExtracted = true
+      this._set("thumbnailExtracted", true)
    }
 
    markVideoMetadataRequired() {
-      this.videoMetadataRequired = true
+      this._set("videoMetadataRequired", true)
    }
 
    markVideoMetadataExtracted() {
-      this.videoMetadataExtracted = true
+      this._set("videoMetadataExtracted", true)
    }
 
    markSubtitlesRequired() {
-      this.subtitlesRequired = true
+      this._set("subtitlesRequired", true)
    }
 
    markSubtitlesExtracted() {
-      this.subtitlesExtracted = true
+      this._set("subtitlesExtracted", true)
    }
 
    markSubtitlesUploaded() {
-      this.subtitlesUploaded = true
+      this._set("subtitlesUploaded", true)
+   }
+
+   setTotalChunks(count) {
+      this._set("totalChunks", count)
+   }
+
+   updateUploadedBytes(bytesUploaded) {
+      this._set("uploadedBytes", this.uploadedBytes + bytesUploaded)
+      this.updateProgress()
+   }
+
+   setUploadedBytes(bytesUploaded) {
+      this._set("uploadedBytes", bytesUploaded)
+      this.updateProgress()
+   }
+
+   updateProgress() {
+      const progress = Math.min(100, Math.floor((this.uploadedBytes / this.fileObj.size) * 100))
+      this._set("progress", progress)
+   }
+
+   onNewFileChunk(offset, extractedChunks) {
+      this._set("offset", offset)
+      this._set("extractedChunks", extractedChunks)
+   }
+
+   fillVideoMetadata(value) {
+      this._set("videoMetadata", value)
+   }
+
+   setCrc(value) {
+      this._set("crc", value)
+   }
+
+   setKey(key) {
+      this._set("key", key)
+   }
+
+   setIv(iv) {
+      this._set("iv", iv)
+   }
+   setStatus(status) {
+      this._set("error", null)
+      this._set("status", status)
+   }
+
+   setError(error) {
+      this._set("error", error)
+   }
+
+
+   markFileUploaded() {
+      this.setStatus(fileUploadStatus.uploaded)
+      setTimeout(() => {
+         if (this.status !== fileUploadStatus.uploaded) return
+         this.setStatus(fileUploadStatus.waitingForSave)
+      }, 1500)
    }
 
    isFullySplit() {
       return this.extractedChunks === this.totalChunks
+   }
+
+   areSecretsGenerated() {
+      return this.iv !== undefined && this.key !== undefined
    }
    isFullyUploaded() {
       const chunksDone = this.uploadedChunks === this.totalChunks
@@ -75,34 +177,21 @@ export class FileStateHolder {
          (this.subtitlesRequired && this.subtitlesExtracted && this.subtitlesUploaded) || //subs exist, are required and must be uploaded
          (this.subtitlesRequired && !this.subtitlesExtracted && this.isFullySplit()) // subs apparently exist, but extraction failed indicated by the fact that file is fully split and this.subtitlesExtracted is still false
 
-
-      console.log("subtitlesRequired: " + this.subtitlesRequired)
-      console.log("subtitlesExtracted: " + this.subtitlesExtracted)
-      console.log("subtitlesUploaded: " + this.subtitlesUploaded)
-      console.log("isFullySplit: " + this.isFullySplit())
+      // console.log("uploadedChunks: " + this.uploadedChunks)
+      // console.log("totalChunks: " + this.totalChunks)
+      //
+      // console.log("chunksDone: " + chunksDone)
+      // console.log("thumbnailDone: " + thumbnailDone)
+      // console.log("videoMetadataDone: " + videoMetadataDone)
+      // console.log("filledInfo: " + filledInfo)
+      // console.log("subtitlesDone: " + subtitlesDone)
+      // console.log("isFullySplit: " + this.isFullySplit())
 
       return (chunksDone && thumbnailDone && videoMetadataDone && filledInfo && subtitlesDone) || this.fileObj.size === 0
    }
 
-   setTotalChunks(count) {
-      this.totalChunks = count
+   isErrorStatus() {
+      return isErrorStatus(this.status)
    }
 
-   updateUploadedBytes(bytesUploaded) {
-      this.uploadedBytes += bytesUploaded
-      this.updateProgress()
-
-   }
-
-   setUploadedBytes(bytesUploaded) {
-      this.uploadedBytes = bytesUploaded
-      this.updateProgress()
-   }
-
-   updateProgress() {
-      this.progress = Math.min(
-         100,
-         Math.floor((this.uploadedBytes / this.fileObj.size) * 100)
-      )
-   }
 }

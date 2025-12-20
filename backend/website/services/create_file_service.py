@@ -53,7 +53,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     frontend_id = validate_key(file, "frontend_id", str, checks=[MaxLength(50), NotEmpty])
     encryption_method = validate_key(file, "encryption_method", int)
     crc = validate_key(file, "crc", int, checks=[MaxLength(10), NotNegative])
-    attachments = validate_key(file, "attachments", list)
+    fragments = validate_key(file, "fragments", list)
 
     thumbnail = validate_key(file, "thumbnail", dict, required=False)
     duration = validate_key(file, "duration", int, required=False)
@@ -81,7 +81,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
         except (ValueError, OverflowError):
             raise BadRequestError("Invalid 'created_at' timestamp format.")
 
-    total_attachments_size = sum(att['fragment_size'] for att in attachments)
+    total_attachments_size = sum(att['fragment_size'] for att in fragments)
     if total_attachments_size != file_size:
         raise BadRequestError(f"Attachment sizes ({total_attachments_size}) do not match declared file size ({file_size}).")
 
@@ -107,8 +107,8 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
 
         file_obj.save()
 
-        for attachment in attachments:
-            _create_fragment(file_obj, attachment)
+        for fragment in fragments:
+            _create_fragment(file_obj, fragment)
 
         if thumbnail:
             file_service.create_thumbnail(file_obj, thumbnail)

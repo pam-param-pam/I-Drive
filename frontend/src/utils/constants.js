@@ -40,12 +40,14 @@ export const fileUploadStatus = {
    errorOccurred: "errorOccurred",
    waitingForInternet: "waitingForInternet",
    retrying: "retrying",
-   fileGone: "fileGone",
+   fileGoneInUpload: "fileGoneInUpload",
+   fileGoneInRequestProducer: "fileGoneInRequestProducer"
 }
 
 export const uploadState = {
    idle: "idle",
    uploading: "uploading",
    paused: "paused",
-   noInternet: "noInternet"
+   noInternet: "noInternet",
+   error: "error"
 }

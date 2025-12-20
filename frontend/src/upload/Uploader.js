@@ -1,105 +1,415 @@
 import { useMainStore } from "@/stores/mainStore.js"
 import { v4 as uuidv4 } from "uuid"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { uploadState } from "@/utils/constants.js"
-import { canUpload } from "@/api/user.js"
-
-import { DiscordUploader } from "@/upload/DiscordUploader.js"
-import { RequestGenerator } from "@/upload/RequestGenerator.js"
-import { BackendManager } from "@/upload/BackendManager.js"
-import { UploadEstimator } from "@/upload/UploadEstimator.js"
-import { MyMutex } from "@/utils/MyMutex.js"
-
+import { uploadState, uploadType } from "@/utils/constants.js"
+import { canUpload, checkWifi } from "@/api/user.js"
+import { AsyncQueue } from "@/upload/AsyncQueue.js"
+import { RequestProducer } from "@/upload/RequestProducer.js"
+import { DiscordUploadConsumer } from "@/upload/DiscordUploadConsumer.js"
+import { UploadRuntime } from "@/upload/UploadRuntime.js"
+import { showToast } from "@/utils/common.js"
+import { checkFilesSizes } from "@/upload/utils/uploadHelper.js"
+import { watch } from "vue"
+import { DiscordResponseConsumer } from "@/upload/DiscordResponseConsumer.js"
+import { BackendFileConsumer } from "@/upload/BackendFileConsumer.js"
+import { DiscordAttachmentConsumer } from "@/upload/DiscordAttachmentConsumer.js"
 
 export class Uploader {
    constructor() {
-      this.fileProcessorWorker = null
-      this.estimator = new UploadEstimator()
-
-      this.discordUploader = new DiscordUploader()
-      this.backendManager = new BackendManager()
-      this.requestGenerator = new RequestGenerator(this.backendManager)
-
       this.mainStore = useMainStore()
       this.uploadStore = useUploadStore()
-      this.mutex = new MyMutex()
 
+      this.uploadRuntime = null
+      // queues
+      this.fileQueue = null
+      this.requestQueue = null
+      this.discordResponseQueue = null
+      this.backendFileQueue = null
+      this.discordAttachmentQueue = null
+
+      // workers
+      this.fileProcessorWorker = null
+
+      //consumers
+      this.requestProducer = null
+      this.discordResponseConsumer = null
+      this.backendFileConsumer = null
+      this.discordAttachmentConsumer = null
+      this.uploadConsumers = []
+
+      this._internetProbeInterval = null
+      setInterval(() => this.logQueueStats(), 1000)
+
+      watch(
+         () => this.mainStore.settings.concurrentUploadRequests,
+         value => this.setUploadConcurrency(value)
+      )
+
+      watch(
+         () => this.uploadStore.state,
+         (newState, oldState) => {
+            if (newState === uploadState.noInternet) {
+               this._startInternetProbe()
+            } else if (oldState === uploadState.noInternet) {
+               this._stopInternetProbe()
+            }
+         }
+      )
+   }
+
+   logQueueStats() {
+      console.log(
+         "fileQueue:", this.fileQueue?.size(),
+         "requestQueue:", this.requestQueue?.size(),
+         "discordResponseQueue:", this.discordResponseQueue?.size(),
+         "backendFileQueue", this.backendFileQueue?.size()
+      )
+   }
+
+   async startUploadWithChecks(type, folderContext, filesList) {
+      const mainStore = useMainStore()
+
+      const proceed = async () => {
+         await this.startUpload(type, folderContext, filesList)
+      }
+
+      if (await checkFilesSizes(filesList)) {
+         mainStore.showHover({
+            prompt: "notOptimizedForSmallFiles",
+            confirm: proceed
+         })
+      } else {
+         await proceed()
+      }
    }
 
    async startUpload(type, folderContext, filesList) {
-      /**Entry for upload process*/
-      window.addEventListener("beforeunload", beforeUnload)
+      document.addEventListener("visibilitychange", () => {
+         if (!document.hidden) this.requestMoreFilesFromWorker()
+      })
+      // window.addEventListener("beforeunload", beforeUnload)
 
-      this.uploadStore.state = uploadState.uploading
-
-      let res = await canUpload(folderContext)
+      const res = await canUpload(folderContext)
       if (!res.can_upload) return
 
+      this.initRuntimeUpload()
+      this.initQueues()
+      this.startConsumers()
+      this.startProducer()
+
+      if (this.uploadRuntime.uploadState === uploadState.idle) {
+         this.uploadRuntime.setUploadingState(uploadState.uploading)
+
+      }
       this.processNewFiles(type, folderContext, filesList, res.lockFrom)
    }
 
    processNewFiles(typeOfUpload, folderContext, filesList, lockFrom) {
-      /**This method converts different uploadInputs into 1, standard one*/
-      let uploadId = uuidv4()
-      let encryptionMethod = this.mainStore.settings.encryptionMethod
-      let parentPassword = this.mainStore.getFolderPassword(lockFrom)
+      const uploadId = uuidv4()
+      const encryptionMethod = this.mainStore.settings.encryptionMethod
+      const parentPassword = this.mainStore.getFolderPassword(lockFrom)
 
-      this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
-      this.fileProcessorWorker.onmessage = (event) => {
-         let { files, totalBytes } = event.data
-         this.uploadStore.queue.push(...files)
-         this.uploadStore.queue.sort()
-         this.uploadStore.allBytesToUpload += totalBytes
-         this.processUploads()
-         this.fileProcessorWorker.terminate()
+      this.workerDone = false
+      if (!this.fileProcessorWorker) {
+         this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
       }
 
-      this.fileProcessorWorker.postMessage({ typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom })
 
+      this.requestMoreFilesFromWorker = () => {
+         if (this.workerDone) return
+         this.fileProcessorWorker.postMessage({ type: "produce" })
+      }
+      this.uploadRuntime.setPendingWorkerFilesLength(filesList.length)
+      let totalBytes = 0
+      for (const item of filesList) {
+         if (typeOfUpload === uploadType.dragAndDropInput) {
+            totalBytes += item.file.size
+         } else {
+            totalBytes += item.size
+         }
+      }
+      this.uploadRuntime.setAllBytesToUpload(totalBytes)
+
+      this.fileProcessorWorker.onmessage = async event => {
+         this.fileQueue.open()
+
+         const { files, totalBytes, done } = event.data
+
+         if (files && files.length > 0) {
+
+            for (const file of files) {
+               this.uploadRuntime.registerFile(file)
+               await this.fileQueue.put(file)
+               this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength - 1)
+            }
+         }
+
+         if (done) {
+            console.log("closing file queue")
+            this.fileQueue.close()
+            this.uploadRuntime.workerDone = true
+         }
+      }
+
+      // initialize worker state (one-time)
+      this.fileProcessorWorker.postMessage({type: "init", typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom})
+
+      // kickstart first batch
+      this.requestMoreFilesFromWorker()
    }
 
-   async processUploads() {
-      if (!(this.uploadStore.state === uploadState.uploading || this.uploadStore.state === uploadState.idle)) return
+   initRuntimeUpload() {
+      if (this.uploadRuntime) return
+      this.uploadRuntime = new UploadRuntime({ uploadFinishCallback: this.onUploadSessionFinished })
+   }
 
-      // Acquire the mutex before checking/modifying currentRequests
-      const unlock = await this.mutex.lock()
-      let req = null
-      try {
-         const maxConcurrency = this.mainStore.settings.concurrentUploadRequests
-         if (this.uploadStore.currentRequests >= maxConcurrency) return
-
-         req = await this.requestGenerator.getRequest()
-         if (!req) return
-
-         this.uploadStore.currentRequests++
-
-         // Start the upload without blocking the mutex
-         this.discordUploader.uploadRequest(req)
-            .then(({ request, discordResponse }) => this.backendManager.afterUploadRequest(request, discordResponse))
-            .catch(err => {
-               this.uploadStore.onGeneralError(err, req)
-            })
-            .finally(() => {
-               // Critical section for decrementing
-               this.mutex.lock().then(unlockInner => {
-                  this.uploadStore.currentRequests--
-                  unlockInner()
-                  this.processUploads()
-               })
-            })
-      } finally {
-         unlock() // release mutex
+   initQueues() {
+      if (!this.fileQueue) {
+         this.fileQueue = new AsyncQueue(5)
+      } else {
+         this.fileQueue.open()
       }
-      this.processUploads()
+      if (!this.requestQueue) {
+         this.requestQueue = new AsyncQueue(2)
+      } else {
+         this.requestQueue.open()
+      }
+      if (!this.discordResponseQueue) {
+         this.discordResponseQueue = new AsyncQueue(5)
+      } else {
+         this.discordResponseQueue.open()
+      }
+      if (!this.backendFileQueue) {
+         this.backendFileQueue = new AsyncQueue(5)
+      } else {
+         this.backendFileQueue.open()
+      }
+      if (!this.discordAttachmentQueue) {
+         this.discordAttachmentQueue = new AsyncQueue(5)
+      } else {
+         this.discordAttachmentQueue.open()
+      }
+   }
+
+   startProducer() {
+      if (!this.requestProducer) {
+         console.info("Recreating requestProducer")
+         this.requestProducer = new RequestProducer({
+            uploadRuntime: this.uploadRuntime,
+            fileQueue: this.fileQueue,
+            requestQueue: this.requestQueue,
+            requestMoreFiles: this.requestMoreFiles.bind(this)
+         })
+      }
+      if (!this.requestProducer.isRunning()) {
+         console.info("Starting requestProducer")
+         // fire-and-forget long-running task
+         this.requestProducer.run()
+            .catch(err => {
+               console.error("RequestProducer crashed", err)
+               this.uploadStore.state = uploadState.error
+            })
+      }
+   }
+
+   startConsumers() {
+      /** ======= UPLOAD CONSUMERS =======*/
+      if (!this.uploadConsumers.length) {
+         console.info("Starting uploadConsumers!")
+         this.uploadConsumers = []
+         this.setUploadConcurrency(this.mainStore.settings.concurrentUploadRequests)
+      }
+
+      /** ======= DISCORD RESPONSE CONSUMER =======*/
+      if (!this.discordResponseConsumer) {
+         console.info("Recreating discordResponseConsumer!")
+         this.discordResponseConsumer = new DiscordResponseConsumer({
+            discordResponseQueue: this.discordResponseQueue,
+            backendFileQueue: this.backendFileQueue,
+            discordAttachmentQueue: this.discordAttachmentQueue,
+            uploadRuntime: this.uploadRuntime
+         })
+      }
+      if (!this.discordResponseConsumer.isRunning()) {
+         console.info("Starting discordResponseConsumer!")
+         this.discordResponseConsumer.run().catch(err => {
+            console.error("DiscordResponseConsumer crashed", err)
+            this.uploadStore.state = uploadState.error
+         })
+      }
+
+      /** ======= BACKEND FILE CONSUMER =======*/
+      if (!this.backendFileConsumer) {
+         console.info("Recreating backendFileConsumer!")
+         this.backendFileConsumer = new BackendFileConsumer({
+            backendFileQueue: this.backendFileQueue,
+            uploadRuntime: this.uploadRuntime
+         })
+      }
+      if (!this.backendFileConsumer.isRunning()) {
+         console.info("Starting backendFileConsumer!")
+         this.backendFileConsumer.run().catch(err => {
+            console.error("BackendFileConsumer crashed", err)
+            this.uploadStore.state = uploadState.error
+         })
+      }
+
+
+      /** ======= DISCORD ATTACHMENT CONSUMER =======*/
+      if (!this.discordAttachmentConsumer) {
+         console.info("Recreating discordAttachmentConsumer!")
+         this.discordAttachmentConsumer = new DiscordAttachmentConsumer({
+            discordAttachmentQueue: this.discordAttachmentQueue,
+            uploadRuntime: this.uploadRuntime
+         })
+      }
+      if (!this.discordAttachmentConsumer.isRunning()) {
+         console.info("Starting discordAttachmentConsumer!")
+         this.discordAttachmentConsumer.run().catch(err => {
+            console.error("DiscordAttachmentConsumer crashed", err)
+            this.uploadStore.state = uploadState.error
+         })
+      }
+   }
+
+   setUploadConcurrency(target) {
+      const current = this.uploadConsumers.length
+      if (target === current) return
+
+      if (target > current) {
+         this._addConsumers(target - current)
+      } else {
+         this._removeConsumers(current - target)
+      }
+   }
+
+   ensureQueuesOpen() {
+      this.fileQueue?.open()
+      this.requestQueue?.open()
+      this.discordResponseQueue?.open()
+      this.backendFileQueue?.open()
+      this.discordAttachmentQueue?.open()
+   }
+
+
+   requestMoreFiles() {
+      this.fileProcessorWorker.postMessage({ type: "produce" })
+   }
+
+   pauseAll() {
+      if (this.uploadRuntime.uploadState === uploadState.uploading) {
+         this.uploadRuntime.setUploadingState(uploadState.paused)
+         this.uploadConsumers.forEach(c => c.abortAll())
+      }
+   }
+
+   resumeAll() {
+      if (this.uploadRuntime.uploadState === uploadState.paused) {
+         this.uploadRuntime.setUploadingState(uploadState.uploading)
+         this.saveFilesIfNeeded()
+      }
+   }
+
+   saveFilesIfNeeded() {
+      this.backendFileConsumer.saveFilesIfNeeded()
+   }
+
+   retrySaveFailedFiles() {
+      getUploader().backendFileConsumer.retryFailedFiles()
+   }
+
+   retryGoneFile(frontendId) {
+      this.ensureQueuesOpen()
+      this.uploadConsumers.forEach(c => c.retryGoneFile(frontendId))
+      let file = this.requestProducer.getGoneFile(frontendId)
+      if (!file) return
+      this.fileQueue.put(file).then(() => {
+         this.startConsumers()
+         this.startProducer()
+         this.fileQueue.close()
+      })
+   }
+
+   retryFailedRequests() {
+      this.uploadConsumers.forEach(c => c.retryFailedRequests())
+   }
+
+   onUploadSessionFinished = () => {
+      this.cleanup()
+      this.uploadStore.onUploadFinishUI()
+      showToast("success", "toasts.uploadFinished")
    }
 
    cleanup() {
       window.removeEventListener("beforeunload", beforeUnload)
-      this.estimator = new UploadEstimator()
-      this.discordUploader = new DiscordUploader()
-      this.backendManager = new BackendManager()
-      this.requestGenerator = new RequestGenerator(this.backendManager)
+      // this.stopInternetProbe()
+      // this.fileProcessorWorker = null
+      // this.fileQueue?.close()
+      // this.requestQueue?.close()
+      //
+      // this.uploadConsumers.forEach(c => c.stop())
+      //
+      // this.uploadConsumers = []
+      // this.fileQueue = null
+      // this.requestQueue = null
+      // this.requestProducer = null
+      // this.uploadRuntime = null
    }
+
+   _addConsumers(count) {
+      for (let i = 0; i < count; i++) {
+         const consumer = new DiscordUploadConsumer({
+            requestQueue: this.requestQueue,
+            discordResponseQueue: this.discordResponseQueue,
+            uploadRuntime: this.uploadRuntime
+         })
+
+         this.uploadConsumers.push(consumer)
+         consumer.run().catch(err => {
+            console.error("DiscordUploadConsumer crashed", err)
+            this.uploadStore.state = uploadState.error
+         })
+      }
+   }
+
+   _removeConsumers(count) {
+      for (let i = 0; i < count; i++) {
+         const consumer = this.uploadConsumers.pop()
+         if (!consumer) break
+         consumer.stop()
+      }
+   }
+
+   _startInternetProbe() {
+      if (this._internetProbeInterval) return
+
+      this._internetProbeInterval = setInterval(async () => {
+         try {
+            await this._checkInternet()
+            this._onInternetRestored()
+         } catch {
+         }
+      }, 10000)
+   }
+
+   _onInternetRestored() {
+      this._stopInternetProbe()
+
+      if (this.uploadRuntime.uploadState !== uploadState.noInternet) return
+
+      this.uploadRuntime.setUploadingState(uploadState.uploading)
+   }
+
+   async _checkInternet() {
+      await checkWifi()
+   }
+
+   _stopInternetProbe() {
+      if (!this._internetProbeInterval) return
+      clearInterval(this._internetProbeInterval)
+      this._internetProbeInterval = null
+   }
+
 }
 
 let _uploaderInstance = null
@@ -113,7 +423,7 @@ export function getUploader() {
 }
 
 
-const beforeUnload = (event) => {
+const beforeUnload = event => {
    event.preventDefault()
    event.returnValue = ""
 }

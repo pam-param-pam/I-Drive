@@ -116,7 +116,7 @@ backendInstance.interceptors.response.use(
       //Handle No Wi-Fi
       if (noWifi(error) && error.config.__retryErrors) {
          console.warn(`No WIFI, retrying after 5 seconds.`)
-         return retryRequest(backendInstance, error, 5000)
+         return retryRequest(backendInstance, error, 5000, 1)
       }
 
       //Handle 5XX

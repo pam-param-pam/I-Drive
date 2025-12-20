@@ -93,7 +93,7 @@ function calculateCounter(bytesToSkip) {
 
 }
 
-export async function encryptAttachment(attachment) {
+export async function encryptAttachment(attachment, fileState) {
    let fileObj = attachment.fileObj
 
    let bytesToSkip = 0
@@ -101,8 +101,8 @@ export async function encryptAttachment(attachment) {
    let key
    if (attachment.type === attachmentType.file) {
       bytesToSkip = attachment.offset
-      iv = fileObj.iv
-      key = fileObj.key
+      iv = fileState.iv
+      key = fileState.key
    }
    else {
       if (fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {

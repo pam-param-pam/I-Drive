@@ -17,6 +17,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     message_limit = 60          # messages allowed
     message_window = 60          # seconds
+    #todo add re authorize every few messages
 
     @abstractmethod
     def authorize(self) -> tuple[bool, bool, str]:

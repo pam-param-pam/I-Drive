@@ -175,6 +175,9 @@
   },
 
   "prompts": {
+    "noInternet": "Waiting for internet...",
+    "uploadFilesCrashed": "Upload file crashed!",
+    "controlOptions": "Device control options",
     "isDeviceControlActive": "Device control active",
     "isNavigationActive": "Navigation event",
     "isVideoToggleActive": "Video toggle event",

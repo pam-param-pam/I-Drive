@@ -96,13 +96,11 @@ export async function retry469Error(instance, error, maxTries=2) {
                prompt: "FolderPassword",
                props: { requiredFolderPasswords: error.response.data.requiredFolderPasswords, isInShareContext: config.__shareContext },
                confirm: () => {
-                  console.log("on confirm")
                   retry469Request(config)
                      .then(resolve)
                      .catch(reject)
                },
                cancel: () => {
-                  console.log("on cancel")
                   reject(error)
                },
             })

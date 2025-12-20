@@ -8,7 +8,7 @@ from ..celery import app
 from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
-from ..websockets.utils import send_event
+from ..websockets.utils import send_event, group_and_send_event
 
 
 @app.task

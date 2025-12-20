@@ -53,7 +53,7 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
     key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
     author = get_discord_author(file_obj.owner, message_author_id)
 
-    if Subtitle.objects.filter(language=language).exists():
+    if Subtitle.objects.filter(file=file_obj, language=language).exists():
         raise BadRequestError("Subtitle with this language already exists")
 
     return Subtitle.objects.create(

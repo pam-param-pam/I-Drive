@@ -2,6 +2,8 @@ import base64
 
 import shortuuid
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import CheckConstraint, Q, UniqueConstraint
 from django.utils import timezone
@@ -228,3 +230,66 @@ class SubtitleTrack(VideoMetadataTrackMixin):
 
     def __str__(self):
         return f"Subtitle Track({self.language}) for {self.video_metadata.file}"
+
+
+class AttachmentLinker(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    message_id = models.CharField(max_length=19, db_index=True)
+
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={'model__in': ('bot', 'webhook')}
+    )
+    object_id = models.BigIntegerField()
+    author = GenericForeignKey('content_type', 'object_id')
+    channel = models.ForeignKey('Channel', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"FragmentLinker(linked={self.fragments.count() + self.thumbnails.count()})"
+
+
+class FragmentLink(models.Model):
+    linker = models.ForeignKey(AttachmentLinker, on_delete=models.CASCADE, related_name="fragments")
+    fragment = models.ForeignKey("Fragment", on_delete=models.CASCADE)
+    sequence = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["sequence"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["linker", "sequence"],
+                name="%(class)s_unique_fragment_sequence_per_linker",
+            ),
+            models.UniqueConstraint(
+                fields=["linker", "fragment"],
+                name="%(class)s_unique_fragment_per_linker",
+            ),
+            models.CheckConstraint(
+                check=Q(sequence__gt=0),
+                name="%(class)s_sequence_gt_0",
+            )
+        ]
+
+
+class ThumbnailLink(models.Model):
+    linker = models.ForeignKey(AttachmentLinker, on_delete=models.CASCADE, related_name="thumbnails")
+    thumbnail = models.ForeignKey(Thumbnail, on_delete=models.CASCADE)
+    sequence = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["sequence"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["linker", "sequence"],
+                name="%(class)s_unique_thumbnail_sequence_per_linker",
+            ),
+            models.UniqueConstraint(
+                fields=["linker", "thumbnail"],
+                name="%(class)s_unique_thumbnail_per_linker",
+            ),
+            models.CheckConstraint(
+                check=Q(sequence__gt=0),
+                name="%(class)s_sequence_gt_0",
+            )
+        ]

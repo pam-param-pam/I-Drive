@@ -18,7 +18,7 @@ from .views.itemManagmentViews import rename_view, move_to_trash, move, \
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_preview, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits
 from .views.streamViews import stream_preview, stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
-from .views.testViews import your_ip, get_discord_state
+from .views.testViews import your_ip, get_discord_state, create_linker
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, list_active_devices_view, revoke_device_view, logout_all_devices_view
@@ -159,6 +159,9 @@ urlpatterns = [
     path("items/ultraDownload/attachments/<attachment_id>", ['GET'], get_attachment_url_view, name="download metadata for ultra download"),
     path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
     path("cleanup/<check_message_id>", ['GET'], check_message_id, name="check if message id is used"),
+
+    path("linker", ['POST'], create_linker, name="create_linker"),
+
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     # 85 endpoints

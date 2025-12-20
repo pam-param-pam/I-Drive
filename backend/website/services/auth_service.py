@@ -149,7 +149,7 @@ def _logout_websockets(user: User, device_id: str = None) -> None:
             "device_id": device_id,
         }
     )
-
+    # todo logout device control websocket
 
 def login_device(request, username: str, password: str) -> tuple[str, PerDeviceToken]:
     user = authenticate(request, username=username, password=password)

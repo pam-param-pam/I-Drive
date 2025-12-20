@@ -13,6 +13,7 @@ from ..services import create_file_service
 @permission_classes([IsAuthenticated & CreatePerms])
 def create_file_view(request):
     files_data = request.data['files']
+    # return HttpResponse(status=500)
     file_objs = create_file_service.create_files(request, request.user, files_data)
 
     response_json = []

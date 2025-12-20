@@ -11,8 +11,10 @@ import httpx
 from httpx import Response
 
 from ..constants import DISCORD_BASE_URL, cache
-from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin
+from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Fragment
 from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordTextError
+from ..models.file_related_models import FragmentLink, ThumbnailLink, Thumbnail
+# from ..models.file_related_models import FragmentLink
 from ..queries.selectors import query_attachments
 
 logger = logging.getLogger("Discord")
@@ -169,9 +171,8 @@ class Discord:
             current_datetime = datetime.utcnow()
             ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
             return ttl_seconds
-        except KeyError:
-            logger.debug("Key Error attachments, message: ")
-            logger.debug(message)
+        except (KeyError, IndexError):
+            return 60 * 60 * 24  # default value
 
     def _make_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         max_retries = 3
@@ -239,6 +240,8 @@ class Discord:
                 logger.error(traceback.print_exc())
                 self.remove_user_state(user)
 
+        raise RuntimeError("Something went wrong")
+
     def _make_webhook_request(self, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3):
         logger.debug(f"Making webhook request: {url}")
 
@@ -270,35 +273,74 @@ class Discord:
         return message
 
     def get_attachment_url(self, user, resource: DiscordAttachmentMixin) -> str:
+        # todo validate the url is from discord, else reject
         start = time.perf_counter()
+        if isinstance(resource, Fragment):
+            link_url = self.get_from_linker(user, resource)
+            if link_url:
+                logger.info(f"⏱ get_attachment_url used linked! Took {time.perf_counter() - start:.4f} seconds")
+                return link_url
+
         result = self.get_file_url(user, resource.message_id, resource.attachment_id, resource.channel_id)
-        logger.debug(f"⏱ get_attachment_url took {time.perf_counter() - start:.4f} seconds")
+        logger.info(f"⏱ get_attachment_url took {time.perf_counter() - start:.4f} seconds")
         return result
+
+    def get_from_linker(self, user, resource: Fragment | Thumbnail):
+        if isinstance(resource, Fragment):
+            link = FragmentLink.objects.select_related("linker").filter(fragment=resource).first()
+        elif isinstance(resource, Thumbnail):
+            link = ThumbnailLink.objects.select_related("linker").filter(thumbnail=resource).first()
+        else:
+            raise KeyError(f"Resource type {type(resource)} is not supported for linker")
+
+        if not link:
+            return None
+
+        message = self.get_message(user, link.linker.channel.discord_id, link.linker.message_id)
+        seq = link.sequence
+        if 1 <= seq <= 10:
+            return message["content"].split("\n")[seq - 1]
+
+        embed = message["embeds"][0]
+
+        if 11 <= seq <= 31:
+            return embed["description"].split("\n")[seq - 11]
+
+        if 32 <= seq <= 36:
+            return embed["fields"][0]["value"].split("\n")[seq - 32]
+
+        if 37 <= seq <= 41:
+            return embed["fields"][1]["value"].split("\n")[seq - 37]
+
+        if seq == 42:
+            return embed["fields"][2]["value"].split("\n")[0]
+
+        return None
 
     def get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str) -> str:
         start = time.perf_counter()
-        message = self.get_message(user, message_id, channel_id).json()
+        message = self.get_message(user, channel_id, message_id)
         for attachment in message["attachments"]:
             if attachment["id"] == attachment_id:
-                logger.debug(f"⏱ get_file_url took {time.perf_counter() - start:.4f} seconds")
+                logger.info(f"⏱ get_file_url took {time.perf_counter() - start:.4f} seconds")
                 return attachment["url"]
 
         raise BadRequestError(f"File with {attachment_id} not found in the db")
 
-    def get_message(self, user, message_id: str, channel_id: str) -> httpx.Response:
+    def get_message(self, user, channel_id: str, message_id: str) -> dict:
         start = time.perf_counter()
         cached_message = cache.get(message_id)
         if cached_message:
-            logger.debug(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
+            logger.info(f"⚡ get_message served from cache in {time.perf_counter() - start:.4f} seconds")
             return cached_message
 
         url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages/{message_id}'
         response = self._make_bot_request(user, 'GET', url)
         message = response.json()
         expiry = self._calculate_expiry(message)
-        cache.set(message["id"], response, timeout=expiry)
-        logger.debug(f"⏱ get_message (non-cache) took {time.perf_counter() - start:.4f} seconds")
-        return response
+        cache.set(message["id"], message, timeout=expiry)
+        logger.info(f"⏱ get_message (non-cache) took {time.perf_counter() - start:.4f} seconds")
+        return message
 
     def remove_message(self, user, message_id: str) -> httpx.Response:
         channel_id = self._get_channel_id(message_id)
@@ -327,7 +369,7 @@ class Discord:
         return response
     
     def fetch_messages(self, user, channel_id):
-        # todo
+        # todo fix this
         url = f"{DISCORD_BASE_URL}/channels/{channel_id}/messages"
         params = {"limit": 100}
         number_of_errors = 0

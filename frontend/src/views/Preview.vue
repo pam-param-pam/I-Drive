@@ -365,7 +365,10 @@ export default {
    beforeUnmount() {
       window.removeEventListener("keydown", this.key)
       window.removeEventListener("fullscreenchange", this.fullscreenChange)
-      this.$refs.video.textTracks.removeEventListener("change", this.onSubtitleChanged)
+      if (this.$refs?.video?.textTracks) {
+         this.$refs.video.textTracks.removeEventListener("change", this.onSubtitleChanged)
+
+      }
    },
 
    methods: {

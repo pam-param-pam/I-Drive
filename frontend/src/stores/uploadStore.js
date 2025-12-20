@@ -8,102 +8,32 @@ import { showToast } from "@/utils/common.js"
 
 export const useUploadStore = defineStore("upload", {
    state: () => ({
-      queue: [],
       state: uploadState.idle,
-      pausedRequests: [],
-      // erroredRequests: [],
 
-      currentRequests: 0,
-
+      files: {},
       //UI
+      eta: Infinity,
       allBytesToUpload: 0,
       allBytesUploaded: 0,
-      uploadSpeedMap: new Map(),
-      fileState: [],
-      eta: Infinity,
-
-      fileCache: {} // key: frontendId -> small object
+      uploadSpeed: 0,
+      pendingWorkerFilesLength: 0
    }),
 
    getters: {
-      areAllUploadsFinished() {
-         return this.fileState.every(file => file.isFullyUploaded() && this.queue.length === 0)
-      },
+
       isAllFinished() {
-         return this.fileState.length === 0 && this.queue.length === 0
+        return false
       },
 
-      uploadSpeed() {
-         const uploadSpeed = Array.from(this.uploadSpeedMap.values()).reduce((sum, value) => sum + value, 0)
-         if (isNaN(uploadSpeed)) {
-            return 0
-         }
-         return uploadSpeed
-      },
       filesInUpload() {
-         const N = 10
-
-         const mapToSmallObj = (file) => {
-            let cached = this.fileCache[file.frontendId]
-            if (cached) {
-               cached.progress = file.progress
-               cached.status = file.status
-               cached.error = file.error
-               cached.name = file.fileObj.name
-               cached.extension = file.fileObj.extension
-               return cached
-            }
-            const smallObj = {
-               frontendId: file.frontendId,
-               progress: file.progress,
-               status: file.status,
-               error: file.error,
-               name: file.fileObj.name,
-               extension: file.fileObj.extension,
-            }
-            this.fileCache[file.frontendId] = smallObj
-            return smallObj
-         }
-
-         if (this.fileState.length === 1) {
-            return [mapToSmallObj(this.fileState[0])]
-         }
-
-         // Keep top N manually
-         const topFiles = []
-         for (const f of this.fileState) {
-            if (f.status === fileUploadStatus.waitingForSave) continue
-
-            // Insert into topFiles in descending order
-            let inserted = false
-            for (let i = 0; i < topFiles.length; i++) {
-               if (f.progress > topFiles[i].progress) {
-                  topFiles.splice(i, 0, f)
-                  inserted = true
-                  break
-               }
-            }
-            if (!inserted && topFiles.length < N) topFiles.push(f)
-
-            if (topFiles.length > N) topFiles.pop()
-         }
-
-         return topFiles.map(mapToSmallObj)
+         const all = Object.values(this.files)
+         const uploading = all.filter(f => f.status === fileUploadStatus.uploading)
+         const source = uploading.length > 0 ? uploading : all
+         return source.slice(0, 20)
       },
-      remainingBytes() {
-         let totalQueueSize = this.queue.reduce((total, item) => total + item.fileObj.size, 0)
 
-         let remainingUploadSize = this.fileState.reduce((total, item) => {
-
-            const uploadedSize = item.fileObj.size * (item.progress / 100)
-            const remainingSize = item.fileObj.size - uploadedSize
-            return total + remainingSize
-         }, 0)
-
-         return totalQueueSize + remainingUploadSize
-      },
       filesInUploadCount() {
-         return this.queue.length + this.fileState.length
+         return Object.keys(this.files).length + this.pendingWorkerFilesLength
       },
       progress() {
          return (this.allBytesUploaded / this.allBytesToUpload) * 100
@@ -112,230 +42,57 @@ export const useUploadStore = defineStore("upload", {
    },
 
    actions: {
-      async startUpload(type, folderContext, filesList) {
-         if (await checkFilesSizes(filesList)) {
-            useMainStore().showHover({
-               prompt: "notOptimizedForSmallFiles",
-               confirm: () => {
-                  this.state = uploadState.uploading
-                  getUploader().startUpload(type, folderContext, filesList)
-               }
-            })
-         } else {
-            this.state = uploadState.uploading
-            await getUploader().startUpload(type, folderContext, filesList)
-         }
 
+      registerFile(snapshot) {
+         this.files[snapshot.frontendId] = snapshot
       },
 
-      getFileFromQueue() {
-         if (this.queue.length === 0) {
-            console.warn("getFileFromQueue is empty, yet it was called idk why")
-            return
-         }
-
-         const file = this.queue.shift() // get and remove the file
-
-         // Only add to fileState if it doesn't already exist
-         const exists = this.fileState.some(f => f.frontendId === file.fileObj.frontendId)
-         if (!exists) {
-            this.fileState.push(new FileStateHolder(file))
-         }
-
-         return file
+      updateFile(frontendId, snapshot) {
+         if (!this.files[frontendId]) return
+         this.files[frontendId] = snapshot
       },
+
+      setPendingWorkerFilesLength(value) {
+         this.pendingWorkerFilesLength = value
+      },
+
+      setAllBytesToUpload(value) {
+         this.allBytesToUpload = value
+      },
+
+      setAllBytesUploaded(value) {
+         this.allBytesUploaded = value
+      },
+
+      setUploadSpeed(value) {
+         this.uploadSpeed = value
+      },
+
       setState(state) {
          this.state = state
       },
-      setStatus(frontendId, status) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-         /**We must filter statuses*/
-         if (isErrorStatus(fileState.status) && status === fileUploadStatus.uploading) return
-         fileState.error = null
-         fileState.status = status
+
+      setEta(eta) {
+         this.eta = eta
       },
 
-      setError(frontendId, error) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-         fileState.error = error
+      deleteFileState(frontendId) {
+         delete this.files[frontendId]
       },
 
-      markFileUploaded(frontendId) {
-         this.setStatus(frontendId, fileUploadStatus.uploaded)
-         setTimeout(() => {
-            let file = this.fileState.find(item => item.frontendId === frontendId)
-            if (!file || file.status !== fileUploadStatus.uploaded) return
-            this.setStatus(frontendId, fileUploadStatus.waitingForSave)
-         }, 1500)
-      },
 
-      fixUploadTracking(request, bytesUploaded) {
-         this.uploadSpeedMap.delete(request.id)
-         this.allBytesUploaded -= bytesUploaded
 
-         for (let attachment of request.attachments) {
-            let fileState = this.getFileState(attachment.fileObj.frontendId)
-            this.setStatus(fileState.frontendId, fileUploadStatus.retrying)
-            fileState.setUploadedBytes(Math.max(0, fileState.uploadedBytes - bytesUploaded))
-         }
-      },
-      onUploadProgress(request, progressEvent) {
-         this.allBytesUploaded += progressEvent.bytes
-         this.uploadSpeedMap.set(request.id, progressEvent.rate)
-         getUploader().estimator.updateSpeed(this.uploadSpeed)
-         this.eta = getUploader().estimator.estimateRemainingTime(this.remainingBytes)
 
-         const uploadedSoFar = progressEvent.bytes
-         const totalSize = request.totalSize
 
-         for (let attachment of request.attachments) {
-            const fileObj = attachment.fileObj
-            const fileState = this.getFileState(fileObj.frontendId)
 
-            if (attachment.type === attachmentType.file) {
-               const attachmentSize = attachment.rawBlob.size
-               const estimatedUploaded = Math.floor((attachmentSize / totalSize) * uploadedSoFar)
 
-               fileState.updateUploadedBytes(estimatedUploaded)
-
-               let percentage = fileState.progress
-               if (percentage > 100) {
-                  console.warn(`Percentage overflow(${percentage}%) in upload for file: ${fileObj.name}, size=${fileObj.size}, reportedSize=${fileState.uploadedBytes}`)
-                  percentage = 100
-                  fileState.progress = percentage
-               }
-
-            }
-         }
-      },
-      fixMissingBytesFromRequest(request, missingBytes) {
-         this.allBytesUploaded += missingBytes
-
-         for (let attachment of request.attachments) {
-            const fileObj = attachment.fileObj
-            const fileState = this.getFileState(fileObj.frontendId)
-
-            const estimatedUploaded = Math.floor((missingBytes / request.attachments.length))
-
-            if (attachment.type === attachmentType.file) {
-               fileState.updateUploadedBytes(estimatedUploaded)
-            }
-         }
-      },
-      onGeneralError(error, request) {
-         if (error.handled) return
-         console.error(error)
-         for (let attachment of request.attachments) {
-            let frontendId = attachment.fileObj.frontendId
-            const fileState = this.getFileState(frontendId)
-            if (fileState.status === fileUploadStatus.uploadFailed || fileState.status === fileUploadStatus.saveFailed) return
-            this.setStatus(frontendId, fileUploadStatus.errorOccurred)
-            this.setError(frontendId, error)
-         }
-      },
-      setTotalChunks(frontendId, totalChunks) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-         fileState.setTotalChunks(totalChunks)
-      },
-      onNewFileChunk(frontendId, offset, extractedChunks) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.offset = offset
-         fileState.extractedChunks = extractedChunks
-
-      },
-
-      incrementChunk(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.incrementChunk()
-      },
-
-      markThumbnailExtracted(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markThumbnailExtracted()
-      },
-
-      markVideoMetadataRequired(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markVideoMetadataRequired()
-      },
-
-      markThumbnailUploaded(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markThumbnailUploaded()
-      },
-
-      markVideoMetadataExtracted(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markVideoMetadataExtracted()
-      },
-
-      markSubtitlesRequired(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markSubtitlesRequired()
-      },
-
-      markSubtitlesExtracted(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markSubtitlesExtracted()
-      },
-
-      markSubtitlesUploaded(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         fileState.markSubtitlesUploaded()
-      },
-
-      isFileUploaded(frontendId) {
-         const fileState = this.getFileState(frontendId)
-         if (!fileState) return
-
-         return fileState.isFullyUploaded()
-      },
-
-      addPausedRequest(request) {
-         this.pausedRequests.push(request)
-      },
-
-      markRequestFinished(request) {
-         this.uploadSpeedMap.delete(request.id)
-      },
-
-      getFileState(frontendId) {
-         let fileState = this.fileState.find(f => f.frontendId === frontendId)
-         if (!fileState) {
-            console.warn(`File with frontendId ${frontendId} not found in fileState`)
-         }
-         return fileState
-      },
-
-      markFileSaved(frontendId) {
-         let index = this.fileState.findIndex(f => f.frontendId === frontendId)
-         delete this.fileCache[frontendId]
-         if (index !== -1) {
-            this.fileState.splice(index, 1)
-         } else {
-            console.warn(`File with frontendId ${frontendId} not found in fileState`)
-         }
+      onUploadFinishUI() {
+         this.state = uploadState.idle
+         this.files = {}
+         this.eta = Infinity
+         this.allBytesToUpload = 0
+         this.allBytesUploaded = 0
+         this.uploadSpeed = 0
       },
 
       addToWebhooks(webhook) {
@@ -353,6 +110,12 @@ export const useUploadStore = defineStore("upload", {
       setFileExtensions(value) {
          this.fileExtensions = value
       },
+
+
+
+
+
+      /* todo
 
       retryFailSaveFile(frontendId) {
          getUploader().backendManager.reSaveFile(frontendId)
@@ -381,42 +144,10 @@ export const useUploadStore = defineStore("upload", {
          }
          this.onUploadFinish()
       },
+      */
 
-      retryAll() {
-         this.resumeAll()
-      },
-
-      pauseAll() {
-         this.state = uploadState.paused
-         getUploader().discordUploader.pauseAllRequests()
-
-      },
-      resumeAll() {
-         this.state = uploadState.uploading
-         getUploader().processUploads()
-         getUploader().backendManager.saveFilesIfNeeded()
-      },
-
-      onUploadFinish() {
-         if (this.isAllFinished) {
-            this.state = uploadState.idle
-            this.queue = []
-            this.pausedRequests = []
-            this.currentRequests = 0
-            this.fileCache = {}
-
-            //UI
-            this.uploadSpeedMap = new Map()
-            this.fileState = []
-            this.eta = Infinity
-            this.allBytesToUpload = 0
-            this.allBytesUploaded = 0
-
-            getUploader().cleanup()
-            showToast("success", "toasts.uploadFinished")
-         }
-
-      }
 
    }
 })
+
+

@@ -7,7 +7,7 @@ from ..websockets.BaseConsumer import RateLimitedWebsocketConsumer
 class ShareConsumer(RateLimitedWebsocketConsumer):
     message_limit = 5
     message_window = 60
-
+    #todo add auto expiry
     def __init__(self):
         super().__init__()
         self.share = None

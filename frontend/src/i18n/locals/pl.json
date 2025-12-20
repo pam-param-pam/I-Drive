@@ -176,6 +176,9 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "noInternet": "Brak internetu...",
+    "uploadFilesCrashed": "Przesyłanie plików nie powiodło sie!",
+    "controlOptions": "Ustawienia eventów",
     "isDeviceControlActive": "Kontrola urządzenia aktywna",
     "isNavigationActive": "Navigation event",
     "isVideoToggleActive": "Video toggle event",

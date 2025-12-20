@@ -37,6 +37,17 @@ export async function createQrSession() {
    return response.data
 }
 
+export async function checkWifi() {
+   let url = "/healthcheck/"
+   let response = await backendInstance.get(url, {
+      headers: {
+         "Authorization": false
+      },
+      __displayErrorToast: false
+
+   })
+   return response.data
+}
 
 export async function changePassword(data) {
    let url = `/auth/password`

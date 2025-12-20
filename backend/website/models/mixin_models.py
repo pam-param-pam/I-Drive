@@ -83,6 +83,8 @@ class DiscordAttachmentMixin(models.Model):
     object_id = models.BigIntegerField()
     author = GenericForeignKey('content_type', 'object_id')
     channel_id = models.CharField(max_length=19, db_index=True)
+    # todo migrate to use Channel object
+    # pay attention to the fact that abstract is True, we must custom migrate each model inheriting DiscordAttachmentMixin
 
     class Meta:
         abstract = True

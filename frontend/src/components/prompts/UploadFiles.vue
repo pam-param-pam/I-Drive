@@ -2,11 +2,17 @@
    <div v-if="filesInUploadCount > 0" class="upload-files" v-bind:class="{ closed: !open }">
       <div class="card floating">
          <div class="card-title">
-            <h2 v-if="state !== uploadState.idle && state !== uploadState.paused">
+            <h2 v-if="state === uploadState.error">
+               {{ $t('prompts.uploadFilesCrashed') }}
+            </h2>
+            <h2 v-else-if="state === uploadState.uploading">
                {{ $t('prompts.uploadFiles', { amount: filesInUploadCount }) }}
             </h2>
-            <h2 v-if="state === uploadState.paused">
+            <h2 v-else-if="state === uploadState.paused">
                {{ $t('prompts.pausedFilesUpload', { amount: filesInUploadCount }) }}
+            </h2>
+            <h2 v-else-if="state === uploadState.noInternet">
+               {{ $t('prompts.noInternet') }}
             </h2>
             <div v-if="state === uploadState.uploading" class="upload-info">
                <div class="upload-speed">{{ filesize(uploadSpeed) }}/s</div>
@@ -15,16 +21,7 @@
 
             <div class="action-buttons">
                <button
-                 v-if="state === uploadState.noInternet && !isAllUploadsFinished"
-                 :aria-label="$t('uploadFile.retry')"
-                 :title="$t('uploadFile.retry')"
-                 class="action"
-                 @click="retry"
-               >
-                  <i class="material-icons">refresh</i>
-               </button>
-               <button
-                  v-if="state === uploadState.uploading && !isAllUploadsFinished"
+                  v-if="state === uploadState.uploading"
                   :aria-label="$t('uploadFile.pause')"
                   :title="$t('uploadFile.pause')"
                   class="action"
@@ -33,7 +30,7 @@
                   <i class="material-icons">pause</i>
                </button>
                <button
-                  v-if="state === uploadState.paused && !isAllUploadsFinished"
+                  v-if="state === uploadState.paused"
                   :aria-label="$t('uploadFile.pause')"
                   :title="$t('uploadFile.pause')"
                   class="action"
@@ -42,7 +39,7 @@
                   <i class="material-icons">play_arrow</i>
                </button>
                <button
-                 v-if="state === uploadState.paused && !isAllUploadsFinished"
+                 v-if="state === uploadState.paused"
                  :aria-label="$t('uploadFile.abortAll')"
                  :title="$t('uploadFile.abortAll')"
                  class="action"
@@ -65,9 +62,9 @@
          <div class="card-content">
             <UploadFile
                v-for="fileState in filesInUpload"
-               :aria-label="fileState.name"
+               :aria-label="fileState.fileObj.name"
                :data-dir="false"
-               :data-type="fileState.type"
+               :data-type="fileState.fileObj.name"
                :fileState="fileState"
             />
          </div>
@@ -124,12 +121,11 @@ export default {
    },
 
    methods: {
-      ...mapActions(useUploadStore, ['pauseAll', 'resumeAll', 'retryAll']),
       ...mapActions(useMainStore, ['showHover']),
 
       filesize,
-      abortAll() {
-         getUploader().backendManager.saveFilesIfNeeded() //todo
+      async abortAll() {
+         await getUploader().saveFilesIfNeeded()
          this.showHover({
             prompt: 'AbortAllWarning',
             confirm: () => {
@@ -141,14 +137,11 @@ export default {
       toggle() {
          this.open = !this.open
       },
-      retry() {
-         this.retryAll()
-      },
       pause() {
-         this.pauseAll()
+         getUploader().pauseAll()
       },
-      resume(event) {
-         this.resumeAll()
+      resume() {
+         getUploader().resumeAll()
       }
    }
 }
