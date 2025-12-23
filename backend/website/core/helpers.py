@@ -110,8 +110,10 @@ def get_file_type(extension: str) -> str:
     return EXTENSION_TO_FILE_TYPE.get(extension.lower(), "Other")
 
 
-def validate_value(value: Any, expected_type: Type, *, required: bool = False, checks: list = None):
+def validate_value(value: Any, expected_type: Type, *, required: bool = False, default=None, checks: list = None):
     if value is None:
+        if not required and default is not None:
+            return default
         if not required:
             return None
         raise BadRequestError("Value cannot be null.")
@@ -161,6 +163,7 @@ def validate_key(data: Optional[dict], key: str, expected_type, *, required: boo
             value,
             expected_type,
             required=required,
+            default=default,
             checks=checks
         )
     except BadRequestError as e:

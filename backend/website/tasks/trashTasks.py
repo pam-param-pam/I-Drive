@@ -22,10 +22,10 @@ def move_to_trash_task(context: dict, ids: list[str]):
         if files.exists():
             files.update(inTrash=True, inTrashSince=timezone.now())
 
-            group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, files)
-
         for file in files:
             file.remove_cache()
+
+        group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, files)
 
         total_length = len(folders)
         last_percentage = 0

@@ -99,9 +99,7 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
-        "duration", "parent__id", "preview__iso", "preview__model_name", "crc",
-        "preview__aperture", "preview__exposure_time", "preview__focal_length",
-        "thumbnail", "videoposition__timestamp", "videometadata__id"
+        "duration", "parent__id", "crc", "thumbnail", "videoposition__timestamp", "videometadata__id", "rawmetadata__id",
     )
 
     LOCK_FROM_ANNOTATE = {
@@ -215,6 +213,7 @@ class Fragment(DiscordAttachmentMixin):
     file = models.ForeignKey(File, on_delete=models.CASCADE, related_name="fragments")
     created_at = models.DateTimeField(default=timezone.now)
     offset = models.PositiveBigIntegerField()
+    crc = models.BigIntegerField(null=True)
 
     class Meta:
         constraints = [
@@ -239,6 +238,20 @@ class Fragment(DiscordAttachmentMixin):
             UniqueConstraint(
                 fields=["file", "offset"],
                 name="%(class)s_fragment_unique_offset_per_file",
+            ),
+            # crc must me non-negative or null
+            CheckConstraint(
+                check=Q(crc__gte=0) | Q(crc__isnull=True),
+                name="%(class)s_crc_non_negative_or_null"
+            ),
+            # crc must be > 0 or null if size > 0
+            CheckConstraint(
+                check=(
+                        Q(size__lte=0, crc=0) |
+                        Q(size__gt=0, crc__gt=0) |
+                        Q(crc__isnull=True)
+                ),
+                name="%(class)s_crc_valid_based_on_size"
             )
         ]
 

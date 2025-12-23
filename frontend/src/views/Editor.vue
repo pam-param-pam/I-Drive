@@ -221,7 +221,8 @@ export default {
          } catch (error) {
             console.log(error)
             this.setError(error)
-            this.raw = "Failed to load file. Status code: " + this.error.response.status
+            let data =JSON.parse(this.error.response.data)
+            this.raw = "Failed to load file.\nStatus code: " + this.error.response.status + "\ndetails: " + data?.details
          } finally {
             this.copyRaw = this.raw
             this.currentLanguage = this.guessLanguage()

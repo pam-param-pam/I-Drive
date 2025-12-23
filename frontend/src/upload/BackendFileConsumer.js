@@ -76,8 +76,6 @@ export class BackendFileConsumer {
             .catch(err => this.onBackendSaveError(files, err))
          }
       )
-
-
    }
 
    onBackendSave(files) {

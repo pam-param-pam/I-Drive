@@ -176,6 +176,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "cameraOwner": "Autor",
     "noInternet": "Brak internetu...",
     "uploadFilesCrashed": "Przesyłanie plików nie powiodło sie!",
     "controlOptions": "Ustawienia eventów",

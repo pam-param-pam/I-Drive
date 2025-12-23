@@ -13,6 +13,7 @@ import { buf as crc32buf } from "crc-32"
 import { v4 as uuidv4 } from "uuid"
 import { showToast } from "@/utils/common.js"
 import { buildVttFromSamples } from "@/utils/subtitleUtlis.js"
+import { getUploader } from "@/upload/Uploader.js"
 
 export class RequestProducer {
    constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles }) {
@@ -44,9 +45,7 @@ export class RequestProducer {
    isRunning() {
       return this._running
    }
-   /**
-    * MAIN LOOP — replaces getRequest() + generator
-    */
+
    async run() {
       if (this._running) {
          console.warn("RequestProducer is already running!")
@@ -88,8 +87,11 @@ export class RequestProducer {
 
             // ---------- THUMBNAIL ----------
             if (!state.thumbnailExtracted) {
-               const thumbnail = await makeThumbnailIfNeeded(queueFile)
-
+               const {thumbnail, other} = await makeThumbnailIfNeeded(queueFile)
+               if (other) {
+                  if (other.duration) state.setDuration(other.duration)
+                  if (other.rawMetadata) state.setRawMetadata(other.rawMetadata)
+               }
                if (thumbnail) {
                   state.markThumbnailExtracted(frontendId)
 
@@ -101,13 +103,11 @@ export class RequestProducer {
                   }
 
                   attachments.push({type: attachmentType.thumbnail, fileObj: queueFile.fileObj, rawBlob: thumbnail})
-
                   totalSize += roundUpTo64(thumbnail.size)
                }
             }
 
             // ---------- MP4 BOX HANDLING ----------
-
             let mp4boxFile = this.mp4Boxes.get(frontendId)
             if (isVideoFile(queueFile.fileObj.extension) && !mp4boxFile) {
                mp4boxFile = MP4Box.createFile()
@@ -116,7 +116,7 @@ export class RequestProducer {
 
                mp4boxFile.onReady = info => {
                   const videoMetadata = parseVideoMetadata(info)
-                  state.fillVideoMetadata(videoMetadata)
+                  state.setVideoMetadata(videoMetadata)
                   state.markVideoMetadataExtracted()
 
                   const subtitleTracks = info.tracks.filter(t => t.type === "subtitles") || []
@@ -183,7 +183,8 @@ export class RequestProducer {
                   "fileObj": queueFile.fileObj,
                   "rawBlob": chunk,
                   "fragmentSequence": chunkSequence + 1,
-                  "offset": offset
+                  "offset": offset,
+                  "crc": crc32buf(new Uint8Array(buf), 0)
                })
 
 
@@ -261,9 +262,8 @@ export class RequestProducer {
       if (queueFile.fileObj.size === 0) {
          state.markFileUploaded(frontendId)
          //todo
-         let file = this.backendManager.getOrCreateState(queueFile.fileObj)
-         this.backendManager.addFinishedFile(file)
-         this.backendManager.saveFilesIfNeeded()
+         let file = getUploader().discordResponseConsumer.getOrCreateState(queueFile.fileObj)
+         getUploader().backendFileQueue.put(file)
          return true
       }
       return false

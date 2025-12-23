@@ -2,7 +2,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .streamViews import stream_file, stream_thumbnail, stream_preview, stream_subtitle
+from .streamViews import stream_file, stream_thumbnail, stream_subtitle
 from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
     CheckShareItemBelongings, CheckTrash, CheckReady
 from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
@@ -160,20 +160,6 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
     signed_file_id = request.META['signed_file_id']
     request._request.META['share_context'] = True
     return stream_thumbnail(request._request, signed_file_id)
-
-
-@api_view(['GET'])
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckReady], resource_key="file_obj")
-def share_view_preview(request, share_obj: ShareableLink, file_obj: File):
-    signed_file_id = request.META['signed_file_id']
-    request._request.META['share_context'] = True
-    return stream_preview(request._request, signed_file_id)
 
 
 @api_view(['GET'])

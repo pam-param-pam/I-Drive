@@ -124,6 +124,13 @@ export function isImageFile(extension) {
 }
 
 
+export function isRawImageFile(extension) {
+   extension = extension.toLowerCase()
+   let uploadStore = useUploadStore()
+   return uploadStore.fileExtensions["Raw image"].includes(extension)
+}
+
+
 //todo yea this needs fixing lol
 export function getWebhook() {
    const uploadStore = useUploadStore()
@@ -150,53 +157,73 @@ export function getWebhook() {
    return weightedWebhooks[Math.floor(Math.random() * weightedWebhooks.length)]
 }
 
-export async function fastVideoThumbnail(file, seekTo = 0.1, maxWidth = 1280, maxHeight = 720) {
-   const video = document.createElement('video')
+
+export async function fastVideoThumbnail(
+   file,
+   seekTo = 0.1,
+   maxWidth = 1280,
+   maxHeight = 720,
+   quality = 0.5
+) {
+   const video = document.createElement("video")
    const url = URL.createObjectURL(file)
 
+   let waitingForSeek = false
+   let targetTime = 0
+   let resolved = false
+
    return new Promise((resolve, reject) => {
-      // Timeout after 5 seconds
-      const timeout = setTimeout(() => {
-         cleanup()
-         reject(new Error('Timeout generating thumbnail'))
-      }, 5000)
 
       const cleanup = () => {
-         clearTimeout(timeout)
+         document.removeEventListener("visibilitychange", onVisibilityChange)
          video.onerror = null
          video.onloadedmetadata = null
          video.onseeked = null
          URL.revokeObjectURL(url)
-         video.src = ''
+         video.src = ""
+      }
+
+      const onVisibilityChange = () => {
+         if (!document.hidden && waitingForSeek) {
+            // Re-trigger seek when tab becomes active again
+            try {
+               video.currentTime = targetTime
+            } catch (_) {
+               // ignored – browser may still be waking media pipeline
+            }
+         }
       }
 
       video.onerror = () => {
+         if (resolved) return
+         resolved = true
          cleanup()
-         reject(new Error('Failed to load video'))
+         reject(new Error("Failed to load video"))
       }
 
       video.onloadedmetadata = () => {
-         // Save duration
          const duration = video.duration || 0
-
-         // Seek to requested time (clamp between 0 and duration)
-         video.currentTime = Math.max(0, Math.min(seekTo, duration - 0.1))
+         targetTime = Math.max(0, Math.min(seekTo, Math.max(0, duration - 0.1)))
+         waitingForSeek = true
+         video.currentTime = targetTime
       }
 
       video.onseeked = () => {
-         // Create canvas for this thumbnail only
-         const canvas = document.createElement('canvas')
-         const ctx = canvas.getContext('2d')
+         if (!waitingForSeek || resolved) return
+         waitingForSeek = false
 
+         const canvas = document.createElement("canvas")
+         const ctx = canvas.getContext("2d")
          if (!ctx) {
+            resolved = true
             cleanup()
-            reject(new Error('Canvas context not available'))
+            reject(new Error("Canvas context not available"))
             return
          }
+
          let width = video.videoWidth
          let height = video.videoHeight
 
-         // Set canvas to video dimensions (max 400px for speed)
          if (width > height) {
             if (width > maxWidth) {
                height *= maxWidth / width
@@ -212,47 +239,103 @@ export async function fastVideoThumbnail(file, seekTo = 0.1, maxWidth = 1280, ma
          canvas.width = Math.round(width)
          canvas.height = Math.round(height)
 
-         // Draw and create blob
          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-         canvas.toBlob(blob => {
-            cleanup()
 
-            if (!blob) {
-               reject(new Error('Failed to create thumbnail blob'))
-               return
-            }
+         canvas.toBlob(
+            blob => {
+               if (resolved) return
+               resolved = true
+               cleanup()
 
-            resolve({
-               thumbnail: blob,
-               duration: video.duration || 0
-            })
-         }, 'image/webp', 0.6)
+               if (!blob) {
+                  reject(new Error("Failed to create thumbnail blob"))
+                  return
+               }
+
+               resolve({
+                  thumbnail: blob,
+                  duration: video.duration || 0
+               })
+            },
+            "image/webp",
+            quality
+         )
       }
 
-      // Setup video
+      document.addEventListener("visibilitychange", onVisibilityChange)
+
       video.src = url
       video.muted = true
-      video.crossOrigin = 'anonymous'
-      video.preload = 'metadata'
+      video.crossOrigin = "anonymous"
+      video.preload = "metadata"
       video.load()
    })
 }
 
 
-export async function makeThumbnailIfNeeded(queueFile) {
-   let thumbnail
+export function extractRawThumbnail(file, quality = 0.5) {
+   return new Promise((resolve, reject) => {
+      const reader = new FileReader()
 
-   //extracting thumbnail if needed for audio file
-   if (isAudioFile(queueFile.fileObj.extension)) {
-      try {
-         thumbnail = await getAudioCover(queueFile)
-      } catch (e) {
-         console.warn(e)
+      reader.onerror = () => reject(reader.error)
+
+      reader.onload = async (e) => {
+         try {
+            const buf = new Uint8Array(e.target.result)
+
+            const metadata = dcraw(buf, { verbose: true, identify: true })
+            const thumbnailBytes = dcraw(buf, { extractThumbnail: true })
+
+            // 1) Wrap original thumbnail bytes (JPEG/TIFF/etc.)
+            const originalBlob = new Blob([thumbnailBytes])
+
+            // 2) Decode
+            const bitmap = await createImageBitmap(originalBlob)
+
+            // 3) Draw to canvas
+            const canvas = document.createElement("canvas")
+            canvas.width = bitmap.width
+            canvas.height = bitmap.height
+
+            const ctx = canvas.getContext("2d")
+            if (!ctx) throw new Error("Canvas context not available")
+
+            ctx.drawImage(bitmap, 0, 0)
+
+            // 4) Re-encode with quality
+            const webpBlob = await new Promise((resolve) =>
+               canvas.toBlob(resolve, "image/webp", quality)
+            )
+
+            if (!webpBlob) throw new Error("Failed to encode thumbnail")
+
+            console.log("RAW THUMB SIZE:", webpBlob.size)
+
+            resolve({
+               thumbnail: webpBlob,
+               metadata
+            })
+         } catch (err) {
+            reject(err)
+         }
       }
-   }
-   //generating a thumbnail if needed for video file
-   if (isVideoFile(queueFile.fileObj.extension)) {
-      try {
+
+      reader.readAsArrayBuffer(file)
+   })
+}
+
+
+export async function makeThumbnailIfNeeded(queueFile) {
+   let thumbnail = null
+   let other = {}
+   try {
+      //extracting thumbnail if needed for audio file
+      if (isAudioFile(queueFile.fileObj.extension)) {
+         thumbnail = await getAudioCover(queueFile)
+      }
+      //generating a thumbnail if needed for video file
+      if (isVideoFile(queueFile.fileObj.extension)) {
+
          let data
          if (queueFile.fileObj.size > 25 * 1024 * 1024) {
             data = await getVideoCover(queueFile)
@@ -260,25 +343,26 @@ export async function makeThumbnailIfNeeded(queueFile) {
             data = await fastVideoThumbnail(queueFile.systemFile)
          }
 
-         let duration = data.duration
+         other.duration = Math.round(data.duration)
          thumbnail = data.thumbnail
-         queueFile.fileObj.duration = Math.round(duration)
-
-      } catch (e) {
-         console.warn(e)
-         showToast("error", "Couldn't get thumbnail for: " + queueFile.fileObj.name)
       }
-   }
-   //generating a thumbnail for an image
-   if (isImageFile(queueFile.fileObj.extension)) {
-      try {
+      //generating a thumbnail for an image
+      if (isImageFile(queueFile.fileObj.extension)) {
          thumbnail = await getImageThumbnail(queueFile)
-      } catch (e) {
-         console.warn(e)
-         showToast("error", "Couldn't get thumbnail for: " + queueFile.fileObj.name)
       }
+
+      //generating a thumbnail for a raw image
+      if (isRawImageFile(queueFile.fileObj.extension)) {
+         let data = await extractRawThumbnail(queueFile.systemFile)
+         thumbnail = data.thumbnail
+         other.rawMetadata = parseRawMetadata(data.metadata)
+      }
+   } catch (e) {
+      console.warn(e)
+      showToast("error", "Couldn't get thumbnail for: " + queueFile.fileObj.name)
    }
-   return thumbnail
+   return { thumbnail, other }
+
 }
 
 
@@ -314,6 +398,31 @@ export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
 
       videoPlayer.load()
    })
+}
+
+
+export function parseRawMetadata(text) {
+   const lines = text.split("\n")
+
+   const map = {}
+
+   for (const line of lines) {
+      const idx = line.indexOf(":")
+      if (idx === -1) continue
+
+      const key = line.slice(0, idx).trim()
+      map[key] = line.slice(idx + 1).trim()
+   }
+   let owner = map["Owner"]
+   if (!owner || owner === "unknown") owner = null
+   return {
+      camera: map["Camera"] || null,
+      camera_owner: owner,
+      iso: map["ISO speed"] || null,
+      shutter: map["Shutter"] || null,
+      aperture: map["Aperture"] || null,
+      focal_length: map["Focal length"] || null
+   }
 }
 
 

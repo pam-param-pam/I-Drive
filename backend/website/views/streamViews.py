@@ -1,23 +1,16 @@
-import io
+import mimetypes
 import mimetypes
 import re
 import time
 from io import BytesIO
 
 import aiohttp
-import exifread
-import imageio
-import rawpy
 import requests
 from PIL import Image
 from asgiref.sync import sync_to_async
-from cryptography.fernet import Fernet
-from django.contrib.contenttypes.models import ContentType
-from django.db.utils import IntegrityError
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse, HttpResponse
 from django.views.decorators.cache import cache_page
-from rawpy._rawpy import LibRawUnsupportedThumbnailError, LibRawFileUnsupportedError
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from zipFly import GenFile, ZipFly
@@ -26,138 +19,16 @@ from zipFly.EmptyFolder import EmptyFolder
 from ..auth.Permissions import CheckLockedFolderIP
 from ..auth.throttle import MediaThrottle, defaultAuthUserThrottle
 from ..auth.utils import check_resource_perms
-from ..constants import MAX_SIZE_OF_PREVIEWABLE_FILE, EventCode, ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
+from ..constants import ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
 from ..core.crypto.Decryptor import Decryptor
+from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
+from ..core.errors import BadRequestError, FailedToResizeImageError
 from ..core.http.utils import get_content_disposition_string, parse_range_header
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
-from ..models import Fragment, Preview
-from ..core.Serializers import FileSerializer
-from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
-from ..core.errors import DiscordError, BadRequestError, FailedToResizeImageError
 from ..queries.builders import build_flattened_children, build_zip_file_dict
-from ..queries.selectors import check_if_bots_exists, get_discord_author
+from ..queries.selectors import check_if_bots_exists
 from ..tasks.helper import auto_prefetch
-from ..websockets.utils import send_event
-
-
-@api_view(['GET'])
-@throttle_classes([MediaThrottle])
-@permission_classes([AllowAny])
-@cache_page(60 * 60 * 24)
-@extract_file_from_signed_url
-@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
-def stream_preview(request, file_obj: File):
-    try:
-        preview = Preview.objects.get(file=file_obj)
-        url = discord.get_attachment_url(file_obj.owner, preview)
-
-        res = requests.get(url, timeout=20)
-        if not res.ok:
-            raise DiscordError(res)
-
-        file_content = res.content
-        fernet = Fernet(preview.key)
-        decrypted_data = fernet.decrypt(file_content)
-        response = HttpResponse(content_type="image/jpeg")
-        response.write(decrypted_data)
-
-        return response
-
-    except Preview.DoesNotExist:
-        pass
-
-    fragments = Fragment.objects.filter(file=file_obj).order_by('sequence')
-    if len(fragments) == 0:
-        return HttpResponse(status=204)
-
-    # RAW IMAGE FILE
-    if file_obj.type == "Raw image":
-        raise BadRequestError(f"Resource of type {file_obj.type} is not previewable")
-
-    if file_obj.size > MAX_SIZE_OF_PREVIEWABLE_FILE:
-        raise BadRequestError("File too big: size > 100mb") # todo
-
-    check_if_bots_exists(file_obj.owner)
-    decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
-
-    file_content = b''
-    for fragment in fragments:
-        url = discord.get_attachment_url(file_obj.owner, fragment)
-        response = requests.get(url, timeout=20)
-        if not response.ok:
-            raise DiscordError(response)
-
-        decrypted_data = decryptor.decrypt(response.content)
-        file_content += decrypted_data
-
-    file_content += decryptor.finalize()
-    file_like_object = io.BytesIO(file_content)
-
-    try:
-        with rawpy.imread(file_like_object) as raw:
-            thumb = raw.extract_thumb()
-
-        if thumb.format == rawpy.ThumbFormat.JPEG:
-            data = io.BytesIO(thumb.data)
-
-        elif thumb.format == rawpy.ThumbFormat.BITMAP:
-
-            # thumb.data is an RGB numpy array, convert with imageio
-            data = io.BytesIO()
-            imageio.imwrite(data, thumb.data)
-
-    except (LibRawFileUnsupportedError, LibRawUnsupportedThumbnailError):
-        raise BadRequestError("Raw file cannot be read properly to extract preview image.")
-
-    tags = exifread.process_file(file_like_object)
-    model_name = str(tags.get("Image Model"))
-    focal_length = str(tags.get("EXIF FocalLength"))
-    aperture = str(tags.get("EXIF ApertureValue"))
-    iso = str(tags.get("EXIF ISOSpeedRatings"))
-    exposure_time = str(tags.get("EXIF ExposureTime"))
-
-    # ENCRYPTION
-    key = Fernet.generate_key()
-    fernet = Fernet(key)
-    encrypted_data = fernet.encrypt(data.getvalue())
-    user = file_obj.owner
-    attachment_name = user.discordsettings.attachment_name
-    files = {'file': (attachment_name, encrypted_data)}
-
-    message = discord.send_file(user, files)  # todo migrate to webhooks
-
-    size = data.getbuffer().nbytes
-    encrypted_size = encrypted_data.__sizeof__()
-
-    author = get_discord_author(request.user, message['author']['id'])
-
-    try:
-        Preview.objects.create(
-            file=file_obj,
-            size=size,
-            encrypted_size=encrypted_size,
-            key=key,
-            model_name=model_name,
-            focal_length=focal_length,
-            aperture=aperture,
-            iso=iso,
-            exposure_time=exposure_time,
-            message_id=message["id"],
-            attachment_id=message["attachments"][0]["id"],
-            content_type=ContentType.objects.get_for_model(author),
-            object_id=author.discord_id
-        )
-
-        file_dict = FileSerializer().serialize_object(file_obj)
-        send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
-
-    except IntegrityError:
-        pass
-    response = HttpResponse(data.getvalue(), content_type="image/webp")
-    name_ascii, name_encoded = get_content_disposition_string(f"preview_{file_obj.get_name_no_extension()}.webp")
-    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
-    return response
 
 
 @api_view(['GET'])
@@ -374,12 +245,6 @@ def stream_file(request, file_obj: File):
         status = 206
     else:
         status = 200
-
-    if request.META.get('share_context') and (status == 200 or isDownload):
-        discord.send_message(file_obj.owner, f"{file_obj.name} has been downloaded!")
-
-    elif request.META.get('share_context'):
-        discord.send_message(file_obj.owner, f"{file_obj.name} has been watched!")
 
     mime, _ = mimetypes.guess_type(file_obj.name)
     response = StreamingHttpResponse(file_iterator(selected_fragment_index - 1, start_byte, end_byte, real_start_byte), content_type=mime, status=status)

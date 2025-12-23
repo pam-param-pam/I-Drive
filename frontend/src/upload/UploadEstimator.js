@@ -1,61 +1,68 @@
 export class UploadEstimator {
-   constructor(smoothingFactor = 0.1, trendWeight = 0.2, windowSize = 20000, feedbackFactor = 0.05) {
-      this.windowSize = windowSize
-      this.feedbackFactor = feedbackFactor  // Controls how much past error influences the next estimate
-      this.buffer = []                       // Stores recent speeds with timestamps
-      this.previousEstimate = null           // Holds the previous estimate for error calculation
-      this.previousRemainingBytes = null     // Holds the previous bytes for error calculation
+   constructor(windowMs = 5000) {
+      this.windowMs = windowMs
+
+      // Sliding window of byte deltas: [{ bytes, time }]
+      this.samples = []
+      this.smoothedEta = null
+      this.etaSmoothing = 0.01 // α ∈ (0,1), lower = flatter
+
+      this.previousRemainingBytes = null
    }
 
-   updateSpeed(currentSpeed) {
-      let currentTime = Date.now() // Capture the current timestamp in milliseconds
+   _updateActualSpeed(remainingBytes) {
+      const now = Date.now()
 
-      // Add new speed with timestamp to the buffer
-      this.buffer.push({ currentSpeed, currentTime })
+      if (this.previousRemainingBytes !== null) {
+         const bytesDelta = this.previousRemainingBytes - remainingBytes
+         if (bytesDelta > 0) {
+            this.samples.push({ bytes: bytesDelta, time: now })
+         }
+      }
 
-      // Remove data older than the defined window size
-      this.buffer = this.buffer.filter(entry =>
-         (currentTime - entry.currentTime) <= this.windowSize
-      )
+      this.previousRemainingBytes = remainingBytes
+
+      // Drop samples outside sliding window
+      const cutoff = now - this.windowMs
+      while (this.samples.length && this.samples[0].time < cutoff) {
+         this.samples.shift()
+      }
    }
 
-   calculateAverageSpeed() {
-      // Return 0 if there's no data in the last 30 seconds
-      if (this.buffer.length === 0) return 0
+   getSpeed() {
+      if (this.samples.length === 0) {
+         return null
+      }
 
-      // Sum up the speeds in the buffer
-      let speedSum = this.buffer.reduce((sum, entry) => sum + entry.currentSpeed, 0)
+      const now = Date.now()
+      const oldest = this.samples[0].time
+      const elapsedMs = Math.max(1, now - oldest)
 
-      // Calculate the average speed
-      return speedSum / this.buffer.length
+      const totalBytes = this.samples.reduce((s, e) => s + e.bytes, 0)
+      return totalBytes / (elapsedMs / 1000) // bytes/sec
    }
 
    estimateRemainingTime(remainingBytes) {
-      // Calculate the average speed over the last windowSize
-      let averageSpeed = this.calculateAverageSpeed()
+      this._updateActualSpeed(remainingBytes)
 
-      // If no valid speed data or if speed is zero, return 0
-      if (averageSpeed <= 0) return 0
-
-      // Calculate estimated time remaining based on average speed
-      let estimatedTime = remainingBytes / averageSpeed
-
-      // Adjust based on previous estimate error
-      if (this.previousEstimate !== null && this.previousRemainingBytes !== null) {
-         let actualBytesTransferred = this.previousRemainingBytes - remainingBytes
-         let actualTimeElapsed = actualBytesTransferred / averageSpeed
-
-         // Calculate the error as the difference between estimated and actual time
-         let error = actualTimeElapsed - this.previousEstimate
-
-         // Adjust current estimate based on feedback from previous error
-         estimatedTime -= error * this.feedbackFactor
+      const speed = this.getSpeed()
+      if (!speed || speed <= 0) {
+         return Infinity
       }
 
-      // Update previous estimate and remaining bytes for the next iteration
-      this.previousEstimate = estimatedTime
-      this.previousRemainingBytes = remainingBytes
+      const rawEta = Math.max(0, remainingBytes / speed)
 
-      return estimatedTime
+      // First value: no smoothing yet
+      if (this.smoothedEta === null || !isFinite(this.smoothedEta)) {
+         this.smoothedEta = rawEta
+         return rawEta
+      }
+
+      // Exponential moving average
+      this.smoothedEta =
+         this.smoothedEta +
+         this.etaSmoothing * (rawEta - this.smoothedEta)
+
+      return this.smoothedEta
    }
 }

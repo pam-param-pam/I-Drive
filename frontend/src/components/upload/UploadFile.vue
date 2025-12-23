@@ -129,14 +129,15 @@ export default {
       showTryAgainButton() {
          return (this.fileState.status === fileUploadStatus.saveFailed ||
                this.fileState.status === fileUploadStatus.uploadFailed ||
-               this.fileState.status === fileUploadStatus.fileGoneInUpload) ||
-               this.fileState.status === fileUploadStatus.fileGoneInRequestProducer &&
+               this.fileState.status === fileUploadStatus.fileGoneInUpload ||
+               this.fileState.status === fileUploadStatus.fileGoneInRequestProducer) &&
                this.state === uploadState.uploading
       },
       showDismissButton() {
-         return (this.fileState.status === fileUploadStatus.fileGone || this.fileState.status === fileUploadStatus.errorOccurred)
+         return (this.fileState.status === fileUploadStatus.fileGoneInUpload ||
+           this.fileState.status === fileUploadStatus.fileGoneInRequestProducer ||
+           this.fileState.status === fileUploadStatus.errorOccurred)
       }
-
    },
 
    methods: {

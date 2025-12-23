@@ -1,10 +1,5 @@
 import { defineStore } from "pinia"
-import { attachmentType, fileUploadStatus, uploadState } from "@/utils/constants.js"
-import { FileStateHolder } from "@/upload/FileStateHolder.js"
-import { getUploader } from "@/upload/Uploader.js"
-import { checkFilesSizes, isErrorStatus } from "@/upload/utils/uploadHelper.js"
-import { useMainStore } from "@/stores/mainStore.js"
-import { showToast } from "@/utils/common.js"
+import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 
 export const useUploadStore = defineStore("upload", {
    state: () => ({
@@ -27,9 +22,17 @@ export const useUploadStore = defineStore("upload", {
 
       filesInUpload() {
          const all = Object.values(this.files)
+
          const uploading = all.filter(f => f.status === fileUploadStatus.uploading)
+
          const source = uploading.length > 0 ? uploading : all
-         return source.slice(0, 20)
+
+         return source
+            .slice()
+            .sort((a, b) =>
+               (b.lastModifiedTimestamp || 0) - (a.lastModifiedTimestamp || 0)
+            )
+            .slice(0, 20)
       },
 
       filesInUploadCount() {
@@ -42,49 +45,30 @@ export const useUploadStore = defineStore("upload", {
    },
 
    actions: {
-
-      registerFile(snapshot) {
-         this.files[snapshot.frontendId] = snapshot
-      },
-
-      updateFile(frontendId, snapshot) {
-         if (!this.files[frontendId]) return
-         this.files[frontendId] = snapshot
-      },
-
-      setPendingWorkerFilesLength(value) {
-         this.pendingWorkerFilesLength = value
-      },
-
-      setAllBytesToUpload(value) {
-         this.allBytesToUpload = value
-      },
-
-      setAllBytesUploaded(value) {
-         this.allBytesUploaded = value
-      },
-
-      setUploadSpeed(value) {
-         this.uploadSpeed = value
-      },
-
-      setState(state) {
-         this.state = state
-      },
-
-      setEta(eta) {
-         this.eta = eta
-      },
-
-      deleteFileState(frontendId) {
+      onFileSaved(frontendId) {
          delete this.files[frontendId]
       },
 
+      updateFileField(frontendId, field, value) {
+         let file = this.files[frontendId]
+         if (!file) {
+            file = this.files[frontendId] = {}
+         }
 
+         if (file[field] === value) return
 
+         file[field] = value
+         file.lastModifiedTimestamp = Date.now()
+      },
 
-
-
+      onGlobalStateChange(snapshot) {
+         this.allBytesUploaded = snapshot.allBytesUploaded
+         this.allBytesToUpload = snapshot.allBytesToUpload
+         this.state = snapshot.uploadState
+         this.pendingWorkerFilesLength = snapshot.pendingWorkerFilesLength
+         this.uploadSpeed = snapshot.speed
+         this.eta = snapshot.eta
+      },
 
       onUploadFinishUI() {
          this.state = uploadState.idle
@@ -109,44 +93,7 @@ export const useUploadStore = defineStore("upload", {
       },
       setFileExtensions(value) {
          this.fileExtensions = value
-      },
-
-
-
-
-
-      /* todo
-
-      retryFailSaveFile(frontendId) {
-         getUploader().backendManager.reSaveFile(frontendId)
-      },
-
-      async retryUploadFile(frontendId) {
-         await getUploader().discordUploader.reUploadRequest(frontendId)
-         getUploader().processUploads()
-      },
-
-      retryGoneFile(frontendId) {
-         let state = this.getFileState(frontendId)
-         if (!state) return
-         this.setStatus(frontendId, fileUploadStatus.retrying)
-         let newFile = { systemFile: state.systemFile, fileObj: state.fileObj }
-         this.queue.unshift(newFile)
-         getUploader().processUploads()
-      },
-
-      dismissFile(frontendId) {
-         let index = this.fileState.findIndex(file => file.frontendId === frontendId)
-         if (index !== -1) {
-            this.fileState.splice(index, 1)
-         } else {
-            console.warn("Failed to find file: " + frontendId + " in fileState")
-         }
-         this.onUploadFinish()
-      },
-      */
-
-
+      }
    }
 })
 

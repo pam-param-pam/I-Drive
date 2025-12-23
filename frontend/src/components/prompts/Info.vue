@@ -63,48 +63,68 @@
           {{ formatCrc(crc) }}
         </code>
       </p>
-      <p v-if="iso">
-        <strong>{{ $t("prompts.iso") }}:</strong> {{ iso }}
-      </p>
-      <p v-if="aperture">
-        <strong>{{ $t("prompts.aperture") }}:</strong> f/{{ aperture }}
-      </p>
-      <p v-if="exposureTime">
-        <strong>{{ $t("prompts.exposureTime") }}:</strong> {{ exposureTime }} sec
-      </p>
-      <p v-if="focalLength">
-        <strong>{{ $t("prompts.focalLength") }}:</strong> {{ focalLength }}mm
-      </p>
-      <p v-if="modelName">
-        <strong>{{ $t("prompts.modelName") }}:</strong> {{ modelName }}
-      </p>
+    </div>
 
-      <!-- Expandable section -->
-      <div v-if="isDir && !isInShareContext" class="expandable-section">
+     <!-- Expandable section for folders -->
+     <div v-if="isDir && !isInShareContext" class="expandable-section">
         <div class="expandable-header" @click="fetchAdditionalInfo">
-          <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
-          <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
-            keyboard_arrow_down
-          </i>
+           <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
+           <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
+              keyboard_arrow_down
+           </i>
         </div>
 
         <div v-if="isFolderExpanded" class="expandable-content">
-          <p>
-            <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}
-          </p>
-          <p>
-            <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}
-          </p>
-          <p v-if="folderSize != null">
-            <strong>{{ $t("prompts.size") }}: </strong>
-            <code @dblclick="changeView($event, folderSize, humanSize, ' bytes')">
-              {{ humanSize(folderSize) }}
-            </code>
-          </p>
+           <p>
+              <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ numberDirs }}
+           </p>
+           <p>
+              <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ numberFiles }}
+           </p>
+           <p v-if="folderSize != null">
+              <strong>{{ $t("prompts.size") }}: </strong>
+              <code @dblclick="changeView($event, folderSize, humanSize, ' bytes')">
+                 {{ humanSize(folderSize) }}
+              </code>
+           </p>
         </div>
-      </div>
-    </div>
-    <!-- Expandable section for tracks -->
+     </div>
+
+
+     <!-- Expandable section for raw images -->
+     <div v-if="!isDir && type==='Raw image' && isRawMetadata && !isInShareContext" class="expandable-section card-content">
+        <div class="expandable-header" @click="fetchAdditionalInfo">
+           <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
+           <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
+              keyboard_arrow_down
+           </i>
+        </div>
+
+        <div v-if="isFileExpanded" class="expandable-content">
+           <p>
+              <strong>{{ $t("prompts.modelName") }}:</strong> {{ metadata.camera }}
+           </p>
+           <p v-if="metadata.camera_owner">
+              <strong>{{ $t("prompts.cameraOwner") }}:</strong> {{ metadata.camera_owner }}
+           </p>
+           <p>
+              <strong>{{ $t("prompts.iso") }}:</strong> {{ metadata.iso }}
+           </p>
+           <p>
+              <strong>{{ $t("prompts.aperture") }}:</strong> {{ metadata.aperture }}
+           </p>
+           <p>
+              <strong>{{ $t("prompts.exposureTime") }}:</strong> {{ metadata.shutter }} sec
+           </p>
+           <p>
+              <strong>{{ $t("prompts.focalLength") }}:</strong> {{ metadata.focal_length }}
+           </p>
+
+        </div>
+     </div>
+
+
+    <!-- Expandable section for video metadata -->
     <div v-if="!isDir && type==='Video' && isVideoMetadata && !isInShareContext" class="expandable-section card-content">
       <div class="expandable-header" @click="fetchAdditionalInfo">
         <strong>{{ $t("prompts.videoMetadata") }}</strong>
@@ -374,6 +394,12 @@ export default {
       isVideoMetadata() {
          if (this.selectedCount === 1) {
             return this.selected[0].isVideoMetadata
+         }
+         return false
+      },
+      isRawMetadata() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].isRawMetadata
          }
          return false
       },

@@ -13,10 +13,10 @@ from .constants import API_BASE_URL, cache, EncryptionMethod
 from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
 from .discord.Discord import discord
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Preview, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
-    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
+    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent, AttachmentLinker, FragmentLink
+from .models.file_related_models import RawMetadata, ThumbnailLink
 
-# from .models.file_related_models import FragmentLinker, FragmentLink
 from .tasks.deleteTasks import smart_delete_task
 
 admin.site.register(UserSettings, SimpleHistoryAdmin)
@@ -28,8 +28,10 @@ admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
 admin.site.register(PerDeviceToken)
 admin.site.register(ShareAccessEvent)
-# admin.site.register(FragmentLinker)
-# admin.site.register(FragmentLink)
+admin.site.register(AttachmentLinker)
+admin.site.register(FragmentLink)
+admin.site.register(ThumbnailLink)
+admin.site.register(RawMetadata)
 
 
 @admin.register(Fragment)
@@ -154,15 +156,14 @@ class FileAdmin(SimpleHistoryAdmin):
     def media_tag(self, obj: File):
         signed_file_id = sign_resource_id_with_expiry(obj.id)
 
-        if obj.type == "Raw image":
-            url = f"{API_BASE_URL}/files/{signed_file_id}/preview/stream"
-            return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
-
-        elif obj.type == "Image":
+        try:
+            _ = obj.thumbnail
             url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
             return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+        except Thumbnail.DoesNotExist:
+            pass
 
-        elif obj.type == "Video":
+        if obj.type == "Video":
             url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
             poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
 
@@ -252,27 +253,6 @@ class FileAdmin(SimpleHistoryAdmin):
     formatted_encryption_method.short_description = "Encryption method"
     readable_size.admin_order_field = 'size'
 
-@admin.register(Preview)
-class PreviewAdmin(SimpleHistoryAdmin):
-    ordering = ['-created_at']
-    search_fields = ['file__name', 'file__id', 'file__owner__username']
-    list_display = ['file_name', 'owner', 'readable_size', 'readable_encrypted_size', 'created_at']
-    readonly_fields = ['created_at', 'channel_id', 'message_id', 'attachment_id', 'size', 'file', 'encryption_method']
-
-    def file_name(self, obj: Preview):
-        return obj.file.name
-
-    def owner(self, obj: Preview):
-        return obj.file.owner
-
-    def readable_size(self, obj: Preview):
-        return filesizeformat(obj.size)
-
-    def readable_encrypted_size(self, obj: Preview):
-        return filesizeformat(obj.encrypted_size)
-
-    def encryption_method(self, obj: Subtitle):
-        return EncryptionMethod(obj.file.encryption_method).name
 
 @admin.register(Thumbnail)
 class ThumbnailAdmin(SimpleHistoryAdmin):
@@ -395,10 +375,10 @@ class BotAdmin(admin.ModelAdmin):
 class MomentAdmin(admin.ModelAdmin):
     search_fields = ('file_name', 'file__owner__username')
     list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
-    readonly_fields = ('channel_id', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'preview', 'encryption_method')
+    readonly_fields = ('channel_id', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
     exclude = ['size', 'timestamp']
 
-    def preview(self, obj: Moment):
+    def moment_preview(self, obj: Moment):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/moment/{obj.timestamp}/stream"
         return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
@@ -432,15 +412,15 @@ class VideoMetadataAdmin(admin.ModelAdmin):
 class SubtitleAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id', 'file__owner__username')
     list_display = ['file_name', 'language', 'owner', 'readable_size']
-    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'preview')
+    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
     exclude = ['size']
 
-    def preview(self, obj):
+    def sub_preview(self, obj):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{obj.id}/stream"
         return format_html('<a href="{}" target="_blank">Preview Subtitle</a>', url)
 
-    preview.short_description = "Subtitle Preview"
+    sub_preview.short_description = "Subtitle Preview"
 
     def readable_size(self, obj: Subtitle):
         return filesizeformat(obj.size)

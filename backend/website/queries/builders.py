@@ -28,7 +28,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
 
     if include_files:
         file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
-            "parent", "videoposition", "thumbnail", "preview", "videometadata"
+            "parent", "videoposition", "thumbnail", "videometadata", "rawmetadata"
         ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)
 
     folder_children = []
@@ -131,7 +131,7 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
     file_serializer = ShareFileSerializer(share)
 
     files = list(folder_obj.files.filter(ready=True, inTrash=False).select_related(
-        "parent", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
+        "parent", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
 
     folders = []
     if include_folders:

@@ -4,6 +4,7 @@ from collections import defaultdict
 from .crypto.signer import sign_resource_id_with_expiry
 from ..constants import API_BASE_URL
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken
+from ..models.file_related_models import RawMetadata
 from ..queries.selectors import get_item_inside_share
 
 
@@ -68,9 +69,7 @@ class FileSerializer(AdvancedSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since,
-            duration, parent__id, iso, model_name, crc,
-            aperture, exposure_time, focal_length,
-            thumbnail, video_position, video_metadata_id
+            duration, parent__id, crc, thumbnail, video_position, video_metadata_id, raw_metadata_id
         ) = tuple_data
 
         d = {
@@ -85,6 +84,7 @@ class FileSerializer(AdvancedSerializer):
             "isLocked": is_locked,
             "encryption_method": encryption_method,
             "isVideoMetadata": video_metadata_id is not None,
+            "isRawMetadata": raw_metadata_id is not None,
             "crc": crc,
         }
 
@@ -97,20 +97,8 @@ class FileSerializer(AdvancedSerializer):
         if duration:
             d["duration"] = duration
 
-        if iso:
-            d.update({
-                "iso": iso,
-                "model_name": model_name,
-                "aperture": aperture,
-                "exposure_time": exposure_time,
-                "focal_length": focal_length,
-            })
-
         if not hide and not (is_locked and in_trash):
             signed_id = sign_resource_id_with_expiry(id)
-
-            if type_ == "Raw image":
-                d["preview_url"] = f"{API_BASE_URL}/files/{signed_id}/preview/stream"
 
             d["download_url"] = f"{API_BASE_URL}/files/{signed_id}/stream"
             if thumbnail:
@@ -130,9 +118,7 @@ class ShareFileSerializer(FileSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since,
-            duration, parent__id, iso, model_name, crc,
-            aperture, exposure_time, focal_length,
-            thumbnail, video_position, video_metadata_id
+            duration, parent__id, crc, thumbnail, video_position, video_metadata_id, raw_metadata_id
         ) = tuple_data
 
         d = {
@@ -146,6 +132,7 @@ class ShareFileSerializer(FileSerializer):
             "last_modified": last_modified_at.isoformat() if last_modified_at else None,
             "encryption_method": encryption_method,
             "isVideoMetadata": video_metadata_id is not None,
+            "isRawMetadata": raw_metadata_id is not None,
             "crc": crc,
         }
 
@@ -154,10 +141,6 @@ class ShareFileSerializer(FileSerializer):
 
         if not hide and not (is_locked and in_trash):
             signed_id = sign_resource_id_with_expiry(id)
-
-            if type_ == "Raw image":
-
-                d["preview_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/preview/stream"
 
             d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/stream"
 
@@ -329,6 +312,17 @@ class SubtitleTrackSerializer(SimpleSerializer):
         track_dict["type"] = "Subtitle"
         return track_dict
 
+class RawMetadataSerializer(SimpleSerializer):
+    def serialize_object(self, metadata: RawMetadata) -> dict:
+        return {
+            "camera": metadata.camera,
+            "camera_owner": metadata.camera_owner,
+            "iso": metadata.iso,
+            "shutter": metadata.shutter,
+            "aperture": metadata.aperture,
+            "focal_length": metadata.focal_length,
+            "type": "RawMetadata",
+        }
 
 class DeviceTokenSerializer(SimpleSerializer):
     def serialize_object(self, token: PerDeviceToken) -> dict:

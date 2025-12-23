@@ -146,7 +146,7 @@
                </div>
             </div>
 
-            <ExtendedImage v-else-if="file?.type === 'Image' && file?.size > 0" :src="fileSrcUrl" />
+            <ExtendedImage v-else-if="(file?.type === 'Image' || (file?.type === 'Raw image' && file?.thumbnail_url)) && file?.size > 0" :src="fileSrcUrl" />
             <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
                <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
                <audio
@@ -161,6 +161,7 @@
                v-else-if="file?.name.endsWith('.pdf') && file?.size > 0"
                :data="fileSrcUrl"
                class="pdf"
+               @error="onPdfError"
             ></object>
 
             <OfficePreview
@@ -308,11 +309,10 @@ export default {
          return this.token !== undefined
       },
       fileSrcUrl() {
-         if (this.file?.type === "Image" && !this.imageFullSize && this.file?.thumbnail_url) {
+         if (!this.imageFullSize && this.file?.thumbnail_url) {
             return this.file?.thumbnail_url
          }
-         if (this.file?.preview_url) return this.file?.preview_url + "?inline=True"
-         return this.file?.download_url + "?inline=True"
+         return this.file?.download_url + "?download=true&inline=True"
       },
       currentIndex() {
          if (this.files && this.file) {
@@ -452,6 +452,9 @@ export default {
          this.$toast.error(this.$t("toasts.videoUnplayable"))
       },
 
+      onPdfError(error) {
+        this.setError({status: "500", response: {data: {details: "Failed to load pdf file. Reason unknown"}}})
+      },
       showMoments() {
          if (!this.videoRef.readyState) {
             this.$toast.error(this.$t("toasts.playVideoFirst"))

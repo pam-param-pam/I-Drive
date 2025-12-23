@@ -117,11 +117,7 @@ export class DiscordUploadConsumer {
             this.uploadRuntime.fixUploadTracking(request, totalBytesUploaded, error)
          },
 
-         onRequestFinish: () => {
-            let missing = request.totalSize - totalBytesUploaded
-            if (missing < 0) missing = 0
-            this.uploadRuntime.fixMissingBytesFromRequest(request, missing)
-         },
+         onRequestFinish: () => {},
 
          signal: abortSignal
       }
@@ -235,7 +231,9 @@ export class DiscordUploadConsumer {
             const fileState = this.uploadRuntime.getFileState(frontendId)
             fileState.setStatus(fileUploadStatus.retrying)
          }
-         await this.requestQueue.put(request)
+         setTimeout(() => {
+            this.requestQueue.put(request)
+         }, 1000)
       }
    }
 

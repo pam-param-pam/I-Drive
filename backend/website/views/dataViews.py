@@ -17,12 +17,14 @@ from ..auth.Permissions import ReadPerms, default_checks, CheckOwnership, CheckL
 from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from ..auth.utils import check_resource_perms
 from ..constants import cache
-from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
+from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
+    RawMetadataSerializer
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
     extract_items
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..discord.Discord import discord
-from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail, Preview
+from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
+from ..models.file_related_models import RawMetadata
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
 from ..queries.selectors import query_attachments, check_if_bots_exists
 
@@ -91,11 +93,10 @@ def get_usage(request, folder_obj: Folder):
     if not total_used_size:
         file_used = File.objects.filter(owner=request.user, inTrash=False, ready=True, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
         thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        preview_used = Preview.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
         moment_used = Moment.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
         subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
 
-        total_used_size = file_used + thumbnail_used + preview_used + moment_used + subtitle_used
+        total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
         cache.set(f"TOTAL_USED_SIZE:{request.user}", total_used_size, 60)
 
     if folder_obj.parent:
@@ -117,30 +118,41 @@ def fetch_additional_info(request, item_obj):
         return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
 
     else:
-        tracks = []
-        videoSerializer = VideoTrackSerializer()
-        audioSerializer = AudioTrackSerializer()
-        subtitleSerializer = SubtitleTrackSerializer()
+        if item_obj.type == "Video":
+            tracks = []
+            videoSerializer = VideoTrackSerializer()
+            audioSerializer = AudioTrackSerializer()
+            subtitleSerializer = SubtitleTrackSerializer()
 
-        for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
-            tracks.append(videoSerializer.serialize_object(track))
+            for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
+                tracks.append(videoSerializer.serialize_object(track))
 
-        for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
-            tracks.append(audioSerializer.serialize_object(track))
+            for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
+                tracks.append(audioSerializer.serialize_object(track))
 
-        for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
-            tracks.append(subtitleSerializer.serialize_object(track))
-        try:
-            metadata = VideoMetadata.objects.get(file=item_obj)
-        except VideoMetadata.DoesNotExist:
-            raise ResourceNotFoundError("No video metadata for this file :(")
+            for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
+                tracks.append(subtitleSerializer.serialize_object(track))
+            try:
+                metadata = VideoMetadata.objects.get(file=item_obj)
+            except VideoMetadata.DoesNotExist:
+                raise ResourceNotFoundError("No video metadata for this file :(")
 
-        metadata_dict = {
-            "tracks": tracks, "is_fragmented": metadata.is_fragmented, "is_progressive": metadata.is_progressive,
-            "has_moov": metadata.has_moov, "has_IOD": metadata.has_IOD, "brands": metadata.brands, "mime": metadata.mime,
-        }
+            metadata_dict = {
+                "tracks": tracks, "is_fragmented": metadata.is_fragmented, "is_progressive": metadata.is_progressive,
+                "has_moov": metadata.has_moov, "has_IOD": metadata.has_IOD, "brands": metadata.brands, "mime": metadata.mime,
+            }
+            return JsonResponse(metadata_dict, status=200)
 
-        return JsonResponse(metadata_dict, status=200)
+        elif item_obj.type == "Raw image":
+            try:
+                raw_metadata = RawMetadata.objects.get(file=item_obj)
+                metadata_dict = RawMetadataSerializer().serialize_object(raw_metadata)
+                return JsonResponse(metadata_dict, status=200)
+            except RawMetadata.DoesNotExist:
+                raise ResourceNotFoundError("No raw metadata for this file :(")
+        else:
+            raise ResourceNotFoundError("Wrong item type.")
+
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -283,7 +295,7 @@ def search(request):
 
     if include_files:
         files = File.objects.filter(file_filters) \
-                    .select_related("parent", "videoposition", "thumbnail", "preview") \
+                    .select_related("parent", "videoposition", "thumbnail") \
                     .prefetch_related("tags") \
                     .order_by(ascending + order_by).annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)[:result_limit]
 
@@ -317,7 +329,7 @@ def search(request):
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_trash(request):
     files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
-        "parent", "videoposition", "thumbnail", "preview").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
+        "parent", "videoposition", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
 
     folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
 

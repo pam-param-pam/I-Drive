@@ -11,10 +11,8 @@ import httpx
 from httpx import Response
 
 from ..constants import DISCORD_BASE_URL, cache
-from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Fragment
+from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Fragment, Thumbnail, FragmentLink, ThumbnailLink
 from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, HttpxError, DiscordTextError
-from ..models.file_related_models import FragmentLink, ThumbnailLink, Thumbnail
-# from ..models.file_related_models import FragmentLink
 from ..queries.selectors import query_attachments
 
 logger = logging.getLogger("Discord")
@@ -74,7 +72,7 @@ class Discord:
                 pass
 
     def _get_channel_id(self, message_id):
-        attachments = query_attachments(message_id=message_id)
+        attachments = query_attachments(message_id=message_id)  # no change here?
         if len(attachments) > 0:
             return attachments[0].channel_id
 
@@ -188,6 +186,8 @@ class Discord:
                     raise
                 time.sleep(1)
 
+        raise RuntimeError("Error. _make_request returned no request")
+
     def _make_bot_request(self, user, method: str, url: str, headers: dict = None, params: dict = None, json: dict = None, files: dict = None, timeout: Union[int, None] = 3) -> Response:
         self._check_discord_block(user)
 
@@ -252,25 +252,6 @@ class Discord:
             raise DiscordError(response)
 
         return response
-
-    def send_message(self, user, message: str) -> httpx.Response:
-        channel_id = self._get_channel_for_user(user).id
-        url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
-        payload = {'content': message}
-        headers = {"Content-Type": 'application/json'}
-
-        response = self._make_bot_request(user, 'POST', url, headers=headers, json=payload)
-        return response
-
-    def send_file(self, user, files: dict, json=None) -> httpx.Response:
-        channel_id = self._get_channel_for_user(user).id
-        url = f'{DISCORD_BASE_URL}/channels/{channel_id}/messages'
-        response = self._make_bot_request(user, 'POST', url, files=files, json=json, timeout=None)
-
-        message = response.json()
-        expiry = self._calculate_expiry(message)
-        cache.set(message["id"], response, timeout=expiry)
-        return message
 
     def get_attachment_url(self, user, resource: DiscordAttachmentMixin) -> str:
         # todo validate the url is from discord, else reject

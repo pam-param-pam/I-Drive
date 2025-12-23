@@ -175,6 +175,7 @@
   },
 
   "prompts": {
+    "cameraOwner": "Camera Owner",
     "noInternet": "Waiting for internet...",
     "uploadFilesCrashed": "Upload file crashed!",
     "controlOptions": "Device control options",

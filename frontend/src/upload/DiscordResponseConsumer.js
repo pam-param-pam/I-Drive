@@ -7,8 +7,11 @@ export class DiscordResponseConsumer {
       this.discordAttachmentQueue = discordAttachmentQueue
       this.uploadRuntime = uploadRuntime
       this.running = false
-
       this.backendState = new Map()
+
+      this.uploadRuntime.onFileChange(["videoMetadata", "rawMetadata"], ({ frontendId, field, current }) => {
+            this.onFileMetadata(frontendId, field, current)
+         })
    }
 
    stop() {
@@ -30,12 +33,7 @@ export class DiscordResponseConsumer {
             console.warn("DiscordResponseConsumer breaking!")
             break
          }
-
-         try {
-            await this.handleDiscordResult(result)
-         } catch (err) {
-            console.error("BackendFileProducer error", err)
-         }
+         await this.handleDiscordResult(result)
       }
       this.running = false
    }
@@ -44,11 +42,9 @@ export class DiscordResponseConsumer {
       for (let i = 0; i < request.attachments.length; i++) {
          const attachment = request.attachments[i]
          const discordAttachment = discordResponse.data.attachments[i]
-         // this.discordAttachmentQueue.put({"discordAttachment": discordAttachment, "attachment": attachment})
+         await this.discordAttachmentQueue.put({"discordAttachment": discordAttachment, "attachment": attachment})
          this.fillAttachmentInfo(attachment, discordResponse, discordAttachment)
       }
-
-      this.uploadRuntime.markRequestFinished(request)
    }
 
    getOrCreateState(fileObj) {
@@ -63,7 +59,7 @@ export class DiscordResponseConsumer {
             frontend_id: fileObj.frontendId,
             encryption_method: parseInt(fileObj.encryptionMethod),
             created_at: fileObj.createdAt,
-            duration: fileObj.duration,
+            duration: fileState.duration,
             iv: fileState.iv,
             key: fileState.key,
             crc: 0,
@@ -73,6 +69,18 @@ export class DiscordResponseConsumer {
          })
       }
       return this.backendState.get(fileObj.frontendId)
+   }
+   onFileMetadata(frontendId, field, current) {
+      if (current && field) {
+         let fileObj = this.uploadRuntime.getFileState(frontendId).fileObj
+         let state = this.getOrCreateState(fileObj)
+         if (field === "videoMetadata") {
+            state.videoMetadata = current
+         }
+         else if (field === "rawMetadata") {
+            state.rawMetadata = current
+         }
+      }
    }
 
    fillAttachmentInfo(attachment, discordResponse, discordAttachment) {
@@ -90,7 +98,8 @@ export class DiscordResponseConsumer {
             message_id: discordResponse.data.id,
             attachment_id: discordAttachment.id,
             message_author_id: discordResponse.data.author.id,
-            offset: attachment.offset
+            offset: attachment.offset,
+            crc: attachment.crc >>> 0
          })
 
          fileState.incrementChunk(fileObj.frontendId)

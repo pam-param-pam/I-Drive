@@ -50,36 +50,6 @@ class Thumbnail(DiscordAttachmentMixin):
         return f"Thumbnail=[{self.file.name}]"
 
 
-class Preview(DiscordAttachmentMixin):
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    created_at = models.DateTimeField(default=timezone.now)
-    encrypted_size = models.PositiveBigIntegerField()
-    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True, related_name="preview")
-    key = models.BinaryField()
-    iso = models.CharField(max_length=50, null=True)
-    aperture = models.CharField(max_length=50, null=True)
-    exposure_time = models.CharField(max_length=50, null=True)
-    model_name = models.CharField(max_length=50, null=True)
-    focal_length = models.CharField(max_length=50, null=True)
-
-    class Meta:
-        constraints = [
-            # encrypted_size >= 0
-            CheckConstraint(
-                check=Q(encrypted_size__gte=0),
-                name="%(class)s_encrypted_size_non_negative",
-            ),
-            # key must NOT be NULL
-            CheckConstraint(
-                check=Q(key__isnull=False),
-                name="%(class)s_key_required",
-            )
-        ]
-
-    def __str__(self):
-        return f"Preview=[{self.file.name}]"
-
-
 class Moment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     file = models.ForeignKey(File, on_delete=models.CASCADE, unique=False)
@@ -193,8 +163,19 @@ class VideoMetadata(models.Model):
     mime = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"Metadata for {self.file}"
+        return f"Video metadata for {self.file}"
 
+class RawMetadata(models.Model):
+    file = models.OneToOneField("File", on_delete=models.CASCADE)
+    camera = models.CharField(max_length=50)
+    camera_owner = models.CharField(max_length=50)
+    iso = models.CharField(max_length=50)
+    shutter = models.CharField(max_length=50)
+    aperture = models.CharField(max_length=50)
+    focal_length = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"Raw metadata for {self.file}"
 
 class VideoMetadataTrackMixin(models.Model):
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
@@ -235,7 +216,7 @@ class SubtitleTrack(VideoMetadataTrackMixin):
 class AttachmentLinker(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     message_id = models.CharField(max_length=19, db_index=True)
-
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
     content_type = models.ForeignKey(
         ContentType,
         on_delete=models.CASCADE,

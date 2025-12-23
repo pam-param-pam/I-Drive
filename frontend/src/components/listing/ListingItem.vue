@@ -67,14 +67,12 @@ export default {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
       imageSrc() {
          if (this.item.size === 0) return null
-         if (this.type === "Raw image") {
-            if (this.item.preview_url) return this.item.preview_url
-            if (this.item.download_url) return this.item.download_url
-         }
-         if (["Video", "Audio", "Image"].includes(this.type) && this.item.thumbnail_url) {
+         if (this.item.thumbnail_url) {
+            console.log("1111")
             return this.item.thumbnail_url
          }
          if (this.type === "Image") {
+            console.log("2222")
             return this.item.download_url
          }
          return null

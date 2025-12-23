@@ -29,12 +29,6 @@ class FileDict(TypedDict):
     encryption_method: int
     lockFrom: Optional[ShortUUIDField]
     in_trash_since: Optional[str]
-    iso: Optional[str]
-    model_name: Optional[str]
-    aperture: Optional[str]
-    exposure_time: Optional[str]
-    focal_length: Optional[str]
-    preview_url: Optional[str]
     download_url: Optional[str]
     thumbnail_url: Optional[str]
 

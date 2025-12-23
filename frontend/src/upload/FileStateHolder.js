@@ -1,22 +1,12 @@
 import { fileUploadStatus } from "@/utils/constants.js"
 import { isErrorStatus } from "@/upload/utils/uploadHelper.js"
 
-const AUTO_SYNC_FIELDS = [
-   "status",
-   "progress",
-   "error",
-   "fileObj",
-   "totalChunks",
-   "extractedChunks",
-   "uploadedChunks"
-]
-
 export class FileStateHolder {
-
-   constructor(file, notifyCallback) {
+   constructor(file, fieldChangeCallback) {
       this.fileObj = file.fileObj
       this.systemFile = file.systemFile
       this.frontendId = this.fileObj.frontendId
+
       this.totalChunks = undefined
       this.extractedChunks = 0
       this.uploadedChunks = 0
@@ -37,38 +27,41 @@ export class FileStateHolder {
       this.offset = 0
       this.error = null
 
+      this.rawMetadata = null
+      this.duration = 0
       this.crc = 0
-      this.videMetadata = null
+      this.videoMetadata = null
       this.iv = undefined
       this.key = undefined
 
-      this._notifyCallback = notifyCallback
+      this._fieldChangeCallback = fieldChangeCallback
    }
 
-   toStoreSnapshot() {
-      const snapshot = {
-         frontendId: this.frontendId
-      }
+   emitInitialState() {
+      for (const field of Object.keys(this)) {
+         if (field.startsWith("_")) continue
 
-      for (const field of AUTO_SYNC_FIELDS) {
-         snapshot[field] = this[field]
-      }
-
-      return snapshot
-   }
-
-   _notify() {
-      if (this._notifyCallback) {
-         this._notifyCallback(this.toStoreSnapshot())
+         this._fieldChangeCallback?.({
+            frontendId: this.frontendId,
+            field,
+            prev: undefined,
+            current: this[field]
+         })
       }
    }
 
    _set(field, value) {
       if (this[field] === value) return
+
+      const prev = this[field]
       this[field] = value
-      if (AUTO_SYNC_FIELDS.includes(field)) {
-         this._notify()
-      }
+
+      this._fieldChangeCallback?.({
+         frontendId: this.frontendId,
+         field,
+         prev,
+         current: value
+      })
    }
 
    incrementChunk() {
@@ -127,10 +120,15 @@ export class FileStateHolder {
       this._set("extractedChunks", extractedChunks)
    }
 
-   fillVideoMetadata(value) {
+   setVideoMetadata(value) {
       this._set("videoMetadata", value)
    }
-
+   setRawMetadata(value) {
+      this._set("rawMetadata", value)
+   }
+   setDuration(value) {
+      this._set("duration", value)
+   }
    setCrc(value) {
       this._set("crc", value)
    }

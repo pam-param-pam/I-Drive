@@ -38,22 +38,12 @@ export class Uploader {
       this.uploadConsumers = []
 
       this._internetProbeInterval = null
-      setInterval(() => this.logQueueStats(), 1000)
+
+      setInterval(() => this.logQueueStats(), 5000)
 
       watch(
          () => this.mainStore.settings.concurrentUploadRequests,
          value => this.setUploadConcurrency(value)
-      )
-
-      watch(
-         () => this.uploadStore.state,
-         (newState, oldState) => {
-            if (newState === uploadState.noInternet) {
-               this._startInternetProbe()
-            } else if (oldState === uploadState.noInternet) {
-               this._stopInternetProbe()
-            }
-         }
       )
    }
 
@@ -62,7 +52,8 @@ export class Uploader {
          "fileQueue:", this.fileQueue?.size(),
          "requestQueue:", this.requestQueue?.size(),
          "discordResponseQueue:", this.discordResponseQueue?.size(),
-         "backendFileQueue", this.backendFileQueue?.size()
+         "backendFileQueue", this.backendFileQueue?.size(),
+         "discordAttachmentQueue", this.discordAttachmentQueue.size(),
       )
    }
 
@@ -84,9 +75,6 @@ export class Uploader {
    }
 
    async startUpload(type, folderContext, filesList) {
-      document.addEventListener("visibilitychange", () => {
-         if (!document.hidden) this.requestMoreFilesFromWorker()
-      })
       // window.addEventListener("beforeunload", beforeUnload)
 
       const res = await canUpload(folderContext)
@@ -139,8 +127,8 @@ export class Uploader {
 
             for (const file of files) {
                this.uploadRuntime.registerFile(file)
-               await this.fileQueue.put(file)
                this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength - 1)
+               await this.fileQueue.put(file)
             }
          }
 
@@ -161,6 +149,27 @@ export class Uploader {
    initRuntimeUpload() {
       if (this.uploadRuntime) return
       this.uploadRuntime = new UploadRuntime({ uploadFinishCallback: this.onUploadSessionFinished })
+      this.uploadRuntime.onGlobalStateChange(snapshot => {
+         this.uploadStore.onGlobalStateChange(snapshot)
+      })
+      this.uploadRuntime.onFileChange(
+         ["status", "progress", "error", "fileObj"],
+         ({ frontendId, field, current }) => {
+            this.uploadStore.updateFileField(frontendId, field, current)
+         }
+      )
+      this.uploadRuntime.onFileSaved((frontendId) => {
+         this.uploadStore.onFileSaved(frontendId)
+      })
+      this.uploadRuntime.onUploadStateChange(
+         (newState, prevState) => {
+            if (newState === uploadState.noInternet) {
+               this._startInternetProbe()
+            } else if (prevState === uploadState.noInternet) {
+               this._stopInternetProbe()
+            }
+         })
+
    }
 
    initQueues() {
@@ -297,28 +306,30 @@ export class Uploader {
    }
 
    pauseAll() {
-      if (this.uploadRuntime.uploadState === uploadState.uploading) {
-         this.uploadRuntime.setUploadingState(uploadState.paused)
-         this.uploadConsumers.forEach(c => c.abortAll())
-      }
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
+      this.uploadRuntime.setUploadingState(uploadState.paused)
+      this.uploadConsumers.forEach(c => c.abortAll())
    }
 
    resumeAll() {
-      if (this.uploadRuntime.uploadState === uploadState.paused) {
-         this.uploadRuntime.setUploadingState(uploadState.uploading)
-         this.saveFilesIfNeeded()
-      }
+      if (this.uploadRuntime.uploadState !== uploadState.paused) return
+      this.uploadRuntime.setUploadingState(uploadState.uploading)
+      this.saveFilesIfNeeded()
    }
 
    saveFilesIfNeeded() {
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
       this.backendFileConsumer.saveFilesIfNeeded()
+
    }
 
    retrySaveFailedFiles() {
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
       getUploader().backendFileConsumer.retryFailedFiles()
    }
 
    retryGoneFile(frontendId) {
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
       this.ensureQueuesOpen()
       this.uploadConsumers.forEach(c => c.retryGoneFile(frontendId))
       let file = this.requestProducer.getGoneFile(frontendId)
@@ -330,7 +341,13 @@ export class Uploader {
       })
    }
 
+   dismissFile(frontendId) {
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
+      //todo well this leaves so much orphanded data
+      this.uploadRuntime.deleteFileState(frontendId)
+   }
    retryFailedRequests() {
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
       this.uploadConsumers.forEach(c => c.retryFailedRequests())
    }
 

@@ -8,7 +8,7 @@ from ..celery import app
 from ..constants import EventCode, cache
 from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
-from ..models import File, Folder, Fragment, Preview, Thumbnail, Subtitle, Moment, Webhook
+from ..models import File, Folder, Fragment, Thumbnail, Subtitle, Moment, Webhook
 from ..core.errors import DiscordError
 from ..queries.selectors import query_attachments
 from ..websockets.utils import group_and_send_event
@@ -25,13 +25,6 @@ def gather_message_structure(files: list) -> dict[str, list[str]]:
         # Fragments
         for fragment in Fragment.objects.filter(file=file):
             message_structure[fragment.message_id].append(fragment.attachment_id)
-
-        # Preview
-        try:
-            preview = file.preview
-            message_structure[preview.message_id].append(preview.attachment_id)
-        except Preview.DoesNotExist:
-            pass
 
         # Thumbnail
         try:
@@ -121,7 +114,7 @@ def smart_delete_task(context: dict, ids):
     send_message(message="toasts.deleting", args={"percentage": 0}, finished=False, context=context)
     try:
 
-        top_files = File.objects.filter(id__in=ids).select_related("parent", "thumbnail", "preview")
+        top_files = File.objects.filter(id__in=ids).select_related("parent", "thumbnail")
         top_folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
         if top_files.exists():

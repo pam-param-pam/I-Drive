@@ -285,7 +285,7 @@ export default {
             return
          }
          let step = this.$refs.imgex.width / 5
-         if (event.targetTouches.length === 2) {
+         if (event.targetTouches?.length === 2) {
             this.moveDisabled = true
             clearTimeout(this.disabledTimer)
             this.disabledTimer = setTimeout(

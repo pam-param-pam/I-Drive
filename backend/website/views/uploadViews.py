@@ -51,3 +51,11 @@ def edit_file_view(request, file_obj):
 def create_or_edit_thumbnail_view(request, file_obj):
     create_file_service.create_or_edit_thumbnail(request, request.user, file_obj, request.data)
     return HttpResponse(status=204)
+
+
+@api_view(['POST'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & CreatePerms])
+def create_linker(request):
+    create_file_service.create_linker(request.user, request.data)
+    return HttpResponse(status=204)

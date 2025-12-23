@@ -9,11 +9,15 @@ from ..constants import cache
 from ..core.errors import BadRequestError
 from ..core.helpers import validate_key, validate_encryption_fields, validate_value, validate_crc
 from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
-from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment
+from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Fragment
+from ..models.file_related_models import RawMetadata
 from ..queries.selectors import get_discord_author
 
 
 def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
+    if file_obj.type not in ("Video", "Raw image", "Image", "Audio"):
+        raise BadRequestError(f"Thumbnail is not allowed for file type: {file_obj.type}")
+
     channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
     message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
     attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
@@ -40,6 +44,9 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
 
 
 def create_subtitle(file_obj: File, data: dict) -> Subtitle:
+    if file_obj.type != "Video":
+        raise BadRequestError(f"Subtitles are not allowed for file type: {file_obj.type}")
+
     language = validate_key(data, "language", str, checks=[NotEmpty, MaxLength(20)])
     is_forced = validate_key(data, "is_forced", bool)
     channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
@@ -103,12 +110,12 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
         model_class.objects.create(**kwargs)
 
 
-def create_video_metadata(file: File, metadata: dict) -> VideoMetadata:
-    if file.type != "Video":
-        raise BadRequestError("Must be a video.")
+def create_video_metadata(file_obj: File, metadata: dict) -> VideoMetadata:
+    if file_obj.type != "Video":
+        raise BadRequestError(f"Video metadata is not allowed for file type: {file_obj.type}")
 
     video_metadata = VideoMetadata.objects.create(
-        file=file,
+        file=file_obj,
         is_fragmented=validate_key(metadata, "is_fragmented", bool),
         is_progressive=validate_key(metadata, "is_progressive", bool),
         has_moov=validate_key(metadata, "has_moov", bool),
@@ -122,6 +129,23 @@ def create_video_metadata(file: File, metadata: dict) -> VideoMetadata:
 
     return video_metadata
 
+def create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
+    if file_obj.type != "Raw image":
+        raise BadRequestError(f"Raw metadata is not allowed for file type: {file_obj.type}")
+    print("EXACTRACING CAMERA OWNER")
+    camera_owner = validate_key(metadata, "camera_owner", str, required=False, default="", checks=[MaxLength(50)])
+
+    raw_metadata = RawMetadata.objects.create(
+        file=file_obj,
+        camera=validate_key(metadata, "camera", str, checks=[NotEmpty, MaxLength(50)]),
+        camera_owner=camera_owner,
+        iso=validate_key(metadata, "iso", str, checks=[NotEmpty, MaxLength(50)]),
+        shutter=validate_key(metadata, "shutter", str, checks=[NotEmpty, MaxLength(50)]),
+        aperture=validate_key(metadata, "aperture", str, checks=[NotEmpty, MaxLength(50)]),
+        focal_length=validate_key(metadata, "focal_length", str, checks=[NotEmpty, MaxLength(50)]),
+    )
+
+    return raw_metadata
 
 def update_video_position(file_obj: File, new_position) -> None:
     if file_obj.type != "Video":
@@ -173,13 +197,18 @@ def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     delete_single_discord_attachment(user, subtitle)
 
 
-def change_crc(file_obj: File, new_crc: int) -> None:
-    validate_value(new_crc, int, checks=[NotNegative])
+def change_file_crc(file_obj: File, new_crc: int) -> None:
+    validate_value(new_crc, int, checks=[MaxLength(10), NotNegative])
     validate_crc(file_obj.size, new_crc)
 
     file_obj.crc = new_crc
     file_obj.save()
 
+def change_fragment_crc(user, fragment_id: str, new_crc: int) -> None:
+    frag = Fragment.objects.get(id=fragment_id, file_owner=user)
+    validate_value(new_crc, int, checks=[MaxLength(10), NotNegative])
+    frag.crc = new_crc
+    frag.save()
 
 def remove_moment(user, file_obj, moment_id) -> None:
     moment = Moment.objects.get(file=file_obj, id=moment_id)
