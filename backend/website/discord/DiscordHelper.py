@@ -238,7 +238,7 @@ class DiscordHelper:
 
         channels = Channel.objects.filter(owner=user)
         for ch in channels:
-            if len(query_attachments(channel_id=ch.id)) > 0:  # no change here
+            if len(query_attachments(channel_id=ch.discord_id)) > 0:  # no change here
                 raise BadRequestError("Cannot reset discord settings. There are files in this channel")
 
         if DiscordSettings.objects.exclude(user=user).filter(category_id=discord_settings.category_id).exists():
@@ -249,7 +249,7 @@ class DiscordHelper:
 
         errors = []
         for ch in channels:
-            errors.append(self._create_channel_in_category_cleanup(bot_token, ch.id))
+            errors.append(self._create_channel_in_category_cleanup(bot_token, ch.discord_id))
 
         if discord_settings.category_id:
             errors.append(self._create_category_cleanup(bot_token, discord_settings.category_id))

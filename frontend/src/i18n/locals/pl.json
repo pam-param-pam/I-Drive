@@ -72,6 +72,7 @@
 
   },
   "errors": {
+    "rateLimitExceeded": "Za dużo zapytań >:(",
     "integrityError": "Błąd spójności danych!",
     "masterSlaveEqual": "Nie możesz kontrolować samego siebie...",
     "badDeviceId": "To urządzenie nie istnieje. Spróbuj odswierzyć strone",

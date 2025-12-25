@@ -85,31 +85,31 @@
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isNavigationActive" type="checkbox" />
+                     <input v-model="deviceControlOptions.isNavigationActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
                      {{ $t("prompts.isNavigationActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoToggleActive" type="checkbox" />
+                     <input v-model="deviceControlOptions.isVideoToggleActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
                      {{ $t("prompts.isVideoToggleActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoSeekActive" type="checkbox" />
+                     <input v-model="deviceControlOptions.isVideoSeekActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
                      {{ $t("prompts.isVideoSeekActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoSubtitlesActive" type="checkbox" />
+                     <input v-model="deviceControlOptions.isVideoSubtitlesActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
                      {{ $t("prompts.isVideoSubtitlesActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoFullscreenActive" type="checkbox" />
+                     <input v-model="deviceControlOptions.isVideoFullscreenActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
                      {{ $t("prompts.isVideoFullscreenActive") }}
                   </label>
                </p>

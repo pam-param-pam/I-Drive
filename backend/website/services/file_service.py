@@ -205,7 +205,7 @@ def change_file_crc(file_obj: File, new_crc: int) -> None:
     file_obj.save()
 
 def change_fragment_crc(user, fragment_id: str, new_crc: int) -> None:
-    frag = Fragment.objects.get(id=fragment_id, file_owner=user)
+    frag = Fragment.objects.get(id=fragment_id, file__owner=user)
     validate_value(new_crc, int, checks=[MaxLength(10), NotNegative])
     frag.crc = new_crc
     frag.save()

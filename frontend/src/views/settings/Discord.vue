@@ -361,7 +361,7 @@ export default {
          try {
             let res = await deleteDiscordSettings()
 
-            let isError = res.errors != null
+            let isError = res.errors
             let content = isError ? res.errors : this.$t("toasts.discordSettingsDeleted")
             let type    = isError ? "error" : "success"
             let timeout = isError ? null : 3000

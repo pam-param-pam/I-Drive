@@ -29,4 +29,4 @@ def encrypt_message(key: str, data: Union[str, List, Dict]) -> str:
     padded_data = padder.update(data.encode()) + padder.finalize()
 
     encrypted = encryptor.update(padded_data) + encryptor.finalize()
-    return base64.b64encode(iv + encrypted).decode('utf-8')
+    return base64.b64encode(iv + encrypted).decode()

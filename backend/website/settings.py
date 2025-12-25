@@ -26,6 +26,7 @@ ALLOWED_HOSTS = ['*']  # todo
 
 # CSRF_COOKIE_SECURE = True # todo fix
 # SESSION_COOKIE_SECURE = True
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 102400000 # higher than the count of fields
 
 # Application definition
 INSTALLED_APPS = [
@@ -61,7 +62,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
-    'website.core.http.middlewares.CommonErrorsMiddleware',
     'website.core.http.middlewares.FailedRequestLoggerMiddleware',
     'website.core.http.middlewares.ApplyRateLimitHeadersMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',

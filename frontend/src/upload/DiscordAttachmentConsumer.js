@@ -100,7 +100,7 @@ export class DiscordAttachmentConsumer {
       }
 
       // flush remaining when upload is done
-      if (this.uploadRuntime.fileStates.size === 0 && this.ready[kind].length > 0) { //todo change this
+      if (this.uploadRuntime.fileStates.size === 0 && this.ready[kind].length > 0) { //todo change this, increase length > 0
          const batch = this.ready[kind].splice(0, this.ready[kind].length)
          this._emitBatch(kind, batch)
       }

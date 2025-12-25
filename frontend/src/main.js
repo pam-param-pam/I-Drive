@@ -10,6 +10,7 @@ import VueLazyLoad from "vue3-lazyload"
 import Vue3TouchEvents from "vue3-touch-events"
 import VueVirtualScroller from "vue-virtual-scroller"
 import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
+import piniaPersist from "pinia-plugin-persistedstate"
 
 const app = createApp(App)
 
@@ -24,7 +25,10 @@ app.use(VueLazyLoad, {
 })
 
 app.use(VueVirtualScroller)
-app.use(createPinia())
+const pinia = createPinia()
+
+app.use((pinia))
+pinia.use(piniaPersist)
 
 
 const filterBeforeCreate = (toast, toasts) => {

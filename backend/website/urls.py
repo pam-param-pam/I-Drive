@@ -11,10 +11,10 @@ from .views.authViews import login_per_device_view, logout_per_device_view, regi
     cancel_pending_qr_session_view, change_password_view, healthcheck_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id, \
-    check_message_id
+    check_message_id, get_fragment_for_crc
 from .views.itemManagmentViews import rename_view, move_to_trash, move, \
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_video_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
-    add_moment_view, change_file_crc_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
+    add_moment_view, change_file_crc_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, change_fragment_crc_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits
 from .views.streamViews import stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
@@ -154,6 +154,8 @@ urlpatterns = [
 
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 
+    path("fixcrc/fragments", ['GET'], get_fragment_for_crc, name="check if attachment id is used"),
+    path('fixcrc/fragments/<fragment_id>', ['PATCH'], change_fragment_crc_view, name='change crc'),
 
     path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
     path("cleanup/<check_message_id>", ['GET'], check_message_id, name="check if message id is used"),

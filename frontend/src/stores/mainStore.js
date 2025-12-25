@@ -38,8 +38,13 @@ export const useMainStore = defineStore("main", {
          isNavigationActive: true,
          isDeviceControlActive: true,
          isVideoVolumeChangeActive: true,
-      }
+      },
    }),
+
+   persist: {
+      key: "main:device-control",
+      pick: ["deviceControlOptions"],
+   },
 
    getters: {
       isLogged() {

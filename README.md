@@ -58,7 +58,7 @@ This allows for a simple way of viewing, managing, and downloading of your files
 In reality the Frontend does a LOT more than just splitting the file into chunks.
 It has to:
 - Calculate crc checksum 
-- Generate video metadata
+- Generate metadata
 - Generate thumbnails
 - Extract subtitles
 - Encrypt the file and more
@@ -66,7 +66,7 @@ It has to:
 
 The same thing applies to pretty much every part of this app. Even if something looks simple at first glance. 
 It's most likely pretty complicated under the hood. 
-After all this entire project has more than **31k** lines of code. 
+After all, this entire project has more than **33k** lines of code. 
 And another **2k** of configuration and translation lines
 
 
