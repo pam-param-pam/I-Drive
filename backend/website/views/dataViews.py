@@ -529,7 +529,7 @@ def check_attachment_id(request, attachment_id):
 def get_fragment_for_crc(request):
     qs = Fragment.objects.filter(crc=None)
     count = qs.count()
-    fragment = qs.first()
+    fragment = qs.order_by("?").first()
     if not fragment:
         return HttpResponse(status=404)
 
