@@ -94,7 +94,7 @@ class FileSerializer(AdvancedSerializer):
         if in_trash:
             d["in_trash_since"] = in_trash_since.isoformat()
 
-        if duration:
+        if duration is not None:
             d["duration"] = duration
 
         if not hide and not (is_locked and in_trash):
@@ -256,9 +256,9 @@ class BotSerializer(SimpleSerializer):
 class MomentSerializer(SimpleSerializer):
     def serialize_object(self, moment: Moment) -> dict:
         signed_file_id = sign_resource_id_with_expiry(moment.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.timestamp}/stream"
+        url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.id}/stream"
 
-        return {"file_id": moment.file.id, "moment_id": moment.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
+        return {"file_id": moment.file.id, "id": moment.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
 
 
 class TagSerializer(SimpleSerializer):

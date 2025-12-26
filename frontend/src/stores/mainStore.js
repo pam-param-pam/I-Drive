@@ -240,7 +240,6 @@ export const useMainStore = defineStore("main", {
          this.selected = []
       },
       pushToItems(newItem) {
-         //ensures watch is triggered
          if (this.items.length === 0) {
             this.items = [newItem]
             return

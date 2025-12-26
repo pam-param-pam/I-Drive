@@ -146,7 +146,12 @@
                </div>
             </div>
 
-            <ExtendedImage v-else-if="(file?.type === 'Image' || (file?.type === 'Raw image' && file?.thumbnail_url)) && file?.size > 0" :src="fileSrcUrl" />
+            <ExtendedImage
+              v-else-if="(file?.type === 'Image' || (file?.type === 'Raw image' && file?.thumbnail_url)) && file?.size > 0"
+              :src="fileSrcUrl"
+              :thumbSrc="thumbSrcUrl"
+              :imageFullSize="imageFullSize"
+            />
             <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
                <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
                <audio
@@ -308,10 +313,10 @@ export default {
       isInShareContext() {
          return this.token !== undefined
       },
+      thumbSrcUrl() {
+         return this.file?.thumbnail_url
+      },
       fileSrcUrl() {
-         if (!this.imageFullSize && this.file?.thumbnail_url) {
-            return this.file?.thumbnail_url
-         }
          return this.file?.download_url + "?download=true&inline=True"
       },
       currentIndex() {

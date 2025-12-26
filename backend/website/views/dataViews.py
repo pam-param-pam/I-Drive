@@ -19,8 +19,7 @@ from ..auth.utils import check_resource_perms
 from ..constants import cache
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
     RawMetadataSerializer
-from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file, check_bulk_permissions, \
-    extract_items
+from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail

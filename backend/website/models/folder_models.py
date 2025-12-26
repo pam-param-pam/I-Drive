@@ -52,9 +52,11 @@ class Folder(MPTTModel):
 
             # 4. lockFrom requires password
             CheckConstraint(
-                check=(Q(lockFrom__isnull=True) & Q(password__isnull=True)) |
-                      (Q(lockFrom__isnull=False) & Q(password__isnull=False)),
-                name="%(class)s_lock_password_consistent"
+                check=(
+                        Q(lockFrom__isnull=True) |                # unlocked (password may or may not be NULL)
+                        (Q(lockFrom__isnull=False) & Q(password__isnull=False))  # locked requires password
+                ),
+                name="%(class)s_lock_password_consistent_v2",
             ),
 
             # 5. autoLock must be False unless lockFrom exists

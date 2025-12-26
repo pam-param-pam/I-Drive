@@ -26,11 +26,17 @@ import { isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
 import Action from "@/components/header/Action.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
+import { backendInstance } from "@/axios/networker.js"
 
 export default {
    components: { HeaderBar, Action },
    props: {
       src: String,
+      thumbSrc: {
+         type: String,
+         required: false
+      },
+      imageFullSize: Boolean,
       moveDisabledTime: {
          type: Number,
          default: () => 200
@@ -67,7 +73,12 @@ export default {
          requestController: null
       }
    },
-
+   computed: {
+      imageSrc() {
+         if (!this.imageFullSize && this.thumbSrc) return this.thumbSrc
+         return this.src
+      }
+   },
    async mounted() {
       await this.loadImage()
 
@@ -90,14 +101,13 @@ export default {
    },
 
    watch: {
-      async src() {
+      async imageSrc() {
          if (this.requestController) {
             this.requestController.abort()
          }
          this.imageLoaded = false
          this.$refs.imgex.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="
          await this.loadImage()
-         this.scale = 1
          this.setZoom()
          this.setCenter()
       }
@@ -112,7 +122,7 @@ export default {
             }
 
             this.requestController = new AbortController()
-            let src = this.src
+            let src = this.imageSrc
             const config = {
                responseType: "arraybuffer",
                signal: this.requestController.signal,
@@ -120,7 +130,7 @@ export default {
                   this.updateLoadingToast(event.progress, src)
                }
             }
-            let data = await getFileRawData(this.src, config)
+            let data = await getFileRawData(this.imageSrc, config)
 
             let blob = data instanceof Blob ? data : new Blob([data])
 
@@ -137,17 +147,16 @@ export default {
          }
       },
       updateLoadingToast(percentage, src) {
-         if (src !== this.src) {
+         if (src !== this.imageSrc) {
             return
          }
          if (percentage) {
+            const translate = this.$t
+
             percentage = Math.round(percentage * 100)
             this.$toast.update("progress-image", {
-
-               content: this.$t("toasts.loadingImage", { percentage }),
-
+               content: translate("toasts.loadingImage", { percentage }),
                options: { timeout: null, type: "info", draggable: false, closeOnClick: false }
-
             }, true)
             if (percentage >= 100) {
                this.endToast()
@@ -163,14 +172,15 @@ export default {
       prev(event) {
          event.preventDefault()
       },
-      onError() {
+      async onError() {
+         await backendInstance.get(this.imageSrc)
+
          this.turnedOFF = true
          this.$refs.imgex.src = "/img/failed.svg"
          if (isMobile()) {
             this.$refs.imgex.style.width = "100%"
          } else {
             this.$refs.imgex.style.width = "40%"
-
          }
       },
       onLoad() {

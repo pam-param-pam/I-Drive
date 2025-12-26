@@ -144,4 +144,4 @@ def custom_exception_handler(exception, context):
             traceback.print_exc()
         return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
 
-    return exception
+    return response

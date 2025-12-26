@@ -105,7 +105,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
             ready=True
         )
 
-        if duration:
+        if duration is not None:
             file_obj.duration = duration
 
         file_obj.save()

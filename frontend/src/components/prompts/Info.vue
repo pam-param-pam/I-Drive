@@ -48,7 +48,7 @@
         <strong>{{ $t("prompts.resolution") }}:</strong>
         {{ resolution.width }} x {{ resolution.height }}
       </div>
-      <div v-if="duration">
+       <div v-if="duration !== null">
         <strong>{{ $t("prompts.duration") }}:</strong> {{ formatSeconds(duration) }}
       </div>
       <p v-if="created">
@@ -368,10 +368,15 @@ export default {
          return null
       },
       duration() {
-         if (this.selectedCount === 1) {
-            return this.selected[0].duration
+         if (this.selectedCount !== 1) return null
+
+         const item = this.selected[0]
+
+         if (!('duration' in item) || item.duration === null) {
+            return null
          }
-         return null
+
+         return item.duration
       },
       owner() {
          if (this.selectedCount === 0) {

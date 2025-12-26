@@ -1,12 +1,12 @@
 import datetime
 from typing import Union, List
 
+import easy
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
-from django.utils.html import format_html
 from simple_history.admin import SimpleHistoryAdmin
 
 from .constants import API_BASE_URL, cache, EncryptionMethod
@@ -19,52 +19,58 @@ from .models.file_related_models import RawMetadata, ThumbnailLink
 
 from .tasks.deleteTasks import smart_delete_task
 
+admin.site.register(PerDeviceToken)
+
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
 admin.site.register(DiscordSettings, SimpleHistoryAdmin)
-admin.site.register(VideoPosition)
+
 admin.site.register(VideoTrack)
 admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
-admin.site.register(PerDeviceToken)
+
+admin.site.register(VideoPosition)
+
 admin.site.register(ShareAccessEvent)
+
 admin.site.register(AttachmentLinker)
 admin.site.register(FragmentLink)
 admin.site.register(ThumbnailLink)
-admin.site.register(RawMetadata)
 
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'channel_id', 'message_id', 'attachment_id', 'sequence', 'offset', 'readable_size', 'file', 'created_at', 'size', 'fragment_url')
+    readonly_fields = ('id', 'channel_id', 'message_id', 'attachment_id', 'sequence', 'offset', 'readable_size',
+                       'file', 'created_at', 'size', 'fragment_url', 'object_id', 'content_type', 'crc')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
     search_fields = ["file__name", 'file__owner__username']
 
+    @easy.smart(short_description="Owner", admin_order_field="file__owner__username")
     def owner(self, obj: Fragment):
         return obj.file.owner
 
-    def folder(self, obj: Fragment):
-        return f"{obj.file.parent.name}({obj.file.parent.id})"
-
+    @easy.smart(short_description="Size", admin_order_field="size")
     def readable_size(self, obj: Fragment):
         return filesizeformat(obj.size)
 
-    def file_name(self, obj: Fragment):
-        file_name = obj.file.name
-        if len(file_name) < 100:
-            return file_name
-        return "*File name to long to display*"
+    @easy.smart(short_description="Folder", admin_order_field="file__parent__name")
+    def folder(self, obj: Fragment):
+        return f"{obj.file.parent.name}({obj.file.parent.id})"
 
+    @easy.smart(short_description="File name", admin_order_field="file__name")
+    def file_name(self, obj: Fragment):
+        name = obj.file.name
+        if len(name) < 100:
+            return name
+        return "*File name too long to display*"
+
+    @easy.with_tags()
+    @easy.smart(short_description="URL", allow_tags=True)
     def fragment_url(self, obj: Fragment):
         url = discord.get_attachment_url(obj.file.owner, obj)
-        return format_html(f'<a href="{url}" target="_blank">{url}</a><br>')
-
-    owner.admin_order_field = "file__owner__username"
-    folder.admin_order_field = "file__parent__name"
-    readable_size.admin_order_field = "size"
-    file_name.admin_order_field = "file__name"
+        return f'<a href="{url}" target="_blank">{url}</a><br>'
 
 
 @admin.register(Folder)
@@ -74,6 +80,10 @@ class FolderAdmin(SimpleHistoryAdmin):
     list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock', 'force_ready']
     search_fields = ["id", "name"]
+
+    @easy.smart(short_description="Is locked", admin_order_field="password")
+    def is_locked(self, obj: File):
+        return obj._is_locked()
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
@@ -127,12 +137,6 @@ class FolderAdmin(SimpleHistoryAdmin):
 
         super().save_model(request, obj, form, change)
 
-    def is_locked(self, obj: File):
-        return obj._is_locked()
-
-    is_locked.admin_order_field = 'password'
-    is_locked.boolean = True
-
 
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
@@ -145,62 +149,59 @@ class FileAdmin(SimpleHistoryAdmin):
     search_fields = ['name', 'id', 'type', 'owner__username']
     filter_horizontal = ('tags',)
 
+    @easy.smart(short_description="Locked", admin_order_field="parent__password", bool=True)
+    def is_locked(self, obj: File):
+        return obj._is_locked()
+
+    @easy.smart(short_description="Readable size", admin_order_field="size")
+    def readable_size(self, obj: File):
+        return filesizeformat(obj.size)
+
+    @easy.smart(short_description="Encryption key (base64)")
+    def formatted_key(self, obj: File):
+        return obj.get_base64_key()
+
+    @easy.smart(short_description="Encryption IV (base64)")
+    def formatted_iv(self, obj: File):
+        return obj.get_base64_iv()
+
+    @easy.smart(short_description="Encryption method")
+    def formatted_encryption_method(self, obj: File):
+        return obj.get_encryption_method().name
+
+    @easy.with_tags()
+    @easy.smart(short_description="Preview")
+    def media_tag(self, obj: File):
+        signed_file_id = sign_resource_id_with_expiry(obj.id)
+
+        # Video preview
+        if obj.type == "Video":
+            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
+            poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
+            return (
+                f'<video controls style="width:350px; height:auto;" poster="{poster_url}">'
+                f'<source src="{url}" type="video/mp4"></video>'
+            )
+
+        # Audio preview
+        if obj.type == "Audio":
+            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
+            poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
+            return (
+                '<div style="display:flex; align-items:center;">'
+                f'<img src="{poster_url}" style="width:100px; height:100px; margin-right:10px;">'
+                f'<audio controls><source src="{url}" type="audio/mpeg"></audio>'
+                '</div>'
+            )
+
+        # Otherwise: default link
+        url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
+        return f'<a href="{url}" target="_blank">{url}</a>'
+
     def get_form(self, request, obj=None, **kwargs):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
         return form
-
-    def is_locked(self, obj: File):
-        return obj.parent.is_locked
-
-    def media_tag(self, obj: File):
-        signed_file_id = sign_resource_id_with_expiry(obj.id)
-
-        try:
-            _ = obj.thumbnail
-            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
-        except Thumbnail.DoesNotExist:
-            pass
-
-        if obj.type == "Video":
-            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
-
-            return format_html(
-                '<video controls style="width: 350px; height: auto;" poster="{}">'
-                '<source src="{}" type="video/mp4">'
-                '</video>',
-                poster_url,
-                url
-            )
-        elif obj.type == "Audio":
-            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
-
-            return format_html(
-                '<div style="display: flex; align-items: center;">'
-                '<img src="{}" alt="Audio Thumbnail" style="width: 100px; height: 100px; margin-right: 10px;">'
-                '<audio controls ">'
-                '<source src="{}" type="audio/mpeg">'
-                'Your browser does not support the audio element.'
-                '</audio>'
-                '</div>',
-                poster_url,
-                url
-            )
-        else:
-            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            return format_html(f'<a href="{url}" target="_blank">{url}</a>')
-
-    def formatted_key(self, obj: File):
-        return obj.get_base64_key()
-
-    def formatted_iv(self, obj: File):
-        return obj.get_base64_iv()
-
-    def formatted_encryption_method(self, obj: File):
-        return obj.get_encryption_method().name
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
         ids = []
@@ -239,20 +240,6 @@ class FileAdmin(SimpleHistoryAdmin):
         for file in queryset:
             file.restoreFromTrash()
 
-    def readable_size(self, obj: File):
-        return filesizeformat(obj.size)
-
-    def is_locked(self, obj: File):
-        return obj._is_locked()
-
-    is_locked.admin_order_field = 'parent__password'
-    is_locked.boolean = True
-    formatted_key.short_description = "Encryption key (base64)"
-    formatted_iv.short_description = "Encryption iv (base64)"
-    media_tag.short_description = 'PREVIEW MEDIA FILE'
-    formatted_encryption_method.short_description = "Encryption method"
-    readable_size.admin_order_field = 'size'
-
 
 @admin.register(Thumbnail)
 class ThumbnailAdmin(SimpleHistoryAdmin):
@@ -261,59 +248,60 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
     list_display = ['file_name', 'owner', 'readable_size', 'created_at']
     readonly_fields = ['created_at', 'channel_id', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'object_id', 'content_type']
 
+    @easy.smart(short_description="File name", admin_order_field="file__name")
     def file_name(self, obj: Thumbnail):
         return obj.file.name
 
+    @easy.smart(short_description="Owner", admin_order_field="file__owner__username")
     def owner(self, obj: Thumbnail):
         return obj.file.owner
 
+    @easy.smart(short_description="Size", admin_order_field="size")
     def readable_size(self, obj: Thumbnail):
         return filesizeformat(obj.size)
 
+    @easy.with_tags()
+    @easy.smart(short_description="Preview thumbnail", allow_tags=True)
     def thumbnail_media(self, obj: Thumbnail):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
-        return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+        return f'<img src="{url}" style="width:350px; height:auto;">'
 
-    def encryption_method(self, obj: Subtitle):
+    @easy.smart(short_description="Encryption method")
+    def encryption_method(self, obj: Thumbnail):
         return EncryptionMethod(obj.file.encryption_method).name
-
-    thumbnail_media.short_description = 'PREVIEW THUMBNAIL'
 
 
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
-    list_display = ('token', 'resource_link', 'expiration_time', 'created_at', 'owner', 'content_type', 'is_expired')
+    list_display = ('token', 'resource_link', 'content_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
     readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner', 'is_expired')
 
-    def resource_name(self, obj: ShareableLink):
-        if obj.resource:
-            return str(obj.resource.name)
-        else:
+    @easy.with_tags()
+    @easy.smart(short_description="Resource")
+    def resource_link(self, obj: ShareableLink):
+
+        if not obj.resource:
             return "<RESOURCE DELETED>"
 
-    resource_name.short_description = 'Name'
+        url = reverse(
+            f"admin:{obj.content_type.app_label}_{obj.content_type.model}_change",
+            args=[obj.object_id]
+        )
+        # admin-easy will mark safe due to allow_tags default in smart
+        return f'<a href="{url}">{obj.resource.name}</a>'
 
-    def resource_link(self, obj: ShareableLink):
-        url = reverse('admin:%s_%s_change' % (
-            obj.content_type.app_label,
-            obj.content_type.model
-        ), args=[obj.object_id])
-        return format_html('<a href="{}">' + self.resource_name(obj) + '</a>', url)
-
+    @easy.smart(short_description="Expired?", admin_order_field="expiration_time", bool=True)
     def is_expired(self, obj: ShareableLink):
         return obj.is_expired()
 
-    resource_link.short_description = 'Resource'
-    is_expired.admin_order_field = 'expiration_time'
-    is_expired.boolean = True
-
 @admin.register(UserZIP)
 class UserZIPAdmin(admin.ModelAdmin):
-    list_display = ('owner_name', 'created_at')
-    filter_horizontal = ('files', 'folders')
+    list_display = ("owner_name", "created_at")
+    filter_horizontal = ("files", "folders")
     ordering = ["-created_at"]
 
+    @easy.smart(short_description="Owner", admin_order_field="owner__username")
     def owner_name(self, obj: UserZIP):
         return obj.owner.username
 
@@ -322,24 +310,26 @@ class UserZIPAdmin(admin.ModelAdmin):
 class TagAdmin(SimpleHistoryAdmin):
     list_display = ['name', 'owner', 'amount_of_files']
     search_fields = ('name',)
-
     readonly_fields = ('id', 'file_list', 'created_at')
 
-    def all_files(self, obj: Tag):
-        return obj.files.all()
-
-    def amount_of_files(self, obj: Tag):
-        return len(self.all_files(obj))
-
+    @easy.with_tags()
+    @easy.smart(short_description="Files", allow_tags=True)
     def file_list(self, obj: Tag):
-        files = self.all_files(obj)
-        if files:
-            return format_html(
-                "<br>".join([format_html('<a href="{}">{}</a>', reverse('admin:%s_file_change' % file._meta.app_label, args=[file.id]), file.name) for file in files])
-            )
-        return "No files"
+        qs = obj.files.all()
+        if not qs.exists():
+            return "No files"
 
-    file_list.short_description = "Files"
+        rows = []
+        for f in qs:
+            url = reverse(f"admin:{f._meta.app_label}_file_change", args=[f.id])
+            rows.append(f'<a href="{url}">{f.name}</a>')
+
+        return "<br>".join(rows)
+
+    @easy.smart(short_description="File count", admin_order_field="files__count")
+    def amount_of_files(self, obj: Tag):
+        return obj.files.count()
+
 
 @admin.register(Channel)
 class ChannelAdmin(admin.ModelAdmin):
@@ -378,35 +368,40 @@ class MomentAdmin(admin.ModelAdmin):
     readonly_fields = ('channel_id', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
     exclude = ['size', 'timestamp']
 
+    @easy.with_tags()
+    @easy.smart(short_description="Preview", allow_tags=True)
     def moment_preview(self, obj: Moment):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/moment/{obj.timestamp}/stream"
-        return format_html('<img src="{}" style="width: 350px; height: auto;" />', url)
+        url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{obj.id}/stream"
+        return f'<img src="{url}" style="width:350px; height:auto;">'
 
+    @easy.smart(short_description="Owner", admin_order_field="file__owner__username")
     def owner(self, obj: Moment):
         return obj.file.owner
 
+    @easy.smart(short_description="Timestamp", admin_order_field="timestamp")
     def formatted_timestamp(self, obj: Moment):
-        a = datetime.timedelta(seconds=obj.timestamp)
-        return str(a)
+        return str(datetime.timedelta(seconds=obj.timestamp))
 
+    @easy.smart(short_description="Size", admin_order_field="size")
     def readable_size(self, obj: Moment):
         return filesizeformat(obj.size)
 
-    def encryption_method(self, obj: Subtitle):
+    @easy.smart(short_description="Encryption method")
+    def encryption_method(self, obj: Moment):
         return EncryptionMethod(obj.file.encryption_method).name
-
-    readable_size.short_description = 'Size'
-    readable_size.admin_order_field = 'size'
-
-    formatted_timestamp.short_description = 'Timestamp'
-    formatted_timestamp.admin_order_field = 'timestamp'
 
 
 @admin.register(VideoMetadata)
 class VideoMetadataAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id')
     readonly_fields = ('file', 'is_progressive', 'is_fragmented', 'has_moov', 'has_IOD', 'brands', 'mime')
+
+
+@admin.register(RawMetadata)
+class RawMetadataAdmin(admin.ModelAdmin):
+    search_fields = ('file__name', 'file__id')
+    readonly_fields = ('file', 'camera', 'camera_owner', 'iso', 'shutter', 'aperture', 'focal_length')
 
 @admin.register(Subtitle)
 class SubtitleAdmin(admin.ModelAdmin):
@@ -415,49 +410,43 @@ class SubtitleAdmin(admin.ModelAdmin):
     readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
     exclude = ['size']
 
-    def sub_preview(self, obj):
+    @easy.with_tags()
+    @easy.smart(short_description="Subtitle Preview", allow_tags=True)
+    def sub_preview(self, obj: Subtitle):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{obj.id}/stream"
-        return format_html('<a href="{}" target="_blank">Preview Subtitle</a>', url)
+        url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{obj.id}/stream?inline=True"
+        return f'<a href="{url}" target="_blank">Preview Subtitle</a>'
 
-    sub_preview.short_description = "Subtitle Preview"
-
+    @easy.smart(short_description="Size", admin_order_field="size")
     def readable_size(self, obj: Subtitle):
         return filesizeformat(obj.size)
 
+    @easy.smart(short_description="Encryption method")
     def encryption_method(self, obj: Subtitle):
         return EncryptionMethod(obj.file.encryption_method).name
 
-    def file_name(self, obj):
+    @easy.smart(short_description="File Name", admin_order_field="file__name")
+    def file_name(self, obj: Subtitle):
         return obj.file.name
 
-    def owner(self, obj):
+    @easy.smart(short_description="Owner", admin_order_field="file__owner__username")
+    def owner(self, obj: Subtitle):
         return obj.file.owner.username
 
-    def formatted_key(self, obj: File):
+    @easy.smart(short_description="Encryption key (base64)")
+    def formatted_key(self, obj: Subtitle):
         return obj.get_base64_key()
 
-    def formatted_iv(self, obj: File):
+    @easy.smart(short_description="Encryption iv (base64)")
+    def formatted_iv(self, obj: Subtitle):
         return obj.get_base64_iv()
 
-    file_name.admin_order_field = 'file__name'
-    file_name.short_description = 'File Name'
-
-    owner.admin_order_field = 'file__owner'
-    owner.short_description = 'Owner'
-
-    readable_size.short_description = 'Size'
-    readable_size.admin_order_field = 'size'
 
 @admin.register(ShareAccess)
 class ShareAccessAdmin(admin.ModelAdmin):
     readonly_fields = ('share', 'ip', 'user_agent', 'readable_accessed_by', 'access_time')
     exclude = ['accessed_by']
 
+    @easy.smart(short_description="Accessed by")
     def readable_accessed_by(self, obj: ShareAccess):
-        if obj.accessed_by:
-            return obj.accessed_by.username
-        else:
-            return "Unknown (Anonymous)"
-
-    readable_accessed_by.short_description = "Accessed by"
+        return obj.accessed_by.username if obj.accessed_by else "Unknown (Anonymous)"

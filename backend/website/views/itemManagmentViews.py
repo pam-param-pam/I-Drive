@@ -203,7 +203,7 @@ def add_moment_view(request, file_obj):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def remove_moment_view(request, file_obj, moment_id):
-    file_service.remove_subtitle(request.user, file_obj, moment_id)
+    file_service.remove_moment(request.user, file_obj, moment_id)
     return HttpResponse(status=204)
 
 

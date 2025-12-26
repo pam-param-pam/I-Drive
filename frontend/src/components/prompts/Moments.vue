@@ -76,7 +76,7 @@
 </template>
 
 <script>
-import { captureVideoFrame, generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
+import { captureVideoFrame, generateIv, generateKey, getImageThumbnail, upload } from "@/upload/utils/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
@@ -143,7 +143,7 @@ export default {
                this.$toast.error(this.$t("toasts.momentAlreadyExists"))
                return
             }
-            this.$toast.info(this.$t("toasts.savingMoment"))
+            let saving_id = this.$toast.info(this.$t("toasts.savingMoment"))
 
             let res = await canUpload(this.file.parent_id)
             if (!res.can_upload) return
@@ -186,7 +186,10 @@ export default {
             if (moment) {
                this.moments.push(moment)
             }
-            this.$toast.success(this.$t("toasts.momentUploaded"))
+            this.$toast.update(saving_id, {
+               content: this.$t("toasts.momentUploaded"),
+               options: { type: "success" }
+            })
 
          } catch (error) {
             this.$toast.error(this.$t("toasts.momentUploadFailed"))
@@ -216,9 +219,9 @@ export default {
       },
       async getCurrentThumbnail() {
          if (this.video) {
-            let data = await captureVideoFrame(this.video, this.currentTimestamp, false)
-            this.currentThumbnailData = data.thumbnail
-            return URL.createObjectURL(data.thumbnail)
+            let frames = await captureVideoFrame(this.video, this.currentTimestamp, false)
+            this.currentThumbnailData = frames[0].thumbnail
+            return URL.createObjectURL(this.currentThumbnailData)
          }
       },
       cancel() {
@@ -233,6 +236,9 @@ export default {
 
 .card.floating {
  max-height: 60vh;
+ min-width: 40%;
+ max-width: 60%;
+
 }
 
 .card-content.vertical {

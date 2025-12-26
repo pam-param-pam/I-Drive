@@ -240,7 +240,7 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
     if timestamp < 0:
         raise BadRequestError("Timestamp cannot be < 0")
 
-    if timestamp > file_obj.duration:
+    if file_obj.duration and timestamp > file_obj.duration:
         raise BadRequestError("Timestamp cannot be > duration")
 
     if Moment.objects.filter(timestamp=timestamp, file=file_obj).exists():

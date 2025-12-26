@@ -119,6 +119,7 @@ def stream_thumbnail(request, file_obj: File):
 @extract_file_from_signed_url
 @check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_subtitle(request, file_obj: File, subtitle_id):
+    isInline = request.GET.get('inline', False)
     check_if_bots_exists(file_obj.owner)
 
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
@@ -136,7 +137,8 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
 
     response = HttpResponse(subtitle_content)
     name_ascii, name_encoded = get_content_disposition_string(f"{subtitle.language}_subtitles_" + file_obj.get_name_no_extension() + ".vtt")
-    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
+    content_disposition = f'{"inline" if isInline else "attachment"}; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
+    response['Content-Disposition'] = content_disposition
     return response
 
 
@@ -146,10 +148,10 @@ def stream_subtitle(request, file_obj: File, subtitle_id):
 @cache_page(60 * 60 * 24 * 30)
 @extract_file_from_signed_url
 @check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
-def stream_moment(request, file_obj: File, timestamp):
+def stream_moment(request, file_obj: File, moment_id):
     check_if_bots_exists(file_obj.owner)
 
-    moment = Moment.objects.get(file=file_obj, timestamp=timestamp)
+    moment = Moment.objects.get(file=file_obj, id=moment_id)
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=moment.key, iv=moment.iv)
 
     url = discord.get_attachment_url(file_obj.owner, moment)
@@ -300,8 +302,11 @@ def stream_zip_files(request, token):
     user_zip = UserZIP.objects.get(token=token)
     user = user_zip.owner
     check_if_bots_exists(user)
-    #todo secure for locked folders/files from wrong ip, exctract range header
-    check_resource_perms(request, user_zip.files.first(), [CheckLockedFolderIP])
+
+    if user_zip.files.exists():
+        check_resource_perms(request, user_zip.files.first(), [CheckLockedFolderIP])
+    if user_zip.folders.exists():
+        check_resource_perms(request, user_zip.folders.first(), [CheckLockedFolderIP])
 
     async def stream_file(file_obj, fragments, chunk_size=8192 * 16):
         async with aiohttp.ClientSession() as session:
