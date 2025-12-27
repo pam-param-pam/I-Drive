@@ -148,7 +148,10 @@ export class FileStateHolder {
       this._set("iv", iv)
    }
    setStatus(status) {
-      if (this.status === fileUploadStatus.errorOccurred && status !== fileUploadStatus.retrying) return
+      if (this.status === fileUploadStatus.errorOccurred && status !== fileUploadStatus.retrying) {
+         console.warn("Possible override of error status!")
+         console.log(this.error)
+      }
       this._set("error", null)
       this._set("status", status)
    }

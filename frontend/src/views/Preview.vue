@@ -109,7 +109,7 @@
                ref="video"
                :autoplay="true"
                :poster="file?.thumbnail_url"
-               :src="fileSrcUrl"
+               :src="videoSrcUrl"
                controls
                loop
                @seeked="onMovieSeek"
@@ -157,7 +157,7 @@
                <audio
                   ref="player"
                   :autoplay="true"
-                  :src="fileSrcUrl"
+                  :src="videoSrcUrl"
                   controls
                ></audio>
             </div>
@@ -315,6 +315,9 @@ export default {
       },
       thumbSrcUrl() {
          return this.file?.thumbnail_url
+      },
+      videoSrcUrl() {
+         return this.file?.download_url + "?inline=True"
       },
       fileSrcUrl() {
          return this.file?.download_url + "?download=true&inline=True"

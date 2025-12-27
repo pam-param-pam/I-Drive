@@ -6,7 +6,7 @@ export class UploadEstimator {
       this.samples = []
       this.smoothedEta = null
       this.etaSmoothing = 0.01 // α ∈ (0,1), lower = flatter
-
+      this.firstSpikeTreshold = 500
       this.previousRemainingBytes = null
    }
 
@@ -30,16 +30,18 @@ export class UploadEstimator {
    }
 
    getSpeed() {
-      if (this.samples.length === 0) {
-         return null
-      }
+      if (this.samples.length === 0) return null
 
       const now = Date.now()
       const oldest = this.samples[0].time
-      const elapsedMs = Math.max(1, now - oldest)
+      const elapsedMs = now - oldest
+
+      if (elapsedMs < this.firstSpikeTreshold) {
+         return null
+      }
 
       const totalBytes = this.samples.reduce((s, e) => s + e.bytes, 0)
-      return totalBytes / (elapsedMs / 1000) // bytes/sec
+      return totalBytes / (elapsedMs / 1000)
    }
 
    estimateRemainingTime(remainingBytes) {

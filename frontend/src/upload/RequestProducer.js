@@ -173,12 +173,14 @@ export class RequestProducer {
                const remainingFileSize = fileSize - offset
                const chunkSizeToTake = Math.min(remainingSpace, remainingFileSize)
                const chunk = queueFile.systemFile.slice(offset, offset + chunkSizeToTake)
-               const buf = await chunk.arrayBuffer()
+
                if ((remainingSpace < maxChunkSize / 3 && remainingFileSize > maxChunkSize / 3) || attachments.length === maxChunks) {
                   await this.requestQueue.put({ id: uuidv4(), totalSize, attachments })
                   totalSize = 0
                   attachments = []
                }
+
+               const buf = await chunk.arrayBuffer()
 
                if (mp4boxFile && (!state.videoMetadataExtracted || !state.subtitlesExtracted)) {
                   appendMp4BoxBuffer(mp4boxFile, chunk, offset)

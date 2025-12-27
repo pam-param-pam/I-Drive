@@ -102,12 +102,12 @@ export class Uploader {
          this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
       }
 
-
       this.requestMoreFilesFromWorker = () => {
          if (this.workerDone) return
          this.fileProcessorWorker.postMessage({ type: "produce" })
       }
-      this.uploadRuntime.setPendingWorkerFilesLength(filesList.length)
+
+      this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength + filesList.length)
       let totalBytes = 0
       for (const item of filesList) {
          if (typeOfUpload === uploadType.dragAndDropInput) {
@@ -116,7 +116,7 @@ export class Uploader {
             totalBytes += item.size
          }
       }
-      this.uploadRuntime.setAllBytesToUpload(totalBytes)
+      this.uploadRuntime.setAllBytesToUpload(this.uploadRuntime.allBytesToUpload + totalBytes)
 
       this.fileProcessorWorker.onmessage = async event => {
          this.fileQueue.open()

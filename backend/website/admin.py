@@ -41,11 +41,33 @@ admin.site.register(ThumbnailLink)
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'channel_id', 'message_id', 'attachment_id', 'sequence', 'offset', 'readable_size',
-                       'file', 'created_at', 'size', 'fragment_url', 'object_id', 'content_type', 'crc')
+                       'file', 'created_at', 'size', 'fragment_url', 'object_id', 'content_type', 'crc', 'crc_hex', 'jump')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
     search_fields = ["file__name", 'file__owner__username']
+
+    @easy.with_tags()
+    @easy.smart(short_description="Open fragment by sequence", allow_tags=True)
+    def jump(self, obj: Fragment):
+        # cursed stuff!
+        mapping = {
+            frag.sequence: frag.id
+            for frag in obj.file.fragments.all()
+        }
+
+        base = "/adminwebsite/fragment/"
+
+        return (
+            f"<script>var fragMap = {mapping};</script>"
+            f'<a href="#" '
+            f'onclick="var s = prompt(`Sequence:`); '
+            f'if(!s) return false; '
+            f'var id = fragMap[s]; '
+            f'if(!id) {{ alert(`No fragment with sequence `+s); return false; }} '
+            f'window.location = `{base}` + id + `/change/`; '
+            f'return false;">Open fragment…</a>'
+        )
 
     @easy.smart(short_description="Owner", admin_order_field="file__owner__username")
     def owner(self, obj: Fragment):
@@ -72,6 +94,9 @@ class FragmentAdmin(SimpleHistoryAdmin):
         url = discord.get_attachment_url(obj.file.owner, obj)
         return f'<a href="{url}" target="_blank">{url}</a><br>'
 
+    @easy.smart(short_description="CRC HEX", allow_tags=True)
+    def crc_hex(self, obj: Fragment):
+        return f"{obj.crc:08X}"
 
 @admin.register(Folder)
 class FolderAdmin(SimpleHistoryAdmin):

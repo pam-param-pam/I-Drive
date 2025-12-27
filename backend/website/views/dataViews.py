@@ -426,7 +426,7 @@ def ultra_download_metadata(request, item_obj):
             file_dict["iv"] = file_obj.get_base64_iv()
 
         fragment_dicts = []
-        fragments = Fragment.objects.filter(file=file_obj)
+        fragments = Fragment.objects.filter(file=file_obj).order_by("sequence")
         for fragment in fragments:
             fragment_dict = {
                 "message_id": fragment.message_id,

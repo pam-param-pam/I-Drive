@@ -216,6 +216,8 @@ class Fragment(DiscordAttachmentMixin):
     crc = models.BigIntegerField(null=True)
 
     class Meta:
+        ordering = ["sequence"]
+
         constraints = [
             # sequence must be non-negative
             CheckConstraint(
