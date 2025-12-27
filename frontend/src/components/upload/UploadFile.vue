@@ -136,7 +136,10 @@ export default {
       showDismissButton() {
          return (this.fileState.status === fileUploadStatus.fileGoneInUpload ||
            this.fileState.status === fileUploadStatus.fileGoneInRequestProducer ||
-           this.fileState.status === fileUploadStatus.errorOccurred)
+           this.fileState.status === fileUploadStatus.errorOccurred ||
+           this.fileState.status === fileUploadStatus.saveFailed ||
+           this.fileState.status === fileUploadStatus.uploadFailed
+         )
       }
    },
 
@@ -145,6 +148,7 @@ export default {
       isErrorStatus,
       ...mapActions(useUploadStore, ["pauseAll", "resumeAll", "dismissFile", "retryFailSaveFile", "retryGoneFile", "retryUploadFile"]),
       dismiss() {
+         console.log("dissming: " + this.fileState.frontendId)
          getUploader().dismissFile(this.fileState.frontendId)
       },
       retry() {

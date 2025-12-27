@@ -6,7 +6,9 @@ import {
    appendMp4BoxBuffer,
    generateIv,
    generateKey,
-   isVideoFile, makeThumbnailIfNeeded, parseVideoMetadata,
+   isVideoFile,
+   makeThumbnailIfNeeded,
+   parseVideoMetadata,
    roundUpTo64
 } from "@/upload/utils/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
@@ -27,8 +29,7 @@ export class RequestProducer {
       this.createdFolders = new Map()
       this.mp4Boxes = new Map()
       this.subtitleAttachments = new Map()
-      this.subsNumTracker = new Map()
-
+      this.subtitleNames = new Map()
       this.goneFiles = []
 
       this._MP4BoxPromise = null
@@ -87,7 +88,7 @@ export class RequestProducer {
 
             // ---------- THUMBNAIL ----------
             if (!state.thumbnailExtracted) {
-               const {thumbnail, other} = await makeThumbnailIfNeeded(queueFile)
+               const { thumbnail, other } = await makeThumbnailIfNeeded(queueFile)
                if (other) {
                   if (other.duration) state.setDuration(other.duration)
                   if (other.rawMetadata) state.setRawMetadata(other.rawMetadata)
@@ -97,12 +98,12 @@ export class RequestProducer {
 
                   if (totalSize + thumbnail.size > maxChunkSize || attachments.length === maxChunks) {
                      showToast("warning", "Couldn't fit thumbnail with 1st fragment for file: " + queueFile.fileObj.name)
-                     await this.requestQueue.put({id: uuidv4(), totalSize, attachments})
+                     await this.requestQueue.put({ id: uuidv4(), totalSize, attachments })
                      totalSize = 0
                      attachments = []
                   }
 
-                  attachments.push({type: attachmentType.thumbnail, fileObj: queueFile.fileObj, rawBlob: thumbnail})
+                  attachments.push({ type: attachmentType.thumbnail, fileObj: queueFile.fileObj, rawBlob: thumbnail })
                   totalSize += roundUpTo64(thumbnail.size)
                }
             }
@@ -120,11 +121,10 @@ export class RequestProducer {
                   state.markVideoMetadataExtracted()
 
                   const subtitleTracks = info.tracks.filter(t => t.type === "subtitles") || []
-                  this.subsNumTracker.set(frontendId, subtitleTracks.length)
+                  state.setExpectedSubtitleCount(subtitleTracks.length)
                   if (subtitleTracks.length > 0) {
                      state.markSubtitlesRequired()
                   }
-
                   subtitleTracks.forEach(track => {
                      mp4boxFile.setExtractionOptions(track.id, track, {
                         nbSamples: track.nb_samples
@@ -144,9 +144,17 @@ export class RequestProducer {
 
                   if (mp4boxFile.collectedSamples.length >= subTrack.nb_samples) {
                      const vtt = buildVttFromSamples(subTrack, mp4boxFile.collectedSamples)
-
+                     console.log(subTrack)
                      if (vtt.size <= maxChunkSize) {
-                        let name = subTrack.name || subTrack.language || id
+                        let name
+                        if (subTrack.language === "und" && subTrack.name === "SubtitleHandler") {
+                           name = "" + id
+                        } else if (subTrack.name === "SubtitleHandler") {
+                           name = subTrack.language
+                        } else if (subTrack.language === "und") {
+                           name = subTrack.name
+                        }
+                        name = this.makeUniqueSubName(name, id)
                         let isForced = subTrack.kind?.value === "forced-subtitle"
                         this.createAndPushSubtitleAttachment(frontendId, vtt, name, isForced)
                      }
@@ -204,23 +212,23 @@ export class RequestProducer {
                }
             }
 
-
             state.setTotalChunks(chunkSequence)
-            this.cleanMp4Box(frontendId) // todo
+            this.cleanMp4Box(frontendId)
 
 
-            } catch (err) {
-               if (err.name === "NotFoundError") {
-                  this.uploadRuntime.getFileState(frontendId).setStatus(fileUploadStatus.fileGoneInRequestProducer)
-                  this.goneFiles.push(queueFile)
-               } else {
-                  this.uploadRuntime.getFileState(frontendId).setStatus(fileUploadStatus.errorOccurred)
-                  this.uploadRuntime.getFileState(frontendId).setError(err)
-               }
+         } catch (err) {
+            if (err.name === "NotFoundError") {
+               this.uploadRuntime.getFileState(frontendId).setStatus(fileUploadStatus.fileGoneInRequestProducer)
+               this.goneFiles.push(queueFile)
+            } else {
+               console.error(err)
+               this.uploadRuntime.getFileState(frontendId).setStatus(fileUploadStatus.errorOccurred)
+               this.uploadRuntime.getFileState(frontendId).setError(err)
             }
+         }
       }
       if (attachments.length > 0) {
-         await this.requestQueue.put({id: uuidv4(), totalSize, attachments})
+         await this.requestQueue.put({ id: uuidv4(), totalSize, attachments })
       }
       this._running = false
    }
@@ -273,46 +281,51 @@ export class RequestProducer {
       const state = this.uploadRuntime.getFileState(frontendId)
       const fileObj = state.fileObj
 
-      const attachment = {type: attachmentType.subtitle, fileObj, rawBlob: blob, subName, isForced}
+      const attachment = { type: attachmentType.subtitle, fileObj, rawBlob: blob, subName, isForced }
 
       if (!this.subtitleAttachments.has(frontendId)) {
          this.subtitleAttachments.set(frontendId, [])
       }
-
+      state.incrementExtractedSubtitleCount()
       this.subtitleAttachments.get(frontendId).push(attachment)
-
       this.tryEmitSubtitlesRequest(frontendId)
    }
 
    tryEmitSubtitlesRequest(frontendId) {
       const state = this.uploadRuntime.getFileState(frontendId)
 
-      const expectedCount = this.subsNumTracker.get(frontendId)
-      const attachments = this.subtitleAttachments.get(frontendId)
+      const expectedCount = state.expectedSubtitleCount
+      const extractedCount = state.extractedSubtitleCount
 
-      // Not all subtitles collected yet
-      if (!expectedCount || attachments.length !== expectedCount) {
+      const attachments = this.subtitleAttachments.get(frontendId)
+      console.log("expectedCount: " + expectedCount)
+      console.log("extractedCount: " + extractedCount)
+      console.log("attachments: " + attachments.length)
+      if (!expectedCount || extractedCount !== expectedCount) {
          return
       }
-
-      const maxMessageSize = this.mainStore.user.maxDiscordMessageSize
       const maxAttachments = this.mainStore.user.maxAttachmentsPerMessage
 
-      let totalSize = 0
-      for (const att of attachments) {
-         totalSize += att.rawBlob.size
-      }
-
-      if (totalSize > maxMessageSize || attachments.length > maxAttachments) {
-         showToast("error", "toasts.tooManySubtitlesOrTooBig")
-         state.markSubtitlesUploaded(frontendId)
-         this.cleanMp4Box(frontendId)
-         return
+      const batches = []
+      for (let i = 0; i < attachments.length; i += maxAttachments) {
+         batches.push(attachments.slice(i, i + maxAttachments))
       }
 
       state.markSubtitlesExtracted(frontendId)
 
-      this.requestQueue.put({ id: uuidv4(), totalSize, attachments})
+      for (const batch of batches) {
+         console.log("batch: " + JSON.stringify(batch))
+         let totalSize = 0
+         for (const att of batch) {
+            totalSize += att.rawBlob.size
+         }
+
+         this.requestQueue.put({
+            id: uuidv4(),
+            totalSize,
+            attachments: batch
+         })
+      }
 
       this.subtitleAttachments.delete(frontendId)
    }
@@ -323,8 +336,18 @@ export class RequestProducer {
          mp4boxFile.flush()
          this.mp4Boxes.delete(frontendId)
       }
-      this.subsNumTracker.delete(frontendId)
-      this.subtitleAttachments.delete(frontendId)
+   }
+
+   makeUniqueSubName(base, id) {
+      if (!base || base.trim() === "") {
+         return "" + id
+      }
+      const count = this.subtitleNames.get(base) || 0
+      this.subtitleNames.set(base, count + 1)
+
+      if (count === 0) return base
+
+      return `${base}-${id}`
    }
 
    getGoneFile(frontendId) {

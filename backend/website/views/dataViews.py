@@ -433,7 +433,8 @@ def ultra_download_metadata(request, item_obj):
                 "attachment_id": fragment.attachment_id,
                 "offset": fragment.offset,
                 "sequence": fragment.sequence,
-                "size": fragment.size
+                "size": fragment.size,
+                "crc": fragment.crc,
             }
             fragment_dicts.append(fragment_dict)
 

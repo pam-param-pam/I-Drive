@@ -161,8 +161,8 @@
               </span>
             </p>
           </div>
-
-          <select v-model="currentTrack" class="input input--block styled-select">
+<!--          TODO HANDLE OPTION OVERFLOW-->
+          <select v-model="currentTrack" class="input input--block styled-select" size="1">
             <option v-for="track in metadata.tracks" :key="track" :value="track">{{ track.number }} - {{ track.type }} {{ $t("prompts.track") }}</option>
           </select>
           <div v-if="currentTrack">

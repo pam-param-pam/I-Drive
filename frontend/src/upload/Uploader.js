@@ -153,7 +153,7 @@ export class Uploader {
          this.uploadStore.onGlobalStateChange(snapshot)
       })
       this.uploadRuntime.onFileChange(
-         ["status", "progress", "error", "fileObj"],
+         ["status", "progress", "error", "fileObj", "frontendId"],
          ({ frontendId, field, current }) => {
             this.uploadStore.updateFileField(frontendId, field, current)
          }

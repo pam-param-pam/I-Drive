@@ -602,7 +602,7 @@ export function parseVideoMetadata(info) {
    videoMetadata.has_moov = info.hasMoov
    videoMetadata.has_IOD = info.hasIOD
 
-   videoMetadata.mime = info.mime
+   videoMetadata.mime = cleanCodecString(info.mime)
    videoMetadata.brands = info.brands.join(", ")
 
    for (let infoTrack of info.tracks) {
@@ -724,3 +724,25 @@ export function getFileType(fileName) {
    return "Other"
 }
 
+
+function cleanCodecString(input) {
+   const codecsMatch = input.match(/codecs="([^"]+)"/)
+   if (!codecsMatch) return input
+
+   const rawCodecs = codecsMatch[1]
+      .split(",")
+      .map(c => c.trim())
+      .filter(Boolean)
+
+   const uniqueCodecs = [...new Set(rawCodecs)]
+
+   const cleaned = input
+      .replace(/profiles="[^"]*"/, "")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+
+   return cleaned.replace(
+      /codecs="[^"]*"/,
+      `codecs="${uniqueCodecs.join(", ")}"`
+   ).replace(/\s*;+\s*$/, "")
+}

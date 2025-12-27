@@ -129,7 +129,11 @@ export class DiscordResponseConsumer {
             key: attachment.key,
             message_author_id: discordResponse.data.author.id
          })
-         fileState.markSubtitlesUploaded()
+         console.log("fileState.extractedSubtitleCount: " + fileState.extractedSubtitleCount)
+         console.log("backendState.subtitles.length: " + backendState.subtitles.length)
+         if (fileState.extractedSubtitleCount === backendState.subtitles.length) {
+            fileState.markSubtitlesUploaded()
+         }
       }
 
       if (fileState.isFullyUploaded()) {

@@ -320,8 +320,7 @@ class RawMetadataSerializer(SimpleSerializer):
             "iso": metadata.iso,
             "shutter": metadata.shutter,
             "aperture": metadata.aperture,
-            "focal_length": metadata.focal_length,
-            "type": "RawMetadata",
+            "focal_length": metadata.focal_length
         }
 
 class DeviceTokenSerializer(SimpleSerializer):

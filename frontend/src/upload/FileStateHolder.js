@@ -20,6 +20,8 @@ export class FileStateHolder {
       this.subtitlesRequired = undefined
       this.subtitlesExtracted = false
       this.subtitlesUploaded = false
+      this.expectedSubtitleCount = 0
+      this.extractedSubtitleCount = 0
 
       this.status = fileUploadStatus.preparing
       this.progress = 0
@@ -95,7 +97,12 @@ export class FileStateHolder {
    markSubtitlesUploaded() {
       this._set("subtitlesUploaded", true)
    }
-
+   setExpectedSubtitleCount(count) {
+      this._set("expectedSubtitleCount", count)
+   }
+   incrementExtractedSubtitleCount() {
+      this._set("extractedSubtitleCount", this.extractedSubtitleCount+1)
+   }
    setTotalChunks(count) {
       this._set("totalChunks", count)
    }
@@ -141,6 +148,7 @@ export class FileStateHolder {
       this._set("iv", iv)
    }
    setStatus(status) {
+      if (this.status === fileUploadStatus.errorOccurred && status !== fileUploadStatus.retrying) return
       this._set("error", null)
       this._set("status", status)
    }
