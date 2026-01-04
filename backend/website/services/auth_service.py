@@ -130,11 +130,19 @@ def create_qr_session(request) -> tuple[str, int]:
 
 
 def _revoke_device(user: User, device_id: str) -> None:
-    qs = PerDeviceToken.objects.filter(user=user)
-    token = qs.filter(device_id=device_id).first()
+    # prevent races to delete
+    with transaction.atomic():
+        token = (
+            PerDeviceToken.objects
+            .select_for_update()
+            .filter(user=user, device_id=device_id)
+            .first()
+        )
+        if not token:
+            return
 
-    DeviceControlState.clear_all(token.device_id)
-    token.delete()
+        DeviceControlState.clear_all(token.device_id)
+        token.delete()
 
 
 def _logout_websockets(user: User, device_id: str = None) -> None:
@@ -149,7 +157,6 @@ def _logout_websockets(user: User, device_id: str = None) -> None:
             "device_id": device_id,
         }
     )
-    # todo logout device control websocket
 
 def login_device(request, username: str, password: str) -> tuple[str, PerDeviceToken]:
     user = authenticate(request, username=username, password=password)

@@ -87,7 +87,6 @@ export default {
    name: 'uploadFiles',
 
    components: { UploadFile },
-
    data() {
       return {
          open: true

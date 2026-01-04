@@ -100,6 +100,7 @@ import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/user.js"
 import { forceLogout } from "@/utils/auth.js"
 import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
+import throttle from "lodash.throttle"
 
 export default {
    name: "Devices",
@@ -132,18 +133,18 @@ export default {
             this.setLoading(false)
          }
       },
-      async revokeADevice(deviceId) {
+      revokeADevice: throttle(async function(deviceId) {
          await revokeDevice(deviceId)
          this.devices = this.devices.filter(d => d.device_id !== deviceId)
          this.$toast.success(this.$t("toasts.deviceRevoked"))
-      },
-      async logoutAll() {
+      }, 500),
+      logoutAll: throttle(async function() {
          await logoutAllDevices()
          await forceLogout()
-      },
-      showDeviceControlPrompt() {
+      }, 1000),
+      showDeviceControlPrompt: throttle(function()  {
          this.showHover({ prompt: "ControlDevice" })
-      }
+      }, 1000)
 
    }
 }

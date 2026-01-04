@@ -46,7 +46,6 @@ export const useUploadStore = defineStore("upload", {
 
    actions: {
       onFileSaved(frontendId) {
-         console.log("DELETING IN STORE: " + frontendId)
          delete this.files[frontendId]
       },
 

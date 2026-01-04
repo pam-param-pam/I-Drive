@@ -54,7 +54,6 @@ export class DiscordResponseConsumer {
          this.backendState.set(fileObj.frontendId, {
             name: fileObj.name,
             parent_id: fileObj.folderId,
-            extension: fileObj.extension,
             size: fileObj.size,
             frontend_id: fileObj.frontendId,
             encryption_method: parseInt(fileObj.encryptionMethod),
@@ -63,8 +62,6 @@ export class DiscordResponseConsumer {
             iv: fileState.iv,
             key: fileState.key,
             crc: 0,
-            parent_password: fileObj.parentPassword,
-            lock_from: fileObj.lockFrom,
             fragments: []
          })
       }

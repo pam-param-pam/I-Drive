@@ -123,8 +123,7 @@ def delete(request, items):
 @check_resource_permissions(default_checks & CheckRoot, resource_key="item_obj")
 def rename_view(request, item_obj):
     new_name = request.data["new_name"]
-    extension = request.data["extension"]
-    item_service.rename_item(request, item_obj, new_name, extension)
+    item_service.rename_item(request, item_obj, new_name)
     return HttpResponse(status=204)
 
 

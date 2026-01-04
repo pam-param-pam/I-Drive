@@ -13,7 +13,7 @@ from ..auth.utils import check_resource_perms
 from ..constants import EventCode, MAX_DISCORD_MESSAGE_SIZE
 from ..core.Serializers import FileSerializer
 from ..core.errors import BadRequestError
-from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc
+from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc, get_file_extension
 from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
 from ..models import File, Fragment, Thumbnail, Channel, FragmentLink, ThumbnailLink, AttachmentLinker
 from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists
@@ -50,7 +50,6 @@ def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
 def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     file_name = validate_key(file, "name", str, checks=[NotEmpty])
     parent_id = validate_key(file, "parent_id", str, checks=[NotEmpty])
-    extension = validate_key(file, "extension", str, checks=[MaxLength(50), NotEmpty])
     file_size = validate_key(file, "size", int, checks=[NotNegative])
     frontend_id = validate_key(file, "frontend_id", str, checks=[MaxLength(50), NotEmpty])
     encryption_method = validate_key(file, "encryption_method", int, checks=[MaxLength(1)])
@@ -69,6 +68,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     key, iv = validate_encryption_fields(encryption_method, key_b64, iv_b64)
     validate_crc(file_size, crc)
 
+    extension = get_file_extension(file_name)
     file_type = get_file_type(extension)
 
     parent = get_folder(parent_id)

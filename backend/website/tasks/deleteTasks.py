@@ -43,7 +43,7 @@ def gather_message_structure(files: list) -> dict[str, list[str]]:
 
     return message_structure
 
-def delete_files(context, files: list):
+def delete_files(context: RequestContext, files: list):
     skipped_webhooks = []
     skipped_channels = []
 
@@ -91,9 +91,9 @@ def delete_files(context, files: list):
                 if author:
                     skipped_webhooks.append(author.url)
 
-            send_message(message=e.message, finished=True, args=None, context=context.request_id, isError=True)
+            send_message(message=e.message, finished=True, args=None, context=context, isError=True)
         except Exception as e:
-            send_message(message=str(e), finished=True, args=None, context=context.request_id, isError=True)
+            send_message(message=str(e), finished=True, args=None, context=context, isError=True)
 
         # local per-message pacing (keeps per-thread Discord happy)
         time.sleep(0.5)
@@ -146,5 +146,3 @@ def smart_delete_task(context: dict, ids):
     except Exception as e:
         traceback.print_exc()
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
-
-

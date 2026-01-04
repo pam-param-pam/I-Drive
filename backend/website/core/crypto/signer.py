@@ -13,9 +13,9 @@ def sign_resource_id_with_expiry(file_id: str) -> str:
     return signed_file_id
 
 # Function to verify and extract the file id
-def verify_signed_resource_id(signed_file_id: str, expiry_seconds: int = SIGNED_URL_EXPIRY_SECONDS) -> str:
+def verify_signed_resource_id(signed_file_id: str) -> str:
     try:
-        file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=expiry_seconds))
+        file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=SIGNED_URL_EXPIRY_SECONDS))
         return file_id
     except (BadSignature, SignatureExpired):
         raise ResourcePermissionError("URL not valid or expired.")

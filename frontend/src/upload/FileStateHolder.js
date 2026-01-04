@@ -37,6 +37,7 @@ export class FileStateHolder {
       this.key = undefined
 
       this._fieldChangeCallback = fieldChangeCallback
+      this._waitingTimer = null
    }
 
    emitInitialState() {
@@ -163,7 +164,7 @@ export class FileStateHolder {
 
    markFileUploaded() {
       this.setStatus(fileUploadStatus.uploaded)
-      setTimeout(() => {
+      this._waitingTimer = setTimeout(() => {
          if (this.status !== fileUploadStatus.uploaded) return
          this.setStatus(fileUploadStatus.waitingForSave)
       }, 1500)
@@ -203,4 +204,10 @@ export class FileStateHolder {
       return isErrorStatus(this.status)
    }
 
+   onDelete() {
+      if (this._waitingTimer) {
+         clearTimeout(this._waitingTimer)
+         this._waitingTimer = null
+      }
+   }
 }

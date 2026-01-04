@@ -306,7 +306,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt", "isLogged"]),
+      ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt"]),
       isEpub() {
          return this.file?.name.endsWith(".epub")
       },
@@ -429,13 +429,16 @@ export default {
          this.addSelected(this.file)
          this.setLastItem(this.file)
          await this.$nextTick() //this is vevy important
-         if (this.file?.type === "Video" && this.$refs.video && this.isLogged) {
-            this.videoRef = this.$refs.video
-            this.$refs.video.currentTime = this.file.video_position || 0
-            this.lastSentVideoPosition = this.file.video_position || 0
+         if (this.file?.type === "Video" && this.$refs.video) {
+            if (!this.isInShareContext) {
+               this.videoRef = this.$refs.video
+               this.$refs.video.currentTime = this.file.video_position || 0
+               this.lastSentVideoPosition = this.file.video_position || 0
+            }
+
             await this.fetchSubtitles()
             this.loadSubtitleStyle()
-            this.$refs.video.textTracks.addEventListener("change", this.onSubtitleChanged)
+            this.videoRef.textTracks.addEventListener("change", this.onSubtitleChanged)
          }
 
          if (!this.isEpub) return

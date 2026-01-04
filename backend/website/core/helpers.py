@@ -109,6 +109,10 @@ def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Ty
 def get_file_type(extension: str) -> str:
     return EXTENSION_TO_FILE_TYPE.get(extension.lower(), "Other")
 
+def get_file_extension(filename: str) -> str:
+    if "." not in filename or filename.endswith("."):
+        return ".txt"
+    return "." + filename.rsplit(".", 1)[1]
 
 def validate_value(value: Any, expected_type: Type, *, required: bool = False, default=None, checks: list = None):
     if value is None:

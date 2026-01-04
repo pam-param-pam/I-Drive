@@ -2,6 +2,8 @@ import axios from "axios"
 import { logout } from "@/utils/auth.js"
 import { useToast } from "vue-toastification"
 import i18n from "@/i18n/index.js"
+import router from "@/router/index.js"
+import { showToast } from "@/utils/common.js"
 
 const cancelTokenMap = new Map()
 const toast = useToast()
@@ -82,5 +84,14 @@ export async function displayErrorToastIfNeeded(error) {
          timeout: 5000,
          position: "bottom-right"
       })
+   }
+}
+
+export async function handleResourceURLExpiredIfNeeded(error) {
+   if (error.response && error.response.status === 403) {
+      let errorMessage = error.response?.data?.error
+      if (errorMessage === "errors.resourceAccessForbidden") {
+         router.go(0)
+      }
    }
 }

@@ -166,7 +166,7 @@ class FolderAdmin(SimpleHistoryAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'size', 'readable_size', 'duration', 'inTrashSince', 'ready', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
+    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'duration', 'inTrashSince', 'ready', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'ready', 'type', 'created_at',
                     'inTrash', 'is_locked']
@@ -388,7 +388,7 @@ class BotAdmin(admin.ModelAdmin):
 
 @admin.register(Moment)
 class MomentAdmin(admin.ModelAdmin):
-    search_fields = ('file_name', 'file__owner__username')
+    search_fields = ('file__name', 'file__owner__username')
     list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
     readonly_fields = ('channel_id', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
     exclude = ['size', 'timestamp']

@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from ..auth.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP, CheckTrash
 from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from ..auth.utils import check_resource_perms
-from ..constants import cache
+from ..constants import cache, SIGNED_URL_EXPIRY_SECONDS
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
     RawMetadataSerializer
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
@@ -45,7 +45,7 @@ def get_folder_info(request, folder_obj: Folder):
     folder_content = cache.get(folder_obj.id)
     if not folder_content:
         folder_content = build_folder_content(folder_obj)
-        cache.set(folder_obj.id, folder_content)
+        cache.set(folder_obj.id, folder_content, timeout=SIGNED_URL_EXPIRY_SECONDS)
 
     breadcrumbs = build_breadcrumbs(folder_obj)
     return HttpResponse(

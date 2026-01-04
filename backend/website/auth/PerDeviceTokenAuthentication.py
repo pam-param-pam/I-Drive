@@ -8,7 +8,6 @@ from ..models import PerDeviceToken
 
 
 class PerDeviceTokenAuthentication(BaseAuthentication):
-
     keyword_token = 'token'
     keyword_bearer = 'bearer'
 

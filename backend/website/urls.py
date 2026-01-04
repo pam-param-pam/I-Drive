@@ -68,7 +68,7 @@ urlpatterns = [
     path("files/<signed_file_id>/thumbnail/stream", ["GET"], stream_thumbnail, name="stream_thumbnail"),
     path("files/<signed_file_id>/moments/<moment_id>/stream", ["GET"], stream_moment, name="stream_moment"),
     path("files/<signed_file_id>/subtitles/<subtitle_id>/stream", ["GET"], stream_subtitle, name="stream_subtitle"),
-    path("files/<signed_file_id>/stream", ["GET"], stream_file, name="stream_subtitle"),
+    path("files/<signed_file_id>/stream", ["GET"], stream_file, name="stream file"),
 
     path("files", ["POST"], create_file_view, name="create file"),
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),

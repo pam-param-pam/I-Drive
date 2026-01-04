@@ -169,7 +169,6 @@ export class Uploader {
                this._stopInternetProbe()
             }
          })
-
    }
 
    initQueues() {
@@ -413,7 +412,6 @@ export class Uploader {
       this._stopInternetProbe()
 
       if (this.uploadRuntime.uploadState !== uploadState.noInternet) return
-
       this.uploadRuntime.setUploadingState(uploadState.uploading)
    }
 

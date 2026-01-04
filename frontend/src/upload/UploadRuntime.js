@@ -157,6 +157,7 @@ export class UploadRuntime {
    }
 
    markFileSaved(frontendId) {
+      this.getFileState(frontendId).onDelete()
       this.fileStates.delete(frontendId)
       this._emitFileSaved(frontendId)
       this._checkAllFilesFinished()
@@ -253,6 +254,17 @@ export class UploadRuntime {
    _setStatus(frontendId, status) {
       this.fileStates.get(frontendId).setStatus(status)
    }
-
+   async waitUntilResumed() {
+      return new Promise(resolve => {
+         const unsubscribe = this.onUploadStateChange(
+            (newState) => {
+               if (newState === uploadState.uploading) {
+                  unsubscribe()
+                  resolve()
+               }
+            }
+         )
+      })
+   }
 
 }

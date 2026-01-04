@@ -3,7 +3,14 @@ import { baseURL } from "@/utils/constants.js"
 import i18n from "@/i18n/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useToast } from "vue-toastification"
-import { attachCancelSignature, displayErrorToastIfNeeded, noWifi, parseBinaryJsonResponse, shouldRetry469 } from "@/axios/helper.js"
+import {
+   attachCancelSignature,
+   displayErrorToastIfNeeded,
+   handleResourceURLExpiredIfNeeded,
+   noWifi,
+   parseBinaryJsonResponse,
+   shouldRetry469
+} from "@/axios/helper.js"
 import { retry469Error, retryRequest } from "@/axios/retry.js"
 
 const toast = useToast()
@@ -96,6 +103,10 @@ backendInstance.interceptors.response.use(
       if (axios.isCancel(error)) {
          return Promise.reject(error)
       }
+
+
+      //handle resource url expired
+      handleResourceURLExpiredIfNeeded(error)
 
       //Handle 469
       if (shouldRetry469(error)) {

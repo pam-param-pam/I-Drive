@@ -173,7 +173,8 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
 def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
     signed_file_id = request.META['signed_file_id']
     request._request.META['share_context'] = True
-    return stream_subtitle(request._request, signed_file_id, subtitle_id)
+    print("HERE IN SHARE VIW SUBTIT")
+    return stream_subtitle(request._request, signed_file_id, subtitle_id=subtitle_id)
 
 
 @api_view(['GET'])

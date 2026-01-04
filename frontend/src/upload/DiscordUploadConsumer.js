@@ -1,12 +1,12 @@
 import axios from "axios"
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { upload } from "@/upload/utils/uploadHelper.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { noWifi } from "@/axios/helper.js"
 import i18n from "@/i18n/index.js"
 import { useToast } from "vue-toastification"
 import { encryptAttachment } from "@/upload/utils/encryption.js"
 import { getUploader } from "@/upload/Uploader.js"
+import { useUploadStore } from "@/stores/uploadStore.js"
 
 const toast = useToast()
 
@@ -36,8 +36,8 @@ export class DiscordUploadConsumer {
       }
       this.running = true
       while (this.running) {
-         if (this.uploadStore.state !== uploadState.uploading) {
-            await this.waitUntilResumed()
+         if (this.uploadRuntime.uploadState !== uploadState.uploading) {
+            await this.uploadRuntime.waitUntilResumed()
          }
          const request = await this.requestQueue.take()
          if (!request) {
@@ -60,8 +60,8 @@ export class DiscordUploadConsumer {
    async uploadSingleRequest(request) {
       const attachmentName = this.uploadStore.attachmentName
 
-      if (this.uploadStore.state === uploadState.paused) {
-         await this.waitUntilResumed()
+      if (this.uploadRuntime.uploadState === uploadState.paused) {
+         await this.uploadRuntime.waitUntilResumed()
       }
       try {
          const formData = await this.buildFormData(request, attachmentName)
@@ -235,16 +235,5 @@ export class DiscordUploadConsumer {
             this.requestQueue.put(request)
          }, 1000)
       }
-   }
-
-   async waitUntilResumed() {
-      await new Promise(resolve => {
-         const unsub = this.uploadStore.$subscribe((_m, state) => {
-            if (state.state === uploadState.uploading) {
-               unsub()
-               resolve()
-            }
-         })
-      })
    }
 }

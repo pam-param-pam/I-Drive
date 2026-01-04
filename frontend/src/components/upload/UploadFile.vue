@@ -2,7 +2,7 @@
    <div
       :class="{
          'error-border': isErrorStatus(fileState.status) || state === uploadState.error,
-         'success-border': fileState.status === fileUploadStatus.uploaded || fileState.status === fileUploadStatus.waitingForSave,
+         'success-border': (fileState.status === fileUploadStatus.uploaded || fileState.status === fileUploadStatus.waitingForSave) && state !== uploadState.noInternet,
          'warning-border': state === uploadState.paused && fileState.status !== fileUploadStatus.waitingForSave,
          'shake-animation': isShaking
       }"

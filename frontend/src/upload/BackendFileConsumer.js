@@ -2,6 +2,7 @@ import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 import { createFile } from "@/api/files.js"
 import { showToast } from "@/utils/common.js"
 import { getUploader } from "@/upload/Uploader.js"
+import { noWifi } from "@/axios/helper.js"
 
 export class BackendFileConsumer {
    constructor({ backendFileQueue, uploadRuntime }) {
@@ -29,6 +30,9 @@ export class BackendFileConsumer {
       }
       this.running = true
       while (this.running) {
+         if (this.uploadRuntime.uploadState === uploadState.noInternet) {
+            await this.uploadRuntime.waitUntilResumed()
+         }
          const file = await this.backendFileQueue.take()
          if (!file) break
 
@@ -60,23 +64,23 @@ export class BackendFileConsumer {
    }
 
    saveFiles(files) {
-      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+      const resourcePasswords = {}
 
-      sleep(3000).then(r => {
-         const resourcePasswords = {}
+      for (const file of files) {
+         let state = this.uploadRuntime.getFileState(file.frontend_id)
+         let parentPassword = state.fileObj.parentPassword
+         let lockFromId = state.fileObj.lockFrom
 
-         for (const file of files) {
-            if (file.parent_password && file.lock_from) {
-               resourcePasswords[file.lock_from] = file.parent_password
-            }
+         if (parentPassword && lockFromId) {
+            resourcePasswords[lockFromId] = parentPassword
          }
+      }
 
-         createFile({ files, resourcePasswords }, { __displayErrorToast: false })
-            .then(() => this.onBackendSave(files))
-            .catch(err => this.onBackendSaveError(files, err))
-         }
-      )
+      createFile({ files, resourcePasswords }, { __displayErrorToast: false })
+         .then(() => this.onBackendSave(files))
+         .catch(err => this.onBackendSaveError(files, err))
    }
+
 
    onBackendSave(files) {
       for (const file of files) {
@@ -86,11 +90,18 @@ export class BackendFileConsumer {
    }
 
    onBackendSaveError(files, error) {
-      for (const file of files) {
-         const state = this.uploadRuntime.getFileState(file.frontend_id)
-         state.setStatus(fileUploadStatus.saveFailed)
-         state.setError(error?.response?.data)
-         this.failedFiles.push(file)
+      if (noWifi(error)) {
+         this.uploadRuntime.setUploadingState(uploadState.noInternet)
+         for (const file of files) {
+            this.backendFileQueue.put(file)
+         }
+
+      } else{
+         for (const file of files) {
+            const state = this.uploadRuntime.getFileState(file.frontend_id)
+            state.setStatus(fileUploadStatus.saveFailed)
+            state.setError(error?.response?.data)
+         }
       }
 
       if (error.response?.status >= 500) this.databaseErrors++

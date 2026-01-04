@@ -1,5 +1,4 @@
 import mimetypes
-import mimetypes
 import re
 import time
 from io import BytesIO
