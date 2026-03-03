@@ -39,7 +39,7 @@ import { useMainStore } from '@/stores/mainStore.js'
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'new-folder',
+   name: 'NewFolder',
 
    data() {
       return {

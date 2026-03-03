@@ -11,6 +11,7 @@ from ..websockets.utils import send_event
 
 
 def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
+    name = validate_value(name, str, checks=[NotEmpty])
     validate_value(name, str, checks=[NotEmpty])
 
     folder_obj = Folder(name=name, parent=parent, owner=user)

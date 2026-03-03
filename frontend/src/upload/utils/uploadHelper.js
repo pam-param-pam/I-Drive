@@ -240,7 +240,7 @@ export async function fastVideoThumbnail(
          canvas.height = Math.round(height)
 
          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
+         let duration = video.duration
          canvas.toBlob(
             blob => {
                if (resolved) return
@@ -254,7 +254,7 @@ export async function fastVideoThumbnail(
 
                resolve({
                   thumbnail: blob,
-                  duration: video.duration || 0
+                  duration: duration
                })
             },
             "image/webp",
@@ -335,14 +335,12 @@ export async function makeThumbnailIfNeeded(queueFile) {
       }
       //generating a thumbnail if needed for video file
       if (isVideoFile(queueFile.fileObj.extension)) {
-
          let data
-         if (queueFile.fileObj.size > 25 * 1024 * 1024) {
-            data = await getVideoCover(queueFile)
-         } else {
-            data = await fastVideoThumbnail(queueFile.systemFile)
-         }
-
+         // if (queueFile.fileObj.size > 25 * 1024 * 1024) {
+         //    data = await getVideoCover(queueFile) // todo make this safe, just like fastVideoThumbnail
+         // } else {
+         data = await fastVideoThumbnail(queueFile.systemFile)
+         // }
          other.duration = Math.round(data.duration)
          thumbnail = data.thumbnail
       }

@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "markAllRead": "Mark all as read",
+    "toggleSize": "Toggle image size",
     "deviceControl": "Device control",
     "stopActive": "Stop device control",
     "accept": "Accept",
@@ -71,6 +73,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "urlInvalidOrExpired": "URL invalid or expired",
     "integrityError": "Integrity Error!",
     "masterSlaveEqual": "You cannot control yourself...",
     "badDeviceId": "Device doesn't exist. Refresh the page",
@@ -146,7 +149,14 @@
     "esc": "clear selection and/or close the prompt",
     "f1": "more item information",
     "f2": "rename file",
-    "help": "Help"
+    "help": "Help",
+    "invalidToken": "Authentication failed. The bot token is invalid, expired, or has been revoked. Generate a new token in the Discord Developer Portal and add a new bot, then remove this one.",
+    "missingPermission": "The bot does not have sufficient permissions to work. Verify the bot role permissions and channel access in the server settings.",
+    "unknownGuild": "The Discord server (guild) no longer exists or the bot has been removed from it. Re-invite the bot or verify the server ID.",
+    "webhookDeleted": "This webhook no longer exists. It may have been deleted manually or invalidated. There is nothing you can do. The files related to the webhook are lost.",
+    "unknownChannel": "The target channel does not exist or the bot does not have access to it. Verify bots permissions. If the channel is gone, there is nothing you can do. The files are lost.",
+    "rateLimit": "Discord rate limit exceeded. Requests are temporarily blocked. Please wait before retrying. If this persists, reduce request frequency.",
+    "generic": "The credential encountered an error. Review its configuration and Discord permissions."
   },
   "languages": {
     "en": "English",
@@ -174,8 +184,23 @@
     "usernameTaken": "Username already taken",
     "wrongCredentials": "Wrong credentials"
   },
-
   "prompts": {
+    "noNotifications": "No notifications yet!",
+    "notifications": "Notifications",
+    "searchForIds": "Search for IDs",
+    "searchForType": "Search for event type",
+    "accessAt": "Accessed at",
+    "time": "Time",
+    "ip": "IP",
+    "visitEvents": "Visit events",
+    "visitEventsFor": "All events for",
+    "failedToLoadPrompt": "Failed to load a prompt. Report this",
+    "name": "Name",
+    "id": "ID",
+    "fixCredential": "Fix credential",
+    "blockedUntil": "Blocked until",
+    "blockReason": "Block reason",
+    "discord_error_code": "Discord error code",
     "cameraOwner": "Camera Owner",
     "noInternet": "Waiting for internet...",
     "uploadFilesCrashed": "Upload file crashed!",
@@ -354,6 +379,7 @@
     "video": "Video"
   },
   "settings": {
+    "itemInfoShortcut": "Display item info on sidebar",
     "deviceControl": "Device Control",
     "deviceControlMessage": "You can request control of a device and act as a pilot to control another device",
     "qrDeviceInfo": "Verify device's information before confirming the login!",
@@ -430,6 +456,7 @@
     "shareNotFound": "Share Not found. Maybe the link expired or is invalid?"
   },
   "sidebar": {
+    "notifications": "Notifications",
     "help": "Help",
     "login": "Login",
     "logout": "Logout",
@@ -449,6 +476,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "credentialReenabled": "Enabled webhook/bot",
     "subtitleRenamed": "Subtitle renamed!",
     "subtitleRenameFailed": "Failed to rename subtitle",
     "illegalMove": "You cannot move those items here",

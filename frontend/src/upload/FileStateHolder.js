@@ -30,7 +30,7 @@ export class FileStateHolder {
       this.error = null
 
       this.rawMetadata = null
-      this.duration = 0
+      this.duration = null
       this.crc = 0
       this.videoMetadata = null
       this.iv = undefined

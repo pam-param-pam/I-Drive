@@ -36,6 +36,11 @@ export async function getShareVisits(token) {
    return response.data
 }
 
+export async function getVisitEvents(token, visit_id) {
+   let url = `/shares/${token}/visits/${visit_id}`
+   let response = await backendInstance.get(url)
+   return response.data
+}
 
 export async function createShare(data) {
    let url = `/shares`

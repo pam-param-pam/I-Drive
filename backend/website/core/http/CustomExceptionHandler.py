@@ -3,20 +3,20 @@ import traceback
 from typing import Any
 
 import httpx
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import OperationalError, IntegrityError, ProgrammingError
 from django.http import JsonResponse
 from httpx import ConnectError
 from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
-from rest_framework.exceptions import PermissionDenied, ValidationError, APIException
+from rest_framework.exceptions import PermissionDenied, APIException
 from rest_framework.exceptions import Throttled
 from rest_framework.views import exception_handler
 
 from .utils import build_http_error_response
 from ..errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, ResourceNotFoundError, \
     MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, FailedToResizeImageError, DiscordBlockError, DiscordTextError, DiscordError, \
-    UsernameTakenError
+    UsernameTakenError, URLInvalidOrExpired
 from ..helpers import format_wait_time
 from ..helpers import get_attr
 from ...models import ShareableLink
@@ -38,16 +38,12 @@ def custom_exception_handler(exception, context):
         custom_response_data['retry_after'] = f'{exception.wait} seconds'
         return JsonResponse(custom_response_data, status=429)
 
-    elif isinstance(exception, ValidationError):
-        details = (response.data.get('non_field_errors') or [response.data])[0]
-        return JsonResponse(build_http_error_response(error='errors.validationFailed', code=400, details=details), status=400)
-
     elif isinstance(exception, PermissionDenied):
         return JsonResponse(build_http_error_response(error='errors.permissionDenied', code=403, details=exception.detail), status=403)
 
     #  400 BAD REQUEST
     elif isinstance(exception, ValidationError):
-        return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception.message)), status=400)
+        return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception)), status=400)
 
     elif isinstance(exception, BadRequestError):
         return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details=str(exception)), status=400)
@@ -61,16 +57,6 @@ def custom_exception_handler(exception, context):
     elif isinstance(exception, InvalidMove):
         return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Invalid parent, recursion detected."), status=400)
 
-    elif isinstance(exception, KeyError):
-        if is_dev_env:
-            traceback.print_exc()
-        return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Missing some required parameters"), status=400)
-
-    elif isinstance(exception, (ValueError, TypeError)):
-        if is_dev_env:
-            traceback.print_exc()
-        return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Bad parameters"), status=400)
-
     elif isinstance(exception, OverflowError):
         return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
 
@@ -83,6 +69,9 @@ def custom_exception_handler(exception, context):
 
     elif isinstance(exception, RootPermissionError):
         return JsonResponse(build_http_error_response(code=403, error="errors.rootFolderNoAccess", details="You cannot perform this action on a 'root' folder"), status=403)
+
+    elif isinstance(exception, URLInvalidOrExpired):
+        return JsonResponse(build_http_error_response(code=403, error="errors.urlInvalidOrExpired", details="URL is expired or invalid"), status=403)
 
     # 404 NOT FOUND
     elif isinstance(exception, ObjectDoesNotExist):

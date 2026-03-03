@@ -11,6 +11,14 @@
       <slot />
 
       <action
+        v-if='this.multiSelection'
+        :label="$t('buttons.multiSelect')"
+        icon='close'
+        @action='this.setMultiSelection(false)'
+        :outside="true"
+      />
+
+      <action
         v-if="this.deviceControlStatus.status === 'active_master' || this.deviceControlStatus.status === 'active_slave'"
         id="deviceControl"
         class="hide-mobile-tap"
@@ -69,10 +77,10 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["settings", "currentPromptName", "deviceControlStatus"])
+      ...mapState(useMainStore, ["settings", "currentPromptName", "deviceControlStatus", "multiSelection"])
    },
    methods: {
-      ...mapActions(useMainStore, ["showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["showHover", "closeHover", "setMultiSelection"]),
       openSidebar() {
          this.showHover("sidebar")
       }

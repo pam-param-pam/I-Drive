@@ -135,7 +135,7 @@ import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
 
 export default {
-   name: "manage-subtitles",
+   name: "EditSubtitles",
    components: { SmartFileInput, ProgressBar },
    data() {
       return {

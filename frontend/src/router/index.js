@@ -170,6 +170,16 @@ async function initAuth() {
 
 router.beforeEach((to, from, next) => {
    const store = useMainStore()
+
+   if (store.multiSelection) {
+      store.multiSelection = false
+      next(false) // consume back
+      return
+   } else if (store.currentPrompt) {
+      store.closeHover()
+      next(false) // consume back
+      return
+   }
    store.setLoading(true)
    next()
 })
@@ -190,6 +200,8 @@ router.beforeResolve(async (to, from, next) => {
    store.closeHovers()
    store.resetSelected()
    store.setError(null)
+   store.setMultiSelection(false)
+   store.closeContextMenu()
    // this will only be null on first route
    if (from.name == null) {
       await initAuth()

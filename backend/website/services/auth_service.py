@@ -8,14 +8,17 @@ from django.contrib.auth import user_logged_in, user_logged_out
 from django.contrib.auth.models import User
 from django.db import transaction
 
+from . import user_service
 from ..constants import TOKEN_EXPIRY_DAYS, QR_CODE_SESSION_EXPIRY, cache, EventCode
 from ..core.Serializers import DeviceTokenSerializer
 from ..core.dataModels.http import RequestContext
 from ..core.deviceControl.DeviceControlState import DeviceControlState
 from ..core.errors import BadRequestError, UsernameTakenError, ResourceNotFoundError, ResourcePermissionError
-from ..core.helpers import get_ip
+from ..core.helpers import get_ip, validate_value
 from ..core.http.utils import get_device_metadata
+from ..core.validators.GeneralChecks import NotEmpty
 from ..models import PerDeviceToken, UserPerms, UserSettings, Folder, DiscordSettings
+from ..models.other_models import NotificationType
 from ..tasks.queueTasks import queue_ws_event
 from ..websockets.utils import send_event
 
@@ -159,6 +162,9 @@ def _logout_websockets(user: User, device_id: str = None) -> None:
     )
 
 def login_device(request, username: str, password: str) -> tuple[str, PerDeviceToken]:
+    username = validate_value(username, str, checks=[NotEmpty])
+    password = validate_value(password, str, checks=[NotEmpty])
+
     user = authenticate(request, username=username, password=password)
     if not user:
         raise BadRequestError('Invalid credentials')
@@ -167,7 +173,7 @@ def login_device(request, username: str, password: str) -> tuple[str, PerDeviceT
 
     user_logged_in.send(sender=user.__class__, request=request, user=user)
     send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_obj))
-
+    user_service.create_notification(user, NotificationType.IMPORTANT, "New device login.", "A new device has logged into your account. Check it in device settings")  # todo
     return raw_token, token_obj
 
 def logout_all_devices_for_user(request, user) -> None:
@@ -181,6 +187,9 @@ def logout_device(request, user: User, device_id: str) -> None:
 
 
 def register_user(request, username: str, password: str) -> tuple[str, PerDeviceToken]:
+    username = validate_value(username, str, checks=[NotEmpty])
+    password = validate_value(password, str, checks=[NotEmpty])
+
     if User.objects.filter(username=username):
         raise UsernameTakenError()
 
@@ -188,6 +197,9 @@ def register_user(request, username: str, password: str) -> tuple[str, PerDevice
     return login_device(request, username, password)
 
 def change_password(request, user: User, current_password: str, new_password: str) -> tuple[str, PerDeviceToken]:
+    current_password = validate_value(current_password, str, checks=[NotEmpty])
+    new_password = validate_value(new_password, str, checks=[NotEmpty])
+
     if not user.check_password(current_password):
         raise ResourcePermissionError("Password is incorrect!")
 
@@ -195,7 +207,7 @@ def change_password(request, user: User, current_password: str, new_password: st
     user.save()
 
     logout_all_devices_for_user(request, user)
-    raw_token, token_obj = login_device(request, user.username, new_password)
+    raw_token, token_obj = login_device(request, username=user.username, password=new_password)
     return raw_token, token_obj
 
 

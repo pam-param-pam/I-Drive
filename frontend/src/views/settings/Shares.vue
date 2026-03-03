@@ -84,7 +84,9 @@ export default {
       Errors
    },
 
-   computed: mapState(useMainStore, ['settings', 'loading', 'error']),
+   computed: {
+      ...mapState(useMainStore, ['settings', 'loading', 'error'])
+   },
 
    data() {
       return {
@@ -146,9 +148,8 @@ export default {
 
       async showInfo(event, share) {
          let visits = await getShareVisits(share.token)
-         visits = visits.accesses
          this.showHover({
-            prompt: "shareAccesses",
+            prompt: "ShareVisits",
             props: {share, visits},
          })
       }

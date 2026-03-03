@@ -52,6 +52,9 @@ QR_CODE_SESSION_EXPIRY = 300
 # Set of allowed sizes as a param on the thumbnail endpoint
 ALLOWED_THUMBNAIL_SIZES = ("64", "256", "512", "1024", "original")
 
+# Set of allowed sizes as a param on the thumbnail endpoint
+MAX_THUMBNAIL_SIZE = 1 * 1024 * 1024
+
 # How long a device control pending request is valid for
 DEVICE_CONTROL_PENDING_TTL = 60
 
@@ -61,7 +64,13 @@ DEVICE_CONTROL_ACTIVE_TTL = 7200
 # How long a device control reject state is
 DEVICE_CONTROL_REJECTED_TTL = 5
 
+# How long a share access last for, before a new one is created for that user/IP, in MINUTES
+SHARE_ACCESS_DURATION = 180
+
 cache = caches["default"]
+
+# Controls (partially) if cache is used in some places, should be True in PROD. Use only for debugging
+USE_CACHE = True
 
 FILE_TYPES = {
     "Video": (
@@ -136,6 +145,7 @@ class EventCode(Enum):
     DEVICE_CONTROL_REPLY = 14
     DEVICE_CONTROL_COMMAND = 15
     DEVICE_CONTROL_STATUS = 16
+    NEW_NOTIFICATION = 17
 
 class EncryptionMethod(Enum):
     Not_Encrypted = 0
@@ -158,6 +168,10 @@ class ShareEventType(str, Enum):
     FILE_DOWNLOAD_START = "file_download_start"
     FILE_DOWNLOAD_SUCCESSFUL = "file_download_successful"
     FILE_STREAM = "file_stream"
+
+    # Others
+    THUMBNAIL_STREAM = "thumbnail_stream"
+    SUBTITLE_STREAM = "subtitle_stream"
 
     # Folder
     FOLDER_OPEN = "folder_open"

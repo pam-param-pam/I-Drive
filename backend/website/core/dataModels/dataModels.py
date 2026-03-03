@@ -49,3 +49,11 @@ class ZipDownloadStartEvent(BaseModel):
 class ZipDownloadSuccessfulEvent(BaseModel):
     files: list[str]
     folders: list[str]
+
+class ThumbnailStreamedEvent(BaseModel):
+    file_id: str
+    thumbnail_id: str
+
+class SubtitleStreamedEvent(BaseModel):
+    file_id: str
+    subtitle_id: str

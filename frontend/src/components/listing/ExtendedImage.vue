@@ -99,7 +99,7 @@ export default {
       window.removeEventListener("resize", this.onResize)
       document.removeEventListener("mouseup", this.onMouseUp)
    },
-
+//todo fix zoom!
    watch: {
       async imageSrc() {
          if (this.requestController) {
@@ -143,7 +143,7 @@ export default {
                return
             }
             console.error("Error loading image blob:", e)
-            this.onError()
+            await this.onError()
          }
       },
       updateLoadingToast(percentage, src) {
@@ -173,8 +173,6 @@ export default {
          event.preventDefault()
       },
       async onError() {
-         await backendInstance.get(this.imageSrc)
-
          this.turnedOFF = true
          this.$refs.imgex.src = "/img/failed.svg"
          if (isMobile()) {

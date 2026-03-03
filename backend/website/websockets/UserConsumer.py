@@ -63,6 +63,8 @@ class UserConsumer(RateLimitedWebsocketConsumer):
 
         elif op_code == EventCode.DEVICE_CONTROL_COMMAND.value:
             self.handle_device_control_command(json_data)
+        else:
+            self.send_error("errors.unknownOpCode")
 
     def on_accept(self):
         master_device_id = DeviceControlState.slave_has_pending(self.device_id)
@@ -72,7 +74,7 @@ class UserConsumer(RateLimitedWebsocketConsumer):
         self.send_device_control_status()
 
     def send_event(self, event: WebsocketEvent):
-        if self.user.id == event['context']['user_id'] and (not self.device_id or not event['context'].get('device_id') or self.device_id == event['context'].get('device_id')):
+        if self.user.id == event['context']['user_id']: #  todo fix context and device aware and (not event['context'].get('device_id') or self.device_id == event['context'].get('device_id')):
             self.send(json.dumps(event['ws_payload']))
 
     def logout(self, event: WebsocketLogoutEvent):

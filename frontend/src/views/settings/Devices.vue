@@ -96,11 +96,11 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/user.js"
 import { forceLogout } from "@/utils/auth.js"
 import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
 import throttle from "lodash.throttle"
+import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/auth.js"
 
 export default {
    name: "Devices",

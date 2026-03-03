@@ -132,7 +132,7 @@ def create_video_metadata(file_obj: File, metadata: dict) -> VideoMetadata:
 def create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
     if file_obj.type != "Raw image":
         raise BadRequestError(f"Raw metadata is not allowed for file type: {file_obj.type}")
-    print("EXACTRACING CAMERA OWNER")
+
     camera_owner = validate_key(metadata, "camera_owner", str, required=False, default="", checks=[MaxLength(50)])
 
     raw_metadata = RawMetadata.objects.create(
@@ -151,7 +151,7 @@ def update_video_position(file_obj: File, new_position) -> None:
     if file_obj.type != "Video":
         raise BadRequestError("Must be a video.")
 
-    if new_position > file_obj.duration:
+    if new_position > file_obj.duration and file_obj.duration not in (0, None):  # legacy files have broken duration
         raise BadRequestError("Timestamp exceeds video duration")
 
     video_position, created = VideoPosition.objects.get_or_create(file=file_obj)
@@ -216,15 +216,16 @@ def remove_moment(user, file_obj, moment_id) -> None:
 
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:
-    timestamp = data['timestamp']
-    channel_id = data['channel_id']
-    message_id = data['message_id']
-    attachment_id = data['attachment_id']
-    size = data['size']
-    message_author_id = data['message_author_id']
-    author = get_discord_author(user, message_author_id)
+    timestamp = validate_key(data, "timestamp", int, checks=[NotNegative])
+    channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
+    message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
+    attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
+    message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
+    size = validate_key(data, "size", int, checks=[IsPositive])
     iv = data.get('iv')
     key = data.get('key')
+
+    author = get_discord_author(user, message_author_id)
 
     if iv:
         iv = base64.b64decode(iv)

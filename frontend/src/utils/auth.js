@@ -1,11 +1,12 @@
 import router from "@/router"
 import { baseWS } from "@/utils/constants"
-import { getUser, loginUser, logoutUser, registerUser } from "@/api/user.js"
+import { getUser } from "@/api/user.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
 import { onEvent } from "@/utils/WsEventhandler.js"
 import { showToast } from "@/utils/common.js"
+import { loginUser, logoutUser, registerUser } from "@/api/auth.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
@@ -67,7 +68,7 @@ export async function signup(username, password) {
    await validateLogin()
 }
 
-
+//todo fix this logout mess
 export async function logout() {
    console.log("POLITE LOGOUT ACKNOWLEDGED")
 
@@ -90,6 +91,7 @@ export async function logout() {
 export async function forceLogout() {
    console.log("FORCE LOGOUT ACKNOWLEDGED")
    localStorage.removeItem("token")
+   localStorage.removeItem("device_id")
    await router.push({ path: "/login" })
    router.go(0)
 }

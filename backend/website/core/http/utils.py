@@ -5,8 +5,10 @@ import requests
 import shortuuid
 from django.contrib.admin.utils import quote
 from django.utils.encoding import smart_str
+from urllib.parse import quote
 
 from ..dataModels.general import ResponseDict, ErrorDict
+from ..errors import BadRequestError
 from ..helpers import get_ip
 
 
@@ -19,9 +21,13 @@ def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:
 
 
 def get_content_disposition_string(name: str) -> tuple[str, str]:
-    name_ascii = quote(smart_str(name))
-    encoded_name = quote(name)
-    return name_ascii, encoded_name
+    name_ascii = smart_str(name, errors="ignore")
+    name_ascii = re.sub(r'[^\x20-\x7E]', '_', name_ascii)
+
+    # filename*= → RFC 5987 UTF-8 + percent encoding
+    name_encoded = quote(name, safe="")
+
+    return name_ascii, name_encoded
 
 
 def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
@@ -70,7 +76,6 @@ def get_device_metadata(request):
     }
 
 
-
 def parse_range_header(range_header: str) -> tuple[bool, int, Optional[int]]:
     if range_header:
         range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
@@ -78,7 +83,7 @@ def parse_range_header(range_header: str) -> tuple[bool, int, Optional[int]]:
             start_byte = int(range_match.group(1))
             end_byte = int(range_match.group(2)) if range_match.group(2) else None
         else:
-            raise ValueError("Invalid range header")
+            raise BadRequestError("Invalid range header")
     else:
         start_byte = 0
         end_byte = None

@@ -57,7 +57,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     fragments = validate_key(file, "fragments", list)
 
     thumbnail = validate_key(file, "thumbnail", dict, required=False)
-    duration = validate_key(file, "duration", int, required=False)
+    duration = validate_key(file, "duration", int, required=False, checks=[IsPositive])
     created_at = validate_key(file, "created_at", int, required=False)
     key_b64 = validate_key(file, "key", str, required=False)
     iv_b64 = validate_key(file, "iv", str, required=False)
@@ -76,6 +76,9 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
 
     if File.objects.filter(frontend_id=frontend_id).exists():
         return None
+
+    if duration and file_type != "Video":
+        raise BadRequestError("Duration field is only allowed for video files")
 
     if created_at:
         try:
@@ -101,8 +104,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
             frontend_id=frontend_id,
             encryption_method=encryption_method,
             created_at=created_at,
-            crc=crc,
-            ready=True
+            crc=crc
         )
 
         if duration is not None:
@@ -131,7 +133,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
 def create_files(request, user: User, files_data: list[dict]) -> list[File]:
     check_if_bots_exists(request.user)
 
-    validate_ids_as_list(files_data, max_length=25)
+    validate_ids_as_list(files_data, max_length=100)
 
     file_objs = []
 

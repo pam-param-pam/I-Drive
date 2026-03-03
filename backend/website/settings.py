@@ -26,7 +26,7 @@ ALLOWED_HOSTS = ['*']  # todo
 
 # CSRF_COOKIE_SECURE = True # todo fix
 # SESSION_COOKIE_SECURE = True
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 102400000 # higher than the count of fields
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 102400000  # higher than the count of fields
 
 # Application definition
 INSTALLED_APPS = [
@@ -191,7 +191,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '30/m',
-        'user': '25/5s',
+        'user': '60/5s',
         'media': '1000/m',
         'media_anon': '100/m',
         'folder_password': '20/m',

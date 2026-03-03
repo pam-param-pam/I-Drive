@@ -14,29 +14,6 @@ export async function getUser(token) {
    return response.data
 }
 
-
-export async function loginUser(data) {
-   let url = "/auth/token/login"
-   let response = await backendInstance.post(url, data, {
-      headers: {
-         "Authorization": false
-      },
-      __displayErrorToast: false
-   })
-   return response.data
-}
-
-
-export async function createQrSession() {
-   let url = "/auth/qrcode"
-   let response = await backendInstance.post(url, {}, {
-      headers: {
-         "Authorization": false
-      }
-   })
-   return response.data
-}
-
 export async function checkWifi() {
    let url = "/healthcheck/"
    let response = await backendInstance.get(url, {
@@ -49,57 +26,6 @@ export async function checkWifi() {
    return response.data
 }
 
-export async function changePassword(data) {
-   let url = `/auth/password`
-   let response = await backendInstance.patch(url, data)
-   return response.data
-}
-
-export async function registerUser(data) {
-   let url = "/auth/register"
-   let response = await backendInstance.post(url, data, {
-      headers: {
-         "Authorization": false
-      },
-      __displayErrorToast: false
-   })
-   return response.data
-}
-
-
-export async function logoutUser(token) {
-   let url = "/auth/token/logout"
-   let response = await backendInstance.post(url, {}, {
-      headers: {
-         "Authorization": "token " + token
-      }
-   })
-   return response.data
-}
-
-export async function getQrSessionDeviceInfo(sessionId) {
-   let url = `/auth/qrcode/get/${sessionId}`
-   let response = await backendInstance.get(url, {
-      __displayErrorToast: false
-   })
-   return response.data
-}
-
-
-export async function closePendingQrSession(sessionId) {
-   let url = `/auth/qrcode/cancel/${sessionId}`
-   let response = await backendInstance.get(url, {
-      __displayErrorToast: false
-   })
-   return response.data
-}
-
-
-export async function approveQrSession(sessionId) {
-   let url = `/auth/qrcode/${sessionId}`
-   let response = await backendInstance.post(url)
-   return response.data
-}
 
 
 export async function updateSettings(data) {
@@ -146,6 +72,11 @@ export async function addDiscordBot(data) {
    return response.data
 }
 
+export async function reenableCredential(data) {
+   let url = `/user/discordSettings/credentials`
+   let response = await backendInstance.post(url, data)
+   return response.data
+}
 
 export async function deleteDiscordBot(discordId) {
    let url = `/user/discordSettings/bots/${discordId}`
@@ -191,22 +122,8 @@ export async function deleteDiscordSettings() {
 }
 
 
-export async function getActiveDevices() {
-   let url = `/user/devices`
+export async function getNotifications() {
+   let url = `/user/notifications`
    let response = await backendInstance.get(url)
-   return response.data
-}
-
-
-export async function revokeDevice(deviceId) {
-   let url = `/user/devices/${deviceId}`
-   let response = await backendInstance.delete(url)
-   return response.data
-}
-
-
-export async function logoutAllDevices() {
-   let url = `/user/devices/logout-all`
-   let response = await backendInstance.post(url)
    return response.data
 }

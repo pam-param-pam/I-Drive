@@ -68,7 +68,7 @@ export default {
          return {
             download: this.selectedCount > 0,
             info: this.selectedCount > 0,
-            openInNewWindow: true,
+            openInNewWindow: this.selectedCount === 1,
             copyShare: this.selectedCount === 1
          }
       }

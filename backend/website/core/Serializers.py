@@ -1,10 +1,13 @@
 from abc import abstractmethod, ABC
 from collections import defaultdict
+from typing import Iterable
 
 from .crypto.signer import sign_resource_id_with_expiry
-from ..constants import API_BASE_URL
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken
+from ..constants import API_BASE_URL, ShareEventType
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken, \
+    ShareAccessEvent
 from ..models.file_related_models import RawMetadata
+from ..models.other_models import Notification
 from ..queries.selectors import get_item_inside_share
 
 
@@ -14,7 +17,7 @@ class SimpleSerializer(ABC):
     def serialize_object(self, obj: object) -> dict:
         raise NotImplementedError
 
-    def serialize_objects(self, objs: list[object]) -> list:
+    def serialize_objects(self, objs: list[object] | Iterable[object]) -> list:
         dicts_list = []
         for obj in objs:
             dicts_list.append(self.serialize_object(obj))
@@ -203,44 +206,27 @@ class ShareSerializer(SimpleSerializer):
         return item
 
 class ShareAccessSerializer(SimpleSerializer):
-    def serialize_object(self, share: ShareAccess) -> dict:
-        # Group accesses
-        accessed = ShareAccess.objects.filter(share=share)
-
-        access_summary = defaultdict(lambda: {
-            "user": None,
-            "ip": None,
-            "user_agent": None,
-            "access_count": 0,
-            "last_access_time": None,
-        })
-
-        for access in accessed:
-            key = (
-                access.accessed_by.username if access.accessed_by else "anonymous",
-                access.ip,
-                access.user_agent,
-            )
-
-            entry = access_summary[key]
-            entry["user"] = key[0]
-            entry["ip"] = key[1]
-            entry["user_agent"] = key[2]
-            entry["access_count"] += 1
-
-            if entry["last_access_time"] is None or access.access_time > entry["last_access_time"]:
-                entry["last_access_time"] = access.access_time
-
+    def serialize_object(self, access: ShareAccess) -> dict:
         return {
-            "accesses": [
-                {
-                    **entry,
-                    "last_access_time": entry["last_access_time"].isoformat()
-                }
-                for entry in access_summary.values()
-            ]
+            "id": access.id,
+            "user": access.accessed_by.username if access.accessed_by else None,
+            "ip": access.ip,
+            "user_agent": access.user_agent,
+            "access_time": access.access_time.isoformat() if access.access_time else None,
         }
 
+class ShareAccessEventSerializer(SimpleSerializer):
+    def serialize_object(self, event: ShareAccessEvent) -> dict:
+        event_enum = ShareEventType(event.event_type)
+        event_type = event_enum.name
+
+        return {
+            "id": event.id,
+            "access_id": event.access_id,
+            "event_type": event_type,
+            "timestamp": event.timestamp.isoformat() if event.timestamp else None,
+            "metadata": event.metadata or {},
+        }
 
 class WebhookSerializer(SimpleSerializer):
     def serialize_object(self, webhook: Webhook) -> dict:
@@ -336,4 +322,14 @@ class DeviceTokenSerializer(SimpleSerializer):
             'country': token.country,
             'city': token.city,
             'device_type': token.device_type
+        }
+
+class NotificationSerializer(SimpleSerializer):
+    def serialize_object(self, notification: Notification) -> dict:
+        return {
+            "type": notification.type,
+            "title": notification.title,
+            "message": notification.message,
+            "is_read": notification.is_read,
+            "created_at": notification.created_at
         }

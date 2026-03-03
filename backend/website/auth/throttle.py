@@ -1,3 +1,4 @@
+import base64
 import time
 from datetime import datetime, timedelta
 
@@ -8,6 +9,7 @@ from ..constants import cache
 
 
 class MyUserRateThrottleBase(UserRateThrottle):
+    scope = None
     bucket = None
 
     def __init__(self):
@@ -16,6 +18,7 @@ class MyUserRateThrottleBase(UserRateThrottle):
         self.fail_limit = 100
         self.fail_count = None
         self.request = None
+        self.bucket = base64.b64encode(self.scope.encode()).decode().rstrip("=")
 
     def get_cache_key(self, request, view):
         self.request = request
@@ -144,41 +147,31 @@ class MyUserRateThrottleBase(UserRateThrottle):
 
 class defaultAnonUserThrottle(MyUserRateThrottleBase):
     scope = 'anon'
-    bucket = "aBcDeFgHiJ"
 
 class defaultAuthUserThrottle(MyUserRateThrottleBase):
     scope = 'user'
-    bucket = "RpQwXsEfGt"
 
 class FolderPasswordThrottle(MyUserRateThrottleBase):
     scope = 'folder_password'
-    bucket = "zYxWvUtSrQ"
 
 class MediaThrottle(MyUserRateThrottleBase):
     scope = 'media'
-    bucket = "lMnOpQrStU"
 
 class AnonUserMediaThrottle(MyUserRateThrottleBase):
     scope = 'media_anon'
-    bucket = "lYnOX4rStU"
 
 class SearchThrottle(MyUserRateThrottleBase):
     scope = 'search'
-    bucket = "VwXyZaBcDe"
 
 class PasswordChangeThrottle(MyUserRateThrottleBase):
     scope = 'password_change'
-    bucket = "FgHiJkLmNo"
 
 class RegisterThrottle(MyUserRateThrottleBase):
     scope = 'register'
-    bucket = "FdHakamxf"
 
 class LoginThrottle(MyUserRateThrottleBase):
     scope = 'login'
-    bucket = "Ad3DkDf5o"
 
 class DiscordSettingsThrottle(MyUserRateThrottleBase):
     scope = 'discord_settings'
-    bucket = "YWJob2rcw"
 

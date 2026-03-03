@@ -214,7 +214,6 @@ class DiscordHelper:
             print(f"Exception when deleting channel {channel_id}: {e}")
 
     def _create_webhook(self, bot_token, channel, webhook_payload):
-
         res = self.client.post(f"{DISCORD_BASE_URL}/channels/{channel[0]}/webhooks", headers=self._get_headers(bot_token), json=webhook_payload)
         if not res.is_success:
             raise DiscordTextError(f"Failed to create webhook in channel {channel[0]}", res.status_code)
@@ -228,6 +227,16 @@ class DiscordHelper:
         self._assign_role_to_bot(guild_id, primary_token, bot_id, role_id)
         return bot_id, bot_name
 
+    def _channel_has_messages(self, bot_token, channel_id):
+        res = self.client.get(f"{DISCORD_BASE_URL}/channels/{channel_id}/messages", headers=self._get_headers(bot_token), params={"limit": 1})
+
+        if not res.is_success:
+            raise DiscordTextError(f"Failed to fetch messages for channel {channel_id}", res.status_code)
+
+        messages = res.json()
+
+        return bool(messages)
+
     def remove_all(self, user):
         discord_settings = DiscordSettings.objects.get(user=user)
         guild_id = discord_settings.guild_id
@@ -238,8 +247,11 @@ class DiscordHelper:
 
         channels = Channel.objects.filter(owner=user)
         for ch in channels:
-            if len(query_attachments(channel_id=ch.discord_id)) > 0:  # no change here
+            if len(query_attachments(channel_id=ch.discord_id)) > 0:
                 raise BadRequestError("Cannot reset discord settings. There are files in this channel")
+
+            if self._channel_has_messages(bot_token, ch.discord_id):
+                raise BadRequestError(f"Cannot remove channel: {ch.name}. There are messages in this channel")
 
         if DiscordSettings.objects.exclude(user=user).filter(category_id=discord_settings.category_id).exists():
             raise BadRequestError("Cannot remove category, its in use by another user.")

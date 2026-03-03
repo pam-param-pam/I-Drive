@@ -9,7 +9,7 @@ from ..celery import app
 from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder, Webhook
-from ..tasks.deleteTasks import delete_files, smart_delete_task
+from ..tasks.deleteTasks import smart_delete_task
 from ..core.errors import NoBotsError
 
 
@@ -38,7 +38,9 @@ def prune_expired_tokens():
 
 @app.task
 def delete_unready_files():
-    files = File.objects.filter(ready=False)
+    #todo
+    return
+    files = File.objects.filter(state=ItemState.ACTIVE)
     current_datetime = timezone.now()
 
     # Group files by owner
@@ -126,6 +128,7 @@ def delete_files_from_trash():
 
     current_datetime = timezone.now()
 
+    # todo delete better using with 1 call to task with list of ids
     for file in files:
         elapsed_time = current_datetime - file.inTrashSince
         # if file is in trash for at least 30 days
@@ -140,4 +143,3 @@ def delete_files_from_trash():
         if elapsed_time >= timedelta(days=30):
             smart_delete_task.delay(RequestContext.from_user(folder.owner_id), [folder.id])
 
-    # todo delete better using with 1 call to task with list of ids

@@ -125,6 +125,8 @@ export async function onEvent(message) {
    }
    if (op_code === 3) { // items updated event
       for (let item of event.data) {
+         //todo make all of these events work wit/based on breadcrumbs too just like here
+         store.updateBreadcrumbsAndCurrentFolder(item)
          if (item.parent_id !== currentFolder?.id && !store.searchActive) continue
          store.updateItem(item)
       }
@@ -233,5 +235,8 @@ export async function onEvent(message) {
          store.closeHover()
       }
    }
+   if (op_code === 17) { // new notification
+      store.user.unreadNotifications++
+   }
 
-}
+   }

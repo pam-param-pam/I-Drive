@@ -8,20 +8,21 @@ from django.views.static import serve
 
 from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
-    cancel_pending_qr_session_view, change_password_view, healthcheck_view
+    cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id, \
     check_message_id, get_fragment_for_crc
-from .views.itemManagmentViews import rename_view, move_to_trash, move, \
+from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_video_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, change_file_crc_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, change_fragment_crc_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
-    share_get_subtitles, check_share_password, get_share_visits
+    share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view, create_linker
 from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
-    delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, list_active_devices_view, revoke_device_view, logout_all_devices_view
+    delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
+    reenable_credential_view, get_notifications_view, mark_notifications_read_view
 
 _route_registry = {}
 _registered_routes = set()
@@ -97,8 +98,8 @@ urlpatterns = [
     path("folders/<folder_id>/password/reset", ["POST"], reset_folder_password_view, name="create folder"),
     path("folders/<folder_id>/stats", ['GET'], get_file_stats, name="get file stats for folder"),
 
-    path("items/move", ["PATCH"], move, name="bulk move items"),
-    path("items/moveToTrash", ["PATCH"], move_to_trash, name="bulk move items to trash"),
+    path("items/move", ["PATCH"], move_items_view, name="bulk move items"),
+    path("items/moveToTrash", ["PATCH"], move_items_to_trash_view, name="bulk move items to trash"),
     path("items/restoreFromTrash", ["PATCH"], restore_from_trash, name="move items to trash"),
     path("items/delete", ["POST"], delete, name="bulk delete items"),
     path("items/zip", ["POST"], create_zip_model, name="create zip model"),
@@ -118,14 +119,13 @@ urlpatterns = [
     django_path('auth/qrcode/get/<session_id>', get_qr_session_device_info_view, name='get new device info by session id'),
     django_path('auth/qrcode/cancel/<session_id>', cancel_pending_qr_session_view, name='cancel new device pending session'),
     django_path("auth/password", change_password_view, name="change password"),
+    path("auth/devices", ['GET'], list_active_devices_view, name="list active devices"),
+    path("auth/devices/logout-all", ['POST'], logout_all_devices_view, name="logouts all devices"),
+    path("auth/devices/<device_id>", ['DELETE'], revoke_device_view, name="revoke a device"),
 
     path('user/me', ['GET'], users_me, name="get current user"),
     path('user/canUpload/<folder_id>', ['GET'], can_upload, name="check if user is allowed to upload"),
     path("user/settings", ['PUT'], update_settings, name="update settings"),
-
-    path("user/devices", ['GET'], list_active_devices_view, name="list active devices"),
-    path("user/devices/logout-all", ['POST'], logout_all_devices_view, name="logouts all devices"),
-    path("user/devices/<device_id>", ['DELETE'], revoke_device_view, name="revoke a device"),
 
     path("user/discordSettings", ['GET'], get_discord_settings_view, name="get discord settings"),
     path("user/discordSettings", ['PATCH'], update_attachment_name_view, name="update upload destination"),
@@ -135,10 +135,15 @@ urlpatterns = [
     path("user/discordSettings/webhooks/<webhook_id>", ['DELETE'], delete_webhook_view, name="delete a webhook"),
     path("user/discordSettings/bots", ['POST'], add_bot_view, name="add a bot"),
     path("user/discordSettings/bots/<bot_id>", ['DELETE'], delete_bot_view, name="delete a bot"),
+    path("user/discordSettings/credentials", ['POST'], reenable_credential_view, name="reenable a credential"),
+
+    path("user/notifications", ['GET'], get_notifications_view, name="get user notifications"),
+    path("user/notifications", ['POST'], mark_notifications_read_view, name="mark notifications as read"),
 
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),
     path("shares/<token>/visits", ['GET'], get_share_visits, name="get share visits"),
+    path("shares/<token>/visits/<visit_id>", ['GET'], get_visit_events, name="get access event data"),
     path("shares/<token>", ['DELETE'], delete_share, name="delete share"),
     path('shares/<token>', ['GET'], view_share, name='view_share'),
     path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),

@@ -55,7 +55,7 @@ import { isSharePasswordCorrect } from "@/api/share.js"
 import { isPasswordCorrect } from "@/api/item.js"
 
 export default {
-   name: "folder-password",
+   name: "FolderPassword",
 
    data() {
       return {

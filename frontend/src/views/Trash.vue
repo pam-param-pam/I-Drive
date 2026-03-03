@@ -54,7 +54,6 @@ export default {
 
    mounted() {
       this.setItems(null)
-      // this.setCurrentFolder(null)
       this.setDisabledCreation(true)
       this.setSearchActive(false)
       this.setSearchItems(null)

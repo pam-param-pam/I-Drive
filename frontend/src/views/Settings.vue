@@ -68,9 +68,28 @@ export default {
    methods: {
       ...mapActions(useMainStore, ['setDisabledCreation']),
 
-      onDrop() {
-         this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
-      },
+      onDrop(event) {
+         const dt = event.dataTransfer
+
+         if (!dt) return
+
+         // Case 1: Files (most reliable)
+         if (dt.files && dt.files.length > 0) {
+            this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
+            return
+         }
+
+         // Case 2: Items (needed for folder detection in Chromium)
+         if (dt.items && dt.items.length > 0) {
+            const hasFileLikeItem = Array.from(dt.items).some(
+              item => item.kind === "file"
+            )
+
+            if (hasFileLikeItem) {
+               this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
+            }
+         }
+      }
 
    },
 

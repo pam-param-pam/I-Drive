@@ -41,7 +41,7 @@ import { v4 as uuidv4 } from "uuid"
 import { generateIv, generateKey } from "@/upload/utils/uploadHelper.js"
 
 export default {
-   name: 'new-file',
+   name: 'NewFile',
 
    data() {
       return {

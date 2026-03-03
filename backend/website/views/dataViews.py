@@ -24,6 +24,7 @@ from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadReq
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
 from ..models.file_related_models import RawMetadata
+from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
 from ..queries.selectors import query_attachments, check_if_bots_exists
 
@@ -90,10 +91,10 @@ def get_file_info(request, file_obj: File):
 def get_usage(request, folder_obj: Folder):
     total_used_size = cache.get(f"TOTAL_USED_SIZE:{request.user}")
     if not total_used_size:
-        file_used = File.objects.filter(owner=request.user, inTrash=False, ready=True, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        moment_used = Moment.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__ready=True, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        file_used = File.objects.filter(owner=request.user, inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
 
         total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
         cache.set(f"TOTAL_USED_SIZE:{request.user}", total_used_size, 60)
@@ -109,7 +110,7 @@ def get_usage(request, folder_obj: Folder):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
-@check_resource_permissions(default_checks, resource_key="item_obj")
+@check_resource_permissions(default_checks - CheckTrash, resource_key="item_obj")
 def fetch_additional_info(request, item_obj):
     if isinstance(item_obj, Folder):
         folder_used_size = calculate_size(item_obj)
@@ -211,8 +212,8 @@ def search(request):
         raise BadRequestError("Both property and rage must be specified, not just one.")
 
     # Initialize query filters
-    file_filters = Q(owner=user, ready=True, inTrash=False, parent__inTrash=False)
-    folder_filters = Q(owner=user, ready=True, inTrash=False, parent__isnull=False)
+    file_filters = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
+    folder_filters = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__isnull=False)
 
     # Handle lockFrom and password logic
     if lock_from and password:
@@ -327,10 +328,10 @@ def search(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_trash(request):
-    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related(
+    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, state=ItemState.ACTIVE).select_related(
         "parent", "videoposition", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
 
-    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, ready=True).select_related("parent")
+    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, state=ItemState.ACTIVE).select_related("parent")
 
     file_serializer = FileSerializer()
     folder_serializer = FolderSerializer()

@@ -3,11 +3,16 @@ from urllib.parse import urlparse
 from django.contrib.auth.models import User
 from django.db import transaction
 
+from ..constants import EventCode
+from ..core.dataModels.http import RequestContext
 from ..core.errors import BadRequestError
 from ..discord.Discord import discord
 from ..discord.DiscordHelper import DiscordHelper
 from ..models import Webhook, Bot, DiscordSettings, Channel, File
+from ..models.mixin_models import ItemState
+from ..models.other_models import Notification, NotificationType
 from ..queries.selectors import get_webhook, query_attachments
+from ..websockets.utils import send_event
 
 
 def create_webhook(user: User, url: str) -> Webhook:
@@ -77,6 +82,14 @@ def delete_bot(user: User, bot_id: str) -> None:
     bot.delete()
     discord.remove_user_state(user)
 
+def reenable_credential(user: User, credential_id: str) -> None:
+    state = discord._get_user_state(user)
+    credential = state.get_credential_from_id(credential_id)
+    if not credential:
+        raise BadRequestError("Credential not found.")
+
+    state.unblock_credential(credential)
+
 def auto_setup_discord_settings(user: User, guild_id: str, bot_token: str, attachment_name: str) -> None:
     settings = DiscordSettings.objects.get(user=user)
 
@@ -122,7 +135,7 @@ def change_attachment_name(user: User, new_attachment_name: str):
     discord_settings.save()
 
 def reset_discord_settings(user: User) -> str:
-    if File.objects.filter(owner=user).exists():
+    if File.objects.filter(owner=user, state__in=[ItemState.ACTIVE, ItemState.DELETING]).exists():
         raise BadRequestError("Cannot reset discord settings. Remove all files first")
 
     discord_settings = DiscordSettings.objects.get(user=user)
@@ -148,3 +161,8 @@ def reset_discord_settings(user: User) -> str:
     discord.remove_user_state(user)
 
     return error_string
+
+def create_notification(user: User, notification_type: NotificationType, title: str, message: str) -> Notification:
+    notification = Notification.objects.create(owner=user, type=notification_type, title=title, message=message)
+    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_NOTIFICATION)
+    return notification

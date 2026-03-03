@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 
-from ..errors import ResourcePermissionError
+from ..errors import URLInvalidOrExpired
 from ...constants import SIGNED_URL_EXPIRY_SECONDS
 
 signer = TimestampSigner()
@@ -18,4 +18,4 @@ def verify_signed_resource_id(signed_file_id: str) -> str:
         file_id = signer.unsign(signed_file_id, max_age=timedelta(seconds=SIGNED_URL_EXPIRY_SECONDS))
         return file_id
     except (BadSignature, SignatureExpired):
-        raise ResourcePermissionError("URL not valid or expired.")
+        raise URLInvalidOrExpired("URL not valid or expired.")

@@ -39,6 +39,15 @@ export const useMainStore = defineStore("main", {
          isDeviceControlActive: true,
          isVideoVolumeChangeActive: true,
       },
+      multiSelection: false,
+      contextMenuState: {
+         visible: false,
+         advanced: false,
+      },
+      imagesBlock: {
+         lastError: null,
+         blockedUntil: null
+      },
    }),
 
    persist: {
@@ -47,6 +56,9 @@ export const useMainStore = defineStore("main", {
    },
 
    getters: {
+      areImagesBlocked() {
+         return (this.imagesBlock.blockedUntil && Date.now() < this.imagesBlock.blockedUntil)
+      },
       isLogged() {
          return this.user !== null
       },
@@ -58,20 +70,20 @@ export const useMainStore = defineStore("main", {
       selectedCount() {
          return this.selected.length
       },
-      previousPrompt(state) {
-         return state.prompts.length > 1
-            ? state.prompts[state.prompts.length - 2]
+      previousPrompt() {
+         return this.prompts.length > 1
+            ? this.prompts[this.prompts.length - 2]
             : null
       },
-      currentPrompt(state) {
-         return state.prompts.length > 0
-            ? state.prompts[state.prompts.length - 1]
+      currentPrompt() {
+         return this.prompts.length > 0
+            ? this.prompts[this.prompts.length - 1]
             : null
       },
-      currentPromptName(state, getters) {
+      currentPromptName() {
          return this.currentPrompt?.prompt
       },
-      previousPromptName(state, getters) {
+      previousPromptName() {
          return this.previousPrompt?.prompt
       },
       sortedItems() {
@@ -177,6 +189,9 @@ export const useMainStore = defineStore("main", {
       closeHovers() {
          this.prompts = []
       },
+      setUnreadNotifications(value) {
+        this.user.unreadNotifications = value
+      },
       toggleShell() {
          this.showShell = !this.showShell
       },
@@ -254,22 +269,43 @@ export const useMainStore = defineStore("main", {
          this.items.push(newItem)
       },
       updateItem(newItem) {
-         let index1 = this.items.findIndex(item => item.id === newItem.id)
-         let index2 = this.selected.findIndex(item => item.id === newItem.id)
-         let index3 = this.searchItems.findIndex(item => item.id === newItem.id)
+         const index1 = this.items.findIndex(item => item.id === newItem.id)
+         const index2 = this.selected.findIndex(item => item.id === newItem.id)
+         const index3 = this.searchItems.findIndex(item => item.id === newItem.id)
 
          if (index1 !== -1) {
             this.items[index1] = newItem
-         }
-         else {
+         } else {
             console.warn(`Not found for id ${newItem.id}`)
          }
+
          if (index2 !== -1) {
             this.selected[index2] = newItem
          }
+
          if (index3 !== -1) {
             this.searchItems[index3] = newItem
          }
+      },
+      updateBreadcrumbsAndCurrentFolder(newItem) {
+         if (this.currentFolder && this.currentFolder.id === newItem.id) {
+            this.setCurrentFolder(newItem)
+         }
+
+         let changed = false
+
+         const updated = this.breadcrumbs.map(bc => {
+            if (bc.id === newItem.id && bc.name !== newItem.name) {
+               changed = true
+               return { ...bc, name: newItem.name }
+            }
+            return bc
+         })
+
+         if (changed) {
+            this.setBreadcrumbs(updated)
+         }
+
       },
       changeLockStatusAndPasswordCache({ folderId, newLockStatus, lockFrom }) {
          let index1 = this.items.findIndex(item => item.id === folderId)
@@ -343,7 +379,34 @@ export const useMainStore = defineStore("main", {
       },
       clearPopupPreview() {
          this.popupPreview = null
-      }
+      },
+      setMultiSelection(value) {
+         this.multiSelection = value
+         if (!value) {
+            this.resetSelected()
+         }
+      },
+      openContextMenu({ pos, advanced = false }) {
+         this.contextMenuState.visible = true
+         this.contextMenuState.pos = pos
+         this.contextMenuState.advanced = advanced
+      },
+
+      closeContextMenu() {
+         this.contextMenuState.visible = false
+      },
+      blockImagesFor(seconds) {
+         const ms = Number(seconds) * 1000
+         if (!Number.isFinite(ms) || ms <= 0) return
+
+         const candidate = Date.now() + ms
+
+         if (!this.imagesBlock.blockedUntil || candidate > this.imagesBlock.blockedUntil) {
+            this.imagesBlock.blockedUntil = candidate
+         }
+
+         this.imagesBlock.lastError = 429
+      },
    }
 })
 

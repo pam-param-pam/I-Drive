@@ -16,6 +16,8 @@ from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent, AttachmentLinker, FragmentLink
 from .models.file_related_models import RawMetadata, ThumbnailLink
+from .models.mixin_models import ItemState
+from .models.other_models import Notification
 
 from .tasks.deleteTasks import smart_delete_task
 
@@ -31,11 +33,13 @@ admin.site.register(SubtitleTrack)
 
 admin.site.register(VideoPosition)
 
-admin.site.register(ShareAccessEvent)
+admin.site.register(ShareAccessEvent)  # todo
 
 admin.site.register(AttachmentLinker)
-admin.site.register(FragmentLink)
+admin.site.register(FragmentLink)  # todo
 admin.site.register(ThumbnailLink)
+
+admin.site.register(Notification)
 
 
 @admin.register(Fragment)
@@ -102,11 +106,11 @@ class FragmentAdmin(SimpleHistoryAdmin):
 class FolderAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'last_modified_at')
     ordering = ["-created_at"]
-    list_display = ["name", "owner", "ready", "created_at", "inTrash", "is_locked"]
+    list_display = ["name", "owner", "state", "created_at", "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock', 'force_ready']
     search_fields = ["id", "name"]
 
-    @easy.smart(short_description="Is locked", admin_order_field="password")
+    @easy.smart(short_description="Is locked", admin_order_field="password", boolean=True)
     def is_locked(self, obj: File):
         return obj._is_locked()
 
@@ -116,11 +120,13 @@ class FolderAdmin(SimpleHistoryAdmin):
         return form
 
     def force_ready(self, request, queryset: QuerySet[Folder]):
+        # todo, make this use service layer
         for real_obj in queryset:
-            real_obj.ready = True
+            real_obj.state = ItemState.ACTIVE
             real_obj.save()
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
+        # todo, make this use service layer
         ids = []
         for real_obj in queryset:
             ids.append(real_obj.id)
@@ -128,6 +134,7 @@ class FolderAdmin(SimpleHistoryAdmin):
         smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
+        # todo, make this use service layer
         if isinstance(obj, Folder):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
 
@@ -140,18 +147,22 @@ class FolderAdmin(SimpleHistoryAdmin):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
+        # todo, make this use service layer
         for real_obj in queryset:
             real_obj.force_delete()
 
     def move_to_trash(self, request, queryset: QuerySet[Folder]):
+        # todo, make this use service layer
         for folder in queryset:
             folder.moveToTrash()
 
     def restore_from_trash(self, request, queryset: QuerySet[Folder]):
+        # todo, make this use service layer
         for folder in queryset:
             folder.restoreFromTrash()
 
     def unlock(self, request, queryset: QuerySet[Folder]):
+        # todo, make this use service layer
         for folder in queryset:
             folder.removeLock()
 
@@ -166,15 +177,15 @@ class FolderAdmin(SimpleHistoryAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'duration', 'inTrashSince', 'ready', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
+    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'duration', 'inTrashSince', 'state', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
     ordering = ["-created_at"]
-    list_display = ['name', 'parent', 'readable_size', 'owner', 'ready', 'type', 'created_at',
+    list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
                     'inTrash', 'is_locked']
     actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
     search_fields = ['name', 'id', 'type', 'owner__username']
     filter_horizontal = ('tags',)
 
-    @easy.smart(short_description="Locked", admin_order_field="parent__password", bool=True)
+    @easy.smart(short_description="Locked", admin_order_field="parent__password", boolean=True)
     def is_locked(self, obj: File):
         return obj._is_locked()
 
@@ -204,7 +215,7 @@ class FileAdmin(SimpleHistoryAdmin):
             url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
             poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
             return (
-                f'<video controls style="width:350px; height:auto;" poster="{poster_url}">'
+                f'<video controls style="width:100%; height:auto;" poster="{poster_url}">'
                 f'<source src="{url}" type="video/mp4"></video>'
             )
 
@@ -218,6 +229,15 @@ class FileAdmin(SimpleHistoryAdmin):
                 f'<audio controls><source src="{url}" type="audio/mpeg"></audio>'
                 '</div>'
             )
+        if obj.type == "Image" or obj.type == "Raw image":
+            url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream?inline=True"
+            return (
+                f'<a href="{url}" target="_blank" style="display:inline-block;">'
+                f'<img src="{url}" '
+                f'style="max-width:100%; height:auto; width:auto; object-fit:contain; '
+                f'border-radius:6px; border:1px solid #ddd;" />'
+                f'</a>'
+            )
 
         # Otherwise: default link
         url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
@@ -229,6 +249,7 @@ class FileAdmin(SimpleHistoryAdmin):
         return form
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
+        # todo, make this use service layer
         ids = []
         for real_obj in queryset:
             ids.append(real_obj.id)
@@ -236,6 +257,7 @@ class FileAdmin(SimpleHistoryAdmin):
         smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def delete_model(self, request, obj: Union[File, List[File]]):
+        # todo, make this use service layer
         if isinstance(obj, File):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
 
@@ -249,19 +271,23 @@ class FileAdmin(SimpleHistoryAdmin):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def force_ready(self, request, queryset: QuerySet[File]):
+        # todo, make this use service layer
         for real_obj in queryset:
-            real_obj.ready = True
+            real_obj.state = ItemState.ACTIVE
             real_obj.save()
 
     def force_delete_model(self, request, queryset: QuerySet[File]):
+        # todo, make this use service layer
         for real_obj in queryset:
             real_obj.force_delete()
 
     def move_to_trash(self, request, queryset: QuerySet[File]):
+        # todo, make this use service layer
         for file in queryset:
             file.moveToTrash()
 
     def restore_from_trash(self, request, queryset: QuerySet[File]):
+        # todo, make this use service layer
         for file in queryset:
             file.restoreFromTrash()
 
@@ -289,6 +315,8 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
     @easy.smart(short_description="Preview thumbnail", allow_tags=True)
     def thumbnail_media(self, obj: Thumbnail):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
+        poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
+
         url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
         return f'<img src="{url}" style="width:350px; height:auto;">'
 
@@ -305,16 +333,25 @@ class ShareableLinkAdmin(admin.ModelAdmin):
     @easy.with_tags()
     @easy.smart(short_description="Resource")
     def resource_link(self, obj: ShareableLink):
+        model = obj.content_type.model_class()
 
-        if not obj.resource:
+        if not model:
+            return "<INVALID CONTENT TYPE>"
+
+        try:
+            resource = model.objects.filter(pk=obj.object_id).first()
+        except Exception:
+            return "<BROKEN REFERENCE>"
+
+        if not resource:
             return "<RESOURCE DELETED>"
 
         url = reverse(
             f"admin:{obj.content_type.app_label}_{obj.content_type.model}_change",
             args=[obj.object_id]
         )
-        # admin-easy will mark safe due to allow_tags default in smart
-        return f'<a href="{url}">{obj.resource.name}</a>'
+
+        return f'<a href="{url}">{resource.name}</a>'
 
     @easy.smart(short_description="Expired?", admin_order_field="expiration_time", bool=True)
     def is_expired(self, obj: ShareableLink):
@@ -430,6 +467,8 @@ class RawMetadataAdmin(admin.ModelAdmin):
 
 @admin.register(Subtitle)
 class SubtitleAdmin(admin.ModelAdmin):
+    ordering = ['-file__internal_created_at']
+
     search_fields = ('file__name', 'file__id', 'file__owner__username')
     list_display = ['file_name', 'language', 'owner', 'readable_size']
     readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
@@ -469,7 +508,7 @@ class SubtitleAdmin(admin.ModelAdmin):
 
 @admin.register(ShareAccess)
 class ShareAccessAdmin(admin.ModelAdmin):
-    readonly_fields = ('share', 'ip', 'user_agent', 'readable_accessed_by', 'access_time')
+    readonly_fields = ('share', 'id', 'ip', 'user_agent', 'readable_accessed_by', 'access_time')
     exclude = ['accessed_by']
 
     @easy.smart(short_description="Accessed by")

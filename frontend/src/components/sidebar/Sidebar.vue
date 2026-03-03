@@ -1,125 +1,148 @@
 <template>
-  <nav :class="{ active }">
-    <template v-if="isLogged">
-      <button
-        :aria-label="$t('sidebar.myFiles')"
-        :title="$t('sidebar.myFiles')"
-        class="action"
-        @click="toRoot"
+   <nav :class="{ active }">
+      <template v-if="isLogged">
+         <button
+           :aria-label="$t('sidebar.myFiles')"
+           :title="$t('sidebar.myFiles')"
+           class="action"
+           @click="toRoot"
+         >
+            <i class="material-icons">folder</i>
+            <span>{{ $t("sidebar.myFiles") }}</span>
+         </button>
+
+         <div v-if="perms.create">
+            <button
+              :aria-label="$t('sidebar.newFolder')"
+              :disabled="disabledCreation || !currentFolder"
+              :title="$t('sidebar.newFolder')"
+              class="action"
+              @click="showHover('newFolder')"
+            >
+               <i class="material-icons">create_new_folder</i>
+               <span>{{ $t("sidebar.newFolder") }}</span>
+            </button>
+
+            <button
+              :aria-label="$t('sidebar.newFile')"
+              :disabled="disabledCreation || !currentFolder"
+              :title="$t('sidebar.newFile')"
+              class="action"
+              @click="showHover('newFile')"
+            >
+               <i class="material-icons">note_add</i>
+               <span>{{ $t("sidebar.newFile") }}</span>
+            </button>
+         </div>
+
+         <button
+           :aria-label="$t('sidebar.trash')"
+           :title="$t('sidebar.trash')"
+           class="action"
+           @click="toTrash"
+         >
+            <i class="material-icons">delete</i>
+            <span>{{ $t("sidebar.trash") }}</span>
+         </button>
+
+         <div>
+            <button
+              :aria-label="$t('sidebar.settings')"
+              :title="$t('sidebar.settings')"
+              class="action"
+              @click="toSettings"
+            >
+               <i class="material-icons">settings_applications</i>
+               <span>{{ $t("sidebar.settings") }}</span>
+            </button>
+
+            <button
+              id="logout"
+              :aria-label="$t('sidebar.logout')"
+              :title="$t('sidebar.logout')"
+              class="action"
+              @click="logout"
+            >
+               <i class="material-icons">exit_to_app</i>
+               <span>{{ $t("sidebar.logout") }}</span>
+            </button>
+         </div>
+      </template>
+      <template v-else>
+         <router-link
+           :aria-label="$t('sidebar.login')"
+           :title="$t('sidebar.login')"
+           class="action"
+           to="/login"
+         >
+            <i class="material-icons">exit_to_app</i>
+            <span>{{ $t("sidebar.login") }}</span>
+         </router-link>
+
+         <router-link
+           v-if="signup"
+           :aria-label="$t('sidebar.register')"
+           :title="$t('sidebar.register')"
+           class="action"
+           to="/login"
+         >
+            <i class="material-icons">person_add</i>
+            <span>{{ $t("sidebar.register") }}</span>
+         </router-link>
+      </template>
+
+      <div
+        v-if="$route.name === 'Files' && (!disabledCreation || searchActive)"
+        class="credits"
+        style="width: 80%; margin: 2em 2.5em 3em 2.5em"
+        @click="showHover('fileStats')"
       >
-        <i class="material-icons">folder</i>
-        <span>{{ $t("sidebar.myFiles") }}</span>
-      </button>
-
-      <div v-if="perms.create">
-        <button
-          :aria-label="$t('sidebar.newFolder')"
-          :disabled="disabledCreation || !currentFolder"
-          :title="$t('sidebar.newFolder')"
-          class="action"
-          @click="showHover('newFolder')"
-        >
-          <i class="material-icons">create_new_folder</i>
-          <span>{{ $t("sidebar.newFolder") }}</span>
-        </button>
-
-        <button
-          :aria-label="$t('sidebar.newFile')"
-          :disabled="disabledCreation || !currentFolder"
-          :title="$t('sidebar.newFile')"
-          class="action"
-          @click="showHover('newFile')"
-        >
-          <i class="material-icons">note_add</i>
-          <span>{{ $t("sidebar.newFile") }}</span>
-        </button>
+         <progress-bar :val="Math.round((usage.used / usage.total) * 100)" size="small"></progress-bar>
+         <br />
+         {{ filesize(usage.used) }} of {{ filesize(usage.total) }} used
       </div>
 
-      <button
-        :aria-label="$t('sidebar.trash')"
-        :title="$t('sidebar.trash')"
-        class="action"
-        @click="toTrash"
-      >
-        <i class="material-icons">delete</i>
-        <span>{{ $t("sidebar.trash") }}</span>
-      </button>
-
-      <div>
-        <button
-          :aria-label="$t('sidebar.settings')"
-          :title="$t('sidebar.settings')"
-          class="action"
-          @click="toSettings"
-        >
-          <i class="material-icons">settings_applications</i>
-          <span>{{ $t("sidebar.settings") }}</span>
-        </button>
-
-        <button
-          id="logout"
-          :aria-label="$t('sidebar.logout')"
-          :title="$t('sidebar.logout')"
-          class="action"
-          @click="logout"
-        >
-          <i class="material-icons">exit_to_app</i>
-          <span>{{ $t("sidebar.logout") }}</span>
-        </button>
-      </div>
-    </template>
-    <template v-else>
-      <router-link
-        :aria-label="$t('sidebar.login')"
-        :title="$t('sidebar.login')"
-        class="action"
-        to="/login"
-      >
-        <i class="material-icons">exit_to_app</i>
-        <span>{{ $t("sidebar.login") }}</span>
-      </router-link>
-
-      <router-link
-        v-if="signup"
-        :aria-label="$t('sidebar.register')"
-        :title="$t('sidebar.register')"
-        class="action"
-        to="/login"
-      >
-        <i class="material-icons">person_add</i>
-        <span>{{ $t("sidebar.register") }}</span>
-      </router-link>
-    </template>
-
-    <div
-      v-if="$route.name === 'Files' && (!disabledCreation || searchActive)"
-      class="credits"
-      style="width: 80%; margin: 2em 2.5em 3em 2.5em"
-      @click="showHover('fileStats')"
-    >
-      <progress-bar :val="Math.round((usage.used / usage.total) * 100)" size="small"></progress-bar>
-      <br />
-      {{ filesize(usage.used) }} of {{ filesize(usage.total) }} used
-    </div>
-
-    <p class="credits">
+      <p class="credits">
          <span>
             <a :href="repoLink" rel="noopener noreferrer" target="_blank"
             >{{ name }} By {{ author }} v.{{ version }}</a
             >
          </span>
-      <span>
+         <span>
             <a @click="help">{{ $t("sidebar.help") }}</a>
          </span>
-    </p>
-    <dark-mode-button />
+      </p>
 
-    <div v-if="selectedFile && !isMobile() && shellSettings.showFileInfoInSidebar" class="selected-file-info">
-      <p><strong>Name:</strong> {{ selectedFile.name }}</p>
-      <p><strong>ID:</strong> {{ selectedFile.id }}</p>
-      <p v-if="selectedFile.size"><strong>Size:</strong> {{ filesize(selectedFile.size) }}</p>
-    </div>
-  </nav>
+      <div class="sidebar-actions-row">
+         <dark-mode-button />
+
+         <div class="notif-wrapper" v-if="isLogged">
+            <button
+              :aria-label="$t('sidebar.notifications')"
+              :title="$t('sidebar.notifications')"
+              class="action action--notifications"
+              :class="{ 'notif-alert': highlightNotification }"
+              @click="toggleNotifications"
+            >
+               <i class="material-icons">notifications</i>
+               <span v-if="user.unreadNotifications" class="notif-badge">{{ user.unreadNotifications }}</span>
+               <span class="notif-ripple" v-if="highlightNotification"></span>
+            </button>
+         </div>
+
+      </div>
+      <div v-if="selectedFile && !isMobile() && settings.itemInfoShortcut" class="selected-file-info">
+         <p><strong>{{ $t("prompts.name") }}: </strong> {{ selectedFile.name }}</p>
+         <p><strong>{{ $t("prompts.id") }}: </strong> {{ selectedFile.id }}</p>
+         <p v-if="!selectedFile.isDir"><strong>{{ $t("prompts.type") }}: </strong> {{ selectedFile.type }}</p>
+         <p v-if="!selectedFile.isDir"><strong>{{ $t("prompts.isEncrypted") }}: </strong>
+            <span :style="{ color: selectedFile.encryption_method !== 0 ? 'green' : 'red' }">
+              {{ selectedFile.encryption_method !== 0 ? "\u2705" : "\u274C" }}
+            </span>
+         </p>
+         <p v-if="!selectedFile.isDir"><strong>{{ $t("prompts.size") }}: </strong> {{ filesize(selectedFile.size) }}</p>
+      </div>
+   </nav>
 </template>
 
 <script>
@@ -147,13 +170,13 @@ export default {
          name: name,
          author: author,
          repoLink: githubUrl,
-         lastFolderId: null
-
+         lastFolderId: null,
+         highlightNotification: false
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ["items", "usage", "shellSettings", "user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading", "searchActive", "searchItems", "selected", "sortedItems"]),
+      ...mapState(useMainStore, ["items", "usage", "settings", "user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading", "searchActive", "searchItems", "selected", "sortedItems"]),
       selectedFile() {
          return this.selected[0]
       },
@@ -172,13 +195,26 @@ export default {
       },
       async searchItems() {
          await this.fetchUsage()
+      },
+      "user.unreadNotifications"(newVal, oldVal) {
+         if (newVal > oldVal) {
+            this.signalNewNotification()
+         }
       }
    },
    methods: {
       isMobile,
       filesize,
       ...mapActions(useMainStore, ["closeHover", "showHover", "setUsage"]),
-
+      toggleNotifications() {
+         this.showHover("notifications")
+      },
+      signalNewNotification() {
+         this.highlightNotification = true
+         setTimeout(() => {
+            this.highlightNotification = false
+         }, 800)
+      },
       async fetchUsage() {
          if (this.currentFolder && (this.$route.name === "Files" || this.$route.name === "Preview")) {
             if (!this.searchActive) {
@@ -238,28 +274,91 @@ export default {
 </script>
 <style scoped>
 .selected-file-info {
- position: fixed;
- bottom: 1rem;
- left: 0;
- width: 100%;
- background: rgba(0, 0, 0, 0.05);
- padding: 0.75rem 1rem;
- font-size: 0.9rem;
- text-align: left;
+   position: fixed;
+   bottom: 1rem;
+   left: 0;
+   width: 100%;
+   background: rgba(0, 0, 0, 0.05);
+   padding: 0.75rem 1rem;
+   font-size: 0.9rem;
+   text-align: left;
 
 }
 
 .selected-file-info h4,
 .selected-file-info p {
- margin: 0.25rem 0;
- font-size: 0.85rem;
- word-wrap: break-word;
- overflow-wrap: break-word;
- white-space: normal;
- max-width: 16em; /* Prevents text from exceeding the container width */
+   margin: 0.25rem 0;
+   font-size: 0.85rem;
+   word-wrap: break-word;
+   overflow-wrap: break-word;
+   white-space: normal;
+   max-width: 16em;
 }
 
 .selected-file-info strong {
- font-weight: bold;
+   font-weight: bold;
+}
+
+.sidebar-actions-row {
+   display: flex;
+   align-items: center;
+   position: relative;
+}
+
+.notif-badge {
+   position: absolute;
+   top: 8px;
+   left: 40px;
+   background: #e57373;
+   color: var(--textPrimary);
+   font-size: 11px;
+   padding: 2px 6px;
+   border-radius: 10px;
+}
+
+.action--notifications:hover {
+   background: transparent !important;
+   box-shadow: none !important;
+   transform: none !important;
+}
+
+.action--notifications {
+   padding-right: 15px;
+   padding-left: 15px;
+
+}
+
+/* subtle glow */
+.notif-alert {
+   position: relative;
+   box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.5);
+   border-radius: 8px;
+}
+
+/* ripple effect */
+.notif-ripple {
+   position: absolute;
+   top: 50%;
+   left: 50%;
+   width: 10px;
+   height: 10px;
+   background: rgba(229, 115, 115, 0.6);
+   border-radius: 50%;
+   transform: translate(-50%, -50%);
+   animation: ripple 1.2s ease-out forwards;
+   pointer-events: none;
+}
+
+@keyframes ripple {
+   0% {
+      width: 10px;
+      height: 10px;
+      opacity: 0.7;
+   }
+   100% {
+      width: 80px;
+      height: 80px;
+      opacity: 0;
+   }
 }
 </style>

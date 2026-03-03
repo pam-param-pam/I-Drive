@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-from ..auth.Permissions import CheckTrash, CheckReady
+from ..auth.Permissions import CheckTrash, CheckState
 from ..auth.utils import check_resource_perms
 from ..core.dataModels.general import Item
 from ..core.errors import BadRequestError
@@ -49,12 +49,12 @@ def delete_share(share: ShareableLink) -> None:
 def create_share_zip(request, share_obj: ShareableLink, ids: list[str]) -> UserZIP:
     validate_ids_as_list(ids)
 
-    user_zip = UserZIP.objects.create(owner=share_obj.owner)
+    user_zip = UserZIP.objects.create(owner=share_obj.owner)  # todo, this is weird, owner != share viewer
 
     for item_id in ids:
         item = get_item(item_id)
         check_if_item_belongs_to_share(request, share_obj, item)
-        check_resource_perms(request, item, [CheckTrash, CheckReady])
+        check_resource_perms(request, item, [CheckTrash, CheckState])
 
         if isinstance(item, Folder):
             user_zip.folders.add(item)

@@ -9,6 +9,7 @@ from mptt.models import MPTTModel
 from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 
+from .mixin_models import ItemState
 from ..constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH
 
 
@@ -26,11 +27,21 @@ class Folder(MPTTModel):
     autoLock = models.BooleanField(default=False)
     lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='+')
 
+    # --- lifecycle state ---
+    state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
+    state_changed_at = models.DateTimeField(null=True)
+    state_error = models.TextField(null=True)
+
     class MPTTMeta:
         order_insertion_by = ['-created_at']
 
     class Meta:
         constraints = [
+            # 0. folder state must be valid
+            CheckConstraint(
+                check=Q(state__in=[state.value for state in ItemState]),
+                name="%(class)s_valid_state",
+            ),
             # 1. name must not be empty or whitespace
             CheckConstraint(
                 check=~Q(name__regex=r'^\s*$'),
@@ -112,6 +123,7 @@ class Folder(MPTTModel):
         self.remove_cache()
         super(Folder, self).delete()
 
+    # todo move this to a service layer
     def moveToTrash(self):
         self.inTrash = True
         self.inTrashSince = timezone.now()

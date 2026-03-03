@@ -9,6 +9,7 @@ from ..constants import ALLOWED_IPS_LOCKED
 from ..core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from ..core.helpers import get_ip, get_attr
 from ..models import UserPerms, File, Folder, ShareableLink
+from ..models.mixin_models import ItemState
 from ..queries.selectors import check_if_item_belongs_to_share, get_item_inside_share
 
 
@@ -191,14 +192,14 @@ class CheckTrash(BaseResourceCheck):
             raise ResourcePermissionError("Cannot access resource in trash!")
 
 
-class CheckReady(BaseResourceCheck):
+class CheckState(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
         self._require_type(resource, (File, Folder, dict, tuple))
-
-        ready = self._require_attr(resource, 'ready')
-        if not ready:
-            raise ResourcePermissionError("Resource is not ready")
+        return
+        state = self._require_attr(resource, 'state')
+        if state != ItemState.ACTIVE:
+            raise ResourcePermissionError("Resource is not active")
 
 
 class CheckLockedFolderIP(BaseResourceCheck):
@@ -362,4 +363,4 @@ class CheckGroup:
         return self.__str__()
 
 
-default_checks = CheckGroup(CheckOwnership, CheckFolderLock, CheckTrash, CheckReady)
+default_checks = CheckGroup(CheckOwnership, CheckFolderLock, CheckTrash, CheckState)

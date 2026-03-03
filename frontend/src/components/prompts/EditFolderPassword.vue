@@ -51,7 +51,7 @@ import { mapActions, mapState } from 'pinia'
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'folder-password',
+   name: 'EditFolderPassword',
 
    data() {
       return {

@@ -14,22 +14,11 @@ from ..discord.Discord import discord
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 def get_discord_state(request):
-    user = User.objects.get(id=1)
-    discord._get_channel_for_user(user)
+    user = User.objects.get(id=5)
+    state = discord._get_user_state(user)
 
-    bots_dict = []
 
-    state = discord.users_state[user.id]
-    retry_timestamp = state.get('retry_timestamp')
-    if retry_timestamp:
-        remaining_time = state['retry_timestamp'] - time.time()
-    else:
-        remaining_time = None
-
-    for token in state['bots'].values():
-        bots_dict.append(token)
-
-    return JsonResponse({"blocked": state['blocked'], "retry_after": remaining_time, "bots": bots_dict}, safe=False)
+    return JsonResponse(state.to_dict(), safe=False)
 
 
 @api_view(['GET'])

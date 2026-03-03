@@ -72,7 +72,7 @@
 import { QrcodeStream } from "vue-qrcode-reader"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { approveQrSession, closePendingQrSession, getQrSessionDeviceInfo } from "@/api/user.js"
+import { approveQrSession, closePendingQrSession, getQrSessionDeviceInfo } from "@/api/auth.js"
 
 export default {
    name: "scan-qr-prompt",

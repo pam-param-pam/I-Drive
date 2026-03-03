@@ -4,6 +4,10 @@ import { showToast } from "@/utils/common.js"
 import { getUploader } from "@/upload/Uploader.js"
 import { noWifi } from "@/axios/helper.js"
 
+const SMALL_FILE_LIMIT = 0.1 * 1024 * 1024
+const NORMAL_FILE_COUNT = 20
+const SMALL_FILE_COUNT = 99
+
 export class BackendFileConsumer {
    constructor({ backendFileQueue, uploadRuntime }) {
       this.backendFileQueue = backendFileQueue
@@ -56,7 +60,20 @@ export class BackendFileConsumer {
       let totalSize = 0
       for (const file of this.finishedFiles) totalSize += file.size
 
-      if (this.finishedFiles.length > 20 || totalSize > 100 * 1024 * 1024 || this.shouldSaveFiles() || this.uploadRuntime.isUploadFullyFinished()) {
+      const allFilesAreSmall = this.finishedFiles.every(
+         file => file.size < SMALL_FILE_LIMIT
+      )
+
+      const fileCountThreshold = allFilesAreSmall
+         ? SMALL_FILE_COUNT
+         : NORMAL_FILE_COUNT;
+
+      if (
+         this.finishedFiles.length > fileCountThreshold ||
+         totalSize > 100 * 1024 * 1024 ||
+         this.shouldSaveFiles() ||
+         this.uploadRuntime.isUploadFullyFinished()
+      ) {
          const batch = this.finishedFiles
          this.finishedFiles = []
          this.saveFiles(batch)
@@ -96,11 +113,12 @@ export class BackendFileConsumer {
             this.backendFileQueue.put(file)
          }
 
-      } else{
+      } else {
          for (const file of files) {
             const state = this.uploadRuntime.getFileState(file.frontend_id)
             state.setStatus(fileUploadStatus.saveFailed)
             state.setError(error?.response?.data)
+            this.failedFiles.push(file)
          }
       }
 
@@ -113,8 +131,10 @@ export class BackendFileConsumer {
       }
    }
 
-   retryFailedFiles() {
-      if (!this.failedFiles.length) return
+   async retryFailedFiles() {
+      if (!this.failedFiles.length) {
+         return
+      }
 
       const batch = this.failedFiles
       this.failedFiles = []
@@ -122,8 +142,9 @@ export class BackendFileConsumer {
       for (const file of batch) {
          const state = this.uploadRuntime.getFileState(file.frontend_id)
          if (state) state.setStatus(fileUploadStatus.retrying)
-      }
 
-      batch.forEach(file => this.backendFileQueue.put(file))
+         await new Promise(resolve => setTimeout(resolve, 500))
+         this.backendFileQueue.put(file)
+      }
    }
 }

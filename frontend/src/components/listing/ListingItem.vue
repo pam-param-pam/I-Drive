@@ -1,5 +1,17 @@
 <template>
    <div class="item-wrapper">
+      <span
+         v-if="multiSelection"
+         class="multi-select-hitbox"
+         v-touch:tap.stop="onMultiSelectTap"
+      >
+        <button
+           class="multi-select-toggle"
+           :aria-pressed="isSelected"
+           tabindex="-1"
+        />
+      </span>
+
       <div
          ref="wrapper"
          :aria-label="item.name"
@@ -11,8 +23,11 @@
          class="item"
          role="button"
          tabindex="0"
-         @click="click"
-         @dblclick="open"
+         @click.left="onLeftClick"
+         @click.right.prevent="onRightClick"
+         @dblclick="onDoubleClick"
+         v-touch:hold.prevent="onLongPress"
+         v-touch:tap.prevent="onMobileTap"
          @dragover="dragOver"
          @dragstart="dragStart"
          @drop="drop"
@@ -28,12 +43,17 @@
             />
             <i v-else :style="iconStyle" class="material-icons"></i>
          </div>
-         <div class="name">
+
+         <div class="name" :title="item.name">
             <p>{{ item.name }}</p>
          </div>
+
          <div class="size">
-            <p :data-order="humanSize(item.size)" class="size">{{ humanSize(item.size) }}</p>
+            <p :data-order="humanSize(item.size)">
+               {{ humanSize(item.size) }}
+            </p>
          </div>
+
          <div class="created">
             <p>{{ humanTime(item.created) }}</p>
          </div>
@@ -41,17 +61,20 @@
    </div>
 </template>
 
+
 <script>
 import { filesize } from "@/utils"
 import { move } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { humanTime, isMobile } from "@/utils/common.js"
+import { toRaw } from "vue"
+import { getFileRawData } from "@/api/files.js"
 
 export default {
    name: "item",
 
-   emits: ["onOpen", "onLongPress"],
+   emits: ["onOpen", "onContextMenuOpen", "onHideContextMenu"],
 
    props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
@@ -64,15 +87,13 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems"]),
+      ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems", "multiSelection", "contextMenuState", "areImagesBlocked"]),
       imageSrc() {
          if (this.item.size === 0) return null
          if (this.item.thumbnail_url) {
-            console.log("1111")
             return this.item.thumbnail_url
          }
          if (this.type === "Image") {
-            console.log("2222")
             return this.item.download_url
          }
          return null
@@ -80,7 +101,7 @@ export default {
       imageSrcSmall() {
          let size = this.settings.viewMode === "height grid" ? "512" : "256"
          if (!this.imageSrc) return
-         if (this.fallback) return "/img/failed.svg"
+         if (this.fallback || this.areImagesBlocked) return "/img/failed.svg"
          return this.imageSrc + "?size=" + size
       },
       type() {
@@ -129,7 +150,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview"]),
+      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview", "setMultiSelection", "blockImagesFor"]),
 
       humanSize(size) {
          if (!size) return "-"
@@ -180,72 +201,59 @@ export default {
          el.style.opacity = 1
       },
 
-      async drop(event) {
-         if (event.dataTransfer.files.length > 0) return
-         if (!this.canDrop) {
-            this.$toast.error(this.$t("toasts.illegalMove"))
+      onLongPress() {
+         if (!isMobile()) return
+
+         this.setMultiSelection(true)
+         this.hideContextMenu()
+      },
+      onDoubleClick(event) {
+         this.$emit("onOpen", event)
+      },
+      onMultiSelectTap(event) {
+         if (this.multiSelection) {
+            if (this.isSelected) {
+               this.removeSelected(this.item)
+            } else {
+               this.addSelected(this.item)
+            }
+         }
+      },
+      onMobileTap(event) {
+         if (!isMobile()) return
+
+         if (this.clickTimer) {
+            // SECOND TAP → double tap
+            clearTimeout(this.clickTimer)
+            this.clickTimer = null
+            this.$emit("onOpen", event)
             return
          }
-         if (this.selectedCount === 0) return
 
-         let listOfIds = this.selected.map((obj) => obj.id)
-         let res = await move({ ids: listOfIds, new_parent_id: this.item.id })
+         // FIRST TAP → wait
+         this.clickTimer = setTimeout(() => {
+            this.clickTimer = null
+            //repackage event with x and y cords
+            let touch =
+               event.touches?.[0] ||
+               event.changedTouches?.[0]
 
-         let message = this.$t("toasts.movingItems")
-         this.$toast.info(message, {
-            timeout: null,
-            id: res.task_id
-         })
+            if (!touch) return null
 
-         this.resetSelected()
-      },
-
-      open() {
-         if (this.item.isDir) this.setLastItem(this.item)
-
-         this.$emit("onOpen", this.item)
-      },
-
-      openContextMenu(event) {
-         this.$emit("onLongPress", event, this.item)
-      },
-      async handleImageError(event) {
-         const img = event.target
-
-         // prevent infinite retry
-         if (img.dataset.failed) return
-         img.dataset.failed = "true"
-
-         try {
-            const res = await fetch(this.imageSrcSmall, { method: "GET", mode: "cors" })
-            console.log(res)
-            if (res.ok) {
-               const blob = await res.blob()
-               img.src = URL.createObjectURL(blob)
-            } else if (res.status !== 503) {
-               this.fallback = true
+            let newEvent = {
+               clientX: touch.clientX,
+               clientY: touch.clientY
             }
-         } catch (err) {
-            console.log(err)
-            this.fallback = true
-         }
+            this.manageContextMenu(newEvent)
+         }, this.clickDelay)
       },
-      click(event) {
-         if (isMobile()) {
-            if (this.clickTimer) {
-               clearTimeout(this.clickTimer)
-               this.clickTimer = null
-               return
-            }
-
-            this.clickTimer = setTimeout(() => {
-               this.clickTimer = null
-
-               if (isMobile()) {
-                  this.openContextMenu(event)
-               }
-            }, this.clickDelay)
-         }
+      onRightClick(event) {
+         //always display context menu (desktop only)
+         this.manageContextMenu(event)
+      },
+      onLeftClick(event) {
+         this.hideContextMenu()
+         //always add to selected (desktop only)
 
          // Deselect items if no shift or ctrl key is pressed and there are selected items
          // then add current item to selected if it wasn't previously selected
@@ -285,6 +293,79 @@ export default {
          } else {
             this.addSelected(this.item)
          }
+      },
+      async manageContextMenu(event) {
+         if (this.contextMenuState.visible && isMobile()) {
+            this.hideContextMenu()
+            if (this.selectedCount === 1) {
+               this.resetSelected()
+            }
+            return
+         }
+
+         if (this.selectedCount === 0) {
+            this.addSelected(this.item)
+         } else if (this.selectedCount === 1) {
+            this.resetSelected()
+            this.addSelected(this.item)
+         }
+         this.$emit("onContextMenuOpen", event)
+
+      },
+      hideContextMenu() {
+         this.$emit("onHideContextMenu")
+      },
+      async drop(event) {
+         if (event.dataTransfer.files.length > 0) return
+         if (!this.canDrop) {
+            this.$toast.error(this.$t("toasts.illegalMove"))
+            return
+         }
+         if (this.selectedCount === 0) return
+
+         let listOfIds = this.selected.map((obj) => obj.id)
+         let res = await move({ ids: listOfIds, new_parent_id: this.item.id })
+
+         let message = this.$t("toasts.movingItems")
+         this.$toast.info(message, {
+            timeout: null,
+            id: res.task_id
+         })
+
+         this.resetSelected()
+      },
+
+      open() {
+         if (this.item.isDir) this.setLastItem(this.item)
+
+         this.$emit("onOpen", this.item)
+      },
+
+      async handleImageError(event) {
+         const img = event.target
+
+         if (img.dataset.failed) return
+         img.dataset.failed = "true"
+
+         if (this.areImagesBlocked) {
+            this.fallback = true
+            return
+         }
+
+         try {
+            const data = await getFileRawData(this.imageSrc)
+            img.src = URL.createObjectURL(data)
+
+         } catch (err) {
+            const response = err?.response
+
+            if (response?.status === 429) {
+               const retryAfter = Number(response.headers?.["retry-after"]) || 30
+               this.blockImagesFor(retryAfter)
+            }
+
+            this.fallback = true
+         }
       }
    }
 }
@@ -301,6 +382,7 @@ export default {
 }
 
 .grid .item-wrapper {
+ position: relative; /* positioning context for button */
  border-radius: 10px;
  margin: 0.5em;
  background-color: var(--surfacePrimary);
@@ -363,7 +445,6 @@ export default {
  display: flex;
  align-items: center;
  border-bottom: 1px solid var(--divider);
- padding: 8px 12px;
  cursor: pointer;
  transition: background-color 0.2s ease-in-out;
 }
@@ -373,7 +454,6 @@ export default {
 }
 
 .list .item-wrapper .item > div {
- padding: 4px 8px;
  overflow: hidden;
  text-overflow: ellipsis;
  white-space: nowrap;
@@ -404,8 +484,8 @@ export default {
 }
 
 .list .item-wrapper img {
- max-width: 32px;
- max-height: 32px;
+ max-width: 48px;
+ max-height: 48px;
  object-fit: cover;
  border-radius: 4px;
 }
@@ -414,4 +494,47 @@ export default {
  font-size: 24px;
  color: #666;
 }
+
+.item-wrapper:hover .multi-select-toggle {
+}
+
+.multi-select-toggle {
+ position: absolute;
+ top: -8px;
+ left: -8px;
+
+ width: 14px;
+ height: 14px;
+ border-radius: 50%;
+
+ background: #cfcfcf;
+ border: 2px solid #fff;
+
+ box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+
+ cursor: pointer;
+ padding: 0;
+
+ touch-action: manipulation;
+}
+
+.multi-select-hitbox {
+ position: absolute;
+ top: 15px;
+ left: 15px;
+
+ width: 36px;
+ height: 36px;
+
+ display: flex;
+ align-items: center;
+ justify-content: center;
+
+ z-index: 5;
+}
+
+.multi-select-toggle[aria-pressed="true"] {
+ background: var(--dark-blue);
+}
+
 </style>

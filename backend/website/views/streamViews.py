@@ -18,13 +18,14 @@ from zipFly.EmptyFolder import EmptyFolder
 from ..auth.Permissions import CheckLockedFolderIP
 from ..auth.throttle import MediaThrottle, defaultAuthUserThrottle
 from ..auth.utils import check_resource_perms
-from ..constants import ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE
+from ..constants import ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE, MAX_THUMBNAIL_SIZE, USE_CACHE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
 from ..core.errors import BadRequestError, FailedToResizeImageError
 from ..core.http.utils import get_content_disposition_string, parse_range_header
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
+from ..models.mixin_models import ItemState
 from ..queries.builders import build_flattened_children, build_zip_file_dict
 from ..queries.selectors import check_if_bots_exists
 from ..tasks.helper import auto_prefetch
@@ -37,18 +38,22 @@ from ..tasks.helper import auto_prefetch
 @check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_thumbnail(request, file_obj: File):
     size_param = request.GET.get("size", "original").lower()
+    isInline = request.GET.get('inline', False)
 
     # Only allow specific sizes
     if size_param not in ALLOWED_THUMBNAIL_SIZES:
         raise BadRequestError(f"Invalid size: must be one of {', '.join(ALLOWED_THUMBNAIL_SIZES)}")
 
-    cache_key = f"thumbnail:{file_obj.id}:{size_param}"
+    cache_key = f"thumbnail:{file_obj.id}"
     thumbnail_content = cache.get(cache_key)
 
-    if not thumbnail_content:
+    if not thumbnail_content or not USE_CACHE:
         check_if_bots_exists(file_obj.owner)
 
         thumbnail = file_obj.thumbnail
+        if thumbnail.size > MAX_THUMBNAIL_SIZE:
+            raise BadRequestError("Thumbnail too big too stream!")
+
         decryptor = Decryptor(
             method=file_obj.get_encryption_method(),
             key=thumbnail.key,
@@ -56,49 +61,21 @@ def stream_thumbnail(request, file_obj: File):
         )
 
         url = discord.get_attachment_url(file_obj.owner, thumbnail)
-        discord_response = requests.get(url)
+
+        discord_response = requests.get(url, timeout=5)
         if not discord_response.ok:
             return JsonResponse(status=discord_response.status_code, data=discord_response.json())
 
         thumbnail_content = decryptor.decrypt(discord_response.content)
         thumbnail_content += decryptor.finalize()
 
-        if size_param != "original":
-            try:
-                resize_start = time.perf_counter()
-
-                target_size = int(size_param)
-
-                image = Image.open(BytesIO(thumbnail_content))
-                image = image.convert("RGB")
-
-                orig_width, orig_height = image.size
-                aspect_ratio = orig_width / orig_height
-
-                if orig_width >= orig_height:
-                    new_width = target_size
-                    new_height = int(target_size / aspect_ratio)
-                else:
-                    new_height = target_size
-                    new_width = int(target_size * aspect_ratio)
-
-                image = image.resize((new_width, new_height), Image.LANCZOS)
-
-                buffer = BytesIO()
-                image.save(buffer, format="WEBP")
-                thumbnail_content = buffer.getvalue()
-
-                resize_duration = time.perf_counter() - resize_start
-                print(f"[resize] Resized {file_obj.id} to {new_width}x{new_height} in {resize_duration:.3f}s")
-
-            except Exception:
-                raise FailedToResizeImageError("Failed to resize image")
-
         cache.set(cache_key, thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
     response = HttpResponse(thumbnail_content, content_type="image/webp")
     name_ascii, name_encoded = get_content_disposition_string(f"thumbnail_{file_obj.get_name_no_extension()}.webp")
-    response['Content-Disposition'] = f'attachment; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
+    content_disposition = f'{"inline" if isInline else "attachment"}; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
+    response['Content-Disposition'] = content_disposition
+
     response["Cache-Control"] = f"max-age={MAX_MEDIA_CACHE_AGE}"
 
     # Set Vary header
@@ -196,11 +173,11 @@ def stream_file(request, file_obj: File):
     async def file_iterator(index, start_byte, end_byte, real_start_byte, chunk_size=8192 * 16):
         async with aiohttp.ClientSession() as session:
             decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv, start_byte=real_start_byte)
+            headers = {'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
-                headers = {'Range': f'bytes={start_byte}-{end_byte}' if end_byte else f'bytes={start_byte}-'}
-
+                print(headers)
                 async with session.get(url, headers=headers) as dc_res:
                     dc_res.raise_for_status()
 
@@ -222,6 +199,7 @@ def stream_file(request, file_obj: File):
                     break
 
                 index += 1
+                headers = {}
 
             if file_obj.is_encrypted():
                 yield decryptor.finalize()
@@ -240,9 +218,8 @@ def stream_file(request, file_obj: File):
         else:
             start_byte -= fragment.size
 
-    # if range header was given then to allow seeking in the browser we need to return 206 - partial response.
-    # Otherwise, the response was probably called by download browser function, and we need to return 200
-    if is_range_header and not isDownload:
+    # if range header was given we must return 206
+    if is_range_header:
         status = 206
     else:
         status = 200
@@ -279,6 +256,9 @@ def stream_file(request, file_obj: File):
     # if it's a download process in a browser, we want to return the entire file and not just 1 fragment
     if range_header and not isDownload:
         response['Content-Length'] = real_end_byte - real_start_byte
+
+    if range_header and isDownload:
+        response['Content-Length'] = file_obj.size - real_end_byte
 
     return response
 
@@ -320,8 +300,8 @@ def stream_zip_files(request, token):
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         yield decryptor.decrypt(raw_data)
 
-    files = user_zip.files.filter(ready=True, inTrash=False)
-    folders = user_zip.folders.filter(ready=True, inTrash=False)
+    files = user_zip.files.filter(state=ItemState.ACTIVE, inTrash=False)
+    folders = user_zip.folders.filter(state=ItemState.ACTIVE, inTrash=False)
     dict_files = []
 
     single_root = False

@@ -1,4 +1,5 @@
 import base64
+import math
 from typing import Union, Type, Tuple, Optional, Any
 
 from .errors import BadRequestError
@@ -146,8 +147,8 @@ def validate_value(value: Any, expected_type: Type, *, required: bool = False, d
     return value
 
 
-def validate_key(data: Optional[dict], key: str, expected_type, *, required: bool = True, default=None, checks: list = None):
-    if not data:
+def extract_key(data: Optional[dict], key: str, *, required: bool = True, default=None):
+    if data is None:
         if required:
             raise BadRequestError("'data' cannot be None.")
         return default
@@ -160,7 +161,15 @@ def validate_key(data: Optional[dict], key: str, expected_type, *, required: boo
             raise BadRequestError(f"Missing required field '{key}'.")
         return default
 
-    value = data[key]
+    return data[key]
+
+def validate_key(data: Optional[dict], key: str, expected_type, *, required: bool = True, default=None, checks: list = None):
+    value = extract_key(
+        data,
+        key,
+        required=required,
+        default=default
+    )
 
     try:
         return validate_value(
@@ -171,7 +180,7 @@ def validate_key(data: Optional[dict], key: str, expected_type, *, required: boo
             checks=checks
         )
     except BadRequestError as e:
-        raise BadRequestError(f"Field '{key}': {e}")
+        raise BadRequestError(f"Field '{key}': {e}.\nDefault: {default}\nRequired: {required}")
 
 
 def validate_encryption_fields(encryption_method: int, key_b64: str, iv_b64: str) -> tuple[Optional[bytes], Optional[bytes]]:
@@ -217,3 +226,10 @@ def validate_encryption_fields(encryption_method: int, key_b64: str, iv_b64: str
 def validate_crc(file_size: int, crc: int) -> None:
     if not crc and file_size:
         raise BadRequestError("Bad crc value")
+
+def normalize_blocked_until(value):
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isinf(value):
+        return None
+    return value

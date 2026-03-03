@@ -104,7 +104,6 @@ backendInstance.interceptors.response.use(
          return Promise.reject(error)
       }
 
-
       //handle resource url expired
       handleResourceURLExpiredIfNeeded(error)
 

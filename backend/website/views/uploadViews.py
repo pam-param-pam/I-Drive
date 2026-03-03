@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms
 from ..auth.throttle import defaultAuthUserThrottle
 from ..core.decorators import extract_file, check_resource_permissions
+from ..core.helpers import extract_key
 from ..services import create_file_service
 
 
@@ -12,8 +13,8 @@ from ..services import create_file_service
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
 def create_file_view(request):
-    files_data = request.data['files']
-    # return HttpResponse(status=500)
+    files_data = extract_key(request.data, "files")
+
     file_objs = create_file_service.create_files(request, request.user, files_data)
 
     response_json = []
@@ -38,7 +39,7 @@ def create_file_view(request):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def edit_file_view(request, file_obj):
-    file_data = request.data['file_data']
+    file_data = extract_key(request.data, "file_data")
     create_file_service.edit_file(request, request.user, file_obj, file_data)
     return HttpResponse(status=204)
 

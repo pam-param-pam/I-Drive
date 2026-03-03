@@ -1,7 +1,7 @@
 <template>
   <div>
     <component
-      :is="prompt.prompt"
+       :is="prompt.prompt"
       v-for="(prompt, index) in prompts"
       v-show="prompt.prompt === currentPromptName"
       :key="index"
@@ -40,13 +40,16 @@ import UploadDestinationWarning from "@/components/prompts/UploadDestinationWarn
 import EditThumbnail from "@/components/prompts/EditThumbnail.vue"
 import Moments from "@/components/prompts/Moments.vue"
 import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
-import shareAccesses from "@/components/prompts/ShareAccesses.vue"
 import { defineAsyncComponent } from "vue"
 import AbortAllWarning from "@/components/prompts/AbortAllWarning.vue"
 import NewFile from "@/components/prompts/newFile.vue"
 import ControlDevice from "@/components/prompts/ControlDevice.vue"
 import ControlConsentPrompt from "@/components/prompts/ControlConsentPrompt.vue"
-
+import FixCredential from "@/components/prompts/FixCredential.vue"
+import Notifications from "@/components/prompts/Notifications.vue"
+import ShareVisits from "@/components/prompts/ShareVisits.vue"
+import ShareVisitEvents from "@/components/prompts/ShareVisitEvents.vue"
+import SingleNotification from "@/components/prompts/SingleNotification.vue"
 export default {
    name: "prompts",
 
@@ -74,11 +77,15 @@ export default {
       EditThumbnail,
       Moments,
       EditSubtitles,
-      shareAccesses,
       AbortAllWarning,
       NewFile,
       ControlDevice,
       ControlConsentPrompt,
+      FixCredential,
+      Notifications,
+      ShareVisits,
+      ShareVisitEvents,
+      SingleNotification,
       ScanQrCode: defineAsyncComponent(() => import('@/components/prompts/ScanQrCode.vue')),
       FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
    },
@@ -112,10 +119,24 @@ export default {
          return this.currentPrompt !== null && this.currentPromptName !== "more"
       }
    },
-
+   watch: {
+      currentPromptName(val) {
+         if (this.currentPrompt && !this.isAvailable(val)) {
+            this.$toast.error(this.$t("prompts.failedToLoadPrompt"))
+         }
+      }
+   },
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
+      isAvailable(name) {
+         if (!name) return false
 
+         const components = this.$options?.components ?? {}
+         const lowerName = name.toLowerCase()
+
+         return Object.keys(components)
+            .some(key => key.toLowerCase() === lowerName)
+      },
       resetPrompts() {
          let promptComponent = this.$refs[this.currentPromptName]
          if (!promptComponent) {

@@ -255,10 +255,19 @@ export class RequestProducer {
             parentFolder = this.createdFolders[path_key]
          } else {
             let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
+            let folder
+            try {
+                folder = await create({ "parent_id": parentFolder, "name": folderName }, {
+                  __retryErrors: true
+               })
+            } catch (e) {
+               console.log(e)
+               if (e?.response?.data?.error === "errors.badRequest") {
+                  throw new Error(e?.response?.data?.details || "Failed to create a parent folder.")
+               }
+               throw e
+            }
 
-            let folder = await create({ "parent_id": parentFolder, "name": folderName }, {
-               __retryErrors: true
-            })
             parentFolder = folder.id
             this.createdFolders[path_key] = folder.id
          }

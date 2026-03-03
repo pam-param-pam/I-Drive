@@ -11,12 +11,13 @@ from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
 from .folder_models import Folder
-from .mixin_models import DiscordAttachmentMixin
+from .mixin_models import DiscordAttachmentMixin, ItemState
 from ..constants import FILE_TYPE_CHOICES, EncryptionMethod, cache, MAX_FILES_IN_FOLDER
 from ..core.helpers import chop_long_file_name
 
 
 class File(models.Model):
+    internal_created_at = models.DateTimeField(default=timezone.now, db_index=True)
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     name = models.CharField(max_length=100)
     extension = models.CharField(max_length=20)
@@ -26,7 +27,6 @@ class File(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files')
-    ready = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     inTrashSince = models.DateTimeField(null=True)
     key = models.BinaryField(null=True)
@@ -36,10 +36,20 @@ class File(models.Model):
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     frontend_id = models.CharField(max_length=40, unique=True)
     crc = models.BigIntegerField(null=True)
+
+    # --- lifecycle state ---
+    state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
+    state_changed_at = models.DateTimeField(null=True)
+    state_error = models.TextField(null=True)
+
     history = HistoricalRecords()
 
     class Meta:
         constraints = [
+            CheckConstraint(
+                check=Q(state__in=[state.value for state in ItemState]),
+                name="%(class)s_valid_state",
+            ),
             CheckConstraint(
                 check=Q(type__in=[choice[0] for choice in FILE_TYPE_CHOICES]),
                 name="%(class)s_valid_file_type"
@@ -94,7 +104,7 @@ class File(models.Model):
             )
         ]
 
-    MINIMAL_VALUES = ("id", "name", "inTrash", "ready", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password")
+    MINIMAL_VALUES = ("id", "name", "inTrash", "state", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password")
 
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
@@ -160,7 +170,6 @@ class File(models.Model):
         super(File, self).save(*args, **kwargs)
 
     def remove_cache(self):
-        cache.delete(self.id)
         cache.delete(self.parent_id)
 
     def get_encryption_method(self) -> EncryptionMethod:
@@ -206,7 +215,6 @@ class File(models.Model):
         if (self.parent.files.count() + self.parent.subfolders.count() + 1) > MAX_FILES_IN_FOLDER:
             raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
 
-# todo add fragment level crc :sob:
 class Fragment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     sequence = models.SmallIntegerField()
@@ -214,23 +222,31 @@ class Fragment(DiscordAttachmentMixin):
     created_at = models.DateTimeField(default=timezone.now)
     offset = models.PositiveBigIntegerField()
     crc = models.BigIntegerField(null=True)
+    state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
 
     class Meta:
         ordering = ["sequence"]
 
+        indexes = [
+            models.Index(fields=["file", "sequence"]),
+        ]
+
         constraints = [
+            # valid fragment state
+            CheckConstraint(
+                check=Q(state__in=[state.value for state in ItemState]),
+                name="%(class)s_valid_state",
+            ),
             # sequence must be non-negative
             CheckConstraint(
                 check=Q(sequence__gt=0),
                 name="%(class)s_sequence_greater_than_zero",
             ),
-
             # offset must be non-negative
             CheckConstraint(
                 check=Q(offset__gte=0),
                 name="%(class)s_offset_non_negative",
             ),
-
             # unique fragment sequence for a file
             UniqueConstraint(
                 fields=["file", "sequence"],

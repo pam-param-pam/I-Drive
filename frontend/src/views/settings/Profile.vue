@@ -38,6 +38,13 @@
             </label>
           </p>
 
+           <p>
+              <label>
+                 <input v-model="itemInfoShortcut" type="checkbox" />
+                 {{ $t("settings.itemInfoShortcut") }}
+              </label>
+           </p>
+
           <div>
             <label>
               <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
@@ -102,12 +109,13 @@
 
 <script>
 import Languages from "@/components/settings/Languages.vue"
-import { changePassword, updateSettings } from "@/api/user.js"
+import { updateSettings } from "@/api/user.js"
 import router from "@/router/index.js"
 import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
+import { changePassword } from "@/api/auth.js"
 
 export default {
    name: "profile",
@@ -129,7 +137,8 @@ export default {
          concurrentUploadRequests: 4,
          encryptionMethod: null,
          keepCreationTimestamp: false,
-         popupPreview: false
+         popupPreview: false,
+         itemInfoShortcut: false,
       }
    },
 
@@ -161,6 +170,7 @@ export default {
       this.encryptionMethod = this.settings.encryptionMethod
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
       this.popupPreview = this.settings.popupPreview
+      this.itemInfoShortcut = this.settings.itemInfoShortcut
    },
 
    methods: {
@@ -200,6 +210,7 @@ export default {
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
             popupPreview: this.popupPreview,
+            itemInfoShortcut: this.itemInfoShortcut,
          }
 
          await updateSettings(data)

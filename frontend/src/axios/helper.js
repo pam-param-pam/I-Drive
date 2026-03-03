@@ -90,7 +90,7 @@ export async function displayErrorToastIfNeeded(error) {
 export async function handleResourceURLExpiredIfNeeded(error) {
    if (error.response && error.response.status === 403) {
       let errorMessage = error.response?.data?.error
-      if (errorMessage === "errors.resourceAccessForbidden") {
+      if (errorMessage === "errors.urlInvalidOrExpired") {
          router.go(0)
       }
    }

@@ -20,7 +20,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1G
 
   ### database
   postgres:
@@ -39,6 +39,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
+  #todo https://hub.docker.com/r/willfarrell/autoheal/
   ### Main backend
   backend:
     container_name: idrive-backend
@@ -59,7 +60,7 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request as u; u.urlopen('http://localhost:8000/healthcheck')\" || exit 1"]
       interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 3
 
     environment:
       # General
@@ -85,7 +86,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
 
 
  ### nginx

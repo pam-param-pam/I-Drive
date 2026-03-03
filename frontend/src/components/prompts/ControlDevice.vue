@@ -158,7 +158,8 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { getActiveDevices } from "@/api/user.js"
+
+import { getActiveDevices } from "@/api/auth.js"
 
 export default {
    name: "ControlDevice",

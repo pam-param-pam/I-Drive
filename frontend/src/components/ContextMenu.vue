@@ -59,6 +59,7 @@ export default {
 
    methods: {
       hideContextMenu() {
+         console.log("aaaa")
          this.$emit('hide')
       }
    }
@@ -69,7 +70,7 @@ export default {
    position: fixed;
    min-width: 200px;
    border: 1px solid rgba(0, 0, 0, 0.2);
-   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
    z-index: 1000;
    background-color: var(--surfacePrimary);
 }

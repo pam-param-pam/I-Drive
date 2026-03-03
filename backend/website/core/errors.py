@@ -36,6 +36,9 @@ class FailedToResizeImageError(IDriveException):
 class UsernameTakenError(IDriveException):
     """Raised on register, when a user with this username already exists"""
 
+class URLInvalidOrExpired(IDriveException):
+    """Raised when signed url is not valid or expired"""
+
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""
     def __init__(self, ip):
@@ -69,12 +72,35 @@ class DiscordError(IDriveException):
     def __init__(self, response: Response):
         self.status = response.status_code
         self._json_error = response.json()
-        self.message = self._json_error['message']
-        self.code = self._json_error['code']
+        self.message = self._json_error.get('message') or self._json_error
+        self.code = self._json_error.get('code')
         super().__init__(self.message)
 
     def __str__(self):
         return f'Discord error-> {self.status}: {self.message}'
+
+class DiscordErrorMaxRetries(IDriveException):
+    def __init__(self, errors: list[Response]):
+        self.errors = errors
+
+    def __str__(self):
+        lines = []
+
+        for idx, res in enumerate(self.errors, start=1):
+            try:
+                body_preview = res.text
+                if len(body_preview) > 300:
+                    body_preview = body_preview[:300] + "…"
+            except:
+                body_preview = "<no body>"
+
+            lines.append(
+                f"Attempt {idx}: "
+                f"status={res.status_code} "
+                f"body={body_preview}"
+            )
+
+        return "\n".join(lines)
 
 class MissingOrIncorrectResourcePasswordError(IDriveException):
     """Raised when password for a resource is missing"""

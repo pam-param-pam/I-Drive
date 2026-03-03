@@ -46,14 +46,12 @@ export default {
 }
 </script>
 <style scoped>
-/* General Styles */
 .dark-mode-toggle {
-   margin-top: 10px;
+   margin-left: 15px;
    display: flex;
    align-items: center;
    justify-content: center;
    padding: 10px 15px;
-   margin-left: 0.5em;
    border: none;
    border-radius: 50%;
    font-size: 24px;
@@ -61,31 +59,26 @@ export default {
    outline: none;
 }
 
-/* Disable unwanted hover styles for touch devices */
 @media (hover: none) {
    .dark-mode-toggle:hover {
-      background-color: transparent; /* Remove hover background */
-      color: inherit; /* Retain original text color */
+      background-color: transparent;
+      color: inherit;
    }
 }
 
-/* Explicitly handle the :active state */
 .dark-mode-toggle:active {
-   background-color: transparent; /* Ensure no background on active */
+   background-color: transparent;
    color: inherit;
 }
 
-/* Material Icon Styles */
 .dark-mode-toggle .material-icons {
    font-size: 28px;
 }
 
-/* Light Mode */
 .dark-mode-toggle.light {
    background-color: var(--background);
 }
 
-/* Dark Mode */
 .dark-mode-toggle.dark {
    background-color: var(--background);
    color: #ffffff;

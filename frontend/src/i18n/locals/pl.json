@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "markAllRead": "Oznacz wszystkie jako przeczytane",
+    "toggleSize": "Przełącz rozmiar zdjęcia",
     "deviceControl": "Kontrola urządzenia",
     "stopActive": "Usuń kontrole urządzenia",
     "accept": "Potwierdź",
@@ -72,6 +74,7 @@
 
   },
   "errors": {
+    "urlInvalidOrExpired": "URL wygasł, odswież strone",
     "rateLimitExceeded": "Za dużo zapytań >:(",
     "integrityError": "Błąd spójności danych!",
     "masterSlaveEqual": "Nie możesz kontrolować samego siebie...",
@@ -177,6 +180,22 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "noNotifications": "Brak powiadomień!",
+    "notifications": "Powiadomienia",
+    "searchForType": "Search po typach eventów",
+    "searchForIds": "Szukaj po ID",
+    "accessAt": "Dostep",
+    "time": "Dostep",
+    "ip": "IP",
+    "visitEvents": "Eventy",
+    "visitEventsFor": "Wszystkie eventy dla",
+    "failedToLoadPrompt": "Wystąpił nieznany bląd.",
+    "name": "Nazwa",
+    "id": "ID",
+    "fixCredential": "Napraw bot/webhook",
+    "blockedUntil": "Zablokowane do",
+    "blockReason": "Typ bloku",
+    "discord_error_code": "Discord error code",
     "cameraOwner": "Autor",
     "noInternet": "Brak internetu...",
     "uploadFilesCrashed": "Przesyłanie plików nie powiodło sie!",
@@ -352,6 +371,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "itemInfoShortcut": "Wyświetlaj informacje o plikach/folderach na bocznym pasku",
     "deviceControl": "Zdalna Kontrola Urządzenia",
     "deviceControlMessage": "Możesz użyć tego urządzenia jako pilot do kontrolowania innego",
     "qrDeviceInfo": "Zweryfikuj dane urządzenia przed potwierdzeniem!",
@@ -428,6 +448,7 @@
     "shareNotFound": "Share nie istnieje. Może link wygasł, lub jest nie poprawny?"
   },
   "sidebar": {
+    "notifications": "Powiadomienia",
     "help": "Pomoc",
     "login": "Login",
     "logout": "Wyloguj",
@@ -448,6 +469,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "credentialReenabled": "Wlączono webhook/bot",
     "subtitleRenamed": "Zmieniono język!",
     "subtitleRenameFailed": "Nie udało sie zmienić języka napisu",
     "illegalMove": "Nie możesz tu przenieść tych rzeczy",

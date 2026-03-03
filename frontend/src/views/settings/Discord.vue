@@ -62,7 +62,7 @@
                            <th></th>
                         </tr>
 
-                        <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id">
+                        <tr v-for="(webhook, index) in webhooks" :key="webhook.discord_id" :class="{ disabled: webhook.is_blocked }">
                            <td class="share-name-column">
                               <a>{{
                                   index + 1 + " &#8205; &#8205; &#8205; &#8205;" + webhook.name
@@ -73,6 +73,16 @@
                            </td>
                            <td class="share-name-column expiry-column">
                               <a>{{ humanTime(webhook.created_at) }}</a>
+                           </td>
+                           <td v-if="webhook.is_blocked" class="small">
+                              <button
+                                 :aria-label="$t('buttons.enable')"
+                                 :title="$t('buttons.enable')"
+                                 class="action"
+                                 @click="fixCredential(webhook)"
+                              >
+                                 <i class="material-icons">sync</i>
+                              </button>
                            </td>
                            <td class="share-name-column small">
                               <button
@@ -182,20 +192,30 @@
                         <tr
                            v-for="(bot, index) in bots"
                            :key="bot.discord_id"
+                           :class="{ disabled: bot.is_blocked }"
                         >
                            <td class="share-name-column">
                               <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
                               <span v-if="bot.primary" :title="$t('settings.primaryBot')">
-                     <svg class="crown-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
-                          style="vertical-align: text-bottom;">
-                      <path fill="currentColor"
-                            d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"></path>
-                    </svg>
-                  </span>
-
+                                 <svg class="crown-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
+                                      style="vertical-align: text-bottom;">
+                                  <path fill="currentColor"
+                                        d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"></path>
+                                </svg>
+                              </span>
                            </td>
                            <td class="share-name-column expiry-column">
                               <a>{{ humanTime(bot.created_at) }}</a>
+                           </td>
+                           <td v-if="bot.is_blocked" class="small">
+                              <button
+                                 :aria-label="$t('buttons.enable')"
+                                 :title="$t('buttons.enable')"
+                                 class="action"
+                                 @click="fixCredential(bot)"
+                              >
+                                 <i class="material-icons">sync</i>
+                              </button>
                            </td>
                            <td class="share-name-column small">
                               <button
@@ -287,16 +307,7 @@ export default {
    },
 
    async created() {
-      this.setLoading(true)
-      try {
-         let res = await getDiscordSettings()
-         this.setDiscordSettings(res)
-      } catch (error) {
-         console.error(error)
-         this.setError(error)
-      } finally {
-         this.setLoading(false)
-      }
+      await this.fetchDiscordSettings()
    },
 
    methods: {
@@ -304,12 +315,24 @@ export default {
       ...mapActions(useMainStore, ["setError", "setLoading", "showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
 
       ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
+
+      async fetchDiscordSettings() {
+         this.setLoading(true)
+         try {
+            let res = await getDiscordSettings()
+            this.setDiscordSettings(res)
+         } catch (error) {
+            console.error(error)
+            this.setError(error)
+         } finally {
+            this.setLoading(false)
+         }
+      },
       setDiscordSettings(res) {
          this.setWebhooks(res.webhooks)
 
          this.bots = res.bots
          this.guildId = res.guild_id
-         this.webhooks = res.webhooks
          this.attachmentName = res.attachment_name
          this.autoSetupComplete = res.auto_setup_complete
          this.channels = res.channels
@@ -355,7 +378,7 @@ export default {
 
       async resetAll() {
          const toastId = this.$toast.info(this.$t("toasts.discordSettingsDeleting"),
-           { type: "info", timeout: null, draggable: false, closeOnClick: false, closeButton: false }
+            { type: "info", timeout: null, draggable: false, closeOnClick: false, closeButton: false }
          )
 
          try {
@@ -363,7 +386,7 @@ export default {
 
             let isError = res.errors
             let content = isError ? res.errors : this.$t("toasts.discordSettingsDeleted")
-            let type    = isError ? "error" : "success"
+            let type = isError ? "error" : "success"
             let timeout = isError ? null : 3000
 
             this.$toast.update(toastId, {
@@ -408,7 +431,18 @@ export default {
       updateAttachmentName: throttle(async function() {
          await updateDiscordSettings({ attachment_name: this.attachmentName })
          this.$toast.success(this.$t("toasts.uploadDestinationUpdated"))
-      }, 1000)
+      }, 1000),
+
+      fixCredential(credential) {
+         console.log(credential)
+         this.showHover({
+            prompt: "FixCredential",
+            props: {credential: credential},
+            confirm: () => {
+               this.fetchDiscordSettings()
+            }
+         })
+      }
    }
 }
 </script>

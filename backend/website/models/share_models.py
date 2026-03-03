@@ -1,5 +1,4 @@
 import datetime
-
 import secrets
 
 import shortuuid
@@ -12,10 +11,10 @@ from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from ..constants import ShareEventType
+from . import Thumbnail
+from ..constants import ShareEventType, SHARE_ACCESS_DURATION
 from ..core.dataModels.dataModels import ViewShare, FileCloseEvent, FileOpenEvent, FileDownloadStartEvent, FileDownloadSuccessfulEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, \
-    ZipDownloadSuccessfulEvent, ZipDownloadStartEvent, MoviePauseEvent, MovieSeekEvent, MovieWatchEvent
-from ..core.errors import ResourceNotFoundError
+    ZipDownloadSuccessfulEvent, ZipDownloadStartEvent, MoviePauseEvent, MovieSeekEvent, MovieWatchEvent, SubtitleStreamedEvent, ThumbnailStreamedEvent
 from ..core.helpers import get_ip
 
 
@@ -49,8 +48,6 @@ class ShareableLink(models.Model):
                 check=(Q(password__isnull=True) | ~Q(password__exact="")),
                 name="%(class)s_password_not_empty_string",
             ),
-
-            #
         ]
 
     def __str__(self):
@@ -59,6 +56,10 @@ class ShareableLink(models.Model):
     def save(self, *args, **kwargs):
         if self.token is None or self.token == '':
             self.token = secrets.token_urlsafe(32)
+
+        if self.content_type.model not in ("folder", "file"):
+            raise ValueError("Invalid content_type for ShareableLink")
+
         super(ShareableLink, self).save(*args, **kwargs)
 
     def is_expired(self):
@@ -77,6 +78,7 @@ class ShareableLink(models.Model):
 
 
 class ShareAccess(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     share = models.ForeignKey(ShareableLink, on_delete=models.CASCADE)
     ip = models.GenericIPAddressField(null=True)
     user_agent = models.TextField()
@@ -89,12 +91,12 @@ class ShareAccess(models.Model):
         user_agent = request.user_agent
         user = request.user if request.user.is_authenticated else None
 
-        ten_minutes_ago = timezone.now() - datetime.timedelta(minutes=10)
+        time_ago = timezone.now() - datetime.timedelta(minutes=SHARE_ACCESS_DURATION)
         existing = cls.objects.filter(
             share=share,
             ip=ip,
             user_agent=user_agent,
-            access_time__gte=ten_minutes_ago
+            access_time__gte=time_ago
         ).order_by('-access_time').first()
 
         if existing:
@@ -111,6 +113,7 @@ class ShareAccess(models.Model):
 
 
 class ShareAccessEvent(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     access = models.ForeignKey(ShareAccess, on_delete=models.CASCADE, related_name='events')
     timestamp = models.DateTimeField(auto_now_add=True)
     event_type = models.CharField(max_length=64)
@@ -144,6 +147,11 @@ class ShareAccessEvent(models.Model):
         # Zip
         ShareEventType.ZIP_DOWNLOAD_START: ZipDownloadStartEvent,
         ShareEventType.ZIP_DOWNLOAD_SUCCESSFUL: ZipDownloadSuccessfulEvent,
+
+        # Other
+        ShareEventType.SUBTITLE_STREAM: SubtitleStreamedEvent,
+        ShareEventType.THUMBNAIL_STREAM: ThumbnailStreamedEvent,
+
     }
 
     @staticmethod

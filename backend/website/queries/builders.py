@@ -1,12 +1,18 @@
-from typing import List, Dict
+import math
+import time
+from collections import defaultdict
+from typing import List, Dict, Iterable
 
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 
-from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer
+from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer, ShareAccessSerializer, \
+    ShareAccessEventSerializer
 from ..core.dataModels.general import Item, ZipFileDict, Breadcrumbs, FolderDict
-from ..core.helpers import get_attr
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel
+from ..core.helpers import get_attr, normalize_blocked_until
+from ..discord.Discord import discord
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccess, ShareAccessEvent
+from ..models.mixin_models import ItemState
 
 
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
@@ -27,13 +33,13 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     file_children = []
 
     if include_files:
-        file_children = folder_obj.files.filter(ready=True, inTrash=False).select_related(
+        file_children = folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False).select_related(
             "parent", "videoposition", "thumbnail", "videometadata", "rawmetadata"
         ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)
 
     folder_children = []
     if include_folders:
-        folder_children = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
+        folder_children = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False).select_related("parent")
 
     folder_serializer = FolderSerializer()
     file_serializer = FileSerializer()
@@ -64,7 +70,7 @@ def calculate_size(folder: Folder) -> int:
     """
     Function to calculate size of a folder
     """
-    size_result = folder.get_all_files().filter(ready=True, inTrash=False).aggregate(Sum('size'))
+    size_result = folder.get_all_files().filter(state=ItemState.ACTIVE, inTrash=False).aggregate(Sum('size'))
     return size_result['size__sum'] or 0
 
 
@@ -72,8 +78,8 @@ def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
     """
     Function to calculate entire file & folder count of a given folder
     """
-    file_count = folder.get_all_files().filter(ready=True, inTrash=False).count()
-    folder_count = folder.get_all_subfolders().filter(ready=True, inTrash=False).count()
+    file_count = folder.get_all_files().filter(state=ItemState.ACTIVE, inTrash=False).count()
+    folder_count = folder.get_all_subfolders().filter(state=ItemState.ACTIVE, inTrash=False).count()
     return folder_count, file_count
 
 
@@ -98,7 +104,7 @@ def build_flattened_children(folder: Folder, full_path="", root_folder=None) -> 
     base_relative_path = f"{full_path}{folder.name}/"
 
     # Collect all files in the current folder
-    files = folder.files.filter(ready=True, inTrash=False)
+    files = folder.files.filter(state=ItemState.ACTIVE, inTrash=False)
     if not files.exists() and root_folder != folder:  # append empty folders, but only for non root
         children.append({"name": base_relative_path, "isDir": True})
     else:
@@ -130,12 +136,12 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
     folder_serializer = ShareFolderSerializer()
     file_serializer = ShareFileSerializer(share)
 
-    files = list(folder_obj.files.filter(ready=True, inTrash=False).select_related(
+    files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False).select_related(
         "parent", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
 
     folders = []
     if include_folders:
-        folders = folder_obj.subfolders.filter(ready=True, inTrash=False).select_related("parent")
+        folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False).select_related("parent")
 
     file_dicts = [file_serializer.serialize_dict(file) for file in files]
     folder_dicts = [folder_serializer.serialize_object(folder) for folder in folders]
@@ -151,16 +157,46 @@ def build_discord_settings(user) -> dict:
     bots = Bot.objects.filter(owner=user).order_by('created_at')
     channels = Channel.objects.filter(owner=user)
 
-    webhook_dicts = []
+    if settings.auto_setup_complete:
+        state = discord._get_user_state(user)
+        credential_map = {c.secret: c for c in state._credentials.values()}
+    else:
+        credential_map = {}
 
     serializer = WebhookSerializer()
 
+    webhook_dicts = []
     for webhook in webhooks:
-        webhook_dicts.append(serializer.serialize_object(webhook))
+        data = serializer.serialize_object(webhook)
+
+        cred = credential_map.get(webhook.url)
+
+        if cred:
+            data["is_blocked"] = bool(cred.blocked_until and cred.blocked_until > time.time())
+            data["blocked_until"] = normalize_blocked_until(cred.blocked_until)
+            data["block_reason"] = cred.block_reason
+            data["discord_error_code"] = cred.discord_error_code
+
+        else:
+            data["is_blocked"] = False
+
+        webhook_dicts.append(data)
 
     bots_dicts = []
     for bot in bots:
-        bots_dicts.append(BotSerializer().serialize_object(bot))
+        data = BotSerializer().serialize_object(bot)
+
+        cred = credential_map.get(bot.token)
+
+        if cred:
+            data["is_blocked"] = bool(cred.blocked_until and cred.blocked_until > time.time())
+            data["blocked_until"] = normalize_blocked_until(cred.blocked_until)
+            data["block_reason"] = cred.block_reason
+            data["discord_error_code"] = cred.discord_error_code
+        else:
+            data["is_blocked"] = False
+
+        bots_dicts.append(data)
 
     can_add_bots_or_webhooks = bool(settings.guild_id and len(channels) > 0)
 
@@ -170,3 +206,43 @@ def build_discord_settings(user) -> dict:
 
     return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
             "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
+
+
+def create_share_events(events: Iterable[ShareAccessEvent]):
+    serializer = ShareAccessEventSerializer()
+    serialized = serializer.serialize_objects(events)
+
+    file_ids = {
+        e.metadata.get("file_id")
+        for e in events
+        if e.metadata and "file_id" in e.metadata
+    }
+
+    folder_ids = {
+        e.metadata.get("folder_id")
+        for e in events
+        if e.metadata and "folder_id" in e.metadata
+    }
+
+    files = {
+        f.id: f.name
+        for f in File.objects.filter(id__in=file_ids).only("id", "name")
+    }
+
+    folders = {
+        f.id: f.name
+        for f in Folder.objects.filter(id__in=folder_ids).only("id", "name")
+    }
+
+    for event_dict in serialized:
+        metadata = event_dict.get("metadata") or {}
+
+        file_id = metadata.get("file_id")
+        if file_id and file_id in files:
+            metadata["file_name"] = files[file_id]
+
+        folder_id = metadata.get("folder_id")
+        if folder_id and folder_id in folders:
+            metadata["folder_name"] = folders[folder_id]
+
+    return serialized

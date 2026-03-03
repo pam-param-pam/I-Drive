@@ -242,7 +242,6 @@ import {
    send_movie_toggle_event,
    send_movie_volume_change_event
 } from "@/utils/deviceControl.js"
-import router from "@/router/index.js"
 
 export default {
    name: "preview",

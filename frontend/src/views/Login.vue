@@ -56,11 +56,11 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapState } from "pinia"
 import throttle from "lodash.throttle"
 import { isMobile, onceAtATime } from "@/utils/common.js"
-import { createQrSession } from "@/api/user.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
 import { validateLogin } from "@/utils/auth"
 import VueQrcode from "@chenfengyuan/vue-qrcode"
+import { createQrSession } from "@/api/auth.js"
 
 export default {
    name: "login",

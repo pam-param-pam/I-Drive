@@ -29,7 +29,7 @@ import { mapActions, mapState } from 'pinia'
 import { useMainStore } from '@/stores/mainStore.js'
 
 export default {
-   name: 'share-delete',
+   name: 'ShareDelete',
 
    computed: {
       ...mapState(useMainStore, ['currentPrompt'])

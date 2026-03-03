@@ -29,7 +29,6 @@ import { search } from "@/api/search.js"
 import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { scanDataTransfer } from "@/upload/utils/uploadHelper.js"
 import { uploadType } from "@/utils/constants.js"
 import { name } from "@/utils/constants"
@@ -81,7 +80,7 @@ export default {
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock && this.perms.modify,
             locate: this.selectedCount === 1 && this.searchActive,
             search: true,
-            openInNewWindow: true,
+            openInNewWindow: this.selectedCount === 1,
             modifyFile: this.selectedCount === 1 && !this.selected[0].isDir && this.perms.modify
          }
       }
@@ -271,7 +270,6 @@ export default {
       },
 
       onOpen(item) {
-         this.$refs.listing.hideContextMenu()
          //if we are in search mode and we click to open a folder that we currently are in
          // routing won't work(as its already in that route, so we need to just quit the search)
          if (this.searchActive && item.id === this.currentFolder.id) {

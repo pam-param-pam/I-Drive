@@ -20,7 +20,6 @@ header > * {
 header title {
   display: block;
   flex: 1 1 auto;
-  padding: 0 1em;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 1.2em;

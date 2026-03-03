@@ -49,12 +49,12 @@ export class Uploader {
 
    logQueueStats() {
       console.log(
-         "fileQueue:", this.fileQueue?.size(),
-         "requestQueue:", this.requestQueue?.size(),
-         "discordResponseQueue:", this.discordResponseQueue?.size(),
-         "backendFileQueue", this.backendFileQueue?.size(),
-         "discordAttachmentQueue", this.discordAttachmentQueue.size(),
-      )
+      "fileQueue:", this.fileQueue?.size(), "closed:", this.fileQueue?.closed,
+      "requestQueue:", this.requestQueue?.size(), "closed:", this.requestQueue?.closed,
+      "discordResponseQueue:", this.discordResponseQueue?.size(), "closed:", this.discordResponseQueue?.closed,
+      "backendFileQueue:", this.backendFileQueue?.size(), "closed:", this.backendFileQueue?.closed,
+      "discordAttachmentQueue:", this.discordAttachmentQueue?.size(), "closed:", this.discordAttachmentQueue?.closed
+   )
    }
 
    async startUploadWithChecks(type, folderContext, filesList) {
@@ -92,19 +92,17 @@ export class Uploader {
       this.processNewFiles(type, folderContext, filesList, res.lockFrom)
    }
 
+   requestMoreFilesFromWorker() {
+      this.fileProcessorWorker.postMessage({ type: "produce" })
+   }
+
    processNewFiles(typeOfUpload, folderContext, filesList, lockFrom) {
       const uploadId = uuidv4()
       const encryptionMethod = this.mainStore.settings.encryptionMethod
       const parentPassword = this.mainStore.getFolderPassword(lockFrom)
 
-      this.workerDone = false
       if (!this.fileProcessorWorker) {
          this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
-      }
-
-      this.requestMoreFilesFromWorker = () => {
-         if (this.workerDone) return
-         this.fileProcessorWorker.postMessage({ type: "produce" })
       }
 
       this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength + filesList.length)
@@ -119,10 +117,13 @@ export class Uploader {
       this.uploadRuntime.setAllBytesToUpload(this.uploadRuntime.allBytesToUpload + totalBytes)
 
       this.fileProcessorWorker.onmessage = async event => {
-         this.fileQueue.open()
-
          const { files, totalBytes, done } = event.data
-
+         if (!done) {
+            this.initRuntimeUpload()
+            this.initQueues()
+            this.startConsumers()
+            this.startProducer()
+         }
          if (files && files.length > 0) {
 
             for (const file of files) {
@@ -135,7 +136,6 @@ export class Uploader {
          if (done) {
             console.log("closing file queue")
             this.fileQueue.close()
-            this.uploadRuntime.workerDone = true
          }
       }
 
@@ -323,7 +323,11 @@ export class Uploader {
    }
 
    retrySaveFailedFiles() {
-      if (this.uploadRuntime.uploadState !== uploadState.uploading) return
+      console.log("retrySaveFailedFiles")
+      if (this.uploadRuntime.uploadState !== uploadState.uploading) {
+         console.log("return")
+         return
+      }
       getUploader().backendFileConsumer.retryFailedFiles()
    }
 
@@ -358,6 +362,7 @@ export class Uploader {
 
    cleanup() {
       window.removeEventListener("beforeunload", beforeUnload)
+      //todo
       // this.stopInternetProbe()
       // this.fileProcessorWorker = null
       // this.fileQueue?.close()

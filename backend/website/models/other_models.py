@@ -50,4 +50,48 @@ class UserZIP(models.Model):
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(days=7)
 
+class NotificationType(models.TextChoices):
+    INFO = "info", "Info"
+    SUCCESS = "success", "Success"
+    WARNING = "warning", "Warning"
+    ERROR = "error", "Error"
+    IMPORTANT = "important", "Important"
 
+class Notification(models.Model):
+    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications", db_index=True)
+    type = models.CharField(max_length=20, choices=NotificationType.choices)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    read_at = models.DateTimeField(blank=True, null=True)
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    # device_id = models.
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["owner", "is_read"]),
+            models.Index(fields=["owner", "created_at"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=Q(type__in=NotificationType.values),
+                name="notification_type_valid",
+            )
+        ]
+
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=["is_read", "read_at"])
+
+    def mark_as_deleted(self):
+        if not self.is_deleted:
+            self.is_deleted = True
+            self.save(update_fields=["is_deleted"])
+
+    def __str__(self):
+        return f"{self.owner} - {self.title}"
