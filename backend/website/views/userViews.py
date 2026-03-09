@@ -7,6 +7,7 @@ from ..auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
 from ..constants import EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, FILE_TYPES
 from ..core.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer, NotificationSerializer
 from ..core.decorators import check_resource_permissions, extract_folder
+from ..core.errors import BadRequestError, RootFolderError
 from ..core.helpers import extract_key
 from ..discord.Discord import discord
 from ..models import UserSettings, Folder, Webhook, Bot, UserPerms, Channel, PerDeviceToken
@@ -43,7 +44,11 @@ def users_me(request):
     user = request.user
     settings: UserSettings = user.usersettings
     perms: UserPerms = user.userperms
-    root = Folder.objects.get(owner=user, parent=None)
+
+    try:
+        root = Folder.objects.get(owner=user, parent=None)
+    except (Folder.DoesNotExist, Folder.MultipleObjectsReturned) as error:
+        raise RootFolderError(str(error))
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
     unread_notifications = Notification.objects.filter(owner=request.user, is_deleted=False, is_read=False).count()
@@ -51,10 +56,8 @@ def users_me(request):
     response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE,
                          "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE, "unreadNotifications": unread_notifications
                          },
-                "perms": {"admin": perms.admin, "execute": perms.execute, "create": perms.create,
-                          "lock": perms.lock,
-                          "modify": perms.modify, "delete": perms.delete, "share": perms.share,
-                          "download": perms.download},
+                "perms": {"admin": perms.admin, "create": perms.create, "lock": perms.lock, "modify": perms.modify,
+                          "delete": perms.delete, "share": perms.share, "download": perms.download},
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
@@ -200,13 +203,6 @@ def reset_discord_settings_view(request):
     return JsonResponse({"errors": error_string, "settings": settings}, status=200)
 
 
-@api_view(['POST'])
-@throttle_classes([DiscordSettingsThrottle])
-@permission_classes([IsAuthenticated & AdminPerms])
-def reset_discord_state_view(request):
-    discord.remove_user_state(request.user)
-    return HttpResponse(status=204)
-
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -218,9 +214,10 @@ def get_notifications_view(request):
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-def mark_notifications_read_view(request):
+def set_notifications_read_status_view(request):
     notifications_ids = extract_key(request.data, "ids")
+    is_read = extract_key(request.data, "is_read")
 
-    notifications = Notification.objects.filter(owner=request.user, id__in=notifications_ids).all()
-    for notif in notifications:
-        notif.mark_as_read()
+    user_service.set_notifications_read_status(request.user, notifications_ids, read=is_read)
+    return HttpResponse(status=204)
+

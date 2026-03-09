@@ -16,7 +16,7 @@ from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc, get_file_extension
 from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
 from ..models import File, Fragment, Thumbnail, Channel, FragmentLink, ThumbnailLink, AttachmentLinker
-from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists
+from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists, get_discord_channel
 from ..websockets.utils import group_and_send_event, send_event
 
 
@@ -31,6 +31,7 @@ def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
     crc = validate_key(fragment, "crc", int, checks=[MaxLength(10), NotNegative])
 
     author = get_discord_author(file_obj.owner, message_author_id)
+    channel = get_discord_channel(file_obj.owner, channel_id)
 
     fragment = Fragment.objects.create(
         sequence=fragment_sequence,
@@ -38,7 +39,7 @@ def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
         size=fragment_size,
         offset=offset,
         crc=crc,
-        channel_id=channel_id,
+        channel=channel,
         message_id=message_id,
         attachment_id=str(attachment_id),
         content_type=ContentType.objects.get_for_model(author),
@@ -202,7 +203,6 @@ def create_or_edit_thumbnail(request, user: User, file_obj: File, data: dict) ->
         pass
 
     file_service.create_thumbnail(file_obj, data)
-
     file_obj.remove_cache()
 
     file_dict = FileSerializer().serialize_object(file_obj)

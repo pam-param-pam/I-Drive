@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 import traceback
 from abc import abstractmethod, ABC
 from datetime import timedelta
@@ -8,8 +10,6 @@ from channels.generic.websocket import WebsocketConsumer
 from django.core.cache import cache
 from django.utils import timezone
 
-from ..constants import EventCode
-
 
 class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
     connection_limit = 5        # how many new connections allowed
@@ -17,7 +17,16 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     message_limit = 60          # messages allowed
     message_window = 60          # seconds
-    #todo add re authorize every few messages
+
+    ping_heartbeat = True
+    ping_interval = 10  # seconds
+    ping_timeout = 5  # seconds
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_pong = time.time()
+        self._heartbeat_thread = None
+        self._heartbeat_running = None
 
     @abstractmethod
     def authorize(self) -> tuple[bool, bool, str]:
@@ -26,6 +35,12 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
     @abstractmethod
     def get_group_name(self) -> str:
         raise NotImplementedError("get_group_name() must be implemented in subclass.")
+
+    def on_ratelimit(self):
+        pass
+
+    def on_exception(self, exception: Exception):
+        pass
 
     def on_message(self, text_data, bytes_data):
         pass
@@ -77,31 +92,49 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
             self.accept()
         else:
             self.accept(token)
+
+        if self.ping_heartbeat:
+            self.last_pong = time.time()
+            self._heartbeat_running = True
+            self._heartbeat_thread = threading.Thread(
+                target=self._heartbeat_loop,
+                daemon=True
+            )
+            self._heartbeat_thread.start()
+
         async_to_sync(self.channel_layer.group_add)(self.get_group_name(), self.channel_name)
+
         self.on_accept()
 
     def disconnect(self, close_code):
         async_to_sync(self.channel_layer.group_discard)(self.get_group_name(), self.channel_name)
         self.on_disconnect(close_code)
 
-    def send_error(self, error_code):
-        self.send_json({'is_encrypted': False, 'event': {'op_code': EventCode.WEBSOCKET_ERROR.value, 'data': [{'error_code': error_code}]}})
-
     def receive(self, text_data=None, bytes_data=None):
         """DO NOT OVERRIDE THIS FUNCTION TO HANDLE MESSAGES.
         USE on_message() INSTEAD!"""
+
+        # 0) Ensure client is still authorized
+        authorized, _, _ = self.authorize()
+        if not authorized:
+            self.close()
+
         # 1) Rate-limit per-message
         if not self._check_rate_limit("msg", self.message_limit, self.message_window):
-            self.send_error('rate_limit_exceeded')
+            self.on_ratelimit()
             return
 
-        # 2) Pass to subclass handler
+        # 2) Handle heartbeat (application pong)
+        if self.ping_heartbeat and text_data == "PONG":
+            self.last_pong = time.time()
+            return
+
+        # 3) Pass to subclass handler
         try:
             self.on_message(text_data, bytes_data)
         except Exception as e:
             traceback.print_exc()
-            if not self.on_error(e):
-                self.send_error('internal_websocket_error')
+            self.on_exception(e)
 
     def send_json(self, data: dict):
         self.send(json.dumps(data))
@@ -132,5 +165,28 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
         return token_key, is_standard_protocol
 
-    def on_error(self, exception: Exception) -> bool:
-        return False
+    def _heartbeat_loop(self):
+        while self._heartbeat_running:
+            time.sleep(10)
+
+            async_to_sync(self.channel_layer.send)(
+                self.channel_name,
+                {
+                    "type": "heartbeat_ping",
+                }
+            )
+
+            if time.time() - self.last_pong > 25:
+                async_to_sync(self.channel_layer.send)(
+                    self.channel_name,
+                    {
+                        "type": "heartbeat_close",
+                    }
+                )
+                break
+
+    def heartbeat_ping(self, event):
+        self.send("PING")
+
+    def heartbeat_close(self, event):
+        self.close()

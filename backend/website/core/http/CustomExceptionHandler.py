@@ -15,7 +15,7 @@ from rest_framework.views import exception_handler
 
 from .utils import build_http_error_response
 from ..errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, ResourceNotFoundError, \
-    MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, FailedToResizeImageError, DiscordBlockError, DiscordTextError, DiscordError, \
+    MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, DiscordBlockError, DiscordTextError, DiscordError, \
     UsernameTakenError, URLInvalidOrExpired
 from ..helpers import format_wait_time
 from ..helpers import get_attr
@@ -103,7 +103,7 @@ def custom_exception_handler(exception, context):
     elif isinstance(exception, IntegrityError):
         return JsonResponse(build_http_error_response(code=500, error="errors.integrityError", details=str(exception)), status=500)
 
-    elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord, FailedToResizeImageError)):
+    elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord)):
         return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
 
     elif isinstance(exception, ProgrammingError):

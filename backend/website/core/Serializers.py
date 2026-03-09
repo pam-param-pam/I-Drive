@@ -327,6 +327,7 @@ class DeviceTokenSerializer(SimpleSerializer):
 class NotificationSerializer(SimpleSerializer):
     def serialize_object(self, notification: Notification) -> dict:
         return {
+            "id": notification.id,
             "type": notification.type,
             "title": notification.title,
             "message": notification.message,

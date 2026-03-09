@@ -11,10 +11,10 @@ from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from . import Thumbnail
 from ..constants import ShareEventType, SHARE_ACCESS_DURATION
 from ..core.dataModels.dataModels import ViewShare, FileCloseEvent, FileOpenEvent, FileDownloadStartEvent, FileDownloadSuccessfulEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, \
-    ZipDownloadSuccessfulEvent, ZipDownloadStartEvent, MoviePauseEvent, MovieSeekEvent, MovieWatchEvent, SubtitleStreamedEvent, ThumbnailStreamedEvent
+    ZipDownloadSuccessfulEvent, ZipDownloadStartEvent, MovieToggleEvent, MovieSeekEvent, MovieWatchEvent, SubtitleStreamedEvent, ThumbnailStreamedEvent
+from ..core.dataModels.http import ShareContext
 from ..core.helpers import get_ip
 
 
@@ -86,26 +86,24 @@ class ShareAccess(models.Model):
     access_time = models.DateTimeField(auto_now_add=True)
 
     @classmethod
-    def get_or_create_recent(cls, share, request) -> 'ShareAccess':
-        ip, _ = get_ip(request)
-        user_agent = request.user_agent
-        user = request.user if request.user.is_authenticated else None
+    def get_or_create_recent(cls, share: ShareableLink, context: ShareContext) -> 'ShareAccess':
 
         time_ago = timezone.now() - datetime.timedelta(minutes=SHARE_ACCESS_DURATION)
         existing = cls.objects.filter(
             share=share,
-            ip=ip,
-            user_agent=user_agent,
+            ip=context.ip,
+            user_agent=context.user_agent,
             access_time__gte=time_ago
         ).order_by('-access_time').first()
 
         if existing:
             return existing
+
         return cls.objects.create(
             share=share,
-            ip=ip,
-            user_agent=user_agent,
-            accessed_by=user
+            ip=context.ip,
+            user_agent=context.user_agent,
+            accessed_by=context.user
         )
 
     def __str__(self):
@@ -130,7 +128,6 @@ class ShareAccessEvent(models.Model):
 
         # File
         ShareEventType.FILE_OPEN: FileOpenEvent,
-        ShareEventType.FILE_CLOSE: FileCloseEvent,
         ShareEventType.FILE_DOWNLOAD_START: FileDownloadStartEvent,
         ShareEventType.FILE_DOWNLOAD_SUCCESSFUL: FileDownloadSuccessfulEvent,
         ShareEventType.FILE_STREAM: FileStreamEvent,
@@ -142,7 +139,7 @@ class ShareAccessEvent(models.Model):
         # Movie
         ShareEventType.MOVIE_WATCH: MovieWatchEvent,
         ShareEventType.MOVIE_SEEK: MovieSeekEvent,
-        ShareEventType.MOVIE_PAUSE: MoviePauseEvent,
+        ShareEventType.MOVIE_TOGGLE: MovieToggleEvent,
 
         # Zip
         ShareEventType.ZIP_DOWNLOAD_START: ZipDownloadStartEvent,
@@ -155,9 +152,8 @@ class ShareAccessEvent(models.Model):
     }
 
     @staticmethod
-    def log(share: ShareableLink, request, event_type: ShareEventType, **metadata):
-
-        access = ShareAccess.get_or_create_recent(share, request)
+    def log(share: ShareableLink, context: ShareContext, event_type: ShareEventType, **metadata):
+        access = ShareAccess.get_or_create_recent(share, context)
 
         schema_cls = ShareAccessEvent.EVENT_SCHEMAS[event_type]
 
@@ -169,16 +165,3 @@ class ShareAccessEvent(models.Model):
             event_type=event_type.value,
             metadata=metadata
         )
-
-    def clean(self):
-        try:
-            event_enum = ShareEventType(self.event_type)
-        except ValueError:
-            raise ValidationError(f"Unknown event_type: {self.event_type}")
-
-        schema_cls = self.EVENT_SCHEMAS[event_enum]
-
-        try:
-            schema_cls(**self.metadata)
-        except Exception as e:
-            raise ValidationError(f"Invalid metadata for {self.event_type}: {e}")

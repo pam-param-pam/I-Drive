@@ -1,5 +1,3 @@
-import traceback
-from collections import defaultdict
 from datetime import timedelta, datetime
 
 from django.contrib.auth.models import User
@@ -7,10 +5,12 @@ from django.utils import timezone
 
 from ..celery import app
 from ..core.dataModels.http import RequestContext
+from ..core.errors import NoBotsError
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder, Webhook
+from ..models.mixin_models import ItemState
 from ..tasks.deleteTasks import smart_delete_task
-from ..core.errors import NoBotsError
+from collections import defaultdict
 
 
 @app.task
@@ -19,7 +19,6 @@ def delete_expired_shares():
     for share in shares:
         if share.is_expired():
             share.delete()
-
 
 @app.task
 def delete_expired_zips():
@@ -33,26 +32,26 @@ def prune_expired_tokens():
     now = timezone.now()
     expired_tokens = PerDeviceToken.objects.filter(expires_at__lte=now)
     count, _ = expired_tokens.delete()
-    return f"Pruned {count} expired tokens"
 
 
 @app.task
-def delete_unready_files():
-    #todo
-    return
-    files = File.objects.filter(state=ItemState.ACTIVE)
+def delete_failed_files():
     current_datetime = timezone.now()
+    cutoff = current_datetime - timedelta(hours=6)
 
-    # Group files by owner
-    owner_files_map = defaultdict(list)
+    files = File.objects.filter(state=ItemState.FAILED, parent__state=ItemState.ACTIVE, created_at__lte=cutoff)
+    folders = Folder.objects.filter(state=ItemState.FAILED, created_at__lte=cutoff)
+
+    owner_items_map = defaultdict(list)
 
     for file in files:
-        if current_datetime - file.created_at >= timedelta(hours=6):  # delta of six hours to prevent files in upload from being deleted
-            owner_files_map[file.owner.id].append(file)
+        owner_items_map[file.owner_id].append(file.id)
 
-    for owner_id, files in owner_files_map.items():
-        # pass a list of all files in batches(batched by owner_id)
-        delete_files(RequestContext.from_user(owner_id), files)
+    for folder in folders:
+        owner_items_map[folder.owner_id].append(folder.id)
+
+    for owner_id, item_ids in owner_items_map.items():
+        smart_delete_task.delay(RequestContext.from_user(owner_id), item_ids)
 
 
 @app.task
@@ -76,14 +75,13 @@ def delete_dangling_discord_files(days=3):
                     for discord_message in batch:
                         discord_attachments = discord_message['attachments']
                         if not discord_attachments:
-                            discord.remove_message(user, discord_message['id'])
+                            discord.delete_message(user, discord_message['id'])
 
                         attachments_to_keep = []
                         attachments_to_remove = []
 
                         timestamp = datetime.fromisoformat(discord_message['timestamp'])
                         now = datetime.now(timezone.utc)
-                        # todo
                         # # skip fresh messages to not break upload
                         # one_hour_ago = now - timedelta(hours=6)
                         # if timestamp > one_hour_ago:
@@ -107,7 +105,7 @@ def delete_dangling_discord_files(days=3):
 
                         if not attachments_to_remove:
                             if not attachments_to_keep:
-                                discord.remove_message(user, discord_message['id'])
+                                discord.delete_message(user, discord_message['id'])
                             continue
 
                         if attachments_to_remove and attachments_to_keep:
@@ -117,29 +115,25 @@ def delete_dangling_discord_files(days=3):
                                 discord.edit_attachments(user, author.token, discord_message['id'], attachments_to_keep)
 
                             deleted_attachments[user] += len(attachments_to_remove)
-
-
+            except Exception as e:
+                pass
 
 
 @app.task
 def delete_files_from_trash():
-    files = File.objects.filter(inTrash=True)
-    folders = Folder.objects.filter(inTrash=True)
-
     current_datetime = timezone.now()
+    cutoff = current_datetime - timedelta(days=30)
 
-    # todo delete better using with 1 call to task with list of ids
+    owner_items_map = defaultdict(list)
+
+    files = File.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
+    folders = Folder.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
+
     for file in files:
-        elapsed_time = current_datetime - file.inTrashSince
-        # if file is in trash for at least 30 days
-        # remove the file
-        if elapsed_time >= timedelta(days=30):
-            smart_delete_task.delay(RequestContext.from_user(file.owner_id), [file.id])
+        owner_items_map[file.owner_id].append(file.id)
 
     for folder in folders:
-        elapsed_time = current_datetime - folder.inTrashSince
-        # if file is in trash for at least 30 days
-        # remove the file
-        if elapsed_time >= timedelta(days=30):
-            smart_delete_task.delay(RequestContext.from_user(folder.owner_id), [folder.id])
+        owner_items_map[folder.owner_id].append(folder.id)
 
+    for owner_id, ids in owner_items_map.items():
+        smart_delete_task.delay(RequestContext.from_user(owner_id), ids)

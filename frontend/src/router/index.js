@@ -4,7 +4,7 @@ import Layout from "@/views/Layout.vue"
 
 import { useMainStore } from "@/stores/mainStore.js"
 import { validateLogin } from "@/utils/auth.js"
-import { send_route_change_event } from "@/utils/deviceControl.js"
+import { deviceControl } from "@/utils/deviceControl.js"
 
 const router = createRouter({
 
@@ -16,7 +16,8 @@ const router = createRouter({
          component: () => import("../views/Login.vue"),
          beforeEnter: async (to, from, next) => {
             const store = useMainStore()
-            if (store.user == null) {
+            console.log("login init auth")
+            if (store.user == null && from.name != null) {
                await initAuth()
             }
 
@@ -143,7 +144,7 @@ const router = createRouter({
 
             const store = useMainStore()
 
-            if (store.user == null) {
+            if (store.user == null && from.name != null) {
                await initAuth()
             }
 
@@ -160,6 +161,7 @@ const router = createRouter({
 
 
 async function initAuth() {
+   console.log("initAuth")
    try {
       await validateLogin()
    } catch (error) {
@@ -192,7 +194,7 @@ router.afterEach((to, from) => {
       params: { ...to.params },
       query: { ...to.query }
    }
-   send_route_change_event(routeForPush)
+   deviceControl.sendRouteChangeEvent(routeForPush)
 })
 
 router.beforeResolve(async (to, from, next) => {
@@ -204,6 +206,7 @@ router.beforeResolve(async (to, from, next) => {
    store.closeContextMenu()
    // this will only be null on first route
    if (from.name == null) {
+      console.log("before resolve initAuth")
       await initAuth()
    }
 

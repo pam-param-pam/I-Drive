@@ -196,7 +196,6 @@ class CheckState(BaseResourceCheck):
     def check(self, request, *resource):
         resource = resource[0]
         self._require_type(resource, (File, Folder, dict, tuple))
-        return
         state = self._require_attr(resource, 'state')
         if state != ItemState.ACTIVE:
             raise ResourcePermissionError("Resource is not active")
@@ -305,9 +304,9 @@ class CheckShareReady(BaseResourceCheck):
         share_obj = resources[0]
         self._require_type(share_obj, ShareableLink)
 
-        ready = self._require_attr(get_item_inside_share(share_obj), 'ready')
-        if not ready:
-            raise ResourceNotFoundError("Share not found or expired")
+        state = self._require_attr(get_item_inside_share(share_obj), 'state')
+        if state != ItemState.ACTIVE:
+            raise ResourcePermissionError("Share not found or expired")
 
 class CheckShareTrash(BaseResourceCheck):
     def check(self, request, *resources):

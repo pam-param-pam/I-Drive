@@ -14,6 +14,7 @@ from .folder_models import Folder
 from .mixin_models import DiscordAttachmentMixin, ItemState
 from ..constants import FILE_TYPE_CHOICES, EncryptionMethod, cache, MAX_FILES_IN_FOLDER
 from ..core.helpers import chop_long_file_name
+from ..services import cache_service
 
 
 class File(models.Model):
@@ -156,12 +157,13 @@ class File(models.Model):
 
         # invalidate any cache
         self.remove_cache()
+
         # invalidate also cache of 'old' parent if the parent was changed
         # we make a db lookup to get the old parent
         # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
         try:
             old_object = File.objects.get(id=self.id)
-            cache.delete(old_object.parent_id)
+            old_object.remove_cache()
         except File.DoesNotExist:
             pass
 
@@ -170,7 +172,7 @@ class File(models.Model):
         super(File, self).save(*args, **kwargs)
 
     def remove_cache(self):
-        cache.delete(self.parent_id)
+        self.parent.remove_cache()
 
     def get_encryption_method(self) -> EncryptionMethod:
         return EncryptionMethod(self.encryption_method)
@@ -188,22 +190,6 @@ class File(models.Model):
         # invalidate any cache
         self.remove_cache()
         super(File, self).delete()
-
-    def moveToTrash(self):
-        if not self.parent.inTrash:
-            self.inTrash = True
-            self.inTrashSince = timezone.now()
-            self.save()
-
-    def restoreFromTrash(self):
-        if self.parent.inTrash:
-            raise ValidationError("Cannot restore from trash! Folder parent is in trash, restore it first.")
-        self.inTrash = False
-        self.save()
-
-    def force_delete(self):
-        self.remove_cache()
-        self.delete()
 
     def is_in_trash(self):
         return self.inTrash or self.parent.inTrash

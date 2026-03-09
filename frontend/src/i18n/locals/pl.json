@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "markUnread": "Oznacz jako nieprzeczytane",
     "markAllRead": "Oznacz wszystkie jako przeczytane",
     "toggleSize": "Przełącz rozmiar zdjęcia",
     "deviceControl": "Kontrola urządzenia",
@@ -63,7 +64,6 @@
     "search": "Szukaj",
     "select": "Wybierz",
     "share": "Udostępnij",
-    "shell": "Pokaż/ukryj wiersz poleceń",
     "submit": "Zatwierdź",
     "switchView": "Zmień widok",
     "toggleSidebar": "Pokaż/ukryj panel boczny",

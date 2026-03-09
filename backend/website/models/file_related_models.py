@@ -12,7 +12,8 @@ from simple_history.models import HistoricalRecords
 
 from .file_models import File
 from .mixin_models import DiscordAttachmentMixin
-from ..constants import ALLOWED_THUMBNAIL_SIZES, cache
+from ..constants import cache
+from ..services import cache_service
 
 
 class Thumbnail(DiscordAttachmentMixin):
@@ -35,15 +36,8 @@ class Thumbnail(DiscordAttachmentMixin):
         ]
 
     def delete(self, *args, **kwargs):
-        # Delete all possible thumbnail cache keys for this file
-
-        for size in ALLOWED_THUMBNAIL_SIZES:
-            cache_key = f"thumbnail:{self.file.id}:{size}"
-            cache.delete(cache_key)
-
-        # Also delete the base cache key if needed (like in your original)
-        cache.delete(f"thumbnail:{self.file.id}")
-
+        key = cache_service.get_thumbnail_key(self.file.id)
+        cache.delete(key)
         super(Thumbnail, self).delete(*args, **kwargs)
 
     def __str__(self):

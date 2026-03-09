@@ -107,7 +107,7 @@ class Channel(models.Model):
                 check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_guild_id_snowflake_format",
             ),
-            # channel_id must be a snowflake
+            # discord_id must be a snowflake
             CheckConstraint(
                 check=Q(discord_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_discord_id_snowflake_format",

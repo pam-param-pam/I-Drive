@@ -3,7 +3,6 @@ import { logout } from "@/utils/auth.js"
 import { useToast } from "vue-toastification"
 import i18n from "@/i18n/index.js"
 import router from "@/router/index.js"
-import { showToast } from "@/utils/common.js"
 
 const cancelTokenMap = new Map()
 const toast = useToast()

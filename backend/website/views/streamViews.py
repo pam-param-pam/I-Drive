@@ -1,11 +1,9 @@
 import mimetypes
 import re
 import time
-from io import BytesIO
 
 import aiohttp
 import requests
-from PIL import Image
 from asgiref.sync import sync_to_async
 from django.http import JsonResponse
 from django.http import StreamingHttpResponse, HttpResponse
@@ -21,7 +19,7 @@ from ..auth.utils import check_resource_perms
 from ..constants import ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE, MAX_THUMBNAIL_SIZE, USE_CACHE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
-from ..core.errors import BadRequestError, FailedToResizeImageError
+from ..core.errors import BadRequestError
 from ..core.http.utils import get_content_disposition_string, parse_range_header
 from ..discord.Discord import discord
 from ..models import File, UserZIP, Moment, Subtitle
@@ -44,13 +42,14 @@ def stream_thumbnail(request, file_obj: File):
     if size_param not in ALLOWED_THUMBNAIL_SIZES:
         raise BadRequestError(f"Invalid size: must be one of {', '.join(ALLOWED_THUMBNAIL_SIZES)}")
 
-    cache_key = f"thumbnail:{file_obj.id}"
+    thumbnail = file_obj.thumbnail
+
+    cache_key = f"thumbnail:{thumbnail.id}"
     thumbnail_content = cache.get(cache_key)
 
     if not thumbnail_content or not USE_CACHE:
         check_if_bots_exists(file_obj.owner)
 
-        thumbnail = file_obj.thumbnail
         if thumbnail.size > MAX_THUMBNAIL_SIZE:
             raise BadRequestError("Thumbnail too big too stream!")
 
@@ -300,7 +299,7 @@ def stream_zip_files(request, token):
                     async for raw_data in response.content.iter_chunked(chunk_size):
                         yield decryptor.decrypt(raw_data)
 
-    files = user_zip.files.filter(state=ItemState.ACTIVE, inTrash=False)
+    files = user_zip.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
     folders = user_zip.folders.filter(state=ItemState.ACTIVE, inTrash=False)
     dict_files = []
 
@@ -308,7 +307,7 @@ def stream_zip_files(request, token):
     if len(files) == 0 and len(folders) == 1:
         single_root = True
         dict_files = build_flattened_children(folders[0], root_folder=folders[0])
-
+        print(dict_files)
     else:
         for file in files:
             file_dict = build_zip_file_dict(file, file.name)

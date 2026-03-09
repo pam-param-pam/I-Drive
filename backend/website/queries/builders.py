@@ -66,20 +66,34 @@ def build_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id
     return list(reversed(breadcrumbs))
 
 
-def calculate_size(folder: Folder) -> int:
+def calculate_size(folder: Folder, includeTrash: bool = False) -> int:
     """
     Function to calculate size of a folder
     """
-    size_result = folder.get_all_files().filter(state=ItemState.ACTIVE, inTrash=False).aggregate(Sum('size'))
-    return size_result['size__sum'] or 0
+    qs = folder.get_all_files().filter(state=ItemState.ACTIVE)
+
+    if not includeTrash:
+        qs = qs.filter(inTrash=False, parent__inTrash=False)
+
+    size_result = qs.aggregate(Sum("size"))
+    return size_result["size__sum"] or 0
 
 
-def calculate_file_and_folder_count(folder: Folder) -> tuple[int, int]:
+def calculate_file_and_folder_count(folder: Folder, includeTrash: bool = False) -> tuple[int, int]:
     """
     Function to calculate entire file & folder count of a given folder
     """
-    file_count = folder.get_all_files().filter(state=ItemState.ACTIVE, inTrash=False).count()
-    folder_count = folder.get_all_subfolders().filter(state=ItemState.ACTIVE, inTrash=False).count()
+
+    file_qs = folder.get_all_files().filter(state=ItemState.ACTIVE)
+    folder_qs = folder.get_all_subfolders().filter(state=ItemState.ACTIVE)
+
+    if not includeTrash:
+        file_qs = file_qs.filter(inTrash=False, parent__inTrash=False)
+        folder_qs = folder_qs.filter(inTrash=False)
+
+    file_count = file_qs.count()
+    folder_count = folder_qs.count()
+
     return folder_count, file_count
 
 
@@ -88,35 +102,63 @@ def build_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
 
 
 def build_flattened_children(folder: Folder, full_path="", root_folder=None) -> List[ZipFileDict]:
-    """
-    Recursively collects all children [folders and files(not in trash and ready)] of the given folder
-    into a flattened list with file IDs and names including folders, but excluding the root folder name.
-
-    This function is used by zip.
-    This function omits the folders locked with a diff password
-    """
-    children = []
-
-    # Track the root folder on the first call
     if root_folder is None:
         root_folder = folder
 
-    base_relative_path = f"{full_path}{folder.name}/"
+    subtree_folders = list(folder.get_descendants(include_self=True).filter(
+        state=ItemState.ACTIVE,
+        inTrash=False,
+        parent__inTrash=False)
+    )
 
-    # Collect all files in the current folder
-    files = folder.files.filter(state=ItemState.ACTIVE, inTrash=False)
-    if not files.exists() and root_folder != folder:  # append empty folders, but only for non root
-        children.append({"name": base_relative_path, "isDir": True})
-    else:
-        for file in files:
-            file_full_path = f"{base_relative_path}{file.name}"
-            file_dict = build_zip_file_dict(file, file_full_path)
-            children.append(file_dict)
+    files = File.objects.filter(
+        parent__in=subtree_folders,
+        state=ItemState.ACTIVE,
+        inTrash=False,
+        parent__inTrash=False
+    )
 
-    # Recursively collect all subfolders and their children
-    filter_condition = Q(lockFrom_id=root_folder.lockFrom_id) if root_folder and root_folder.lockFrom_id is not None else Q(lockFrom_id__isnull=True)
-    for subfolder in folder.subfolders.filter(filter_condition):
-        children.extend(build_flattened_children(subfolder, base_relative_path, root_folder))
+    files_by_folder = defaultdict(list)
+    for f in files:
+        files_by_folder[f.parent_id].append(f)
+
+    subfolders_by_parent = defaultdict(list)
+    for f in subtree_folders:
+        if f.parent_id:
+            subfolders_by_parent[f.parent_id].append(f)
+
+    children = []
+
+    def walk(current_folder, current_path):
+
+        base_relative_path = f"{current_path}{current_folder.name}/"
+
+        folder_files = files_by_folder.get(current_folder.id, [])
+
+        if not folder_files and root_folder != current_folder:
+            children.append({"name": base_relative_path, "isDir": True})
+        else:
+            for file in folder_files:
+                file_full_path = f"{base_relative_path}{file.name}"
+                children.append(build_zip_file_dict(file, file_full_path))
+
+        # ignore locked folders/files
+        filter_condition = (Q(lockFrom_id=root_folder.lockFrom_id) if root_folder.lockFrom_id is not None else Q(lockFrom_id__isnull=True))
+
+        for subfolder in subfolders_by_parent.get(current_folder.id, []):
+            if not filter_condition.children:
+                continue
+            if root_folder.lockFrom_id is not None:
+                if subfolder.lockFrom_id != root_folder.lockFrom_id:
+                    continue
+            else:
+                if subfolder.lockFrom_id is not None:
+                    continue
+
+            walk(subfolder, base_relative_path)
+
+    walk(folder, full_path)
+
     return children
 
 
@@ -136,7 +178,7 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
     folder_serializer = ShareFolderSerializer()
     file_serializer = ShareFileSerializer(share)
 
-    files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False).select_related(
+    files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False).select_related(
         "parent", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
 
     folders = []

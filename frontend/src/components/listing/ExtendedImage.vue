@@ -26,8 +26,7 @@ import { isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
 import Action from "@/components/header/Action.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
-import { backendInstance } from "@/axios/networker.js"
-
+//todo fix zoom
 export default {
    components: { HeaderBar, Action },
    props: {

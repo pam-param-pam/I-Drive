@@ -229,17 +229,6 @@
  color: var(--textSecondary);
 }
 
-/* Shell */
-.dark-mode .shell {
- background: var(--surfacePrimary);
- color: var(--textPrimary);
-}
-
-/* Shell result */
-.dark-mode .shell__result {
- border-top: 1px solid var(--divider);
-}
-
 /* Editor container */
 .dark-mode #editor-container {
  background: var(--background);
@@ -248,7 +237,6 @@
 .dark-mode #editor-container .bar {
  background: var(--surfacePrimary);
 }
-
 
 
 /* Share box */

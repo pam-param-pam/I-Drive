@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "markUnread": "Mark unread",
     "markAllRead": "Mark all as read",
     "toggleSize": "Toggle image size",
     "deviceControl": "Device control",
@@ -62,7 +63,6 @@
     "search": "Search",
     "select": "Select",
     "share": "Share",
-    "shell": "Toggle shell",
     "submit": "Submit",
     "switchView": "Switch view",
     "toggleSidebar": "Toggle sidebar",

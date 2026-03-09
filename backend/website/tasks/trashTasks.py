@@ -1,13 +1,11 @@
 import traceback
-from datetime import timezone
-
-from django.utils import timezone
 
 from .helper import folder_serializer, send_message
 from ..celery import app
 from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
+from ..services import folder_service, file_service
 from ..websockets.utils import send_event, group_and_send_event
 
 
@@ -19,20 +17,15 @@ def move_to_trash_task(context: dict, ids: list[str]):
         files = File.objects.filter(id__in=ids).select_related("parent")
         folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
-        if files.exists():
-            files.update(inTrash=True, inTrashSince=timezone.now())
-
-        for file in files:
-            file.remove_cache()
-
-        group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, files)
+        file_service.internal_move_to_trash(files)
+        group_and_send_event(context, EventCode.ITEM_MOVE_TO_TRASH, list(files))
 
         total_length = len(folders)
         last_percentage = 0
         for index, folder in enumerate(folders):
             folder_dict = folder_serializer.serialize_object(folder)
             send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
-            folder.moveToTrash()
+            folder_service.internal_move_to_trash(folder=folder)
             percentage = round((index + 1) / total_length * 100)
             if percentage != last_percentage:
                 send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, context=context)
@@ -51,19 +44,16 @@ def restore_from_trash_task(context: dict, ids: list[str]):
         files = File.objects.filter(id__in=ids).select_related("parent")
         folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
-        if files.exists():
-            files.update(inTrash=False, inTrashSince=None)
-            group_and_send_event(context, EventCode.ITEM_RESTORE_FROM_TRASH, files)
+        file_service.internal_restore_from_trash(files)
 
-        for file in files:
-            file.remove_cache()
+        group_and_send_event(context, EventCode.ITEM_RESTORE_FROM_TRASH, list(files))
 
         total_length = len(folders)
         last_percentage = 0
         for index, folder in enumerate(folders):
             folder_dict = folder_serializer.serialize_object(folder)
             send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
-            folder.restoreFromTrash()
+            folder_service.internal_restore_from_trash(folder=folder)
             percentage = round((index + 1) / total_length * 100)
             if percentage != last_percentage:
                 send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, context=context)

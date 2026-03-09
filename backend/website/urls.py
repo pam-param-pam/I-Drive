@@ -22,7 +22,7 @@ from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view, create_linker
 from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
-    reenable_credential_view, get_notifications_view, mark_notifications_read_view
+    reenable_credential_view, get_notifications_view, set_notifications_read_status_view
 
 _route_registry = {}
 _registered_routes = set()
@@ -138,7 +138,7 @@ urlpatterns = [
     path("user/discordSettings/credentials", ['POST'], reenable_credential_view, name="reenable a credential"),
 
     path("user/notifications", ['GET'], get_notifications_view, name="get user notifications"),
-    path("user/notifications", ['POST'], mark_notifications_read_view, name="mark notifications as read"),
+    path("user/notifications", ['POST'], set_notifications_read_status_view, name="set notifications read status"),
 
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),

@@ -3,6 +3,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { forceLogout } from "@/utils/auth.js"
 import router from "@/router/index.js"
 import { useToast } from "vue-toastification"
+import { WebsocketEvent } from "@/utils/constants.js"
 
 const toast = useToast()
 
@@ -72,6 +73,7 @@ function removeFromUsage(store, item) {
    store.setUsage(usage)
 }
 
+
 //todo currentFolder is no longer indicative of if the files route is currently active
 
 export async function onEvent(message) {
@@ -93,7 +95,7 @@ export async function onEvent(message) {
 
    let op_code = event.op_code
 
-   if (op_code === 0) { // error from server
+   if (op_code === WebsocketEvent.WEBSOCKET_ERROR) {
       let error_code = event.data[0].error_code
       if (error_code === "rate_limit_exceeded") {
          toast.error(`${i18n.global.t("errors.websocketError")}\n${i18n.global.t("errors.rateLimit")}`)
@@ -104,7 +106,7 @@ export async function onEvent(message) {
       }
    }
 
-   if (op_code === 1) { // items created event
+   if (op_code === WebsocketEvent.ITEM_CREATE) {
       if (folder_context_id !== currentFolder?.id) return
       for (let item of event.data) {
          store.pushToItems(item)
@@ -112,7 +114,7 @@ export async function onEvent(message) {
       }
 
    }
-   if (op_code === 2) { // items deleted event
+   if (op_code === WebsocketEvent.ITEM_DELETE) {
       if (currentRoute === "Trash") {
          let updatedItems = store.items.filter(item => !event.data.includes(item.id))
          store.setItems(updatedItems)
@@ -123,7 +125,7 @@ export async function onEvent(message) {
       }
 
    }
-   if (op_code === 3) { // items updated event
+   if (op_code === WebsocketEvent.ITEM_UPDATE) {
       for (let item of event.data) {
          //todo make all of these events work wit/based on breadcrumbs too just like here
          store.updateBreadcrumbsAndCurrentFolder(item)
@@ -132,12 +134,12 @@ export async function onEvent(message) {
       }
    }
 
-   if (op_code === 4) { // items move-out event
+   if (op_code === WebsocketEvent.ITEM_MOVE_OUT) {
       if (folder_context_id !== currentFolder?.id && !store.searchActive) return
       removeItemsByIds(store, event.data)
    }
 
-   if (op_code === 5) { // items move-in event
+   if (op_code === WebsocketEvent.ITEM_MOVE_IN) {
       for (let item of event.data) {
          if (item.parent_id !== currentFolder?.id) continue
          store.pushToItems(item)
@@ -145,7 +147,7 @@ export async function onEvent(message) {
       }
    }
 
-   if (op_code === 6) { // items move to trash event
+   if (op_code === WebsocketEvent.ITEM_MOVE_TO_TRASH) {
       for (let item of event.data) {
          if (currentRoute === "Trash") {
             store.pushToItems(item)
@@ -155,7 +157,7 @@ export async function onEvent(message) {
       }
    }
 
-   if (op_code === 7) { // items restore from trash event
+   if (op_code === WebsocketEvent.ITEM_RESTORE_FROM_TRASH) {
       if (currentRoute === "Trash") {
          let idsToRemove = new Set(event.data.map(item => item.id))
          let updatedItems = store.items.filter(item => !idsToRemove.has(item.id))
@@ -171,7 +173,7 @@ export async function onEvent(message) {
    }
 
    //todo migrate this event to the general scheme
-   if (op_code === 8 || op_code === 9) { // message update event, for example, when deleting items
+   if (op_code === WebsocketEvent.MESSAGE_SENT || op_code === WebsocketEvent.MESSAGE_UPDATE) {
       let message_data = event.data[0]
 
       let timeout = 0
@@ -194,14 +196,14 @@ export async function onEvent(message) {
       }, true)
    }
 
-   if (op_code === 10) { // folder lock status change event
+   if (op_code === WebsocketEvent.FOLDER_LOCK_STATUS_CHANGE) {
       for (let item of event.data) {
          if (item.parent_id !== currentFolder?.id) return
          store.changeLockStatusAndPasswordCache({ folderId: item.id, newLockStatus: item.isLocked, lockFrom: item.lockFrom })
       }
    }
 
-   if (op_code === 11) { // force logout
+   if (op_code === WebsocketEvent.FORCE_LOGOUT) {
       let localDeviceId = localStorage.getItem("device_id")
       let deviceId = event.data[0].device_id
 
@@ -209,16 +211,16 @@ export async function onEvent(message) {
          await forceLogout()
       }
    }
-   if (op_code === 13) { // device control request
+   if (op_code === WebsocketEvent.DEVICE_CONTROL_REQUEST) {
       let device = event.data[0].master_device
       let expiry = event.data[0].expiry
 
       store.showHover({
          "prompt": "ControlConsentPrompt",
-         "props": {"masterDevice": device, "expiry": expiry}
+         "props": { "masterDevice": device, "expiry": expiry }
       })
    }
-   if (op_code === 15) { // device control command
+   if (op_code === WebsocketEvent.DEVICE_CONTROL_COMMAND) {
       let type = event.data[0].type
       let args = event.data[0].args
       if (type === "route_change") {
@@ -226,7 +228,7 @@ export async function onEvent(message) {
       }
    }
 
-   if (op_code === 16) { // device control status
+   if (op_code === WebsocketEvent.DEVICE_CONTROL_STATUS) {
       store.deviceControlStatus = {
          ...event.data[0],
          _receivedAt: Date.now()
@@ -235,8 +237,9 @@ export async function onEvent(message) {
          store.closeHover()
       }
    }
-   if (op_code === 17) { // new notification
+
+   if (op_code === WebsocketEvent.NEW_NOTIFICATION) {
       store.user.unreadNotifications++
    }
 
-   }
+}

@@ -105,7 +105,7 @@ def check_share_password(request, share_obj):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "folder_obj"], optional=True)
 @check_resource_permissions([CheckTrash, CheckState], resource_key="folder_obj", optional=True)
 def view_share(request, share_obj: ShareableLink, folder_obj=None):
-    ShareAccessEvent.log(share_obj, request, ShareEventType.SHARE_VIEW, share_id=share_obj.id)
+    share_service.log_event_http(request, share_obj, ShareEventType.SHARE_VIEW, share_id=share_obj.id)
 
     settings = UserSettings.objects.get(user=share_obj.owner)
     obj_in_share = get_item_inside_share(share_obj)
@@ -119,7 +119,7 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     del response_dict["parent_id"]
 
     if folder_obj:
-        ShareAccessEvent.log(share_obj, request, ShareEventType.FOLDER_OPEN, folder_id=folder_obj.id)
+        share_service.log_event_http(request, share_obj, ShareEventType.FOLDER_OPEN, folder_id=folder_obj.id)
 
         breadcrumbs = build_share_breadcrumbs(folder_obj, obj_in_share, True)
         folder_content = build_share_folder_content(share_obj, folder_obj, include_folders=settings.subfolders_in_shares)["children"]
@@ -141,7 +141,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 
     file_ids = list(user_zip.files.values_list("id", flat=True))
     folder_ids = list(user_zip.folders.values_list("id", flat=True))
-    ShareAccessEvent.log(share_obj, request, ShareEventType.ZIP_DOWNLOAD_START, files=file_ids, folders=folder_ids)
+    share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD_START, files=file_ids, folders=folder_ids)
 
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
 
@@ -157,7 +157,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
     range_header = request.headers.get('Range')
     is_range_header, start_byte, end_byte = parse_range_header(range_header)
-    ShareAccessEvent.log(share_obj, request, ShareEventType.FILE_STREAM, file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte)
+    share_service.log_event_http(request, share_obj, ShareEventType.FILE_STREAM, file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte)
 
     # Extremely hacky way,
     # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
@@ -177,7 +177,7 @@ def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
 def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
-    # ShareAccessEvent.log(share_obj, request, ShareEventType.THUMBNAIL_STREAM, file_id=file_obj.id, thumbnail_id=file_obj.thumbnail.id)
+    # share_service.log_event_http(request, share_obj, ShareEventType.THUMBNAIL_STREAM, file_id=file_obj.id, thumbnail_id=file_obj.thumbnail.id)
 
     signed_file_id = request.META['signed_file_id']
     request._request.META['share_context'] = True
@@ -193,7 +193,7 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
 def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
-    # ShareAccessEvent.log(share_obj, request, ShareEventType.THUMBNAIL_STREAM, file_id=file_obj.id, subtitle_id=subtitle_id)
+    # share_service.log_event_http(request, share_obj, ShareEventType.THUMBNAIL_STREAM, file_id=file_obj.id, subtitle_id=subtitle_id)
 
     signed_file_id = request.META['signed_file_id']
     request._request.META['share_context'] = True

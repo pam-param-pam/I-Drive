@@ -39,7 +39,6 @@ export default {
       ...mapState(useMainStore, ['error', 'items', 'selected', 'perms', 'loading', 'currentFolder', 'disabledCreation', 'selectedCount', 'setSearchActive', 'setSearchItems']),
       headerButtons() {
          return {
-            shell: this.perms.execute,
             info: this.selectedCount > 0,
             restore: this.selectedCount > 0 && this.perms.modify,
             delete: this.selectedCount > 0 && this.perms.delete

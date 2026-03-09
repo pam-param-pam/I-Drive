@@ -59,7 +59,6 @@ export default {
 
    methods: {
       hideContextMenu() {
-         console.log("aaaa")
          this.$emit('hide')
       }
    }

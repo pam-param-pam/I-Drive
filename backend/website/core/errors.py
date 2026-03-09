@@ -30,14 +30,14 @@ class HttpxError(IDriveException):
 class CannotProcessDiscordRequestError(IDriveException):
     """Raised when we are unable to make requests to discord due to being overloaded"""
 
-class FailedToResizeImageError(IDriveException):
-    """Raised when we are unable to resize an image for unknown reasons"""
-
 class UsernameTakenError(IDriveException):
     """Raised on register, when a user with this username already exists"""
 
 class URLInvalidOrExpired(IDriveException):
     """Raised when signed url is not valid or expired"""
+
+class RootFolderError(IDriveException):
+    """Raised when user has no root folder or has multiple root"""
 
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""

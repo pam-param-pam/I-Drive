@@ -4,12 +4,11 @@ from typing import Union, List
 import easy
 from django.contrib import admin
 from django.db.models import QuerySet
-from django.forms import ModelForm
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
 
-from .constants import API_BASE_URL, cache, EncryptionMethod
+from .constants import API_BASE_URL, EncryptionMethod
 from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
 from .discord.Discord import discord
@@ -18,7 +17,7 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
 from .models.file_related_models import RawMetadata, ThumbnailLink
 from .models.mixin_models import ItemState
 from .models.other_models import Notification
-
+from .services import folder_service
 from .tasks.deleteTasks import smart_delete_task
 
 admin.site.register(PerDeviceToken)
@@ -33,18 +32,15 @@ admin.site.register(SubtitleTrack)
 
 admin.site.register(VideoPosition)
 
-admin.site.register(ShareAccessEvent)  # todo
 
 admin.site.register(AttachmentLinker)
 admin.site.register(FragmentLink)  # todo
 admin.site.register(ThumbnailLink)
 
-admin.site.register(Notification)
-
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'channel_id', 'message_id', 'attachment_id', 'sequence', 'offset', 'readable_size',
+    readonly_fields = ('id', 'channel', 'message_id', 'attachment_id', 'sequence', 'offset', 'readable_size',
                        'file', 'created_at', 'size', 'fragment_url', 'object_id', 'content_type', 'crc', 'crc_hex', 'jump')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
@@ -137,8 +133,6 @@ class FolderAdmin(SimpleHistoryAdmin):
         # todo, make this use service layer
         if isinstance(obj, Folder):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
-
-            obj.force_delete()
         else:
             ids = []
 
@@ -147,31 +141,20 @@ class FolderAdmin(SimpleHistoryAdmin):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
-        # todo, make this use service layer
         for real_obj in queryset:
-            real_obj.force_delete()
+            real_obj.delete()
 
     def move_to_trash(self, request, queryset: QuerySet[Folder]):
-        # todo, make this use service layer
         for folder in queryset:
-            folder.moveToTrash()
+            folder_service.internal_move_to_trash(folder)
 
     def restore_from_trash(self, request, queryset: QuerySet[Folder]):
-        # todo, make this use service layer
         for folder in queryset:
-            folder.restoreFromTrash()
+            folder_service.internal_restore_from_trash(folder)
 
     def unlock(self, request, queryset: QuerySet[Folder]):
-        # todo, make this use service layer
         for folder in queryset:
-            folder.removeLock()
-
-    def save_model(self, request, obj: Folder, form: ModelForm, change: bool):
-        cache.delete(obj.id)
-        if obj.parent:
-            cache.delete(obj.parent.id)
-
-        super().save_model(request, obj, form, change)
+            folder_service.internal_remove_lock(folder)
 
 
 @admin.register(File)
@@ -297,7 +280,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
     search_fields = ['file__name', 'file__id', 'file__owner__username']
     ordering = ['-created_at']
     list_display = ['file_name', 'owner', 'readable_size', 'created_at']
-    readonly_fields = ['created_at', 'channel_id', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'object_id', 'content_type']
+    readonly_fields = ['created_at', 'channel', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'object_id', 'content_type']
 
     @easy.smart(short_description="File name", admin_order_field="file__name")
     def file_name(self, obj: Thumbnail):
@@ -427,7 +410,7 @@ class BotAdmin(admin.ModelAdmin):
 class MomentAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__owner__username')
     list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
-    readonly_fields = ('channel_id', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
+    readonly_fields = ('channel', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
     exclude = ['size', 'timestamp']
 
     @easy.with_tags()
@@ -471,7 +454,7 @@ class SubtitleAdmin(admin.ModelAdmin):
 
     search_fields = ('file__name', 'file__id', 'file__owner__username')
     list_display = ['file_name', 'language', 'owner', 'readable_size']
-    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel_id', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
+    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
     exclude = ['size']
 
     @easy.with_tags()
@@ -508,9 +491,43 @@ class SubtitleAdmin(admin.ModelAdmin):
 
 @admin.register(ShareAccess)
 class ShareAccessAdmin(admin.ModelAdmin):
+    ordering = ["-access_time"]
     readonly_fields = ('share', 'id', 'ip', 'user_agent', 'readable_accessed_by', 'access_time')
+    list_display = ['share', 'readable_accessed_by', 'ip', 'user_agent']
     exclude = ['accessed_by']
 
     @easy.smart(short_description="Accessed by")
     def readable_accessed_by(self, obj: ShareAccess):
         return obj.accessed_by.username if obj.accessed_by else "Unknown (Anonymous)"
+
+
+@admin.register(ShareAccessEvent)
+class ShareAccessEventAdmin(admin.ModelAdmin):
+    ordering = ["-timestamp"]
+    search_fields = ('event_type', 'metadata')
+    list_display = ('readable_accessed_by', 'event_type', 'ip', 'user_agent', 'timestamp')
+
+    @easy.smart(short_description="Accessed by")
+    def readable_accessed_by(self, obj: ShareAccessEvent):
+        return obj.access.accessed_by.username if obj.access.accessed_by else "Unknown (Anonymous)"
+
+    @easy.smart(short_description="IP")
+    def ip(self, obj: ShareAccessEvent):
+        return obj.access.ip
+
+    @easy.smart(short_description="User agent")
+    def user_agent(self, obj: ShareAccessEvent):
+        return obj.access.user_agent
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['owner', 'type', 'title', 'message', 'is_read', 'is_deleted']
+    actions = ['mark_as_read', 'mark_as_unread']
+
+    def mark_as_read(self, request, queryset: QuerySet[Notification]):
+        for notif in queryset:
+            notif.mark_as_read()
+
+    def mark_as_unread(self, request, queryset: QuerySet[Notification]):
+        for notif in queryset:
+            notif.mark_as_unread()

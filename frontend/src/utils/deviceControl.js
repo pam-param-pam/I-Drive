@@ -1,17 +1,20 @@
 import app from "@/main.js"
 import { useMainStore } from "@/stores/mainStore.js"
 
-export function isDeviceControlActive() {
+function isDeviceControlActive() {
    const store = useMainStore()
    if (!store.deviceControlOptions.isDeviceControlActive) return false
    const { status, expiry } = store.deviceControlStatus || {}
 
-   if (status !== "active_master") return false
+   if (status !== "active_master") {
+      return false
+   }
 
    const now = Math.floor(Date.now() / 1000)
    return expiry > now
 }
-export function send_route_change_event(route) {
+
+function sendRouteChangeEvent(route) {
    const store = useMainStore()
 
    if (isDeviceControlActive() && store.deviceControlOptions.isNavigationActive) {
@@ -22,7 +25,7 @@ export function send_route_change_event(route) {
    }
 }
 
-export function send_movie_toggle_event(isPaused) {
+function sendMovieToggleEvent(isPaused) {
    const store = useMainStore()
 
    if (isDeviceControlActive() && store.deviceControlOptions.isVideoToggleActive) {
@@ -33,7 +36,7 @@ export function send_movie_toggle_event(isPaused) {
    }
 }
 
-export function send_movie_seek_event(seconds) {
+function sendMovieSeekEvent(seconds) {
    const store = useMainStore()
 
    if (isDeviceControlActive() && store.deviceControlOptions.isVideoSeekActive) {
@@ -44,7 +47,7 @@ export function send_movie_seek_event(seconds) {
    }
 }
 
-export function send_movie_volume_change_event(volume) {
+function sendMovieVolumeChangeEvent(volume) {
    const store = useMainStore()
 
    if (isDeviceControlActive() && store.deviceControlOptions.isVideoVolumeChangeActive) {
@@ -55,7 +58,7 @@ export function send_movie_volume_change_event(volume) {
    }
 }
 
-export function send_movie_subtitles_change_event(subtitle_id) {
+function sendMovieSubtitlesChangeEvent(subtitle_id) {
    const store = useMainStore()
 
    if (isDeviceControlActive() && store.deviceControlOptions.isVideoSubtitlesActive) {
@@ -66,7 +69,7 @@ export function send_movie_subtitles_change_event(subtitle_id) {
    }
 }
 
-export function send_movie_fullscreen_toggle_event(is_fullscreen) {
+function sendMovieFullscreenToggleEvent(is_fullscreen) {
    const store = useMainStore()
 
    if (isDeviceControlActive() && store.deviceControlOptions.isVideoFullscreenActive) {
@@ -75,4 +78,14 @@ export function send_movie_fullscreen_toggle_event(is_fullscreen) {
          message: { type: "movie_fullscreen_toggle", args: { is_fullscreen } }
       })
    }
+}
+
+export const deviceControl = {
+   isDeviceControlActive,
+   sendRouteChangeEvent,
+   sendMovieToggleEvent,
+   sendMovieSeekEvent,
+   sendMovieVolumeChangeEvent,
+   sendMovieSubtitlesChangeEvent,
+   sendMovieFullscreenToggleEvent
 }

@@ -70,7 +70,6 @@ export default {
       headerButtons() {
          return {
             info: !this.disabledCreation,
-            shell: this.perms.execute,
             upload: this.perms.create && this.currentFolder,
             download: this.perms.download && this.selectedCount > 0,
             moveToTrash: this.selectedCount > 0 && this.perms.delete,

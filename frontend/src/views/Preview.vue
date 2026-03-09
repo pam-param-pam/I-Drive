@@ -76,33 +76,8 @@
       </div>
       <template v-else>
          <div class="preview">
-            <div v-if="error" class="info">
+            <errors v-if="error" :error="error" :simple="false" @close="close" />
 
-               <div v-if="error.status === 404" class="title">
-                  <i class="material-icons">feedback</i>
-                  {{ $t("errors.resourceNotFound") }}
-               </div>
-               <div v-else-if="error.status === 469" class="title">
-                  <i class="material-icons">block</i>
-                  {{ $t("errors.folderPasswordRequired") }}
-               </div>
-               <div v-else-if="error.status === 403" class="title">
-                  <i class="material-icons">block</i>
-                  {{ $t("errors.permissionDenied") }}
-               </div>
-               <div v-else class="title">
-                  <i class="material-icons">error_outline</i>
-                  {{ $t("errors.unknownError", { code: error?.status, response: error?.response?.data?.details }) }}
-               </div>
-
-               <div>
-                  <a class="button button--flat">
-                     <div>
-                        <i class="material-icons" @click="close">arrow_back</i>{{ $t("errors.goBack") }}
-                     </div>
-                  </a>
-               </div>
-            </div>
             <video
                v-else-if="file?.type === 'Video' && file?.size > 0"
                id="video"
@@ -235,20 +210,17 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { defineAsyncComponent } from "vue"
 import { backendInstance } from "@/axios/networker.js"
-import {
-   send_movie_fullscreen_toggle_event,
-   send_movie_seek_event,
-   send_movie_subtitles_change_event,
-   send_movie_toggle_event,
-   send_movie_volume_change_event
-} from "@/utils/deviceControl.js"
+import { deviceControl } from "@/utils/deviceControl.js"
+import Errors from "@/components/Errors.vue"
+import { baseWS, WebsocketEvent } from "@/utils/constants.js"
 
 export default {
    name: "preview",
 
    components: {
+      Errors,
       OfficePreview: defineAsyncComponent(() =>
-         import("@/components/OfficePreview.vue")
+         import("@/components/listing/OfficePreview.vue")
       ),
       VueReader: defineAsyncComponent(() =>
          import("vue-reader")
@@ -300,7 +272,8 @@ export default {
          subtitles: [],
          imageFullSize: false,
 
-         isFullscreen: false
+         isFullscreen: false,
+         shareSocket: null
       }
    },
 
@@ -362,6 +335,14 @@ export default {
 
    created() {
       this.fetchData()
+
+      if (this.isInShareContext) {
+         // Open new WebSocket
+         this.shareSocket = new WebSocket(`${baseWS}/share`, this.token)
+         this.shareSocket.onerror = (error) => {
+            console.error("shareSocket WebSocket error", error)
+         }
+      }
    },
 
    async mounted() {
@@ -379,7 +360,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setCurrentFolderData", "setLastItem", "setLoading", "setError", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["setTextError", "setCurrentFolderData", "setLastItem", "setLoading", "setError", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
 
       async fetchData() {
          this.setLoading(true)
@@ -410,7 +391,14 @@ export default {
                         this.file = items[i]
                      }
                   }
+                  if (!this.file) {
+                     this.setTextError(404, "Resource not found")
+                     return
+                  }
                   this.setItems(res.share)
+
+                  this.sendShareEvent({"type": "file_open", "args": {"file_id": this.file.id}})
+
                } else {
                   this.file = await getFile(this.fileId, this.lockFrom)
                   if (!this.currentFolder) {
@@ -429,14 +417,16 @@ export default {
          this.setLastItem(this.file)
          await this.$nextTick() //this is vevy important
          if (this.file?.type === "Video" && this.$refs.video) {
+            this.videoRef = this.$refs.video
+
             if (!this.isInShareContext) {
-               this.videoRef = this.$refs.video
                this.$refs.video.currentTime = this.file.video_position || 0
                this.lastSentVideoPosition = this.file.video_position || 0
             }
 
             await this.fetchSubtitles()
             this.loadSubtitleStyle()
+            if (!this.videoRef.textTracks) return
             this.videoRef.textTracks.addEventListener("change", this.onSubtitleChanged)
          }
 
@@ -463,7 +453,7 @@ export default {
       },
 
       onPdfError(error) {
-        this.setError({status: "500", response: {data: {details: "Failed to load pdf file. Reason unknown"}}})
+         this.setTextError(500, "Failed to load pdf file. Reason unknown")
       },
       showMoments() {
          if (!this.videoRef.readyState) {
@@ -641,86 +631,70 @@ export default {
          let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
          this.$toast.success(message)
       },
-      videoTimeUpdate() {
-         if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
-         let position = Math.floor(this.$refs.video.currentTime) // round to seconds
-         // To prevent sending too many requests, send only if the position has changed significantly
-         if (Math.abs(position - this.lastSentVideoPosition) >= 10 && this.$refs.video.duration > 60) {
-            // Adjust the interval as needed (e.g., every 1 second)
-            updateVideoPosition(this.file.id, this.file.lockFrom, { position })
 
+      videoTimeUpdate() {
+         let position = Math.floor(this.$refs.video.currentTime) // round to seconds
+         if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
+
+            if (this.isInShareContext)  {
+               this.sendShareEvent({"type": "movie_watch", "args": {"timestamp": Math.round(position), "file_id": this.file.id}})
+            } else if(this.videoRef.duration > 60) {
+               updateVideoPosition(this.file.id, this.file.lockFrom, { position })
+            }
             this.lastSentVideoPosition = position
          }
       },
       onMovieSeek() {
-         if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
+         let toSecond = this.$refs.video.currentTime
+         if (this.isInShareContext)  {
+            this.sendShareEvent({type: "movie_seek", args: {"to_second": Math.round(toSecond), "file_id": this.file.id}})
             return
          }
-         let toSecond = this.$refs.video.currentTime
-         send_movie_seek_event(toSecond)
+         deviceControl.sendMovieSeekEvent(toSecond)
       },
+
       onMovieVolumeChange: throttle(function() {
          if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
          let volume = Math.floor(this.$refs.video.volume)
-         send_movie_volume_change_event(volume)
+         deviceControl.sendMovieVolumeChangeEvent(volume)
       }, 500),
+
       onMoviePlay() {
          if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
-         send_movie_toggle_event(false)
+
+         deviceControl.sendMovieToggleEvent(false)
          let toSecond = this.$refs.video.currentTime
-         send_movie_seek_event(toSecond)
+         deviceControl.sendMovieSeekEvent(toSecond)
       },
+
       onMoviePause() {
          if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
-         send_movie_toggle_event(true)
+
+         deviceControl.sendMovieToggleEvent(false)
          let toSecond = this.$refs.video.currentTime
-         send_movie_seek_event(toSecond)
+         deviceControl.sendMovieSeekEvent(toSecond)
       },
 
       fullscreenChange() {
          if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
+
          this.isFullscreen = !this.isFullscreen
-         send_movie_fullscreen_toggle_event(this.isFullscreen)
+         deviceControl.sendMovieFullscreenToggleEvent(this.isFullscreen)
       },
 
       onSubtitleChanged() {
          if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
+
          let tracks = this.$refs.video.textTracks
 
          for (let i = 0; i < tracks.length; i++) {
             let t = tracks[i]
             if (t.mode === "showing") {
-               send_movie_subtitles_change_event(i)
+               deviceControl.sendMovieSubtitlesChangeEvent(i)
                return
             }
          }
-         send_movie_subtitles_change_event(null)
+         deviceControl.sendMovieSubtitlesChangeEvent(null)
       },
 
       toggleFullscreen(isFullscreen) {
@@ -777,12 +751,7 @@ export default {
          if (existing) existing.remove()
       },
       getRendition(rendition) {
-         // rendition.hooks.content.register((contents) => {
-         //   rendition.manager.container.style['scroll-behavior'] = 'smooth'
-         // })
          this.rendition = rendition
-         // Wait for the content to be fully rendered
-
          this.applyStyles()
       },
 
@@ -826,58 +795,24 @@ export default {
       locationChange(epubcifi) {
          this.calcCurrentLocation()
          //todo one day fix padding and location and mobile support etc
-         // if (isMobile) {
-         //   let container = this.rendition.manager.container
-         //   console.log(container)
-         //   let iframe = container.querySelector('iframe')
-         //   console.log(iframe)
-         //
-         //   if (iframe) {
-         //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
-         //     console.log(iframeDocument)
-         //     const body = iframeDocument.querySelector('body')
-         //
-         //     if (body) {
-         //       // Modify body styles directly
-         //       body.style.setProperty('padding-left', '30px', 'important')
-         //       body.style.setProperty('padding-right', '30px', 'important')
-         //       body.style.setProperty('padding-top', '20px', 'important')
-         //       body.style.setProperty('padding-bottom', '20px', 'important')
-         //     }
-         //   }
-         // }
-
-         // let container = this.rendition.manager.container
-         // console.log(container)
-         // let iframe = container.querySelector('iframe')
-         // console.log(iframe)
-         //
-         // if (iframe) {
-         //   const iframeDocument = iframe.contentDocument || iframe.contentWindow.document
-         //   console.log(iframeDocument)
-         //
-         //   iframeDocument.addEventListener('scroll', (event) => {
-         //     const scrollDirection = event.deltaX < 0 ? 'left' : 'right'
-         //     // Handle the scroll direction and adjust navigation accordingly
-         //     console.log(`Scrolled ${scrollDirection}`)
-         //   })
-         // }
 
          localStorage.setItem("book-progress-" + this.file.id, epubcifi)
          this.bookLocation = epubcifi
+      },
+      sendShareEvent(data) {
+         this.shareSocket.send(JSON.stringify(data))
       }
    },
+
    sockets: {
       onmessage(message_event) {
          if (this.isInShareContext) return
-         if (!this.$refs.video) {
-            console.warn("this.$refs.video is falsy")
-            return
-         }
+
          let jsonObject = JSON.parse(message_event.data)
          let event = jsonObject.event
          let op_code = event.op_code
-         if (op_code === 15) { //device control
+
+         if (op_code === WebsocketEvent.DEVICE_CONTROL_COMMAND) {
             let type = event.data[0].type
             let args = event.data[0].args
 

@@ -43,13 +43,6 @@ export class UploadRuntime {
 
       const fieldSet = new Set(fields)
 
-      // // validation stays here
-      // for (const f of fieldSet) {
-      //    if (!this._isKnownFileField(f)) {
-      //       throw new Error(`Unknown file field: ${f}`)
-      //    }
-      // }
-
       const sub = { fields: fieldSet, listener }
       this._fileChangeSubscriptions.add(sub)
 

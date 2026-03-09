@@ -6,7 +6,6 @@
    <sidebar></sidebar>
    <main>
       <router-view></router-view>
-      <shell v-if="isExecEnabled"></shell>
    </main>
 
    <upload-files></upload-files>
@@ -15,7 +14,6 @@
 
 <script>
 import Prompts from '@/components/prompts/Prompts.vue'
-import Shell from '@/components/Shell.vue'
 import UploadFiles from '../components/prompts/UploadFiles.vue'
 import { useMainStore } from '@/stores/mainStore.js'
 import { mapActions, mapState } from 'pinia'
@@ -28,7 +26,6 @@ export default {
    components: {
       Sidebar,
       Prompts,
-      Shell,
       UploadFiles
    },
 
@@ -41,10 +38,6 @@ export default {
    computed: {
       ...mapState(useMainStore, ['perms', 'isLogged']),
       ...mapState(useUploadStore, ['progress']),
-
-      isExecEnabled() {
-         return this.perms?.execute
-      }
    },
 
    methods: {

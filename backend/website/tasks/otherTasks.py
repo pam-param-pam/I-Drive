@@ -7,6 +7,7 @@ from ..celery import app
 from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
 from ..models import Folder, Fragment
+from ..services import folder_service
 
 logger = get_task_logger(__name__)
 
@@ -17,7 +18,7 @@ def lock_folder_task(context: dict, folder_id: str, password: str):
     try:
         context = RequestContext.deserialize(context)
         folder = Folder.objects.get(id=folder_id)
-        folder.applyLock(folder, password)
+        folder_service.internal_apply_lock(folder=folder, lock_from=folder, password=password)
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
         traceback.print_exc()
@@ -28,7 +29,7 @@ def unlock_folder_task(context: dict, folder_id: str):
     try:
         context = RequestContext.deserialize(context)
         folder = Folder.objects.get(id=folder_id)
-        folder.removeLock()
+        folder_service.internal_remove_lock(folder=folder)
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
         traceback.print_exc()

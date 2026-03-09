@@ -21,7 +21,7 @@ def send_message(message: str, args: Optional[dict], finished: bool, context: Re
 
 def auto_prefetch(file_obj: File, fragment_id: str) -> None:
     from .otherTasks import prefetch_next_fragments
-    # todo circular
+
     if file_obj.type == "video" and file_obj.duration and file_obj.duration > 0:
         mb_per_second = round((file_obj.size / file_obj.duration) / (1024 * 1024), 1)
         fragments_to_prefetch = mb_per_second

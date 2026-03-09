@@ -37,7 +37,6 @@ class UserPerms(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
     globalLock = models.BooleanField(default=False)
     admin = models.BooleanField(default=False)
-    execute = models.BooleanField(default=False)
     create = models.BooleanField(default=True)
     modify = models.BooleanField(default=True)
     lock = models.BooleanField(default=True)

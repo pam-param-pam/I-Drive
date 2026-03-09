@@ -16,6 +16,7 @@ from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordR
 from ..core.helpers import normalize_blocked_until
 from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Fragment, Thumbnail, FragmentLink, ThumbnailLink, Webhook
 from ..queries.selectors import query_attachments
+from ..services import cache_service
 
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.INFO)
@@ -315,9 +316,10 @@ class DiscordManager:
                 files=files,
             )
             self._post_request_check(state, credential, response)
-            state.update_from_headers(credential, response.headers)  # fix this to ensure its ALWAYS called
-            # todo add re enable bots/webhooks
-            # todo 429 throws 503 error
+
+            # todo fix this to ensure its ALWAYS called
+            state.update_from_headers(credential, response.headers)
+
             if response.is_error:
                 raise DiscordError(response)
 
@@ -427,7 +429,7 @@ class DiscordService:
     def _get_channel_id_for_message(self, message_id: str) -> str:
         attachments = query_attachments(message_id=message_id)
         if attachments:
-            return attachments[0].channel_id
+            return attachments[0].channel.discord_id
         raise DiscordTextError(f"Unable to find channel id associated with message ID={message_id}", 404)
 
     def _calculate_expiry(self, message: dict) -> float:
@@ -455,14 +457,16 @@ class DiscordService:
     # -------------------------
 
     def get_message(self, user, channel_id: str, message_id: str) -> dict:
-        cached = cache.get(message_id)
+        key = cache_service.get_discord_message_key(message_id)
+        cached = cache.get(key)
         if cached and USE_CACHE:
             return cached
 
         path = self._discord_path(f"/channels/{channel_id}/messages/{message_id}")
         response = self.manager.execute_bot_once(user, "GET", path)
         message = response.json()
-        cache.set(message["id"], message, timeout=self._calculate_expiry(message))
+        key = cache_service.get_discord_message_key(message["id"])
+        cache.set(key, message, timeout=self._calculate_expiry(message))
         return message
 
     def delete_message(self, user, channel_id, message_id: str) -> Response:
@@ -519,7 +523,7 @@ class DiscordService:
             linked = self._get_from_linker(user, resource)
             if linked:
                 return linked
-        return self._get_file_url(user, resource.message_id, resource.attachment_id, resource.channel_id)
+        return self._get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id)
 
     # -------------------------
     # Attachment editing

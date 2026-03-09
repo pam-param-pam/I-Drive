@@ -69,7 +69,7 @@ export default {
             download: this.selectedCount > 0,
             info: this.selectedCount > 0,
             openInNewWindow: this.selectedCount === 1,
-            copyShare: this.selectedCount === 1
+            copyShare: this.selectedCount === 1 && !this.selected[0].isDir
          }
       }
    },

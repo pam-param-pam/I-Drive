@@ -127,3 +127,9 @@ export async function getNotifications() {
    let response = await backendInstance.get(url)
    return response.data
 }
+
+export async function setNotificationsStatus(data) {
+   let url = `/user/notifications`
+   let response = await backendInstance.post(url, data)
+   return response.data
+}

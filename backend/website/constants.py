@@ -158,13 +158,18 @@ class AuditAction(Enum):
     USER_LOGGED_OUT = 2
     USER_LOGIN_FAILED = 3
 
+
+class NotificationType(Enum):
+    NEW_DEVICE_LOG_IN = 0
+    CUSTOM_MESSAGE = 1
+    ERROR_HAPPENED = 2
+
 class ShareEventType(str, Enum):
     # Share
     SHARE_VIEW = "share_view"
 
     # File
     FILE_OPEN = "file_open"
-    FILE_CLOSE = "file_close"
     FILE_DOWNLOAD_START = "file_download_start"
     FILE_DOWNLOAD_SUCCESSFUL = "file_download_successful"
     FILE_STREAM = "file_stream"
@@ -180,7 +185,7 @@ class ShareEventType(str, Enum):
     # Movie
     MOVIE_WATCH = "movie_watch"
     MOVIE_SEEK = "movie_seek"
-    MOVIE_PAUSE = "movie_pause"
+    MOVIE_TOGGLE = "movie_toggle"
 
     # Zip
     ZIP_DOWNLOAD_START = "zip_download_start"

@@ -189,7 +189,6 @@ export default {
          }
       },
       closeQrWebsocket() {
-         console.log("closing ws")
          if (this.qrSocket) this.qrSocket.close()
       },
       async onQRWebSocketMessage(event) {

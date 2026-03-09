@@ -170,6 +170,7 @@ export default {
 
 
       dragStart(event) {
+         this.hideContextMenu()
          if (!this.canDrag) {
             event.preventDefault()
             return
@@ -317,7 +318,7 @@ export default {
       },
       async drop(event) {
          if (event.dataTransfer.files.length > 0) return
-         if (!this.canDrop) {
+         if (!this.canDrop ) {
             this.$toast.error(this.$t("toasts.illegalMove"))
             return
          }

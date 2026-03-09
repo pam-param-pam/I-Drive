@@ -3,11 +3,13 @@ import threading
 
 from .BaseConsumer import RateLimitedWebsocketConsumer
 from ..constants import QR_CODE_SESSION_EXPIRY, cache
+from ..services import cache_service
 
 
 class QrLoginConsumer(RateLimitedWebsocketConsumer):
     message_limit = 5
     message_window = 60
+    ping_heartbeat = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
@@ -22,7 +24,7 @@ class QrLoginConsumer(RateLimitedWebsocketConsumer):
         self.session_id = session_id
 
         if session_id:
-            session_key = f"qr_session:{session_id}"
+            session_key = cache_service.get_qr_session_key(session_id)
             session_json = cache.get(session_key)
             if session_json:
                 self.close_timer = threading.Timer(QR_CODE_SESSION_EXPIRY + 5, lambda: self.close(code=4000))

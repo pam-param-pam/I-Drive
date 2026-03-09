@@ -11,26 +11,27 @@ from shortuuidfield import ShortUUIDField
 
 from .mixin_models import ItemState
 from ..constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH
+from ..services import cache_service
 
 
 class Folder(MPTTModel):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.CharField(max_length=100)
-    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders')
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now_add=True)
     inTrash = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    inTrashSince = models.DateTimeField(null=True)
+    inTrashSince = models.DateTimeField(null=True, blank=True)
     ready = models.BooleanField(default=True)
-    password = models.CharField(max_length=50, null=True)
-    autoLock = models.BooleanField(default=False)
-    lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='+')
+    password = models.CharField(max_length=50, null=True, blank=True)
+    autoLock = models.BooleanField(default=False, blank=True)
+    lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='+', blank=True)
 
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
-    state_changed_at = models.DateTimeField(null=True)
-    state_error = models.TextField(null=True)
+    state_changed_at = models.DateTimeField(null=True, blank=True)
+    state_error = models.TextField(null=True, blank=True)
 
     class MPTTMeta:
         order_insertion_by = ['-created_at']
@@ -98,7 +99,7 @@ class Folder(MPTTModel):
         Folder.objects.get_or_create(owner=user, name="root")
 
     def save(self, *args, **kwargs):
-        self._check_depth()
+        self.check_depth()
         self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
 
         self.last_modified_at = timezone.now()
@@ -111,9 +112,7 @@ class Folder(MPTTModel):
         # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
         try:
             old_object = Folder.objects.get(id=self.id)
-            if old_object.parent:
-                cache.delete(old_object.parent.id)
-
+            old_object.remove_cache()
         except Folder.DoesNotExist:
             pass
 
@@ -122,73 +121,6 @@ class Folder(MPTTModel):
     def delete(self, *args, **kwargs):
         self.remove_cache()
         super(Folder, self).delete()
-
-    # todo move this to a service layer
-    def moveToTrash(self):
-        self.inTrash = True
-        self.inTrashSince = timezone.now()
-        self.save()
-
-        subfolders = self.get_all_subfolders()
-        for folder in subfolders:
-            folder.inTrash = True
-            folder.inTrashSince = timezone.now()
-            folder.save()
-
-        for file in self.get_all_files().filter(inTrash=True):
-            file.inTrash = False
-            file.inTrashSince = None
-            file.save()
-
-    def restoreFromTrash(self):
-        self.inTrash = False
-        self.inTrashSince = None
-        self.save()
-
-        subfolders = self.get_all_subfolders()
-        for folder in subfolders:
-            folder.inTrash = False
-            folder.inTrashSince = None
-            folder.save()
-
-        for file in self.get_all_files().filter(inTrash=True):
-            file.inTrash = False
-            file.inTrashSince = None
-            file.save()
-
-    def applyLock(self, lockFrom, password):
-        if self == lockFrom:
-            self.autoLock = False
-        else:
-            self.autoLock = True
-
-        self.password = password
-        self.lockFrom = lockFrom
-        self.save()
-
-        subfolders = self.get_all_subfolders()
-        for folder in subfolders:
-            if folder.is_locked and not folder.autoLock:
-                break
-
-            folder.password = password
-            folder.lockFrom = lockFrom
-            folder.autoLock = True
-            folder.save()
-
-    def removeLock(self):
-        self.autoLock = False
-        self.lockFrom = None
-        self.password = None
-        self.save()
-
-        subfolders = self.get_all_subfolders()
-        for folder in subfolders:
-            if folder.lockFrom == self:
-                folder.password = None
-                folder.lockFrom = None
-                folder.autoLock = False
-                folder.save()
 
     def get_all_subfolders(self, include_self=False) -> TreeQuerySet:
         return self.get_descendants(include_self=include_self)
@@ -199,30 +131,16 @@ class Folder(MPTTModel):
         queryset = self.get_all_subfolders(include_self=True)
         return File.objects.filter(parent__in=queryset)
 
-    def force_delete(self):
-        self.remove_cache()
-        self.delete()
-
     def remove_cache(self):
-        cache.delete(self.id)
+        print("folder remove cache")
+        key = cache_service.get_folder_content_key(self.id)
+        cache.delete(key)
+
         if self.parent:
-            cache.delete(self.parent.id)
+            parent_key = cache_service.get_folder_content_key(self.parent.id)
+            cache.delete(parent_key)
 
-    def move_to_new_parent(self, new_parent: 'Folder'):
-        self._check_depth(new_parent=new_parent)
-
-        if new_parent.is_locked and not self.is_locked and not self.autoLock:
-            self.applyLock(new_parent, new_parent.password)
-        elif not new_parent.is_locked and self.autoLock:
-            self.removeLock()
-
-        self.refresh_from_db()
-
-        self.parent = new_parent
-        self.move_to(new_parent, "last-child")
-        self.save()
-
-    def _check_depth(self, new_parent=None):
+    def check_depth(self, new_parent=None):
         parent = new_parent or self.parent
         if not parent:
             return

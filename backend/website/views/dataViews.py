@@ -27,10 +27,12 @@ from ..models.file_related_models import RawMetadata
 from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
 from ..queries.selectors import query_attachments, check_if_bots_exists
+from ..services import cache_service
 
 
 def etag_func(request, folder_obj):
-    folder_content = cache.get(folder_obj.id)
+    key = cache_service.get_folder_content_key(folder_obj.id)
+    folder_content = cache.get(key)
     if folder_content:
         return str(hash(str(folder_content)))
     return None
@@ -43,10 +45,12 @@ def etag_func(request, folder_obj):
 @check_resource_permissions(default_checks - CheckTrash, resource_key="folder_obj")
 @etag(etag_func)
 def get_folder_info(request, folder_obj: Folder):
-    folder_content = cache.get(folder_obj.id)
+    key = cache_service.get_folder_content_key(folder_obj.id)
+    folder_content = cache.get(key)
+
     if not folder_content:
         folder_content = build_folder_content(folder_obj)
-        cache.set(folder_obj.id, folder_content, timeout=SIGNED_URL_EXPIRY_SECONDS)
+        cache.set(key, folder_content, timeout=SIGNED_URL_EXPIRY_SECONDS)
 
     breadcrumbs = build_breadcrumbs(folder_obj)
     return HttpResponse(
@@ -72,6 +76,7 @@ def get_dirs(request, folder_obj: Folder):
     folder_content['folder_path'] = folder_path
     return JsonResponse(folder_content)
 
+
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -89,7 +94,8 @@ def get_file_info(request, file_obj: File):
 @vary_on_headers("x-resource-password")
 @cache_page(60 * 1)
 def get_usage(request, folder_obj: Folder):
-    total_used_size = cache.get(f"TOTAL_USED_SIZE:{request.user}")
+    key = cache_service.get_total_used_size_key(request.user.id)
+    total_used_size = cache.get(key)
     if not total_used_size:
         file_used = File.objects.filter(owner=request.user, inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
         thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
@@ -97,7 +103,7 @@ def get_usage(request, folder_obj: Folder):
         subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
 
         total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
-        cache.set(f"TOTAL_USED_SIZE:{request.user}", total_used_size, 60)
+        cache.set(key, total_used_size, 60)
 
     if folder_obj.parent:
         folder_used_size = calculate_size(folder_obj)
@@ -112,9 +118,11 @@ def get_usage(request, folder_obj: Folder):
 @extract_item()
 @check_resource_permissions(default_checks - CheckTrash, resource_key="item_obj")
 def fetch_additional_info(request, item_obj):
+    isTrash = request.GET.get('isTrash', False)
+
     if isinstance(item_obj, Folder):
-        folder_used_size = calculate_size(item_obj)
-        folder_count, file_count = calculate_file_and_folder_count(item_obj)
+        folder_used_size = calculate_size(item_obj, includeTrash=isTrash)
+        folder_count, file_count = calculate_file_and_folder_count(item_obj, includeTrash=isTrash)
         return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
 
     else:
@@ -186,7 +194,7 @@ def search(request):
     if order_by not in ('size', 'duration', 'created_at'):
         order_by = 'created_at'
 
-    result_limit = min(int(request.GET.get('resultLimit', 100)), 10000) # todo
+    result_limit = min(int(request.GET.get('resultLimit', 100)), 1000)
 
     include_files = request.GET.get('files', 'True').lower() != "false"
 
@@ -411,35 +419,53 @@ def ultra_download_metadata(request, item_obj):
 
     if isinstance(item_obj, File):
         files.append(item_obj)
+        base_folder = item_obj.parent
     else:
         files.extend(item_obj.get_all_files())
+        base_folder = item_obj
+
+    # todo check if this works
+    def build_relative_path(base_folder, file_obj):
+        parts = []
+        parent = file_obj.parent
+
+        while parent and parent != base_folder:
+            parts.append(parent.name)
+            parent = parent.parent
+
+        parts.reverse()
+        return "/".join(parts)
 
     def file_metadata(file_obj: File):
+        rel_path = build_relative_path(base_folder, file_obj)
+
+        name = file_obj.name
+        if rel_path:
+            name = f"{rel_path}/{name}"
+
         file_dict = {
             "id": str(file_obj.id),
-            "name": file_obj.name,
+            "name": name,
             "encryption_method": file_obj.get_encryption_method().value,
             "crc": file_obj.crc,
             "size": file_obj.size
         }
+
         if file_obj.is_encrypted():
             file_dict["key"] = file_obj.get_base64_key()
             file_dict["iv"] = file_obj.get_base64_iv()
 
-        fragment_dicts = []
         fragments = Fragment.objects.filter(file=file_obj).order_by("sequence")
-        for fragment in fragments:
-            fragment_dict = {
-                "message_id": fragment.message_id,
-                "attachment_id": fragment.attachment_id,
-                "offset": fragment.offset,
-                "sequence": fragment.sequence,
-                "size": fragment.size,
-                "crc": fragment.crc,
-            }
-            fragment_dicts.append(fragment_dict)
 
-        file_dict["fragments"] = fragment_dicts
+        file_dict["fragments"] = [{
+            "message_id": f.message_id,
+            "attachment_id": f.attachment_id,
+            "offset": f.offset,
+            "sequence": f.sequence,
+            "size": f.size,
+            "crc": f.crc,
+        } for f in fragments]
+
         return file_dict
 
     response_data = [file_metadata(f) for f in files]
@@ -468,7 +494,7 @@ def get_attachment_url_view(request, attachment_id):
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_file_stats(request, folder_obj):
-    files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False)  # todo this is broken due to how items are moved to trash
+    files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False, parent__inTrash=False)
 
     # Annotate lock-related fields
     files_qs = files_qs.annotate(

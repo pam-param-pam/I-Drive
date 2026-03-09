@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from ..core.dataModels.general import Item
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
-from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin
+from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin, Channel
 from ..safety.helper import get_classes_extending_discordAttachmentMixin
 
 
@@ -83,6 +83,11 @@ def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
         except Webhook.DoesNotExist:
             raise BadRequestError(f"Wrong discord author ID")
 
+def get_discord_channel(user, channel_id: str) -> Channel:
+    try:
+        return Channel.objects.get(discord_id=channel_id, owner=user)
+    except Channel.DoesNotExist:
+        raise BadRequestError(f"Wrong discord author ID")
 
 def check_if_bots_exists(user) -> int:
     bots = Bot.objects.filter(owner=user)
@@ -100,7 +105,7 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
 
     # Add conditions based on provided arguments
     if channel_id:
-        query &= Q(channel_id=channel_id)
+        query &= Q(channel__id=channel_id)
     if message_id:
         query &= Q(message_id=message_id)
     if attachment_id:

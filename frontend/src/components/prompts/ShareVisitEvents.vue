@@ -252,7 +252,7 @@ export default {
 }
 
 .card.floating {
- max-width: 30em !important;
+ max-width: 35em !important;
 }
 
 .scrollable-card {
@@ -267,10 +267,11 @@ export default {
 }
 
 .share-table-container {
- max-height: 55vh;
- overflow-y: auto;
- overflow-x: hidden;
- padding-right: 0.5em;
+   max-height: 55vh;
+   overflow-y: auto;
+   overflow-x: hidden;
+   padding-right: 0.5em;
+   padding-bottom: 1rem;
 }
 
 .share-table-container table {

@@ -8,7 +8,7 @@ from django.contrib.auth import user_logged_in, user_logged_out
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from . import user_service
+from . import user_service, cache_service
 from ..constants import TOKEN_EXPIRY_DAYS, QR_CODE_SESSION_EXPIRY, cache, EventCode
 from ..core.Serializers import DeviceTokenSerializer
 from ..core.dataModels.http import RequestContext
@@ -46,7 +46,7 @@ def _create_token(request, user: User) -> tuple[str, PerDeviceToken]:
 
 
 def authenticate_qr_session(user: User, session_id) -> None:
-    key = f"qr_session:{session_id}"
+    key = cache_service.get_qr_session_key(session_id)
     session_json = cache.get(key)
 
     if not session_json:
@@ -71,7 +71,7 @@ def authenticate_qr_session(user: User, session_id) -> None:
     )
 
 def cancel_pending_qr_session(session_id: str) -> None:
-    key = f"qr_session:{session_id}"
+    key = cache_service.get_qr_session_key(session_id)
     session_json = cache.get(key)
 
     if not session_json:
@@ -86,7 +86,7 @@ def cancel_pending_qr_session(session_id: str) -> None:
     )
 
 def get_qr_session_device_info(user: User, session_id: str) -> dict:
-    key = f"qr_session:{session_id}"
+    key = cache_service.get_qr_session_key(session_id)
     session_json = cache.get(key)
 
     if not session_json:
@@ -109,9 +109,11 @@ def create_qr_session(request) -> tuple[str, int]:
     ip, _ = get_ip(request)
     metadata = get_device_metadata(request)
 
-    existing_session_id = cache.get(f"qr_ip:{ip}")
+    ip_key = cache_service.get_qr_ip_key(ip)
+    existing_session_id = cache.get(ip_key)
     if existing_session_id:
-        cache.delete(f"qr_session:{existing_session_id}")
+        session_key = cache_service.get_qr_session_key(existing_session_id)
+        cache.delete(session_key)
 
     # Create new session
     session_id = str(uuid.uuid4())
@@ -123,11 +125,11 @@ def create_qr_session(request) -> tuple[str, int]:
         "expire_at": expire_at,
         "ip": ip,
     }
+    session_key = cache_service.get_qr_session_key(session_id)
+    cache.set(session_key, json.dumps(session_data), timeout=QR_CODE_SESSION_EXPIRY)
 
-    cache.set(f"qr_session:{session_id}", json.dumps(session_data),
-              timeout=QR_CODE_SESSION_EXPIRY)
-
-    cache.set(f"qr_ip:{ip}", session_id, timeout=QR_CODE_SESSION_EXPIRY)
+    ip_key = cache_service.get_qr_ip_key(ip)
+    cache.set(ip_key, session_id, timeout=QR_CODE_SESSION_EXPIRY)
 
     return session_id, expire_at
 

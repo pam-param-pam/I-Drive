@@ -3,20 +3,21 @@ import traceback
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Literal, Dict
+from typing import List, Literal, Dict, Generator, Any
 
 from django.db import transaction
 from django.utils import timezone
 
 from .helper import send_message
 from ..celery import app
-from ..constants import MAX_DISCORD_MESSAGE_SIZE
+from ..constants import MAX_DISCORD_MESSAGE_SIZE, EventCode
 from ..core.dataModels.http import RequestContext
 from ..core.errors import DiscordError
 from ..discord.Discord import discord
 from ..models import File, Folder, Fragment, Thumbnail, Subtitle, Moment
 from ..models.mixin_models import ItemState
 from ..queries.selectors import query_attachments
+from ..websockets.utils import send_event
 
 TARGET_BATCH_FILES = 100
 FOLDER_CHUNK = 10
@@ -82,6 +83,7 @@ def claim_files(file_ids: set[str]) -> list[tuple[str, str, int, datetime]]:
     claimed_ids = [r[0] for r in rows]
 
     if claimed_ids:
+        # todo, we need to remove cache
         File.objects.filter(id__in=claimed_ids).update(
             state=ItemState.DELETING,
             state_changed_at=timezone.now(),
@@ -97,7 +99,7 @@ def process_explicit_files(input_file_ids: set[str]):
 
 def delete_from_discord(context: RequestContext, message_id, items):
     attachment_ids_to_remove = [messageItem.attachment_id for messageItem in items]
-    channel_id = items[0].channel_id
+    channel_id = items[0].channel.discord_id
     print(f"message_id: {message_id}")
     print(f"channel_id: {channel_id}")
     print(f"attachment_ids_to_remove: {attachment_ids_to_remove}")
@@ -114,13 +116,11 @@ def delete_from_discord(context: RequestContext, message_id, items):
         else:
             discord.edit_attachments_webhook(context.get_user(), author, message_id, attachments_to_keep)
     except DiscordError as error:
-        print("HANDLING ERROR")
-        #todo uncoment
-        # # message not found, ignore
-        # if error.code == 404:
-        #     pass
-        # else:
-        raise error
+        # message not found, ignore
+        if error.code == 404:
+            pass
+        else:
+            raise error
 
 def delete_files(context: RequestContext, file_rows: list[tuple[str, str, int, datetime]]):
     print("FILES LENGTH")
@@ -137,9 +137,9 @@ def delete_files(context: RequestContext, file_rows: list[tuple[str, str, int, d
         try:
             delete_from_discord(context, message_id, items)
         except Exception as error:
-            print("aaaaaaaaaaaaaaaaa")
+            # todo, we need to remove cache
             File.objects.filter(id__in=file_ids).update(state=ItemState.FAILED, state_error=str(error))
-            return
+            raise error
 
         # ---- DB Updates ----
         fragment_ids = []
@@ -202,7 +202,7 @@ def lock_next_folder_batch(folder_ids: set[str], limit: int):
     return rows
 
 
-def process_folders_bottom_up(input_folder_ids: set[str]):
+def process_folders_bottom_up(input_folder_ids: set[str]) -> Generator[tuple[list[tuple[str, str, int, datetime]], set[str]], Any, None]:
     remaining_folders = set(
         Folder.objects
         .filter(id__in=input_folder_ids)
@@ -235,6 +235,7 @@ def process_folders_bottom_up(input_folder_ids: set[str]):
                     break
 
                 # Mark ACTIVE folders as DELETING
+                # todo, we need to remove cache
                 Folder.objects.filter(
                     id__in=locked_folders,
                     state=ItemState.ACTIVE,
@@ -375,6 +376,7 @@ def smart_delete_task(context: dict, ids: List[str]):
 
         # Step 3: Delete input files first
         for file_batch in process_explicit_files(input_file_ids):
+            file_ids = [f[0] for f in file_batch]
             for units in delete_files(context, file_batch):
                 processed_units += units
                 percentage = round((processed_units / total_units) * 100)
@@ -382,22 +384,32 @@ def smart_delete_task(context: dict, ids: List[str]):
                     send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, context=context)
                     last_percentage = percentage
 
-            # todo send events here to frontend
+            send_event(context, None, EventCode.ITEM_DELETE, {'ids': file_ids})
 
         # Step 4: Folder-driven deletion
         for file_batch, drained_folder_batch in process_folders_bottom_up(input_folder_ids):
-            for units in delete_files(context, file_batch):
-                processed_units += units
-                percentage = round((processed_units / total_units) * 100)
-                if percentage != last_percentage:
-                    send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, context=context)
-                    last_percentage = percentage
+            folder_ids = list(drained_folder_batch)
+            try:
+                file_ids = [f[0] for f in file_batch]
 
-            print("drained_folder_batch")
-            print(drained_folder_batch)
-            if drained_folder_batch:
-            # todo send events here to frontend
-                delete_folders(drained_folder_batch)
+                for units in delete_files(context, file_batch):
+                    processed_units += units
+                    percentage = round((processed_units / total_units) * 100)
+                    if percentage != last_percentage:
+                        send_message(message="toasts.deleting", args={"percentage": percentage}, finished=False, context=context)
+                        last_percentage = percentage
+
+                send_event(context, None, EventCode.ITEM_DELETE, {'ids': file_ids})
+
+                # add try except to catch folders failed
+                if drained_folder_batch:
+                    send_event(context, None, EventCode.ITEM_DELETE, {'ids': folder_ids})  # this list is important, else serialization errors and celery fails over
+                    delete_folders(drained_folder_batch)
+
+            except Exception as error:
+                # todo, we need to remove cache
+                Folder.objects.filter(id__in=folder_ids).update(state=ItemState.FAILED, state_error=str(error))
+                raise error
 
     except Exception as e:
         traceback.print_exc()
@@ -407,24 +419,6 @@ def smart_delete_task(context: dict, ids: List[str]):
 
 
 
-#         except DiscordError as e:
-#             channel_id = discord._get_channel_id(message_id)
-#             if e.code == 10003:  # unknown channel
-#                 skipped_channels.append(channel_id)
-#             elif e.code == 10004:  # unknown guild
-#                 raise e
-#             elif e.code == 10015:  # unknown webhook
-#                 if author:
-#                     skipped_webhooks.append(author.url)
-#
-#             send_message(message=e.message, finished=True, args=None, context=context, isError=True)
-#         except Exception as e:
-#             send_message(message=str(e), finished=True, args=None, context=context, isError=True)
-#
-#         # local per-message pacing (keeps per-thread Discord happy)
-#         time.sleep(0.5)
-#         return "done"
-#
 #     # === Parallel section starts here ===
 #     with ThreadPoolExecutor(max_workers=5) as executor:
 #         futures = {executor.submit(process_message, mid): mid for mid in message_structure.keys()}

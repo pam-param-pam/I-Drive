@@ -33,9 +33,7 @@ class DiscordAttachmentMixin(models.Model):
     )
     object_id = models.BigIntegerField()
     author = GenericForeignKey('content_type', 'object_id')
-    channel_id = models.CharField(max_length=19, db_index=True)
-    # todo migrate to use Channel object
-    # pay attention to the fact that abstract is True, we must custom migrate each model inheriting DiscordAttachmentMixin
+    channel = models.ForeignKey("Channel", on_delete=models.CASCADE, db_index=True)
 
     class Meta:
         abstract = True
@@ -51,6 +49,18 @@ class DiscordAttachmentMixin(models.Model):
             CheckConstraint(
                 check=Q(size__gte=0),
                 name="%(class)s_size_non_negative",
+            ),
+            CheckConstraint(
+                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                name="%(class)s_object_id_snowflake_format",
+            ),
+            CheckConstraint(
+                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                name="%(class)s_message_id_snowflake_format",
+            ),
+            CheckConstraint(
+                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                name="%(class)s_attachment_id_snowflake_format",
             ),
         ]
 

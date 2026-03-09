@@ -19,12 +19,20 @@
 
       <div class="card-action">
          <button
+           :aria-label="$t('buttons.markUnread')"
+           :title="$t('buttons.markUnread')"
+           class="button button--flat button--red"
+           @click="markUnread()"
+         >
+            {{ $t("buttons.markUnread") }}
+         </button>
+         <button
             :aria-label="$t('buttons.close')"
             :title="$t('buttons.close')"
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.close') }}
+            {{ $t("buttons.close") }}
          </button>
       </div>
 
@@ -38,14 +46,29 @@ import { useMainStore } from "@/stores/mainStore.js"
 export default {
    name: "SingleNotification",
    props: {
-      notification: { type: Object },
+      notification: { type: Object }
+   },
+   data() {
+      return {
+         markRead: true
+      }
    },
    computed: {
-      ...mapState(useMainStore, ["closeHover"])
+      ...mapState(useMainStore, ["currentPrompt"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover"])
+      ...mapActions(useMainStore, ["closeHover"]),
+      markUnread() {
+         this.markRead = !this.markRead
+         this.cancel()
+      },
+      cancel() {
+         if (this.currentPrompt.confirm) {
+            this.currentPrompt.confirm(this.markRead)
+         }
+         this.closeHover()
+      }
    }
 }
 </script>

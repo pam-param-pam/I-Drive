@@ -88,6 +88,12 @@ class Notification(models.Model):
             self.read_at = timezone.now()
             self.save(update_fields=["is_read", "read_at"])
 
+    def mark_as_unread(self):
+        if self.is_read:
+            self.is_read = False
+            self.read_at = None
+            self.save(update_fields=["is_read", "read_at"])
+
     def mark_as_deleted(self):
         if not self.is_deleted:
             self.is_deleted = True

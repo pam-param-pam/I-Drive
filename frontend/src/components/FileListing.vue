@@ -78,12 +78,6 @@
               icon="file_upload"
               @action="$emit('upload')"
             />
-            <action
-              v-if="headerButtons.shell"
-              :label="$t('buttons.shell')"
-              icon="code"
-              @action="toggleShell()"
-            />
             <action :icon="viewIcon" :label="$t('buttons.switchView')" @action="switchView" />
             <action
               v-if="headerButtons.info"
@@ -437,7 +431,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["contextMenuState", "selectedCount", "searchActive", "showShell", "sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "searchActive"]),
+      ...mapState(useMainStore, ["contextMenuState", "selectedCount", "searchActive", "sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "searchActive"]),
 
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
@@ -507,7 +501,7 @@ export default {
    methods: {
       isMobile,
 
-      ...mapActions(useMainStore, ["openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "toggleShell", "addSelected", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
+      ...mapActions(useMainStore, ["openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "addSelected", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
          this.$emit("uploadInput", event)
@@ -559,7 +553,7 @@ export default {
          if (event.keyCode === 27) {
             // Reset files selection.
             this.resetSelected()
-            this.hideContextMenu()
+            this.closeContextMenu()
          }
 
          // Del!
@@ -587,7 +581,7 @@ export default {
          // Ctrl is pressed
          if ((event.ctrlKey || event.metaKey)) {
             let key = event.key.toLowerCase()
-            if (key === "a" && !this.showShell) {
+            if (key === "a") {
                event.preventDefault()
                this.setSelected(this.sortedItems)
             }
@@ -696,7 +690,7 @@ export default {
          await this.$router.push({ name: "Settings" })
          this.$router.push({ name: "Files", params: { folderId: parent_id } })
 
-         this.hideContextMenu()
+         this.closeContextMenu()
       },
 
       async switchView() {

@@ -67,7 +67,7 @@
 
      <!-- Expandable section for folders -->
      <div v-if="isDir && !isInShareContext" class="expandable-section">
-        <div class="expandable-header" @click="fetchAdditionalInfo">
+        <div class="expandable-header" @click="fetchMoreInfo">
            <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
            <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
               keyboard_arrow_down
@@ -93,8 +93,8 @@
 
      <!-- Expandable section for raw images -->
      <div v-if="!isDir && type==='Raw image' && isRawMetadata && !isInShareContext" class="expandable-section card-content">
-        <div class="expandable-header" @click="fetchAdditionalInfo">
-           <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
+        <div class="expandable-header" @click="fetchMoreInfo">
+           <strong>{{ $t("prompts.fetchAdditionalInfo") }}</strong>
            <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
               keyboard_arrow_down
            </i>
@@ -126,7 +126,7 @@
 
     <!-- Expandable section for video metadata -->
     <div v-if="!isDir && type==='Video' && isVideoMetadata && !isInShareContext" class="expandable-section card-content">
-      <div class="expandable-header" @click="fetchAdditionalInfo">
+      <div class="expandable-header" @click="fetchMoreInfo">
         <strong>{{ $t("prompts.videoMetadata") }}</strong>
         <i :class="{ expanded: isFileExpanded }" class="material-icons expand-icon">
           keyboard_arrow_down
@@ -448,7 +448,7 @@ export default {
 
       ...mapActions(useMainStore, ["closeHover"]),
 
-      async fetchAdditionalInfo() {
+      async fetchMoreInfo() {
          let item
          if (this.selectedCount === 0) item = this.currentFolder
          else item = this.selected[0]
@@ -462,8 +462,10 @@ export default {
             }
             return
          }
+         let isTrash = false
+         if (this.$route.name === "Trash") isTrash=true
 
-         let res = await fetchAdditionalInfo(item.id)
+         let res = await fetchAdditionalInfo(item.id, isTrash)
          if (item.isDir) {
             this.folderSize = res.folder_size
             this.numberDirs = res.folder_count

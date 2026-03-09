@@ -3,7 +3,7 @@ from ..core.helpers import get_attr
 from ..models import UserZIP
 
 
-def create_zip_model(user, items: list[str]) -> UserZIP:
+def create_zip_model(user, items: list[dict]) -> UserZIP:
     parent_ids = set()
 
     for item in items:

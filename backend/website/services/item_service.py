@@ -7,6 +7,7 @@ from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_value, get_file_extension, get_attr
 from ..core.validators.GeneralChecks import MaxLength, NotEmpty
 from ..models import File, Folder
+from ..models.mixin_models import ItemState
 from ..queries.selectors import check_if_bots_exists
 from ..websockets.utils import send_event
 
@@ -65,10 +66,9 @@ def delete_items(request, items: list[Tuple[Item, dict]]):
     check_if_bots_exists(request.user)
 
     for item in items:
-        pass
-        # todo fix this check
-        # if not get_attr(item, 'ready'):
-        #     raise BadRequestError("Cannot delete. At least one item is not ready.")
+        state = get_attr(item, 'state')
+        if state != ItemState.ACTIVE:
+            raise BadRequestError("Cannot delete. At least one item is not ready.")
 
     ids = [get_attr(item, 'id') for item in items]
     smart_delete_task.delay(request.context, ids)

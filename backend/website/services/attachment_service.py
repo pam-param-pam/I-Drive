@@ -23,6 +23,6 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
         else:
             discord.edit_attachments(user, author.token, resource.message_id, attachment_ids_to_keep)
     else:
-        discord.remove_message(user, resource.message_id)
+        discord.delete_message(user, resource.channel.discord_id, resource.message_id)
 
     resource.delete()

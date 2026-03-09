@@ -5,11 +5,12 @@ import { useMainStore } from "@/stores/mainStore.js"
 import app from "@/main.js"
 import VueNativeSock from "vue-native-websocket-vue3"
 import { onEvent } from "@/utils/WsEventhandler.js"
-import { showToast } from "@/utils/common.js"
 import { loginUser, logoutUser, registerUser } from "@/api/auth.js"
+import { WebSocketManager } from "@/utils/WebsocketManager.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
+   console.log("validateLogin")
    let mainStore = useMainStore()
 
    let token = localStorage.getItem("token")
@@ -29,13 +30,18 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setTheme(body.settings.theme)
 
 
-   app.use(VueNativeSock, baseWS + "/user", { reconnection: true, protocol: token, reconnectionDelay: 5000, reconnectionAttempts: 5 })
-   app.config.globalProperties.$socket.addEventListener("message", (message) => {
-      onEvent(message).then()
+   app.use(VueNativeSock, baseWS + "/user", {
+      reconnection: true,
+      protocol: token,
+      reconnectionDelay: 5000,
+      reconnectionAttempts: 5
    })
-   app.config.globalProperties.$socket.onerror = (error) => {
-      showToast("error", "toasts.failedToConnectToWebsocket")
-   }
+
+
+   new WebSocketManager(
+      () => app.config.globalProperties.$socket,
+      onEvent
+   )
    app.config.globalProperties.$socket.send_obj = function(obj) {
       app.config.globalProperties.$socket.send(JSON.stringify(obj))
    }

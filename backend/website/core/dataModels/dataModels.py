@@ -30,17 +30,15 @@ class FolderCloseEvent(BaseModel):
 
 class MovieWatchEvent(BaseModel):
     file_id: str
-    from_second: int
-    to_second: int
+    timestamp: int
 
 class MovieSeekEvent(BaseModel):
     file_id: str
-    from_second: int
     to_second: int
 
-class MoviePauseEvent(BaseModel):
+class MovieToggleEvent(BaseModel):
     file_id: str
-    position_second: int
+    is_paused: bool
 
 class ZipDownloadStartEvent(BaseModel):
     files: list[str]

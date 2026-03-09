@@ -56,7 +56,7 @@ class UserConsumer(RateLimitedWebsocketConsumer):
             self.handle_device_control_request(json_data)
 
         elif op_code == EventCode.DEVICE_CONTROL_STATUS.value:
-            self.send_device_control_status()
+            self.send_device_control_status(self.device_id)
 
         elif op_code == EventCode.DEVICE_CONTROL_REPLY.value:
             self.handle_device_control_reply(json_data)
@@ -64,17 +64,27 @@ class UserConsumer(RateLimitedWebsocketConsumer):
         elif op_code == EventCode.DEVICE_CONTROL_COMMAND.value:
             self.handle_device_control_command(json_data)
         else:
-            self.send_error("errors.unknownOpCode")
+            self.send_error("unknownOpCode")
+
+    def send_error(self, error_code):
+        self.send_json({'is_encrypted': False, 'event': {'op_code': EventCode.WEBSOCKET_ERROR.value, 'data': [{'error_code': f"errors.{error_code}"}]}})
+
+    def on_ratelimit(self):
+        self.send_error("rate_limit_exceeded")
+
+    def on_exception(self, exception):
+        if isinstance(exception, DeviceControlBadStateError):
+            self.send_error(str(exception))
 
     def on_accept(self):
         master_device_id = DeviceControlState.slave_has_pending(self.device_id)
         if master_device_id:
             self.send_device_control_pending(self.device_id)
 
-        self.send_device_control_status()
+        self.send_device_control_status(self.device_id)
 
     def send_event(self, event: WebsocketEvent):
-        if self.user.id == event['context']['user_id']: #  todo fix context and device aware and (not event['context'].get('device_id') or self.device_id == event['context'].get('device_id')):
+        if self.user.id == event['context']['user_id'] and (self.device_id == event['context'].get('device_id') or not event['context'].get('device_id')):
             self.send(json.dumps(event['ws_payload']))
 
     def logout(self, event: WebsocketLogoutEvent):
@@ -84,12 +94,6 @@ class UserConsumer(RateLimitedWebsocketConsumer):
                     self.close()
             else:  # close all connections
                 self.close()
-
-    def on_error(self, exception: Exception) -> bool:
-        if isinstance(exception, DeviceControlBadStateError):
-            self.send_error("errors." + str(exception))
-            return True
-        return False
 
     def get_context(self, device_id: str) -> RequestContext:
         context = RequestContext.from_user(self.user.id)
@@ -118,7 +122,7 @@ class UserConsumer(RateLimitedWebsocketConsumer):
         expiry = DeviceControlState.get_status(slave_device_id)["expiry"]
         send_event(context, None, EventCode.DEVICE_CONTROL_REQUEST, {"master_device": device, "expiry": expiry})
 
-    def send_device_control_status(self, device_id=None) -> None:
+    def send_device_control_status(self, device_id) -> None:
         """Sends current device control status to this device"""
         if not device_id:
             device_id = self.device_id

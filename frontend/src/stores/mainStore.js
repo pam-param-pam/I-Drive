@@ -15,7 +15,6 @@ export const useMainStore = defineStore("main", {
       selected: [],
       prompts: [],
       error: null,
-      showShell: false,
       disabledCreation: false,
       folderPasswords: {},
       searchFilters: { "files": true, "folders": true },
@@ -25,7 +24,6 @@ export const useMainStore = defineStore("main", {
       breadcrumbs: [],
       currentFolder: null,
       items: [],
-      shellSettings: {'showFileInfoInSidebar': false, 'printDebug': true, 'shellContent': []},
       usage: { used: 0, total: 0 },
       popupPreview: {},
       isFilesActive: false,
@@ -133,19 +131,6 @@ export const useMainStore = defineStore("main", {
       setUsage(value) {
         this.usage = value
       },
-      setShellSettings(value) {
-         if (typeof value !== "object") {
-            console.warn('setShellSettings must be object')
-            return
-         }
-        this.shellSettings = value
-      },
-      clearShellContent() {
-         this.shellSettings.shellContent = []
-      },
-      pushShellContent(result) {
-        this.shellSettings.shellContent.push(result)
-      },
       setSearchItems(items) {
          if (!items) items = []
          this.searchItems = items
@@ -192,10 +177,9 @@ export const useMainStore = defineStore("main", {
       setUnreadNotifications(value) {
         this.user.unreadNotifications = value
       },
-      toggleShell() {
-         this.showShell = !this.showShell
-      },
       showHover(value) {
+         this.closeContextMenu()
+
          if (typeof value !== "object") {
             this.prompts.push({
                prompt: value,
@@ -362,6 +346,9 @@ export const useMainStore = defineStore("main", {
             dayjs.locale(locale)
             i18n.global.locale = locale
          }
+      },
+      setTextError(errorCode, details) {
+         this.setError({status: errorCode, response: {data: {details: details}}})
       },
       setError(value) {
          this.error = value

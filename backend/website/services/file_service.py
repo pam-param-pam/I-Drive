@@ -1,17 +1,19 @@
 import base64
-from typing import Type
+from typing import Type, Iterable
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
+from . import cache_service, folder_service
 from .attachment_service import delete_single_discord_attachment
 from ..constants import cache
 from ..core.errors import BadRequestError
 from ..core.helpers import validate_key, validate_encryption_fields, validate_value, validate_crc
 from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
-from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Fragment
+from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Fragment, Folder
 from ..models.file_related_models import RawMetadata
-from ..queries.selectors import get_discord_author
+from ..queries.selectors import get_discord_author, get_discord_channel
 
 
 def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
@@ -27,6 +29,7 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
     size = validate_key(data, "size", int, required=False, checks=[IsPositive])
 
     author = get_discord_author(file_obj.owner, message_author_id)
+    channel = get_discord_channel(file_obj.owner, channel_id)
 
     key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
 
@@ -35,7 +38,7 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
         size=size,
         key=key,
         iv=iv,
-        channel_id=channel_id,
+        channel=channel,
         message_id=message_id,
         attachment_id=attachment_id,
         content_type=ContentType.objects.get_for_model(author),
@@ -59,6 +62,7 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
 
     key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
     author = get_discord_author(file_obj.owner, message_author_id)
+    channel = get_discord_channel(file_obj.owner, channel_id)
 
     if Subtitle.objects.filter(file=file_obj, language=language).exists():
         raise BadRequestError("Subtitle with this language already exists")
@@ -67,7 +71,7 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
         language=language,
         file=file_obj,
         forced=is_forced,
-        channel_id=channel_id,
+        channel=channel,
         message_id=message_id,
         attachment_id=attachment_id,
         content_type=ContentType.objects.get_for_model(author),
@@ -170,8 +174,7 @@ def add_tag(file_obj: File, tag_name: str) -> Tag:
 
     file_obj.tags.add(tag)
 
-    cache.delete(file_obj.id)
-    cache.delete(file_obj.parent.id)
+    file_obj.remove_cache()
     return tag
 
 
@@ -179,8 +182,7 @@ def remove_tag(file_obj: File, tag_id: str) -> None:
     tag = Tag.objects.get(id=tag_id)
     file_obj.tags.remove(tag)
 
-    cache.delete(file_obj.id)
-    cache.delete(file_obj.parent.id)
+    file_obj.remove_cache()
 
     if len(tag.files.all()) == 0:
         tag.delete()
@@ -226,6 +228,7 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
     key = data.get('key')
 
     author = get_discord_author(user, message_author_id)
+    channel = get_discord_channel(file_obj.owner, channel_id)
 
     if iv:
         iv = base64.b64decode(iv)
@@ -253,10 +256,54 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
         message_id=message_id,
         attachment_id=attachment_id,
         content_type=ContentType.objects.get_for_model(author),
-        channel_id=channel_id,
+        channel=channel,
         object_id=author.discord_id,
         size=size,
         key=key,
         iv=iv
     )
     return moment
+
+def internal_move_to_trash(files: Iterable[File]) -> None:
+    now = timezone.now()
+
+    ids = [f.id for f in files if not f.parent.inTrash]
+
+    File.objects.filter(id__in=ids).update(inTrash=True, inTrashSince=now)
+    _clear_cache(ids)
+
+def internal_restore_from_trash(files: Iterable[File]) -> None:
+    invalid = [f.id for f in files if f.parent.inTrash]
+    if invalid:
+        raise BadRequestError("Cannot restore from trash! Folder parent is in trash, restore it first.")
+
+    ids = [f.id for f in files]
+    File.objects.filter(id__in=ids).update(inTrash=False, inTrashSince=None)
+    _clear_cache(ids)
+
+def _clear_cache(file_ids: list[str]) -> None:
+    parent_ids = (
+        File.objects
+        .filter(id__in=file_ids)
+        .values_list("parent_id", flat=True)
+        .distinct()
+    )
+
+    cache_keys = [
+        cache_service.get_folder_content_key(fid)
+        for fid in parent_ids
+    ]
+
+    cache.delete_many(cache_keys)
+
+
+def internal_move_to_new_parent(file_ids: list[str], new_parent: Folder):
+    _clear_cache(file_ids)
+
+    now = timezone.now()
+
+    File.objects.filter(id__in=file_ids).update(
+        parent=new_parent,
+        last_modified_at=now,
+    )
+    folder_service._clear_cache([new_parent.id])

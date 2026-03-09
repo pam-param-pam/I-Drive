@@ -10,6 +10,7 @@ from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
 from ..queries.selectors import get_folder
+from ..services import folder_service, file_service
 from ..websockets.utils import send_event
 
 
@@ -30,10 +31,9 @@ def move_group(context: RequestContext, grouped_items, new_parent, processed_cou
         # Perform one normal move on first item to trigger checks & on_save()
         first_item = item_group.pop(0)
         if is_folder:
-            first_item.move_to_new_parent(new_parent)
+            folder_service.internal_move_to_new_parent(folder=first_item, new_parent=new_parent)
         else:
-            first_item.parent = new_parent
-            first_item.save()
+            file_service.internal_move_to_new_parent(file_ids=[first_item.id], new_parent=new_parent)
 
         send_event(context, old_parent, EventCode.ITEM_MOVE_OUT, [first_item.id])
 
@@ -44,19 +44,18 @@ def move_group(context: RequestContext, grouped_items, new_parent, processed_cou
             batch = item_group[:BATCH_SIZE]  # Take first batch
             item_group = item_group[BATCH_SIZE:]  # Remove taken batch
 
+            file_ids = []
             # Prepare remaining items for bulk update
             for item in batch:
                 if is_folder:
                     # save without bulk update if it's a folder batch
-                    item.move_to_new_parent(new_parent)
+                    folder_service.internal_move_to_new_parent(folder=item, new_parent=new_parent)
                 else:
-                    item.last_modified_at = timezone.now()
-                    item.parent = new_parent
+                    file_ids.append(item.id)
 
             # Bulk update the batch only if it's a file batch (bulk update messes up MPTT structure I think)
-            if batch and not is_folder:
-                with transaction.atomic():
-                    model.objects.bulk_update(batch, ['parent', 'last_modified_at'])
+            if file_ids:
+                file_service.internal_move_to_new_parent(file_ids=file_ids, new_parent=new_parent)
 
             for item in batch:
                 item_dict = folder_serializer.serialize_object(item) if is_folder else file_serializer.serialize_object(item)
@@ -88,8 +87,6 @@ def move_task(context: dict, ids: list[str], new_parent_id: str):
         total_length = len(files) + len(folders)
 
         new_parent = get_folder(new_parent_id)
-        # invalidate any cache
-        new_parent.remove_cache()
 
         # Group items by their current parent
         grouped_files = defaultdict(list)

@@ -54,9 +54,9 @@
          </button>
          <button
            v-if="!hasOlder"
-           :disabled="loadingMore"
+           :disabled="loadingMore || !unread.length"
            class="button button--flat button--red"
-           @click="closeHover()"
+           @click="markAllRead()"
          >
             {{ $t('buttons.markAllRead') }}
          </button>
@@ -71,9 +71,9 @@
 </template>
 <script>
 import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions } from 'pinia'
+import { mapActions, mapState } from "pinia"
 import { nextTick } from "vue"
-import { getNotifications } from "@/api/user.js"
+import { getNotifications, setNotificationsStatus } from "@/api/user.js"
 
 export default {
    name: 'notifications',
@@ -87,18 +87,22 @@ export default {
    },
 
    computed: {
+      ...mapState(useMainStore, ['user']),
       visibleNotifications() {
          return this.notifications.slice(0, this.visibleCount)
       },
       hasOlder() {
          return this.visibleCount < this.notifications.length
-      }
+      },
+      unread() {
+         return this.notifications.filter(n => !n.is_read)
+      },
    },
    created() {
       this.fetchNotifications()
    },
    methods: {
-      ...mapActions(useMainStore, ['closeHover', 'showHover']),
+      ...mapActions(useMainStore, ['closeHover', 'showHover', 'setUnreadNotifications']),
       async fetchNotifications() {
          try {
             this.loadingMore = true
@@ -134,8 +138,42 @@ export default {
       openNotification(notification) {
          this.showHover({
             prompt: "SingleNotification",
-            props: {notification}
+            props: {notification},
+            confirm: (value) => {
+               if (value) {
+                  if (!notification.is_read) {
+                     this.markAsRead([notification])
+                  }
+               } else {
+                  if (notification.is_read) {
+                     this.markAsUnread([notification])
+                  }
+               }
+            }
          })
+      },
+      async markAllRead() {
+         await this.setReadState(this.unread, true)
+      },
+
+      async markAsRead(list) {
+         await this.setReadState(list, true)
+      },
+
+      async markAsUnread(list) {
+         await this.setReadState(list, false)
+      },
+
+      async setReadState(list, isRead) {
+         const ids = list.map(n => n.id)
+         if (!ids.length) return
+
+         await setNotificationsStatus({ ids, is_read: isRead })
+
+         list.forEach(n => n.is_read = isRead)
+
+         const delta = isRead ? -ids.length : ids.length
+         this.setUnreadNotifications(this.user.unreadNotifications + delta)
       }
    }
 }

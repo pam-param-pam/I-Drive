@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Optional
 
 from django.contrib.auth.models import User
@@ -25,3 +26,10 @@ class RequestContext:
         device_id = context_json.get('device_id')
         request_id = context_json.get('request_id', 0)
         return cls(user_id, device_id, request_id)
+
+
+@dataclass
+class ShareContext:
+    ip: str
+    user_agent: str
+    user: Optional[User] = None

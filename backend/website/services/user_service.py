@@ -6,6 +6,7 @@ from django.db import transaction
 from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..core.errors import BadRequestError
+from ..core.helpers import validate_ids_as_list, validate_value
 from ..discord.Discord import discord
 from ..discord.DiscordHelper import DiscordHelper
 from ..models import Webhook, Bot, DiscordSettings, Channel, File
@@ -166,3 +167,19 @@ def create_notification(user: User, notification_type: NotificationType, title: 
     notification = Notification.objects.create(owner=user, type=notification_type, title=title, message=message)
     send_event(RequestContext.from_user(user.id), None, EventCode.NEW_NOTIFICATION)
     return notification
+
+
+def set_notifications_read_status(user, notification_ids: list[str], read=True):
+    validate_value(read, bool)
+    validate_ids_as_list(notification_ids, max_length=100)
+
+    notifications = []
+    for notification_id in notification_ids:
+        notification = Notification.objects.get(owner=user, id=notification_id)
+        notifications.append(notification)
+
+    for notif in notifications:
+        if read:
+            notif.mark_as_read()
+        else:
+            notif.mark_as_unread()
