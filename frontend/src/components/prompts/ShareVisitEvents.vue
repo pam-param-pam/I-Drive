@@ -16,11 +16,11 @@
                <input
                   ref="typeInput"
                   v-model.trim="typeQuery"
-                  class="input"
                   :aria-label="$t('prompts.searchForType')"
                   :placeholder="$t('prompts.searchForType')"
                   :title="$t('prompts.searchForType')"
                   autocomplete="off"
+                  class="input"
                   type="text"
                />
             <i v-if="typeQuery" class="material-icons clear-icon" @click="clearTypeSearch"> close </i>
@@ -35,11 +35,11 @@
                   <input
                      ref="metadataInput"
                      v-model.trim="metadataQuery"
-                     class="input"
                      :aria-label="$t('prompts.searchForIds')"
                      :placeholder="$t('prompts.searchForIds')"
                      :title="$t('prompts.searchForIds')"
                      autocomplete="off"
+                     class="input"
                      type="text"
                   />
               <i v-if="metadataQuery" class="material-icons clear-icon" @click="clearMetadataSearch">close</i>
@@ -245,99 +245,99 @@ export default {
 </script>
 <style scoped>
 .event-metadata mark {
- background: #ffcc00;
- color: black;
- padding: 0 2px;
- border-radius: 2px;
+  background: #ffcc00;
+  color: black;
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
 .card.floating {
- max-width: 35em !important;
+  max-width: 35em !important;
 }
 
 .scrollable-card {
- max-height: 80vh;
- display: flex;
- flex-direction: column;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-content {
- flex: 1;
- overflow: hidden;
+  flex: 1;
+  overflow: hidden;
 }
 
 .share-table-container {
-   max-height: 55vh;
-   overflow-y: auto;
-   overflow-x: hidden;
-   padding-right: 0.5em;
-   padding-bottom: 1rem;
+  max-height: 55vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5em;
+  padding-bottom: 1rem;
 }
 
 .share-table-container table {
- width: 100%;
- border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .share-table-container thead th {
- position: sticky;
- top: 0;
- z-index: 2;
- background: var(--surfacePrimary);
- box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surfacePrimary);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
 }
 
 .index-cell {
- opacity: 0.6;
+  opacity: 0.6;
 }
 
 .clickable-row {
- cursor: pointer;
- transition: background-color 0.15s ease;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .clickable-row:hover {
- background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .event-metadata {
- background: var(--surfaceSecondary);
- padding: 0.75rem;
- font-size: 0.85rem;
- break-after: auto;
- white-space: pre-wrap;
- word-break: break-all;
- overflow-wrap: anywhere;
+  background: var(--surfaceSecondary);
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  break-after: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .ip-and-search {
- display: flex;
- justify-content: space-between;
- align-items: center;
- gap: 1rem;
- flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .search-wrapper {
- position: relative;
- display: flex;
- align-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .search-wrapper .input {
- padding-right: 4rem;
+  padding-right: 4rem;
 }
 
 .clear-icon {
- position: absolute;
- right: 0.4rem;
- cursor: pointer;
- font-size: 18px;
- opacity: 0.6;
+  position: absolute;
+  right: 0.4rem;
+  cursor: pointer;
+  font-size: 18px;
+  opacity: 0.6;
 }
 
 .clear-icon:hover {
- opacity: 1;
+  opacity: 1;
 }
 
 </style>

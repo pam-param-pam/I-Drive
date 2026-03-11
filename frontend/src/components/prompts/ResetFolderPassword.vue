@@ -1,11 +1,11 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t('prompts.resetFolderPassword') }}</h2>
+         <h2>{{ $t("prompts.resetFolderPassword") }}</h2>
       </div>
 
       <div class="card-content">
-         <p>{{ $t('prompts.resetMessage') }}:</p>
+         <p>{{ $t("prompts.resetMessage") }}:</p>
 
          <div>
             <input
@@ -27,7 +27,7 @@
          <div class="checkbox-group">
             <label>
                <input v-model="pinkyPromise" type="checkbox" />
-               {{ $t('prompts.pinkyPromiseResetFolderPassword') }}
+               {{ $t("prompts.pinkyPromiseResetFolderPassword") }}
             </label>
          </div>
       </div>
@@ -39,7 +39,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             :aria-label="$t('buttons.reset')"
@@ -49,20 +49,20 @@
             type="submit"
             @click="submit()"
          >
-            {{ $t('buttons.reset') }}
+            {{ $t("buttons.reset") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { resetPassword } from '@/api/folder.js'
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import { resetPassword } from "@/api/folder.js"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'resetFolderPassword',
+   name: "resetFolderPassword",
 
    props: {
       folderId: {
@@ -77,29 +77,29 @@ export default {
 
    data() {
       return {
-         accountPassword: '',
-         folderPassword: '',
+         accountPassword: "",
+         folderPassword: "",
          pinkyPromise: false
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['currentPrompt', 'previousPromptName'])
+      ...mapState(useMainStore, ["currentPrompt", "previousPromptName"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover', 'setFolderPassword']),
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword"]),
 
-      submit: onceAtATime(async function () {
+      submit: onceAtATime(async function() {
          let res = await resetPassword(this.folderId, this.accountPassword, this.folderPassword)
-         let message = this.$t('toasts.passwordIsBeingUpdated')
+         let message = this.$t("toasts.passwordIsBeingUpdated")
          this.$toast.info(message, {
             timeout: null,
             id: res.task_id
          })
          this.setFolderPassword({ folderId: this.folderId, password: this.folderPassword })
 
-         if (this.previousPromptName === 'FolderPassword') {
+         if (this.previousPromptName === "FolderPassword") {
             let confirmFunc = this.currentPrompt.confirm
 
             this.closeHover()
@@ -115,6 +115,6 @@ export default {
 
 <style scoped>
 .checkbox-group {
-   margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 </style>

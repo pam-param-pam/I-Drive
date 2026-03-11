@@ -99,7 +99,7 @@ def process_explicit_files(input_file_ids: set[str]):
 
 def delete_from_discord(context: RequestContext, message_id, items):
     attachment_ids_to_remove = [messageItem.attachment_id for messageItem in items]
-    channel_id = items[0].channel.discord_id
+    channel_id = items[0].channel_id
     print(f"message_id: {message_id}")
     print(f"channel_id: {channel_id}")
     print(f"attachment_ids_to_remove: {attachment_ids_to_remove}")

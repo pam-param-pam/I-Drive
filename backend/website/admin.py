@@ -17,7 +17,7 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
 from .models.file_related_models import RawMetadata, ThumbnailLink
 from .models.mixin_models import ItemState
 from .models.other_models import Notification
-from .services import folder_service
+from .services import folder_service, file_service
 from .tasks.deleteTasks import smart_delete_task
 
 admin.site.register(PerDeviceToken)
@@ -115,29 +115,15 @@ class FolderAdmin(SimpleHistoryAdmin):
         form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
         return form
 
-    def force_ready(self, request, queryset: QuerySet[Folder]):
-        # todo, make this use service layer
-        for real_obj in queryset:
-            real_obj.state = ItemState.ACTIVE
-            real_obj.save()
-
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
-        # todo, make this use service layer
-        ids = []
-        for real_obj in queryset:
-            ids.append(real_obj.id)
-
+        ids = [f.id for f in queryset]
         smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
-        # todo, make this use service layer
         if isinstance(obj, Folder):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
         else:
-            ids = []
-
-            for real_obj in obj:
-                ids.append(real_obj.id)
+            ids = [f.id for f in obj]
             smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
@@ -156,6 +142,9 @@ class FolderAdmin(SimpleHistoryAdmin):
         for folder in queryset:
             folder_service.internal_remove_lock(folder)
 
+    def force_ready(self, request, queryset: QuerySet[File]):
+        ids = [f.id for f in queryset]
+        folder_service.internal_force_ready(ids)
 
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
@@ -164,7 +153,7 @@ class FileAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
                     'inTrash', 'is_locked']
-    actions = ['move_to_trash', 'restore_from_trash', 'force_ready', 'force_delete_model']
+    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'force_ready']
     search_fields = ['name', 'id', 'type', 'owner__username']
     filter_horizontal = ('tags',)
 
@@ -232,48 +221,29 @@ class FileAdmin(SimpleHistoryAdmin):
         return form
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
-        # todo, make this use service layer
-        ids = []
-        for real_obj in queryset:
-            ids.append(real_obj.id)
-
+        ids = [f.id for f in queryset]
         smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
     def delete_model(self, request, obj: Union[File, List[File]]):
-        # todo, make this use service layer
         if isinstance(obj, File):
             smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
-
-            obj.force_delete()
         else:
-            ids = []
-
-            for real_obj in obj:
-                ids.append(real_obj.id)
-
+            ids = [f.id for f in obj]
             smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
 
-    def force_ready(self, request, queryset: QuerySet[File]):
-        # todo, make this use service layer
-        for real_obj in queryset:
-            real_obj.state = ItemState.ACTIVE
-            real_obj.save()
-
     def force_delete_model(self, request, queryset: QuerySet[File]):
-        # todo, make this use service layer
         for real_obj in queryset:
-            real_obj.force_delete()
+            real_obj.delete()
 
     def move_to_trash(self, request, queryset: QuerySet[File]):
-        # todo, make this use service layer
-        for file in queryset:
-            file.moveToTrash()
+        file_service.internal_move_to_trash(queryset)
 
     def restore_from_trash(self, request, queryset: QuerySet[File]):
-        # todo, make this use service layer
-        for file in queryset:
-            file.restoreFromTrash()
+        file_service.internal_restore_from_trash(queryset)
 
+    def force_ready(self, request, queryset: QuerySet[File]):
+        ids = [f.id for f in queryset]
+        file_service.internal_force_ready(ids)
 
 @admin.register(Thumbnail)
 class ThumbnailAdmin(SimpleHistoryAdmin):
@@ -300,8 +270,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
         signed_file_id = sign_resource_id_with_expiry(obj.file.id)
         poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
 
-        url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
-        return f'<img src="{url}" style="width:350px; height:auto;">'
+        return f'<img src="{poster_url}" style="width:350px; height:auto;">'
 
     @easy.smart(short_description="Encryption method")
     def encryption_method(self, obj: Thumbnail):

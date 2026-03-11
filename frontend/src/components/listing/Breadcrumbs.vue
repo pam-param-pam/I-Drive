@@ -2,16 +2,16 @@
    <div ref="container" class="breadcrumbs">
       <!-- visible breadcrumbs -->
       <component
-        :is="element"
-        :aria-label="$t('files.home')"
-        :class="breadcrumbClass(user?.root)"
-        :title="$t('files.home')"
-        :to="base || ''"
-        draggable="false"
-        @dragenter="dragEnter(user?.root)"
-        @dragleave="dragLeave"
-        @drop="drop(user?.root)"
-        @dragover.prevent
+         :is="element"
+         :aria-label="$t('files.home')"
+         :class="breadcrumbClass(user?.root)"
+         :title="$t('files.home')"
+         :to="base || ''"
+         draggable="false"
+         @dragenter="dragEnter(user?.root)"
+         @dragleave="dragLeave"
+         @drop="drop(user?.root)"
+         @dragover.prevent
       >
          <i class="material-icons">home</i>
       </component>
@@ -22,14 +22,14 @@
          </span>
 
          <component
-           :is="element"
-           :class="breadcrumbClass(folder.id)"
-           :to="base + '/' + folder.id + lockFrom(folder)"
-           draggable="false"
-           @dragenter="dragEnter(folder.id)"
-           @dragleave="dragLeave"
-           @drop="drop(folder.id)"
-           @dragover.prevent
+            :is="element"
+            :class="breadcrumbClass(folder.id)"
+            :to="base + '/' + folder.id + lockFrom(folder)"
+            draggable="false"
+            @dragenter="dragEnter(folder.id)"
+            @dragleave="dragLeave"
+            @drop="drop(folder.id)"
+            @dragover.prevent
          >
             {{ folder.name }}
          </component>
@@ -39,9 +39,9 @@
       <div ref="measureContainer" class="breadcrumbs-measure">
 
          <component
-           :is="element"
-           ref="homeMeasure"
-           :to="base || ''"
+            :is="element"
+            ref="homeMeasure"
+            :to="base || ''"
          >
             <i class="material-icons">home</i>
          </component>
@@ -53,9 +53,9 @@
             </span>
 
             <component
-              :is="element"
-              :ref="'measureCrumb' + folder.id"
-              :to="base + '/' + folder.id + lockFrom(folder)"
+               :is="element"
+               :ref="'measureCrumb' + folder.id"
+               :to="base + '/' + folder.id + lockFrom(folder)"
             >
                {{ folder.name }}
             </component>
@@ -166,7 +166,7 @@ export default {
 
       canDrop(folder_id) {
          return this.selected[0]?.parent_id !== folder_id &&
-           this.$route.name === "Files"
+            this.$route.name === "Files"
       },
 
       async drop(folder_id) {
@@ -193,11 +193,11 @@ export default {
       breadcrumbClass(folderId) {
          return {
             "breadcrumb-hovered":
-              this.draggedOverFolderId === folderId,
+               this.draggedOverFolderId === folderId,
 
             "breadcrumb-faded":
-              this.draggedOverFolderId &&
-              this.draggedOverFolderId !== folderId
+               this.draggedOverFolderId &&
+               this.draggedOverFolderId !== folderId
          }
       },
 
@@ -253,30 +253,30 @@ export default {
 <style scoped>
 
 .breadcrumb-hovered {
-   font-weight: bold;
-   opacity: 1;
-   transition: all 0.2s ease-in-out;
+  font-weight: bold;
+  opacity: 1;
+  transition: all 0.2s ease-in-out;
 }
 
 .breadcrumb-hovered i.material-icons {
-   font-size: 32px;
-   text-shadow: 0 0 2px black;
+  font-size: 32px;
+  text-shadow: 0 0 2px black;
 }
 
 .breadcrumb-faded {
-   opacity: 0.5;
-   transition: opacity 0.2s ease-in-out;
+  opacity: 0.5;
+  transition: opacity 0.2s ease-in-out;
 }
 
 /* hidden measurement row */
 
 .breadcrumbs-measure {
-   position: absolute;
-   visibility: hidden;
-   pointer-events: none;
-   white-space: nowrap;
-   height: 0;
-   overflow: hidden;
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  height: 0;
+  overflow: hidden;
 }
 
 </style>

@@ -1,28 +1,27 @@
 <template>
-   <div id='search'>
-      <div id='input'>
+   <div id="search">
+      <div id="input">
          <input
-            ref='input'
-            v-model='query'
+            ref="input"
+            v-model="query"
             :aria-label="$t('search.search')"
             :placeholder="$t('search.search')"
             :title="$t('search.search')"
-            autocomplete='off'
-            type='text'
+            autocomplete="off"
+            type="text"
          />
          <i
-            v-if='searchActive'
+            v-if="searchActive"
             :aria-label="$t('search.close')"
             :title="$t('search.close')"
-            class='material-icons'
-            @click='exit'
-         >close</i
-         >
+            class="material-icons"
+            @click="exit"
+         >close</i>
          <i
             :aria-label="$t('search.tuneSearch')"
             :title="$t('search.tuneSearch')"
-            class='material-icons'
-            @click='onTuneClick'
+            class="material-icons"
+            @click="onTuneClick"
          >tune</i
          >
       </div>
@@ -30,25 +29,25 @@
 </template>
 
 <script>
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
-import throttle from 'lodash.throttle'
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import throttle from "lodash.throttle"
 
 export default {
-   name: 'search',
+   name: "search",
 
-   emits: ['onSearchQuery', 'exit'],
+   emits: ["onSearchQuery", "exit"],
 
    data() {
       return {
          selected: {},
-         query: '',
+         query: "",
          exited: false
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['searchFilters', 'searchActive', 'currentPrompt'])
+      ...mapState(useMainStore, ["searchFilters", "searchActive", "currentPrompt"])
    },
    async mounted() {
       this.exited = true
@@ -57,39 +56,39 @@ export default {
       this.exited = false
    },
    created() {
-      window.addEventListener('keydown', (event) => {
+      window.addEventListener("keydown", (event) => {
          // Ctrl is pressed
          if ((event.ctrlKey || event.metaKey)) {
             let key = event.key.toLowerCase()
             //allow user to select all text in search and make it not select all items at the same time
-            if (key === 'a') {
+            if (key === "a") {
                if (document.activeElement === this.$refs.input) {
                   event.stopImmediatePropagation()
                }
             }
          }
          //allow to exit search with ESC
-         if (event.code === 'Escape' && this.searchActive && !this.currentPrompt) {
+         if (event.code === "Escape" && this.searchActive && !this.currentPrompt) {
             this.exit()
          }
       })
    },
    methods: {
-      ...mapActions(useMainStore, ['setLastItem', 'showHover', 'resetSelected', 'setSearchFilters']),
+      ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters"]),
 
       search: throttle(async function(override) {
          if (!this.query && !override) return
          this.setLastItem(null)
          //copying to not mutate vuex store state
          let searchDict = { ...this.searchFilters }
-         searchDict['query'] = this.query
+         searchDict["query"] = this.query
          this.setSearchFilters(searchDict)
-         this.$emit('onSearchQuery', searchDict)
+         this.$emit("onSearchQuery", searchDict)
       }, 500),
 
       onTuneClick() {
          this.showHover({
-            prompt: 'SearchTunePrompt',
+            prompt: "SearchTunePrompt",
             confirm: () => {
                this.search(true)
             }
@@ -98,27 +97,27 @@ export default {
 
       async exit() {
          this.resetSelected()
-         this.$emit('exit')
+         this.$emit("exit")
 
          this.exited = true
-         this.query = ''
+         this.query = ""
          this.exited = false
          let searchDict = { ...this.searchFilters }
-         searchDict['query'] = ''
+         searchDict["query"] = ""
          this.setSearchFilters(searchDict)
       }
    },
 
    watch: {
       "searchFilters.query"() {
-         if (!this.searchFilters.query) this.query = ''
+         if (!this.searchFilters.query) this.query = ""
       },
       query() {
          if (this.exited) {
             this.exited = false
             return
          }
-         if (this.query === '') {
+         if (this.query === "") {
             this.exit()
          } else {
             this.resetSelected()

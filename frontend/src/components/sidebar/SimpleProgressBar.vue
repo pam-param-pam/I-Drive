@@ -43,12 +43,12 @@ https://raw.githubusercontent.com/dzwillia/vue-simple-progress/master/src/compon
 
 <script>
 // We're leaving this *almost* untouched as you can read in the beginning
-let isNumber = function (n) {
+let isNumber = function(n) {
    return !isNaN(parseFloat(n)) && isFinite(n)
 }
 
 export default {
-   name: 'SimpleProgressBar',
+   name: "SimpleProgressBar",
 
    props: {
       val: {
@@ -62,19 +62,19 @@ export default {
          // 'medium', 'large', 'huge', 'massive' for common sizes
          default: 3
       },
-      'bg-color': {
+      "bg-color": {
          type: String,
-         default: '#eee'
+         default: "#eee"
       },
-      'bar-color': {
+      "bar-color": {
          type: String,
-         default: '#2196f3' // match .blue color to Material Design's 'Blue 500' color
+         default: "#2196f3" // match .blue color to Material Design's 'Blue 500' color
       },
-      'bar-transition': {
+      "bar-transition": {
          type: String,
-         default: 'all 0.5s ease'
+         default: "all 0.5s ease"
       },
-      'bar-border-radius': {
+      "bar-border-radius": {
          type: Number,
          default: 0
       },
@@ -84,23 +84,23 @@ export default {
       },
       text: {
          type: String,
-         default: ''
+         default: ""
       },
-      'text-align': {
+      "text-align": {
          type: String,
-         default: 'center' // 'left', 'right'
+         default: "center" // 'left', 'right'
       },
-      'text-position': {
+      "text-position": {
          type: String,
-         default: 'bottom' // 'bottom', 'top', 'middle', 'inside'
+         default: "bottom" // 'bottom', 'top', 'middle', 'inside'
       },
-      'font-size': {
+      "font-size": {
          type: Number,
          default: 13
       },
-      'text-fg-color': {
+      "text-fg-color": {
          type: String,
-         default: '#222'
+         default: "#222"
       }
    },
 
@@ -112,19 +112,19 @@ export default {
       },
       size_px() {
          switch (this.size) {
-            case 'tiny':
+            case "tiny":
                return 2
-            case 'small':
+            case "small":
                return 3
-            case 'medium':
+            case "medium":
                return 8
-            case 'large':
+            case "large":
                return 12
-            case 'big':
+            case "big":
                return 16
-            case 'huge':
+            case "huge":
                return 32
-            case 'massive':
+            case "massive":
                return 64
          }
 
@@ -132,13 +132,13 @@ export default {
       },
       text_padding() {
          switch (this.size) {
-            case 'tiny':
-            case 'small':
-            case 'medium':
-            case 'large':
-            case 'big':
-            case 'huge':
-            case 'massive':
+            case "tiny":
+            case "small":
+            case "medium":
+            case "large":
+            case "big":
+            case "huge":
+            case "massive":
                return Math.min(Math.max(Math.ceil(this.size_px / 8), 3), 12)
          }
 
@@ -146,13 +146,13 @@ export default {
       },
       text_font_size() {
          switch (this.size) {
-            case 'tiny':
-            case 'small':
-            case 'medium':
-            case 'large':
-            case 'big':
-            case 'huge':
-            case 'massive':
+            case "tiny":
+            case "small":
+            case "medium":
+            case "large":
+            case "big":
+            case "huge":
+            case "massive":
                return Math.min(Math.max(Math.ceil(this.size_px * 1.4), 11), 32)
          }
 
@@ -163,14 +163,14 @@ export default {
             background: this.bgColor
          }
 
-         if (this.textPosition === 'middle' || this.textPosition === 'inside') {
-            style['position'] = 'relative'
-            style['min-height'] = this.size_px + 'px'
-            style['z-index'] = '-2'
+         if (this.textPosition === "middle" || this.textPosition === "inside") {
+            style["position"] = "relative"
+            style["min-height"] = this.size_px + "px"
+            style["z-index"] = "-2"
          }
 
          if (this.barBorderRadius > 0) {
-            style['border-radius'] = this.barBorderRadius + 'px'
+            style["border-radius"] = this.barBorderRadius + "px"
          }
 
          return style
@@ -178,20 +178,20 @@ export default {
       bar_style() {
          let style = {
             background: this.barColor,
-            width: this.pct + '%',
-            height: this.size_px + 'px',
+            width: this.pct + "%",
+            height: this.size_px + "px",
             transition: this.barTransition
          }
 
          if (this.barBorderRadius > 0) {
-            style['border-radius'] = this.barBorderRadius + 'px'
+            style["border-radius"] = this.barBorderRadius + "px"
          }
 
-         if (this.textPosition === 'middle' || this.textPosition === 'inside') {
-            style['position'] = 'absolute'
-            style['top'] = '0'
-            style['height'] = '100%'
-            ;(style['min-height'] = this.size_px + 'px'), (style['z-index'] = '-1')
+         if (this.textPosition === "middle" || this.textPosition === "inside") {
+            style["position"] = "absolute"
+            style["top"] = "0"
+            style["height"] = "100%"
+            ;(style["min-height"] = this.size_px + "px"), (style["z-index"] = "-1")
          }
 
          return style
@@ -199,22 +199,22 @@ export default {
       text_style() {
          var style = {
             color: this.textFgColor,
-            'font-size': this.text_font_size + 'px',
-            'text-align': this.textAlign
+            "font-size": this.text_font_size + "px",
+            "text-align": this.textAlign
          }
 
          if (
-            this.textPosition === 'top' ||
-            this.textPosition === 'middle' ||
-            this.textPosition === 'inside'
+            this.textPosition === "top" ||
+            this.textPosition === "middle" ||
+            this.textPosition === "inside"
          )
-            style['padding-bottom'] = this.text_padding + 'px'
+            style["padding-bottom"] = this.text_padding + "px"
          if (
-            this.textPosition === 'bottom' ||
-            this.textPosition === 'middle' ||
-            this.textPosition === 'inside'
+            this.textPosition === "bottom" ||
+            this.textPosition === "middle" ||
+            this.textPosition === "inside"
          )
-            style['padding-top'] = this.text_padding + 'px'
+            style["padding-top"] = this.text_padding + "px"
 
          return style
       }

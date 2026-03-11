@@ -3,16 +3,16 @@
       <div class="card floating">
          <div class="card-title">
             <h2 v-if="state === uploadState.error">
-               {{ $t('prompts.uploadFilesCrashed') }}
+               {{ $t("prompts.uploadFilesCrashed") }}
             </h2>
             <h2 v-else-if="state === uploadState.uploading">
-               {{ $t('prompts.uploadFiles', { amount: filesInUploadCount }) }}
+               {{ $t("prompts.uploadFiles", { amount: filesInUploadCount }) }}
             </h2>
             <h2 v-else-if="state === uploadState.paused">
-               {{ $t('prompts.pausedFilesUpload', { amount: filesInUploadCount }) }}
+               {{ $t("prompts.pausedFilesUpload", { amount: filesInUploadCount }) }}
             </h2>
             <h2 v-else-if="state === uploadState.noInternet">
-               {{ $t('prompts.noInternet') }}
+               {{ $t("prompts.noInternet") }}
             </h2>
             <div v-if="state === uploadState.uploading" class="upload-info">
                <div class="upload-speed">{{ filesize(uploadSpeed) }}/s</div>
@@ -39,11 +39,11 @@
                   <i class="material-icons">play_arrow</i>
                </button>
                <button
-                 v-if="state === uploadState.paused"
-                 :aria-label="$t('uploadFile.abortAll')"
-                 :title="$t('uploadFile.abortAll')"
-                 class="action"
-                 @click="abortAll"
+                  v-if="state === uploadState.paused"
+                  :aria-label="$t('uploadFile.abortAll')"
+                  :title="$t('uploadFile.abortAll')"
+                  class="action"
+                  @click="abortAll"
                >
                   <i class="material-icons">close</i>
                </button>
@@ -54,8 +54,8 @@
                   @click="toggle"
                >
                   <i class="material-icons">{{
-                     open ? 'keyboard_arrow_down' : 'keyboard_arrow_up'
-                  }}</i>
+                      open ? "keyboard_arrow_down" : "keyboard_arrow_up"
+                     }}</i>
                </button>
             </div>
          </div>
@@ -73,18 +73,18 @@
 </template>
 
 <script>
-import { mapActions, mapState } from 'pinia'
-import { useUploadStore } from '@/stores/uploadStore.js'
-import { filesize } from '@/utils/index.js'
-import UploadFile from '@/components/upload/UploadFile.vue'
-import upload from '@/components/prompts/Upload.vue'
-import { uploadState } from '@/utils/constants.js'
+import { mapActions, mapState } from "pinia"
+import { useUploadStore } from "@/stores/uploadStore.js"
+import { filesize } from "@/utils/index.js"
+import UploadFile from "@/components/upload/UploadFile.vue"
+import upload from "@/components/prompts/Upload.vue"
+import { uploadState } from "@/utils/constants.js"
 import router from "@/router/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { getUploader } from "@/upload/Uploader.js"
 
 export default {
-   name: 'uploadFiles',
+   name: "uploadFiles",
 
    components: { UploadFile },
    data() {
@@ -104,7 +104,7 @@ export default {
 
       formattedETA() {
          if (!this.eta || this.eta === Infinity) {
-            return '--:--:--'
+            return "--:--:--"
          }
 
          let totalSeconds = this.eta
@@ -113,20 +113,20 @@ export default {
          let minutes = Math.floor(totalSeconds / 60)
          let seconds = Math.round(totalSeconds % 60)
 
-         return `${hours.toString().padStart(2, '0')}:${minutes
+         return `${hours.toString().padStart(2, "0")}:${minutes
             .toString()
-            .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+            .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
       }
    },
 
    methods: {
-      ...mapActions(useMainStore, ['showHover']),
+      ...mapActions(useMainStore, ["showHover"]),
 
       filesize,
       async abortAll() {
          await getUploader().saveFilesIfNeeded()
          this.showHover({
-            prompt: 'AbortAllWarning',
+            prompt: "AbortAllWarning",
             confirm: () => {
                router.go(0)
 

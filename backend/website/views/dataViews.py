@@ -21,6 +21,7 @@ from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackS
     RawMetadataSerializer
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
+from ..core.helpers import timed
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
 from ..models.file_related_models import RawMetadata
@@ -415,60 +416,89 @@ def get_subtitles(request, file_obj: File):
 def ultra_download_metadata(request, item_obj):
     check_if_bots_exists(request.user)
 
-    files = []
-
     if isinstance(item_obj, File):
-        files.append(item_obj)
+        files = [item_obj]
         base_folder = item_obj.parent
     else:
-        files.extend(item_obj.get_all_files())
+        files = list(item_obj.get_all_files().select_related("parent"))
         base_folder = item_obj
 
-    # todo check if this works
-    def build_relative_path(base_folder, file_obj):
-        parts = []
-        parent = file_obj.parent
+    file_ids = [f.id for f in files]
 
-        while parent and parent != base_folder:
-            parts.append(parent.name)
-            parent = parent.parent
+    # ---- fetch all fragments once ----
+    fragments = (
+        Fragment.objects
+        .filter(file_id__in=file_ids)
+        .order_by("sequence")
+        .values(
+            "file_id",
+            "message_id",
+            "attachment_id",
+            "offset",
+            "sequence",
+            "size",
+            "crc"
+        )
+    )
+
+    fragments_by_file = {}
+    for f in fragments:
+        fragments_by_file.setdefault(f["file_id"], []).append({
+            "message_id": f["message_id"],
+            "attachment_id": f["attachment_id"],
+            "offset": f["offset"],
+            "sequence": f["sequence"],
+            "size": f["size"],
+            "crc": f["crc"],
+        })
+
+    # ---- cache folder paths ----
+    path_cache = {}
+
+    def get_folder_path(folder):
+        if folder is None:
+            return ""
+
+        if folder.id in path_cache:
+            return path_cache[folder.id]
+
+        parts = []
+        cur = folder
+
+        while cur:
+            parts.append(cur.name)
+            if cur == base_folder:
+                break
+            cur = cur.parent
 
         parts.reverse()
-        return "/".join(parts)
+        path = "/".join(parts)
+        path_cache[folder.id] = path
 
-    def file_metadata(file_obj: File):
-        rel_path = build_relative_path(base_folder, file_obj)
+        return path
 
-        name = file_obj.name
-        if rel_path:
-            name = f"{rel_path}/{name}"
+    # ---- build metadata ----
+    response_data = []
+
+    for f in files:
+
+        rel_path = get_folder_path(f.parent)
 
         file_dict = {
-            "id": str(file_obj.id),
-            "name": name,
-            "encryption_method": file_obj.get_encryption_method().value,
-            "crc": file_obj.crc,
-            "size": file_obj.size
+            "id": str(f.id),
+            "name": f.name,
+            "path": rel_path,
+            "encryption_method": f.get_encryption_method().value,
+            "crc": f.crc,
+            "size": f.size,
+            "fragments": fragments_by_file.get(f.id, [])
         }
 
-        if file_obj.is_encrypted():
-            file_dict["key"] = file_obj.get_base64_key()
-            file_dict["iv"] = file_obj.get_base64_iv()
+        if f.is_encrypted():
+            file_dict["key"] = f.get_base64_key()
+            file_dict["iv"] = f.get_base64_iv()
 
-        fragments = Fragment.objects.filter(file=file_obj).order_by("sequence")
-
-        file_dict["fragments"] = [{
-            "message_id": f.message_id,
-            "attachment_id": f.attachment_id,
-            "offset": f.offset,
-            "sequence": f.sequence,
-            "size": f.size,
-            "crc": f.crc,
-        } for f in fragments]
-
-        return file_dict
-
-    response_data = [file_metadata(f) for f in files]
+        response_data.append(file_dict)
 
     return JsonResponse(response_data, safe=False)
 

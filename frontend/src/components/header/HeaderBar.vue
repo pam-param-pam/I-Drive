@@ -2,29 +2,29 @@
    <header>
       <img v-if="showLogo" :src="logoURL" />
       <action
-        v-if="showMenu"
-        class="menu-button hideMobileTap"
-        icon="menu"
-        :label="$t('buttons.toggleSidebar')"
-        @action="openSidebar()"
+         v-if="showMenu"
+         :label="$t('buttons.toggleSidebar')"
+         class="menu-button hideMobileTap"
+         icon="menu"
+         @action="openSidebar()"
       />
       <slot />
 
       <action
-        v-if='this.multiSelection'
-        :label="$t('buttons.multiSelect')"
-        icon='close'
-        @action='this.setMultiSelection(false)'
-        :outside="true"
+         v-if="this.multiSelection"
+         :label="$t('buttons.multiSelect')"
+         :outside="true"
+         icon="close"
+         @action="this.setMultiSelection(false)"
       />
 
       <action
-        v-if="this.deviceControlStatus.status === 'active_master' || this.deviceControlStatus.status === 'active_slave'"
-        id="deviceControl"
-        class="hide-mobile-tap"
-        icon="cast"
-        :label="$t('buttons.deviceControl')"
-        @action="showHover('controlDevice')"
+         v-if="this.deviceControlStatus.status === 'active_master' || this.deviceControlStatus.status === 'active_slave'"
+         id="deviceControl"
+         :label="$t('buttons.deviceControl')"
+         class="hide-mobile-tap"
+         icon="cast"
+         @action="showHover('controlDevice')"
       />
 
       <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
@@ -34,14 +34,14 @@
       <action
          v-if="this.$slots.actions"
          id="more"
+         :label="$t('buttons.more')"
          class="hide-mobile-tap"
          icon="more_vert"
-         :label="$t('buttons.more')"
          @action="showHover('more')"
       />
       <div
-         class="overlay"
          v-show="this.currentPromptName === 'more'"
+         class="overlay"
          @click="closeHover()"
       />
    </header>

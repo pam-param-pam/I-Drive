@@ -39,7 +39,7 @@ class Command(BaseCommand):
         is_staff_raw = input("Is staff? (y/N): ").strip().lower()
         is_staff = is_staff_raw in ("y", "yes", "1", "true")
 
-        auth_service.create_new_user(username, password, is_staff=is_staff)
+        auth_service.create_new_user(username, password, is_superuser=is_staff)
 
         self.stdout.write(self.style.SUCCESS(f"User '{username}' created successfully."))
         self.stdout.write(f"is_staff = {is_staff}")

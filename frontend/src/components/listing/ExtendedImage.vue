@@ -12,11 +12,11 @@
    >
       <img
          ref="imgex"
+         :draggable="!turnedOFF"
          alt="Failed to load image"
          class="image-ex-img image-ex-img-center"
-         @load="onLoad"
          @error="onError"
-         :draggable="!turnedOFF"
+         @load="onLoad"
       />
    </div>
 </template>
@@ -98,7 +98,7 @@ export default {
       window.removeEventListener("resize", this.onResize)
       document.removeEventListener("mouseup", this.onMouseUp)
    },
-//todo fix zoom!
+
    watch: {
       async imageSrc() {
          if (this.requestController) {
@@ -366,20 +366,20 @@ export default {
 </script>
 <style scoped>
 .image-ex-container {
- margin: auto;
- overflow: hidden;
- position: relative;
+  margin: auto;
+  overflow: hidden;
+  position: relative;
 }
 
 .image-ex-img {
- position: absolute;
+  position: absolute;
 }
 
 .image-ex-img-center {
- left: 50%;
- top: 50%;
- transform: translate(-50%, -50%);
- position: absolute;
- transition: none;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  position: absolute;
+  transition: none;
 }
 </style>

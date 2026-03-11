@@ -2,18 +2,20 @@
    <div class="item-wrapper">
       <span
          v-if="multiSelection"
-         class="multi-select-hitbox"
          v-touch:tap.stop="onMultiSelectTap"
+         class="multi-select-hitbox"
       >
         <button
-           class="multi-select-toggle"
            :aria-pressed="isSelected"
+           class="multi-select-toggle"
            tabindex="-1"
         />
       </span>
 
       <div
          ref="wrapper"
+         v-touch:hold.prevent="onLongPress"
+         v-touch:tap.prevent="onMobileTap"
          :aria-label="item.name"
          :aria-selected="isSelected"
          :data-dir="item.isDir"
@@ -23,28 +25,26 @@
          class="item"
          role="button"
          tabindex="0"
-         @click.left="onLeftClick"
-         @click.right.prevent="onRightClick"
          @dblclick="onDoubleClick"
-         v-touch:hold.prevent="onLongPress"
-         v-touch:tap.prevent="onMobileTap"
          @dragover="dragOver"
          @dragstart="dragStart"
          @drop="drop"
+         @click.left="onLeftClick"
+         @click.right.prevent="onRightClick"
       >
          <div :style="divStyle">
             <img
                v-if="imageSrcSmall"
+               v-lazy="{ src: imageSrcSmall }"
                :draggable="false"
+               @error="handleImageError"
                @mouseenter="handleHoverStart"
                @mouseleave="handleHoverEnd"
-               @error="handleImageError"
-               v-lazy="{ src: imageSrcSmall }"
             />
             <i v-else :style="iconStyle" class="material-icons"></i>
          </div>
 
-         <div class="name" :title="item.name">
+         <div :title="item.name" class="name">
             <p>{{ item.name }}</p>
          </div>
 
@@ -318,7 +318,7 @@ export default {
       },
       async drop(event) {
          if (event.dataTransfer.files.length > 0) return
-         if (!this.canDrop ) {
+         if (!this.canDrop) {
             this.$toast.error(this.$t("toasts.illegalMove"))
             return
          }
@@ -376,60 +376,60 @@ export default {
 /* 📝 GRID VIEW STYLES       */
 /* ========================= */
 .grid .item-wrapper:hover {
- box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
- 0 1px 2px rgba(0, 0, 0, 0.24) !important;
- background: var(--light-blue);
- transform: scale(1.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12),
+  0 1px 2px rgba(0, 0, 0, 0.24) !important;
+  background: var(--light-blue);
+  transform: scale(1.03);
 }
 
 .grid .item-wrapper {
- position: relative; /* positioning context for button */
- border-radius: 10px;
- margin: 0.5em;
- background-color: var(--surfacePrimary);
- overflow: hidden;
- box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px,
- rgba(0, 0, 0, 0.12) 0 1px 2px;
+  position: relative; /* positioning context for button */
+  border-radius: 10px;
+  margin: 0.5em;
+  background-color: var(--surfacePrimary);
+  overflow: hidden;
+  box-shadow: rgba(0, 0, 0, 0.06) 0 1px 3px,
+  rgba(0, 0, 0, 0.12) 0 1px 2px;
 }
 
 .grid .item-wrapper .item {
- display: flex;
- flex-direction: column;
- text-align: center;
- transition: 0.1s ease background,
- 0.1s ease opacity;
- cursor: pointer;
- user-select: none;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  transition: 0.1s ease background,
+  0.1s ease opacity;
+  cursor: pointer;
+  user-select: none;
 }
 
 .grid .item-wrapper .item img {
- margin-top: 0.5em;
- max-width: 100%;
- object-fit: cover;
- height: 100%;
+  margin-top: 0.5em;
+  max-width: 100%;
+  object-fit: cover;
+  height: 100%;
 }
 
 .grid .item-wrapper .item .name p {
- text-overflow: ellipsis;
- overflow: hidden;
- font-size: 15px;
- margin: 1.25em 2em 0.75em;
- white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 15px;
+  margin: 1.25em 2em 0.75em;
+  white-space: nowrap;
 }
 
 .grid .item-wrapper .item .created,
 .grid .item-wrapper .item .size {
- display: none;
+  display: none;
 }
 
 .grid .item-wrapper [aria-selected='true'] {
- background: #c4e6ff;
+  background: #c4e6ff;
 }
 
 .grid .item-wrapper [data-dir='true'] p {
- font-size: 20px !important;
- font-weight: 300;
- margin-top: 0.5em !important;
+  font-size: 20px !important;
+  font-weight: 300;
+  margin-top: 0.5em !important;
 }
 
 /* ========================= */
@@ -437,105 +437,105 @@ export default {
 /* ========================= */
 
 .list .item-wrapper {
- width: 100%;
- display: flex;
- flex-direction: column;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .list .item-wrapper .item {
- display: flex;
- align-items: center;
- border-bottom: 1px solid var(--divider);
- cursor: pointer;
- transition: background-color 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--divider);
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
 }
 
 .list .item-wrapper .item:hover {
- background-color: var(--surfaceSecondary);
+  background-color: var(--surfaceSecondary);
 }
 
 .list .item-wrapper .item > div {
- overflow: hidden;
- text-overflow: ellipsis;
- white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .list .item-wrapper .item > div:first-child {
- flex: 0 0 40px;
- text-align: center;
+  flex: 0 0 40px;
+  text-align: center;
 }
 
 .list .item-wrapper .name {
- flex: 2;
- font-weight: 500;
+  flex: 2;
+  font-weight: 500;
 }
 
 .list .item-wrapper .size {
- flex: 1;
- text-align: right;
- color: #666;
- font-size: 0.9em;
+  flex: 1;
+  text-align: right;
+  color: #666;
+  font-size: 0.9em;
 }
 
 .list .item-wrapper .created {
- flex: 1.5;
- text-align: right;
- color: #999;
- font-size: 0.9em;
+  flex: 1.5;
+  text-align: right;
+  color: #999;
+  font-size: 0.9em;
 }
 
 .list .item-wrapper img {
- max-width: 48px;
- max-height: 48px;
- object-fit: cover;
- border-radius: 4px;
+  max-width: 48px;
+  max-height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 .list .item-wrapper .material-icons {
- font-size: 24px;
- color: #666;
+  font-size: 24px;
+  color: #666;
 }
 
 .item-wrapper:hover .multi-select-toggle {
 }
 
 .multi-select-toggle {
- position: absolute;
- top: -8px;
- left: -8px;
+  position: absolute;
+  top: -8px;
+  left: -8px;
 
- width: 14px;
- height: 14px;
- border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
 
- background: #cfcfcf;
- border: 2px solid #fff;
+  background: #cfcfcf;
+  border: 2px solid #fff;
 
- box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 
- cursor: pointer;
- padding: 0;
+  cursor: pointer;
+  padding: 0;
 
- touch-action: manipulation;
+  touch-action: manipulation;
 }
 
 .multi-select-hitbox {
- position: absolute;
- top: 15px;
- left: 15px;
+  position: absolute;
+  top: 15px;
+  left: 15px;
 
- width: 36px;
- height: 36px;
+  width: 36px;
+  height: 36px;
 
- display: flex;
- align-items: center;
- justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
- z-index: 5;
+  z-index: 5;
 }
 
 .multi-select-toggle[aria-pressed="true"] {
- background: var(--dark-blue);
+  background: var(--dark-blue);
 }
 
 </style>

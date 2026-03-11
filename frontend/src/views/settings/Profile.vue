@@ -1,110 +1,110 @@
 <template>
-  <div v-if="!loading" class="row">
-    <div class="column">
-      <form class="card" @submit.prevent="saveSettings">
-        <div class="card-title">
-          <h2>{{ $t("settings.profileSettings") }}</h2>
-        </div>
+   <div v-if="!loading" class="row">
+      <div class="column">
+         <form class="card" @submit.prevent="saveSettings">
+            <div class="card-title">
+               <h2>{{ $t("settings.profileSettings") }}</h2>
+            </div>
 
-        <div class="card-content">
-          <p>
-            <label>
-              <input v-model="hideLockedFolders" type="checkbox" />
-              {{ $t("settings.hideLockedFolders") }}
-            </label>
-          </p>
-          <p>
-            <label>
-              <input v-model="subfoldersInShares" type="checkbox" />
-              {{ $t("settings.subfoldersInShares") }}
-            </label>
-          </p>
-          <p>
-            <label>
-              <input v-model="dateFormat" type="checkbox" />
-              {{ $t("settings.setDateFormat") }}
-            </label>
-          </p>
-          <p>
-            <label>
-              <input v-model="keepCreationTimestamp" type="checkbox" />
-              {{ $t("settings.keepCreationTimestamp") }}
-            </label>
-          </p>
-          <p>
-            <label>
-              <input v-model="popupPreview" type="checkbox" />
-              {{ $t("settings.popupPreview") }}
-            </label>
-          </p>
+            <div class="card-content">
+               <p>
+                  <label>
+                     <input v-model="hideLockedFolders" type="checkbox" />
+                     {{ $t("settings.hideLockedFolders") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="subfoldersInShares" type="checkbox" />
+                     {{ $t("settings.subfoldersInShares") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="dateFormat" type="checkbox" />
+                     {{ $t("settings.setDateFormat") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="keepCreationTimestamp" type="checkbox" />
+                     {{ $t("settings.keepCreationTimestamp") }}
+                  </label>
+               </p>
+               <p>
+                  <label>
+                     <input v-model="popupPreview" type="checkbox" />
+                     {{ $t("settings.popupPreview") }}
+                  </label>
+               </p>
 
-           <p>
-              <label>
-                 <input v-model="itemInfoShortcut" type="checkbox" />
-                 {{ $t("settings.itemInfoShortcut") }}
-              </label>
-           </p>
+               <p>
+                  <label>
+                     <input v-model="itemInfoShortcut" type="checkbox" />
+                     {{ $t("settings.itemInfoShortcut") }}
+                  </label>
+               </p>
 
-          <div>
-            <label>
-              <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
-              <input v-model="concurrentUploadRequests" class="input" type="number" />
-            </label>
+               <div>
+                  <label>
+                     <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
+                     <input v-model="concurrentUploadRequests" class="input" type="number" />
+                  </label>
 
-          </div>
+               </div>
 
-          <h3>{{ $t("settings.encryptionMethod") }}</h3>
-          <EncryptionMethod
-            v-model:encryptionMethod="encryptionMethod"
-            class="input input--block"
-          ></EncryptionMethod>
+               <h3>{{ $t("settings.encryptionMethod") }}</h3>
+               <EncryptionMethod
+                  v-model:encryptionMethod="encryptionMethod"
+                  class="input input--block"
+               ></EncryptionMethod>
 
-          <h3>{{ $t("settings.language") }}</h3>
-          <languages v-model:locale="locale" class="input input--block"></languages>
-        </div>
+               <h3>{{ $t("settings.language") }}</h3>
+               <languages v-model:locale="locale" class="input input--block"></languages>
+            </div>
 
-        <div class="card-action">
-          <input :value="$t('buttons.update')" class="button button--flat" type="submit" />
-        </div>
-      </form>
-    </div>
+            <div class="card-action">
+               <input :value="$t('buttons.update')" class="button button--flat" type="submit" />
+            </div>
+         </form>
+      </div>
 
-    <div class="column">
-      <form class="card" @submit.prevent="savePassword">
-        <div class="card-title">
-          <h2>{{ $t("settings.changePassword") }}</h2>
-        </div>
+      <div class="column">
+         <form class="card" @submit.prevent="savePassword">
+            <div class="card-title">
+               <h2>{{ $t("settings.changePassword") }}</h2>
+            </div>
 
-        <div class="card-content">
-          <input
-            v-model="currentPassword"
-            :placeholder="$t('settings.currentPassword')"
-            class="input input--block"
-            name="password"
-            type="password"
-          />
-          <input
-            v-model="password"
-            :class="passwordClass"
-            :placeholder="$t('settings.newPassword')"
-            name="password"
-            type="password"
-          />
-          <input
-            v-model="passwordConf"
-            :class="passwordClass"
-            :placeholder="$t('settings.newPasswordConfirm')"
-            name="password"
-            type="password"
-          />
-        </div>
+            <div class="card-content">
+               <input
+                  v-model="currentPassword"
+                  :placeholder="$t('settings.currentPassword')"
+                  class="input input--block"
+                  name="password"
+                  type="password"
+               />
+               <input
+                  v-model="password"
+                  :class="passwordClass"
+                  :placeholder="$t('settings.newPassword')"
+                  name="password"
+                  type="password"
+               />
+               <input
+                  v-model="passwordConf"
+                  :class="passwordClass"
+                  :placeholder="$t('settings.newPasswordConfirm')"
+                  name="password"
+                  type="password"
+               />
+            </div>
 
-        <div class="card-action">
-          <input :value="$t('buttons.update')" class="button button--flat" type="submit" />
-        </div>
-      </form>
-    </div>
-  </div>
+            <div class="card-action">
+               <input :value="$t('buttons.update')" class="button button--flat" type="submit" />
+            </div>
+         </form>
+      </div>
+   </div>
 </template>
 
 <script>
@@ -138,7 +138,7 @@ export default {
          encryptionMethod: null,
          keepCreationTimestamp: false,
          popupPreview: false,
-         itemInfoShortcut: false,
+         itemInfoShortcut: false
       }
    },
 
@@ -210,7 +210,7 @@ export default {
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
             popupPreview: this.popupPreview,
-            itemInfoShortcut: this.itemInfoShortcut,
+            itemInfoShortcut: this.itemInfoShortcut
          }
 
          await updateSettings(data)

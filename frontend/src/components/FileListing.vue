@@ -3,88 +3,88 @@
       <PopupPreview v-if="!isMobile() && settings.popupPreview" />
       <header-bar>
          <Search
-           v-if="headerButtons.search"
-           ref="search"
-           @exit="$emit('onSearchClosed')"
-           @onSearchQuery="(query) => $emit('onSearchQuery', query)"
+            v-if="headerButtons.search"
+            ref="search"
+            @exit="$emit('onSearchClosed')"
+            @onSearchQuery="(query) => $emit('onSearchQuery', query)"
          />
          <title></title>
          <template #actions>
             <template v-if="!isMobile()">
                <action
-                 v-if="headerButtons.locate"
-                 :label="$t('buttons.locate')"
-                 icon="location_on"
-                 @action="locateItem"
+                  v-if="headerButtons.locate"
+                  :label="$t('buttons.locate')"
+                  icon="location_on"
+                  @action="locateItem"
                />
                <action
-                 v-if="headerButtons.share"
-                 :label="$t('buttons.share')"
-                 icon="share"
-                 show="share"
+                  v-if="headerButtons.share"
+                  :label="$t('buttons.share')"
+                  icon="share"
+                  show="share"
                />
                <action
-                 v-if="headerButtons.modify"
-                 :label="$t('buttons.rename')"
-                 icon="mode_edit"
-                 show="rename"
+                  v-if="headerButtons.modify"
+                  :label="$t('buttons.rename')"
+                  icon="mode_edit"
+                  show="rename"
                />
                <action
-                 v-if="headerButtons.move"
-                 id="move-button"
-                 :label="$t('buttons.moveFile')"
-                 icon="forward"
-                 show="move"
+                  v-if="headerButtons.move"
+                  id="move-button"
+                  :label="$t('buttons.moveFile')"
+                  icon="forward"
+                  show="move"
                />
                <action
-                 v-if="headerButtons.moveToTrash"
-                 id="moveToTrash-button"
-                 :label="$t('buttons.moveToTrash')"
-                 icon="delete"
-                 show="moveToTrash"
+                  v-if="headerButtons.moveToTrash"
+                  id="moveToTrash-button"
+                  :label="$t('buttons.moveToTrash')"
+                  icon="delete"
+                  show="moveToTrash"
                />
                <action
-                 v-if="headerButtons.restore"
-                 :label="$t('buttons.restoreFromTrash')"
-                 icon="restore"
-                 show="restoreFromTrash"
+                  v-if="headerButtons.restore"
+                  :label="$t('buttons.restoreFromTrash')"
+                  icon="restore"
+                  show="restoreFromTrash"
                />
                <action
-                 v-if="headerButtons.delete"
-                 id="delete-button"
-                 :label="$t('buttons.delete')"
-                 icon="delete_forever"
-                 show="delete"
+                  v-if="headerButtons.delete"
+                  id="delete-button"
+                  :label="$t('buttons.delete')"
+                  icon="delete_forever"
+                  show="delete"
                />
             </template>
             <action
-              v-if="headerButtons.lock"
-              :label="$t('buttons.lockFolder')"
-              icon="lock"
-              show="editFolderPassword"
+               v-if="headerButtons.lock"
+               :label="$t('buttons.lockFolder')"
+               icon="lock"
+               show="editFolderPassword"
             />
             <action
-              v-if="headerButtons.download"
-              :counter="selectedCount"
-              :label="$t('buttons.download')"
-              icon="file_download"
-              @action="$emit('download')"
+               v-if="headerButtons.download"
+               :counter="selectedCount"
+               :label="$t('buttons.download')"
+               icon="file_download"
+               @action="$emit('download')"
             />
             <action
-              v-if="headerButtons.upload"
-              id="upload-button"
-              :disabled="searchActive"
-              :label="$t('buttons.upload')"
-              icon="file_upload"
-              @action="$emit('upload')"
+               v-if="headerButtons.upload"
+               id="upload-button"
+               :disabled="searchActive"
+               :label="$t('buttons.upload')"
+               icon="file_upload"
+               @action="$emit('upload')"
             />
             <action :icon="viewIcon" :label="$t('buttons.switchView')" @action="switchView" />
             <action
-              v-if="headerButtons.info"
-              :disabled="selectedCount <= 0 && (searchActive || !this.currentFolder)"
-              :label="$t('buttons.info')"
-              icon="info"
-              show="info"
+               v-if="headerButtons.info"
+               :disabled="selectedCount <= 0 && (searchActive || !this.currentFolder)"
+               :label="$t('buttons.info')"
+               icon="info"
+               show="info"
             />
 
          </template>
@@ -99,63 +99,63 @@
                </a>
             </h2>
             <input
-              id="upload-input"
-              multiple
-              style="display: none"
-              type="file"
-              @change="uploadInput($event)"
+               id="upload-input"
+               multiple
+               style="display: none"
+               type="file"
+               @change="uploadInput($event)"
             />
             <input
-              id="upload-folder-input"
-              multiple
-              style="display: none"
-              type="file"
-              webkitdirectory
-              @change="uploadInput($event)"
+               id="upload-folder-input"
+               multiple
+               style="display: none"
+               type="file"
+               webkitdirectory
+               @change="uploadInput($event)"
             />
          </div>
          <div v-else class="wrapper">
             <div
-              :class="viewMode + ' file-icons'"
-              @dragenter.prevent
-              @dragover.prevent
+               :class="viewMode + ' file-icons'"
+               @dragenter.prevent
+               @dragover.prevent
             >
-               <div draggable="false" class="item header">
+               <div class="item header" draggable="false">
                   <div>
                      <p
-                       :aria-label="$t('files.sortByName')"
-                       :class="{ active: nameSorted }"
-                       :title="$t('files.sortByName')"
-                       class="nameSort"
-                       role="button"
-                       tabindex="0"
-                       @click="sort('name')"
+                        :aria-label="$t('files.sortByName')"
+                        :class="{ active: nameSorted }"
+                        :title="$t('files.sortByName')"
+                        class="nameSort"
+                        role="button"
+                        tabindex="0"
+                        @click="sort('name')"
                      >
                         <span>{{ $t("files.name") }}</span>
                         <i class="material-icons">{{ nameIcon }}</i>
                      </p>
 
                      <p
-                       :aria-label="$t('files.sortBySize')"
-                       :class="{ active: sizeSorted }"
-                       :title="$t('files.sortBySize')"
-                       class="sizeSort"
-                       role="button"
-                       tabindex="0"
-                       @click="sort('size')"
+                        :aria-label="$t('files.sortBySize')"
+                        :class="{ active: sizeSorted }"
+                        :title="$t('files.sortBySize')"
+                        class="sizeSort"
+                        role="button"
+                        tabindex="0"
+                        @click="sort('size')"
                      >
                         <span>{{ $t("files.size") }}</span>
                         <i class="material-icons">{{ sizeIcon }}</i>
                      </p>
 
                      <p
-                       :aria-label="$t('files.sortByCreated')"
-                       :class="{ active: createdSorted }"
-                       :title="$t('files.sortByCreated')"
-                       class="createdSort"
-                       role="button"
-                       tabindex="0"
-                       @click="sort('created')"
+                        :aria-label="$t('files.sortByCreated')"
+                        :class="{ active: createdSorted }"
+                        :title="$t('files.sortByCreated')"
+                        class="createdSort"
+                        role="button"
+                        tabindex="0"
+                        @click="sort('created')"
                      >
                         <span>{{ $t("files.created") }}</span>
                         <i class="material-icons">{{ createdIcon }}</i>
@@ -164,162 +164,162 @@
                </div>
 
                <RecycleScroller
-                 id="filesScroller"
-                 ref="filesScroller"
-                 v-slot="{ item }"
-                 :grid-items="gridItems"
-                 :item-secondary-size="tileWidth"
-                 :item-size="tileHeight"
-                 :items="sortedItems"
-                 :prerender="500"
-                 :style="scrollerClass"
-                 class="scroller"
+                  id="filesScroller"
+                  ref="filesScroller"
+                  v-slot="{ item }"
+                  :grid-items="gridItems"
+                  :item-secondary-size="tileWidth"
+                  :item-size="tileHeight"
+                  :items="sortedItems"
+                  :prerender="500"
+                  :style="scrollerClass"
+                  class="scroller"
                >
                   <item
-                    :key="item.id"
-                    :ref="item.id"
-                    :imageHeight="imageHeight"
-                    :imageWidth="imageWidth"
-                    :item="item"
-                    :readOnly="readonly"
-                    :tileHeight="tileHeight"
-                    :tileWidth="tileWidth"
-                    @onContextMenuOpen="showContextMenu($event, item)"
-                    @onHideContextMenu="closeContextMenu"
-                    @onOpen="$emit('onOpen', item)"
+                     :key="item.id"
+                     :ref="item.id"
+                     :imageHeight="imageHeight"
+                     :imageWidth="imageWidth"
+                     :item="item"
+                     :readOnly="readonly"
+                     :tileHeight="tileHeight"
+                     :tileWidth="tileWidth"
+                     @onContextMenuOpen="showContextMenu($event, item)"
+                     @onHideContextMenu="closeContextMenu"
+                     @onOpen="$emit('onOpen', item)"
                   >
                   </item>
                </RecycleScroller>
 
                <input
-                 id="upload-input"
-                 multiple
-                 style="display: none"
-                 type="file"
-                 @change="uploadInput($event)"
+                  id="upload-input"
+                  multiple
+                  style="display: none"
+                  type="file"
+                  @change="uploadInput($event)"
                />
                <input
-                 id="upload-folder-input"
-                 multiple
-                 style="display: none"
-                 type="file"
-                 webkitdirectory
-                 @change="uploadInput($event)"
+                  id="upload-folder-input"
+                  multiple
+                  style="display: none"
+                  type="file"
+                  webkitdirectory
+                  @change="uploadInput($event)"
                />
             </div>
          </div>
 
          <context-menu
-           v-if="this.selectedCount > 0"
-           :pos="contextMenuState.pos"
-           :show="contextMenuState.visible"
-           @hide="closeContextMenu"
+            v-if="this.selectedCount > 0"
+            :pos="contextMenuState.pos"
+            :show="contextMenuState.visible"
+            @hide="closeContextMenu"
          >
             <action
-              v-if="headerButtons.locate"
-              :label="$t('buttons.locate')"
-              icon="location_on"
-              @action="locateItem"
+               v-if="headerButtons.locate"
+               :label="$t('buttons.locate')"
+               icon="location_on"
+               @action="locateItem"
             />
             <action
-              v-if="headerButtons.openInNewWindow && selected[0]?.isDir"
-              :label="$t('buttons.openFolder')"
-              icon="open_in_new"
-              @action="$emit('openInNewWindow', selected[0])"
+               v-if="headerButtons.openInNewWindow && selected[0]?.isDir"
+               :label="$t('buttons.openFolder')"
+               icon="open_in_new"
+               @action="$emit('openInNewWindow', selected[0])"
             />
             <action
-              v-if="headerButtons.openInNewWindow && !selected[0]?.isDir"
-              :label="$t('buttons.openFile')"
-              icon="open_in_new"
-              @action="$emit('openInNewWindow', selected[0])"
+               v-if="headerButtons.openInNewWindow && !selected[0]?.isDir"
+               :label="$t('buttons.openFile')"
+               icon="open_in_new"
+               @action="$emit('openInNewWindow', selected[0])"
             />
             <action :label="$t('buttons.info')" icon="info" show="info" />
 
             <action
-              v-if="headerButtons.modify"
-              :label="$t('buttons.rename')"
-              icon="mode_edit"
-              show="rename"
+               v-if="headerButtons.modify"
+               :label="$t('buttons.rename')"
+               icon="mode_edit"
+               show="rename"
             />
             <action
-              v-if="headerButtons.moveToTrash"
-              id="moveToTrash-button"
-              :label="$t('buttons.moveToTrash')"
-              icon="delete"
-              show="moveToTrash"
+               v-if="headerButtons.moveToTrash"
+               id="moveToTrash-button"
+               :label="$t('buttons.moveToTrash')"
+               icon="delete"
+               show="moveToTrash"
             />
             <action
-              v-if="headerButtons.restore"
-              :label="$t('buttons.restoreFromTrash')"
-              icon="restore"
-              show="restoreFromTrash"
+               v-if="headerButtons.restore"
+               :label="$t('buttons.restoreFromTrash')"
+               icon="restore"
+               show="restoreFromTrash"
             />
             <action
-              v-if="headerButtons.delete"
-              id="delete-button"
-              :label="$t('buttons.delete')"
-              icon="delete_forever"
-              show="delete"
+               v-if="headerButtons.delete"
+               id="delete-button"
+               :label="$t('buttons.delete')"
+               icon="delete_forever"
+               show="delete"
             />
             <action
-              v-if="headerButtons.move"
-              id="move-button"
-              :label="$t('buttons.moveFile')"
-              icon="forward"
-              show="move"
+               v-if="headerButtons.move"
+               id="move-button"
+               :label="$t('buttons.moveFile')"
+               icon="forward"
+               show="move"
             />
             <action
-              v-if="headerButtons.download"
-              :label="$t('buttons.download')"
-              icon="file_download"
-              @action="$emit('download')"
+               v-if="headerButtons.download"
+               :label="$t('buttons.download')"
+               icon="file_download"
+               @action="$emit('download')"
             />
             <action
-              v-if="headerButtons.share"
-              :label="$t('buttons.share')"
-              icon="share"
-              show="share"
+               v-if="headerButtons.share"
+               :label="$t('buttons.share')"
+               icon="share"
+               show="share"
             />
             <action
-              v-if="headerButtons.lock"
-              :label="selected[0].isLocked ? $t('buttons.editLockFolder') : $t('buttons.lockFolder')"
-              icon="lock"
-              show="editFolderPassword"
+               v-if="headerButtons.lock"
+               :label="selected[0].isLocked ? $t('buttons.editLockFolder') : $t('buttons.lockFolder')"
+               icon="lock"
+               show="editFolderPassword"
             />
             <action
-              v-if="headerButtons.copyShare"
-              :label="$t('buttons.copyFileShareUrl')"
-              icon="content_copy"
-              @action="$emit('copyFileShareUrl')"
+               v-if="headerButtons.copyShare"
+               :label="$t('buttons.copyFileShareUrl')"
+               icon="content_copy"
+               @action="$emit('copyFileShareUrl')"
             />
             <action
-              v-show="headerButtons.modifyFile && contextMenuState.advanced"
-              id="tag"
-              :label="$t('buttons.editTags')"
-              icon="sell"
-              show="EditTags"
+               v-show="headerButtons.modifyFile && contextMenuState.advanced"
+               id="tag"
+               :label="$t('buttons.editTags')"
+               icon="sell"
+               show="EditTags"
             />
             <action
-              v-show="
+               v-show="
                   headerButtons.modifyFile &&
                   contextMenuState.advanced &&
                   (this.selected[0]?.type === 'Video' || this.selected[0]?.type === 'Image')
                "
-              id="thumbnail"
-              :label="$t('buttons.editThumbnail')"
-              icon="image"
-              show="EditThumbnail"
+               id="thumbnail"
+               :label="$t('buttons.editThumbnail')"
+               icon="image"
+               show="EditThumbnail"
             />
             <action
-              v-show="
+               v-show="
                   headerButtons.modifyFile &&
                   contextMenuState.advanced &&
                   this.selected[0].type === 'Video'
                "
-              id="subtitles"
-              :label="$t('buttons.editSubtitles')"
-              icon="subtitles"
-              show="EditSubtitles"
+               id="subtitles"
+               :label="$t('buttons.editSubtitles')"
+               icon="subtitles"
+               show="EditSubtitles"
             />
          </context-menu>
       </template>
@@ -535,11 +535,11 @@ export default {
          posY = Math.max(0, posY)
 
          this.openContextMenu({
-              pos: {
-                 x: posX,
-                 y: posY
-              }, advanced: advanced
-           }
+               pos: {
+                  x: posX,
+                  y: posY
+               }, advanced: advanced
+            }
          )
       },
 
@@ -752,7 +752,7 @@ export default {
          if (!this.lastItem) return
          let filesScroller = this.$refs.filesScroller
          let index =
-           this.sortedItems.findIndex((file) => file.id === this.lastItem.id) - this.numberOfTiles
+            this.sortedItems.findIndex((file) => file.id === this.lastItem.id) - this.numberOfTiles
          let lastItemId = this.lastItem.id
 
          setTimeout(() => {
@@ -778,35 +778,35 @@ export default {
 </script>
 <style scoped>
 .message img {
-   width: 60%;
+  width: 60%;
 }
 
 .wrapper {
-   padding-bottom: 0.5em;
+  padding-bottom: 0.5em;
 }
 
 .wrapper,
 .list,
 .grid {
-   height: 100%;
+  height: 100%;
 }
 
 .scroller {
-   background-color: var(--background);
-   padding-bottom: 2em;
+  background-color: var(--background);
+  padding-bottom: 2em;
 }
 
 .pulse-animation {
-   animation: pulse 3s ease-out;
+  animation: pulse 3s ease-out;
 }
 
 @keyframes pulse {
-   0% {
-      background: #80c6ff;
-   }
-   100% {
-      background: var(--surfacePrimary);
-   }
+  0% {
+    background: #80c6ff;
+  }
+  100% {
+    background: var(--surfacePrimary);
+  }
 }
 
 /* ============================= */
@@ -814,36 +814,36 @@ export default {
 /* ============================= */
 
 .grid .item.header {
-   display: flex;
-   justify-content: flex-start;
-   align-items: center;
-   font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  font-family: Arial, sans-serif;
 }
 
 .grid .item.header > div {
-   display: flex;
-   gap: 10px;
+  display: flex;
+  gap: 10px;
 }
 
 .grid .item.header p {
-   display: flex;
-   align-items: center;
-   gap: 5px;
-   cursor: pointer;
-   font-size: 14px;
-   margin: 0;
-   padding: 10px 15px 10px;
-   border-radius: 3px;
-   transition: color 0.3s;
-   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  margin: 0;
+  padding: 10px 15px 10px;
+  border-radius: 3px;
+  transition: color 0.3s;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .grid .item.header p.active {
-   font-weight: bold;
+  font-weight: bold;
 }
 
 .grid.item.header i.material-icons {
-   font-size: 14px;
-   color: inherit;
+  font-size: 14px;
+  color: inherit;
 }
 </style>

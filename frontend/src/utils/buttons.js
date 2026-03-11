@@ -8,10 +8,11 @@ function getButton(name) {
    return el
 }
 
+
 function loading(button) {
    let el = getButton(button)
 
-   if (el.innerHTML === 'autorenew' || el.innerHTML === 'done') {
+   if (el.innerHTML === "autorenew" || el.innerHTML === "done") {
       return
    }
 
@@ -19,11 +20,12 @@ function loading(button) {
    el.style.opacity = 0
 
    setTimeout(() => {
-      el.classList.add('spin')
-      el.innerHTML = 'autorenew'
+      el.classList.add("spin")
+      el.innerHTML = "autorenew"
       el.style.opacity = 1
    }, 100)
 }
+
 
 function success(button) {
    let el = getButton(button)
@@ -31,9 +33,9 @@ function success(button) {
    el.style.opacity = 0
 
    setTimeout(() => {
-      el.classList.remove('spin')
+      el.classList.remove("spin")
       let prev_icon = el.innerHTML
-      el.innerHTML = 'done'
+      el.innerHTML = "done"
       el.style.opacity = 1
 
       setTimeout(() => {
@@ -46,6 +48,7 @@ function success(button) {
       }, 2000)
    }, 100)
 }
+
 
 export default {
    loading,

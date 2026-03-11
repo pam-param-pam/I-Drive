@@ -7,26 +7,26 @@
       <div id="nav">
          <div class="wrapper">
             <ul>
-               <router-link to="/settings/profile" :draggable="false">
-                  <li :draggable="false" :class="{ active: $route.path === '/settings/profile' }">
-                     {{ $t('settings.profile') }}
+               <router-link :draggable="false" to="/settings/profile">
+                  <li :class="{ active: $route.path === '/settings/profile' }" :draggable="false">
+                     {{ $t("settings.profile") }}
                   </li>
                </router-link>
 
-               <router-link v-if="perms.share" to="/settings/shares" :draggable="false">
-                  <li :draggable="false" :class="{ active: $route.path === '/settings/shares' }">
-                     {{ $t('settings.shareManagement') }}
+               <router-link v-if="perms.share" :draggable="false" to="/settings/shares">
+                  <li :class="{ active: $route.path === '/settings/shares' }" :draggable="false">
+                     {{ $t("settings.shareManagement") }}
                   </li>
                </router-link>
 
-               <router-link to="/settings/discord" :draggable="false">
-                  <li :draggable="false" :class="{ active: $route.path === '/settings/discord' }">
-                     {{ $t('settings.discordSettings') }}
+               <router-link :draggable="false" to="/settings/discord">
+                  <li :class="{ active: $route.path === '/settings/discord' }" :draggable="false">
+                     {{ $t("settings.discordSettings") }}
                   </li>
                </router-link>
-               <router-link to="/settings/devices" :draggable="false">
-                  <li :draggable="false" :class="{ active: $route.path === '/settings/devices' }">
-                     {{ $t('settings.devices') }}
+               <router-link :draggable="false" to="/settings/devices">
+                  <li :class="{ active: $route.path === '/settings/devices' }" :draggable="false">
+                     {{ $t("settings.devices") }}
                   </li>
                </router-link>
             </ul>
@@ -40,7 +40,7 @@
                <div class="bounce2"></div>
                <div class="bounce3"></div>
             </div>
-            <span>{{ $t('files.loading') }}</span>
+            <span>{{ $t("files.loading") }}</span>
          </h2>
       </div>
 
@@ -49,24 +49,24 @@
 </template>
 
 <script>
-import HeaderBar from '@/components/header/HeaderBar.vue'
-import { name } from '@/utils/constants.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import { name } from "@/utils/constants.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 
 export default {
-   name: 'settings',
+   name: "settings",
 
    components: {
       HeaderBar
    },
 
    computed: {
-      ...mapState(useMainStore, ['loading', 'perms'])
+      ...mapState(useMainStore, ["loading", "perms"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setDisabledCreation']),
+      ...mapActions(useMainStore, ["setDisabledCreation"]),
 
       onDrop(event) {
          const dt = event.dataTransfer
@@ -75,18 +75,18 @@ export default {
 
          // Case 1: Files (most reliable)
          if (dt.files && dt.files.length > 0) {
-            this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
+            this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
             return
          }
 
          // Case 2: Items (needed for folder detection in Chromium)
          if (dt.items && dt.items.length > 0) {
             const hasFileLikeItem = Array.from(dt.items).some(
-              item => item.kind === "file"
+               item => item.kind === "file"
             )
 
             if (hasFileLikeItem) {
-               this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
+               this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
             }
          }
       }
@@ -94,25 +94,25 @@ export default {
    },
 
    mounted() {
-      document.title = this.$t('settings.settingsName') + ' - ' + name
-      document.body.classList.add('enable-scroll')
+      document.title = this.$t("settings.settingsName") + " - " + name
+      document.body.classList.add("enable-scroll")
    },
 
    unmounted() {
-      document.body.classList.remove('enable-scroll')
+      document.body.classList.remove("enable-scroll")
    },
 
    created() {
       this.setDisabledCreation(true)
-   },
+   }
 
 }
 </script>
 <style scoped>
 .wrapper {
-   overflow-x: scroll;
-   -webkit-overflow-scrolling: touch;
-   -ms-overflow-style: none;
-   scrollbar-width: none;
+  overflow-x: scroll;
+  -webkit-overflow-scrolling: touch;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

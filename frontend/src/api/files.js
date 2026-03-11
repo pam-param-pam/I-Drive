@@ -113,6 +113,7 @@ export async function getSubtitles(fileId, lockFrom) {
    return response.data
 }
 
+
 export async function renameSubtitle(fileId, subtitleId, newLanguage) {
    let url = `/files/${fileId}/subtitles/${subtitleId}`
 
@@ -122,6 +123,7 @@ export async function renameSubtitle(fileId, subtitleId, newLanguage) {
 
    return response.data
 }
+
 
 export async function addSubtitle(fileId, data) {
    let url = `/files/${fileId}/subtitles`

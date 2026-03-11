@@ -1,4 +1,4 @@
-import {backendInstance} from "@/axios/networker.js"
+import { backendInstance } from "@/axios/networker.js"
 
 export async function search(argumentDict, lockFrom = null, password = null) {
    let headers = {}
@@ -12,7 +12,7 @@ export async function search(argumentDict, lockFrom = null, password = null) {
 
 
    let response = await backendInstance.get(url, {
-      __cancelSignature: 'getItems',
+      __cancelSignature: "getItems",
       headers: headers
    })
    return response.data

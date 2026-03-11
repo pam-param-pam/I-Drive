@@ -1,7 +1,7 @@
 <template>
    <div id="share" class="card floating">
       <div class="card-title">
-         <h2>{{ $t('buttons.share') }}</h2>
+         <h2>{{ $t("buttons.share") }}</h2>
       </div>
 
       <template v-if="listing">
@@ -10,7 +10,7 @@
                <table>
                   <tr>
                      <th>#</th>
-                     <th>{{ $t('settings.shareExpiry') }}</th>
+                     <th>{{ $t("settings.shareExpiry") }}</th>
                      <th></th>
                      <th></th>
                   </tr>
@@ -52,7 +52,7 @@
                class="button button--flat button--grey"
                @click="closeHover()"
             >
-               {{ $t('buttons.close') }}
+               {{ $t("buttons.close") }}
             </button>
             <button
                :aria-label="$t('buttons.new')"
@@ -60,23 +60,23 @@
                class="button button--flat button--blue"
                @click="() => switchListing()"
             >
-               {{ $t('buttons.new') }}
+               {{ $t("buttons.new") }}
             </button>
          </div>
       </template>
 
       <template v-else>
          <div class="card-content">
-            <p>{{ $t('prompts.shareDuration') }}</p>
+            <p>{{ $t("prompts.shareDuration") }}</p>
             <div class="input-group input">
                <input v-focus v-model.trim="time" max="2147483647" min="1" type="number" />
                <select v-model="unit" :aria-label="$t('time.unit')" class="right">
-                  <option value="minutes">{{ $t('time.minutes') }}</option>
-                  <option value="hours">{{ $t('time.hours') }}</option>
-                  <option value="days">{{ $t('time.days') }}</option>
+                  <option value="minutes">{{ $t("time.minutes") }}</option>
+                  <option value="hours">{{ $t("time.hours") }}</option>
+                  <option value="days">{{ $t("time.days") }}</option>
                </select>
             </div>
-            <p>{{ $t('prompts.optionalPassword') }}</p>
+            <p>{{ $t("prompts.optionalPassword") }}</p>
             <input v-model.trim="password" class="input input--block" />
          </div>
 
@@ -87,7 +87,7 @@
                class="button button--flat button--grey"
                @click="() => switchListing()"
             >
-               {{ $t('buttons.cancel') }}
+               {{ $t("buttons.cancel") }}
             </button>
             <button
                :aria-label="$t('buttons.share')"
@@ -95,7 +95,7 @@
                class="button button--flat button--blue"
                @click="submit"
             >
-               {{ $t('buttons.share') }}
+               {{ $t("buttons.share") }}
             </button>
          </div>
       </template>
@@ -103,34 +103,34 @@
 </template>
 
 <script>
-import Clipboard from 'clipboard'
-import { createShare, getAllShares, deleteShare } from '@/api/share.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
+import Clipboard from "clipboard"
+import { createShare, getAllShares, deleteShare } from "@/api/share.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import { humanTime, onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'share',
+   name: "share",
 
    data() {
       return {
          time: 7,
-         unit: 'days',
+         unit: "days",
          links: [],
          clip: null,
-         password: '',
+         password: "",
          listing: true
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['selected', 'settings'])
+      ...mapState(useMainStore, ["selected", "settings"])
    },
 
    async mounted() {
-      this.clip = new Clipboard('.copy-clipboard')
-      this.clip.on('success', () => {
-         this.$toast.success(this.$t('toasts.linkCopied'))
+      this.clip = new Clipboard(".copy-clipboard")
+      this.clip.on("success", () => {
+         this.$toast.success(this.$t("toasts.linkCopied"))
       })
       await this.fetchShares()
    },
@@ -141,7 +141,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ['closeHover', 'showHover']),
+      ...mapActions(useMainStore, ["closeHover", "showHover"]),
 
       async fetchShares() {
          let links = await getAllShares()
@@ -156,7 +156,7 @@ export default {
          }
       },
 
-      submit: onceAtATime(async function () {
+      submit: onceAtATime(async function() {
          if (this.listing) return
          let res = await createShare({
             item_id: this.selected[0].id,
@@ -168,10 +168,10 @@ export default {
          this.sort()
 
          this.time = 7
-         this.unit = 'days'
-         this.password = ''
+         this.unit = "days"
+         this.password = ""
 
-         this.$toast.success(this.$root.$t('settings.shareCreated'))
+         this.$toast.success(this.$root.$t("settings.shareCreated"))
 
          this.listing = true
          await navigator.clipboard.writeText(this.buildLink(res))
@@ -182,7 +182,7 @@ export default {
 
          await deleteShare(share.token)
          this.links = this.links.filter((item) => item.id !== share.id)
-         this.$toast.success(this.$t('settings.shareDeleted'))
+         this.$toast.success(this.$t("settings.shareDeleted"))
          if (this.links.length === 0) {
             this.listing = false
          }
@@ -214,23 +214,23 @@ export default {
 </script>
 <style scoped>
 .share-table-container {
-   max-height: 50vh;
-   overflow-y: auto;
-   overflow-x: hidden;
-   padding-right: 0.5em;
+  max-height: 50vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5em;
 }
 
 .share-table-container table {
-   width: 100%;
-   border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .share-table-container th {
-   position: sticky;
-   top: 0;
-   background: var(--surfacePrimary);
-   z-index: 2;
-   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+  position: sticky;
+  top: 0;
+  background: var(--surfacePrimary);
+  z-index: 2;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
 
 }
 </style>

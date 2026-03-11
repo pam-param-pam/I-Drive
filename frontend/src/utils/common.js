@@ -3,6 +3,7 @@ import i18n from "@/i18n/index.js"
 import throttle from "lodash.throttle"
 import dayjs from "@/utils/dayjsSetup.js"
 import { useMainStore } from "@/stores/mainStore.js"
+
 const toast = useToast()
 
 
@@ -30,9 +31,11 @@ export function detectExtension(filename) {
 
 }
 
+
 const showThrottledToast = throttle(() => {
    showToast("error", "toasts.actionAlreadyInProgress")
 }, 1000, { trailing: false })
+
 
 export function onceAtATime(fn, onBlocked) {
    let isRunning = false
@@ -41,8 +44,7 @@ export function onceAtATime(fn, onBlocked) {
       if (isRunning) {
          if (typeof onBlocked === "function") {
             onBlocked.call(this, ...args)
-         }
-         else {
+         } else {
             showThrottledToast()
          }
          return
@@ -56,6 +58,7 @@ export function onceAtATime(fn, onBlocked) {
    }
 }
 
+
 export function humanTime(date) {
    if (!date) return "-"
 
@@ -66,10 +69,12 @@ export function humanTime(date) {
    return dayjs(date, "YYYY-MM-DD HH:mm").fromNow()
 }
 
+
 export function showToast(type, content, options) {
-   toast(i18n.global.t(content), {type, ...options})
+   toast(i18n.global.t(content), { type, ...options })
 }
 
+
 function capitalize(str) {
-   return str.charAt(0).toUpperCase() + str.slice(1);
+   return str.charAt(0).toUpperCase() + str.slice(1)
 }

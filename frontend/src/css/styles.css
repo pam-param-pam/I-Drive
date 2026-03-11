@@ -15,6 +15,7 @@
 .link {
   color: var(--blue);
 }
+
 main .spinner {
   display: block;
   text-align: center;
@@ -28,6 +29,7 @@ main .message {
   color: #505050;
 
 }
+
 main .spinner > div {
   width: 0.8em;
   height: 0.8em;
@@ -205,7 +207,8 @@ main .spinner .bounce2 {
   text-align: left;
   overflow: auto;
 }
-#previewer .preview audio{
+
+#previewer .preview audio {
   position: fixed;
   bottom: 45px;
   padding-left: 45px;
@@ -246,20 +249,25 @@ main .spinner .bounce2 {
   font-size: 1.5em;
   color: #fff;
 }
+
 #previewer .preview .info .title {
   margin-bottom: 1em;
 }
+
 #previewer .preview .info .title i {
   display: block;
   margin-bottom: 0.1em;
   font-size: 4em;
 }
+
 #previewer .preview .info .button {
   display: inline-block;
 }
+
 #previewer .preview .info .button:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
+
 #previewer .preview .info .button i {
   display: block;
   margin-bottom: 4px;
@@ -399,7 +407,7 @@ main .spinner .bounce2 {
 }
 
 .rules input[type="text"] {
-  border: 1px solid#ddd;
+  border: 1px solid #ddd;
   padding: 0.2rem;
 }
 

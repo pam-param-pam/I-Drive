@@ -98,12 +98,15 @@ export class FileStateHolder {
    markSubtitlesUploaded() {
       this._set("subtitlesUploaded", true)
    }
+
    setExpectedSubtitleCount(count) {
       this._set("expectedSubtitleCount", count)
    }
+
    incrementExtractedSubtitleCount() {
-      this._set("extractedSubtitleCount", this.extractedSubtitleCount+1)
+      this._set("extractedSubtitleCount", this.extractedSubtitleCount + 1)
    }
+
    setTotalChunks(count) {
       this._set("totalChunks", count)
    }
@@ -131,12 +134,15 @@ export class FileStateHolder {
    setVideoMetadata(value) {
       this._set("videoMetadata", value)
    }
+
    setRawMetadata(value) {
       this._set("rawMetadata", value)
    }
+
    setDuration(value) {
       this._set("duration", value)
    }
+
    setCrc(value) {
       this._set("crc", value)
    }
@@ -148,6 +154,7 @@ export class FileStateHolder {
    setIv(iv) {
       this._set("iv", iv)
    }
+
    setStatus(status) {
       if (this.status === fileUploadStatus.errorOccurred && status !== fileUploadStatus.retrying) {
          console.warn("Possible override of error status!")
@@ -177,6 +184,7 @@ export class FileStateHolder {
    areSecretsGenerated() {
       return this.iv !== undefined && this.key !== undefined
    }
+
    isFullyUploaded() {
       const chunksDone = this.uploadedChunks === this.totalChunks
       const thumbnailDone = !this.thumbnailExtracted || this.thumbnailUploaded

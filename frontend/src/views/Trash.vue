@@ -1,5 +1,5 @@
 <template>
-   <h4  class="listing-notice">{{ $t('trash.info') }}</h4>
+   <h4 class="listing-notice">{{ $t("trash.info") }}</h4>
    <errors v-if="error" :error="error" />
 
    <FileListing
@@ -7,21 +7,21 @@
       :headerButtons="headerButtons"
       :isSearchActive="false"
       :readonly="true"
-      @onOpen="onOpen"
       @dropUpload="onDropUpload"
+      @onOpen="onOpen"
    ></FileListing>
 </template>
 
 <script>
-import { getTrash } from '@/api/user.js'
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
-import { name } from '@/utils/constants'
-import Errors from '@/components/Errors.vue'
-import FileListing from '@/components/FileListing.vue'
+import { getTrash } from "@/api/user.js"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
+import { name } from "@/utils/constants"
+import Errors from "@/components/Errors.vue"
+import FileListing from "@/components/FileListing.vue"
 
 export default {
-   name: 'trash',
+   name: "trash",
 
    components: {
       Errors,
@@ -36,7 +36,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['error', 'items', 'selected', 'perms', 'loading', 'currentFolder', 'disabledCreation', 'selectedCount', 'setSearchActive', 'setSearchItems']),
+      ...mapState(useMainStore, ["error", "items", "selected", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount", "setSearchActive", "setSearchItems"]),
       headerButtons() {
          return {
             info: this.selectedCount > 0,
@@ -60,10 +60,10 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['addSelected', 'resetSelected', 'setLoading', 'setError', 'setDisabledCreation', 'setItems', 'setCurrentFolder', 'showHover']),
+      ...mapActions(useMainStore, ["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
 
       async fetchFolder() {
-         document.title = this.$t('trash.trashName') + ' - ' + name
+         document.title = this.$t("trash.trashName") + " - " + name
 
          this.setError(null)
          this.setLoading(true)
@@ -73,7 +73,7 @@ export default {
             let items = res.trash
             this.setItems(items)
          } catch (error) {
-            if (error.code === 'ERR_CANCELED') return
+            if (error.code === "ERR_CANCELED") return
             this.setError(error)
          } finally {
             if (this.isActive) this.setLoading(false)
@@ -83,10 +83,10 @@ export default {
       onOpen(item) {
          this.resetSelected()
          this.addSelected(item)
-         this.showHover('restoreFromTrash')
+         this.showHover("restoreFromTrash")
       },
       onDropUpload() {
-         this.$toast.error(this.$t('toasts.uploadNotAllowedHere'))
+         this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
       }
    }
 }

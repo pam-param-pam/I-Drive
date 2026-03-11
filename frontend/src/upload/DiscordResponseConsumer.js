@@ -10,8 +10,8 @@ export class DiscordResponseConsumer {
       this.backendState = new Map()
 
       this.uploadRuntime.onFileChange(["videoMetadata", "rawMetadata"], ({ frontendId, field, current }) => {
-            this.onFileMetadata(frontendId, field, current)
-         })
+         this.onFileMetadata(frontendId, field, current)
+      })
    }
 
    stop() {
@@ -21,6 +21,7 @@ export class DiscordResponseConsumer {
    isRunning() {
       return this.running
    }
+
    async run() {
       if (this.running) {
          console.warn("DiscordResponseConsumer is already running!")
@@ -42,7 +43,7 @@ export class DiscordResponseConsumer {
       for (let i = 0; i < request.attachments.length; i++) {
          const attachment = request.attachments[i]
          const discordAttachment = discordResponse.data.attachments[i]
-         await this.discordAttachmentQueue.put({"discordAttachment": discordAttachment, "attachment": attachment})
+         await this.discordAttachmentQueue.put({ "discordAttachment": discordAttachment, "attachment": attachment })
          this.fillAttachmentInfo(attachment, discordResponse, discordAttachment)
       }
    }
@@ -67,14 +68,14 @@ export class DiscordResponseConsumer {
       }
       return this.backendState.get(fileObj.frontendId)
    }
+
    onFileMetadata(frontendId, field, current) {
       if (current && field) {
          let fileObj = this.uploadRuntime.getFileState(frontendId).fileObj
          let state = this.getOrCreateState(fileObj)
          if (field === "videoMetadata") {
             state.videoMetadata = current
-         }
-         else if (field === "rawMetadata") {
+         } else if (field === "rawMetadata") {
             state.rawMetadata = current
          }
       }

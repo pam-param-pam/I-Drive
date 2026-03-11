@@ -14,6 +14,7 @@ function isDeviceControlActive() {
    return expiry > now
 }
 
+
 function sendRouteChangeEvent(route) {
    const store = useMainStore()
 
@@ -24,6 +25,7 @@ function sendRouteChangeEvent(route) {
       })
    }
 }
+
 
 function sendMovieToggleEvent(isPaused) {
    const store = useMainStore()
@@ -36,6 +38,7 @@ function sendMovieToggleEvent(isPaused) {
    }
 }
 
+
 function sendMovieSeekEvent(seconds) {
    const store = useMainStore()
 
@@ -46,6 +49,7 @@ function sendMovieSeekEvent(seconds) {
       })
    }
 }
+
 
 function sendMovieVolumeChangeEvent(volume) {
    const store = useMainStore()
@@ -58,6 +62,7 @@ function sendMovieVolumeChangeEvent(volume) {
    }
 }
 
+
 function sendMovieSubtitlesChangeEvent(subtitle_id) {
    const store = useMainStore()
 
@@ -69,6 +74,7 @@ function sendMovieSubtitlesChangeEvent(subtitle_id) {
    }
 }
 
+
 function sendMovieFullscreenToggleEvent(is_fullscreen) {
    const store = useMainStore()
 
@@ -79,6 +85,7 @@ function sendMovieFullscreenToggleEvent(is_fullscreen) {
       })
    }
 }
+
 
 export const deviceControl = {
    isDeviceControlActive,

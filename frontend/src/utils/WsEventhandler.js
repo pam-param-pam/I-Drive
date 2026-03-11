@@ -127,7 +127,7 @@ export async function onEvent(message) {
    }
    if (op_code === WebsocketEvent.ITEM_UPDATE) {
       for (let item of event.data) {
-         //todo make all of these events work wit/based on breadcrumbs too just like here
+         //todo make all of these events work with/based on breadcrumbs too just like here
          store.updateBreadcrumbsAndCurrentFolder(item)
          if (item.parent_id !== currentFolder?.id && !store.searchActive) continue
          store.updateItem(item)

@@ -17,7 +17,7 @@ const router = createRouter({
          beforeEnter: async (to, from, next) => {
             const store = useMainStore()
             console.log("login init auth")
-            if (store.user == null && from.name != null) {
+            if (store.user == null) {
                await initAuth()
             }
 
@@ -144,7 +144,7 @@ const router = createRouter({
 
             const store = useMainStore()
 
-            if (store.user == null && from.name != null) {
+            if (store.user == null) {
                await initAuth()
             }
 
@@ -161,6 +161,7 @@ const router = createRouter({
 
 
 async function initAuth() {
+   // todo this func is called in 3 places, sometimes twice
    console.log("initAuth")
    try {
       await validateLogin()

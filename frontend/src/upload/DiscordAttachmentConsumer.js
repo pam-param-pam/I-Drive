@@ -11,13 +11,13 @@ export class DiscordAttachmentConsumer {
       // attachments waiting until file is saved
       this.pending = {
          file: new Map(),
-         thumbnail: new Map(),
+         thumbnail: new Map()
       }
 
       // attachments eligible for batching
       this.ready = {
          file: [],
-         thumbnail: [],
+         thumbnail: []
       }
 
       this.uploadRuntime.onFileSaved((frontendId) => {
@@ -57,7 +57,7 @@ export class DiscordAttachmentConsumer {
       const entry = {
          attachment_id: discordAttachment.id,
          url: discordAttachment.url,
-         frontendId,
+         frontendId
       }
 
       if (attachment.type === attachmentType.file) {

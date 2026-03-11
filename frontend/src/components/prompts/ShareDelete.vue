@@ -1,7 +1,7 @@
 <template>
    <div class="card floating">
       <div class="card-content">
-         <p>{{ $t('prompts.deleteMessageShare') }}</p>
+         <p>{{ $t("prompts.deleteMessageShare") }}</p>
       </div>
       <div class="card-action">
          <button
@@ -10,7 +10,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             :aria-label="$t('buttons.delete')"
@@ -18,25 +18,25 @@
             class="button button--flat button--red"
             @click="submit"
          >
-            {{ $t('buttons.delete') }}
+            {{ $t("buttons.delete") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
-   name: 'ShareDelete',
+   name: "ShareDelete",
 
    computed: {
-      ...mapState(useMainStore, ['currentPrompt'])
+      ...mapState(useMainStore, ["currentPrompt"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover']),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       submit() {
          if (this.currentPrompt.confirm) this.currentPrompt.confirm()

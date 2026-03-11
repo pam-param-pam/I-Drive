@@ -20,8 +20,8 @@
             />
             <action
                v-if="file?.type === 'Image' && file?.thumbnail_url"
-               :label="$t('buttons.toggleSize')"
                :icon="imageFullSize ? 'fullscreen_exit' : 'fullscreen'"
+               :label="$t('buttons.toggleSize')"
                @action="imageFullSize = !imageFullSize"
             />
             <action
@@ -86,23 +86,23 @@
                :poster="file?.thumbnail_url"
                :src="videoSrcUrl"
                controls
-               loop
-               @seeked="onMovieSeek"
-               @volumechange="onMovieVolumeChange"
-               @play="onMoviePlay"
-               @pause="onMoviePause"
-               @timeupdate="videoTimeUpdate"
-               @loadedmetadata="onVideoLoaded"
-               @error="onVideoError"
                crossorigin="anonymous"
+               loop
+               @error="onVideoError"
+               @loadedmetadata="onVideoLoaded"
+               @pause="onMoviePause"
+               @play="onMoviePlay"
+               @seeked="onMovieSeek"
+               @timeupdate="videoTimeUpdate"
+               @volumechange="onMovieVolumeChange"
             >
                <track
                   v-for="(sub) in subtitles"
                   :key="sub.id"
-                  kind="subtitles"
+                  :default="sub.is_forced"
                   :label="sub.language"
                   :src="sub.url"
-                  :default="sub.is_forced"
+                  kind="subtitles"
                />
             </video>
 
@@ -122,10 +122,10 @@
             </div>
 
             <ExtendedImage
-              v-else-if="(file?.type === 'Image' || (file?.type === 'Raw image' && file?.thumbnail_url)) && file?.size > 0"
-              :src="fileSrcUrl"
-              :thumbSrc="thumbSrcUrl"
-              :imageFullSize="imageFullSize"
+               v-else-if="(file?.type === 'Image' || (file?.type === 'Raw image' && file?.thumbnail_url)) && file?.size > 0"
+               :imageFullSize="imageFullSize"
+               :src="fileSrcUrl"
+               :thumbSrc="thumbSrcUrl"
             />
             <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
                <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
@@ -397,7 +397,7 @@ export default {
                   }
                   this.setItems(res.share)
 
-                  this.sendShareEvent({"type": "file_open", "args": {"file_id": this.file.id}})
+                  this.sendShareEvent({ "type": "file_open", "args": { "file_id": this.file.id } })
 
                } else {
                   this.file = await getFile(this.fileId, this.lockFrom)
@@ -636,9 +636,9 @@ export default {
          let position = Math.floor(this.$refs.video.currentTime) // round to seconds
          if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
 
-            if (this.isInShareContext)  {
-               this.sendShareEvent({"type": "movie_watch", "args": {"timestamp": Math.round(position), "file_id": this.file.id}})
-            } else if(this.videoRef.duration > 60) {
+            if (this.isInShareContext) {
+               this.sendShareEvent({ "type": "movie_watch", "args": { "timestamp": Math.round(position), "file_id": this.file.id } })
+            } else if (this.videoRef.duration > 60) {
                updateVideoPosition(this.file.id, this.file.lockFrom, { position })
             }
             this.lastSentVideoPosition = position
@@ -646,8 +646,8 @@ export default {
       },
       onMovieSeek() {
          let toSecond = this.$refs.video.currentTime
-         if (this.isInShareContext)  {
-            this.sendShareEvent({type: "movie_seek", args: {"to_second": Math.round(toSecond), "file_id": this.file.id}})
+         if (this.isInShareContext) {
+            this.sendShareEvent({ type: "movie_seek", args: { "to_second": Math.round(toSecond), "file_id": this.file.id } })
             return
          }
          deviceControl.sendMovieSeekEvent(toSecond)
@@ -836,58 +836,58 @@ export default {
 </script>
 <style scoped>
 .page {
- position: fixed;
- left: 50%;
- padding: 10px;
- transform: translateX(-50%);
- color: #5e727e;
- z-index: 1;
- font-size: 12px;
+  position: fixed;
+  left: 50%;
+  padding: 10px;
+  transform: translateX(-50%);
+  color: #5e727e;
+  z-index: 1;
+  font-size: 12px;
 }
 
 .epub-reader {
- display: flex;
- align-items: flex-end;
- height: 100%;
- -webkit-column-break-before: always;
- break-before: column;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  -webkit-column-break-before: always;
+  break-before: column;
 }
 
 .epub-reader .arrow.pre {
- left: 0;
+  left: 0;
 }
 
 .epub-reader .size {
- display: flex;
- gap: 5px;
- align-items: center;
- z-index: 111;
- right: 25px;
- outline: none;
- position: absolute;
- top: 78px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  z-index: 111;
+  right: 25px;
+  outline: none;
+  position: absolute;
+  top: 78px;
 }
 
 /* Mobile-specific styles */
 @media (max-width: 768px) {
- .epub-reader .arrow {
-  font-size: 1.5rem;
- }
+  .epub-reader .arrow {
+    font-size: 1.5rem;
+  }
 
- .epub-reader .arrow.pre {
-  left: 0;
- }
+  .epub-reader .arrow.pre {
+    left: 0;
+  }
 
- .epub-reader .arrow.next {
-  right: 0;
- }
+  .epub-reader .arrow.next {
+    right: 0;
+  }
 }
 
 html body {
- padding-left: 1px !important;
+  padding-left: 1px !important;
 }
 
 .thumbnail {
- height: 100%;
+  height: 100%;
 }
 </style>

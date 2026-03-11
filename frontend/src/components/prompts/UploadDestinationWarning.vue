@@ -1,11 +1,11 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t('prompts.uploadDestination') }}</h2>
+         <h2>{{ $t("prompts.uploadDestination") }}</h2>
       </div>
       <div class="card-content">
          <p>
-            {{ $t('prompts.uploadDestinationWarning') }}
+            {{ $t("prompts.uploadDestinationWarning") }}
          </p>
       </div>
       <div class="card-action">
@@ -15,7 +15,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             :aria-label="$t('buttons.imSure')"
@@ -23,25 +23,25 @@
             class="button button--flat button--red"
             @click="submit"
          >
-            {{ $t('buttons.imSure') }}
+            {{ $t("buttons.imSure") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
-   name: 'UploadDestinationWarning',
+   name: "UploadDestinationWarning",
 
    computed: {
-      ...mapState(useMainStore, ['currentPrompt'])
+      ...mapState(useMainStore, ["currentPrompt"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover']),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       async submit() {
          if (this.currentPrompt.confirm) this.currentPrompt.confirm()

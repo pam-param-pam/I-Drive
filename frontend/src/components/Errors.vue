@@ -7,7 +7,7 @@
                <span> {{ $t(info.message) }}</span>
             </div>
             <div class="details">
-               <span v-if="errorDetails"> {{ errorDetails}}</span>
+               <span v-if="errorDetails"> {{ errorDetails }}</span>
             </div>
             <div>
                <a class="button button--flat">
@@ -35,7 +35,6 @@
             {{ $t("errors.goBack") }}
          </button>
       </template>
-
 
 
    </div>
@@ -93,7 +92,7 @@ export default {
          default: true
       }
    },
-   emits: ['close'],
+   emits: ["close"],
 
    computed: {
       errorCode() {
@@ -126,25 +125,25 @@ export default {
 </script>
 <style scoped>
 .details {
- font-size: 17px !important;
- color: var(--textSecondary);
+  font-size: 17px !important;
+  color: var(--textSecondary);
 }
 
 .error-action-button {
- margin-top: 10px;
- padding: 8px 16px;
- font-size: 14px;
- color: var(--background);
- background-color: transparent;
- border: 1px solid var(--background);
- cursor: pointer;
+  margin-top: 10px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--background);
+  background-color: transparent;
+  border: 1px solid var(--background);
+  cursor: pointer;
 }
 
 .error-action-button:hover {
- background-color: rgba(0, 123, 255, 0.1);
+  background-color: rgba(0, 123, 255, 0.1);
 }
 
 .info .button {
-   margin-top: 2em;
+  margin-top: 2em;
 }
 </style>

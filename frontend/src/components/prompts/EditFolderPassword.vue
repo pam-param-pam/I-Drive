@@ -1,13 +1,13 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2 v-if="!isLocked">{{ $t('prompts.setFolderPassword') }}</h2>
-         <h2 v-if="isLocked">{{ $t('prompts.editFolderPassword') }}</h2>
+         <h2 v-if="!isLocked">{{ $t("prompts.setFolderPassword") }}</h2>
+         <h2 v-if="isLocked">{{ $t("prompts.editFolderPassword") }}</h2>
       </div>
 
       <div class="card-content">
          <p v-if="isLocked">
-            {{ $t('prompts.enterOldFolderPassword') }}
+            {{ $t("prompts.enterOldFolderPassword") }}
          </p>
          <input
             v-if="isLocked"
@@ -17,7 +17,7 @@
             type="text"
          />
          <p>
-            {{ $t('prompts.enterNewFolderPassword') }}
+            {{ $t("prompts.enterNewFolderPassword") }}
          </p>
          <input v-focus v-model.trim="password" class="input input--block" type="text" />
       </div>
@@ -29,7 +29,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             :aria-label="$t('buttons.submit')"
@@ -38,30 +38,30 @@
             type="submit"
             @click="submit()"
          >
-            {{ $t('buttons.submit') }}
+            {{ $t("buttons.submit") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { lockWithPassword } from '@/api/folder.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
+import { lockWithPassword } from "@/api/folder.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'EditFolderPassword',
+   name: "EditFolderPassword",
 
    data() {
       return {
-         password: '',
-         oldPassword: ''
+         password: "",
+         oldPassword: ""
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['selected']),
+      ...mapState(useMainStore, ["selected"]),
 
       isLocked() {
          return this.selected[0].isLocked
@@ -72,12 +72,12 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover', 'setFolderPassword']),
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword"]),
 
-      submit: onceAtATime(async function () {
-         if (!(this.password === '' && this.oldPassword === '')) {
+      submit: onceAtATime(async function() {
+         if (!(this.password === "" && this.oldPassword === "")) {
             let res = await lockWithPassword(this.folder_id, this.password, this.oldPassword)
-            let message = this.$t('toasts.passwordIsBeingUpdated')
+            let message = this.$t("toasts.passwordIsBeingUpdated")
             this.$toast.info(message, {
                timeout: null,
                id: res.task_id

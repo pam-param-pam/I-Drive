@@ -36,11 +36,13 @@ export async function getShareVisits(token) {
    return response.data
 }
 
+
 export async function getVisitEvents(token, visit_id) {
    let url = `/shares/${token}/visits/${visit_id}`
    let response = await backendInstance.get(url)
    return response.data
 }
+
 
 export async function createShare(data) {
    let url = `/shares`
@@ -70,7 +72,7 @@ export async function isSharePasswordCorrect(token, password) {
          __cancelSignature: "getSubtitles",
          headers: {
             "X-resource-Password": password
-         },
+         }
       })
       return response.status === 204
    } catch (e) {

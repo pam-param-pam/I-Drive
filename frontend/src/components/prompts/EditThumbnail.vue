@@ -1,53 +1,53 @@
 <template>
-  <div class="card floating" @paste="onPaste">
-    <div class="card-title">
-      <h2>{{ $t("prompts.editThumbnail") }}</h2>
-    </div>
+   <div class="card floating" @paste="onPaste">
+      <div class="card-title">
+         <h2>{{ $t("prompts.editThumbnail") }}</h2>
+      </div>
 
-    <div class="card-content">
-      <p>
-        {{ $t("prompts.selectThumbnail") }}
-      </p>
-      <div v-if="imagePreview" class="image-preview">
-        <img :src="imagePreview" alt="Selected Thumbnail" />
-      </div>
-      <div class="file-input-wrapper">
-        <div class="file-input-wrapper">
-          <SmartFileInput
-            accept="image/*"
-            :label="$t('buttons.addSubtitleFile')"
-            @file-selected="processFile"
-          />
-        </div>
-      </div>
-      <div v-if="uploading" class="prompts-progress-bar-wrapper">
-        <ProgressBar :progress="uploadProgress" />
-        <span>
+      <div class="card-content">
+         <p>
+            {{ $t("prompts.selectThumbnail") }}
+         </p>
+         <div v-if="imagePreview" class="image-preview">
+            <img :src="imagePreview" alt="Selected Thumbnail" />
+         </div>
+         <div class="file-input-wrapper">
+            <div class="file-input-wrapper">
+               <SmartFileInput
+                  :label="$t('buttons.addSubtitleFile')"
+                  accept="image/*"
+                  @file-selected="processFile"
+               />
+            </div>
+         </div>
+         <div v-if="uploading" class="prompts-progress-bar-wrapper">
+            <ProgressBar :progress="uploadProgress" />
+            <span>
                <b> {{ uploadProgress }}% </b>
             </span>
+         </div>
       </div>
-    </div>
 
-    <div class="card-action">
-      <button
-        :aria-label="$t('buttons.cancel')"
-        :title="$t('buttons.cancel')"
-        class="button button--flat button--grey"
-        @click="cancel()"
-      >
-        {{ $t("buttons.cancel") }}
-      </button>
-      <button
-        :aria-label="$t('buttons.upload')"
-        :disabled="!thumbnailFile"
-        :title="$t('buttons.upload')"
-        class="button button--flat"
-        @click="submit()"
-      >
-        {{ $t("buttons.upload") }}
-      </button>
-    </div>
-  </div>
+      <div class="card-action">
+         <button
+            :aria-label="$t('buttons.cancel')"
+            :title="$t('buttons.cancel')"
+            class="button button--flat button--grey"
+            @click="cancel()"
+         >
+            {{ $t("buttons.cancel") }}
+         </button>
+         <button
+            :aria-label="$t('buttons.upload')"
+            :disabled="!thumbnailFile"
+            :title="$t('buttons.upload')"
+            class="button button--flat"
+            @click="submit()"
+         >
+            {{ $t("buttons.upload") }}
+         </button>
+      </div>
+   </div>
 </template>
 
 <script>
@@ -192,43 +192,43 @@ export default {
 
 <style scoped>
 .file-input-wrapper {
- position: relative;
- display: flex;
- align-items: center;
- width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
 input[type='file'] {
- opacity: 0;
- width: 0;
- height: 0;
- position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
 }
 
 .file-label {
- display: inline-block;
- padding: 10px 15px;
- background-color: var(--divider);
- color: var(--textPrimary);
- border-radius: 5px;
- cursor: pointer;
- text-align: center;
- width: 100%;
- font-size: 14px;
+  display: inline-block;
+  padding: 10px 15px;
+  background-color: var(--divider);
+  color: var(--textPrimary);
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  font-size: 14px;
 }
 
 .image-preview {
- margin-top: 15px;
- padding-bottom: 1em;
- display: flex;
- justify-content: center;
- align-items: center;
+  margin-top: 15px;
+  padding-bottom: 1em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .image-preview img {
- max-width: 100%;
- max-height: 200px;
- border-radius: 5px;
- box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 </style>

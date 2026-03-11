@@ -257,7 +257,7 @@ export class RequestProducer {
             let folderName = pathParts.slice(0, i)[pathParts.slice(0, i).length - 1]
             let folder
             try {
-                folder = await create({ "parent_id": parentFolder, "name": folderName }, {
+               folder = await create({ "parent_id": parentFolder, "name": folderName }, {
                   __retryErrors: true
                })
             } catch (e) {
@@ -280,7 +280,7 @@ export class RequestProducer {
       const state = this.uploadRuntime.getFileState(frontendId)
       if (queueFile.fileObj.size === 0) {
          state.markFileUploaded(frontendId)
-         //todo
+         //todo this is quite ugly and feels like spaggetti code
          let file = getUploader().discordResponseConsumer.getOrCreateState(queueFile.fileObj)
          getUploader().backendFileQueue.put(file)
          return true

@@ -12,6 +12,7 @@ function base64ToUint8Array(base64) {
    return bytes
 }
 
+
 export async function encryptWithAesCtr(file, base64Key, base64IV, bytesToSkip) {
    let key = base64ToUint8Array(base64Key)
    let iv = base64ToUint8Array(base64IV)
@@ -37,6 +38,7 @@ export async function encryptWithAesCtr(file, base64Key, base64IV, bytesToSkip) 
    return new Blob([new Uint8Array(encryptedArrayBuffer)])
 }
 
+
 export async function encryptWithChaCha20(file, base64Key, base64IV, bytesToSkip) {
 
    let key = base64ToUint8Array(base64Key)
@@ -50,6 +52,7 @@ export async function encryptWithChaCha20(file, base64Key, base64IV, bytesToSkip
 
    return new Blob([new Uint8Array(encryptedData)])
 }
+
 
 // Calculate iv for AES CTR
 function incrementIV(iv, bytesToSkip) {
@@ -83,15 +86,17 @@ function incrementIV(iv, bytesToSkip) {
 
 }
 
+
 // Calculate counter for ChaCha20
 function calculateCounter(bytesToSkip) {
    if (bytesToSkip === 0) {
       return 0
    }
-    // ChaCha20 block size is 64 bytes
+   // ChaCha20 block size is 64 bytes
    return Math.floor(bytesToSkip / 64)
 
 }
+
 
 export async function encryptAttachment(attachment, fileState) {
    let fileObj = attachment.fileObj
@@ -103,8 +108,7 @@ export async function encryptAttachment(attachment, fileState) {
       bytesToSkip = attachment.offset
       iv = fileState.iv
       key = fileState.key
-   }
-   else {
+   } else {
       if (fileObj.encryptionMethod !== encryptionMethod.NotEncrypted) {
          iv = generateIv(fileObj.encryptionMethod)
          key = generateKey(fileObj.encryptionMethod)
@@ -116,6 +120,7 @@ export async function encryptAttachment(attachment, fileState) {
    return await encrypt(attachment.rawBlob, fileObj.encryptionMethod, key, iv, bytesToSkip)
 
 }
+
 
 export async function encrypt(rawBlob, method, key, iv, bytesToSkip) {
    if (typeof rawBlob === "string") {

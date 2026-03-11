@@ -1,12 +1,12 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t('prompts.editTags') }}</h2>
+         <h2>{{ $t("prompts.editTags") }}</h2>
       </div>
 
       <div class="card-content">
          <p>
-            {{ $t('prompts.editTagsDescription') }}
+            {{ $t("prompts.editTagsDescription") }}
          </p>
 
          <div class="tags-container">
@@ -42,7 +42,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             v-if="tagName !== ''"
@@ -52,7 +52,7 @@
             type="submit"
             @click="submit()"
          >
-            {{ $t('buttons.addTag') }}
+            {{ $t("buttons.addTag") }}
          </button>
          <button
             v-else
@@ -62,30 +62,30 @@
             type="submit"
             @click="submit()"
          >
-            {{ $t('buttons.ok') }}
+            {{ $t("buttons.ok") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import { addTag, getTags, removeTag } from "@/api/files.js"
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'EditTags',
+   name: "EditTags",
 
    data() {
       return {
          tags: [],
-         tagName: ''
+         tagName: ""
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['selected']),
+      ...mapState(useMainStore, ["selected"]),
 
       file() {
          return this.selected[0]
@@ -94,32 +94,32 @@ export default {
 
    watch: {
       tagName(newVal) {
-         if (newVal.includes(' ')) {
+         if (newVal.includes(" ")) {
             this.submit()
          }
       }
    },
 
    async created() {
-     this.tags = await getTags(this.file.id)
+      this.tags = await getTags(this.file.id)
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'updateItem']),
+      ...mapActions(useMainStore, ["closeHover", "resetSelected", "updateItem"]),
 
-      submit: onceAtATime(async function () {
-         if (this.tagName === '') {
+      submit: onceAtATime(async function() {
+         if (this.tagName === "") {
             this.closeHover()
             return
          }
          let tagName = this.tagName.trim()
-         this.tagName = ''
+         this.tagName = ""
 
          let tag = await addTag(this.file.id, { tag_name: tagName })
          this.tags.push(tag)
       }),
 
-      removeTag: onceAtATime(async function (tag) {
+      removeTag: onceAtATime(async function(tag) {
          await removeTag(this.file.id, tag.id)
          this.tags = this.tags.filter(t => t.id !== tag.id)
       })
@@ -129,48 +129,48 @@ export default {
 
 <style scoped>
 .tags-container {
-   display: flex;
-   flex-wrap: wrap;
-   gap: 8px;
-   margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .tag {
-   display: inline-flex;
-   align-items: center;
-   padding-left: 10px;
-   padding-bottom: 4px;
-   padding-top: 4px;
-   background-color: var(--background);
-   border-radius: 16px;
-   font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  padding-left: 10px;
+  padding-bottom: 4px;
+  padding-top: 4px;
+  background-color: var(--background);
+  border-radius: 16px;
+  font-size: 14px;
 }
 
 .remove-tag-button {
-   margin-left: 2px;
-   margin-right: 2px;
-   background: none;
-   border: none;
-   cursor: pointer;
-   font-size: 16px;
-   color: var(--color-text);
+  margin-left: 2px;
+  margin-right: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--color-text);
 }
 
 .remove-tag-button:hover {
-   color: red;
+  color: red;
 }
 
 .close-icon {
-   font-size: 10px;
+  font-size: 10px;
 }
 
 .remove-tag-button i {
-   padding-bottom: 0;
-   padding-top: 4px;
+  padding-bottom: 0;
+  padding-top: 4px;
 }
 
 .tag-icon {
-   font-size: 16px;
-   margin-right: 6px;
+  font-size: 16px;
+  margin-right: 6px;
 }
 </style>

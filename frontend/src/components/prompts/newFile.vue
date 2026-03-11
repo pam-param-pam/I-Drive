@@ -1,11 +1,11 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t('prompts.newFile') }}</h2>
+         <h2>{{ $t("prompts.newFile") }}</h2>
       </div>
 
       <div class="card-content">
-         <p>{{ $t('prompts.newFileMessage') }}</p>
+         <p>{{ $t("prompts.newFileMessage") }}</p>
          <input v-focus v-model.trim="name" class="input input--block" type="text" />
       </div>
 
@@ -16,7 +16,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             id="create-button"
@@ -26,26 +26,26 @@
             class="button button--flat"
             @click="submit"
          >
-            {{ $t('buttons.create') }}
+            {{ $t("buttons.create") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 import { detectExtension, onceAtATime } from "@/utils/common.js"
 import { createFile } from "@/api/files.js"
 import { v4 as uuidv4 } from "uuid"
 import { generateIv, generateKey } from "@/upload/utils/uploadHelper.js"
 
 export default {
-   name: 'NewFile',
+   name: "NewFile",
 
    data() {
       return {
-         name: ''
+         name: ""
       }
    },
 
@@ -57,16 +57,16 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['currentFolder', 'currentPrompt', 'settings']),
+      ...mapState(useMainStore, ["currentFolder", "currentPrompt", "settings"]),
       canSubmit() {
          return this.name.length > 0
       }
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover']),
+      ...mapActions(useMainStore, ["closeHover"]),
 
-      submit: onceAtATime(async function () {
+      submit: onceAtATime(async function() {
          if (this.canSubmit) {
             try {
                let folder = this.folder || this.currentFolder
@@ -85,12 +85,12 @@ export default {
                   "iv": iv,
                   "key": key,
                   "crc": 0,
-                  "attachments": [],
+                  "fragments": []
                }
-               let res = await createFile({ files: [file_data]})
+               let res = await createFile({ files: [file_data] })
                let file = res[0]
                if (file.type === "Code" || file.type === "Text" || file.type === "Database") {
-                  this.$router.push({ name: 'Editor', params: { fileId: file.file_id, lockFrom: file.lockFrom } })
+                  this.$router.push({ name: "Editor", params: { fileId: file.file_id, lockFrom: file.lockFrom } })
                }
             } finally {
                this.closeHover()

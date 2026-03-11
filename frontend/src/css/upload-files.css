@@ -14,13 +14,16 @@
   max-height: 12em;
 
 }
+
 .upload-files {
   position: relative;
   z-index: 9995;
 }
-.upload-files h2{
+
+.upload-files h2 {
   padding-right: 1em;
 }
+
 .upload-files .file {
   margin-bottom: 8px;
 }

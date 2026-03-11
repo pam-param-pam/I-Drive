@@ -1,5 +1,7 @@
 import base64
 import math
+import time
+from functools import wraps
 from typing import Union, Type, Tuple, Optional, Any
 
 from .errors import BadRequestError
@@ -227,9 +229,21 @@ def validate_crc(file_size: int, crc: int) -> None:
     if not crc and file_size:
         raise BadRequestError("Bad crc value")
 
+
 def normalize_blocked_until(value):
     if value is None:
         return None
     if isinstance(value, float) and math.isinf(value):
         return None
     return value
+
+
+def timed(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration = time.perf_counter() - start
+        print(f"{func.__name__} took {duration:.6f}s")
+        return result
+    return wrapper

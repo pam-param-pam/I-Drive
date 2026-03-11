@@ -87,7 +87,7 @@ export class DiscordUploadConsumer {
          let encryptedBlob
          try {
             encryptedBlob = await encryptAttachment(attachment, fileState)
-         } catch (err){
+         } catch (err) {
             if (err.name === "NotFoundError") {
                let err = new Error()
                err.name = "FileGone"
@@ -117,7 +117,8 @@ export class DiscordUploadConsumer {
             this.uploadRuntime.fixUploadTracking(request, totalBytesUploaded, error)
          },
 
-         onRequestFinish: () => {},
+         onRequestFinish: () => {
+         },
 
          signal: abortSignal
       }
@@ -164,6 +165,7 @@ export class DiscordUploadConsumer {
       this.failedRequests.push(request)
       throw err
    }
+
    async setStatusForRequest(request, status) {
       for (let i = 0; i < request.attachments.length; i++) {
          const frontendId = request.attachments[i].fileObj.frontendId
@@ -221,6 +223,7 @@ export class DiscordUploadConsumer {
          await this.requestQueue.put(request)
       }
    }
+
    async retryFailedRequests() {
       const batch = this.failedRequests
       this.failedRequests = []

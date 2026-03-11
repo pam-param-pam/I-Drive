@@ -1,16 +1,17 @@
 <template>
 
-  <div id="editor-container" @wheel="handleZoom" @gesturechange.prevent v-touch:zoom="handlePinch">
-    <CodeEditor
-      v-if="currentLanguage"
-      v-model="raw"
-      :font-size="fontSize + 'px'"
-      :header="true"
-      :languages="currentLanguage"
-      :line-nums="true"
-      :read-only="readOnly"
-      :saveFile="!readOnly"
-      :themes="[
+   <div id="editor-container" v-touch:zoom="handlePinch" @wheel="handleZoom" @gesturechange.prevent>
+      <CodeEditor
+         v-if="currentLanguage"
+         v-model="raw"
+         :font-size="fontSize + 'px'"
+         :header="true"
+         :height="height + 'vh'"
+         :languages="currentLanguage"
+         :line-nums="true"
+         :read-only="readOnly"
+         :saveFile="!readOnly"
+         :themes="[
             ['atom-one-dark', 'Atom One Dark'],
             ['gradient-dark', 'Gradient Dark'],
             ['devibeans', 'Devibeans'],
@@ -19,25 +20,24 @@
             ['androidstudio', 'Android Studio'],
             ['lioshi', 'Lioshi']
          ]"
-      border-radius="0px"
-      :height="height + 'vh'"
-      padding="20px"
-      width="100%"
-      @close="onClose()"
-      @saveFile="onSave()"
-    >
-    </CodeEditor>
-    <div v-if="loading">
-      <h2 class="message delayed editor-loading">
-        <div class="spinner">
-          <div class="bounce1"></div>
-          <div class="bounce2"></div>
-          <div class="bounce3"></div>
-        </div>
-        <span>{{ $t("files.loading") }}</span>
-      </h2>
-    </div>
-  </div>
+         border-radius="0px"
+         padding="20px"
+         width="100%"
+         @close="onClose()"
+         @saveFile="onSave()"
+      >
+      </CodeEditor>
+      <div v-if="loading">
+         <h2 class="message delayed editor-loading">
+            <div class="spinner">
+               <div class="bounce1"></div>
+               <div class="bounce2"></div>
+               <div class="bounce3"></div>
+            </div>
+            <span>{{ $t("files.loading") }}</span>
+         </h2>
+      </div>
+   </div>
 </template>
 
 <script>
@@ -221,7 +221,7 @@ export default {
          } catch (error) {
             console.log(error)
             this.setError(error)
-            let data =JSON.parse(this.error.response.data)
+            let data = JSON.parse(this.error.response.data)
             this.raw = "Failed to load file.\nStatus code: " + this.error.response.status + "\ndetails: " + data?.details
          } finally {
             this.copyRaw = this.raw
@@ -252,7 +252,7 @@ export default {
 
             if (this.raw !== this.copyRaw) {
                if (!this.raw) {
-                  await editFile(this.file.id, {"file_data": null})
+                  await editFile(this.file.id, { "file_data": null })
                   this.copyRaw = this.raw
                   this.onSuccessfulSave()
                   return
@@ -292,7 +292,7 @@ export default {
                   crc: crc,
                   attachment: attachment_data
                }
-               await editFile(this.file.id, {"file_data": file_data})
+               await editFile(this.file.id, { "file_data": file_data })
                this.copyRaw = this.raw
             }
             this.onSuccessfulSave()
@@ -348,7 +348,7 @@ export default {
 
 <style>
 .editor-loading {
- width: 103%;
- padding-top: 3em;
+  width: 103%;
+  padding-top: 3em;
 }
 </style>

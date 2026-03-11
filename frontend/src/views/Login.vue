@@ -1,52 +1,52 @@
 <template>
-  <div id="login">
-    <form @submit.prevent.stop="submit">
-      <h1>&#8205;{{ text }}&#8205;</h1>
-      <div v-if="error" class="wrong">{{ error }}</div>
+   <div id="login">
+      <form @submit.prevent.stop="submit">
+         <h1>&#8205;{{ text }}&#8205;</h1>
+         <div v-if="error" class="wrong">{{ error }}</div>
 
-      <div v-if="qrMode && !createMode" class="qr-container">
-        <div v-if="qrSessionId" class="qr-box">
-          <VueQrcode
-            :value="qrCodeData"
-            :options="{ width: 200, margin: 2}"
-          />
-          <h2 v-if="!qrSessionUser" class="qr-instruction">
-            {{$t('login.QrLoginInfo')}}
+         <div v-if="qrMode && !createMode" class="qr-container">
+            <div v-if="qrSessionId" class="qr-box">
+               <VueQrcode
+                  :options="{ width: 200, margin: 2}"
+                  :value="qrCodeData"
+               />
+               <h2 v-if="!qrSessionUser" class="qr-instruction">
+                  {{ $t("login.QrLoginInfo") }}
 
-          </h2>
-          <div v-if="qrSessionUser" class="qr-login-status">
-            <h3>{{$t('login.QrCheckPhone')}}</h3>
-            <h4>{{$t('login.QrLoggingInAs', {'user': qrSessionUser})}}</h4>
-          </div>
-        </div>
-      </div>
-      <div v-else>
-        <input
-          v-model="username"
-          :placeholder="$t('login.username')"
-          autocapitalize="off"
-          autofocus
-          type="text"
-        />
-        <input v-model="password" :placeholder="$t('login.password')" type="password" />
-        <input
-          v-if="createMode"
-          v-model="passwordConfirm"
-          :placeholder="$t('login.passwordConfirm')"
-          type="password"
-        />
+               </h2>
+               <div v-if="qrSessionUser" class="qr-login-status">
+                  <h3>{{ $t("login.QrCheckPhone") }}</h3>
+                  <h4>{{ $t("login.QrLoggingInAs", { "user": qrSessionUser }) }}</h4>
+               </div>
+            </div>
+         </div>
+         <div v-else>
+            <input
+               v-model="username"
+               :placeholder="$t('login.username')"
+               autocapitalize="off"
+               autofocus
+               type="text"
+            />
+            <input v-model="password" :placeholder="$t('login.password')" type="password" />
+            <input
+               v-if="createMode"
+               v-model="passwordConfirm"
+               :placeholder="$t('login.passwordConfirm')"
+               type="password"
+            />
 
-        <input :value="createMode ? $t('login.signup') : $t('login.submit')" type="submit" />
+            <input :value="createMode ? $t('login.signup') : $t('login.submit')" type="submit" />
 
-      </div>
-      <p v-if="!createMode" @click="toggleQRMode()">
-        {{ qrMode ? $t("login.loginNormally") : $t("login.loginWithQrCode") }}
-      </p>
-      <p v-if="signup" @click="toggleMode">
-        {{ createMode ? $t("login.loginInstead") : $t("login.createAnAccount") }}
-      </p>
-    </form>
-  </div>
+         </div>
+         <p v-if="!createMode" @click="toggleQRMode()">
+            {{ qrMode ? $t("login.loginNormally") : $t("login.loginWithQrCode") }}
+         </p>
+         <p v-if="signup" @click="toggleMode">
+            {{ createMode ? $t("login.loginInstead") : $t("login.createAnAccount") }}
+         </p>
+      </form>
+   </div>
 </template>
 
 <script>
@@ -330,105 +330,105 @@ export default {
 </script>
 <style scoped>
 #login {
- background: url('/img/loginPreview.jpg');
+  background: url('/img/loginPreview.jpg');
 }
 
 #login form {
- position: fixed;
- left: 50%;
- transform: translate(-50%, -50%);
- max-width: 16em;
- width: 90%;
+  position: fixed;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 16em;
+  width: 90%;
 }
 
 #login .wrong {
- background: radial-gradient(
-   circle,
-   rgba(255, 0, 0, 0.6) 30%,
-   rgba(255, 0, 0, 0.3) 60%,
-   rgba(255, 0, 0, 0) 100%
- );
- color: #fff;
- padding: 0.5em;
- text-align: center;
- animation: 0.2s opac forwards;
+  background: radial-gradient(
+    circle,
+    rgba(255, 0, 0, 0.6) 30%,
+    rgba(255, 0, 0, 0.3) 60%,
+    rgba(255, 0, 0, 0) 100%
+  );
+  color: #fff;
+  padding: 0.5em;
+  text-align: center;
+  animation: 0.2s opac forwards;
 }
 
 @keyframes opac {
- 0% {
-  opacity: 0;
- }
- 100% {
-  opacity: 1;
- }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 #login p {
- cursor: pointer;
- text-align: right;
- color: var(--blue);
- font-weight: 500;
- font-size: 0.9rem;
- margin: 0.5rem 0;
+  cursor: pointer;
+  text-align: right;
+  color: var(--blue);
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
 }
 
 #login {
- position: fixed;
- top: 0;
- left: 0;
- width: 100%;
- height: 100%;
- background-size: cover;
- background-position: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
 }
 
 #login h1 {
- text-align: center;
- font-size: 2.5em;
- margin: 0.4em 0 0.67em;
- white-space: nowrap;
+  text-align: center;
+  font-size: 2.5em;
+  margin: 0.4em 0 0.67em;
+  white-space: nowrap;
 }
 
 #login input::placeholder {
- color: white;
+  color: white;
 }
 
 #login input {
- width: 100%;
- padding: 0.7em;
- color: white;
- border-radius: 5px;
- background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  padding: 0.7em;
+  color: white;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 
 #login form {
- top: 65%;
+  top: 65%;
 }
 
 #login h1 {
- color: #fc2f99;
- text-shadow: 0 0 10px deeppink,
- 0 0 20px deeppink,
- 0 0 30px hotpink;
- font-weight: bold;
+  color: #fc2f99;
+  text-shadow: 0 0 10px deeppink,
+  0 0 20px deeppink,
+  0 0 30px hotpink;
+  font-weight: bold;
 }
 
 #login input[type='submit'] {
- background-color: rgba(255, 105, 180, 0.7);
- border: none;
- color: white;
- padding: 0.7em;
- font-size: 1em;
- cursor: pointer;
- transition: box-shadow 0.3s ease,
- background-color 0.3s ease;
- box-shadow: 0 0 6px rgba(255, 105, 180, 1);
+  background-color: rgba(255, 105, 180, 0.7);
+  border: none;
+  color: white;
+  padding: 0.7em;
+  font-size: 1em;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease,
+  background-color 0.3s ease;
+  box-shadow: 0 0 6px rgba(255, 105, 180, 1);
 }
 
 #login input[type='submit']:hover {
- background-color: rgba(255, 105, 180, 0.8);
- box-shadow: 0 0 8px rgba(255, 105, 180, 0.5);
+  background-color: rgba(255, 105, 180, 0.8);
+  box-shadow: 0 0 8px rgba(255, 105, 180, 0.5);
 }
 
 
@@ -442,68 +442,68 @@ textarea:-webkit-autofill:focus,
 select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus {
- -webkit-text-fill-color: white;
- transition: background-color 900000s ease-in-out 0s;
- -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  -webkit-text-fill-color: white;
+  transition: background-color 900000s ease-in-out 0s;
+  -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 }
 
 
 .qr-container {
- display: flex;
- flex-direction: column;
- align-items: center;
- margin: 1em 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1em 0;
 }
 
 .qr-box {
- padding: 1em;
- background: rgba(0, 0, 0, 0.4);
- border-radius: 12px;
- text-align: center;
- -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  padding: 1em;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  text-align: center;
+  -webkit-box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 }
 
 .qr-info {
- color: white;
- margin-top: 0.5em;
- font-size: 0.9rem;
+  color: white;
+  margin-top: 0.5em;
+  font-size: 0.9rem;
 }
 
 .qr-loading {
- color: white;
- font-style: italic;
- text-align: center;
- padding: 1em;
+  color: white;
+  font-style: italic;
+  text-align: center;
+  padding: 1em;
 }
 
 
 .qr-instruction {
- color: #fff;
- font-size: 0.95rem;
- margin-top: 0.6em;
- line-height: 1.3;
- font-weight: 500;
+  color: #fff;
+  font-size: 0.95rem;
+  margin-top: 0.6em;
+  line-height: 1.3;
+  font-weight: 500;
 }
 
 .qr-login-status {
- margin-top: 1em;
- padding: 0.8em;
- background: rgba(0, 0, 0, 0.3);
- border-radius: 10px;
- text-align: center;
- color: #fff;
- -webkit-box-shadow: 0 0 8px rgba(131, 130, 130, 0.6);
+  margin-top: 1em;
+  padding: 0.8em;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  text-align: center;
+  color: #fff;
+  -webkit-box-shadow: 0 0 8px rgba(131, 130, 130, 0.6);
 }
 
 .qr-login-status h3 {
- margin: 0 0 0.4em 0;
- font-size: 1.1rem;
- color: #fc2f99;
+  margin: 0 0 0.4em 0;
+  font-size: 1.1rem;
+  color: #fc2f99;
 }
 
 .qr-login-status h4 {
- margin: 0;
- font-size: 0.95rem;
- font-weight: 500;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 </style>

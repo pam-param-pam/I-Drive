@@ -74,9 +74,8 @@ export async function signup(username, password) {
    await validateLogin()
 }
 
-//todo fix this logout mess
+
 export async function logout() {
-   console.log("POLITE LOGOUT ACKNOWLEDGED")
 
    let store = useMainStore()
 

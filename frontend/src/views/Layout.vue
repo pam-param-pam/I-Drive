@@ -13,15 +13,15 @@
 </template>
 
 <script>
-import Prompts from '@/components/prompts/Prompts.vue'
-import UploadFiles from '../components/prompts/UploadFiles.vue'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
-import { useUploadStore } from '@/stores/uploadStore.js'
-import Sidebar from '@/components/sidebar/Sidebar.vue'
+import Prompts from "@/components/prompts/Prompts.vue"
+import UploadFiles from "../components/prompts/UploadFiles.vue"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import { useUploadStore } from "@/stores/uploadStore.js"
+import Sidebar from "@/components/sidebar/Sidebar.vue"
 
 export default {
-   name: 'layout',
+   name: "layout",
 
    components: {
       Sidebar,
@@ -36,12 +36,12 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['perms', 'isLogged']),
-      ...mapState(useUploadStore, ['progress']),
+      ...mapState(useMainStore, ["perms", "isLogged"]),
+      ...mapState(useUploadStore, ["progress"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['setAnonState'])
+      ...mapActions(useMainStore, ["setAnonState"])
    }
 }
 </script>

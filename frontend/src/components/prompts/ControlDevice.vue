@@ -40,8 +40,8 @@
                 ]"
             >
                <i
-                  class="material-icons status-icon"
                   :class="{ 'hourglass-flip': currentDeviceControlStatus.status === 'pending_master'}"
+                  class="material-icons status-icon"
                >
                   {{ statusIconMap[currentDeviceControlStatus.status] || "info" }}
                </i>
@@ -71,7 +71,7 @@
          <div v-if="currentDeviceControlStatus.status === 'active_master'" class="expandable-section card-content">
             <div class="expandable-header" @click="isControlExpanded = !isControlExpanded">
                <strong>{{ $t("prompts.controlOptions") }}</strong>
-               <i class="material-icons expand-icon" :class="{ expanded: isControlExpanded }">
+               <i :class="{ expanded: isControlExpanded }" class="material-icons expand-icon">
                   keyboard_arrow_down
                </i>
             </div>
@@ -85,31 +85,31 @@
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isNavigationActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
+                     <input v-model="deviceControlOptions.isNavigationActive" :disabled="!deviceControlOptions.isDeviceControlActive" type="checkbox" />
                      {{ $t("prompts.isNavigationActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoToggleActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
+                     <input v-model="deviceControlOptions.isVideoToggleActive" :disabled="!deviceControlOptions.isDeviceControlActive" type="checkbox" />
                      {{ $t("prompts.isVideoToggleActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoSeekActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
+                     <input v-model="deviceControlOptions.isVideoSeekActive" :disabled="!deviceControlOptions.isDeviceControlActive" type="checkbox" />
                      {{ $t("prompts.isVideoSeekActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoSubtitlesActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
+                     <input v-model="deviceControlOptions.isVideoSubtitlesActive" :disabled="!deviceControlOptions.isDeviceControlActive" type="checkbox" />
                      {{ $t("prompts.isVideoSubtitlesActive") }}
                   </label>
                </p>
                <p>
                   <label>
-                     <input v-model="deviceControlOptions.isVideoFullscreenActive" type="checkbox" :disabled="!deviceControlOptions.isDeviceControlActive" />
+                     <input v-model="deviceControlOptions.isVideoFullscreenActive" :disabled="!deviceControlOptions.isDeviceControlActive" type="checkbox" />
                      {{ $t("prompts.isVideoFullscreenActive") }}
                   </label>
                </p>
@@ -170,7 +170,7 @@ export default {
          selectedDeviceId: "",
          _tickInterval: null,
          nowTick: null,
-         isControlExpanded: false,
+         isControlExpanded: false
       }
    },
    created() {
@@ -185,7 +185,7 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["deviceControlStatus", "deviceId", "deviceControlOptions"]),
-      //todo store deviceControlOptions in local storage to be persistant
+
       peerInfo() {
          const st = this.currentDeviceControlStatus
          if (!st || !st.peer) return null
@@ -293,94 +293,94 @@ export default {
 </script>
 <style>
 .card.floating {
- max-width: 26em !important;
+  max-width: 26em !important;
 }
 
 .status-panel {
- margin-top: 1rem;
+  margin-top: 1rem;
 }
 
 .status-box {
- display: flex;
- align-items: center;
- padding: 1rem;
- border-radius: 8px;
- border: 1px solid var(--divider);
- gap: 1rem;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--divider);
+  gap: 1rem;
 }
 
 .status-icon {
- font-size: 28px !important;
+  font-size: 28px !important;
 }
 
 .status-text .status-title {
- padding-bottom: 0.3em;
- font-weight: 600;
- margin: 0;
+  padding-bottom: 0.3em;
+  font-weight: 600;
+  margin: 0;
 }
 
 .status-text .status-code {
- margin: 0.3rem 0 0 0;
- font-size: 13px;
- color: var(--textSecondary);
+  margin: 0.3rem 0 0 0;
+  font-size: 13px;
+  color: var(--textSecondary);
 }
 
 .status-waiting {
- background: var(--surfaceSecondary);
+  background: var(--surfaceSecondary);
 }
 
 .status-success {
- background: rgba(40, 167, 69, 0.15);
- border-color: rgba(40, 167, 69, 0.4);
- color: var(--textPrimary);
+  background: rgba(40, 167, 69, 0.15);
+  border-color: rgba(40, 167, 69, 0.4);
+  color: var(--textPrimary);
 }
 
 .status-error {
- background: rgba(220, 53, 69, 0.15);
- border-color: rgba(220, 53, 69, 0.4);
- color: var(--textPrimary);
+  background: rgba(220, 53, 69, 0.15);
+  border-color: rgba(220, 53, 69, 0.4);
+  color: var(--textPrimary);
 }
 
 .status-neutral {
- background: var(--surfacePrimary);
+  background: var(--surfacePrimary);
 }
 
 .hourglass-flip {
- display: inline-block;
- animation: hourglassFlip 4s ease-in-out infinite;
- transform-origin: center;
+  display: inline-block;
+  animation: hourglassFlip 4s ease-in-out infinite;
+  transform-origin: center;
 }
 
 @keyframes hourglassFlip {
- 0% {
-  transform: rotate(0deg);
- }
- 10% {
-  transform: rotate(180deg);
- }
- 45% {
-  transform: rotate(180deg);
- }
- 55% {
-  transform: rotate(0deg);
- }
- 100% {
-  transform: rotate(0deg);
- }
+  0% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(180deg);
+  }
+  45% {
+    transform: rotate(180deg);
+  }
+  55% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 .role-peer-info {
- margin-top: 0.8rem;
- padding-left: 0.3rem;
+  margin-top: 0.8rem;
+  padding-left: 0.3rem;
 }
 
 .role-peer-info .role-line {
- margin: 0 0 0.3rem 0;
+  margin: 0 0 0.3rem 0;
 }
 
 .role-peer-info .peer-line {
- margin: 0;
- color: var(--textSecondary);
+  margin: 0;
+  color: var(--textSecondary);
 }
 
 </style>

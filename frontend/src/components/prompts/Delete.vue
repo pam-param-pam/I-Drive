@@ -1,35 +1,35 @@
 <template>
-  <div class="card floating">
-    <div class="card-title">
-      <h2>{{ $t("prompts.irreversibleAction") }}</h2>
-    </div>
-    <div class="card-content">
-      <p v-if="selectedCount === 1">
-        {{ $t("prompts.deleteMessageSingle") }}
-      </p>
-      <p v-else-if="selectedCount > 1">
-        {{ $t("prompts.deleteMessageMultiple", { count: selectedCount }) }}
-      </p>
-    </div>
-    <div class="card-action">
-      <button
-        :aria-label="$t('buttons.cancel')"
-        :title="$t('buttons.cancel')"
-        class="button button--flat button--grey"
-        @click="closeHover()"
-      >
-        {{ $t("buttons.cancel") }}
-      </button>
-      <button
-        :aria-label="$t('buttons.delete')"
-        :title="$t('buttons.delete')"
-        class="button button--flat button--red"
-        @click="submit"
-      >
-        {{ $t("buttons.delete") }}
-      </button>
-    </div>
-  </div>
+   <div class="card floating">
+      <div class="card-title">
+         <h2>{{ $t("prompts.irreversibleAction") }}</h2>
+      </div>
+      <div class="card-content">
+         <p v-if="selectedCount === 1">
+            {{ $t("prompts.deleteMessageSingle") }}
+         </p>
+         <p v-else-if="selectedCount > 1">
+            {{ $t("prompts.deleteMessageMultiple", { count: selectedCount }) }}
+         </p>
+      </div>
+      <div class="card-action">
+         <button
+            :aria-label="$t('buttons.cancel')"
+            :title="$t('buttons.cancel')"
+            class="button button--flat button--grey"
+            @click="closeHover()"
+         >
+            {{ $t("buttons.cancel") }}
+         </button>
+         <button
+            :aria-label="$t('buttons.delete')"
+            :title="$t('buttons.delete')"
+            class="button button--flat button--red"
+            @click="submit"
+         >
+            {{ $t("buttons.delete") }}
+         </button>
+      </div>
+   </div>
 </template>
 
 <script>

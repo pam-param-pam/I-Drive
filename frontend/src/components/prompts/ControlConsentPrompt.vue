@@ -63,17 +63,17 @@ export default {
    props: {
       masterDevice: {
          type: Object,
-         required: true,
+         required: true
       },
       expiry: {
          type: Number,
-         required: true,
+         required: true
       }
    },
 
    data() {
       return {
-         _expiryTimer: null,
+         _expiryTimer: null
       }
    },
    mounted() {
@@ -87,13 +87,13 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
 
-      approveRequest: throttle( function() {
-         this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "approve"}}))
+      approveRequest: throttle(function() {
+         this.$socket.send(JSON.stringify({ op_code: 14, "message": { "type": "approve" } }))
          this.$toast.success(this.$t("toasts.deviceControlActive"))
          this.closeHover()
       }, 1000),
-      rejectRequest: throttle( function() {
-         this.$socket.send(JSON.stringify({ op_code: 14, "message": {"type": "reject"}}))
+      rejectRequest: throttle(function() {
+         this.$socket.send(JSON.stringify({ op_code: 14, "message": { "type": "reject" } }))
          this.closeHover()
       }, 1000),
       cancel() {
@@ -119,7 +119,7 @@ export default {
             clearInterval(this._expiryTimer)
             this._expiryTimer = null
          }
-      },
+      }
 
    }
 }
@@ -128,20 +128,20 @@ export default {
 <style scoped>
 
 .device-info {
-   border: 1px solid #ffffff;
-   padding: 0.5rem;
-   margin-top: 1rem;
-   border-radius: 8px;
-   font-size: 0.9rem;
-   color: var(--textSecondary);
+  border: 1px solid #ffffff;
+  padding: 0.5rem;
+  margin-top: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--textSecondary);
 }
 
 .device-info p {
-   margin: 0.25rem 0;
+  margin: 0.25rem 0;
 }
 
 .material-icons {
-   font-size: 20px !important;
-   vertical-align: -5px; /* moves it lower */
+  font-size: 20px !important;
+  vertical-align: -5px; /* moves it lower */
 }
 </style>

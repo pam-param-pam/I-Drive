@@ -52,12 +52,12 @@
 
 <script>
 export default {
-   name: 'SaveButton',
+   name: "SaveButton",
 
    data() {
       return {
-         message: 'buttons.saveFile',
-         currentState: 'normal'
+         message: "buttons.saveFile",
+         currentState: "normal"
       }
    },
 
@@ -77,12 +77,12 @@ export default {
          this.observer.observe(saveButtonElement, {
             attributes: true,
             attributeOldValue: true,
-            attributeFilter: ['class']
+            attributeFilter: ["class"]
          })
 
          this.updateStateFromClass()
       } else {
-         console.error('saveButton reference not found')
+         console.error("saveButton reference not found")
       }
    },
 
@@ -97,15 +97,15 @@ export default {
          let button = this.$refs.saveButton
          let classList = button.classList
 
-         if (classList.contains('loading')) {
-            this.currentState = 'loading'
-            this.message = 'buttons.savingFile'
-         } else if (classList.contains('success')) {
-            this.currentState = 'success'
-            this.message = 'buttons.fileSaved'
+         if (classList.contains("loading")) {
+            this.currentState = "loading"
+            this.message = "buttons.savingFile"
+         } else if (classList.contains("success")) {
+            this.currentState = "success"
+            this.message = "buttons.fileSaved"
          } else {
-            this.currentState = 'normal'
-            this.message = 'buttons.saveFile'
+            this.currentState = "normal"
+            this.message = "buttons.saveFile"
          }
       },
 
@@ -118,82 +118,82 @@ export default {
 
 <style scoped>
 .code-editor .save-file {
-   transition: 0.2s opacity ease;
-   position: relative;
-   opacity: 0.5;
-   width: 24px;
-   height: 24px;
-   cursor: pointer;
+  transition: 0.2s opacity ease;
+  position: relative;
+  opacity: 0.5;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
 }
 
 .code-editor .save-file:focus {
-   outline: none;
+  outline: none;
 }
 
 .code-editor .save-file > svg {
-   pointer-events: none;
+  pointer-events: none;
 }
 
 .code-editor .save-file.normal {
-   opacity: 0.5;
+  opacity: 0.5;
 }
 
 .code-editor .save-file.loading {
-   opacity: 0.5;
+  opacity: 0.5;
 }
 
 .code-editor .save-file.success {
-   opacity: 0.5;
+  opacity: 0.5;
 }
 
 .code-editor .save-file:hover {
-   opacity: 1;
+  opacity: 1;
 }
 
 .code-editor .save-file:hover > .tooltip {
-   display: block;
+  display: block;
 }
 
 .code-editor .save-file > .tooltip {
-   font-family: sans-serif;
-   display: none;
-   position: absolute;
-   bottom: -50px;
-   left: -96px;
-   font-size: 12px;
-   color: white;
-   background: rgba(0, 0, 0, 0.8);
-   box-sizing: border-box;
-   text-align: center;
-   border-radius: 4px;
-   padding: 8px 12px;
-   white-space: nowrap;
-   z-index: 10;
+  font-family: sans-serif;
+  display: none;
+  position: absolute;
+  bottom: -50px;
+  left: -96px;
+  font-size: 12px;
+  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  box-sizing: border-box;
+  text-align: center;
+  border-radius: 4px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  z-index: 10;
 }
 
 /* Loading Spinner Animation */
 @keyframes spin {
-   0% {
-      transform: rotate(0deg);
-   }
-   100% {
-      transform: rotate(360deg);
-   }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-icon {
-   animation: spin 1s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
 .code-editor .save-file.success {
-   width: 32px;
-   height: 32px;
+  width: 32px;
+  height: 32px;
 
-   top: 12px !important;
-   right: 55px !important;
+  top: 12px !important;
+  right: 55px !important;
 }
 
 .code-editor .save-file.success svg path {
-   stroke-width: 1;
+  stroke-width: 1;
 }
 </style>

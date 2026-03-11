@@ -20,21 +20,21 @@
 
 <script>
 export default {
-   name: 'CopyCode',
+   name: "CopyCode",
 
    data() {
       return {
-         message: 'buttons.copyText'
+         message: "buttons.copyText"
       }
    },
 
    methods: {
       showMessage() {
-         this.message = 'buttons.copied'
+         this.message = "buttons.copied"
       },
 
       resetMessage() {
-         this.message = 'buttons.copyText'
+         this.message = "buttons.copyText"
       }
    }
 }
@@ -42,44 +42,44 @@ export default {
 
 <style scoped>
 .code-editor .copy-code {
-   transition: 0.2s opacity ease;
-   position: relative;
-   opacity: 0.5;
-   width: 24px;
-   height: 24px;
-   cursor: pointer;
+  transition: 0.2s opacity ease;
+  position: relative;
+  opacity: 0.5;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
 }
 
 .code-editor .copy-code:focus {
-   outline: none;
+  outline: none;
 }
 
 .code-editor .copy-code > svg {
-   pointer-events: none;
+  pointer-events: none;
 }
 
 .code-editor .copy-code:hover {
-   opacity: 1;
+  opacity: 1;
 }
 
 .code-editor .copy-code:hover > .tooltip {
-   display: block;
+  display: block;
 }
 
 .code-editor .copy-code > .tooltip {
-   font-family: sans-serif;
-   display: none;
-   position: absolute;
-   bottom: -50px;
-   left: -96px;
-   font-size: 12px;
-   color: white;
-   background: rgba(0, 0, 0, 0.8);
-   padding: 8px 12px;
-   box-sizing: border-box;
-   text-align: center;
-   border-radius: 4px;
-   white-space: nowrap;
-   z-index: 10;
+  font-family: sans-serif;
+  display: none;
+  position: absolute;
+  bottom: -50px;
+  left: -96px;
+  font-size: 12px;
+  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px 12px;
+  box-sizing: border-box;
+  text-align: center;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
 }
 </style>

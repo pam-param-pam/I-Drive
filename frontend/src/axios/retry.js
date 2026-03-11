@@ -6,7 +6,9 @@ export async function retryRequest(instance, error, delay, maxRetries = 5) {
 
    if (!config) return Promise.reject(error)
 
-   if (!error.config.__retryCount) { error.config.__retryCount = 0 }
+   if (!error.config.__retryCount) {
+      error.config.__retryCount = 0
+   }
 
    if (config.__retryCount >= maxRetries) {
       console.warn(`Max retries reached (${maxRetries}). Aborting.`)
@@ -23,7 +25,7 @@ export async function retryRequest(instance, error, delay, maxRetries = 5) {
 }
 
 
-export async function retry469Error(instance, error, maxTries=2) {
+export async function retry469Error(instance, error, maxTries = 2) {
    const mainStore = useMainStore()
    let config = error.config
    if (!config.__retryCount) config.__retryCount = 0
@@ -41,6 +43,7 @@ export async function retry469Error(instance, error, maxTries=2) {
 
    let passwordExists = []
    let passwordMissing = []
+
 
    function retry469Request() {
       return new Promise((resolve, reject) => {
@@ -76,6 +79,7 @@ export async function retry469Error(instance, error, maxTries=2) {
       })
    }
 
+
    if (requiredFolderPasswords) {
 
       // Iterate through requiredFolderPasswords
@@ -102,7 +106,7 @@ export async function retry469Error(instance, error, maxTries=2) {
                },
                cancel: () => {
                   reject(error)
-               },
+               }
             })
          })
       } else {

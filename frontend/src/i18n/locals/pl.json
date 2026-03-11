@@ -71,7 +71,6 @@
     "update": "Aktualizuj",
     "upload": "Prześlij",
     "editThumbnail": "Zmień podgląd"
-
   },
   "errors": {
     "urlInvalidOrExpired": "URL wygasł, odswież strone",
@@ -118,7 +117,6 @@
     "noConnectionDetails": "Nie udało sie polączyć z serwerem, sprawdź swoje polączenie.",
     "noConnection": "Brak internetu",
     "badGateway": "Serwer nie odpowiada"
-
   },
   "files": {
     "clear": "Wyczyść",
@@ -459,7 +457,6 @@
     "toggleDarkMode": "Przełącz tryb nocny",
     "trash": "Kosz",
     "newFile": "Nowy plik"
-
   },
   "time": {
     "days": "Dni",
@@ -550,7 +547,6 @@
     "webhookMissing": "Brak webhook URL",
     "websocketError": "Nie udało sie polączyć z websocketem, strona nie będzie działała poprawnie.",
     "copied": "skopiowano"
-
   },
   "trash": {
     "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!",

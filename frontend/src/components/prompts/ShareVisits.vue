@@ -23,17 +23,17 @@
 
                <tbody>
                <tr
-                 v-for="(visit, index) in sortedVisits"
-                 :key="visit.id"
-                 class="clickable-row"
-                 @click="openEvents(visit)"
+                  v-for="(visit, index) in sortedVisits"
+                  :key="visit.id"
+                  class="clickable-row"
+                  @click="openEvents(visit)"
                >
                   <td class="index-cell">
                      {{ index + 1 }}.
                   </td>
 
                   <td>
-                     {{ visit.user || 'Anonymous' }}
+                     {{ visit.user || "Anonymous" }}
                   </td>
 
                   <td>
@@ -74,12 +74,12 @@ export default {
 
    props: {
       share: { type: Object, required: true },
-      visits: { type: Array, required: true },
+      visits: { type: Array, required: true }
    },
    computed: {
       sortedVisits() {
          return [...this.visits].sort((a, b) =>
-           new Date(b.access_time) - new Date(a.access_time)
+            new Date(b.access_time) - new Date(a.access_time)
          )
       }
    },
@@ -91,7 +91,7 @@ export default {
          let events = await getVisitEvents(this.share.token, visit.id)
          this.showHover({
             prompt: "ShareVisitEvents",
-            props: {"share": this.share, events, visit},
+            props: { "share": this.share, events, visit }
          })
       }
    }
@@ -100,52 +100,55 @@ export default {
 
 <style scoped>
 .card.floating {
-   max-width: 30em !important;
+  max-width: 30em !important;
 }
+
 .scrollable-card {
-   max-height: 80vh;
-   display: flex;
-   flex-direction: column;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-content {
-   flex: 1;
-   overflow: hidden;
+  flex: 1;
+  overflow: hidden;
 }
 
 .share-table-container {
-   max-height: 55vh;
-   overflow-y: auto;
-   overflow-x: hidden;
-   padding-right: 0.5em;
+  max-height: 55vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5em;
 }
 
 .share-table-container table {
-   width: 100%;
-   border-collapse: collapse;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 .share-table-container thead th {
-   position: sticky;
-   top: 0;
-   z-index: 2;
-   background: var(--surfacePrimary);
-   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surfacePrimary);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
 }
 
 .clickable-row {
-   cursor: pointer;
-   transition: background-color 0.15s ease;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .clickable-row:hover {
-   background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.05);
 }
+
 .share-table-container td:nth-child(2),
 .share-table-container th:nth-child(2) {
-   padding-right: 2rem;
+  padding-right: 2rem;
 }
+
 .index-cell {
-   opacity: 0.6;
+  opacity: 0.6;
 }
 </style>

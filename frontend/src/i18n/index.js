@@ -1,49 +1,47 @@
-import {createI18n} from 'vue-i18n'
-import en from './locals/en.json'
-import pl from './locals/pl.json'
-import uwu from './locals/uwu.json'
+import { createI18n } from "vue-i18n"
+import en from "./locals/en.json"
+import pl from "./locals/pl.json"
+import uwu from "./locals/uwu.json"
 
-// Detect the locale based on the browser settings
 export function detectLocale() {
    let locale = (navigator.language || navigator.browserLanguage).toLowerCase()
    switch (true) {
       case /^en.*/i.test(locale):
-         locale = 'en'
+         locale = "en"
          break
       case /^pl.*/i.test(locale):
-         locale = 'pl'
+         locale = "pl"
          break
       case /^uwu.*/i.test(locale):
-         locale = 'uwu'
+         locale = "uwu"
          break
       default:
-         locale = 'en'
+         locale = "en"
    }
    return locale
 }
 
-// Remove empty values recursively from the object
+
 const removeEmpty = (obj) =>
    Object.keys(obj)
-      .filter((k) => obj[k] !== null && obj[k] !== undefined && obj[k] !== '') // Remove undefined, null, and empty string
+      .filter((k) => obj[k] !== null && obj[k] !== undefined && obj[k] !== "")
       .reduce(
          (newObj, k) =>
-            typeof obj[k] === 'object'
-               ? Object.assign(newObj, {[k]: removeEmpty(obj[k])}) // Recurse
-               : Object.assign(newObj, {[k]: obj[k]}), // Copy value
+            typeof obj[k] === "object"
+               ? Object.assign(newObj, { [k]: removeEmpty(obj[k]) })
+               : Object.assign(newObj, { [k]: obj[k] }),
          {}
       )
 
 
-// Create the i18n instance with the locale and messages
 const i18n = createI18n({
    locale: detectLocale(),
-   fallbackLocale: 'en',
+   fallbackLocale: "en",
    messages: {
       en: en,
       pl: removeEmpty(pl),
-      uwu: removeEmpty(uwu),
-   },
+      uwu: removeEmpty(uwu)
+   }
 })
 
 export default i18n

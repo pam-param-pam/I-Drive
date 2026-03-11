@@ -4,11 +4,11 @@
 
 <script>
 export default {
-   name: 'app',
+   name: "app",
 
    mounted() {
-      const loading = document.getElementById('loading')
-      loading.classList.add('done')
+      const loading = document.getElementById("loading")
+      loading.classList.add("done")
 
       setTimeout(() => {
          loading.parentNode.removeChild(loading)
@@ -23,15 +23,15 @@ export default {
 html,
 body,
 #app {
-   height: 100%;
+  height: 100%;
 }
 
 body {
-   overflow: hidden;
+  overflow: hidden;
 }
 
 body.enable-scroll,
 #app.enable-scroll {
-   overflow: auto !important;
+  overflow: auto !important;
 }
 </style>

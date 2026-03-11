@@ -14,7 +14,6 @@ import { FileStateHolder } from "@/upload/FileStateHolder.js"
  * Figure a way for DiscordAttachmentConsumer to know when a file is finished. Prob make UploadRuntime emit a yet another callback, and make DiscordAttachmentConsumer
  * register one
  *
- * 
  */
 export class UploadRuntime {
    constructor({ uploadFinishCallback }) {
@@ -36,6 +35,7 @@ export class UploadRuntime {
 
       this._emitGlobalState()
    }
+
    onFileChange(fields, listener) {
       if (!Array.isArray(fields) || fields.length === 0) {
          throw new Error("onFileChange requires a non-empty field list")
@@ -60,6 +60,7 @@ export class UploadRuntime {
          fileCount: this.fileStates.size
       }
    }
+
    onGlobalStateChange(listener) {
       this._globalStateListeners.add(listener)
       return () => this._globalStateListeners.delete(listener)
@@ -142,7 +143,7 @@ export class UploadRuntime {
 
       for (const fileState of affectedFiles) {
          this._setStatus(fileState.frontendId, fileUploadStatus.retrying)
-         const newBytes = Math.max(0,fileState.uploadedBytes - bytesUploaded)
+         const newBytes = Math.max(0, fileState.uploadedBytes - bytesUploaded)
          fileState.setUploadedBytes(newBytes)
       }
 
@@ -171,6 +172,7 @@ export class UploadRuntime {
       this.pendingWorkerFilesLength = number
       this._emitGlobalState()
    }
+
    registerFile(file) {
       const frontendId = file.fileObj.frontendId
 
@@ -178,12 +180,13 @@ export class UploadRuntime {
          throw Error("Attempted to register file state of a file already registered")
       }
 
-      const fileState = new FileStateHolder(file,change => this._onRawFileFieldChange(change))
+      const fileState = new FileStateHolder(file, change => this._onRawFileFieldChange(change))
       this.fileStates.set(frontendId, fileState)
       fileState.emitInitialState()
 
-      this._emitGlobalState() //todo
+      this._emitGlobalState()
    }
+
    _onRawFileFieldChange(change) {
       const { frontendId, field } = change
 
@@ -206,6 +209,7 @@ export class UploadRuntime {
       }
       return state
    }
+
    deleteFileState(frontendId) {
       this.markFileSaved(frontendId)
    }
@@ -221,6 +225,7 @@ export class UploadRuntime {
    isUploadFullyFinished() {
       return this.fileStates.size === 0
    }
+
    _checkAllFilesFinished() {
       if (this.isUploadFullyFinished() && this._uploadFinishCallback) {
          this._uploadFinishCallback()
@@ -247,6 +252,7 @@ export class UploadRuntime {
    _setStatus(frontendId, status) {
       this.fileStates.get(frontendId).setStatus(status)
    }
+
    async waitUntilResumed() {
       return new Promise(resolve => {
          const unsubscribe = this.onUploadStateChange(

@@ -26,7 +26,7 @@ export default {
       }
    },
 
-   emits: ['hide'],
+   emits: ["hide"],
 
    data() {
       return {
@@ -42,42 +42,35 @@ export default {
          return Math.min(this.pos.x, window.innerWidth - (this.contextMenu?.clientWidth || 0))
       }
    },
-
-   watch: {
-      show(val) {
-         if (val) {
-            document.addEventListener('mouseup', this.hideContextMenu)
-         } else {
-            document.removeEventListener('mouseup', this.hideContextMenu)
-         }
-      }
+   mounted() {
+      document.addEventListener("mouseup", this.hideContextMenu)
    },
 
    beforeUnmount() {
-      document.removeEventListener('mouseup', this.hideContextMenu)
+      document.removeEventListener("mouseup", this.hideContextMenu)
    },
 
    methods: {
       hideContextMenu() {
-         this.$emit('hide')
+         this.$emit("hide")
       }
    }
 }
 </script>
 <style>
 .context-menu {
-   position: fixed;
-   min-width: 200px;
-   border: 1px solid rgba(0, 0, 0, 0.2);
-   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-   z-index: 1000;
-   background-color: var(--surfacePrimary);
+  position: fixed;
+  min-width: 200px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  background-color: var(--surfacePrimary);
 }
 
 .context-menu .action {
-   width: 100%;
-   border-radius: 0;
-   display: flex;
-   align-items: center;
+  width: 100%;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
 }
 </style>

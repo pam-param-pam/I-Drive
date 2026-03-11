@@ -13,6 +13,7 @@ from ..core.helpers import validate_key, validate_encryption_fields, validate_va
 from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
 from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Fragment, Folder
 from ..models.file_related_models import RawMetadata
+from ..models.mixin_models import ItemState
 from ..queries.selectors import get_discord_author, get_discord_channel
 
 
@@ -307,3 +308,14 @@ def internal_move_to_new_parent(file_ids: list[str], new_parent: Folder):
         last_modified_at=now,
     )
     folder_service._clear_cache([new_parent.id])
+
+
+def internal_force_ready(file_ids: list[str]):
+    now = timezone.now()
+
+    File.objects.filter(id__in=file_ids).update(
+        state=ItemState.ACTIVE,
+        state_changed_at=now,
+        state_error=None
+    )
+    _clear_cache(file_ids)

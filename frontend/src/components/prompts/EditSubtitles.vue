@@ -19,17 +19,17 @@
                <!-- EDIT MODE -->
                <input
                   v-else
-                  class="subtitle-lang-input"
                   v-model.trim="editingValue"
+                  class="subtitle-lang-input"
                   @blur="commitEdit(sub)"
                   @keydown.enter.prevent="commitEdit(sub)"
                />
 
                <div class="subtitle-actions">
                   <button
+                     :disabled="editingId === sub.id"
                      class="action"
                      @click="startEdit(sub)"
-                     :disabled="editingId === sub.id"
                   >
                      <i class="material-icons">edit</i>
                   </button>
@@ -49,16 +49,16 @@
             <input
                id="langInput"
                v-model.trim="newLanguage"
-               placeholder="English"
                class="input input--block"
+               placeholder="English"
             />
          </div>
 
          <div class="file-input-wrapper">
             <SmartFileInput
                ref="subtitleFileInput"
-               accept=".vtt,.srt"
                :label="$t('buttons.addSubtitleFile')"
+               accept=".vtt,.srt"
                @file-selected="onSubtitleInput"
             />
          </div>
@@ -81,23 +81,23 @@
 
                <div class="input-group">
                   <label>Font Size (px)</label>
-                  <input type="number" v-model.number="subtitleStyle.fontSize" min="10" />
+                  <input v-model.number="subtitleStyle.fontSize" min="10" type="number" />
                </div>
                <div class="input-group input-color">
                   <label>Font Color</label>
-                  <input type="color" v-model="subtitleStyle.color" />
+                  <input v-model="subtitleStyle.color" type="color" />
                </div>
                <div class="input-group input-color">
                   <label>Background Color</label>
-                  <input type="color" v-model="subtitleStyle.backgroundColor" />
+                  <input v-model="subtitleStyle.backgroundColor" type="color" />
                </div>
                <div class="input-group">
                   <label>Text Shadow</label>
-                  <input type="text" v-model="subtitleStyle.textShadow" placeholder="e.g. 2px 2px 4px #000000" />
+                  <input v-model="subtitleStyle.textShadow" placeholder="e.g. 2px 2px 4px #000000" type="text" />
                </div>
                <div class="input-group">
                   <label>Default</label>
-                  <input type="checkbox" v-model="subtitleStyle.default" />
+                  <input v-model="subtitleStyle.default" type="checkbox" />
                </div>
             </div>
          </div>
@@ -107,8 +107,8 @@
             {{ $t("buttons.cancel") }}
          </button>
          <button
-            class="button button--flat"
             :disabled="!canSubmit"
+            class="button button--flat"
             @click="submit"
          >
             {{ $t("buttons.save") }}
@@ -362,90 +362,90 @@ export default {
 
 <style scoped>
 .subtitle-list {
- list-style: none;
- padding: 0;
+  list-style: none;
+  padding: 0;
 }
 
 .subtitle-list li {
- display: flex;
- align-items: center;
- justify-content: space-between;
- margin: 0.5em 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.5em 0;
 }
 
 
 .input-group.input {
- background: transparent;
+  background: transparent;
 }
 
 .input-group label {
- font-size: 15px;
- color: var(--textSecondary);
+  font-size: 15px;
+  color: var(--textSecondary);
 }
 
 .prompts-progress-bar-wrapper {
- display: flex;
- align-items: center;
- gap: 1em;
- margin-top: 1em;
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-top: 1em;
 }
 
 .advanced-settings {
- margin-top: 1em;
- padding: 1em;
- background: var(--surfacePrimary);
- border: 1px solid var(--divider);
- border-radius: 8px;
+  margin-top: 1em;
+  padding: 1em;
+  background: var(--surfacePrimary);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
 }
 
 .advanced-settings .input-group {
- margin-bottom: 1em;
+  margin-bottom: 1em;
 }
 
 .advanced-settings .input-color input {
- padding: 0.20em 0.20em !important;
- height: 25px;
+  padding: 0.20em 0.20em !important;
+  height: 25px;
 }
 
 
 .advanced-settings input,
 .advanced-settings select {
- margin-top: 0.5em;
- margin-left: 0.5em;
- padding: 0.5em 0.5em;
- border: 1px solid var(--divider);
- border-radius: 6px;
- background-color: var(--surfaceSecondary);
- color: var(--textPrimary);
- font-size: 14px;
- box-sizing: border-box;
+  margin-top: 0.5em;
+  margin-left: 0.5em;
+  padding: 0.5em 0.5em;
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+  background-color: var(--surfaceSecondary);
+  color: var(--textPrimary);
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
 .subtitle-lang {
- color: var(--textSecondary);
- padding-left: 0.5em;
+  color: var(--textSecondary);
+  padding-left: 0.5em;
 }
 
 .subtitle-list li {
- display: flex;
- align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .subtitle-lang {
- margin-right: auto;
+  margin-right: auto;
 }
 
 .subtitle-actions {
- display: flex;
- gap: 0.5em;
+  display: flex;
+  gap: 0.5em;
 }
 
 .subtitle-lang-input {
- font-size: inherit;
- background: var(--surfaceSecondary);
- color: var(--textPrimary);
- border: 1px solid var(--divider);
- border-radius: 4px;
- padding: 0.2em 0.4em;
+  font-size: inherit;
+  background: var(--surfaceSecondary);
+  color: var(--textPrimary);
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  padding: 0.2em 0.4em;
 }
 </style>

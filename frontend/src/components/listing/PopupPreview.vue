@@ -1,6 +1,6 @@
 <template>
-   <div class="popup-preview" v-if="source" ref="popup" :style="popupStyle">
-      <img :src="source" alt="Popup image" :style="popupStyle">
+   <div v-if="source" ref="popup" :style="popupStyle" class="popup-preview">
+      <img :src="source" :style="popupStyle" alt="Popup image">
    </div>
 </template>
 
@@ -93,7 +93,7 @@ export default {
             imageHeight *= scale
          }
 
-         // Keep within viewport (optional)
+         // Keep within viewport
          imageWidth = Math.min(imageWidth, innerWidth - 2 * padding)
          imageHeight = Math.min(imageHeight, innerHeight - 2 * padding)
 
@@ -124,28 +124,28 @@ export default {
 
 <style scoped>
 .popup-preview {
- height: unset !important;
- position: fixed;
- pointer-events: none;
- border-radius: 1em;
- border-style: solid;
- border-width: 0.2em;
- box-shadow: 0 0 0.5em black;
- border-color: var(--dark-blue);
- overflow: hidden;
- z-index: 1000;
- transition: all 0.3s ease-in-out;
- background: gray;
+  height: unset !important;
+  position: fixed;
+  pointer-events: none;
+  border-radius: 1em;
+  border-style: solid;
+  border-width: 0.2em;
+  box-shadow: 0 0 0.5em black;
+  border-color: var(--dark-blue);
+  overflow: hidden;
+  z-index: 1000;
+  transition: all 0.3s ease-in-out;
+  background: gray;
 }
 
 .popup-preview img {
- pointer-events: none;
- width: auto;
- height: auto;
- max-width: 100%;
- max-height: 100%;
- display: block;
- object-fit: contain;
+  pointer-events: none;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  object-fit: contain;
 
 }
 </style>

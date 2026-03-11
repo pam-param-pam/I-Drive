@@ -4,14 +4,14 @@
       <div class="column">
          <div class="card">
             <div class="card-title">
-               <h2>{{ $t('settings.shareManagement') }}</h2>
+               <h2>{{ $t("settings.shareManagement") }}</h2>
             </div>
 
             <div v-if="shares.length > 0" class="card-content full">
                <table>
                   <tr>
-                     <th>{{ $t('settings.name') }}</th>
-                     <th class="expiry-column">{{ $t('settings.shareExpiry') }}</th>
+                     <th>{{ $t("settings.name") }}</th>
+                     <th class="expiry-column">{{ $t("settings.shareExpiry") }}</th>
                      <th></th>
                      <th></th>
                      <th></th>
@@ -23,16 +23,16 @@
                      </td>
                      <td class="expiry-column">
                         <template v-if="share.expire !== 0"
-                           >{{ humanTime(share.expire) }}
+                        >{{ humanTime(share.expire) }}
                         </template>
-                        <template v-else>{{ $t('permanent') }}</template>
+                        <template v-else>{{ $t("permanent") }}</template>
                      </td>
                      <td class="small">
                         <button
-                          :aria-label="$t('buttons.info')"
-                          :title="$t('buttons.info')"
-                          class="action"
-                          @click="showInfo($event, share)"
+                           :aria-label="$t('buttons.info')"
+                           :title="$t('buttons.info')"
+                           class="action"
+                           @click="showInfo($event, share)"
                         >
                            <i class="material-icons">info</i>
                         </button>
@@ -62,7 +62,7 @@
             </div>
             <h2 v-else class="message">
                <i class="material-icons">sentiment_dissatisfied</i>
-               <span>{{ $t('files.lonely') }}</span>
+               <span>{{ $t("files.lonely") }}</span>
             </h2>
          </div>
       </div>
@@ -70,22 +70,22 @@
 </template>
 
 <script>
-import Clipboard from 'clipboard'
+import Clipboard from "clipboard"
 import { getAllShares, deleteShare, getShareVisits } from "@/api/share.js"
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
-import Errors from '@/components/Errors.vue'
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
 
 export default {
-   name: 'shares',
+   name: "shares",
 
    components: {
       Errors
    },
 
    computed: {
-      ...mapState(useMainStore, ['settings', 'loading', 'error'])
+      ...mapState(useMainStore, ["settings", "loading", "error"])
    },
 
    data() {
@@ -108,9 +108,9 @@ export default {
    },
 
    mounted() {
-      this.clip = new Clipboard('.copy-clipboard')
-      this.clip.on('success', () => {
-         this.$toast.success(this.$t('toasts.linkCopied'))
+      this.clip = new Clipboard(".copy-clipboard")
+      this.clip.on("success", () => {
+         this.$toast.success(this.$t("toasts.linkCopied"))
       })
    },
 
@@ -120,7 +120,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ['setLoading', 'closeHover', 'showHover', 'setError']),
+      ...mapActions(useMainStore, ["setLoading", "closeHover", "showHover", "setError"]),
 
       async deleteLink(event, share) {
          event.preventDefault()
@@ -128,21 +128,21 @@ export default {
          if (event.ctrlKey) {
             await deleteShare(share.token)
             this.shares = this.shares.filter((item) => item.token !== share.token)
-            this.$toast.success(this.$t('toasts.shareDeleted'))
+            this.$toast.success(this.$t("toasts.shareDeleted"))
          } else {
             this.showHover({
-               prompt: 'shareDelete',
+               prompt: "shareDelete",
                confirm: async () => {
                   await deleteShare(share.token)
                   this.shares = this.shares.filter((item) => item.token !== share.token)
-                  this.$toast.success(this.$t('toasts.shareDeleted'))
+                  this.$toast.success(this.$t("toasts.shareDeleted"))
                }
             })
          }
       },
 
       buildLink(share) {
-         let route = this.$router.resolve({ name: 'Share', params: { token: share.token } })
+         let route = this.$router.resolve({ name: "Share", params: { token: share.token } })
          return new URL(route.href, window.location.origin).href
       },
 
@@ -150,7 +150,7 @@ export default {
          let visits = await getShareVisits(share.token)
          this.showHover({
             prompt: "ShareVisits",
-            props: {share, visits},
+            props: { share, visits }
          })
       }
    }

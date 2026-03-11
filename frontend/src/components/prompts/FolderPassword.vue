@@ -1,50 +1,50 @@
 <template>
-  <div class="card floating">
-    <div class="card-title">
-      <h2 v-if="!isInShareContext">{{ $t("prompts.unlockFolder") }}</h2>
-      <h2 v-else>{{ $t("prompts.unlockShare") }}</h2>
+   <div class="card floating">
+      <div class="card-title">
+         <h2 v-if="!isInShareContext">{{ $t("prompts.unlockFolder") }}</h2>
+         <h2 v-else>{{ $t("prompts.unlockShare") }}</h2>
 
-    </div>
+      </div>
 
-    <div class="card-content">
-      <p v-if="!isInShareContext">
-        {{ $t("prompts.enterFolderPassword") }} <code>{{ folder.name }}</code>
-      </p>
-      <p v-else>
-        {{ $t("prompts.enterSharePassword") }} <code>{{ folder.name }}</code>
-      </p>
-      <input v-focus v-model.trim="password" class="input input--block" type="text" />
-      <button
-        v-if="!isInShareContext"
-        :aria-label="$t('buttons.forgotFolderPassword')"
-        :title="$t('buttons.forgotFolderPassword')"
-        class="button button--small button--text-blue"
-        @click="forgotPassword()"
-      >
-        {{ $t("buttons.forgotFolderPassword") }}
-      </button>
-    </div>
+      <div class="card-content">
+         <p v-if="!isInShareContext">
+            {{ $t("prompts.enterFolderPassword") }} <code>{{ folder.name }}</code>
+         </p>
+         <p v-else>
+            {{ $t("prompts.enterSharePassword") }} <code>{{ folder.name }}</code>
+         </p>
+         <input v-focus v-model.trim="password" class="input input--block" type="text" />
+         <button
+            v-if="!isInShareContext"
+            :aria-label="$t('buttons.forgotFolderPassword')"
+            :title="$t('buttons.forgotFolderPassword')"
+            class="button button--small button--text-blue"
+            @click="forgotPassword()"
+         >
+            {{ $t("buttons.forgotFolderPassword") }}
+         </button>
+      </div>
 
-    <div class="card-action">
-      <button
-        :aria-label="$t('buttons.cancel')"
-        :title="$t('buttons.cancel')"
-        class="button button--flat button--grey"
-        @click="cancel()"
-      >
-        {{ $t("buttons.cancel") }}
-      </button>
-      <button
-        :aria-label="$t('buttons.submit')"
-        :title="$t('buttons.submit')"
-        class="button button--flat"
-        type="submit"
-        @click="submit()"
-      >
-        {{ $t("buttons.unlock") }}
-      </button>
-    </div>
-  </div>
+      <div class="card-action">
+         <button
+            :aria-label="$t('buttons.cancel')"
+            :title="$t('buttons.cancel')"
+            class="button button--flat button--grey"
+            @click="cancel()"
+         >
+            {{ $t("buttons.cancel") }}
+         </button>
+         <button
+            :aria-label="$t('buttons.submit')"
+            :title="$t('buttons.submit')"
+            class="button button--flat"
+            type="submit"
+            @click="submit()"
+         >
+            {{ $t("buttons.unlock") }}
+         </button>
+      </div>
+   </div>
 </template>
 
 <script>
@@ -151,15 +151,15 @@ export default {
 
 <style scoped>
 .button--small {
- font-size: 0.875rem;
- padding: 0.5rem 1rem;
- border: none;
- background: none;
- color: #3a96f6;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  color: #3a96f6;
 }
 
 .button--small:hover {
- text-decoration: underline;
- background: none;
+  text-decoration: underline;
+  background: none;
 }
 </style>

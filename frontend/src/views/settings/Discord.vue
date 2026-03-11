@@ -197,10 +197,10 @@
                            <td class="share-name-column">
                               <a>{{ index + 1 + " &#8205; &#8205; &#8205; &#8205;" + bot.name }}</a>
                               <span v-if="bot.primary" :title="$t('settings.primaryBot')">
-                                 <svg class="crown-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"
-                                      style="vertical-align: text-bottom;">
-                                  <path fill="currentColor"
-                                        d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"></path>
+                                 <svg class="crown-icon" fill="none" height="18" style="vertical-align: text-bottom;" viewBox="0 0 24 24" width="18"
+                                      xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"
+                                        fill="currentColor"></path>
                                 </svg>
                               </span>
                            </td>
@@ -220,8 +220,8 @@
                            <td class="share-name-column small">
                               <button
                                  :aria-label="$t('buttons.delete')"
-                                 :title="$t('buttons.delete')"
                                  :disabled="bot.primary"
+                                 :title="$t('buttons.delete')"
                                  class="action"
                                  @click="deleteBot(bot.discord_id)"
                               >
@@ -437,7 +437,7 @@ export default {
          console.log(credential)
          this.showHover({
             prompt: "FixCredential",
-            props: {credential: credential},
+            props: { credential: credential },
             confirm: () => {
                this.fetchDiscordSettings()
             }
@@ -449,50 +449,50 @@ export default {
 
 <style scoped>
 .table-wrapper {
- padding-bottom: 1em;
+  padding-bottom: 1em;
 }
 
 .button {
- padding: 8px 12px;
- border: none;
- border-radius: 4px;
- cursor: pointer;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .info {
- padding-bottom: 1em;
+  padding-bottom: 1em;
 }
 
 .input:disabled {
- color: gray;
+  color: gray;
 }
 
 .input:disabled:hover {
- cursor: not-allowed;
+  cursor: not-allowed;
 }
 
 .cards-wrapper {
- width: 100%;
+  width: 100%;
 }
 
 .disabled {
- color: gray;
+  color: gray;
 }
 
 .channel-column {
- max-width: 50px;
+  max-width: 50px;
 }
 
 .expiry-column {
- max-width: 50px;
- white-space: nowrap;
+  max-width: 50px;
+  white-space: nowrap;
 }
 
 .crown-icon {
- margin-left: 4px;
- margin-bottom: 1px;
- height: 1em;
- vertical-align: middle;
- color: #d6ac82;
+  margin-left: 4px;
+  margin-bottom: 1px;
+  height: 1em;
+  vertical-align: middle;
+  color: #d6ac82;
 }
 </style>

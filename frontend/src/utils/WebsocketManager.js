@@ -88,7 +88,8 @@ export class WebSocketManager {
             this.send("PONG")
             return true
          }
-      } catch (_) {}
+      } catch (_) {
+      }
 
       return false
    }
@@ -106,7 +107,8 @@ export class WebSocketManager {
 
             try {
                if (this.socket) this.socket.close()
-            } catch (_) {}
+            } catch (_) {
+            }
 
             this.lastPing = now
          }

@@ -19,14 +19,14 @@
 </template>
 
 <script>
-import { getDirs } from '@/api/folder.js'
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import { getDirs } from "@/api/folder.js"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
-   name: 'folder-list',
+   name: "folder-list",
 
-   emits: ['update:current'],
+   emits: ["update:current"],
 
    data() {
       return {
@@ -37,7 +37,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['currentFolder', 'selected'])
+      ...mapState(useMainStore, ["currentFolder", "selected"])
    },
 
    mounted() {
@@ -45,7 +45,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['showHover']),
+      ...mapActions(useMainStore, ["showHover"]),
 
       async fetchData(folder) {
          let res = await getDirs(folder.id)
@@ -53,13 +53,13 @@ export default {
          let dirs = res.children
 
          if (res.parent_id) {
-            let folderBack = { name: '..', id: res.parent_id }
+            let folderBack = { name: "..", id: res.parent_id }
             dirs.unshift(folderBack)
          }
 
          this.dirs = dirs.filter((folder) => this.selected[0].id !== folder.id)
          this.nav = { name: res.name, id: res.id, folder_path: res.folder_path }
-         this.$emit('update:current', this.nav)
+         this.$emit("update:current", this.nav)
       },
 
       async next(event) {
@@ -72,20 +72,20 @@ export default {
 </script>
 <style scoped>
 .file-list {
-   padding-right: 1em;
+  padding-right: 1em;
 }
 
 .file-list li {
-   display: flex;
-   align-items: center;
-   padding: 8px 12px;
-   cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 
 .file-list span {
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
-   flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
 }
 </style>

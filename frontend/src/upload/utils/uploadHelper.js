@@ -8,7 +8,7 @@ import { detectExtension, showToast } from "@/utils/common.js"
 export async function checkFilesSizes(files) {
    let smallFileCount = 0
    let threshold = 100
-   let maxFileSize = 0.5 * 1024 * 1024 // 0.5 MB in bytes
+   let maxFileSize = 0.5 * 1024 * 1024
 
    for (let file of files) {
       let size = file.file?.size || file.size
@@ -131,30 +131,19 @@ export function isRawImageFile(extension) {
 }
 
 
-//todo yea this needs fixing lol
+let webhookIndex = 0
+
+
 export function getWebhook() {
    const uploadStore = useUploadStore()
    const webhooks = uploadStore.webhooks
 
    if (!webhooks || webhooks.length === 0) return null
 
-   // Count webhooks per channel
-   const channelCounts = {}
-   webhooks.forEach(wh => {
-      const id = wh.channel.id
-      channelCounts[id] = (channelCounts[id] || 0) + 1
-   })
+   const webhook = webhooks[webhookIndex % webhooks.length]
+   webhookIndex++
 
-   // Build a flat weighted array: more weight for channels with fewer webhooks
-   const weightedWebhooks = []
-   webhooks.forEach(wh => {
-      const weight = 1 / channelCounts[wh.channel.id]
-      const times = Math.ceil(weight * 100) // scale to integer
-      for (let i = 0; i < times; i++) weightedWebhooks.push(wh)
-   })
-
-   // Pick a random webhook from the weighted array
-   return weightedWebhooks[Math.floor(Math.random() * weightedWebhooks.length)]
+   return webhook
 }
 
 
@@ -341,7 +330,8 @@ export async function makeThumbnailIfNeeded(queueFile) {
          // } else {
          data = await fastVideoThumbnail(queueFile.systemFile)
          // }
-         other.duration = Math.round(data.duration)
+         if (!other.duration) data = await fastVideoThumbnail(queueFile.systemFile)
+         other.duration = Math.ceil(data.duration)
          thumbnail = data.thumbnail
       }
       //generating a thumbnail for an image

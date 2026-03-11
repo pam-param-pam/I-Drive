@@ -1,14 +1,14 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t('prompts.move') }}</h2>
+         <h2>{{ $t("prompts.move") }}</h2>
       </div>
 
       <div class="card-content">
          <p>
-            {{ $t('prompts.moveTo') }} <code class="move-to">{{ dest?.folder_path }}</code>
+            {{ $t("prompts.moveTo") }} <code class="move-to">{{ dest?.folder_path }}</code>
          </p>
-         <FolderList ref="fileList" @update:current="(val) => (dest = val)"> </FolderList>
+         <FolderList ref="fileList" @update:current="(val) => (dest = val)"></FolderList>
       </div>
 
       <div
@@ -23,7 +23,7 @@
                style="justify-self: left"
                @click="createDir()"
             >
-               <span>{{ $t('sidebar.newFolder') }}</span>
+               <span>{{ $t("sidebar.newFolder") }}</span>
             </button>
          </template>
          <div>
@@ -33,7 +33,7 @@
                class="button button--flat button--grey"
                @click="closeHover()"
             >
-               {{ $t('buttons.cancel') }}
+               {{ $t("buttons.cancel") }}
             </button>
             <button
                :aria-label="$t('buttons.move')"
@@ -42,7 +42,7 @@
                class="button button--flat"
                @click="submit"
             >
-               {{ $t('buttons.move') }}
+               {{ $t("buttons.move") }}
             </button>
          </div>
       </div>
@@ -50,14 +50,14 @@
 </template>
 
 <script>
-import FolderList from '@/components/FolderList.vue'
-import { move } from '@/api/item.js'
-import { mapActions, mapState } from 'pinia'
-import { useMainStore } from '@/stores/mainStore.js'
+import FolderList from "@/components/FolderList.vue"
+import { move } from "@/api/item.js"
+import { mapActions, mapState } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'move',
+   name: "move",
 
    components: { FolderList },
 
@@ -68,7 +68,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ['perms', 'selected']),
+      ...mapState(useMainStore, ["perms", "selected"]),
 
       isMoveDisabled() {
          return this.selected[0].parent_id === this.dest?.id
@@ -76,11 +76,11 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover', 'addSelected', 'showHover', 'resetSelected']),
+      ...mapActions(useMainStore, ["closeHover", "addSelected", "showHover", "resetSelected"]),
 
       createDir() {
          this.showHover({
-            prompt: 'newFolder',
+            prompt: "newFolder",
             props: { folder: this.dest },
             confirm: (data) => {
                this.$refs.fileList.dirs.push(data)
@@ -88,11 +88,11 @@ export default {
          })
       },
 
-      submit: onceAtATime(async function () {
+      submit: onceAtATime(async function() {
          let ids = this.selected.map((obj) => obj.id)
          let res = await move({ ids: ids, new_parent_id: this.dest.id })
 
-         let message = this.$t('toasts.movingItems')
+         let message = this.$t("toasts.movingItems")
          this.$toast.info(message, {
             timeout: null,
             id: res.task_id
@@ -106,6 +106,6 @@ export default {
 </script>
 <style scoped>
 .move-to {
-   color: var(--textSecondary)
+  color: var(--textSecondary)
 }
 </style>

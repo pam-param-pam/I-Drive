@@ -93,6 +93,7 @@ export function buildVttFromSamples(subTrack, samples) {
    return new Blob([lines.join("\n")], { type: "text/plain" })
 }
 
+
 export function buildVttFromSrt(srtText) {
    let vtt = srtText.replace(/\r+/g, "").trim()
 

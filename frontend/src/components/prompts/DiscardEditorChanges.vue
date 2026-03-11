@@ -1,32 +1,32 @@
 <template>
-  <div class="card floating">
-    <div class="card-content">
-      <p>
-        {{ $t("prompts.discardEditorChanges") }}
-      </p>
-    </div>
-    <div class="card-action">
-      <button
-        :aria-label="$t('buttons.cancel')"
-        :title="$t('buttons.cancel')"
-        class="button button--flat button--grey"
-        tabindex="2"
-        @click="closeHover()"
-      >
-        {{ $t("buttons.cancel") }}
-      </button>
-      <button
-        id="focus-prompt"
-        :aria-label="$t('buttons.discardChanges')"
-        :title="$t('buttons.discardChanges')"
-        class="button button--flat button--red"
-        tabindex="1"
-        @click="submit"
-      >
-        {{ $t("buttons.discardChanges") }}
-      </button>
-    </div>
-  </div>
+   <div class="card floating">
+      <div class="card-content">
+         <p>
+            {{ $t("prompts.discardEditorChanges") }}
+         </p>
+      </div>
+      <div class="card-action">
+         <button
+            :aria-label="$t('buttons.cancel')"
+            :title="$t('buttons.cancel')"
+            class="button button--flat button--grey"
+            tabindex="2"
+            @click="closeHover()"
+         >
+            {{ $t("buttons.cancel") }}
+         </button>
+         <button
+            id="focus-prompt"
+            :aria-label="$t('buttons.discardChanges')"
+            :title="$t('buttons.discardChanges')"
+            class="button button--flat button--red"
+            tabindex="1"
+            @click="submit"
+         >
+            {{ $t("buttons.discardChanges") }}
+         </button>
+      </div>
+   </div>
 </template>
 
 <script>

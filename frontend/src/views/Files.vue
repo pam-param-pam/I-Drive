@@ -298,6 +298,6 @@ export default {
 </script>
 <style scoped>
 h4 {
- padding-left: 1em;
+  padding-left: 1em;
 }
 </style>

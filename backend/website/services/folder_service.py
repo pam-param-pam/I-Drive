@@ -8,6 +8,7 @@ from ..core.errors import ResourcePermissionError, BadRequestError
 from ..core.helpers import validate_value
 from ..core.validators.GeneralChecks import NotEmpty
 from ..models import Folder, File
+from ..models.mixin_models import ItemState
 from ..tasks.otherTasks import unlock_folder_task, lock_folder_task
 from ..websockets.utils import send_event
 
@@ -21,7 +22,7 @@ def _clear_cache(folder_ids: list[str]) -> None:
     cache.delete_many(cache_keys)
 
     parent_ids = (
-        File.objects
+        Folder.objects
         .filter(id__in=folder_ids)
         .values_list("parent_id", flat=True)
         .distinct()
@@ -176,3 +177,13 @@ def internal_remove_lock(folder: Folder) -> None:
             sub.lockFrom = None
             sub.autoLock = False
             sub.save(update_fields=["password", "lockFrom", "autoLock"])
+
+def internal_force_ready(folder_ids: list[str]):
+    now = timezone.now()
+
+    Folder.objects.filter(id__in=folder_ids).update(
+        state=ItemState.ACTIVE,
+        state_changed_at=now,
+        state_error=None
+    )
+    _clear_cache(folder_ids)

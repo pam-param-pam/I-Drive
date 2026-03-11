@@ -1,8 +1,8 @@
 <template>
-   <h4 v-if="shareState === 'error'" class="listing-notice">{{ $t('share.shareNotFound') }}</h4>
+   <h4 v-if="shareState === 'error'" class="listing-notice">{{ $t("share.shareNotFound") }}</h4>
 
    <h4 v-if="shareState === 'success'" class="listing-notice">
-      {{ $t('share.info', { expiry: humanTime(expiry) }) }}
+      {{ $t("share.info", { expiry: humanTime(expiry) }) }}
    </h4>
 
    <breadcrumbs
@@ -25,16 +25,16 @@
 </template>
 
 <script>
-import { createShareZIP, getShare } from '@/api/share.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
-import Breadcrumbs from '@/components/listing/Breadcrumbs.vue'
-import Errors from '@/components/Errors.vue'
-import FileListing from '@/components/FileListing.vue'
+import { createShareZIP, getShare } from "@/api/share.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
+import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
+import Errors from "@/components/Errors.vue"
+import FileListing from "@/components/FileListing.vue"
 import { humanTime } from "../utils/common.js"
 
 export default {
-   name: 'files',
+   name: "files",
 
    components: {
       Errors,
@@ -57,12 +57,12 @@ export default {
          folderList: [],
          expiry: null,
          shareObj: {},
-         shareState: 'fetching'
+         shareState: "fetching"
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ['selected', 'loading', 'error', 'disabledCreation', 'settings', 'selectedCount', 'isLogged']),
+      ...mapState(useMainStore, ["selected", "loading", "error", "disabledCreation", "settings", "selectedCount", "isLogged"]),
 
       headerButtons() {
          return {
@@ -75,47 +75,47 @@ export default {
    },
 
    created() {
-      document.title = 'share'
+      document.title = "share"
 
       this.setDisabledCreation(true)
       this.fetchShare()
    },
 
    watch: {
-      $route: 'fetchShare'
+      $route: "fetchShare"
    },
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ['setLoading', 'setError', 'setDisabledCreation', 'setItems', 'getFolderPassword']),
+      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "getFolderPassword"]),
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            window.open(this.selected[0].download_url, '_blank')
-            let message = this.$t('toasts.downloadingSingle', { name: this.selected[0].name })
+            window.open(this.selected[0].download_url, "_blank")
+            let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
             this.$toast.success(message)
          } else {
             const ids = this.selected.map((obj) => obj.id)
             let res = await createShareZIP(this.token, { ids: ids })
-            window.open(res.download_url, '_blank')
+            window.open(res.download_url, "_blank")
 
-            let message = this.$t('toasts.downloadingZIP')
+            let message = this.$t("toasts.downloadingZIP")
             this.$toast.success(message)
          }
       },
 
       getNewRoute(item) {
          if (item.isDir) {
-            return { name: 'Share', params: { token: this.token, folderId: item.id } }
+            return { name: "Share", params: { token: this.token, folderId: item.id } }
          } else {
-            if ((item.type === 'Text' || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
+            if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
                return {
-                  name: 'ShareEditor',
+                  name: "ShareEditor",
                   params: { folderId: item.parent_id, fileId: item.id, token: this.token }
                }
             } else {
                return {
-                  name: 'SharePreview',
+                  name: "SharePreview",
                   params: { folderId: item.parent_id, fileId: item.id, token: this.token }
                }
             }
@@ -125,7 +125,7 @@ export default {
       openInNewWindow(item) {
          let route = this.getNewRoute(item)
          let url = this.$router.resolve(route).href
-         window.open(url, '_blank')
+         window.open(url, "_blank")
       },
 
       onOpen(item) {
@@ -134,9 +134,9 @@ export default {
       },
 
       copyFileShareUrl() {
-         let url = this.selected[0].download_url + '?inline=True'
+         let url = this.selected[0].download_url + "?inline=True"
          navigator.clipboard.writeText(url)
-         this.$toast.success(this.$t('toasts.linkCopied'))
+         this.$toast.success(this.$t("toasts.linkCopied"))
 
       },
 
@@ -152,15 +152,15 @@ export default {
             this.id = res.id
 
             this.setItems(res.share)
-            this.shareState = 'success'
+            this.shareState = "success"
          } catch (e) {
-            this.shareState = 'error'
+            this.shareState = "error"
             this.setItems(null)
             this.setError(e)
          } finally {
             this.setLoading(false)
          }
-      },
+      }
 
    }
 }

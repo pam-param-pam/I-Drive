@@ -1,21 +1,20 @@
 <template>
-  <div>
-    <component
-       :is="prompt.prompt"
-      v-for="(prompt, index) in prompts"
-      v-show="prompt.prompt === currentPromptName"
-      :key="index"
-      :ref="prompt.prompt"
-      v-bind="prompt.props"
-    />
+   <div>
+      <component
+         :is="prompt.prompt"
+         v-for="(prompt, index) in prompts"
+         v-show="prompt.prompt === currentPromptName"
+         :key="index"
+         :ref="prompt.prompt"
+         v-bind="prompt.props"
+      />
 
-    <div v-show="showOverlay" class="overlay" @click="resetPrompts"></div>
-    <div v-show="!showOverlay" @click="resetPrompts"></div>
-  </div>
+      <div v-show="showOverlay" class="overlay" @click="resetPrompts"></div>
+      <div v-show="!showOverlay" @click="resetPrompts"></div>
+   </div>
 </template>
 
 <script>
-import Help from "./Help.vue"
 import Info from "./Info.vue"
 import Delete from "./Delete.vue"
 import Rename from "./Rename.vue"
@@ -50,6 +49,7 @@ import Notifications from "@/components/prompts/Notifications.vue"
 import ShareVisits from "@/components/prompts/ShareVisits.vue"
 import ShareVisitEvents from "@/components/prompts/ShareVisitEvents.vue"
 import SingleNotification from "@/components/prompts/SingleNotification.vue"
+
 export default {
    name: "prompts",
 
@@ -62,7 +62,6 @@ export default {
       Move,
       Share,
       NewFolder,
-      Help,
       Upload,
       ShareDelete,
       Sidebar,
@@ -86,8 +85,8 @@ export default {
       ShareVisits,
       ShareVisitEvents,
       SingleNotification,
-      ScanQrCode: defineAsyncComponent(() => import('@/components/prompts/ScanQrCode.vue')),
-      FileStats: defineAsyncComponent(() => import('@/components/prompts/FileStats.vue'))
+      ScanQrCode: defineAsyncComponent(() => import("@/components/prompts/ScanQrCode.vue")),
+      FileStats: defineAsyncComponent(() => import("@/components/prompts/FileStats.vue"))
    },
    created() {
       window.addEventListener("keydown", (event) => {

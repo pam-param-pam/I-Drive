@@ -2,10 +2,10 @@
    <div class="card floating">
       <div class="card-content">
          <p v-if="selectedCount === 1">
-            {{ $t('prompts.restoreFromTrashMessageSingle') }}
+            {{ $t("prompts.restoreFromTrashMessageSingle") }}
          </p>
          <p v-else-if="selectedCount > 1">
-            {{ $t('prompts.restoreFromTrashMessageMultiple', { count: selectedCount }) }}
+            {{ $t("prompts.restoreFromTrashMessageMultiple", { count: selectedCount }) }}
          </p>
       </div>
       <div class="card-action">
@@ -15,7 +15,7 @@
             class="button button--flat button--grey"
             @click="closeHover()"
          >
-            {{ $t('buttons.cancel') }}
+            {{ $t("buttons.cancel") }}
          </button>
          <button
             :aria-label="$t('buttons.restoreFromTrash')"
@@ -23,35 +23,35 @@
             class="button button--flat button--red"
             @click="submit"
          >
-            {{ $t('buttons.restoreFromTrash') }}
+            {{ $t("buttons.restoreFromTrash") }}
          </button>
       </div>
    </div>
 </template>
 
 <script>
-import { restoreFromTrash } from '@/api/item.js'
-import { useMainStore } from '@/stores/mainStore.js'
-import { mapActions, mapState } from 'pinia'
+import { restoreFromTrash } from "@/api/item.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { mapActions, mapState } from "pinia"
 import { onceAtATime } from "@/utils/common.js"
 
 export default {
-   name: 'RestoreFromTrash',
+   name: "RestoreFromTrash",
 
    computed: {
-      ...mapState(useMainStore, ['selectedCount', 'currentPrompt', 'selected', 'items'])
+      ...mapState(useMainStore, ["selectedCount", "currentPrompt", "selected", "items"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ['closeHover', 'resetSelected', 'setItems']),
+      ...mapActions(useMainStore, ["closeHover", "resetSelected", "setItems"]),
 
-      submit: onceAtATime(async function () {
+      submit: onceAtATime(async function() {
 
          let ids = this.selected.map((item) => item.id)
 
          let res = await restoreFromTrash({ ids: ids })
 
-         let message = this.$t('toasts.itemsAreBeingRestoredFromTrash', { amount: ids.length })
+         let message = this.$t("toasts.itemsAreBeingRestoredFromTrash", { amount: ids.length })
          this.$toast.info(message, {
             timeout: null,
             id: res.task_id

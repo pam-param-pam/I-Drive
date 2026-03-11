@@ -3,21 +3,20 @@ import { fileUploadStatus, uploadState } from "@/utils/constants.js"
 
 export const useUploadStore = defineStore("upload", {
    state: () => ({
-      state: uploadState.idle,
-
-      files: {},
       //UI
+      state: uploadState.idle,
+      files: {},
       eta: Infinity,
       allBytesToUpload: 0,
       allBytesUploaded: 0,
       uploadSpeed: 0,
-      pendingWorkerFilesLength: 0
+      pendingWorkerFilesLength: 0,
    }),
 
    getters: {
 
       isAllFinished() {
-        return false
+         return false
       },
 
       filesInUpload() {

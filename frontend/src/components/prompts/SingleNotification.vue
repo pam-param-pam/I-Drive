@@ -19,10 +19,10 @@
 
       <div class="card-action">
          <button
-           :aria-label="$t('buttons.markUnread')"
-           :title="$t('buttons.markUnread')"
-           class="button button--flat button--red"
-           @click="markUnread()"
+            :aria-label="$t('buttons.markUnread')"
+            :title="$t('buttons.markUnread')"
+            class="button button--flat button--red"
+            @click="markUnread()"
          >
             {{ $t("buttons.markUnread") }}
          </button>
@@ -76,19 +76,19 @@ export default {
 <style scoped>
 
 .notification-prompt {
- width: 420px;
- max-width: 90vw;
+  width: 420px;
+  max-width: 90vw;
 }
 
 .notification-message {
- margin-top: 6px;
- opacity: 0.9;
+  margin-top: 6px;
+  opacity: 0.9;
 }
 
 .notification-time {
- margin-top: 12px;
- font-size: 12px;
- opacity: 0.6;
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.6;
 }
 
 </style>

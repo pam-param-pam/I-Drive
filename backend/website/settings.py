@@ -53,6 +53,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
+    'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -64,7 +65,6 @@ MIDDLEWARE = [
     'django_user_agents.middleware.UserAgentMiddleware',
     'website.core.http.middlewares.FailedRequestLoggerMiddleware',
     'website.core.http.middlewares.ApplyRateLimitHeadersMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 

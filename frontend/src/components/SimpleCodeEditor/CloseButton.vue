@@ -20,11 +20,11 @@
 
 <script>
 export default {
-   name: 'CloseButton',
+   name: "CloseButton",
 
    data() {
       return {
-         message: 'buttons.close'
+         message: "buttons.close"
       }
    }
 }
@@ -32,45 +32,45 @@ export default {
 
 <style scoped>
 .close-button {
-   transition: 0.2s opacity ease;
-   position: relative;
-   opacity: 0.5;
-   width: 32px;
-   height: 32px;
-   cursor: pointer;
+  transition: 0.2s opacity ease;
+  position: relative;
+  opacity: 0.5;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
 }
 
 .close-button:focus {
-   outline: none;
+  outline: none;
 }
 
 .close-button > svg {
-   pointer-events: none;
+  pointer-events: none;
 }
 
 .close-button:hover {
-   opacity: 1;
-   color: #ee4c4c;
+  opacity: 1;
+  color: #ee4c4c;
 }
 
 .close-button:hover > .tooltip {
-   display: block;
+  display: block;
 }
 
 .close-button > .tooltip {
-   font-family: sans-serif;
-   display: none;
-   position: absolute;
-   bottom: -10px;
-   left: 40px;
-   font-size: 12px;
-   color: white;
-   background: rgba(0, 0, 0, 0.8);
-   box-sizing: border-box;
-   text-align: center;
-   border-radius: 4px;
-   padding: 8px 12px;
-   white-space: nowrap;
-   z-index: 10;
+  font-family: sans-serif;
+  display: none;
+  position: absolute;
+  bottom: -10px;
+  left: 40px;
+  font-size: 12px;
+  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  box-sizing: border-box;
+  text-align: center;
+  border-radius: 4px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  z-index: 10;
 }
 </style>

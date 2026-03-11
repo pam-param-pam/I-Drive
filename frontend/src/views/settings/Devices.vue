@@ -8,7 +8,7 @@
             </div>
 
             <div class="card-content">
-               <table class="devices-table" v-if="devices.length > 0">
+               <table v-if="devices.length > 0" class="devices-table">
                   <thead>
                   <tr>
                      <th class="share-name-column icon-column"></th>
@@ -29,13 +29,14 @@
                      <td>
                         {{ device.device_name }}
                         <span class="device-id">({{ device.device_id }})</span>
-                     </td>                     <td>{{ device.country || "-" }}</td>
+                     </td>
+                     <td>{{ device.country || "-" }}</td>
                      <td>{{ device.city || "-" }}</td>
                      <td>{{ humanTime(device.expires_at) }}</td>
                      <td>{{ humanTime(device.last_used_at) }}</td>
                      <td>
-                        <button @click="revokeADevice(device.device_id)" :disabled="device.device_id === localDeviceId"
-                                class="button button--flat button--small">
+                        <button :disabled="device.device_id === localDeviceId" class="button button--flat button--small"
+                                @click="revokeADevice(device.device_id)">
                            {{ $t("buttons.revoke") }}
                         </button>
                      </td>
@@ -45,7 +46,7 @@
             </div>
 
             <div class="card-action">
-               <button @click="logoutAll" class="button button--danger button--flat button--red">
+               <button class="button button--danger button--flat button--red" @click="logoutAll">
                   {{ $t("buttons.logoutAllDevices") }}
                </button>
             </div>
@@ -61,7 +62,7 @@
                   {{ $t("settings.deviceControlMessage") }}
                </p>
                <div class="card-action">
-                  <button @click="showDeviceControlPrompt" class="button button--flat">
+                  <button class="button button--flat" @click="showDeviceControlPrompt">
                      {{ $t("buttons.controlDevice") }}
                   </button>
                </div>
@@ -82,7 +83,7 @@
                   {{ $t("settings.qrCodeWarning") }}
                </p>
                <div class="card-action">
-                  <button @click="showHover('ScanQrCode')" class="button button--flat">
+                  <button class="button button--flat" @click="showHover('ScanQrCode')">
                      {{ $t("buttons.scanQrCode") }}
                   </button>
                </div>
@@ -142,7 +143,7 @@ export default {
          await logoutAllDevices()
          await forceLogout()
       }, 1000),
-      showDeviceControlPrompt: throttle(function()  {
+      showDeviceControlPrompt: throttle(function() {
          this.showHover({ prompt: "ControlDevice" })
       }, 1000)
 
@@ -152,15 +153,17 @@ export default {
 
 <style scoped>
 table th, table td {
- padding-right: 10px;
- white-space: nowrap;
+  padding-right: 10px;
+  white-space: nowrap;
 }
+
 .text--red {
-   color: var(--dark-red);
+  color: var(--dark-red);
 }
+
 .device-id {
-   font-size: 0.85em;
-   color: var(--textSecondary);
-   margin-left: 4px;
+  font-size: 0.85em;
+  color: var(--textSecondary);
+  margin-left: 4px;
 }
 </style>

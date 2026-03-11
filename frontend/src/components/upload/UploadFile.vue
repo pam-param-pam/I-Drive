@@ -10,7 +10,7 @@
    >
       <!-- Upper -->
       <div class="fileitem-header file-icons">
-         <div :data-type="getFileType(fileState.fileObj.name)" :aria-label="fileState.fileObj.extension">
+         <div :aria-label="fileState.fileObj.extension" :data-type="getFileType(fileState.fileObj.name)">
             <i class="material-icons file-icon"></i>
          </div>
 
@@ -36,8 +36,8 @@
          <span>
             <b class="error">{{ $t("uploadFile.globalError") }}</b>
          </span>
-            </div>
-            <div v-else-if="state === uploadState.noInternet">
+      </div>
+      <div v-else-if="state === uploadState.noInternet">
          <span>
             <b class="error">{{ $t("uploadFile.noInternet") }}</b>
          </span>
@@ -131,14 +131,14 @@ export default {
                this.fileState.status === fileUploadStatus.uploadFailed ||
                this.fileState.status === fileUploadStatus.fileGoneInUpload ||
                this.fileState.status === fileUploadStatus.fileGoneInRequestProducer) &&
-               this.state === uploadState.uploading
+            this.state === uploadState.uploading
       },
       showDismissButton() {
          return (this.fileState.status === fileUploadStatus.fileGoneInUpload ||
-           this.fileState.status === fileUploadStatus.fileGoneInRequestProducer ||
-           this.fileState.status === fileUploadStatus.errorOccurred ||
-           this.fileState.status === fileUploadStatus.saveFailed ||
-           this.fileState.status === fileUploadStatus.uploadFailed
+            this.fileState.status === fileUploadStatus.fileGoneInRequestProducer ||
+            this.fileState.status === fileUploadStatus.errorOccurred ||
+            this.fileState.status === fileUploadStatus.saveFailed ||
+            this.fileState.status === fileUploadStatus.uploadFailed
          )
       }
    },
@@ -177,126 +177,126 @@ export default {
 
 <style scoped>
 .fileitem-wrapper {
- display: flex;
- flex-direction: column;
- gap: 0.5rem;
- border: 0.15em dashed lightgray;
- border-radius: 0.5rem;
- padding: 0.5rem;
- margin-bottom: 0.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 0.15em dashed lightgray;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  margin-bottom: 0.4em;
 }
 
 .fileitem-header {
- display: flex;
- align-items: center;
- justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .file-name {
- flex: 1;
- white-space: nowrap;
- overflow: hidden;
- text-overflow: ellipsis;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fileitem-progress {
- display: flex;
- gap: 1rem;
- align-items: center;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .error {
- color: red;
+  color: red;
 }
 
 .error-border {
- border-color: red;
+  border-color: red;
 }
 
 .success {
- color: green;
+  color: green;
 }
 
 .success-border {
- border-color: green;
+  border-color: green;
 }
 
 .warning {
- color: orange;
+  color: orange;
 }
 
 .warning-border {
- border-color: orange;
+  border-color: orange;
 }
 
 .info {
- color: #a9a9a9;
+  color: #a9a9a9;
 }
 
 .button-group {
- display: flex;
- gap: 0.5rem;
- margin-left: 1em;
- border-radius: 15px
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1em;
+  border-radius: 15px
 }
 
 .action-button:hover {
- background-color: var(--surfaceSecondary);
+  background-color: var(--surfaceSecondary);
 }
 
 .action-button {
- background: none;
- border: none;
- padding: 0;
- margin: 0;
- cursor: pointer;
- border-radius: 50%;
- display: flex;
- align-items: center;
- justify-content: center;
- transition: background-color 0.3s;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
 }
 
 .button-red:hover {
- color: red;
+  color: red;
 }
 
 .material-icons {
- font-size: 22px;
- vertical-align: middle;
+  font-size: 22px;
+  vertical-align: middle;
 }
 
 @keyframes shake {
- 0% {
-  transform: translate(0, 0);
- }
- 17% {
-  transform: translate(-1px, -1px);
- }
- 34% {
-  transform: translate(1px, -1px);
- }
- 51% {
-  transform: translate(-1px, 1px);
- }
- 68% {
-  transform: translate(1px, 1px);
- }
- 85% {
-  transform: translate(-1px, -1px);
- }
- 100% {
-  transform: translate(0, 0);
- }
+  0% {
+    transform: translate(0, 0);
+  }
+  17% {
+    transform: translate(-1px, -1px);
+  }
+  34% {
+    transform: translate(1px, -1px);
+  }
+  51% {
+    transform: translate(-1px, 1px);
+  }
+  68% {
+    transform: translate(1px, 1px);
+  }
+  85% {
+    transform: translate(-1px, -1px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
 }
 
 .shake-animation {
- animation: shake 0.3s ease infinite;
- border-color: red;
+  animation: shake 0.3s ease infinite;
+  border-color: red;
 }
 
 .file-icons .file-icon {
- color: var(--color-text);
- padding-right: 10px;
+  color: var(--color-text);
+  padding-right: 10px;
 }
 </style>

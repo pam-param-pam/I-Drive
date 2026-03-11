@@ -61,9 +61,7 @@ export class UploadEstimator {
       }
 
       // Exponential moving average
-      this.smoothedEta =
-         this.smoothedEta +
-         this.etaSmoothing * (rawEta - this.smoothedEta)
+      this.smoothedEta = this.smoothedEta + this.etaSmoothing * (rawEta - this.smoothedEta)
 
       return this.smoothedEta
    }

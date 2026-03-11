@@ -49,12 +49,12 @@ export class Uploader {
 
    logQueueStats() {
       console.log(
-      "fileQueue:", this.fileQueue?.size(), "closed:", this.fileQueue?.closed,
-      "requestQueue:", this.requestQueue?.size(), "closed:", this.requestQueue?.closed,
-      "discordResponseQueue:", this.discordResponseQueue?.size(), "closed:", this.discordResponseQueue?.closed,
-      "backendFileQueue:", this.backendFileQueue?.size(), "closed:", this.backendFileQueue?.closed,
-      "discordAttachmentQueue:", this.discordAttachmentQueue?.size(), "closed:", this.discordAttachmentQueue?.closed
-   )
+         "fileQueue:", this.fileQueue?.size(), "closed:", this.fileQueue?.closed,
+         "requestQueue:", this.requestQueue?.size(), "closed:", this.requestQueue?.closed,
+         "discordResponseQueue:", this.discordResponseQueue?.size(), "closed:", this.discordResponseQueue?.closed,
+         "backendFileQueue:", this.backendFileQueue?.size(), "closed:", this.backendFileQueue?.closed,
+         "discordAttachmentQueue:", this.discordAttachmentQueue?.size(), "closed:", this.discordAttachmentQueue?.closed
+      )
    }
 
    async startUploadWithChecks(type, folderContext, filesList) {
@@ -140,7 +140,7 @@ export class Uploader {
       }
 
       // initialize worker state (one-time)
-      this.fileProcessorWorker.postMessage({type: "init", typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom})
+      this.fileProcessorWorker.postMessage({ type: "init", typeOfUpload, folderContext, filesList, uploadId, encryptionMethod, parentPassword, lockFrom })
 
       // kickstart first batch
       this.requestMoreFilesFromWorker()
@@ -349,6 +349,7 @@ export class Uploader {
       //todo well this leaves so much orphanded data
       this.uploadRuntime.deleteFileState(frontendId)
    }
+
    retryFailedRequests() {
       if (this.uploadRuntime.uploadState !== uploadState.uploading) return
       this.uploadConsumers.forEach(c => c.retryFailedRequests())

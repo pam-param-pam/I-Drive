@@ -23,7 +23,6 @@ class UserSettings(models.Model):
     popup_preview = models.BooleanField(default=False)
     item_info_shortcut = models.BooleanField(default=False)
     theme = models.CharField(default="dark", max_length=20)
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.user.username + "'s settings"
@@ -49,7 +48,6 @@ class UserPerms(models.Model):
 
     change_password = models.BooleanField(default=True)
     reset_lock = models.BooleanField(default=False)
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.user.username + "'s perms"
@@ -66,8 +64,6 @@ class DiscordSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
     guild_id = models.CharField(max_length=19, null=True)
     attachment_name = models.CharField(max_length=20, null=True)
-
-    history = HistoricalRecords()
 
     class Meta:
         constraints = [

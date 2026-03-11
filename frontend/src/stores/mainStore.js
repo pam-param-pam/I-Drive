@@ -27,7 +27,7 @@ export const useMainStore = defineStore("main", {
       usage: { used: 0, total: 0 },
       popupPreview: {},
       isFilesActive: false,
-      deviceControlStatus: {"status": "unknown"},
+      deviceControlStatus: { "status": "unknown" },
       deviceControlOptions: {
          isVideoFullscreenActive: true,
          isVideoSubtitlesActive: true,
@@ -35,22 +35,22 @@ export const useMainStore = defineStore("main", {
          isVideoToggleActive: true,
          isNavigationActive: true,
          isDeviceControlActive: true,
-         isVideoVolumeChangeActive: true,
+         isVideoVolumeChangeActive: true
       },
       multiSelection: false,
       contextMenuState: {
          visible: false,
-         advanced: false,
+         advanced: false
       },
       imagesBlock: {
          lastError: null,
          blockedUntil: null
-      },
+      }
    }),
 
    persist: {
       key: "main:device-control",
-      pick: ["deviceControlOptions"],
+      pick: ["deviceControlOptions"]
    },
 
    getters: {
@@ -129,7 +129,7 @@ export const useMainStore = defineStore("main", {
          this.isFilesActive = value
       },
       setUsage(value) {
-        this.usage = value
+         this.usage = value
       },
       setSearchItems(items) {
          if (!items) items = []
@@ -175,7 +175,7 @@ export const useMainStore = defineStore("main", {
          this.prompts = []
       },
       setUnreadNotifications(value) {
-        this.user.unreadNotifications = value
+         this.user.unreadNotifications = value
       },
       showHover(value) {
          this.closeContextMenu()
@@ -348,7 +348,7 @@ export const useMainStore = defineStore("main", {
          }
       },
       setTextError(errorCode, details) {
-         this.setError({status: errorCode, response: {data: {details: details}}})
+         this.setError({ status: errorCode, response: { data: { details: details } } })
       },
       setError(value) {
          this.error = value
@@ -393,7 +393,7 @@ export const useMainStore = defineStore("main", {
          }
 
          this.imagesBlock.lastError = 429
-      },
+      }
    }
 })
 

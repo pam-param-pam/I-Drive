@@ -1,22 +1,22 @@
 <template>
-  <div
-    class="file-input-wrapper"
-    :class="{ 'drag-over': isDragOver }"
-    @dragenter.prevent="onDragEnter"
-    @dragover.prevent="onDragOver"
-    @dragleave.prevent="onDragLeave"
-    @drop.prevent="onDrop"
-  >
-    <input
-      ref="input"
-      type="file"
-      :accept="accept"
-      @change="onFileSelect"
-    />
-    <label class="file-label" @click="triggerFileDialog">
-      {{ fileName || label }}
-    </label>
-  </div>
+   <div
+      :class="{ 'drag-over': isDragOver }"
+      class="file-input-wrapper"
+      @dragenter.prevent="onDragEnter"
+      @dragover.prevent="onDragOver"
+      @dragleave.prevent="onDragLeave"
+      @drop.prevent="onDrop"
+   >
+      <input
+         ref="input"
+         :accept="accept"
+         type="file"
+         @change="onFileSelect"
+      />
+      <label class="file-label" @click="triggerFileDialog">
+         {{ fileName || label }}
+      </label>
+   </div>
 </template>
 
 <script>
@@ -104,37 +104,37 @@ export default {
 
 <style scoped>
 .file-input-wrapper {
- position: relative;
- display: flex;
- align-items: center;
- width: 100%;
- justify-content: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
 }
 
 input[type="file"] {
- opacity: 0;
- width: 0;
- height: 0;
- position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
 }
 
 .file-label {
- display: inline-block;
- padding: 10px 15px;
- background-color: var(--divider);
- color: var(--textPrimary);
- border-radius: 5px;
- cursor: pointer;
- text-align: center;
- width: 100%;
- font-size: 14px;
- transition: background-color 0.2s ease, border 0.2s ease;
- border: 2px dashed transparent;
- margin-top: 2em;
+  display: inline-block;
+  padding: 10px 15px;
+  background-color: var(--divider);
+  color: var(--textPrimary);
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  font-size: 14px;
+  transition: background-color 0.2s ease, border 0.2s ease;
+  border: 2px dashed transparent;
+  margin-top: 2em;
 }
 
 .file-input-wrapper.drag-over .file-label {
- background-color: rgba(128, 128, 128, 0.1);
- border-color: var(--accent, #4da3ff);
+  background-color: rgba(128, 128, 128, 0.1);
+  border-color: var(--accent, #4da3ff);
 }
 </style>

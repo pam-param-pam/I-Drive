@@ -34,20 +34,20 @@
 
 <script>
 export default {
-   name: 'Dropdown',
+   name: "Dropdown",
 
    props: {
       width: {
          type: String,
-         default: '80px'
+         default: "80px"
       },
       height: {
          type: String,
-         default: 'auto'
+         default: "auto"
       },
       title: {
          type: String,
-         default: ''
+         default: ""
       },
       disabled: {
          type: Boolean,
@@ -82,79 +82,78 @@ export default {
 <style scoped>
 .code-editor .dropdown .list.fade-enter-active,
 .code-editor .dropdown .list.fade-leave-active {
-   transition:
-      transform 0.2s ease,
-      opacity 0.2s ease;
+  transition: transform 0.2s ease,
+  opacity 0.2s ease;
 }
 
 .code-editor .dropdown .list.fade-enter-from,
 .code-editor .dropdown .list.fade-leave-to {
-   opacity: 0;
-   transform: translateY(-10px);
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .code-editor .dropdown {
-   cursor: pointer;
-   position: relative;
+  cursor: pointer;
+  position: relative;
 }
 
 .code-editor .dropdown:focus {
-   outline: none;
+  outline: none;
 }
 
 .code-editor .disabled {
-   cursor: default;
+  cursor: default;
 }
 
 .code-editor .disabled:hover > .title {
-   opacity: 0.5 !important;
+  opacity: 0.5 !important;
 }
 
 .code-editor .dropdown:hover > .title {
-   opacity: 1;
+  opacity: 1;
 }
 
 .code-editor .dropdown > .title {
-   transition: opacity 0.2s ease;
-   opacity: 0.5;
-   display: flex;
-   align-items: center;
-   -webkit-user-select: none;
-   user-select: none;
+  transition: opacity 0.2s ease;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .code-editor .dropdown > .title > div {
-   white-space: nowrap;
-   font-size: 14px;
-   line-height: 16px;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 16px;
 }
 
 .code-editor .dropdown > .title > svg {
-   transition: 0.2s;
-   margin-left: 3px;
-   margin-top: 1px;
+  transition: 0.2s;
+  margin-left: 3px;
+  margin-top: 1px;
 }
 
 .code-editor .dropdown > .list {
-   box-sizing: border-box;
-   position: absolute;
-   padding: 1px;
-   border-radius: 6px;
-   overflow: hidden;
-   top: 24px;
-   left: 0;
-   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  position: absolute;
+  padding: 1px;
+  border-radius: 6px;
+  overflow: hidden;
+  top: 24px;
+  left: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .code-editor .dropdown > .list:before {
-   content: '';
-   position: absolute;
-   top: 0px;
-   left: 0px;
-   z-index: -1;
-   width: 100%;
-   height: 100%;
-   background: currentColor;
-   opacity: 0.2;
+  content: '';
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  opacity: 0.2;
 }
 </style>
