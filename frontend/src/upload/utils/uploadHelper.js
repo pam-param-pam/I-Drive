@@ -403,13 +403,15 @@ export function parseRawMetadata(text) {
    }
    let owner = map["Owner"]
    if (!owner || owner === "unknown") owner = null
+   console.log(map)
    return {
       camera: map["Camera"] || null,
       camera_owner: owner,
       iso: map["ISO speed"] || null,
       shutter: map["Shutter"] || null,
       aperture: map["Aperture"] || null,
-      focal_length: map["Focal length"] || null
+      focal_length: map["Focal length"] || null,
+      lens_model: map["Focal length"] || null
    }
 }
 

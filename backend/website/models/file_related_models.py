@@ -161,6 +161,7 @@ class VideoMetadata(models.Model):
 
 class RawMetadata(models.Model):
     file = models.OneToOneField("File", on_delete=models.CASCADE)
+    failed_to_process = models.BooleanField(default=False)
     camera = models.CharField(max_length=50)
     camera_owner = models.CharField(max_length=50)
     iso = models.CharField(max_length=50)

@@ -1,13 +1,26 @@
+import os
+import tempfile
 import traceback
+from io import BytesIO
 
+import exifread
+import rawpy
+import requests
+from PIL import Image
 from celery.utils.log import get_task_logger
+import pyexiv2
 
 from .helper import send_message
 from ..celery import app
+from ..constants import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, EventCode, MAX_DISCORD_MESSAGE_SIZE
+from ..core.Serializers import FileSerializer
+from ..core.crypto.Decryptor import Decryptor
+from ..core.crypto.Encryptor import Encryptor
 from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
-from ..models import Folder, Fragment
-from ..services import folder_service
+from ..models import Folder, Fragment, File
+from ..services import folder_service, file_service
+from ..websockets.utils import send_event
 
 logger = get_task_logger(__name__)
 
@@ -35,7 +48,7 @@ def unlock_folder_task(context: dict, folder_id: str):
         traceback.print_exc()
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
-@app.task(expires=10)
+@app.task(expires=5)
 def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)
@@ -44,3 +57,156 @@ def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
 
     for fragment in filtered_fragments:
         discord.get_attachment_url(user=fragment.file.owner, resource=fragment)
+
+
+def _extract_raw_metadata(raw_buffer):
+    raw_buffer.seek(0)
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".cr3", delete=False)
+    tmp.write(raw_buffer.read())
+    tmp.close()
+
+    try:
+        img = pyexiv2.Image(tmp.name)
+        exif = img.read_exif()
+    finally:
+        os.remove(tmp.name)
+
+    camera = exif.get("Exif.Image.Model", "")
+    iso = exif.get("Exif.Photo.ISOSpeedRatings") or exif.get("Exif.Photo.ISOSpeed") or ""
+    shutter = exif.get("Exif.Photo.ExposureTime", "")
+    aperture = exif.get("Exif.Photo.FNumber", "")
+    focal_length = exif.get("Exif.Photo.FocalLength", "")
+    camera_owner = exif.get("Exif.Photo.CameraOwnerName", "")
+    raw_buffer.seek(0)
+
+    return camera, iso, shutter, aperture, focal_length, camera_owner
+
+
+@app.task()
+def generate_raw_image_thumbnails(batch_size: int = 10):
+    files = File.objects.filter(type="Raw image", thumbnail__isnull=True, rawmetadata__isnull=True, inTrash=False, parent__inTrash=False).select_related("owner")[:batch_size]
+
+    state = {"upload_queue": [], "upload_map": [], "current_size": 0}
+
+    def flush_uploads(user, state):
+        if not state["upload_queue"]:
+            return
+
+        resp = discord.send_files_webhook(user, state["upload_queue"])
+        attachments = resp["attachments"]
+
+        for meta, att in zip(state["upload_map"], attachments):
+            file_obj, enc_key, enc_iv, size = meta
+
+            file_service.create_thumbnail(
+                file_obj,
+                {
+                    "channel_id": resp["channel_id"],
+                    "message_id": resp["id"],
+                    "attachment_id": att["id"],
+                    "message_author_id": resp["author"]["id"],
+                    "key": enc_key,
+                    "iv": enc_iv,
+                    "size": size
+                }
+            )
+            file_obj.remove_cache()
+            send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
+
+        state["upload_queue"].clear()
+        state["upload_map"].clear()
+        state["current_size"] = 0
+
+    for file in files:
+        if file.size > MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION:
+            continue
+
+        try:
+            raw_buffer = BytesIO()
+
+            fragments = file.fragments.all().order_by("sequence")
+            decryptor = Decryptor(method=file.get_encryption_method(), key=file.key, iv=file.iv)
+
+            for frag in fragments:
+                url = discord.get_attachment_url(file.owner, frag)
+
+                r = requests.get(url, timeout=30)
+                r.raise_for_status()
+
+                raw_buffer.write(decryptor.decrypt(r.content))
+
+            metadata = _extract_raw_metadata(raw_buffer)
+            if metadata:
+                camera, iso, shutter, aperture, focal_length, camera_owner = metadata
+                file_service.create_raw_metadata(
+                    file,
+                    {
+                        "camera": camera,
+                        "camera_owner": camera_owner,
+                        "iso": iso,
+                        "shutter": shutter,
+                        "aperture": aperture,
+                        "focal_length": focal_length
+                    }
+                )
+                file.remove_cache()
+
+            raw_buffer.seek(0)
+
+            # # -------------------------
+            # # RAW DEMOSAIC
+            # # -------------------------
+            #
+            with rawpy.imread(raw_buffer) as raw:
+                rgb = raw.postprocess(
+                )
+
+            img = Image.fromarray(rgb)
+
+            img.thumbnail((512, 512))
+
+            webp_buffer = BytesIO()
+            img.save(webp_buffer, format="WEBP", quality=80)
+
+            data = webp_buffer.getvalue()
+
+            method = file.get_encryption_method()
+
+            key = Encryptor.generate_key(method)
+            iv = Encryptor.generate_iv(method)
+
+            encryptor = Encryptor(method, key=key, iv=iv)
+
+            encrypted = encryptor.encrypt(data)
+
+            name = f"{file.id}.webp"
+            size = len(encrypted)
+
+            if len(state["upload_queue"]) >= 10 or state["current_size"] + size > MAX_DISCORD_MESSAGE_SIZE:
+                flush_uploads(file.owner, state)
+
+            state["upload_queue"].append((name, encrypted))
+            state["upload_map"].append((file, encryptor.get_base64_key(), encryptor.get_base64_iv(), size))
+            state["current_size"] += size
+
+        except Exception:
+            traceback.print_exc()
+            meta = file_service.create_raw_metadata(
+                file,
+                {
+                    "camera": "FAILED TO PARSE",
+                    "camera_owner": "FAILED TO PARSE",
+                    "iso": "FAILED TO PARSE",
+                    "shutter": "FAILED TO PARSE",
+                    "aperture": "FAILED TO PARSE",
+                    "focal_length": "FAILED TO PARSE"
+                }
+            )
+
+            meta.failed_to_process = True
+            meta.save(update_fields=["failed_to_process"])
+            file.remove_cache()
+
+    if state["upload_queue"]:
+        flush_uploads(files[0].owner if files else None, state)

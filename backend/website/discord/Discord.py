@@ -274,7 +274,6 @@ class DiscordManager:
         except Exception:
             data = {}
 
-        print(response.text)
         discord_code = data.get("code")
         if status == 401:
             state.block_credential(credential, None, "unauthorized", discord_code)
@@ -332,23 +331,23 @@ class DiscordManager:
         errors = []
 
         for attempt in range(1, self.MAX_RETRIES + 1):
-            response = self.execute_bot_once(user, method, url, bot=bot, json=json, params=params, files=files)
+            try:
+                response = self.execute_bot_once(user, method, url, bot=bot, json=json, params=params, files=files)
+            except DiscordError as exc:
+                if exc.status == 429:
+                    errors.append(exc)
+                    time.sleep(1)
+                    continue
+                else:
+                    raise exc
+            except CannotProcessDiscordRequestError:
+                time.sleep(2)
+                continue
 
             if response.is_success:
                 return response
 
             errors.append(response)
-
-            if response.status_code == 429:
-                retry_after = response.json().get("retry_after", 1)
-                time.sleep(float(retry_after))
-                continue
-
-            if response.status_code in {500, 502, 503, 504}:
-                time.sleep(min(2 ** attempt, 30))
-                continue
-
-            raise DiscordError(response)
 
         raise DiscordErrorMaxRetries(errors)
 
@@ -367,6 +366,7 @@ class DiscordManager:
                 files=files,
             )
             self._post_request_check(state, credential, response)
+
             if response.is_error:
                 raise DiscordError(response)
 
@@ -379,23 +379,23 @@ class DiscordManager:
         errors = []
 
         for attempt in range(1, self.MAX_RETRIES + 1):
-            response = self.execute_webhook_once(user, method, path=path, webhook=webhook, json=json, params=params, files=files)
+            try:
+                response = self.execute_webhook_once(user, method, path=path, webhook=webhook, json=json, params=params, files=files)
+            except DiscordError as exc:
+                if exc.status == 429:
+                    errors.append(exc)
+                    time.sleep(min(2 ** attempt, 5))
+                    continue
+                else:
+                    raise exc
+            except CannotProcessDiscordRequestError:
+                time.sleep(min(2 ** attempt, 5))
+                continue
 
             if response.is_success:
                 return response
 
             errors.append(response)
-
-            if response.status_code == 429:
-                retry_after = response.json().get("retry_after", 1)
-                time.sleep(float(retry_after))
-                continue
-
-            if response.status_code in {500, 502, 503, 504}:
-                time.sleep(min(2 ** attempt, 30))
-                continue
-
-            raise DiscordError(response)
 
         raise DiscordErrorMaxRetries(errors)
 
@@ -530,9 +530,20 @@ class DiscordService:
     # -------------------------
     def edit_attachments_webhook(self, user, webhook: Webhook, message_id: str, attachment_ids_to_keep: list[str]) -> httpx.Response:
         payload = {"attachments": [{"id": a_id} for a_id in attachment_ids_to_keep]}
-        print(payload)
         path = self._discord_path(f"/messages/{message_id}")
         return self.manager.execute_webhook_with_retries(user, "PATCH", path, webhook, json=payload)
+
+    def send_files_webhook(self, user, files: list[tuple[str, bytes]]) -> dict:
+        multipart = []
+        payload = {"attachments": []}
+
+        for i, (name, data) in enumerate(files):
+            multipart.append(("files[%d]" % i, (name, data)))
+            payload["attachments"].append({"id": i, "filename": name})
+
+        resp = self.manager.execute_webhook_with_retries(user, "POST", "?wait=true", json={"payload_json": json.dumps(payload)}, files=multipart)
+
+        return resp.json()
 
     # -------------------------
     # Fetch / pagination
@@ -541,26 +552,19 @@ class DiscordService:
     def fetch_messages(self, user, channel_id: str, limit: int = 100):
         path = self._discord_path(f"/channels/{channel_id}/messages")
         params = {"limit": int(limit)}
-        errors = 0
 
         while True:
-            try:
-                response = self.manager.execute_with_retries(user, "GET", path, params=params)
-                batch = response.json()
-                if not batch:
-                    break
-                yield batch
-                params["before"] = batch[-1]["id"]
-                errors = 0
-            except CannotProcessDiscordRequestError:
-                errors += 1
-                if errors > 10:
-                    raise CannotProcessDiscordRequestError("Unable to fetch more messages")
-                time.sleep(1)
+            response = self.manager.execute_bot_with_retries(user, "GET", path, params=params)
+            batch = response.json()
+            if not batch:
+                break
+            yield batch
+            params["before"] = batch[-1]["id"]
 
     def fetch_all_messages(self, user, channel_id: str, limit: int = 100):
         for batch in self.fetch_messages(user, channel_id, limit=limit):
             for msg in batch:
                 yield msg
+
 
 discord = DiscordService()

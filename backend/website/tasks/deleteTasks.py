@@ -1,4 +1,3 @@
-import math
 import traceback
 from collections import defaultdict
 from dataclasses import dataclass
@@ -10,7 +9,7 @@ from django.utils import timezone
 
 from .helper import send_message
 from ..celery import app
-from ..constants import MAX_DISCORD_MESSAGE_SIZE, EventCode
+from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..core.errors import DiscordError
 from ..discord.Discord import discord
@@ -51,12 +50,12 @@ def expand_ids(ids: list[str]):
 
     return input_file_ids, input_folder_ids, expanded_file_ids
 
+
 def compute_total_units(file_ids: set[str]) -> int:
     if not file_ids:
         return 0
 
-    sizes = File.objects.filter(id__in=file_ids).values_list("size", flat=True)
-    return sum(max(1, math.ceil(size / MAX_DISCORD_MESSAGE_SIZE)) for size in sizes)
+    return Fragment.objects.filter(file_id__in=file_ids).count()
 
 
 def chunked(values, size: int):

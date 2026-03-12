@@ -72,6 +72,12 @@ cache = caches["default"]
 # Controls (partially) if cache is used in some places, should be True in PROD. Use only for debugging
 USE_CACHE = True
 
+# Controls the max size of a raw image that is allowed to be converted to webp in celery task
+MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION = 50 * 1024 * 1024
+
+# Controls after how long files from trash are deleted, in DAYS
+MAX_TIME_FILES_IN_TRASH = 30
+
 FILE_TYPES = {
     "Video": (
         ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".m4v", ".webm", ".ts", ".ogv",

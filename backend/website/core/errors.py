@@ -74,6 +74,7 @@ class DiscordError(IDriveException):
         self._json_error = response.json()
         self.message = self._json_error.get('message') or self._json_error
         self.code = self._json_error.get('code')
+        self.response = response
         super().__init__(self.message)
 
     def __str__(self):

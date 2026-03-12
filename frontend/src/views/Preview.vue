@@ -807,7 +807,7 @@ export default {
    sockets: {
       onmessage(message_event) {
          if (this.isInShareContext) return
-
+         if (message_event.data === "PING") return
          let jsonObject = JSON.parse(message_event.data)
          let event = jsonObject.event
          let op_code = event.op_code

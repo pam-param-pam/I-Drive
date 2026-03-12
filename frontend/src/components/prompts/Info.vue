@@ -94,7 +94,7 @@
       <!-- Expandable section for raw images -->
       <div v-if="!isDir && type==='Raw image' && isRawMetadata && !isInShareContext" class="expandable-section card-content">
          <div class="expandable-header" @click="fetchMoreInfo">
-            <strong>{{ $t("prompts.fetchAdditionalInfo") }}</strong>
+            <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
             <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
                keyboard_arrow_down
             </i>
@@ -114,12 +114,11 @@
                <strong>{{ $t("prompts.aperture") }}:</strong> {{ metadata.aperture }}
             </p>
             <p>
-               <strong>{{ $t("prompts.exposureTime") }}:</strong> {{ metadata.shutter }} sec
+               <strong>{{ $t("prompts.exposureTime") }}:</strong> {{ metadata.shutter }}
             </p>
             <p>
                <strong>{{ $t("prompts.focalLength") }}:</strong> {{ metadata.focal_length }}
             </p>
-
          </div>
       </div>
 

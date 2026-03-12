@@ -45,7 +45,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
-    search_fields = ["file__name", 'file__owner__username']
+    search_fields = ["file__name", 'file__owner__username', "message_id"]
 
     @easy.with_tags()
     @easy.smart(short_description="Open fragment by sequence", allow_tags=True)
