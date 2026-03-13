@@ -1,10 +1,9 @@
 import { attachmentType } from "@/utils/constants.js"
 
 export class DiscordResponseConsumer {
-   constructor({ discordResponseQueue, backendFileQueue, discordAttachmentQueue, uploadRuntime }) {
+   constructor({ discordResponseQueue, backendFileQueue, uploadRuntime }) {
       this.discordResponseQueue = discordResponseQueue
       this.backendFileQueue = backendFileQueue
-      this.discordAttachmentQueue = discordAttachmentQueue
       this.uploadRuntime = uploadRuntime
       this.running = false
       this.backendState = new Map()
@@ -43,7 +42,6 @@ export class DiscordResponseConsumer {
       for (let i = 0; i < request.attachments.length; i++) {
          const attachment = request.attachments[i]
          const discordAttachment = discordResponse.data.attachments[i]
-         await this.discordAttachmentQueue.put({ "discordAttachment": discordAttachment, "attachment": attachment })
          this.fillAttachmentInfo(attachment, discordResponse, discordAttachment)
       }
    }

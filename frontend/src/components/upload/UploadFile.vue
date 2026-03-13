@@ -34,7 +34,7 @@
       </div>
       <div v-if="state === uploadState.error">
          <span>
-            <b class="error">{{ $t("uploadFile.globalError") }}</b>
+            <b class="error">{{ $t("uploadFile.fatal") }}</b>
          </span>
       </div>
       <div v-else-if="state === uploadState.noInternet">

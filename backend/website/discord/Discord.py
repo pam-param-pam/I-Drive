@@ -2,8 +2,8 @@ import json
 import logging
 import random
 import time
-from dataclasses import dataclass, asdict
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, UTC
 from threading import Lock
 from typing import Optional, Dict, Literal, Any
 from urllib.parse import urlparse, parse_qs
@@ -14,7 +14,7 @@ from httpx import Response
 from ..constants import DISCORD_BASE_URL, cache, USE_CACHE
 from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, DiscordTextError, DiscordErrorMaxRetries
 from ..core.helpers import normalize_blocked_until
-from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Fragment, Thumbnail, FragmentLink, ThumbnailLink, Webhook
+from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Webhook
 from ..queries.selectors import query_attachments
 from ..services import cache_service
 
@@ -334,14 +334,14 @@ class DiscordManager:
             try:
                 response = self.execute_bot_once(user, method, url, bot=bot, json=json, params=params, files=files)
             except DiscordError as exc:
-                if exc.status == 429:
+                if exc.status in (429, 500, 502, 503):
                     errors.append(exc)
-                    time.sleep(1)
+                    time.sleep(min(1 ** attempt, 5))
                     continue
                 else:
                     raise exc
             except CannotProcessDiscordRequestError:
-                time.sleep(2)
+                time.sleep(min(2 ** attempt, 5))
                 continue
 
             if response.is_success:
@@ -382,9 +382,9 @@ class DiscordManager:
             try:
                 response = self.execute_webhook_once(user, method, path=path, webhook=webhook, json=json, params=params, files=files)
             except DiscordError as exc:
-                if exc.status == 429:
+                if exc.status in (429, 500, 502, 503):
                     errors.append(exc)
-                    time.sleep(min(2 ** attempt, 5))
+                    time.sleep(min(1 ** attempt, 5))
                     continue
                 else:
                     raise exc
@@ -441,8 +441,8 @@ class DiscordService:
             if ex_param is None:
                 raise ValueError("The 'ex' parameter is missing in the URL")
             expiry_timestamp = int(ex_param, 16)
-            expiry_datetime = datetime.utcfromtimestamp(expiry_timestamp)
-            current_datetime = datetime.utcnow()
+            expiry_datetime = datetime.fromtimestamp(expiry_timestamp, UTC)
+            current_datetime = datetime.now(UTC)
             ttl_seconds = (expiry_datetime - current_datetime).total_seconds()
             return max(ttl_seconds, 0)
         except (KeyError, IndexError, ValueError):
@@ -480,49 +480,7 @@ class DiscordService:
                 return attachment.get("url")
         raise BadRequestError(f"File with attachment_id={attachment_id} not found in message_id={message_id}")
 
-    def _get_from_linker(self, user, resource: Fragment | Thumbnail) -> Optional[str]:
-        if isinstance(resource, Fragment):
-            link = FragmentLink.objects.select_related("linker").filter(fragment=resource).first()
-        elif isinstance(resource, Thumbnail):
-            link = ThumbnailLink.objects.select_related("linker").filter(thumbnail=resource).first()
-        else:
-            raise KeyError(f"Resource type {type(resource)} is not supported for linker")
-
-        if not link:
-            return None
-
-        message = self.get_message(user, link.linker.channel.discord_id, link.linker.message_id)
-        seq = link.sequence
-
-        if 1 <= seq <= 10:
-            return message.get("content", "").split("\n")[seq - 1] if message.get("content") else None
-
-        embeds = message.get("embeds") or []
-        if not embeds:
-            return None
-        embed = embeds[0]
-
-        if 11 <= seq <= 31:
-            return (embed.get("description") or "").split("\n")[seq - 11] if embed.get("description") else None
-
-        fields = embed.get("fields") or []
-
-        if 32 <= seq <= 36 and len(fields) > 0:
-            return (fields[0].get("value") or "").split("\n")[seq - 32] if fields[0].get("value") else None
-
-        if 37 <= seq <= 41 and len(fields) > 1:
-            return (fields[1].get("value") or "").split("\n")[seq - 37] if fields[1].get("value") else None
-
-        if seq == 42 and len(fields) > 2:
-            return (fields[2].get("value") or "").split("\n")[0] if fields[2].get("value") else None
-
-        return None
-
     def get_attachment_url(self, user, resource: DiscordAttachmentMixin) -> str:
-        if isinstance(resource, Fragment):
-            linked = self._get_from_linker(user, resource)
-            if linked:
-                return linked
         return self._get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id)
 
     # -------------------------

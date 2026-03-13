@@ -10,16 +10,16 @@ from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
     cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, check_attachment_id, \
-    check_message_id, get_fragment_for_crc
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_attachment_url_view, get_file_stats, \
+    check_message_id
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_video_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
-    add_moment_view, change_file_crc_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, change_fragment_crc_view
+    add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
 from .views.testViews import get_discord_state
-from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view, create_linker
+from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
     reenable_credential_view, get_notifications_view, set_notifications_read_status_view
@@ -87,7 +87,6 @@ urlpatterns = [
     path("files/<file_id>/subtitles", ["GET"], get_subtitles, name="get file subtitles"),
     path("files/<file_id>/subtitles/<subtitle_id>", ["PATCH"], rename_subtitle_view, name="rename subtitle"),
     path("files/<file_id>/subtitles/<subtitle_id>", ["DELETE"], remove_subtitle_view, name="remove subtitle"),
-    path('files/<file_id>/changecrc', ['PATCH'], change_file_crc_view, name='change crc'),
 
     path("folders", ["POST"], create_folder_view, name="create folder"),
     path('folders/<folder_id>', ["GET"], get_folder_info, name="get files and folders from a folder id"),
@@ -159,14 +158,7 @@ urlpatterns = [
 
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 
-    path("fixcrc/fragments", ['GET'], get_fragment_for_crc, name="check if attachment id is used"),
-    path('fixcrc/fragments/<fragment_id>', ['PATCH'], change_fragment_crc_view, name='change crc'),
-
-    path("cleanup/<attachment_id>", ['GET'], check_attachment_id, name="check if attachment id is used"),
-    path("cleanup/<check_message_id>", ['GET'], check_message_id, name="check if message id is used"),
-
-    path("linker", ['POST'], create_linker, name="create_linker"),
-
+    path("cleanup/<message_id>", ['GET'], check_message_id, name="check if message id is used"),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     # 85 endpoints

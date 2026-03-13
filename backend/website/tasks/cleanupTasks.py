@@ -1,19 +1,18 @@
-import traceback
-from datetime import timedelta, datetime
+from collections import defaultdict
+from datetime import timedelta, datetime, timezone
 
 from django.contrib.auth.models import User
-from django.utils import timezone
+from django.utils import timezone as django_timezone
 
 from ..celery import app
 from ..constants import MAX_TIME_FILES_IN_TRASH
 from ..core.dataModels.http import RequestContext
-from ..core.errors import NoBotsError
+from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
-from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder, Webhook
+from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder
 from ..models.mixin_models import ItemState
 from ..queries.selectors import check_if_bots_exists, query_attachments
 from ..tasks.deleteTasks import smart_delete_task
-from collections import defaultdict
 
 
 @app.task
@@ -32,14 +31,14 @@ def delete_expired_zips():
 
 @app.task
 def prune_expired_tokens():
-    now = timezone.now()
+    now = django_timezone.now()
     expired_tokens = PerDeviceToken.objects.filter(expires_at__lte=now)
     count, _ = expired_tokens.delete()
 
 
 @app.task
 def delete_failed_files():
-    current_datetime = timezone.now()
+    current_datetime = django_timezone.now()
     cutoff = current_datetime - timedelta(hours=6)
 
     files = File.objects.filter(state=ItemState.FAILED, parent__state=ItemState.ACTIVE, created_at__lte=cutoff)
@@ -76,17 +75,17 @@ def delete_dangling_discord_files(days=3):
                     if not discord_attachments:
                         discord.delete_message(user, discord_message['id'])
 
-                    # timestamp = datetime.fromisoformat(discord_message['timestamp'])
-                    # now = datetime.now(timezone.utc)
-                    # # skip fresh messages to not break upload
-                    # one_hour_ago = now - timedelta(hours=6)
-                    # if timestamp > one_hour_ago:
-                    #     continue
-                    #
-                    # # Break when messages found are older than 3 days
-                    # three_days_ago = datetime.now(timezone.utc) - timedelta(days=days)
-                    # if timestamp < three_days_ago:
-                    #     break
+                    timestamp = datetime.fromisoformat(discord_message['timestamp'])
+                    now = datetime.now(timezone.utc)
+                    # skip fresh messages to not break upload
+                    one_hour_ago = now - timedelta(hours=6)
+                    if timestamp > one_hour_ago:
+                        continue
+
+                    # Break when messages found are older than 3 days
+                    three_days_ago = datetime.now(timezone.utc) - timedelta(days=days)
+                    if timestamp < three_days_ago:
+                        break
 
                     database_attachments = query_attachments(message_id=discord_message['id'])
 
@@ -94,14 +93,12 @@ def delete_dangling_discord_files(days=3):
                         discord.delete_message(user, channel.discord_id, discord_message['id'])
                         print(f"deleting: {discord_message["id"]}")
 
-            except Exception as e:
-                traceback.print_exc()
+            except DiscordError:
                 pass
-
 
 @app.task
 def delete_files_from_trash():
-    current_datetime = timezone.now()
+    current_datetime = django_timezone.now()
     cutoff = current_datetime - timedelta(days=MAX_TIME_FILES_IN_TRASH)
 
     owner_items_map = defaultdict(list)

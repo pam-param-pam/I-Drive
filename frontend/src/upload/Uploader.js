@@ -12,7 +12,6 @@ import { checkFilesSizes } from "@/upload/utils/uploadHelper.js"
 import { watch } from "vue"
 import { DiscordResponseConsumer } from "@/upload/DiscordResponseConsumer.js"
 import { BackendFileConsumer } from "@/upload/BackendFileConsumer.js"
-import { DiscordAttachmentConsumer } from "@/upload/DiscordAttachmentConsumer.js"
 
 export class Uploader {
    constructor() {
@@ -25,7 +24,6 @@ export class Uploader {
       this.requestQueue = null
       this.discordResponseQueue = null
       this.backendFileQueue = null
-      this.discordAttachmentQueue = null
 
       // workers
       this.fileProcessorWorker = null
@@ -34,7 +32,6 @@ export class Uploader {
       this.requestProducer = null
       this.discordResponseConsumer = null
       this.backendFileConsumer = null
-      this.discordAttachmentConsumer = null
       this.uploadConsumers = []
 
       this._internetProbeInterval = null
@@ -52,8 +49,7 @@ export class Uploader {
          "fileQueue:", this.fileQueue?.size(), "closed:", this.fileQueue?.closed,
          "requestQueue:", this.requestQueue?.size(), "closed:", this.requestQueue?.closed,
          "discordResponseQueue:", this.discordResponseQueue?.size(), "closed:", this.discordResponseQueue?.closed,
-         "backendFileQueue:", this.backendFileQueue?.size(), "closed:", this.backendFileQueue?.closed,
-         "discordAttachmentQueue:", this.discordAttachmentQueue?.size(), "closed:", this.discordAttachmentQueue?.closed
+         "backendFileQueue:", this.backendFileQueue?.size(), "closed:", this.backendFileQueue?.closed
       )
    }
 
@@ -192,11 +188,6 @@ export class Uploader {
       } else {
          this.backendFileQueue.open()
       }
-      if (!this.discordAttachmentQueue) {
-         this.discordAttachmentQueue = new AsyncQueue(5)
-      } else {
-         this.discordAttachmentQueue.open()
-      }
    }
 
    startProducer() {
@@ -234,7 +225,6 @@ export class Uploader {
          this.discordResponseConsumer = new DiscordResponseConsumer({
             discordResponseQueue: this.discordResponseQueue,
             backendFileQueue: this.backendFileQueue,
-            discordAttachmentQueue: this.discordAttachmentQueue,
             uploadRuntime: this.uploadRuntime
          })
       }
@@ -262,22 +252,6 @@ export class Uploader {
          })
       }
 
-
-      /** ======= DISCORD ATTACHMENT CONSUMER =======*/
-      if (!this.discordAttachmentConsumer) {
-         console.info("Recreating discordAttachmentConsumer!")
-         this.discordAttachmentConsumer = new DiscordAttachmentConsumer({
-            discordAttachmentQueue: this.discordAttachmentQueue,
-            uploadRuntime: this.uploadRuntime
-         })
-      }
-      if (!this.discordAttachmentConsumer.isRunning()) {
-         console.info("Starting discordAttachmentConsumer!")
-         this.discordAttachmentConsumer.run().catch(err => {
-            console.error("DiscordAttachmentConsumer crashed", err)
-            this.uploadStore.state = uploadState.error
-         })
-      }
    }
 
    setUploadConcurrency(target) {
@@ -296,7 +270,6 @@ export class Uploader {
       this.requestQueue?.open()
       this.discordResponseQueue?.open()
       this.backendFileQueue?.open()
-      this.discordAttachmentQueue?.open()
    }
 
 

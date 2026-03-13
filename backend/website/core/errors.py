@@ -1,3 +1,5 @@
+from json import JSONDecodeError
+
 from httpx import Response
 
 from ..core.deviceControl.constants import ErrorType
@@ -71,10 +73,14 @@ class DiscordTextError(IDriveException):
 class DiscordError(IDriveException):
     def __init__(self, response: Response):
         self.status = response.status_code
-        self._json_error = response.json()
-        self.message = self._json_error.get('message') or self._json_error
-        self.code = self._json_error.get('code')
         self.response = response
+        try:
+            self._json_error = response.json()
+            self.message = self._json_error.get('message') or self._json_error
+            self.code = self._json_error.get('code')
+        except JSONDecodeError:
+            self.message = self.response.text[:200]
+            pass
         super().__init__(self.message)
 
     def __str__(self):

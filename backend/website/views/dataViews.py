@@ -568,38 +568,3 @@ def check_message_id(request, message_id):
     if database_attachments:
         return HttpResponse(status=204)
     return HttpResponse(status=404)
-
-
-@api_view(['GET'])
-@throttle_classes([MediaThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-def check_attachment_id(request, attachment_id):
-    database_attachments = query_attachments(attachment_id=attachment_id)
-    if database_attachments:
-        return HttpResponse(status=204)
-    return HttpResponse(status=404)
-
-
-@api_view(['GET'])
-@throttle_classes([MediaThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-def get_fragment_for_crc(request):
-    qs = Fragment.objects.filter(crc=None)
-    count = qs.count()
-    fragment = qs.order_by("?").first()
-    if not fragment:
-        return HttpResponse(status=404)
-
-    url = discord.get_attachment_url(request.user, fragment)
-
-    data_dict = {
-        "encryption_method": fragment.file.get_encryption_method().value,
-        "url": url,
-        "offset": fragment.offset,
-        "fragment_id": fragment.id,
-        "count": count
-    }
-    if fragment.file.is_encrypted():
-        data_dict["key"] = fragment.file.get_base64_key()
-        data_dict["iv"] = fragment.file.get_base64_iv()
-    return JsonResponse(data_dict, status=200)

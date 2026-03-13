@@ -13,9 +13,8 @@ from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
-    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent, AttachmentLinker, FragmentLink
-from .models.file_related_models import RawMetadata, ThumbnailLink
-from .models.mixin_models import ItemState
+    VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
+from .models.file_related_models import RawMetadata
 from .models.other_models import Notification
 from .services import folder_service, file_service
 from .tasks.deleteTasks import smart_delete_task
@@ -31,11 +30,6 @@ admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
 
 admin.site.register(VideoPosition)
-
-
-admin.site.register(AttachmentLinker)
-admin.site.register(FragmentLink)  # todo
-admin.site.register(ThumbnailLink)
 
 
 @admin.register(Fragment)

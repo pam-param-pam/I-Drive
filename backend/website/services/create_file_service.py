@@ -15,7 +15,7 @@ from ..core.Serializers import FileSerializer
 from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc, get_file_extension
 from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
-from ..models import File, Fragment, Thumbnail, Channel, FragmentLink, ThumbnailLink, AttachmentLinker
+from ..models import File, Fragment, Thumbnail
 from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists, get_discord_channel
 from ..websockets.utils import group_and_send_event, send_event
 
@@ -207,41 +207,3 @@ def create_or_edit_thumbnail(request, user: User, file_obj: File, data: dict) ->
 
     file_dict = FileSerializer().serialize_object(file_obj)
     send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
-
-
-def create_linker(user, data):
-    channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
-    message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
-    message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
-    links = validate_key(data, "links", list)
-
-    channel = Channel.objects.get(discord_id=channel_id, owner=user)
-    author = get_discord_author(user, message_author_id)
-
-    with transaction.atomic():
-        linker = AttachmentLinker.objects.create(
-            owner=user,
-            message_id=message_id,
-            channel=channel,
-            object_id=author.discord_id,
-            content_type=ContentType.objects.get_for_model(author),
-        )
-
-        fragment_links = []
-        for link in links:
-            attachment_id = validate_key(link, "attachment_id", str, checks=[IsSnowflake])
-            sequence = validate_key(link, "sequence", int, checks=[IsPositive])
-
-            resource = Fragment.objects.filter(attachment_id=attachment_id).first()
-            if resource:
-                fragment_links.append(FragmentLink(linker=linker, fragment=resource, sequence=sequence))
-                continue
-
-            resource = Thumbnail.objects.filter(attachment_id=attachment_id).first()
-            if resource:
-                fragment_links.append(ThumbnailLink(linker=linker, fragment=resource, sequence=sequence))
-                continue
-
-            raise BadRequestError(f"No fragment or thumbnail found with attachment_id={attachment_id}")
-
-        FragmentLink.objects.bulk_create(fragment_links)

@@ -163,26 +163,6 @@ def remove_moment_view(request, file_obj, moment_id):
     return HttpResponse(status=204)
 
 
-@api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def change_file_crc_view(request, file_obj):
-    crc = extract_key(request.data, "crc")
-    file_service.change_file_crc(file_obj, crc)
-    return HttpResponse(status=204)
-
-
-@api_view(['PATCH'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-def change_fragment_crc_view(request, fragment_id):
-    crc = extract_key(request.data, "crc")
-    file_service.change_fragment_crc(request.user, fragment_id, crc)
-    return HttpResponse(status=204)
-
-
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])

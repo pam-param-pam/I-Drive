@@ -85,7 +85,13 @@ def _extract_raw_metadata(raw_buffer):
 
 @app.task()
 def generate_raw_image_thumbnails(batch_size: int = 10):
-    files = File.objects.filter(type="Raw image", thumbnail__isnull=True, rawmetadata__isnull=True, inTrash=False, parent__inTrash=False).select_related("owner")[:batch_size]
+    files = File.objects.filter(
+        type="Raw image",
+        thumbnail__isnull=True,
+        rawmetadata__isnull=True,
+        inTrash=False,
+        parent__inTrash=False
+    ).select_related("owner")[:batch_size]
 
     state = {"upload_queue": [], "upload_map": [], "current_size": 0}
 
@@ -97,7 +103,7 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
         attachments = resp["attachments"]
 
         for meta, att in zip(state["upload_map"], attachments):
-            file_obj, enc_key, enc_iv, size = meta
+            file_obj, enc_key, enc_iv, size, metadata = meta
 
             file_service.create_thumbnail(
                 file_obj,
@@ -111,8 +117,29 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
                     "size": size
                 }
             )
+
+            if metadata:
+                camera, iso, shutter, aperture, focal_length, camera_owner = metadata
+                file_service.create_raw_metadata(
+                    file_obj,
+                    {
+                        "camera": camera,
+                        "camera_owner": camera_owner,
+                        "iso": iso,
+                        "shutter": shutter,
+                        "aperture": aperture,
+                        "focal_length": focal_length
+                    }
+                )
+
             file_obj.remove_cache()
-            send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
+
+            send_event(
+                RequestContext.from_user(file_obj.owner.id),
+                file_obj.parent,
+                EventCode.ITEM_UPDATE,
+                FileSerializer().serialize_object(file_obj)
+            )
 
         state["upload_queue"].clear()
         state["upload_map"].clear()
@@ -126,7 +153,11 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
             raw_buffer = BytesIO()
 
             fragments = file.fragments.all().order_by("sequence")
-            decryptor = Decryptor(method=file.get_encryption_method(), key=file.key, iv=file.iv)
+            decryptor = Decryptor(
+                method=file.get_encryption_method(),
+                key=file.key,
+                iv=file.iv
+            )
 
             for frag in fragments:
                 url = discord.get_attachment_url(file.owner, frag)
@@ -136,35 +167,17 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
 
                 raw_buffer.write(decryptor.decrypt(r.content))
 
+            raw_buffer.seek(0)
+
             metadata = _extract_raw_metadata(raw_buffer)
-            if metadata:
-                camera, iso, shutter, aperture, focal_length, camera_owner = metadata
-                file_service.create_raw_metadata(
-                    file,
-                    {
-                        "camera": camera,
-                        "camera_owner": camera_owner,
-                        "iso": iso,
-                        "shutter": shutter,
-                        "aperture": aperture,
-                        "focal_length": focal_length
-                    }
-                )
-                file.remove_cache()
 
             raw_buffer.seek(0)
 
-            # # -------------------------
-            # # RAW DEMOSAIC
-            # # -------------------------
-            #
             with rawpy.imread(raw_buffer) as raw:
-                rgb = raw.postprocess(
-                )
+                rgb = raw.postprocess()
 
             img = Image.fromarray(rgb)
-
-            img.thumbnail((512, 512))
+            img.thumbnail((1080, 720))
 
             webp_buffer = BytesIO()
             img.save(webp_buffer, format="WEBP", quality=80)
@@ -187,11 +200,20 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
                 flush_uploads(file.owner, state)
 
             state["upload_queue"].append((name, encrypted))
-            state["upload_map"].append((file, encryptor.get_base64_key(), encryptor.get_base64_iv(), size))
+            state["upload_map"].append(
+                (
+                    file,
+                    encryptor.get_base64_key(),
+                    encryptor.get_base64_iv(),
+                    size,
+                    metadata
+                )
+            )
             state["current_size"] += size
 
         except Exception:
             traceback.print_exc()
+
             meta = file_service.create_raw_metadata(
                 file,
                 {
@@ -206,6 +228,7 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
 
             meta.failed_to_process = True
             meta.save(update_fields=["failed_to_process"])
+
             file.remove_cache()
 
     if state["upload_queue"]:
