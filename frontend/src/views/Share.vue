@@ -22,6 +22,8 @@
       @onOpen="onOpen"
       @openInNewWindow="openInNewWindow"
    ></FileListing>
+   <router-view />
+
 </template>
 
 <script>
@@ -82,7 +84,13 @@ export default {
    },
 
    watch: {
-      $route: "fetchShare"
+      selected() { console.log("Share rerender: selected changed") },
+      sortedItems() { console.log("Share rerender: items changed") },
+      loading() { console.log("Share rerender: loading changed") },
+
+      '$route.params.folderId'() {
+         this.fetchShare()
+      }
    },
 
    methods: {

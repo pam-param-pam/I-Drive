@@ -90,8 +90,9 @@ export class RequestProducer {
             if (!state.thumbnailExtracted) {
                const { thumbnail, other } = await makeThumbnailIfNeeded(queueFile)
                if (other) {
-                  if (other.duration) state.setDuration(other.duration)
                   if (other.rawMetadata) state.setRawMetadata(other.rawMetadata)
+                  if (other.photoMetadata) state.setPhotoMetadata(other.photoMetadata)
+
                }
                if (thumbnail) {
                   state.markThumbnailExtracted(frontendId)
@@ -144,7 +145,6 @@ export class RequestProducer {
 
                   if (mp4boxFile.collectedSamples.length >= subTrack.nb_samples) {
                      const vtt = buildVttFromSamples(subTrack, mp4boxFile.collectedSamples)
-                     console.log(subTrack)
                      if (vtt.size <= maxChunkSize) {
                         let name
                         if (subTrack.language === "und" && subTrack.name === "SubtitleHandler") {
@@ -261,7 +261,6 @@ export class RequestProducer {
                   __retryErrors: true
                })
             } catch (e) {
-               console.log(e)
                if (e?.response?.data?.error === "errors.badRequest") {
                   throw new Error(e?.response?.data?.details || "Failed to create a parent folder.")
                }
@@ -309,9 +308,6 @@ export class RequestProducer {
       const extractedCount = state.extractedSubtitleCount
 
       const attachments = this.subtitleAttachments.get(frontendId)
-      console.log("expectedCount: " + expectedCount)
-      console.log("extractedCount: " + extractedCount)
-      console.log("attachments: " + attachments.length)
       if (!expectedCount || extractedCount !== expectedCount) {
          return
       }
@@ -325,7 +321,6 @@ export class RequestProducer {
       state.markSubtitlesExtracted(frontendId)
 
       for (const batch of batches) {
-         console.log("batch: " + JSON.stringify(batch))
          let totalSize = 0
          for (const att of batch) {
             totalSize += att.rawBlob.size

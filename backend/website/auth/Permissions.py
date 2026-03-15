@@ -280,7 +280,7 @@ class CheckShareItemBelongings(BaseResourceCheck):
         self._require_type(share_obj, ShareableLink)
         if item_obj:
             self._require_type(item_obj, (Folder, File))
-            check_if_item_belongs_to_share(request, share_obj, item_obj)
+            check_if_item_belongs_to_share(share_obj, item_obj)
 
 class CheckShareOwnership(BaseResourceCheck):
     def check(self, request, *resources):

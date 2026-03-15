@@ -15,10 +15,6 @@ from ..websockets.utils import send_event
 
 
 def move_group(context: RequestContext, grouped_items, new_parent, processed_count, last_percentage, total_length, is_folder):
-    if is_folder:
-        model = Folder
-    else:
-        model = File
 
     BATCH_SIZE = 250
 

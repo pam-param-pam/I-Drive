@@ -12,9 +12,8 @@ from simple_history.models import HistoricalRecords
 
 from .folder_models import Folder
 from .mixin_models import DiscordAttachmentMixin, ItemState
-from ..constants import FILE_TYPE_CHOICES, EncryptionMethod, cache, MAX_FILES_IN_FOLDER
+from ..constants import FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER
 from ..core.helpers import chop_long_file_name
-from ..services import cache_service
 
 
 class File(models.Model):
@@ -33,7 +32,6 @@ class File(models.Model):
     key = models.BinaryField(null=True)
     iv = models.BinaryField(null=True)
     encryption_method = models.SmallIntegerField()
-    duration = models.IntegerField(null=True)
     tags = models.ManyToManyField('Tag', blank=True, related_name='files')
     frontend_id = models.CharField(max_length=40, unique=True)
     crc = models.BigIntegerField(null=True)
@@ -58,10 +56,6 @@ class File(models.Model):
             CheckConstraint(
                 check=Q(size__gte=0),
                 name="%(class)s_size_non_negative"
-            ),
-            CheckConstraint(
-                check=Q(duration__gte=0) | Q(duration__isnull=True),
-                name="%(class)s_duration_non_negative"
             ),
             CheckConstraint(
                 check=~Q(name__exact=""),
@@ -109,8 +103,8 @@ class File(models.Model):
 
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
-        "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince",
-        "duration", "parent__id", "crc", "thumbnail", "videoposition__timestamp", "videometadata__id", "rawmetadata__id",
+        "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
+        "parent__id", "crc", "thumbnail__id", "videoposition__timestamp", "videometadata__id", "rawmetadata__id", "photometadata__id",
     )
 
     LOCK_FROM_ANNOTATE = {
@@ -215,6 +209,7 @@ class Fragment(DiscordAttachmentMixin):
 
         indexes = [
             models.Index(fields=["file", "sequence"]),
+            models.Index(fields=["file", "state"]),
         ]
 
         constraints = [

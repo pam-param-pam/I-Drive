@@ -4,6 +4,7 @@ from django.utils import timezone
 from . import cache_service
 from ..constants import EventCode, cache
 from ..core.Serializers import FolderSerializer
+from ..core.dataModels.http import RequestContext
 from ..core.errors import ResourcePermissionError, BadRequestError
 from ..core.helpers import validate_value
 from ..core.validators.GeneralChecks import NotEmpty
@@ -35,9 +36,12 @@ def _clear_cache(folder_ids: list[str]) -> None:
 
     cache.delete_many(cache_keys)
 
-def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
+def create_folder(context: RequestContext, user: User, parent: Folder, name: str) -> Folder:
     name = validate_value(name, str, checks=[NotEmpty])
     validate_value(name, str, checks=[NotEmpty])
+
+    if parent.state != ItemState.ACTIVE:
+        raise BadRequestError("Parent not ready")
 
     folder_obj = Folder(name=name, parent=parent, owner=user)
 
@@ -48,43 +52,43 @@ def create_folder(request, user: User, parent: Folder, name: str) -> Folder:
     folder_obj.save()
 
     folder_dict = FolderSerializer().serialize_object(folder_obj)
-    send_event(request.context, parent, EventCode.ITEM_CREATE, folder_dict)
+    send_event(context, parent, EventCode.ITEM_CREATE, folder_dict)
     return folder_obj
 
 
-def change_folder_password(request, folder_obj: Folder, new_password: str) -> bool:
+def change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str) -> bool:
     validate_value(new_password, str)
 
     if new_password:
-        lock_folder_task.delay(request.context, folder_obj.id, new_password)
+        lock_folder_task.delay(context, folder_obj.id, new_password)
     else:
-        unlock_folder_task.delay(request.context, folder_obj.id)
+        unlock_folder_task.delay(context, folder_obj.id)
 
     is_locked = True if new_password else False
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(request.context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': is_locked, 'lockFrom': lockFrom}])
 
     return is_locked
 
 
-def reset_folder_password(request, folder_obj: Folder, account_password: str, new_folder_password: str) -> bool:
+def reset_folder_password(context: RequestContext, user, folder_obj: Folder, account_password: str, new_folder_password: str) -> bool:
     validate_value(new_folder_password, str)
 
-    if not request.user.check_password(account_password):
+    if not user.check_password(account_password):
         raise ResourcePermissionError("Account password is incorrect")
 
     if new_folder_password:
-        lock_folder_task.delay(request.context, folder_obj.id, new_folder_password)
+        lock_folder_task.delay(context, folder_obj.id, new_folder_password)
     else:
-        unlock_folder_task.delay(request.context, folder_obj.id)
+        unlock_folder_task.delay(context, folder_obj.id)
 
     is_locked = True if new_folder_password else False
 
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(request.context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': is_locked, 'lockFrom': lockFrom}])
 
     return is_locked
@@ -132,7 +136,7 @@ def internal_restore_from_trash(folder: Folder) -> None:
     folder_ids = [f.id for f in subfolders]
     folder_ids.append(folder.id)
 
-    Folder.objects.filter(id__in=[f.id for f in subfolders]).update(
+    Folder.objects.filter(id__in=folder_ids).update(
         inTrash=False,
         inTrashSince=None
     )

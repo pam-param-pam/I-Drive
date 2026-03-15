@@ -374,8 +374,8 @@ export default {
          imageWidth: 100,
          numberOfTiles: 5,
 
-         scrollInterval: null,
-         scrollToAnimationTimeout: null
+         scrollInterval: null
+
       }
    },
 
@@ -386,15 +386,19 @@ export default {
             this.calculateGridLayoutWrapper()
             this.scrollToLastItem()
          })
+      },
+      "$route.name"(newName, oldName) {
+         if (newName === "Files" || newName === "Share") {
+            this.scrollToLastItem()
+         }
       }
    },
 
    mounted() {
       this.$nextTick(() => {
          this.calculateGridLayoutWrapper()
-         this.scrollToLastItem()
       })
-      //
+
       window.addEventListener("resize", this.calculateGridLayoutWrapper)
 
       // Add the needed event listeners to the window and document.
@@ -408,13 +412,14 @@ export default {
       document.addEventListener("drag", this.autoScroll)
       document.addEventListener("dragend", this.stopAutoScroll)
    },
-
+   beforeRouteLeave() {
+      clearTimeout(this.scrollToAnimationTimeout)
+   },
    beforeUnmount() {
       this.resetSelected()
 
-      if (this.scrollToAnimationTimeout) {
-         clearTimeout(this.scrollToAnimationTimeout)
-         this.scrollToAnimationTimeout = null
+      if (this.multiSelection) {
+         this.setMultiSelection(false)
       }
 
       // Remove event listeners before destroying this page.
@@ -431,7 +436,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["contextMenuState", "selectedCount", "searchActive", "sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "searchActive"]),
+      ...mapState(useMainStore, ["multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "searchActive"]),
 
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
@@ -499,13 +504,13 @@ export default {
    },
 
    methods: {
+      ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "addSelected", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
       isMobile,
-
-      ...mapActions(useMainStore, ["openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "addSelected", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
 
       async uploadInput(event) {
          this.$emit("uploadInput", event)
       },
+
       showContextMenu(event) {
          let advanced = event.ctrlKey || event.shiftKey
 
@@ -732,7 +737,6 @@ export default {
          let tileWidth = containerWidth / numberOfTiles
 
          this.numberOfTiles = numberOfTiles
-         console.log(this.settings.viewMode)
          if (this.settings.viewMode === "width grid") {
             this.tileWidth = tileWidth
             this.tileHeight = tileWidth * 0.75
@@ -748,30 +752,46 @@ export default {
          if (isMobile()) this.imageHeight += 20
       },
 
-      scrollToLastItem() {
+      async waitForRef(id, tries = 20) {
+         for (let i = 0; i < tries; i++) {
+            const el = this.$refs[id]
+            if (el?.$el) return el
+            await new Promise(r => requestAnimationFrame(r))
+         }
+         return null
+      },
+
+      async scrollToLastItem() {
+         function nextFrame() {
+            return new Promise(resolve => requestAnimationFrame(resolve))
+         }
+
+
          if (!this.lastItem) return
-         let filesScroller = this.$refs.filesScroller
-         let index =
-            this.sortedItems.findIndex((file) => file.id === this.lastItem.id) - this.numberOfTiles
-         let lastItemId = this.lastItem.id
 
-         setTimeout(() => {
-            filesScroller.scrollToItem(index)
+         await this.$nextTick()
+         await nextFrame()
 
-            setTimeout(() => {
-               let itemElement = this.$refs[lastItemId]
-               if (itemElement) {
-                  itemElement.$el.classList.add("pulse-animation")
+         const filesScroller = this.$refs.filesScroller
+         if (!filesScroller) return
 
-                  // Remove the animation class after 3.5 seconds
-                  this.scrollToAnimationTimeout = setTimeout(() => {
-                     itemElement.$el.classList.remove("pulse-animation")
-                     this.setLastItem(null)
-                     this.scrollToAnimationTimeout = null
-                  }, 3500)
-               }
-            }, 100)
-         }, 50)
+         const index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
+         const lastItemId = this.lastItem.id
+
+         filesScroller.scrollToItem(index)
+         await nextFrame()
+
+         const itemElement = this.$refs[lastItemId]
+         if (!itemElement?.$el) return
+
+         itemElement.$el.classList.add("pulse-animation")
+
+         this.setLastItem(null)
+         this.scrollToAnimationTimeout = setTimeout(() => {
+            if (itemElement?.$el) {
+               itemElement.$el.classList.remove("pulse-animation")
+            }
+         }, 3500)
       }
    }
 }

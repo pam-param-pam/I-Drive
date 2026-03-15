@@ -20,6 +20,7 @@
          @upload="upload"
          @uploadInput="onUploadInput"
       ></FileListing>
+      <router-view />
    </div>
 </template>
 
@@ -37,6 +38,7 @@ import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { cancelRequestBySignature } from "@/axios/helper.js"
 import { getUploader } from "@/upload/Uploader.js"
+import axios from "axios"
 
 export default {
    name: "files",
@@ -98,7 +100,13 @@ export default {
    },
 
    watch: {
-      $route: "fetchFolder"
+      '$route.params.folderId'() {
+         this.fetchFolder()
+      },
+      selected() { console.log("Files rerender: selected changed") },
+      sortedItems() { console.log("Files rerender: items changed") },
+      loading() { console.log("Files rerender: loading changed") },
+
    },
 
    methods: {
@@ -114,7 +122,7 @@ export default {
             let items = await search(searchParams, lockFrom, password)
             this.setSearchItems(items)
          } catch (error) {
-            if (error.code === "ERR_CANCELED") return
+            if (axios.isCancel(error)) return
             console.log(error)
             this.setError(error)
 
@@ -155,7 +163,7 @@ export default {
                let res = await getItems(this.folderId, this.lockFrom)
                this.setCurrentFolderData(res)
             } catch (error) {
-               if (error.code === "ERR_CANCELED") return
+               if (axios.isCancel(error)) return
                console.log(error)
                this.setError(error)
             } finally {
@@ -255,9 +263,9 @@ export default {
             return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
          } else {
             if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
-               return { name: "Editor", params: { fileId: item.id, lockFrom: item.lockFrom } }
+               return { name: "Editor", params: { folderId: item.parent_id, fileId: item.id, lockFrom: item.lockFrom } }
             } else {
-               return { name: "Preview", params: { fileId: item.id, lockFrom: item.lockFrom } }
+               return { name: "Preview", params: { folderId: item.parent_id, fileId: item.id, lockFrom: item.lockFrom } }
             }
          }
       },

@@ -1,8 +1,14 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
-import jsmediatags from "jsmediatags"
 import { uploadInstance } from "@/axios/networker.js"
 import { detectExtension, showToast } from "@/utils/common.js"
+import {
+   fastVideoThumbnail,
+   generateAudioThumbnail,
+   generateImageThumbnail,
+   generateRawImageThumbnail,
+   slowVideoCover
+} from "@/upload/utils/thumbnailHelper.js"
 
 
 export async function checkFilesSizes(files) {
@@ -147,201 +153,31 @@ export function getWebhook() {
 }
 
 
-export async function fastVideoThumbnail(
-   file,
-   seekTo = 0.1,
-   maxWidth = 1280,
-   maxHeight = 720,
-   quality = 0.5
-) {
-   const video = document.createElement("video")
-   const url = URL.createObjectURL(file)
-
-   let waitingForSeek = false
-   let targetTime = 0
-   let resolved = false
-
-   return new Promise((resolve, reject) => {
-
-      const cleanup = () => {
-         document.removeEventListener("visibilitychange", onVisibilityChange)
-         video.onerror = null
-         video.onloadedmetadata = null
-         video.onseeked = null
-         URL.revokeObjectURL(url)
-         video.src = ""
-      }
-
-      const onVisibilityChange = () => {
-         if (!document.hidden && waitingForSeek) {
-            // Re-trigger seek when tab becomes active again
-            try {
-               video.currentTime = targetTime
-            } catch (_) {
-               // ignored – browser may still be waking media pipeline
-            }
-         }
-      }
-
-      video.onerror = () => {
-         if (resolved) return
-         resolved = true
-         cleanup()
-         reject(new Error("Failed to load video"))
-      }
-
-      video.onloadedmetadata = () => {
-         const duration = video.duration || 0
-         targetTime = Math.max(0, Math.min(seekTo, Math.max(0, duration - 0.1)))
-         waitingForSeek = true
-         video.currentTime = targetTime
-      }
-
-      video.onseeked = () => {
-         if (!waitingForSeek || resolved) return
-         waitingForSeek = false
-
-         const canvas = document.createElement("canvas")
-         const ctx = canvas.getContext("2d")
-         if (!ctx) {
-            resolved = true
-            cleanup()
-            reject(new Error("Canvas context not available"))
-            return
-         }
-
-         let width = video.videoWidth
-         let height = video.videoHeight
-
-         if (width > height) {
-            if (width > maxWidth) {
-               height *= maxWidth / width
-               width = maxWidth
-            }
-         } else {
-            if (height > maxHeight) {
-               width *= maxHeight / height
-               height = maxHeight
-            }
-         }
-
-         canvas.width = Math.round(width)
-         canvas.height = Math.round(height)
-
-         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-         let duration = video.duration
-         canvas.toBlob(
-            blob => {
-               if (resolved) return
-               resolved = true
-               cleanup()
-
-               if (!blob) {
-                  reject(new Error("Failed to create thumbnail blob"))
-                  return
-               }
-
-               resolve({
-                  thumbnail: blob,
-                  duration: duration
-               })
-            },
-            "image/webp",
-            quality
-         )
-      }
-
-      document.addEventListener("visibilitychange", onVisibilityChange)
-
-      video.src = url
-      video.muted = true
-      video.crossOrigin = "anonymous"
-      video.preload = "metadata"
-      video.load()
-   })
-}
-
-
-export function extractRawThumbnail(file, quality = 0.5) {
-   return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-
-      reader.onerror = () => reject(reader.error)
-
-      reader.onload = async (e) => {
-         try {
-            const buf = new Uint8Array(e.target.result)
-
-            const metadata = dcraw(buf, { verbose: true, identify: true })
-            const thumbnailBytes = dcraw(buf, { extractThumbnail: true })
-
-            // 1) Wrap original thumbnail bytes (JPEG/TIFF/etc.)
-            const originalBlob = new Blob([thumbnailBytes])
-
-            // 2) Decode
-            const bitmap = await createImageBitmap(originalBlob)
-
-            // 3) Draw to canvas
-            const canvas = document.createElement("canvas")
-            canvas.width = bitmap.width
-            canvas.height = bitmap.height
-
-            const ctx = canvas.getContext("2d")
-            if (!ctx) throw new Error("Canvas context not available")
-
-            ctx.drawImage(bitmap, 0, 0)
-
-            // 4) Re-encode with quality
-            const webpBlob = await new Promise((resolve) =>
-               canvas.toBlob(resolve, "image/webp", quality)
-            )
-
-            if (!webpBlob) throw new Error("Failed to encode thumbnail")
-
-            console.log("RAW THUMB SIZE:", webpBlob.size)
-
-            resolve({
-               thumbnail: webpBlob,
-               metadata
-            })
-         } catch (err) {
-            reject(err)
-         }
-      }
-
-      reader.readAsArrayBuffer(file)
-   })
-}
-
-
 export async function makeThumbnailIfNeeded(queueFile) {
    let thumbnail = null
    let other = {}
    try {
       //extracting thumbnail if needed for audio file
       if (isAudioFile(queueFile.fileObj.extension)) {
-         thumbnail = await getAudioCover(queueFile)
+         thumbnail = await generateAudioThumbnail(queueFile.systemFile)
       }
       //generating a thumbnail if needed for video file
       if (isVideoFile(queueFile.fileObj.extension)) {
-         let data
-         // if (queueFile.fileObj.size > 25 * 1024 * 1024) {
-         //    data = await getVideoCover(queueFile) // todo make this safe, just like fastVideoThumbnail
-         // } else {
-         data = await fastVideoThumbnail(queueFile.systemFile)
-         // }
-         if (!other.duration) data = await fastVideoThumbnail(queueFile.systemFile)
-         other.duration = Math.ceil(data.duration)
-         thumbnail = data.thumbnail
+         if (queueFile.fileObj.size > 300 * 1024 * 1024) {
+            thumbnail = await slowVideoCover(queueFile.systemFile)
+         }
+         thumbnail = await fastVideoThumbnail(queueFile.systemFile)
       }
       //generating a thumbnail for an image
       if (isImageFile(queueFile.fileObj.extension)) {
-         thumbnail = await getImageThumbnail(queueFile)
+         let data = await generateImageThumbnail(queueFile.systemFile)
+         thumbnail = data.thumbnail
+         other.photoMetadata = data.photoMetadata
       }
 
       //generating a thumbnail for a raw image
       if (isRawImageFile(queueFile.fileObj.extension)) {
-         let data = await extractRawThumbnail(queueFile.systemFile)
+         let data = await generateRawImageThumbnail(queueFile.systemFile)
          thumbnail = data.thumbnail
          other.rawMetadata = parseRawMetadata(data.metadata)
       }
@@ -351,41 +187,6 @@ export async function makeThumbnailIfNeeded(queueFile) {
    }
    return { thumbnail, other }
 
-}
-
-
-export function getVideoCover(file, seekTo = -2, retryTimes = 0) {
-   return new Promise((resolve, reject) => {
-      const videoPlayer = document.createElement("video")
-      videoPlayer.src = URL.createObjectURL(file.systemFile)
-
-      videoPlayer.addEventListener("error", () => {
-         reject(new Error("Error when loading video file"))
-      })
-
-      videoPlayer.addEventListener("loadedmetadata", () => {
-         captureVideoFrame(videoPlayer, seekTo, true)
-            .then((frames) => {
-               if (frames.length === 1) {
-                  if (isPitchBlack(frames[0].canvas) && retryTimes < 5) {
-                     resolve(getVideoCover(file, seekTo + 2, retryTimes + 1))
-                  }
-               }
-               createThumbnails(frames)
-                  .then((thumbnails) => {
-                     const largestThumbnail = findLargestThumbnail(thumbnails)
-                     resolve({
-                        thumbnail: largestThumbnail,
-                        duration: frames[0].duration
-                     })
-                  })
-                  .catch(reject)
-            })
-            .catch(reject)
-      })
-
-      videoPlayer.load()
-   })
 }
 
 
@@ -403,7 +204,6 @@ export function parseRawMetadata(text) {
    }
    let owner = map["Owner"]
    if (!owner || owner === "unknown") owner = null
-   console.log(map)
    return {
       camera: map["Camera"] || null,
       camera_owner: owner,
@@ -413,171 +213,6 @@ export function parseRawMetadata(text) {
       focal_length: map["Focal length"] || null,
       lens_model: map["Focal length"] || null
    }
-}
-
-
-function createThumbnails(frames) {
-   const thumbnailPromises = frames.map(frame => createThumbnail(frame.canvas))
-   return Promise.all(thumbnailPromises)
-}
-
-
-function findLargestThumbnail(thumbnails) {
-   thumbnails.sort((a, b) => b.size - a.size)
-   return thumbnails[0]
-}
-
-
-function isPitchBlack(canvas) {
-   const testCanvas = document.createElement("canvas")
-   testCanvas.width = testCanvas.height = 1
-   const tinyCtx = testCanvas.getContext("2d")
-   tinyCtx.drawImage(canvas, 0, 0, 1, 1)
-
-   const data = tinyCtx.getImageData(0, 0, 1, 1).data
-   const totalColor = data[0] + data[1] + data[2] + data[3]
-
-   return totalColor === 255
-}
-
-
-function createThumbnail(source, options = {}) {
-   const {
-      quality = 0.65,
-      maxWidth = 1280,
-      maxHeight = 720,
-      mimeType = "image/webp"
-   } = options
-
-   return new Promise((resolve) => {
-      let width = source.width
-      let height = source.height
-
-      // Downscale to target resolution
-      if (width > height) {
-         if (width > maxWidth) {
-            height *= maxWidth / width
-            width = maxWidth
-         }
-      } else {
-         if (height > maxHeight) {
-            width *= maxHeight / height
-            height = maxHeight
-         }
-      }
-
-      // Draw downscaled image
-      const canvas = document.createElement("canvas")
-      canvas.width = Math.round(width)
-      canvas.height = Math.round(height)
-
-      const ctx = canvas.getContext("2d")
-      ctx.drawImage(source, 0, 0, canvas.width, canvas.height)
-
-      // Compress
-      canvas.toBlob((blob) => {
-         resolve(blob)
-      }, mimeType, quality)
-   })
-}
-
-
-export function captureVideoFrame(videoPlayer, seekTo, multiple, options = {}) {
-   return new Promise((resolve, reject) => {
-      const width = videoPlayer.videoWidth
-      const height = videoPlayer.videoHeight
-      const frames = []
-
-      const captureAndCheckThumbnail = (seekPosition, attempt) => {
-         videoPlayer.currentTime = seekPosition
-
-         videoPlayer.addEventListener("seeked", () => {
-            const frameCanvas = document.createElement("canvas")
-            frameCanvas.width = width
-            frameCanvas.height = height
-            const ctx = frameCanvas.getContext("2d")
-            ctx.drawImage(videoPlayer, 0, 0, width, height)
-
-            frameCanvas.toBlob(blob => {
-               if (!blob) {
-                  reject(new Error(`Failed to create Blob from canvas at seek position ${seekPosition}`))
-                  return
-               }
-
-               frames.push({
-                  thumbnail: blob,
-                  canvas: frameCanvas,
-                  duration: videoPlayer.duration,
-                  seekPosition: seekPosition
-               })
-
-               if (attempt < (multiple ? 5 : 1) - 1) {
-                  const nextSeekPosition = seekPosition + (videoPlayer.duration * 0.1)
-                  captureAndCheckThumbnail(nextSeekPosition, attempt + 1)
-               } else {
-                  resolve(frames)
-               }
-            }, options.type, options.quality)
-
-         }, { once: true })
-
-         videoPlayer.currentTime = seekPosition
-      }
-
-      captureAndCheckThumbnail(seekTo, 0)
-   })
-}
-
-
-export function getImageThumbnail(file, options = {}) {
-   const defaultOptions = {
-      quality: 0.5,
-      ...options
-   }
-   return new Promise((resolve, reject) => {
-      const img = new Image()
-
-      img.onload = () => {
-         createThumbnail(img, defaultOptions)
-            .then(resolve)
-            .catch(reject)
-         URL.revokeObjectURL(img.src)
-      }
-
-      img.onerror = () => {
-         reject(new Error("Failed to load image"))
-      }
-
-      img.src = URL.createObjectURL(file.systemFile)
-   })
-}
-
-
-export async function getAudioCover(file, options = {}) {
-   return new Promise((resolve, reject) => {
-      jsmediatags.read(file.systemFile, {
-         onSuccess: (tag) => {
-            const picture = tag.tags.picture
-            if (!picture) return reject(new Error("No picture found in audio file"))
-
-            const { data, format } = picture
-            const byteArray = new Uint8Array(data)
-            const blob = new Blob([byteArray], { type: format })
-
-            const img = new Image()
-            img.onload = () => {
-               createThumbnail(img, options).then(resolve).catch(reject)
-               URL.revokeObjectURL(img.src)
-            }
-            img.onerror = reject
-            img.src = URL.createObjectURL(blob)
-         },
-         onError: (error) => {
-            console.error("Error reading file:", error.type, error.info)
-            reject(new Error("Failed to read audio file"))
-         }
-      })
-   })
 }
 
 

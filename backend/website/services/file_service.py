@@ -12,12 +12,15 @@ from ..core.errors import BadRequestError
 from ..core.helpers import validate_key, validate_encryption_fields, validate_value, validate_crc
 from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
 from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Fragment, Folder
-from ..models.file_related_models import RawMetadata
+from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.mixin_models import ItemState
 from ..queries.selectors import get_discord_author, get_discord_channel
 
 
 def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
+    if file_obj.state != ItemState.ACTIVE:
+        raise BadRequestError("Item not ready")
+
     if file_obj.type not in ("Video", "Raw image", "Image", "Audio"):
         raise BadRequestError(f"Thumbnail is not allowed for file type: {file_obj.type}")
 
@@ -48,6 +51,9 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
 
 
 def create_subtitle(file_obj: File, data: dict) -> Subtitle:
+    if file_obj.state != ItemState.ACTIVE:
+        raise BadRequestError("Item not ready")
+
     if file_obj.type != "Video":
         raise BadRequestError(f"Subtitles are not allowed for file type: {file_obj.type}")
 
@@ -90,7 +96,7 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
             "bitrate": validate_key(track, "bitrate", (int, float), checks=[IsPositive]),
             "codec": validate_key(track, "codec", str, checks=[MaxLength(100)]),
             "size": validate_key(track, "size", (int, float), checks=[IsPositive]),
-            "duration": validate_key(track, "duration", (int, float), checks=[IsPositive]),
+            "duration": validate_key(track, "duration", (int, float), checks=[NotNegative]),
             "language": validate_key(track, "language", str, required=False, checks=[MaxLength(100)]),
             "track_number": index + 1,
         }
@@ -152,12 +158,21 @@ def create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
 
     return raw_metadata
 
+def create_photo_metadata(file_obj: File, metadata: dict) -> PhotoMetadata:
+    if file_obj.type != "Image":
+        raise BadRequestError(f"Photo metadata is not allowed for file type: {file_obj.type}")
+
+    photo_metadata = PhotoMetadata.objects.create(
+        file=file_obj,
+        height=validate_key(metadata, "height", int, checks=[IsPositive]),
+        width=validate_key(metadata, "width", int, checks=[IsPositive]),
+    )
+
+    return photo_metadata
+
 def update_video_position(file_obj: File, new_position) -> None:
     if file_obj.type != "Video":
         raise BadRequestError("Must be a video.")
-
-    if new_position > file_obj.duration and file_obj.duration not in (0, None):  # legacy files have broken duration
-        raise BadRequestError("Timestamp exceeds video duration")
 
     video_position, created = VideoPosition.objects.get_or_create(file=file_obj)
 
@@ -244,9 +259,6 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
 
     if timestamp < 0:
         raise BadRequestError("Timestamp cannot be < 0")
-
-    if file_obj.duration and timestamp > file_obj.duration:
-        raise BadRequestError("Timestamp cannot be > duration")
 
     if Moment.objects.filter(timestamp=timestamp, file=file_obj).exists():
         raise BadRequestError("Moment with this timestamp already exists!")

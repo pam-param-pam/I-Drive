@@ -174,8 +174,6 @@ export default {
          this.closeHover()
       },
       async cancel() {
-         console.log("CANCEL")
-         console.log(this.sessionId)
          try {
             if (this.sessionId) await closePendingQrSession(this.sessionId)
          } catch (e) {

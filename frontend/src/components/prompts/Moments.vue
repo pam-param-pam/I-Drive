@@ -75,7 +75,7 @@
 </template>
 
 <script>
-import { captureVideoFrame, generateIv, generateKey, getImageThumbnail, upload } from "@/upload/utils/uploadHelper.js"
+import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
@@ -85,6 +85,7 @@ import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { encrypt } from "@/upload/utils/encryption.js"
+import { getMomentFrame } from "@/upload/utils/thumbnailHelper.js"
 
 export default {
    name: "moments",
@@ -217,9 +218,9 @@ export default {
 
       },
       async getCurrentThumbnail() {
+
          if (this.video) {
-            let frames = await captureVideoFrame(this.video, this.currentTimestamp, false)
-            this.currentThumbnailData = frames[0].thumbnail
+            this.currentThumbnailData = await getMomentFrame(this.video)
             return URL.createObjectURL(this.currentThumbnailData)
          }
       },

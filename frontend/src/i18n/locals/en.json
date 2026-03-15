@@ -543,6 +543,7 @@
     "itemsAreBeingMovedToTrash": "Moving to Trash...",
     "itemsAreBeingRestoredFromTrash": "Restoring from Trash...",
     "itemsDeleted": "Deleted!",
+    "itemsDeletedPartially": "Some items failed to delete",
     "itemsMovedToTrash": "Moved to Trash!",
     "itemsRestoredFromTrash": "Restored items from Trash!",
     "movedItems": "Moved items!",

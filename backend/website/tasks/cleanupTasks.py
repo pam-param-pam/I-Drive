@@ -1,18 +1,16 @@
-from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta, datetime, timezone
 
 from django.contrib.auth.models import User
+from django.db import close_old_connections
 from django.utils import timezone as django_timezone
 
+from .helper import bulk_deletable
 from ..celery import app
-from ..constants import MAX_TIME_FILES_IN_TRASH
-from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
-from ..models import ShareableLink, UserZIP, PerDeviceToken, File, Channel, Folder
-from ..models.mixin_models import ItemState
+from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel
 from ..queries.selectors import check_if_bots_exists, query_attachments
-from ..tasks.deleteTasks import smart_delete_task
 
 
 @app.task
@@ -36,81 +34,123 @@ def prune_expired_tokens():
     count, _ = expired_tokens.delete()
 
 
-@app.task
-def delete_failed_files():
-    current_datetime = django_timezone.now()
-    cutoff = current_datetime - timedelta(hours=6)
+def bulk_delete_messages(user, channel_id, message_ids):
+    if not message_ids:
+        return
 
-    files = File.objects.filter(state=ItemState.FAILED, parent__state=ItemState.ACTIVE, created_at__lte=cutoff)
-    folders = Folder.objects.filter(state=ItemState.FAILED, created_at__lte=cutoff)
+    discord.bulk_delete_messages(user, channel_id, message_ids)
 
-    owner_items_map = defaultdict(list)
+def delete_single_safe(user, channel_id, message_id):
+    try:
+        discord.delete_message(user, channel_id, message_id)
+    except DiscordError:
+        pass
 
-    for file in files:
-        owner_items_map[file.owner_id].append(file.id)
+def flush_bulk(user, channel_id, message_ids):
+    try:
+        discord.bulk_delete_messages(user, channel_id, message_ids)
 
-    for folder in folders:
-        owner_items_map[folder.owner_id].append(folder.id)
+    except DiscordError:
+        # fallback to individual deletion
+        for msg_id in message_ids:
+            delete_single_safe(user, channel_id, msg_id)
 
-    for owner_id, item_ids in owner_items_map.items():
-        smart_delete_task.delay(RequestContext.from_user(owner_id), item_ids)
+def process_channel(user, channel, days):
+
+    close_old_connections()
+
+    bulk_candidates = []
+    now = datetime.now(timezone.utc)
+    six_hours_ago = now - timedelta(hours=6)
+    cutoff = now - timedelta(days=days)
+
+    try:
+
+        for discord_message in discord.fetch_all_messages(user, channel.discord_id):
+
+            msg_id = discord_message["id"]
+            timestamp = datetime.fromisoformat(discord_message["timestamp"])
+
+            # # Skip fresh messages
+            # if timestamp > six_hours_ago:
+            #     continue
+            #
+            # # Stop when reaching old messages
+            # if timestamp < cutoff:
+            #     break
+
+            database_attachments = query_attachments(message_id=msg_id)
+
+            if database_attachments:
+                continue
+
+            # Decide deletion strategy
+            if bulk_deletable(msg_id):
+
+                bulk_candidates.append(msg_id)
+
+                # Flush when reaching 100
+                if len(bulk_candidates) == 100:
+                    flush_bulk(user, channel.discord_id, bulk_candidates)
+                    bulk_candidates.clear()
+
+            else:
+                delete_single_safe(user, channel.discord_id, msg_id)
+
+        # Flush remaining bulk candidates
+        if bulk_candidates:
+            flush_bulk(user, channel.discord_id, bulk_candidates)
+
+    except DiscordError:
+        pass
 
 
 @app.task
 def delete_dangling_discord_files(days=3):
-    users = User.objects.filter().all()
 
+    users = User.objects.all()
     for user in users:
-        print(f"delete_dangling_discord_files for user: {user}")
-        channels = Channel.objects.filter(owner=user)
-        for channel in channels:
-            print(f"Checking channel: {channel.discord_id}")
-            try:
-                check_if_bots_exists(user)
-            except NoBotsError:
-                continue
-            try:
-                for discord_message in discord.fetch_all_messages(user, channel.discord_id):
-                    discord_attachments = discord_message['attachments']
-                    if not discord_attachments:
-                        discord.delete_message(user, discord_message['id'])
 
-                    timestamp = datetime.fromisoformat(discord_message['timestamp'])
-                    now = datetime.now(timezone.utc)
-                    # skip fresh messages to not break upload
-                    one_hour_ago = now - timedelta(hours=6)
-                    if timestamp > one_hour_ago:
-                        continue
+        try:
+            number_of_bots = check_if_bots_exists(user)
+        except NoBotsError:
+            continue
 
-                    # Break when messages found are older than 3 days
-                    three_days_ago = datetime.now(timezone.utc) - timedelta(days=days)
-                    if timestamp < three_days_ago:
-                        break
+        channels = list(Channel.objects.filter(owner=user))
 
-                    database_attachments = query_attachments(message_id=discord_message['id'])
+        # limit threads to avoid hitting global rate limits
+        max_threads = min(number_of_bots, len(channels))
 
-                    if not database_attachments:
-                        discord.delete_message(user, channel.discord_id, discord_message['id'])
-                        print(f"deleting: {discord_message["id"]}")
+        with ThreadPoolExecutor(max_workers=max_threads) as executor:
 
-            except DiscordError:
-                pass
+            futures = [
+                executor.submit(process_channel, user, channel, days)
+                for channel in channels
+            ]
+
+            for f in as_completed(futures):
+                try:
+                    f.result()
+                except Exception as e:
+                    print(f"Channel worker failed: {e}")
 
 @app.task
 def delete_files_from_trash():
-    current_datetime = django_timezone.now()
-    cutoff = current_datetime - timedelta(days=MAX_TIME_FILES_IN_TRASH)
-
-    owner_items_map = defaultdict(list)
-
-    files = File.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
-    folders = Folder.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
-
-    for file in files:
-        owner_items_map[file.owner_id].append(file.id)
-
-    for folder in folders:
-        owner_items_map[folder.owner_id].append(folder.id)
-
-    for owner_id, ids in owner_items_map.items():
-        smart_delete_task.delay(RequestContext.from_user(owner_id), ids)
+    #todo
+    pass
+    # current_datetime = django_timezone.now()
+    # cutoff = current_datetime - timedelta(days=MAX_TIME_FILES_IN_TRASH)
+    #
+    # owner_items_map = defaultdict(list)
+    #
+    # files = File.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
+    # folders = Folder.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
+    #
+    # for file in files:
+    #     owner_items_map[file.owner_id].append(file.id)
+    #
+    # for folder in folders:
+    #     owner_items_map[folder.owner_id].append(folder.id)
+    #
+    # for owner_id, ids in owner_items_map.items():
+    #     smart_delete_task.delay(RequestContext.from_user(owner_id), ids)

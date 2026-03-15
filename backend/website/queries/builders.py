@@ -34,7 +34,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
 
     if include_files:
         file_children = folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False).select_related(
-            "parent", "videoposition", "thumbnail", "videometadata", "rawmetadata"
+            "parent", "videoposition", "thumbnail", "videometadata", "rawmetadata", "photometadata"
         ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)
 
     folder_children = []

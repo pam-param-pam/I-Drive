@@ -172,7 +172,7 @@ export default {
             this.closeHover()
 
          } catch (error) {
-            if (error.code === "ERR_CANCELED") return
+            if (axios.isCancel(error)) return
             this.$toast.error(this.$t("toasts.thumbnailUploadFailed"))
             this.uploading = false
             this.uploadProgress = 0

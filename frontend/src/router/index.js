@@ -5,6 +5,8 @@ import Layout from "@/views/Layout.vue"
 import { useMainStore } from "@/stores/mainStore.js"
 import { validateLogin } from "@/utils/auth.js"
 import { deviceControl } from "@/utils/deviceControl.js"
+import { lazyWithLoading } from "@/utils/common.js"
+
 
 const router = createRouter({
 
@@ -16,7 +18,6 @@ const router = createRouter({
          component: () => import("../views/Login.vue"),
          beforeEnter: async (to, from, next) => {
             const store = useMainStore()
-            console.log("login init auth")
             if (store.user == null) {
                await initAuth()
             }
@@ -36,10 +37,35 @@ const router = createRouter({
                path: "/share/:token/:folderId?",
                name: "Share",
                component: () => import("../views/Share.vue"),
-               props: true,
+               props: route => ({
+                  token: route.params.token,
+                  folderId: route.params.folderId
+               }),
                meta: {
                   requiresAuth: false
-               }
+               },
+               children: [
+                  {
+                     path: "editor/:fileId", // The order of these two Editor children matters :3
+                     name: "ShareEditor",
+                     component: lazyWithLoading(() => import("../views/Editor.vue")),
+                     props: true,
+                     meta: {
+                        requiresAuth: false
+                     }
+                  },
+
+                  {
+                     path: "preview/:fileId", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
+                     name: "SharePreview",
+                     component: lazyWithLoading(() => import("../views/Preview.vue")),
+                     props: true,
+                     meta: {
+                        requiresAuth: false
+                     }
+
+                  },
+               ]
             },
             {
                path: "/trash",
@@ -57,48 +83,28 @@ const router = createRouter({
                props: true,
                meta: {
                   requiresAuth: true
-               }
-            },
-            {
-               path: "/editor/:folderId?/:fileId/:token", // The order of these two Editor children matters :3
-               name: "ShareEditor",
-               // component: Editor,
-               component: () => import("../views/Editor.vue"),
-               props: true,
-               meta: {
-                  requiresAuth: false
-               }
-            },
-            {
-               path: "/editor/:fileId",
-               name: "Editor",
-               // component: Editor,
-               component: () => import("../views/Editor.vue"),
+               },
+               children: [
+                  {
+                     path: "preview/:fileId",
+                     name: "Preview",
+                     component: lazyWithLoading(() => import("../views/Preview.vue")),
+                     props: true,
+                     meta: {
+                        requiresAuth: true
+                     }
+                  },
+                  {
+                     path: "editor/:fileId",
+                     name: "Editor",
+                     component: lazyWithLoading(() => import("../views/Editor.vue")),
 
-               props: true,
-               meta: {
-                  requiresAuth: true
-               }
-            },
-            {
-               path: "/preview/:folderId?/:fileId/:token", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
-               name: "SharePreview",
-               component: () => import("../views/Preview.vue"),
-               props: true,
-               meta: {
-                  requiresAuth: false
-               }
-
-            },
-            {
-               path: "/preview/:fileId",
-               name: "Preview",
-               component: () => import("../views/Preview.vue"),
-               props: true,
-               meta: {
-                  requiresAuth: true
-               }
-
+                     props: true,
+                     meta: {
+                        requiresAuth: true
+                     }
+                  },
+               ]
             },
             {
                path: "/settings",
@@ -162,7 +168,6 @@ const router = createRouter({
 
 async function initAuth() {
    // todo this func is called in 3 places, sometimes twice
-   console.log("initAuth")
    try {
       await validateLogin()
    } catch (error) {
@@ -174,22 +179,15 @@ async function initAuth() {
 router.beforeEach((to, from, next) => {
    const store = useMainStore()
 
-   if (store.multiSelection) {
-      store.multiSelection = false
-      next(false) // consume back
-      return
-   } else if (store.currentPrompt) {
+    if (store.currentPrompt) {
       store.closeHover()
       next(false) // consume back
       return
    }
-   store.setLoading(true)
    next()
 })
 
 router.afterEach((to, from) => {
-   const store = useMainStore()
-   store.setLoading(false)
    const routeForPush = {
       name: to.name,
       params: { ...to.params },
@@ -207,7 +205,6 @@ router.beforeResolve(async (to, from, next) => {
    store.closeContextMenu()
    // this will only be null on first route
    if (from.name == null) {
-      console.log("before resolve initAuth")
       await initAuth()
    }
 

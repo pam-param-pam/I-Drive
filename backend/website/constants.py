@@ -91,7 +91,7 @@ FILE_TYPES = {
     "Raw image": (
         ".iiq", ".3fr", ".dcr", ".k25", ".kdc", ".crw", ".cr2", ".cr3",
         ".erf", ".mef", ".mos", ".nef", ".nrw", ".orf", ".pef", ".rw2",
-        ".arw", ".srf", ".sr2",
+        ".arw", ".srf", ".sr2", ".dng"
     ),
     "Text": (
         ".txt", ".text",

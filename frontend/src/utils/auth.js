@@ -10,7 +10,6 @@ import { WebSocketManager } from "@/utils/WebsocketManager.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
-   console.log("validateLogin")
    let mainStore = useMainStore()
 
    let token = localStorage.getItem("token")

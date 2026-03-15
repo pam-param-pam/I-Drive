@@ -176,7 +176,8 @@ def stream_file(request, file_obj: File):
 
             while index < len(fragments):
                 url = await sync_to_async(discord.get_attachment_url)(user, fragments[index])
-                print(headers)
+                auto_prefetch(file_obj, fragments[index].id)
+
                 async with session.get(url, headers=headers) as dc_res:
                     dc_res.raise_for_status()
 

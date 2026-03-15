@@ -40,7 +40,7 @@ def create_file_view(request):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def edit_file_view(request, file_obj):
     file_data = extract_key(request.data, "file_data")
-    create_file_service.edit_file(request, request.user, file_obj, file_data)
+    create_file_service.edit_file(request.user, file_obj, file_data)
     return HttpResponse(status=204)
 
 
@@ -50,5 +50,5 @@ def edit_file_view(request, file_obj):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def create_or_edit_thumbnail_view(request, file_obj):
-    create_file_service.create_or_edit_thumbnail(request, request.user, file_obj, request.data)
+    create_file_service.create_or_edit_thumbnail(request.user, file_obj, request.data)
     return HttpResponse(status=204)

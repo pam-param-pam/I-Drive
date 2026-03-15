@@ -99,7 +99,6 @@ export default {
          return this.token !== undefined
       },
       height() {
-         console.log(isMobile() ? "96" : "98")
          return isMobile() ? "96" : "98"
       }
    },
@@ -315,6 +314,7 @@ export default {
          let message = this.$t("toasts.fileSaved")
          this.$toast.success(message)
       },
+
       onClose() {
          try {
             if (this.isInShareContext) {
@@ -324,7 +324,9 @@ export default {
                })
                return
             }
-            let uri = { name: `Files`, params: { folderId: this.file.parent_id } }
+
+            let uri = { name: "Files", params: { folderId: this.file.parent_id } }
+
             if (this.raw !== this.copyRaw) {
                this.showHover({
                   prompt: "discardEditorChanges",
@@ -336,10 +338,10 @@ export default {
             }
 
             this.$router.push(uri)
+
          } catch (e) {
-            // catch every error so user can always close...
             console.error(e)
-            this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
+            this.$router.push({ name: "Files", params: { folderId: this.user.root } })
          }
       }
    }

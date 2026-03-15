@@ -68,7 +68,6 @@ export class AsyncQueue {
    }
 
    close() {
-      console.log("closing loop")
       if (this.closed) return
       this.closed = true
 

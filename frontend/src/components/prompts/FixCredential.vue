@@ -69,9 +69,6 @@ export default {
          required: true
       }
    },
-   created() {
-      console.log(this.credential)
-   },
    computed: {
       ...mapState(useMainStore, ["currentPrompt"]),
 

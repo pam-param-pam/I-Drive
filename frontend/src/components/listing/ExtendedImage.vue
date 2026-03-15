@@ -26,6 +26,7 @@ import { isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
 import Action from "@/components/header/Action.vue"
 import HeaderBar from "@/components/header/HeaderBar.vue"
+import axios from "axios"
 //todo fix zoom
 export default {
    components: { HeaderBar, Action },
@@ -137,7 +138,7 @@ export default {
             if (!this.$refs.imgex) return
             this.$refs.imgex.src = this._currentBlobUrl
          } catch (e) {
-            if (e.code === "ERR_CANCELED") {
+            if (axios.isCancel(e)) {
                this.endToast()
                return
             }

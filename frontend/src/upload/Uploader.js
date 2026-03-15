@@ -56,8 +56,11 @@ export class Uploader {
    async startUploadWithChecks(type, folderContext, filesList) {
       const mainStore = useMainStore()
 
+      const res = await canUpload(folderContext)
+      if (!res.can_upload) return
+
       const proceed = async () => {
-         await this.startUpload(type, folderContext, filesList)
+         await this.startUpload(type, folderContext, filesList, res.lockFrom)
       }
 
       if (await checkFilesSizes(filesList)) {
@@ -70,12 +73,8 @@ export class Uploader {
       }
    }
 
-   async startUpload(type, folderContext, filesList) {
+   async startUpload(type, folderContext, filesList, lockFrom) {
       // window.addEventListener("beforeunload", beforeUnload)
-
-      const res = await canUpload(folderContext)
-      if (!res.can_upload) return
-
       this.initRuntimeUpload()
       this.initQueues()
       this.startConsumers()
@@ -85,7 +84,7 @@ export class Uploader {
          this.uploadRuntime.setUploadingState(uploadState.uploading)
 
       }
-      this.processNewFiles(type, folderContext, filesList, res.lockFrom)
+      this.processNewFiles(type, folderContext, filesList, lockFrom)
    }
 
    requestMoreFilesFromWorker() {
@@ -130,7 +129,6 @@ export class Uploader {
          }
 
          if (done) {
-            console.log("closing file queue")
             this.fileQueue.close()
          }
       }
@@ -296,9 +294,7 @@ export class Uploader {
    }
 
    retrySaveFailedFiles() {
-      console.log("retrySaveFailedFiles")
       if (this.uploadRuntime.uploadState !== uploadState.uploading) {
-         console.log("return")
          return
       }
       getUploader().backendFileConsumer.retryFailedFiles()

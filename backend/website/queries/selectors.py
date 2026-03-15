@@ -47,24 +47,38 @@ def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     return False
 
 
-def check_if_item_belongs_to_share(request, share: ShareableLink, requested_item: Union[File, Folder]) -> None:  # todo check safety
+def check_if_item_belongs_to_share(share: ShareableLink, requested_item: Union[File, Folder]) -> None:
     obj_in_share = get_item(share.object_id)
     settings = UserSettings.objects.get(user=share.owner)
 
-    if requested_item != obj_in_share:
-        if not settings.subfolders_in_shares:
-            if isinstance(obj_in_share, Folder) and requested_item not in obj_in_share.files.all():
-                raise ResourceNotFoundError()
+    if requested_item == obj_in_share:
+        return
 
-        else:
-            if isinstance(obj_in_share, Folder):
-                if not is_subitem(requested_item, obj_in_share):
+    if not settings.subfolders_in_shares:
+        if isinstance(obj_in_share, Folder):
+            if isinstance(requested_item, File):
+                if requested_item.parent_id != obj_in_share.id:
                     raise ResourceNotFoundError()
             else:
                 raise ResourceNotFoundError()
+        else:
+            raise ResourceNotFoundError()
 
-        if obj_in_share.lockFrom != requested_item.lockFrom:
-            raise ResourcePermissionError("This resource is locked. Ask the owner of this resource to share it separately")
+    else:
+        if isinstance(obj_in_share, Folder):
+            if isinstance(requested_item, Folder):
+                node = requested_item
+            else:
+                node = requested_item.parent
+
+            if node.tree_id != obj_in_share.tree_id or not (obj_in_share.lft <= node.lft <= obj_in_share.rght):
+                raise ResourceNotFoundError()
+
+        else:
+            raise ResourceNotFoundError()
+
+    if obj_in_share.lockFrom != requested_item.lockFrom:
+        raise ResourcePermissionError("This resource is locked. Ask the owner of this resource to share it separately")
 
 
 def get_webhook(user, discord_id: str) -> Webhook:
@@ -105,7 +119,7 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
 
     # Add conditions based on provided arguments
     if channel_id:
-        query &= Q(channel__id=channel_id)
+        query &= Q(channel_id=channel_id)
     if message_id:
         query &= Q(message_id=message_id)
     if attachment_id:

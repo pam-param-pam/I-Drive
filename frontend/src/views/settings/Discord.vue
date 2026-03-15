@@ -98,13 +98,14 @@
                      </table>
                   </div>
                   <div v-else class="info">
-             <span>
-                {{ $t("settings.webhookInfo") }}
-                <br />
-                <br />
-                {{ $t("settings.webhookAdvice") }}
-             </span>
+                   <span>
+                      {{ $t("settings.webhookInfo") }}
+                      <br />
+                      <br />
+                      {{ $t("settings.webhookAdvice") }}
+                   </span>
                   </div>
+                  <br>
                   <input
                      v-if="showWebhookInput || webhooks.length === 0"
                      v-model="webhookUrl"
@@ -199,8 +200,9 @@
                               <span v-if="bot.primary" :title="$t('settings.primaryBot')">
                                  <svg class="crown-icon" fill="none" height="18" style="vertical-align: text-bottom;" viewBox="0 0 24 24" width="18"
                                       xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"
-                                        fill="currentColor"></path>
+                                  <path
+                                     d="M5 18a1 1 0 0 0-1 1 3 3 0 0 0 3 3h10a3 3 0 0 0 3-3 1 1 0 0 0-1-1H5ZM3.04 7.76a1 1 0 0 0-1.52 1.15l2.25 6.42a1 1 0 0 0 .94.67h14.55a1 1 0 0 0 .95-.71l1.94-6.45a1 1 0 0 0-1.55-1.1l-4.11 3-3.55-5.33.82-.82a.83.83 0 0 0 0-1.18l-1.17-1.17a.83.83 0 0 0-1.18 0l-1.17 1.17a.83.83 0 0 0 0 1.18l.82.82-3.61 5.42-4.41-3.07Z"
+                                     fill="currentColor"></path>
                                 </svg>
                               </span>
                            </td>
@@ -239,11 +241,12 @@
                      {{ $t("settings.botAdvice") }}
                   </span>
                   </div>
+                  <br>
                   <input
                      v-if="showBotInput || bots.length === 0"
                      v-model="botToken"
                      :placeholder="$t('settings.newBotPlaceholder')"
-                     class="input"
+                     class="input input"
                      type="text"
                      @keyup.enter="addBot"
                   />
@@ -424,7 +427,7 @@ export default {
                   console.error(e)
                   this.$toast.dismiss(toastId)
                }
-
+               this.botToken = ""
             }
          })
       },
@@ -434,7 +437,6 @@ export default {
       }, 1000),
 
       fixCredential(credential) {
-         console.log(credential)
          this.showHover({
             prompt: "FixCredential",
             props: { credential: credential },

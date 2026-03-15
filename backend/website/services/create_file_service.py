@@ -12,10 +12,12 @@ from ..auth.Permissions import default_checks
 from ..auth.utils import check_resource_perms
 from ..constants import EventCode, MAX_DISCORD_MESSAGE_SIZE
 from ..core.Serializers import FileSerializer
+from ..core.dataModels.http import RequestContext
 from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc, get_file_extension
 from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
 from ..models import File, Fragment, Thumbnail
+from ..models.mixin_models import ItemState
 from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists, get_discord_channel
 from ..websockets.utils import group_and_send_event, send_event
 
@@ -33,6 +35,9 @@ def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
     author = get_discord_author(file_obj.owner, message_author_id)
     channel = get_discord_channel(file_obj.owner, channel_id)
 
+    if file_obj.state != ItemState.ACTIVE:
+        raise BadRequestError("Item not ready")
+
     fragment = Fragment.objects.create(
         sequence=fragment_sequence,
         file=file_obj,
@@ -48,6 +53,7 @@ def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
 
     return fragment
 
+# todo remove request param
 def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     file_name = validate_key(file, "name", str, checks=[NotEmpty])
     parent_id = validate_key(file, "parent_id", str, checks=[NotEmpty])
@@ -58,12 +64,13 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     fragments = validate_key(file, "fragments", list)
 
     thumbnail = validate_key(file, "thumbnail", dict, required=False)
-    duration = validate_key(file, "duration", int, required=False, checks=[IsPositive])
     created_at = validate_key(file, "created_at", int, required=False)
     key_b64 = validate_key(file, "key", str, required=False)
     iv_b64 = validate_key(file, "iv", str, required=False)
     video_metadata = validate_key(file, "videoMetadata", dict, required=False)
     raw_metadata = validate_key(file, "rawMetadata", dict, required=False)
+    photo_metadata = validate_key(file, "photoMetadata", dict, required=False)
+
     subtitles = validate_key(file, "subtitles", list, required=False, default=[])
 
     key, iv = validate_encryption_fields(encryption_method, key_b64, iv_b64)
@@ -77,9 +84,6 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
 
     if File.objects.filter(frontend_id=frontend_id).exists():
         return None
-
-    if duration and file_type != "Video":
-        raise BadRequestError("Duration field is only allowed for video files")
 
     if created_at:
         try:
@@ -108,9 +112,6 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
             crc=crc
         )
 
-        if duration is not None:
-            file_obj.duration = duration
-
         file_obj.save()
 
         for fragment in fragments:
@@ -124,6 +125,9 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
 
         if raw_metadata:
             file_service.create_raw_metadata(file_obj, raw_metadata)
+
+        if photo_metadata:
+            file_service.create_photo_metadata(file_obj, photo_metadata)
 
         for sub in subtitles:
             file_service.create_subtitle(file_obj, sub)
@@ -145,13 +149,16 @@ def create_files(request, user: User, files_data: list[dict]) -> list[File]:
         file_objs.append(file_obj)
 
     if file_objs:
-        group_and_send_event(request.context, EventCode.ITEM_CREATE, file_objs)
+        group_and_send_event(RequestContext.from_user(user.id), EventCode.ITEM_CREATE, file_objs)
 
     return file_objs
 
 
-def edit_file(request, user, file_obj: File, file_data: Optional[dict]):
+def edit_file(user, file_obj: File, file_data: Optional[dict]):
     check_if_bots_exists(user)
+
+    if file_obj.state != ItemState.ACTIVE:
+        raise BadRequestError("Item not ready")
 
     if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
         raise BadRequestError("You cannot edit a file larger than 10Mb!")
@@ -191,11 +198,14 @@ def edit_file(request, user, file_obj: File, file_data: Optional[dict]):
 
         file_obj.save()
 
-    send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
+    send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
 
 
-def create_or_edit_thumbnail(request, user: User, file_obj: File, data: dict) -> None:
+def create_or_edit_thumbnail(user: User, file_obj: File, data: dict) -> None:
     check_if_bots_exists(user)
+
+    if file_obj.state != ItemState.ACTIVE:
+        raise BadRequestError("Item not ready")
 
     try:
         delete_single_discord_attachment(user, file_obj.thumbnail)
@@ -206,4 +216,4 @@ def create_or_edit_thumbnail(request, user: User, file_obj: File, data: dict) ->
     file_obj.remove_cache()
 
     file_dict = FileSerializer().serialize_object(file_obj)
-    send_event(request.context, file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
+    send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, file_dict)

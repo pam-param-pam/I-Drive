@@ -19,6 +19,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { name } from "@/utils/constants"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
+import axios from "axios"
 
 export default {
    name: "trash",
@@ -73,7 +74,7 @@ export default {
             let items = res.trash
             this.setItems(items)
          } catch (error) {
-            if (error.code === "ERR_CANCELED") return
+            if (axios.isCancel(error)) return
             this.setError(error)
          } finally {
             if (this.isActive) this.setLoading(false)

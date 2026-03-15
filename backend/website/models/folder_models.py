@@ -132,7 +132,6 @@ class Folder(MPTTModel):
         return File.objects.filter(parent__in=queryset)
 
     def remove_cache(self):
-        print("folder remove cache")
         key = cache_service.get_folder_content_key(self.id)
         cache.delete(key)
 

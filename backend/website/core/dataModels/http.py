@@ -9,9 +9,12 @@ class RequestContext:
         self.user_id = user_id
         self.device_id = device_id
         self.request_id = request_id
+        self.user = None
 
     def get_user(self) -> Optional[User]:
-        return User.objects.get(id=self.user_id) if self.user_id else None
+        if not self.user and self.user_id:
+            self.user = User.objects.get(id=self.user_id)
+        return self.user
 
     def __json__(self):
         return {"user_id": self.user_id, "request_id": self.request_id, "device_id": self.device_id}

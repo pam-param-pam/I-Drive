@@ -30,7 +30,7 @@ export class FileStateHolder {
       this.error = null
 
       this.rawMetadata = null
-      this.duration = null
+      this.photoMetadata = null
       this.crc = 0
       this.videoMetadata = null
       this.iv = undefined
@@ -139,8 +139,8 @@ export class FileStateHolder {
       this._set("rawMetadata", value)
    }
 
-   setDuration(value) {
-      this._set("duration", value)
+   setPhotoMetadata(value) {
+      this._set("photoMetadata", value)
    }
 
    setCrc(value) {
@@ -158,7 +158,8 @@ export class FileStateHolder {
    setStatus(status) {
       if (this.status === fileUploadStatus.errorOccurred && status !== fileUploadStatus.retrying) {
          console.warn("Possible override of error status!")
-         console.log(this.error)
+         console.warn(this.error)
+         return
       }
       this._set("error", null)
       this._set("status", status)

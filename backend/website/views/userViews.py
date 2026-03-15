@@ -48,7 +48,7 @@ def users_me(request):
     try:
         root = Folder.objects.get(owner=user, parent=None)
     except (Folder.DoesNotExist, Folder.MultipleObjectsReturned) as error:
-        raise RootFolderError(str(error))
+        raise RootFolderError("Root folder error.")
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
     unread_notifications = Notification.objects.filter(owner=request.user, is_deleted=False, is_read=False).count()

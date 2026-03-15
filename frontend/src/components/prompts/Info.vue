@@ -16,9 +16,7 @@
          <p v-if="id" class="break-word">
             <strong>{{ $t("prompts.identifier") }}:</strong> {{ id }}
          </p>
-         <p v-if="inTrashSince">
-            <strong>{{ $t("prompts.inTrashSince") }}:</strong> {{ humanTime(inTrashSince) }}
-         </p>
+
          <p v-if="type">
             <strong>{{ $t("prompts.type") }}:</strong> {{ type }}
          </p>
@@ -44,13 +42,6 @@
             <strong>{{ $t("prompts.owner") }}:</strong> {{ owner }}
          </p>
 
-         <div v-if="resolution">
-            <strong>{{ $t("prompts.resolution") }}:</strong>
-            {{ resolution.width }} x {{ resolution.height }}
-         </div>
-         <div v-if="duration !== null">
-            <strong>{{ $t("prompts.duration") }}:</strong> {{ formatSeconds(duration) }}
-         </div>
          <p v-if="created">
             <strong>{{ $t("prompts.created") }}:</strong> {{ humanTime(created) }}
          </p>
@@ -62,6 +53,9 @@
             <code @dblclick="changeView($event, crc, formatCrc)">
                {{ formatCrc(crc) }}
             </code>
+         </p>
+         <p v-if="inTrashSince">
+            <strong>{{ $t("prompts.inTrashSince") }}:</strong> {{ humanTime(inTrashSince) }}
          </p>
       </div>
 
@@ -90,116 +84,124 @@
          </div>
       </div>
 
+      <!-- Expandable metadata section -->
+      <div v-if="!isDir && !isInShareContext && hasMetadata" class="expandable-section card-content">
 
-      <!-- Expandable section for raw images -->
-      <div v-if="!isDir && type==='Raw image' && isRawMetadata && !isInShareContext" class="expandable-section card-content">
          <div class="expandable-header" @click="fetchMoreInfo">
             <strong>{{ $t("prompts.fetchMoreInfo") }}</strong>
-            <i :class="{ expanded: isFolderExpanded }" class="material-icons expand-icon">
-               keyboard_arrow_down
-            </i>
-         </div>
-
-         <div v-if="isFileExpanded" class="expandable-content">
-            <p>
-               <strong>{{ $t("prompts.modelName") }}:</strong> {{ metadata.camera }}
-            </p>
-            <p v-if="metadata.camera_owner">
-               <strong>{{ $t("prompts.cameraOwner") }}:</strong> {{ metadata.camera_owner }}
-            </p>
-            <p>
-               <strong>{{ $t("prompts.iso") }}:</strong> {{ metadata.iso }}
-            </p>
-            <p>
-               <strong>{{ $t("prompts.aperture") }}:</strong> {{ metadata.aperture }}
-            </p>
-            <p>
-               <strong>{{ $t("prompts.exposureTime") }}:</strong> {{ metadata.shutter }}
-            </p>
-            <p>
-               <strong>{{ $t("prompts.focalLength") }}:</strong> {{ metadata.focal_length }}
-            </p>
-         </div>
-      </div>
-
-
-      <!-- Expandable section for video metadata -->
-      <div v-if="!isDir && type==='Video' && isVideoMetadata && !isInShareContext" class="expandable-section card-content">
-         <div class="expandable-header" @click="fetchMoreInfo">
-            <strong>{{ $t("prompts.videoMetadata") }}</strong>
             <i :class="{ expanded: isFileExpanded }" class="material-icons expand-icon">
                keyboard_arrow_down
             </i>
          </div>
 
          <div v-if="isFileExpanded" class="expandable-content">
-            <div v-if="metadata">
+
+            <!-- RAW IMAGE -->
+            <template v-if="type === 'Raw image' && isRawMetadata">
+               <p><strong>{{ $t("prompts.modelName") }}:</strong> {{ metadata.camera }}</p>
+
+               <p v-if="metadata.camera_owner">
+                  <strong>{{ $t("prompts.cameraOwner") }}:</strong> {{ metadata.camera_owner }}
+               </p>
+
+               <p><strong>{{ $t("prompts.iso") }}:</strong> {{ metadata.iso }}</p>
+               <p><strong>{{ $t("prompts.aperture") }}:</strong> {{ metadata.aperture }}</p>
+               <p><strong>{{ $t("prompts.exposureTime") }}:</strong> {{ metadata.shutter }}</p>
+               <p><strong>{{ $t("prompts.focalLength") }}:</strong> {{ metadata.focal_length }}</p>
+            </template>
+
+
+            <!-- IMAGE -->
+            <template v-if="type === 'Image' && isPhotoMetadata">
+               <p>
+                  <strong>{{ $t("prompts.resolution") }}:</strong>
+                  {{ metadata.width }} x {{ metadata.height }}
+               </p>
+            </template>
+
+
+            <!-- VIDEO -->
+            <template v-if="type === 'Video' && isVideoMetadata">
+
                <div v-if="primaryMetadata">
+                  <p><strong>{{ $t("prompts.codec") }}:</strong> {{ primaryMetadata.codec }}</p>
+                  <p><strong>{{ $t("prompts.resolution") }}:</strong> {{ primaryMetadata.resolution }}</p>
+
                   <p>
-                     <strong>{{ $t("prompts.codec") }}:</strong> {{ primaryMetadata.codec }}
-                  </p>
-                  <p>
-                     <strong>{{ $t("prompts.resolution") }}:</strong> {{ primaryMetadata.resolution }}
-                  </p>
-                  <p>
-                     <strong>{{ $t("prompts.audioType") }}: </strong>
+                     <strong>{{ $t("prompts.audioType") }}:</strong>
                      <span v-if="primaryMetadata.audioType">
-                 {{ primaryMetadata.audioType }}
-              </span>
+                        {{ primaryMetadata.audioType }}
+                     </span>
                      <span v-else>
-                {{ $t("prompts.noAudio") }}
-              </span>
+                        {{ $t("prompts.noAudio") }}
+                     </span>
                   </p>
+
                   <p>
-                     <strong>{{ $t("prompts.isSubs") }}: </strong>
+                     <strong>{{ $t("prompts.isSubs") }}:</strong>
                      <span v-if="primaryMetadata.isSubs">
-                {{ $t("prompts.isSubsYes") }}
-              </span>
+                        {{ $t("prompts.isSubsYes") }}
+                     </span>
                      <span v-else>
-                {{ $t("prompts.isSubsNo") }}
-              </span>
-                  </p>
-               </div>
-               <!--          TODO HANDLE OPTION OVERFLOW-->
-               <select v-model="currentTrack" class="input input--block styled-select" size="1">
-                  <option v-for="track in metadata.tracks" :key="track" :value="track">{{ track.number }} - {{ track.type }} {{ $t("prompts.track") }}</option>
-               </select>
-               <div v-if="currentTrack">
-                  <p v-if="currentTrack?.codec">
-                     <strong>{{ $t("prompts.codec") }}:</strong> {{ currentTrack.codec }}
-                  </p>
-                  <p v-if="currentTrack?.bitrate">
-                     <strong>{{ $t("prompts.bitrate") }}:</strong> {{ currentTrack.bitrate }}
-                  </p>
-                  <p v-if="currentTrack?.height && currentTrack?.width">
-                     <strong>{{ $t("prompts.resolution") }}:</strong> {{ currentTrack.width }} x {{ currentTrack.height }}
-                  </p>
-                  <p v-if="currentTrack?.fps">
-                     <strong>{{ $t("prompts.fps") }}:</strong> {{ currentTrack.fps }}
-                  </p>
-                  <p v-if="currentTrack?.duration">
-                     <strong>{{ $t("prompts.duration") }}:</strong> {{ formatSeconds(currentTrack.duration) }}
-                  </p>
-                  <p v-if="currentTrack?.size">
-                     <strong>{{ $t("prompts.size") }}:</strong> {{ currentTrack.size }}
-                  </p>
-                  <p v-if="currentTrack?.sample_rate">
-                     <strong>{{ $t("prompts.sampleRate") }}:</strong> {{ currentTrack.sample_rate }}
-                  </p>
-                  <p v-if="currentTrack?.channel_count">
-                     <strong>{{ $t("prompts.channelCount") }}:</strong> {{ currentTrack.channel_count }}
-                  </p>
-                  <p v-if="currentTrack?.sample_size">
-                     <strong>{{ $t("prompts.sampleSize") }}:</strong> {{ currentTrack.sample_size }}
-                  </p>
-                  <p v-if="currentTrack?.language">
-                     <strong>{{ $t("prompts.language") }}:</strong> {{ currentTrack.language }}
+                        {{ $t("prompts.isSubsNo") }}
+                     </span>
                   </p>
                </div>
 
-            </div>
+               <select v-model="currentTrack" class="input input--block styled-select">
+                  <option v-for="track in metadata.tracks" :key="track.number" :value="track">
+                     {{ track.number }} - {{ track.type }} {{ $t("prompts.track") }}
+                  </option>
+               </select>
+
+               <div v-if="currentTrack">
+
+                  <p v-if="currentTrack.codec">
+                     <strong>{{ $t("prompts.codec") }}:</strong> {{ currentTrack.codec }}
+                  </p>
+
+                  <p v-if="currentTrack.bitrate">
+                     <strong>{{ $t("prompts.bitrate") }}:</strong> {{ currentTrack.bitrate }}
+                  </p>
+
+                  <p v-if="currentTrack.height && currentTrack.width">
+                     <strong>{{ $t("prompts.resolution") }}:</strong>
+                     {{ currentTrack.width }} x {{ currentTrack.height }}
+                  </p>
+
+                  <p v-if="currentTrack.fps">
+                     <strong>{{ $t("prompts.fps") }}:</strong> {{ currentTrack.fps }}
+                  </p>
+
+                  <p v-if="currentTrack.duration">
+                     <strong>{{ $t("prompts.duration") }}:</strong>
+                     {{ formatSeconds(currentTrack.duration) }}
+                  </p>
+
+                  <p v-if="currentTrack.size">
+                     <strong>{{ $t("prompts.size") }}:</strong> {{ currentTrack.size }}
+                  </p>
+
+                  <p v-if="currentTrack.sample_rate">
+                     <strong>{{ $t("prompts.sampleRate") }}:</strong> {{ currentTrack.sample_rate }}
+                  </p>
+
+                  <p v-if="currentTrack.channel_count">
+                     <strong>{{ $t("prompts.channelCount") }}:</strong> {{ currentTrack.channel_count }}
+                  </p>
+
+                  <p v-if="currentTrack.sample_size">
+                     <strong>{{ $t("prompts.sampleSize") }}:</strong> {{ currentTrack.sample_size }}
+                  </p>
+
+                  <p v-if="currentTrack.language">
+                     <strong>{{ $t("prompts.language") }}:</strong> {{ currentTrack.language }}
+                  </p>
+               </div>
+            </template>
          </div>
       </div>
+
       <div class="card-action">
          <button
             :aria-label="$t('buttons.ok')"
@@ -350,11 +352,8 @@ export default {
          return null
       },
       extension() {
-         if (this.selectedCount === 1) {
-            const filename = this.selected[0].name
-            if (filename && filename.includes(".")) {
-               return filename.split(".").pop().toLowerCase()
-            }
+         if (this.selectedCount === 1 && !this.selected[0].isDir) {
+            return this.selected[0].extension
          }
          return null
       },
@@ -366,17 +365,7 @@ export default {
          }
          return null
       },
-      duration() {
-         if (this.selectedCount !== 1) return null
 
-         const item = this.selected[0]
-
-         if (!("duration" in item) || item.duration === null) {
-            return null
-         }
-
-         return item.duration
-      },
       owner() {
          if (this.selectedCount === 0) {
             return this.currentFolder.owner
@@ -406,6 +395,19 @@ export default {
             return this.selected[0].isRawMetadata
          }
          return false
+      },
+      isPhotoMetadata() {
+         if (this.selectedCount === 1) {
+            return this.selected[0].isPhotoMetadata
+         }
+         return false
+      },
+      hasMetadata() {
+         return (
+           (this.type === "Raw image" && this.isRawMetadata) ||
+           (this.type === "Image" && this.isPhotoMetadata) ||
+           (this.type === "Video" && this.isVideoMetadata)
+         )
       },
       crc() {
          if (this.selectedCount === 1) {

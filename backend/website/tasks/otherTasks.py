@@ -8,7 +8,6 @@ import rawpy
 import requests
 from PIL import Image
 from celery.utils.log import get_task_logger
-import pyexiv2
 
 from .helper import send_message
 from ..celery import app
@@ -18,8 +17,8 @@ from ..core.crypto.Decryptor import Decryptor
 from ..core.crypto.Encryptor import Encryptor
 from ..core.dataModels.http import RequestContext
 from ..discord.Discord import discord
-from ..models import Folder, Fragment, File
-from ..services import folder_service, file_service
+from ..models import (Folder, Fragment, File, DiscordSettings)
+from ..services import folder_service, file_service, create_file_service
 from ..websockets.utils import send_event
 
 logger = get_task_logger(__name__)
@@ -62,40 +61,29 @@ def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
 def _extract_raw_metadata(raw_buffer):
     raw_buffer.seek(0)
 
-    tmp = tempfile.NamedTemporaryFile(suffix=".cr3", delete=False)
-    tmp.write(raw_buffer.read())
-    tmp.close()
+    tags = exifread.process_file(raw_buffer, details=False)
 
-    try:
-        img = pyexiv2.Image(tmp.name)
-        exif = img.read_exif()
-    finally:
-        os.remove(tmp.name)
+    camera = str(tags.get("Image Model", ""))
+    iso = str(tags.get("EXIF ISOSpeedRatings", ""))
+    shutter = str(tags.get("EXIF ExposureTime", "")) + " sec"
+    aperture = str(tags.get("EXIF FNumber", "")) + "F"
+    focal_length = str(tags.get("EXIF FocalLength", "")) + " mm"
 
-    camera = exif.get("Exif.Image.Model", "")
-    iso = exif.get("Exif.Photo.ISOSpeedRatings") or exif.get("Exif.Photo.ISOSpeed") or ""
-    shutter = exif.get("Exif.Photo.ExposureTime", "")
-    aperture = exif.get("Exif.Photo.FNumber", "")
-    focal_length = exif.get("Exif.Photo.FocalLength", "")
-    camera_owner = exif.get("Exif.Photo.CameraOwnerName", "")
     raw_buffer.seek(0)
 
-    return camera, iso, shutter, aperture, focal_length, camera_owner
+    return camera, iso, shutter, aperture, focal_length, None
 
+@app.task(expires=5)
+def generate_raw_image_thumbnails():
+    files = File.objects.filter(type="Raw image", thumbnail__isnull=True, rawmetadata__isnull=True, inTrash=False, parent__inTrash=False).select_related("owner")
 
-@app.task()
-def generate_raw_image_thumbnails(batch_size: int = 10):
-    files = File.objects.filter(
-        type="Raw image",
-        thumbnail__isnull=True,
-        rawmetadata__isnull=True,
-        inTrash=False,
-        parent__inTrash=False
-    ).select_related("owner")[:batch_size]
+    state = {
+        "upload_queue": [],
+        "upload_map": [],
+        "current_size": 0
+    }
 
-    state = {"upload_queue": [], "upload_map": [], "current_size": 0}
-
-    def flush_uploads(user, state):
+    def flush_uploads(user):
         if not state["upload_queue"]:
             return
 
@@ -105,7 +93,8 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
         for meta, att in zip(state["upload_map"], attachments):
             file_obj, enc_key, enc_iv, size, metadata = meta
 
-            file_service.create_thumbnail(
+            create_file_service.create_or_edit_thumbnail(
+                user,
                 file_obj,
                 {
                     "channel_id": resp["channel_id"],
@@ -120,6 +109,7 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
 
             if metadata:
                 camera, iso, shutter, aperture, focal_length, camera_owner = metadata
+
                 file_service.create_raw_metadata(
                     file_obj,
                     {
@@ -134,12 +124,7 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
 
             file_obj.remove_cache()
 
-            send_event(
-                RequestContext.from_user(file_obj.owner.id),
-                file_obj.parent,
-                EventCode.ITEM_UPDATE,
-                FileSerializer().serialize_object(file_obj)
-            )
+            send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
 
         state["upload_queue"].clear()
         state["upload_map"].clear()
@@ -153,6 +138,7 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
             raw_buffer = BytesIO()
 
             fragments = file.fragments.all().order_by("sequence")
+
             decryptor = Decryptor(
                 method=file.get_encryption_method(),
                 key=file.key,
@@ -167,22 +153,28 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
 
                 raw_buffer.write(decryptor.decrypt(r.content))
 
-            raw_buffer.seek(0)
-
             metadata = _extract_raw_metadata(raw_buffer)
 
-            raw_buffer.seek(0)
-
             with rawpy.imread(raw_buffer) as raw:
-                rgb = raw.postprocess()
+                rgb = raw.postprocess(
+                    use_camera_wb=True,
+                    half_size=True
+                )
+
+            del raw_buffer
 
             img = Image.fromarray(rgb)
-            img.thumbnail((1080, 720))
+            del rgb
+
+            img.thumbnail((1920, 1080))
 
             webp_buffer = BytesIO()
             img.save(webp_buffer, format="WEBP", quality=80)
 
+            del img
+
             data = webp_buffer.getvalue()
+            del webp_buffer
 
             method = file.get_encryption_method()
 
@@ -192,14 +184,17 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
             encryptor = Encryptor(method, key=key, iv=iv)
 
             encrypted = encryptor.encrypt(data)
+            del data
 
-            name = f"{file.id}.webp"
+            settings = DiscordSettings.objects.get(user=file.owner)
             size = len(encrypted)
 
+            # flush before exceeding limits
             if len(state["upload_queue"]) >= 10 or state["current_size"] + size > MAX_DISCORD_MESSAGE_SIZE:
-                flush_uploads(file.owner, state)
+                flush_uploads(file.owner)
 
-            state["upload_queue"].append((name, encrypted))
+            state["upload_queue"].append((settings.attachment_name, encrypted))
+
             state["upload_map"].append(
                 (
                     file,
@@ -209,11 +204,11 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
                     metadata
                 )
             )
+
             state["current_size"] += size
 
         except Exception:
             traceback.print_exc()
-
             meta = file_service.create_raw_metadata(
                 file,
                 {
@@ -231,5 +226,5 @@ def generate_raw_image_thumbnails(batch_size: int = 10):
 
             file.remove_cache()
 
-    if state["upload_queue"]:
-        flush_uploads(files[0].owner if files else None, state)
+    if state["upload_queue"] and files:
+        flush_uploads(files[0].owner)

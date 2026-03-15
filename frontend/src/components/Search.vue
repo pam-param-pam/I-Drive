@@ -129,17 +129,18 @@ export default {
 </script>
 <style scoped>
 .material-icons {
- cursor: pointer;
- transition: color 0.3s,
- transform 0.3s;
+  cursor: pointer;
+  transition: color 0.3s,
+  transform 0.3s;
 }
 
 .material-icons:hover {
- color: #007bff;
- transform: scale(1.1);
+  color: #007bff;
+  transform: scale(1.1);
 }
 
 #search input {
- color: var(--color-text);
+  color: var(--color-text);
+   padding-right: 1.5em;
 }
 </style>

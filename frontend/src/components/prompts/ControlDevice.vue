@@ -223,7 +223,6 @@ export default {
          return st
       },
       filteredDevices() {
-         console.log(this.deviceId)
          return this.devices.filter(d => d.device_id !== this.deviceId)
       },
 

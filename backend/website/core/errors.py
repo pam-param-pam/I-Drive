@@ -74,6 +74,9 @@ class DiscordError(IDriveException):
     def __init__(self, response: Response):
         self.status = response.status_code
         self.response = response
+        self.code = None
+        headers = response.headers
+
         try:
             self._json_error = response.json()
             self.message = self._json_error.get('message') or self._json_error
@@ -81,10 +84,19 @@ class DiscordError(IDriveException):
         except JSONDecodeError:
             self.message = self.response.text[:200]
             pass
+
+        self.retry_after = self._parse_float(headers.get("X-RateLimit-Reset-After"))# or 5
         super().__init__(self.message)
 
+    @staticmethod
+    def _parse_float(v):
+        try:
+            return float(v) if v is not None else None
+        except Exception:
+            return None
+
     def __str__(self):
-        return f'Discord error-> {self.status}: {self.message}'
+        return f'Discord error-> {self.status}: {self.message}\ncode={self.code}'
 
 class DiscordErrorMaxRetries(IDriveException):
     def __init__(self, errors: list[Response]):

@@ -213,6 +213,7 @@ import { backendInstance } from "@/axios/networker.js"
 import { deviceControl } from "@/utils/deviceControl.js"
 import Errors from "@/components/Errors.vue"
 import { baseWS, WebsocketEvent } from "@/utils/constants.js"
+import axios from "axios"
 
 export default {
    name: "preview",
@@ -248,6 +249,7 @@ export default {
 
    data() {
       return {
+         loading: false,
          fullSize: false,
          showNav: true,
          file: null,
@@ -278,7 +280,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "loading", "perms", "currentFolder", "currentPrompt"]),
+      ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "perms", "currentFolder", "currentPrompt"]),
       isEpub() {
          return this.file?.name.endsWith(".epub")
       },
@@ -325,12 +327,12 @@ export default {
    },
 
    watch: {
-      $route() {
+      '$route'() {
          this.fetchData()
          this.toggleNavigation()
          if (this.prefetchTimeout) clearTimeout(this.prefetchTimeout)
          this.prefetch()
-      }
+      },
    },
 
    created() {
@@ -353,17 +355,18 @@ export default {
    beforeUnmount() {
       window.removeEventListener("keydown", this.key)
       window.removeEventListener("fullscreenchange", this.fullscreenChange)
-      if (this.$refs?.video?.textTracks) {
-         this.$refs.video.textTracks.removeEventListener("change", this.onSubtitleChanged)
+      if (this.videoRef?.textTracks) {
+         this.videoRef.textTracks.removeEventListener("change", this.onSubtitleChanged)
 
       }
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setTextError", "setCurrentFolderData", "setLastItem", "setLoading", "setError", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
-
+      ...mapActions(useMainStore, ["setTextError", "setCurrentFolderData", "setLastItem", "setError", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      setLoading(value) {
+         this.loading = value
+      },
       async fetchData() {
-         this.setLoading(true)
          this.setError(null)
 
          this.videoRef = null
@@ -382,6 +385,8 @@ export default {
 
          if (!this.file) {
             try {
+               this.setLoading(true)
+
                if (this.isInShareContext) {
                   let res = await getShare(this.token, this.folderId)
                   this.shareObj = res
@@ -395,8 +400,10 @@ export default {
                      this.setTextError(404, "Resource not found")
                      return
                   }
-                  this.setItems(res.share)
-
+                  // Only update store if it is empty
+                  if (!this.sortedItems || this.sortedItems.length === 0) {
+                     this.setItems(res.share)
+                  }
                   this.sendShareEvent({ "type": "file_open", "args": { "file_id": this.file.id } })
 
                } else {
@@ -407,20 +414,24 @@ export default {
                   }
                }
             } catch (error) {
-               if (error.code === "ERR_CANCELED") return
+               if (axios.isCancel(error)) return
                this.setError(error)
             } finally {
                this.setLoading(false)
             }
          }
+
+         console.log("MOUNTED FOR FILE: " + this.file.name)
+
          this.addSelected(this.file)
          this.setLastItem(this.file)
+
          await this.$nextTick() //this is vevy important
          if (this.file?.type === "Video" && this.$refs.video) {
             this.videoRef = this.$refs.video
 
             if (!this.isInShareContext) {
-               this.$refs.video.currentTime = this.file.video_position || 0
+               this.videoRef.currentTime = this.file.video_position || 0
                this.lastSentVideoPosition = this.file.video_position || 0
             }
 
@@ -482,45 +493,33 @@ export default {
       prev() {
          if (this.isVideoFullScreen()) return
          this.hoverNav = false
-         if (this.hasPrevious) {
-            let previousFile = this.files[this.currentIndex - 1]
+         if (!this.hasPrevious) return
 
-            if (this.isInShareContext) {
-               this.$router.push({
-                  name: "SharePreview",
-                  params: {
-                     folderId: previousFile.parent_id,
-                     fileId: previousFile.id,
-                     token: this.token
-                  }
-               })
-            } else {
-               this.$router.push({
-                  name: "Preview",
-                  params: { fileId: previousFile.id, lockFrom: previousFile.lockFrom }
-               })
+         const previousFile = this.files[this.currentIndex - 1]
+
+         this.$router.push({
+            name: this.isInShareContext ? "SharePreview" : "Preview",
+            params: {
+               ...this.$route.params,
+               fileId: previousFile.id
             }
-         }
+         })
       },
 
       next() {
          if (this.isVideoFullScreen()) return
          this.hoverNav = false
-         if (this.hasNext) {
-            let nextFile = this.files[this.currentIndex + 1]
+         if (!this.hasNext) return
 
-            if (this.isInShareContext) {
-               this.$router.push({
-                  name: "SharePreview",
-                  params: { folderId: nextFile.parent_id, fileId: nextFile.id, token: this.token }
-               })
-            } else {
-               this.$router.push({
-                  name: "Preview",
-                  params: { fileId: nextFile.id, lockFrom: nextFile.lockFrom }
-               })
+         const nextFile = this.files[this.currentIndex + 1]
+
+         this.$router.push({
+            name: this.isInShareContext ? "SharePreview" : "Preview",
+            params: {
+               ...this.$route.params,
+               fileId: nextFile.id
             }
-         }
+         })
       },
       onSwipeLeft(event) {
          if (this.disableSwipe) return
@@ -582,9 +581,7 @@ export default {
                this.subtitles = await getShareSubtitles(this.token, this.file.id)
             }
          } catch (err) {
-            if (err.name === "CanceledError" || err.name === "AbortError") {
-               console.log("Subtitle fetch cancelled")
-            } else {
+            if (!axios.isCancel(err)) {
                console.error("Subtitle fetch failed", err)
             }
          }
@@ -603,22 +600,13 @@ export default {
       }, 500),
 
       close() {
+         let routeName = "Files"
+         if (this.isInShareContext) routeName = "Share"
          try {
-            let parent_id = this.currentFolder?.id
-
-            if (this.isInShareContext) {
-               this.$router.push({
-                  name: "Share",
-                  params: { token: this.token, folderId: this.folderId }
-               })
-               return
-            }
-            if (parent_id) {
-               this.$router.push({ name: `Files`, params: { folderId: parent_id } })
-            } else {
-               this.$router.push({ name: `Files`, params: { folderId: this.user.root } })
-            }
-
+            this.$router.push({
+               name: routeName,
+               params: { ...this.$route.params }
+            })
             // catch every error so user can always close...
          } catch (e) {
             console.error(e)
@@ -633,19 +621,21 @@ export default {
       },
 
       videoTimeUpdate() {
-         let position = Math.floor(this.$refs.video.currentTime) // round to seconds
+         if (!this.videoRef) return
+         let position = Math.floor(this.videoRef.currentTime) // round to seconds
          if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
 
             if (this.isInShareContext) {
                this.sendShareEvent({ "type": "movie_watch", "args": { "timestamp": Math.round(position), "file_id": this.file.id } })
-            } else if (this.videoRef.duration > 60) {
+            } else if (this.videoRef.duration > 120) {
                updateVideoPosition(this.file.id, this.file.lockFrom, { position })
             }
             this.lastSentVideoPosition = position
          }
       },
       onMovieSeek() {
-         let toSecond = this.$refs.video.currentTime
+         if (!this.videoRef) return
+         let toSecond = this.videoRef.currentTime
          if (this.isInShareContext) {
             this.sendShareEvent({ type: "movie_seek", args: { "to_second": Math.round(toSecond), "file_id": this.file.id } })
             return
@@ -654,28 +644,30 @@ export default {
       },
 
       onMovieVolumeChange: throttle(function() {
+         if (!this.videoRef) return
          if (this.isInShareContext) return
-         let volume = Math.floor(this.$refs.video.volume)
+         let volume = Math.floor(this.videoRef.volume)
          deviceControl.sendMovieVolumeChangeEvent(volume)
       }, 500),
 
       onMoviePlay() {
+         if (!this.videoRef) return
          if (this.isInShareContext) return
-
          deviceControl.sendMovieToggleEvent(false)
-         let toSecond = this.$refs.video.currentTime
+         let toSecond = this.videoRef.currentTime
          deviceControl.sendMovieSeekEvent(toSecond)
       },
 
       onMoviePause() {
+         if (!this.videoRef) return
          if (this.isInShareContext) return
-
          deviceControl.sendMovieToggleEvent(false)
-         let toSecond = this.$refs.video.currentTime
+         let toSecond = this.videoRef.currentTime
          deviceControl.sendMovieSeekEvent(toSecond)
       },
 
       fullscreenChange() {
+         if (!this.videoRef) return
          if (this.isInShareContext) return
 
          this.isFullscreen = !this.isFullscreen
@@ -683,9 +675,10 @@ export default {
       },
 
       onSubtitleChanged() {
+         if (!this.videoRef) return
          if (this.isInShareContext) return
 
-         let tracks = this.$refs.video.textTracks
+         let tracks = this.videoRef.textTracks
 
          for (let i = 0; i < tracks.length; i++) {
             let t = tracks[i]
@@ -699,16 +692,16 @@ export default {
 
       toggleFullscreen(isFullscreen) {
          if (isFullscreen) {
-            this.$refs.video.requestFullscreen()
+            this.videoRef.requestFullscreen()
          } else if (this.isFullscreen) {
             document.exitFullscreen()
          }
       },
 
       setSubtitleTrack(index) {
-         console.log("setSubtitleTrack")
+         if (!this.videoRef) return
          if (index === null || index === undefined) return
-         let tracks = this.$refs.video.textTracks
+         let tracks = this.videoRef.textTracks
 
          for (let i = 0; i < tracks.length; i++) {
             tracks[i].mode = "disabled"
@@ -817,13 +810,13 @@ export default {
             let args = event.data[0].args
 
             if (type === "movie_seek") {
-               this.$refs.video.currentTime = args.seconds
+               this.videoRef.currentTime = args.seconds
             } else if (type === "movie_toggle") {
                let isPaused = args.isPaused
-               if (isPaused) this.$refs.video.pause()
-               else this.$refs.video.play()
+               if (isPaused) this.videoRef.pause()
+               else this.videoRef.play()
             } else if (type === "movie_volume_change") {
-               this.$refs.video.volume = args.volume
+               this.videoRef.volume = args.volume
             } else if (type === "movie_fullscreen_toggle") {
                this.toggleFullscreen(args.is_fullscreen)
             } else if (type === "movie_subtitle_change") {

@@ -532,6 +532,7 @@
     "itemsAreBeingMovedToTrash": "Przenoszenie do kosza...",
     "itemsAreBeingRestoredFromTrash": "Przywracanie z kosza...",
     "itemsDeleted": "Usunięto!",
+    "itemsDeletedPartially": "Niektórych itemów nie udało sie usunać",
     "itemsMovedToTrash": "Przeniesiono do kosza!",
     "itemsRestoredFromTrash": "Przywrócono z kosza!",
     "movedItems": "Przeniesiono itemy!",
@@ -570,3 +571,4 @@
     "fileGone": "Brak pliku na dysku"
   }
 }
+

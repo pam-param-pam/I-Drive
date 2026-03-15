@@ -75,6 +75,31 @@ export function showToast(type, content, options) {
 }
 
 
-function capitalize(str) {
+export function capitalize(str) {
    return str.charAt(0).toUpperCase() + str.slice(1)
 }
+
+export function lazyWithLoading(importer, delay = 150) {
+   let promise = null
+
+   return () => {
+      if (!promise) {
+         const store = useMainStore()
+
+         let timer = setTimeout(() => {
+            store.loading = true
+         }, delay)
+
+         promise = importer()
+            .finally(() => {
+               clearTimeout(timer)
+               store.loading = false
+            })
+      }
+
+      return promise
+   }
+}
+
+
+

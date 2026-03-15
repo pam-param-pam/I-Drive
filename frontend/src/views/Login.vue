@@ -169,8 +169,6 @@ export default {
             console.error("QR WebSocket error", error)
          }
 
-         console.log("New QR session created:", this.qrSessionId, "expires at", this.qrExpireAt)
-
          // Calculate delay until next refresh
          let delay = Math.max((this.qrExpireAt - now) * 1000 - 1000, 0)
 

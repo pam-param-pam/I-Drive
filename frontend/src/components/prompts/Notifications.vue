@@ -107,8 +107,6 @@ export default {
          try {
             this.loadingMore = true
             this.notifications = await getNotifications()
-         } catch (e) {
-            console.log(e)
          } finally {
             this.loadingMore = false
          }

@@ -14,10 +14,10 @@ from .core.dataModels.http import RequestContext
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
+from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata
 from .models.other_models import Notification
-from .services import folder_service, file_service
-from .tasks.deleteTasks import smart_delete_task
+from .services import folder_service, file_service, delete_service
 
 admin.site.register(PerDeviceToken)
 
@@ -110,15 +110,15 @@ class FolderAdmin(SimpleHistoryAdmin):
         return form
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
-        ids = [f.id for f in queryset]
-        smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
+        context = RequestContext.from_user(request.user.id)
+        delete_service.delete_items(context, request.user, list(queryset))
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
+        context = RequestContext.from_user(request.user.id)
         if isinstance(obj, Folder):
-            smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
+            delete_service.delete_items(context, request.user, [obj])
         else:
-            ids = [f.id for f in obj]
-            smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
+            delete_service.delete_items(context, request.user, obj)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
         for real_obj in queryset:
@@ -143,7 +143,7 @@ class FolderAdmin(SimpleHistoryAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'duration', 'inTrashSince', 'state', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
+    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'inTrashSince', 'state', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
                     'inTrash', 'is_locked']
@@ -215,15 +215,16 @@ class FileAdmin(SimpleHistoryAdmin):
         return form
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
-        ids = [f.id for f in queryset]
-        smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
+        context = RequestContext.from_user(request.user.id)
+        delete_service.delete_items(context, request.user, list(queryset))
 
     def delete_model(self, request, obj: Union[File, List[File]]):
+        context = RequestContext.from_user(request.user.id)
+
         if isinstance(obj, File):
-            smart_delete_task.delay(RequestContext.from_user(request.user.id), [obj.id])
+            delete_service.delete_items(context, request.user, [obj.id])
         else:
-            ids = [f.id for f in obj]
-            smart_delete_task.delay(RequestContext.from_user(request.user.id), ids)
+            delete_service.delete_items(context, request.user, obj)
 
     def force_delete_model(self, request, queryset: QuerySet[File]):
         for real_obj in queryset:
@@ -494,3 +495,18 @@ class NotificationAdmin(admin.ModelAdmin):
     def mark_as_unread(self, request, queryset: QuerySet[Notification]):
         for notif in queryset:
             notif.mark_as_unread()
+
+
+@admin.register(DeletionFileWorkItem)
+class DeletionFileWorkItemAdmin(admin.ModelAdmin):
+    list_display = ['file_id', 'state']
+
+@admin.register(DeletionFolderWorkItem)
+class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
+    list_display = ['folder_id', 'state']
+
+
+@admin.register(DeletionJob)
+class DeletionJobAdmin(admin.ModelAdmin):
+    ordering = ["-started_at"]
+    list_display = ['state', 'started_at']

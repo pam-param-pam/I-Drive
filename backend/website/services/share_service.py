@@ -48,7 +48,7 @@ def create_share(user: User, item_obj: Item, unit: str, value: int, password: st
 def delete_share(share: ShareableLink) -> None:
     share.delete()
 
-
+# todo why does this check perms...
 def create_share_zip(request, share_obj: ShareableLink, ids: list[str]) -> UserZIP:
     validate_ids_as_list(ids)
 
@@ -56,7 +56,7 @@ def create_share_zip(request, share_obj: ShareableLink, ids: list[str]) -> UserZ
 
     for item_id in ids:
         item = get_item(item_id)
-        check_if_item_belongs_to_share(request, share_obj, item)
+        check_if_item_belongs_to_share(share_obj, item)
         check_resource_perms(request, item, [CheckTrash, CheckState])
 
         if isinstance(item, Folder):
@@ -67,12 +67,12 @@ def create_share_zip(request, share_obj: ShareableLink, ids: list[str]) -> UserZ
     user_zip.save()
     return user_zip
 
+
 def log_event_http(request, share: ShareableLink, event_type: ShareEventType, **metadata):
     ip, _ = get_ip(request)
     user_agent = request.user_agent
     user = request.user if request.user.is_authenticated else None
-    print("log_event_http")
-    print(user)
+
     context = ShareContext(ip=ip, user_agent=user_agent, user=user)
     ShareAccessEvent.log(share, context, event_type, **metadata)
 

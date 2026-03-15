@@ -138,10 +138,10 @@ class Subtitle(DiscordAttachmentMixin):
         ]
 
     def get_base64_key(self):
-        return base64.b64encode(self.key).decode('utf-8')
+        return base64.b64encode(self.key).decode()
 
     def get_base64_iv(self):
-        return base64.b64encode(self.iv).decode('utf-8')
+        return base64.b64encode(self.iv).decode()
 
     def __str__(self):
         return f"Subtitle file ({self.language}) for {self.file}"
@@ -172,6 +172,14 @@ class RawMetadata(models.Model):
     def __str__(self):
         return f"Raw metadata for {self.file}"
 
+class PhotoMetadata(models.Model):
+    file = models.OneToOneField("File", on_delete=models.CASCADE)
+    height = models.IntegerField()
+    width = models.IntegerField()
+
+    def __str__(self):
+        return f"Photo metadata for {self.file}"
+
 class VideoMetadataTrackMixin(models.Model):
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
     bitrate = models.IntegerField()
@@ -181,6 +189,8 @@ class VideoMetadataTrackMixin(models.Model):
     language = models.CharField(max_length=100, null=True)
     track_number = models.IntegerField()
 
+    def __str__(self):
+        return f"Raw metadata for {self.video_metadata.file}"
 
 class VideoTrack(VideoMetadataTrackMixin):
     height = models.IntegerField()

@@ -148,7 +148,6 @@ export default {
       isErrorStatus,
       ...mapActions(useUploadStore, ["pauseAll", "resumeAll", "dismissFile", "retryFailSaveFile", "retryGoneFile", "retryUploadFile"]),
       dismiss() {
-         console.log("dissming: " + this.fileState.frontendId)
          getUploader().dismissFile(this.fileState.frontendId)
       },
       retry() {

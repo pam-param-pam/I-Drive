@@ -6,7 +6,7 @@ from .crypto.signer import sign_resource_id_with_expiry
 from ..constants import API_BASE_URL, ShareEventType
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken, \
     ShareAccessEvent
-from ..models.file_related_models import RawMetadata
+from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.other_models import Notification
 from ..queries.selectors import get_item_inside_share
 
@@ -51,7 +51,6 @@ class AdvancedSerializer(ABC):
 
 
 class FileSerializer(AdvancedSerializer):
-
     def _object_to_tuple(self, obj) -> tuple:
         file_tuple = (
             File.objects
@@ -71,8 +70,8 @@ class FileSerializer(AdvancedSerializer):
         (
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
-            size, created_at, last_modified_at, encryption_method, in_trash_since,
-            duration, parent__id, crc, thumbnail, video_position, video_metadata_id, raw_metadata_id
+            size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
+            parent__id, crc, thumbnail_id, video_position, video_metadata_id, raw_metadata_id, photo_metadata_id
         ) = tuple_data
 
         d = {
@@ -88,6 +87,7 @@ class FileSerializer(AdvancedSerializer):
             "encryption_method": encryption_method,
             "isVideoMetadata": video_metadata_id is not None,
             "isRawMetadata": raw_metadata_id is not None,
+            "isPhotoMetadata": photo_metadata_id is not None,
             "crc": crc,
         }
 
@@ -97,14 +97,11 @@ class FileSerializer(AdvancedSerializer):
         if in_trash:
             d["in_trash_since"] = in_trash_since.isoformat()
 
-        if duration is not None:
-            d["duration"] = duration
-
         if not hide and not (is_locked and in_trash):
             signed_id = sign_resource_id_with_expiry(id)
 
             d["download_url"] = f"{API_BASE_URL}/files/{signed_id}/stream"
-            if thumbnail:
+            if thumbnail_id:
                 d["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_id}/thumbnail/stream"
 
             if video_position:
@@ -120,8 +117,8 @@ class ShareFileSerializer(FileSerializer):
         (
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
-            size, created_at, last_modified_at, encryption_method, in_trash_since,
-            duration, parent__id, crc, thumbnail, video_position, video_metadata_id, raw_metadata_id
+            size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
+            parent__id, crc, thumbnail_id, video_position, video_metadata_id, raw_metadata_id, photo_metadata_id
         ) = tuple_data
 
         d = {
@@ -136,18 +133,16 @@ class ShareFileSerializer(FileSerializer):
             "encryption_method": encryption_method,
             "isVideoMetadata": video_metadata_id is not None,
             "isRawMetadata": raw_metadata_id is not None,
+            "isPhotoMetadata": photo_metadata_id is not None,
             "crc": crc,
         }
-
-        if duration:
-            d["duration"] = duration
 
         if not hide and not (is_locked and in_trash):
             signed_id = sign_resource_id_with_expiry(id)
 
             d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/stream"
 
-            if thumbnail:
+            if thumbnail_id:
                 d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/thumbnail/stream"
 
             if video_position:
@@ -307,6 +302,13 @@ class RawMetadataSerializer(SimpleSerializer):
             "shutter": metadata.shutter,
             "aperture": metadata.aperture,
             "focal_length": metadata.focal_length
+        }
+
+class PhotoMetadataSerializer(SimpleSerializer):
+    def serialize_object(self, metadata: PhotoMetadata) -> dict:
+        return {
+            "height": metadata.height,
+            "width": metadata.width,
         }
 
 class DeviceTokenSerializer(SimpleSerializer):

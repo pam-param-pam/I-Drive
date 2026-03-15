@@ -340,7 +340,7 @@ export default {
       },
 
       handleSubtitleUploadError(error) {
-         if (error.code === "ERR_CANCELED") return
+         if (axios.isCancel(error)) return
          console.error(error)
          this.$toast.error(this.$t("toasts.subtitleUploadFailed"))
       },

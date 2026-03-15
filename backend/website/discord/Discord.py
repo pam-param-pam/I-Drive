@@ -331,12 +331,13 @@ class DiscordManager:
         errors = []
 
         for attempt in range(1, self.MAX_RETRIES + 1):
+            print(f"ATTEMPT: {attempt}")
             try:
                 response = self.execute_bot_once(user, method, url, bot=bot, json=json, params=params, files=files)
             except DiscordError as exc:
                 if exc.status in (429, 500, 502, 503):
                     errors.append(exc)
-                    time.sleep(min(1 ** attempt, 5))
+                    time.sleep(exc.retry_after)
                     continue
                 else:
                     raise exc
@@ -384,12 +385,13 @@ class DiscordManager:
             except DiscordError as exc:
                 if exc.status in (429, 500, 502, 503):
                     errors.append(exc)
-                    time.sleep(min(1 ** attempt, 5))
+                    time.sleep(exc.retry_after)
                     continue
                 else:
                     raise exc
             except CannotProcessDiscordRequestError:
-                time.sleep(min(2 ** attempt, 5))
+                print("CannotProcessDiscordRequestError")
+                time.sleep(min(2 ** attempt, 10))
                 continue
 
             if response.is_success:
@@ -397,6 +399,7 @@ class DiscordManager:
 
             errors.append(response)
 
+        print(errors)
         raise DiscordErrorMaxRetries(errors)
 
 
@@ -472,6 +475,11 @@ class DiscordService:
     def delete_message(self, user, channel_id, message_id: str) -> Response:
         path = self._discord_path(f"/channels/{channel_id}/messages/{message_id}")
         return self.manager.execute_bot_with_retries(user, "DELETE", path)
+
+    def bulk_delete_messages(self, user, channel_id, message_ids: list[str]) -> Response:
+        path = self._discord_path(f"/channels/{channel_id}/messages/bulk-delete")
+        payload = {"messages": message_ids}
+        return self.manager.execute_bot_with_retries(user, "POST", path, json=payload)
 
     def _get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str) -> str:
         message = self.get_message(user, channel_id, message_id)

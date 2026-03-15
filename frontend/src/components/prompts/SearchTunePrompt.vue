@@ -53,7 +53,6 @@
                <label>{{ $t("prompts.orderBy") }}</label>
                <select v-model="orderBy" class="input input--block styled-select">
                   <option value="created_at">{{ $t("prompts.orderByCreatedAt") }}</option>
-                  <option value="duration">{{ $t("prompts.orderByDuration") }}</option>
                   <option value="size">{{ $t("prompts.orderBySize") }}</option>
                   <option value="name">{{ $t("prompts.orderByName") }}</option>
                </select>
@@ -202,7 +201,6 @@ export default {
             { label: "Size", value: "size", type: "number" },
             { label: "Created At", value: "created_at", type: "date" },
             { label: "Last Modified At", value: "last_modified_at", type: "date" },
-            { label: "Duration", value: "duration", type: "number" }
          ]
       }
    },

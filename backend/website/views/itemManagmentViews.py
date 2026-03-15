@@ -10,7 +10,7 @@ from ..core.decorators import extract_folder, check_resource_permissions, extrac
 from ..core.helpers import extract_key
 from ..core.http.utils import build_response
 from ..models import File
-from ..services import folder_service, item_service, file_service
+from ..services import folder_service, item_service, file_service, delete_service
 
 
 @api_view(['POST'])
@@ -20,7 +20,7 @@ from ..services import folder_service, item_service, file_service
 @check_resource_permissions(default_checks, resource_key="parent")
 def create_folder_view(request, parent):
     name = extract_key(request.data, "name")
-    folder_obj = folder_service.create_folder(request, request.user, parent, name)
+    folder_obj = folder_service.create_folder(request.context, request.user, parent, name)
     folder_dict = FolderSerializer().serialize_object(folder_obj)
     return JsonResponse(folder_dict, status=200)
 
@@ -36,7 +36,7 @@ def create_folder_view(request, parent):
 )
 def move_items_view(request, new_parent_obj, items):
     """This view uses values instead of ORM objects for files"""
-    item_service.move_items(request, items, new_parent_obj)
+    item_service.move_items(request.context, items, new_parent_obj)
     return JsonResponse(build_response(request.context.request_id, "Moving items..."))
 
 
@@ -47,7 +47,7 @@ def move_items_view(request, new_parent_obj, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def move_items_to_trash_view(request, items):
     """This view uses values instead of ORM objects for files"""
-    item_service.move_items_to_trash(request, items)
+    item_service.move_items_to_trash(request.context, items)
     return JsonResponse(build_response(request.context.request_id, "Moving to Trash..."))
 
 
@@ -58,7 +58,7 @@ def move_items_to_trash_view(request, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def restore_from_trash(request, items):
     """This view uses values instead of ORM objects for files"""
-    item_service.restore_items_from_trash(request, items)
+    item_service.restore_items_from_trash(request.context, items)
     return JsonResponse(build_response(request.context.request_id, "Restoring from Trash..."))
 
 
@@ -69,7 +69,7 @@ def restore_from_trash(request, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def delete(request, items):
     """This view uses values instead of ORM objects for files"""
-    item_service.delete_items(request, items)
+    delete_service.delete_items(request.context, request.user, items)
     return JsonResponse(build_response(request.context.request_id, f"{len(items)} items are being deleted..."))
 
 
@@ -80,7 +80,7 @@ def delete(request, items):
 @check_resource_permissions(default_checks & CheckRoot, resource_key="item_obj")
 def rename_view(request, item_obj):
     new_name = extract_key(request.data, "new_name")
-    item_service.rename_item(request, item_obj, new_name)
+    item_service.rename_item(request.context, item_obj, new_name)
     return HttpResponse(status=204)
 
 
@@ -91,7 +91,7 @@ def rename_view(request, item_obj):
 @check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
 def change_folder_password_view(request, folder_obj):
     new_password = extract_key(request.data, "new_password")
-    is_locked = folder_service.change_folder_password(request, folder_obj, new_password)
+    is_locked = folder_service.change_folder_password(request.context, folder_obj, new_password)
     if is_locked:
         return JsonResponse(build_response(request.context.request_id, "Folder is being locked..."))
     return JsonResponse(build_response(request.context.request_id, "Folder is being unlocked..."))
@@ -105,7 +105,7 @@ def change_folder_password_view(request, folder_obj):
 def reset_folder_password_view(request, folder_obj):
     account_password = extract_key(request.data, "accountPassword")
     new_folder_password = extract_key(request.data, "folderPassword")
-    is_locked = folder_service.reset_folder_password(request, folder_obj, account_password, new_folder_password)
+    is_locked = folder_service.reset_folder_password(request.context, request.user, folder_obj, account_password, new_folder_password)
     if is_locked:
         return JsonResponse(build_response(request.context.request_id, "Folder password is being changed..."))
     return JsonResponse(build_response(request.context.request_id, "Folder is being unlocked..."))

@@ -8,7 +8,7 @@ export class DiscordResponseConsumer {
       this.running = false
       this.backendState = new Map()
 
-      this.uploadRuntime.onFileChange(["videoMetadata", "rawMetadata"], ({ frontendId, field, current }) => {
+      this.uploadRuntime.onFileChange(["videoMetadata"], ({ frontendId, field, current }) => {
          this.onFileMetadata(frontendId, field, current)
       })
    }
@@ -57,11 +57,12 @@ export class DiscordResponseConsumer {
             frontend_id: fileObj.frontendId,
             encryption_method: parseInt(fileObj.encryptionMethod),
             created_at: fileObj.createdAt,
-            duration: fileState.duration,
             iv: fileState.iv,
             key: fileState.key,
             crc: 0,
-            fragments: []
+            fragments: [],
+            photoMetadata: fileState.photoMetadata,
+            rawMetadata: fileState.rawMetadata,
          })
       }
       return this.backendState.get(fileObj.frontendId)
@@ -73,8 +74,8 @@ export class DiscordResponseConsumer {
          let state = this.getOrCreateState(fileObj)
          if (field === "videoMetadata") {
             state.videoMetadata = current
-         } else if (field === "rawMetadata") {
-            state.rawMetadata = current
+         } else {
+            throw Error("Unknown metadata field")
          }
       }
    }
@@ -125,8 +126,6 @@ export class DiscordResponseConsumer {
             key: attachment.key,
             message_author_id: discordResponse.data.author.id
          })
-         console.log("fileState.extractedSubtitleCount: " + fileState.extractedSubtitleCount)
-         console.log("backendState.subtitles.length: " + backendState.subtitles.length)
          if (fileState.extractedSubtitleCount === backendState.subtitles.length) {
             fileState.markSubtitlesUploaded()
          }

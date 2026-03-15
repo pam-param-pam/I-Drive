@@ -18,13 +18,12 @@ from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPassw
 from ..auth.utils import check_resource_perms
 from ..constants import cache, SIGNED_URL_EXPIRY_SECONDS
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
-    RawMetadataSerializer
+    RawMetadataSerializer, PhotoMetadataSerializer
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
-from ..core.helpers import timed
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
-from ..models.file_related_models import RawMetadata
+from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
 from ..queries.selectors import query_attachments, check_if_bots_exists
@@ -159,6 +158,15 @@ def fetch_additional_info(request, item_obj):
                 return JsonResponse(metadata_dict, status=200)
             except RawMetadata.DoesNotExist:
                 raise ResourceNotFoundError("No raw metadata for this file :(")
+
+        elif item_obj.type == "Image":
+            try:
+                photo_metadata = PhotoMetadata.objects.get(file=item_obj)
+                photo_metadata = PhotoMetadataSerializer().serialize_object(photo_metadata)
+                return JsonResponse(photo_metadata, status=200)
+            except RawMetadata.DoesNotExist:
+                raise ResourceNotFoundError("No photo metadata for this file :(")
+
         else:
             raise ResourceNotFoundError("Wrong item type.")
 
@@ -192,7 +200,7 @@ def search(request):
     limit_to_folders = request.GET.get('limitToFolders', "").replace(" ", "")
 
     order_by = request.GET.get('orderBy', None)
-    if order_by not in ('size', 'duration', 'created_at'):
+    if order_by not in ('size', 'created_at'):
         order_by = 'created_at'
 
     result_limit = min(int(request.GET.get('resultLimit', 100)), 1000)
@@ -209,10 +217,6 @@ def search(request):
 
     if not (query or file_type or extension or tags or include_files or include_folders):
         raise BadRequestError("Please specify at least one search parameter")
-
-    if order_by == "duration" or attribute == "duration":
-        file_type = "Video"
-        include_folders = False
 
     if attribute:
         include_folders = False
