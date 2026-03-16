@@ -1,5 +1,6 @@
 import uuid
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Literal
 from uuid import UUID
@@ -9,7 +10,7 @@ from django.utils import timezone
 
 from .helper import send_message, bulk_deletable
 from ..celery import app
-from ..constants import EventCode, cache
+from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..core.errors import DiscordError
 from ..discord.Discord import discord
@@ -17,7 +18,7 @@ from ..models import File, Folder, Fragment, Thumbnail, Moment, Subtitle
 from ..models.delete_models import DeletionJob, DeletionFileWorkItem, DeletionFolderWorkItem
 from ..models.mixin_models import ItemState
 from ..queries.selectors import query_attachments
-from ..services import cache_service, file_service, folder_service
+from ..services import file_service, folder_service
 from ..websockets.utils import send_event
 
 AuthorType = Literal["bot", "webhook"]
@@ -142,33 +143,36 @@ def plan_deletion_job(job_id: UUID) -> None:
             ]
         )
 
+    delete_cache(expanded_folder_ids, expanded_file_ids)
+    process_file_batch.delay(job.request_context, job.id)
+
+
+def delete_cache(expanded_folder_ids: set[str], expanded_file_ids: set[str]):
     file_service._clear_cache(list(expanded_file_ids))
     folder_service._clear_cache(list(expanded_folder_ids))
 
-    process_file_batch.delay(job.request_context, job.id)
 
 @app.task()
 def process_file_batch(context_dict: dict, job_id: UUID) -> None:
     context = RequestContext.deserialize(context_dict)
 
     if not acquire_user_lock(context.user_id):
-        print("LOCK!!")
         # another worker already processing this user's deletions
-        process_file_batch.apply_async((context_dict, job_id), countdown=60)
+        process_file_batch.apply_async((context_dict, job_id), countdown=10)
         return
-
-    claim_token, items = claim_file_work_items(job_id)
-
-    file_ids = [item.file_id for item in items]
-
     try:
-        execute_remote_deletions(context, job_id, file_ids)
-        mark_remote_done(claim_token)
-        finalize_file_deletions(job_id, file_ids, claim_token)
+        claim_token, items = claim_file_work_items(job_id)
 
-    except Exception as error:
-        mark_batch_failed(job_id, file_ids, claim_token, error)
-        raise
+        file_ids = [item.file_id for item in items]
+
+        try:
+            dispatch_channel_deletions(context, job_id, file_ids)
+            mark_remote_done(claim_token)
+            finalize_file_deletions(job_id, file_ids, claim_token)
+
+        except Exception as error:
+            mark_batch_failed(job_id, file_ids, claim_token, error)
+            raise
     finally:
         release_user_lock(context.user_id)
 
@@ -309,29 +313,52 @@ def bulk_delete_messages(user, channel_id, messages, context, job_id):
                     delete_message_items(user, msg_id, items)
                     mark_items_deleted(context, job_id, items)
 
-def execute_remote_deletions(context: RequestContext, job_id: UUID, file_ids: list[str]) -> None:
+def process_channel_deletions(context, job_id: UUID, channel_id: str, messages):
     user = context.get_user()
-    message_structure = gather_message_structure(file_ids)
 
-    bulk_candidates = defaultdict(list)
+    bulk_candidates = []
     normal_deletes = []
 
-    for message_id, items in message_structure.items():
-        channel_id = items[0].channel_id
-
+    for message_id, items in messages:
         if bulk_deletable(message_id):
-            bulk_candidates[channel_id].append((message_id, items))
+            bulk_candidates.append((message_id, items))
         else:
             normal_deletes.append((message_id, items))
 
-    # ---- bulk deletes ----
-    for channel_id, messages in bulk_candidates.items():
-        bulk_delete_messages(user, channel_id, messages, context, job_id)
+    bulk_delete_messages(user, channel_id, bulk_candidates, context, job_id)
 
-    # ---- fallback single deletes ----
     for message_id, items in normal_deletes:
         delete_message_items(user, message_id, items)
         mark_items_deleted(context, job_id, items)
+
+
+def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> None:
+    message_structure = gather_message_structure(file_ids)
+
+    channel_map = defaultdict(list)
+
+    for message_id, items in message_structure.items():
+        channel_id = items[0].channel_id
+        channel_map[channel_id].append((message_id, items))
+
+    futures = []
+
+    with ThreadPoolExecutor(max_workers=len(channel_map)) as executor:
+        for channel_id, messages in channel_map.items():
+            futures.append(
+                executor.submit(
+                    process_channel_deletions,
+                    context,
+                    job_id,
+                    channel_id,
+                    messages
+                )
+            )
+
+        # wait for completion and propagate exceptions
+        for future in as_completed(futures):
+            future.result()
+
 
 def delete_message_items(user, message_id: str, items: list[MessageItem]) -> None:
     attachment_ids_to_remove = [

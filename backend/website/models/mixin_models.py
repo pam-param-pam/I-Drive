@@ -17,7 +17,6 @@ from django.apps import apps
 class ItemState(models.TextChoices):
     ACTIVE = "active"          # normal, visible, usable
     DELETING = "deleting"      # deletion in progress (claimed)
-    FAILED = "failed"          # deletion failed permanently
     DELETED = "deleted"        # deleted, should not be used
 
 class DiscordAttachmentMixin(models.Model):

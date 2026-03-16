@@ -499,14 +499,14 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(DeletionFileWorkItem)
 class DeletionFileWorkItemAdmin(admin.ModelAdmin):
-    list_display = ['file_id', 'state']
+    list_display = ['file_id', 'state', 'job_id', 'claimed_at']
 
 @admin.register(DeletionFolderWorkItem)
 class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
-    list_display = ['folder_id', 'state']
+    list_display = ['folder_id', 'state', 'job_id', 'claimed_at']
 
 
 @admin.register(DeletionJob)
 class DeletionJobAdmin(admin.ModelAdmin):
     ordering = ["-started_at"]
-    list_display = ['state', 'started_at']
+    list_display = ['state', 'started_at', 'heartbeat_at', 'last_progress_percentage']

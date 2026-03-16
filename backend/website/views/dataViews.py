@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timedelta
 
 from django.db import models
-from django.db.models import Count, Sum, Case, When, Value, CharField
+from django.db.models import Count, Sum, Case, When, Value, CharField, OuterRef, Exists
 from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
 from django.http import JsonResponse, HttpResponse
@@ -26,7 +26,7 @@ from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack
 from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
-from ..queries.selectors import query_attachments, check_if_bots_exists
+from ..queries.selectors import query_attachments, check_if_bots_exists, get_trash_files_and_folders
 from ..services import cache_service
 
 
@@ -341,15 +341,12 @@ def search(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_trash(request):
-    files = File.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, state=ItemState.ACTIVE).select_related(
-        "parent", "videoposition", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES)
-
-    folders = Folder.objects.filter(inTrash=True, owner=request.user, parent__inTrash=False, state=ItemState.ACTIVE).select_related("parent")
+    files, folders = get_trash_files_and_folders(request.user)
 
     file_serializer = FileSerializer()
     folder_serializer = FolderSerializer()
 
-    file_dicts = [file_serializer.serialize_dict(file) for file in files]
+    file_dicts = [file_serializer.serialize_tuple(file) for file in files]
     folder_dicts = [folder_serializer.serialize_object(folder) for folder in folders]
 
     return JsonResponse({"trash": file_dicts + folder_dicts})

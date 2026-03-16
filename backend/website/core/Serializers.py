@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
-from collections import defaultdict
 from typing import Iterable
+
+from django.db.models import Exists, OuterRef
 
 from .crypto.signer import sign_resource_id_with_expiry
 from ..constants import API_BASE_URL, ShareEventType
@@ -54,7 +55,9 @@ class FileSerializer(AdvancedSerializer):
     def _object_to_tuple(self, obj) -> tuple:
         file_tuple = (
             File.objects
-            .filter(id=obj.id).annotate(**File.LOCK_FROM_ANNOTATE)
+            .filter(id=obj.id)
+            .annotate(**File.DISPLAY_ANNOTATE)
+            .annotate(has_subtitle=Exists(Subtitle.objects.filter(file_id=OuterRef("pk"))))
             .values_list(*File.DISPLAY_VALUES)
             .first()
         )
@@ -71,7 +74,7 @@ class FileSerializer(AdvancedSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, thumbnail_id, video_position, video_metadata_id, raw_metadata_id, photo_metadata_id
+            parent__id, crc, video_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
         ) = tuple_data
 
         d = {
@@ -85,9 +88,10 @@ class FileSerializer(AdvancedSerializer):
             "last_modified": last_modified_at.isoformat() if last_modified_at else None,
             "isLocked": is_locked,
             "encryption_method": encryption_method,
-            "isVideoMetadata": video_metadata_id is not None,
-            "isRawMetadata": raw_metadata_id is not None,
-            "isPhotoMetadata": photo_metadata_id is not None,
+            "isVideoMetadata": has_videometadata,
+            "isRawMetadata": has_rawmetadata,
+            "isPhotoMetadata": has_photometadata,
+            "hasSubtitles": has_subtitle,
             "crc": crc,
         }
 
@@ -101,7 +105,7 @@ class FileSerializer(AdvancedSerializer):
             signed_id = sign_resource_id_with_expiry(id)
 
             d["download_url"] = f"{API_BASE_URL}/files/{signed_id}/stream"
-            if thumbnail_id:
+            if has_thumbnail:
                 d["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_id}/thumbnail/stream"
 
             if video_position:
@@ -118,7 +122,7 @@ class ShareFileSerializer(FileSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, thumbnail_id, video_position, video_metadata_id, raw_metadata_id, photo_metadata_id
+            parent__id, crc, video_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
         ) = tuple_data
 
         d = {
@@ -131,9 +135,10 @@ class ShareFileSerializer(FileSerializer):
             "created": created_at.isoformat() if created_at else None,
             "last_modified": last_modified_at.isoformat() if last_modified_at else None,
             "encryption_method": encryption_method,
-            "isVideoMetadata": video_metadata_id is not None,
-            "isRawMetadata": raw_metadata_id is not None,
-            "isPhotoMetadata": photo_metadata_id is not None,
+            "isVideoMetadata": has_videometadata,
+            "isRawMetadata": has_rawmetadata,
+            "isPhotoMetadata": has_photometadata,
+            "hasSubtitles": has_subtitle,
             "crc": crc,
         }
 
@@ -142,7 +147,7 @@ class ShareFileSerializer(FileSerializer):
 
             d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/stream"
 
-            if thumbnail_id:
+            if has_thumbnail:
                 d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/thumbnail/stream"
 
             if video_position:

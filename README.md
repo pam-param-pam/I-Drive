@@ -61,7 +61,7 @@ It has to:
 - Generate metadata
 - Generate thumbnails
 - Extract subtitles
-- Encrypt the file and more
+- Encrypt the file
 - And more!
 
 The same thing applies to pretty much every part of this app. Even if something looks simple at first glance. 

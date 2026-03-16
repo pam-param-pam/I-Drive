@@ -1,10 +1,11 @@
 from typing import Union
 
-from django.db.models import Q
+from django.db.models import Q, Value, BooleanField, Case, When, Exists, OuterRef
 
-from ..core.dataModels.general import Item
+from ..core.dataModels.general import Item, FolderDict
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
-from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin, Channel
+from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin, Channel, Subtitle
+from ..models.mixin_models import ItemState
 from ..safety.helper import get_classes_extending_discordAttachmentMixin
 
 
@@ -149,3 +150,19 @@ def get_item_inside_share(share: ShareableLink):
         # looks like folder/file no longer exist, deleting time!
         share.delete()
         raise ResourceNotFoundError()
+
+def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
+    files = (File.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE)
+        .prefetch_related("tags", "videoposition__timestamp")
+        .annotate(
+            has_subtitle=Exists(
+                Subtitle.objects.filter(file_id=OuterRef("pk"))
+            )
+        )
+        .annotate(**File.DISPLAY_ANNOTATE)
+        .values_list(*File.DISPLAY_VALUES)
+    )
+
+    folders = Folder.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE).select_related("parent")
+
+    return files, folders

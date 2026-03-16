@@ -3,15 +3,16 @@ import time
 from collections import defaultdict
 from typing import List, Dict, Iterable
 
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Exists, F, Value, Case, BooleanField, When
 from django.db.models.aggregates import Sum
+from django.db.models.functions import Coalesce
 
 from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer, ShareAccessSerializer, \
     ShareAccessEventSerializer
 from ..core.dataModels.general import Item, ZipFileDict, Breadcrumbs, FolderDict
 from ..core.helpers import get_attr, normalize_blocked_until
 from ..discord.Discord import discord
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccess, ShareAccessEvent
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccess, ShareAccessEvent, Subtitle
 from ..models.mixin_models import ItemState
 
 
@@ -33,9 +34,18 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     file_children = []
 
     if include_files:
-        file_children = folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False).select_related(
-            "parent", "videoposition", "thumbnail", "videometadata", "rawmetadata", "photometadata"
-        ).prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)
+        file_children = (
+            folder_obj.files
+            .filter(state=ItemState.ACTIVE, inTrash=False)
+            .prefetch_related("tags", "videoposition__timestamp")
+            .annotate(
+                has_subtitle=Exists(
+                    Subtitle.objects.filter(file_id=OuterRef("pk"))
+                )
+            )
+            .annotate(**File.DISPLAY_ANNOTATE)
+            .values_list(*File.DISPLAY_VALUES)
+        )
 
     folder_children = []
     if include_folders:

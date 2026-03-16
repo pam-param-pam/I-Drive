@@ -5,7 +5,7 @@ import shortuuid
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
@@ -104,7 +104,7 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
-        "parent__id", "crc", "thumbnail__id", "videoposition__timestamp", "videometadata__id", "rawmetadata__id", "photometadata__id",
+        "parent__id", "crc", "videoposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "has_thumbnail", "has_videometadata"
     )
 
     LOCK_FROM_ANNOTATE = {
@@ -117,6 +117,33 @@ class File(models.Model):
         "lockFrom__name": F("parent__lockFrom__name"),
         "password": F("parent__password"),
         "is_dir": Value(False, output_field=BooleanField()),
+    }
+
+    FILE_METADATA_ANNOTATE = {
+        "has_thumbnail": Case(
+            When(thumbnail__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        "has_videometadata": Case(
+            When(videometadata__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        "has_rawmetadata": Case(
+            When(rawmetadata__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+        "has_photometadata": Case(
+            When(photometadata__isnull=False, then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+    }
+    DISPLAY_ANNOTATE = {
+        **FILE_METADATA_ANNOTATE,
+        **LOCK_FROM_ANNOTATE,
     }
 
     def get_name_no_extension(self):
