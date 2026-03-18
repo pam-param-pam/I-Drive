@@ -237,8 +237,9 @@ export default {
       toRoot() {
          const currentId = this.currentFolder?.id || this.user.root
 
-         if (this.lastFolderId === currentId) {
-            // Called twice on same folder, go to absolute root
+         // Called twice on same folder, or called in Files go to absolute root
+         if (this.lastFolderId === currentId || this.$route.name === "Files") {
+
             this.$router.push({ name: "Files", params: { folderId: this.user.root } })
          } else {
             // Normal navigation
@@ -268,91 +269,91 @@ export default {
 </script>
 <style scoped>
 .selected-file-info {
- position: fixed;
- bottom: 1rem;
- left: 0;
- width: 100%;
- background: rgba(0, 0, 0, 0.05);
- padding: 0.75rem 1rem;
- font-size: 0.9rem;
- text-align: left;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--background);
+  padding: 0.75rem 1rem 1rem;
+  font-size: 0.9rem;
+  text-align: left;
 
 }
 
 .selected-file-info h4,
 .selected-file-info p {
- margin: 0.25rem 0;
- font-size: 0.85rem;
- word-wrap: break-word;
- overflow-wrap: break-word;
- white-space: normal;
- max-width: 16em;
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 16em;
 }
 
 .selected-file-info strong {
- font-weight: bold;
+  font-weight: bold;
 }
 
 .sidebar-actions-row {
- display: flex;
- align-items: center;
- position: relative;
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
 .notif-badge {
- position: absolute;
- top: 8px;
- left: 40px;
- background: #e57373;
- color: var(--textPrimary);
- font-size: 11px;
- padding: 2px 6px;
- border-radius: 10px;
+  position: absolute;
+  top: 8px;
+  left: 40px;
+  background: #e57373;
+  color: var(--textPrimary);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 
 .action--notifications:hover {
- background: transparent !important;
- box-shadow: none !important;
- transform: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .action--notifications {
- padding-right: 15px;
- padding-left: 15px;
+  padding-right: 15px;
+  padding-left: 15px;
 
 }
 
 /* subtle glow */
 .notif-alert {
- position: relative;
- box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.5);
- border-radius: 8px;
+  position: relative;
+  box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.5);
+  border-radius: 8px;
 }
 
 /* ripple effect */
 .notif-ripple {
- position: absolute;
- top: 50%;
- left: 50%;
- width: 10px;
- height: 10px;
- background: rgba(229, 115, 115, 0.6);
- border-radius: 50%;
- transform: translate(-50%, -50%);
- animation: ripple 1.2s ease-out forwards;
- pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: rgba(229, 115, 115, 0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: ripple 1.2s ease-out forwards;
+  pointer-events: none;
 }
 
 @keyframes ripple {
- 0% {
-  width: 10px;
-  height: 10px;
-  opacity: 0.7;
- }
- 100% {
-  width: 80px;
-  height: 80px;
-  opacity: 0;
- }
+  0% {
+    width: 10px;
+    height: 10px;
+    opacity: 0.7;
+  }
+  100% {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+  }
 }
 </style>

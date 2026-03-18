@@ -189,7 +189,11 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
     file_serializer = ShareFileSerializer(share)
 
     files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False).select_related(
-        "parent", "thumbnail").prefetch_related("tags").annotate(**File.LOCK_FROM_ANNOTATE).values(*File.DISPLAY_VALUES))
+        "parent", "thumbnail").prefetch_related("tags").annotate(**File.DISPLAY_ANNOTATE).annotate(
+                has_subtitle=Exists(
+                    Subtitle.objects.filter(file_id=OuterRef("pk"))
+                )
+            ).values(*File.DISPLAY_VALUES))
 
     folders = []
     if include_folders:

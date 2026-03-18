@@ -752,15 +752,6 @@ export default {
          if (isMobile()) this.imageHeight += 20
       },
 
-      async waitForRef(id, tries = 20) {
-         for (let i = 0; i < tries; i++) {
-            const el = this.$refs[id]
-            if (el?.$el) return el
-            await new Promise(r => requestAnimationFrame(r))
-         }
-         return null
-      },
-
       async scrollToLastItem() {
          function nextFrame() {
             return new Promise(resolve => requestAnimationFrame(resolve))

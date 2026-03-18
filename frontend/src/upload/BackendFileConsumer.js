@@ -64,9 +64,7 @@ export class BackendFileConsumer {
          file => file.size < SMALL_FILE_LIMIT
       )
 
-      const fileCountThreshold = allFilesAreSmall
-         ? SMALL_FILE_COUNT
-         : NORMAL_FILE_COUNT
+      const fileCountThreshold = allFilesAreSmall ? SMALL_FILE_COUNT : NORMAL_FILE_COUNT
 
       if (
          this.finishedFiles.length > fileCountThreshold ||

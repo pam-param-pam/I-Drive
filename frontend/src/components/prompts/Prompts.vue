@@ -120,7 +120,7 @@ export default {
    },
    watch: {
       currentPromptName(val) {
-         if (this.currentPrompt && !this.isAvailable(val)) {
+         if (this.currentPrompt && !this.isAvailable(val) && this.currentPromptName !== "more") {
             this.$toast.error(this.$t("prompts.failedToLoadPrompt"))
          }
       }

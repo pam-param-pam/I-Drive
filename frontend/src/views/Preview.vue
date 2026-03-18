@@ -434,11 +434,12 @@ export default {
                this.videoRef.currentTime = this.file.video_position || 0
                this.lastSentVideoPosition = this.file.video_position || 0
             }
-
-            await this.fetchSubtitles()
-            this.loadSubtitleStyle()
-            if (!this.videoRef.textTracks) return
-            this.videoRef.textTracks.addEventListener("change", this.onSubtitleChanged)
+            if (this.file.hasSubtitles) {
+               await this.fetchSubtitles()
+               this.loadSubtitleStyle()
+               if (!this.videoRef.textTracks) return
+               this.videoRef.textTracks.addEventListener("change", this.onSubtitleChanged)
+            }
          }
 
          if (!this.isEpub) return

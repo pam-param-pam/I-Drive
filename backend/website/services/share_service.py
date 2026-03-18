@@ -19,7 +19,7 @@ from ..queries.selectors import check_if_item_belongs_to_share, get_item
 
 def create_share(user: User, item_obj: Item, unit: str, value: int, password: str) -> ShareableLink:
     validate_value(value, int, checks=[IsPositive])
-    validate_value(password, int, checks=[NotEmpty, MaxLength(100)])
+    validate_value(password, str, checks=[NotEmpty, MaxLength(100)])
 
     units = {
         "minutes": timedelta(minutes=value),

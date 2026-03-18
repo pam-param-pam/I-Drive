@@ -14,6 +14,7 @@
 
       <div
          ref="wrapper"
+         v-touch-options="{ touchHoldTolerance: 1000 }"
          v-touch:hold.prevent="onLongPress"
          v-touch:tap.prevent="onMobileTap"
          :aria-label="item.name"
@@ -147,11 +148,22 @@ export default {
          return null
       }
    },
+   mounted() {
+      window.addEventListener("keydown", this.onEsc)
+   },
 
+   unmounted() {
+      window.removeEventListener("keydown", this.onEsc)
+   },
    methods: {
       humanTime,
       ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview", "setMultiSelection", "blockImagesFor"]),
 
+      onEsc(event) {
+         if (event.key === "Escape" && this.multiSelection) {
+            this.setMultiSelection(false)
+         }
+      },
       humanSize(size) {
          if (!size) return "-"
          return filesize(this.item.size)

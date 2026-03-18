@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timedelta
 
 from django.db import models
-from django.db.models import Count, Sum, Case, When, Value, CharField, OuterRef, Exists
+from django.db.models import Count, Sum, Case, When, Value, CharField, Exists, OuterRef
 from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
 from django.http import JsonResponse, HttpResponse
@@ -310,7 +310,11 @@ def search(request):
         files = File.objects.filter(file_filters) \
                     .select_related("parent", "videoposition", "thumbnail") \
                     .prefetch_related("tags") \
-                    .order_by(ascending + order_by).annotate(**File.LOCK_FROM_ANNOTATE).values_list(*File.DISPLAY_VALUES)[:result_limit]
+                    .order_by(ascending + order_by).annotate(**File.DISPLAY_ANNOTATE).annotate(
+                    has_subtitle=Exists(
+                        Subtitle.objects.filter(file_id=OuterRef("pk"))
+                    )
+                    ).values_list(*File.DISPLAY_VALUES)[:result_limit]
 
     if include_folders:
         folders = Folder.objects.filter(folder_filters) \
@@ -421,7 +425,7 @@ def ultra_download_metadata(request, item_obj):
         files = [item_obj]
         base_folder = item_obj.parent
     else:
-        files = list(item_obj.get_all_files().select_related("parent"))
+        files = list(item_obj.get_all_files().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).select_related("parent"))
         base_folder = item_obj
 
     file_ids = [f.id for f in files]
