@@ -11,6 +11,7 @@ from shortuuidfield import ShortUUIDField
 
 from .mixin_models import ItemState
 from ..constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH
+from ..core.helpers import check_name
 from ..services import cache_service
 
 
@@ -31,7 +32,6 @@ class Folder(MPTTModel):
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True, blank=True)
-    state_error = models.TextField(null=True, blank=True)
 
     class MPTTMeta:
         order_insertion_by = ['-created_at']
@@ -73,8 +73,8 @@ class Folder(MPTTModel):
 
             # 5. autoLock must be False unless lockFrom exists
             CheckConstraint(
-                check=Q(lockFrom__isnull=False) | Q(autoLock=False),
-                name="%(class)s_autoLock_valid"
+                check=Q(lockFrom__isnull=False) | Q(autoLock=False) | Q(state=ItemState.DELETING),
+                name="%(class)s_autoLock_valid",
             ),
 
             # 6. prevent folder from being its own parent
@@ -99,6 +99,7 @@ class Folder(MPTTModel):
         Folder.objects.get_or_create(owner=user, name="root")
 
     def save(self, *args, **kwargs):
+        check_name(self.name)
         self.check_depth()
         self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
 

@@ -28,7 +28,6 @@ def _reclaim_stale_file_claims(minutes: int = 10):
 
 
 def _reclaim_stale_folder_claims(minutes: int = 10):
-    #todo ensure job is also stale, else increase the mins to more than 10
     cutoff = timezone.now() - timedelta(minutes=minutes)
     stale = DeletionFolderWorkItem.objects.filter(
         state=DeletionFolderWorkItem.State.CLAIMED,

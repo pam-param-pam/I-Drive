@@ -134,7 +134,7 @@ class FolderAdmin(SimpleHistoryAdmin):
 
     def unlock(self, request, queryset: QuerySet[Folder]):
         for folder in queryset:
-            folder_service.internal_remove_lock(folder)
+            folder_service.internal_remove_lock(folder, lock_from=folder.lockFrom)
 
     def force_ready(self, request, queryset: QuerySet[File]):
         ids = [f.id for f in queryset]
@@ -500,11 +500,20 @@ class NotificationAdmin(admin.ModelAdmin):
 @admin.register(DeletionFileWorkItem)
 class DeletionFileWorkItemAdmin(admin.ModelAdmin):
     list_display = ['file_id', 'state', 'job_id', 'claimed_at']
+    actions = ['reset_attempts_to_1']
+
+    def reset_attempts_to_1(self, request, queryset):
+        updated = queryset.update(attempts=1)
+        self.message_user(request, f"{updated} items updated")
 
 @admin.register(DeletionFolderWorkItem)
 class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
     list_display = ['folder_id', 'state', 'job_id', 'claimed_at']
+    actions = ['reset_attempts_to_1']
 
+    def reset_attempts_to_1(self, request, queryset):
+        updated = queryset.update(attempts=1)
+        self.message_user(request, f"{updated} items updated")
 
 @admin.register(DeletionJob)
 class DeletionJobAdmin(admin.ModelAdmin):

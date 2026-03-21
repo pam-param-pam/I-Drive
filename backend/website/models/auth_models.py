@@ -13,7 +13,7 @@ from shortuuidfield import ShortUUIDField
 
 class PerDeviceTokenManager(models.Manager):
     def _hash(self, raw_token: str) -> str:
-        return hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+        return hashlib.sha256(raw_token.encode()).hexdigest()
 
     def create_token(self, user, device_name: str, device_id: str, expires: datetime.timedelta, ip_address: str, user_agent: str, country: str = None, city: str = None,
                      device_type: str = None):

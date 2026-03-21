@@ -418,6 +418,7 @@ def get_subtitles(request, file_obj: File):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
+@check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="item_obj")
 def ultra_download_metadata(request, item_obj):
     check_if_bots_exists(request.user)
 
@@ -426,7 +427,10 @@ def ultra_download_metadata(request, item_obj):
         base_folder = item_obj.parent
     else:
         files = list(item_obj.get_all_files().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).select_related("parent"))
-        base_folder = item_obj
+        base_folder: Folder = item_obj
+
+        for folder in base_folder.get_all_subfolders().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False):
+            check_resource_perms(request, folder, default_checks)
 
     file_ids = [f.id for f in files]
 
@@ -437,8 +441,7 @@ def ultra_download_metadata(request, item_obj):
         .order_by("sequence")
         .values(
             "file_id",
-            "message_id",
-            "attachment_id",
+            "id",
             "offset",
             "sequence",
             "size",
@@ -447,14 +450,13 @@ def ultra_download_metadata(request, item_obj):
     )
 
     fragments_by_file = {}
-    for f in fragments:
-        fragments_by_file.setdefault(f["file_id"], []).append({
-            "message_id": f["message_id"],
-            "attachment_id": f["attachment_id"],
-            "offset": f["offset"],
-            "sequence": f["sequence"],
-            "size": f["size"],
-            "crc": f["crc"],
+    for fragment in fragments:
+        fragments_by_file.setdefault(fragment["file_id"], []).append({
+            "fragment_id": fragment["id"],
+            "offset": fragment["offset"],
+            "sequence": fragment["sequence"],
+            "size": fragment["size"],
+            "crc": fragment["crc"],
         })
 
     # ---- cache folder paths ----
@@ -485,23 +487,24 @@ def ultra_download_metadata(request, item_obj):
     # ---- build metadata ----
     response_data = []
 
-    for f in files:
+    for file in files:
 
-        rel_path = get_folder_path(f.parent)
+        rel_path = get_folder_path(file.parent)
 
         file_dict = {
-            "id": str(f.id),
-            "name": f.name,
+            "id": str(file.id),
+            "name": file.name,
             "path": rel_path,
-            "encryption_method": f.get_encryption_method().value,
-            "crc": f.crc,
-            "size": f.size,
-            "fragments": fragments_by_file.get(f.id, [])
+            "encryption_method": file.get_encryption_method().value,
+            "crc": file.crc,
+            "size": file.size,
+            "fragments": fragments_by_file.get(file.id, []),
+            "lockFrom": file.parent.lockFrom.id if file.parent.lockFrom else None
         }
 
-        if f.is_encrypted():
-            file_dict["key"] = f.get_base64_key()
-            file_dict["iv"] = f.get_base64_iv()
+        if file.is_encrypted():
+            file_dict["key"] = file.get_base64_key()
+            file_dict["iv"] = file.get_base64_iv()
 
         response_data.append(file_dict)
 
@@ -511,10 +514,9 @@ def ultra_download_metadata(request, item_obj):
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-def get_attachment_url_view(request, attachment_id):
+def get_fragment_url_view(request, fragment_id):
     check_if_bots_exists(request.user)
-
-    fragment = Fragment.objects.get(attachment_id=attachment_id)
+    fragment = Fragment.objects.get(id=fragment_id)
 
     file = fragment.file
     check_resource_perms(request, file, default_checks)

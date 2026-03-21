@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.utils import timezone
 
 from . import cache_service
@@ -43,13 +44,14 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
     if parent.state != ItemState.ACTIVE:
         raise BadRequestError("Parent not ready")
 
-    folder_obj = Folder(name=name, parent=parent, owner=user)
+    with transaction.atomic():
+        folder_obj = Folder(name=name, parent=parent, owner=user)
 
-    # apply lock if needed
-    if parent.is_locked:
-        internal_apply_lock(folder=folder_obj, lock_from=parent.lockFrom, password=parent.password)
+        # apply lock if needed
+        if parent.is_locked:
+            internal_apply_lock(folder=folder_obj, lock_from=parent.lockFrom, password=parent.password)
 
-    folder_obj.save()
+        folder_obj.save()
 
     folder_dict = FolderSerializer().serialize_object(folder_obj)
     send_event(context, parent, EventCode.ITEM_CREATE, folder_dict)
@@ -97,19 +99,37 @@ def reset_folder_password(context: RequestContext, user, folder_obj: Folder, acc
 def internal_move_to_new_parent(folder: Folder, new_parent: 'Folder'):
     folder.check_depth(new_parent=new_parent)
 
-    if new_parent.is_locked and not folder.is_locked and not folder.autoLock:
-        internal_apply_lock(folder=folder, lock_from=new_parent, password=new_parent.password)
-    elif not new_parent.is_locked and folder.autoLock:
-        internal_remove_lock(folder=folder)
+    with transaction.atomic():
+        is_folder_locked = folder.is_locked
+        is_parent_locked = new_parent.is_locked
 
-    folder.refresh_from_db()
+        old_password = folder.password if is_folder_locked else None
 
-    # invalidate cache of the current parent
-    folder.parent.remove_cache()
+        if is_parent_locked:
+            # Always inherit parent lock
+            internal_apply_lock(
+                folder=folder,
+                lock_from=new_parent.lockFrom if new_parent.autoLock else new_parent,
+                password=new_parent.password,
+            )
 
-    folder.parent = new_parent
-    folder.move_to(new_parent, "last-child")
-    folder.save()
+        elif is_folder_locked:
+            # Preserve original lock (re-root it to itself)
+            internal_apply_lock(
+                folder=folder,
+                lock_from=folder,
+                password=old_password,
+                force_reroot=True,
+            )
+
+        folder.refresh_from_db()
+
+        # invalidate cache of the current parent
+        folder.parent.remove_cache()
+
+        folder.parent = new_parent
+        folder.move_to(new_parent, "last-child")
+        folder.save()
 
 
 def internal_move_to_trash(folder: Folder) -> None:
@@ -136,58 +156,60 @@ def internal_restore_from_trash(folder: Folder) -> None:
     folder_ids = [f.id for f in subfolders]
     folder_ids.append(folder.id)
 
-    Folder.objects.filter(id__in=folder_ids).update(
-        inTrash=False,
-        inTrashSince=None
-    )
+    with transaction.atomic():
+        Folder.objects.filter(id__in=folder_ids).update(
+            inTrash=False,
+            inTrashSince=None
+        )
 
-    File.objects.filter(parent__in=[folder] + list(subfolders), inTrash=True).update(
-        inTrash=False,
-        inTrashSince=None
-    )
+        File.objects.filter(parent__in=[folder] + list(subfolders), inTrash=True).update(
+            inTrash=False,
+            inTrashSince=None
+        )
 
     _clear_cache(folder_ids)
 
 
-def internal_apply_lock(folder: Folder, lock_from: Folder, password: str) -> None:
-    folder.autoLock = folder != lock_from
-    folder.password = password
-    folder.lockFrom = lock_from
-    folder.save(update_fields=["autoLock", "password", "lockFrom"])
+def internal_apply_lock(folder: Folder, lock_from: Folder, password: str, force_reroot: bool = False) -> None:
+    with transaction.atomic():
+        folder.autoLock = folder != lock_from
+        folder.password = password
+        folder.lockFrom = lock_from
+        folder.save(update_fields=["autoLock", "password", "lockFrom"])
 
-    subfolders = folder.get_all_subfolders()
+        subfolders = folder.get_all_subfolders()
 
-    for sub in subfolders:
-        if sub.is_locked and not sub.autoLock:
-            break
+        for sub in subfolders:
+            if not force_reroot and sub.is_locked and not sub.autoLock:
+                continue
 
-        sub.password = password
-        sub.lockFrom = lock_from
-        sub.autoLock = True
-        sub.save(update_fields=["password", "lockFrom", "autoLock"])
-
-
-def internal_remove_lock(folder: Folder) -> None:
-    folder.autoLock = False
-    folder.lockFrom = None
-    folder.password = None
-    folder.save(update_fields=["autoLock", "lockFrom", "password"])
-
-    subfolders = folder.get_all_subfolders()
-
-    for sub in subfolders:
-        if sub.lockFrom == folder:
-            sub.password = None
-            sub.lockFrom = None
-            sub.autoLock = False
+            sub.password = password
+            sub.lockFrom = lock_from
+            sub.autoLock = True
             sub.save(update_fields=["password", "lockFrom", "autoLock"])
+
+
+def internal_remove_lock(folder: Folder, lock_from: Folder) -> None:
+    with transaction.atomic():
+        folder.autoLock = False
+        folder.lockFrom = None
+        folder.password = None
+        folder.save(update_fields=["autoLock", "lockFrom", "password"])
+
+        subfolders = folder.get_all_subfolders()
+
+        for sub in subfolders:
+            if sub.lockFrom == lock_from:
+                sub.password = None
+                sub.lockFrom = None
+                sub.autoLock = False
+                sub.save(update_fields=["password", "lockFrom", "autoLock"])
 
 def internal_force_ready(folder_ids: list[str]):
     now = timezone.now()
 
     Folder.objects.filter(id__in=folder_ids).update(
         state=ItemState.ACTIVE,
-        state_changed_at=now,
-        state_error=None
+        state_changed_at=now
     )
     _clear_cache(folder_ids)

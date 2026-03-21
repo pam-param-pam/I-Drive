@@ -2,21 +2,15 @@ from typing import Union
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.db import models
+from django.db.models import Q, CheckConstraint
 
 from .discord_models import Bot, Webhook
 
 
-from django.db import models
-from django.db.models import Q, CheckConstraint
-
-from django.db import models
-from django.db.models import Q, CheckConstraint
-from django.apps import apps
-
-
 class ItemState(models.TextChoices):
     ACTIVE = "active"          # normal, visible, usable
-    DELETING = "deleting"      # deletion in progress (claimed)
+    DELETING = "deleting"      # deletion in progress
     DELETED = "deleted"        # deleted, should not be used
 
 class DiscordAttachmentMixin(models.Model):

@@ -1,5 +1,6 @@
 import base64
 import math
+import re
 import time
 from functools import wraps
 from typing import Union, Type, Tuple, Optional, Any
@@ -247,3 +248,51 @@ def timed(func):
         print(f"{func.__name__} took {duration:.6f}s")
         return result
     return wrapper
+
+
+def check_name(name):
+    WINDOWS_RESERVED_NAMES = {
+        "CON", "PRN", "AUX", "NUL",
+        *(f"COM{i}" for i in range(1, 10)),
+        *(f"LPT{i}" for i in range(1, 10)),
+    }
+
+    INVALID_CHARS_PATTERN = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
+    DRIVE_PATTERN = re.compile(r'^[a-zA-Z]:[/\\]')  # e.g. C:\ or Z:/
+
+    if not name:
+        raise BadRequestError("Name cannot be empty")
+
+    stripped = name.strip()
+
+    # 1. Block full paths / drive references (e.g. Z://, C:\foo)
+    if DRIVE_PATTERN.match(stripped):
+        raise BadRequestError(f"Invalid name: looks like a drive path ({name})")
+
+    # block any path separators at all
+    if "/" in name or "\\" in name:
+        raise BadRequestError("Invalid name: must not contain path separators")
+
+    # 2. Reserved device names (case-insensitive)
+    base = stripped.split(".")[0].upper()
+    if base in WINDOWS_RESERVED_NAMES:
+        raise BadRequestError(f"Invalid name: '{name}' is a reserved Windows device name")
+
+    # 3. Invalid characters
+    if INVALID_CHARS_PATTERN.search(name):
+        raise BadRequestError("Invalid name: contains forbidden characters")
+
+    # 4. Cannot end with space or dot (Windows rule)
+    if stripped.rstrip(" .") != stripped:
+        raise BadRequestError("Invalid name: cannot end with space or dot")
+
+    # 5. Avoid '.' and '..'
+    if stripped in {".", ".."}:
+        raise BadRequestError("Invalid name: '.' and '..' are not allowed")
+
+    if len(name) > 255:
+        raise BadRequestError("Invalid name: too long")
+
+    # bare drive
+    if re.match(r'^[a-zA-Z]:$', stripped):
+        raise BadRequestError("Invalid name: drive prefix not allowed")

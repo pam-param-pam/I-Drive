@@ -261,10 +261,7 @@ export class RequestProducer {
                   __retryErrors: true
                })
             } catch (e) {
-               if (e?.response?.data?.error === "errors.badRequest") {
-                  throw new Error(e?.response?.data?.details || "Failed to create a parent folder.")
-               }
-               throw e
+               throw new Error("Failed to create a parent folder.")
             }
 
             parentFolder = folder.id

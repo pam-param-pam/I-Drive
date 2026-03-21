@@ -13,7 +13,7 @@ from simple_history.models import HistoricalRecords
 from .folder_models import Folder
 from .mixin_models import DiscordAttachmentMixin, ItemState
 from ..constants import FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER
-from ..core.helpers import chop_long_file_name
+from ..core.helpers import chop_long_file_name, check_name
 
 
 class File(models.Model):
@@ -39,7 +39,6 @@ class File(models.Model):
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True)
-    state_error = models.TextField(null=True)
 
     history = HistoricalRecords()
 
@@ -173,6 +172,7 @@ class File(models.Model):
     lockFrom__name = property(_lockFrom__name)
 
     def save(self, *args, **kwargs):
+        check_name(self.name)
         self._check_folder_file_limit()
         self.name = chop_long_file_name(self.name)
 

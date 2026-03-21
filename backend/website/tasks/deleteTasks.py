@@ -165,14 +165,15 @@ def process_file_batch(context_dict: dict, job_id: UUID) -> None:
 
         file_ids = [item.file_id for item in items]
 
-        try:
-            dispatch_channel_deletions(context, job_id, file_ids)
-            mark_remote_done(claim_token)
-            finalize_file_deletions(job_id, file_ids, claim_token)
+        if file_ids:
+            try:
+                dispatch_channel_deletions(context, job_id, file_ids)
+                mark_remote_done(claim_token)
+                finalize_file_deletions(job_id, file_ids, claim_token)
 
-        except Exception as error:
-            mark_batch_failed(job_id, file_ids, claim_token, error)
-            raise
+            except Exception as error:
+                mark_batch_failed(job_id, file_ids, claim_token, error)
+                raise
     finally:
         release_user_lock(context.user_id)
 
@@ -194,7 +195,13 @@ def mark_items_deleted(context: RequestContext, job_id: UUID, items: List[Messag
             .get(id=job_id)
         )
 
-        job.deleted_fragments += len(fragment_ids)
+        updated = Fragment.objects.filter(
+            id__in=fragment_ids,
+            state__ne=ItemState.DELETED
+        ).update(state=ItemState.DELETED)
+
+        job.deleted_fragments += updated
+
         job.heartbeat_at = timezone.now()
 
         if job.total_fragments:

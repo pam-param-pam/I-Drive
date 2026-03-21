@@ -71,13 +71,13 @@ def process_channel(user, channel, days):
             msg_id = discord_message["id"]
             timestamp = datetime.fromisoformat(discord_message["timestamp"])
 
-            # # Skip fresh messages
-            # if timestamp > six_hours_ago:
-            #     continue
-            #
-            # # Stop when reaching old messages
-            # if timestamp < cutoff:
-            #     break
+            # Skip fresh messages
+            if timestamp > six_hours_ago:
+                continue
+
+            # Stop when reaching old messages
+            if timestamp < cutoff:
+                break
 
             database_attachments = query_attachments(message_id=msg_id)
 

@@ -41,7 +41,7 @@ def unlock_folder_task(context: dict, folder_id: str):
     try:
         context = RequestContext.deserialize(context)
         folder = Folder.objects.get(id=folder_id)
-        folder_service.internal_remove_lock(folder=folder)
+        folder_service.internal_remove_lock(folder=folder, lock_from=folder.lockFrom)
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
         traceback.print_exc()

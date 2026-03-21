@@ -14,10 +14,8 @@ from ..discord.Discord import discord
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 def get_discord_state(request):
-    user = User.objects.get(id=5)
+    user = User.objects.get(id=2)
     state = discord._get_user_state(user)
-
-
     return JsonResponse(state.to_dict(), safe=False)
 
 

@@ -175,6 +175,7 @@ export default {
    computed: {
       ...mapState(useMainStore, ["items", "usage", "settings", "user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading", "searchActive", "searchItems", "selected", "sortedItems"]),
       selectedFile() {
+         if (this.selected.length > 1) return null
          return this.selected[0]
       },
       active() {

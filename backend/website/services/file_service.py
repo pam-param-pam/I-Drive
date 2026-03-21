@@ -5,13 +5,12 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-from . import cache_service, folder_service
+from . import folder_service
 from .attachment_service import delete_single_discord_attachment
-from ..constants import cache
 from ..core.errors import BadRequestError
-from ..core.helpers import validate_key, validate_encryption_fields, validate_value, validate_crc
+from ..core.helpers import validate_key, validate_encryption_fields, validate_value
 from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
-from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Fragment, Folder
+from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Folder
 from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.mixin_models import ItemState
 from ..queries.selectors import get_discord_author, get_discord_channel
@@ -214,20 +213,6 @@ def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
     delete_single_discord_attachment(user, subtitle)
 
-
-def change_file_crc(file_obj: File, new_crc: int) -> None:
-    validate_value(new_crc, int, checks=[MaxLength(10), NotNegative])
-    validate_crc(file_obj.size, new_crc)
-
-    file_obj.crc = new_crc
-    file_obj.save()
-
-def change_fragment_crc(user, fragment_id: str, new_crc: int) -> None:
-    frag = Fragment.objects.get(id=fragment_id, file__owner=user)
-    validate_value(new_crc, int, checks=[MaxLength(10), NotNegative])
-    frag.crc = new_crc
-    frag.save()
-
 def remove_moment(user, file_obj, moment_id) -> None:
     moment = Moment.objects.get(file=file_obj, id=moment_id)
     delete_single_discord_attachment(user, moment)
@@ -302,32 +287,25 @@ def _clear_cache(file_ids: list[str]) -> None:
         .distinct()
     )
 
-    cache_keys = [
-        cache_service.get_folder_content_key(fid)
-        for fid in parent_ids
-    ]
-
-    cache.delete_many(cache_keys)
+    folder_service._clear_cache(list(parent_ids))
 
 
 def internal_move_to_new_parent(file_ids: list[str], new_parent: Folder):
-    _clear_cache(file_ids)
-
     now = timezone.now()
 
     File.objects.filter(id__in=file_ids).update(
         parent=new_parent,
         last_modified_at=now,
     )
-    folder_service._clear_cache([new_parent.id])
+    _clear_cache(file_ids)
 
+    folder_service._clear_cache([new_parent.id])
 
 def internal_force_ready(file_ids: list[str]):
     now = timezone.now()
 
     File.objects.filter(id__in=file_ids).update(
         state=ItemState.ACTIVE,
-        state_changed_at=now,
-        state_error=None
+        state_changed_at=now
     )
     _clear_cache(file_ids)

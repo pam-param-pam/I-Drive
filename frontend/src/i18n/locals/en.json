@@ -185,6 +185,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "showPrevious": "Show previous",
+    "loading": "Loading",
     "noNotifications": "No notifications yet!",
     "notifications": "Notifications",
     "searchForIds": "Search for IDs",

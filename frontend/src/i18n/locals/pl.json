@@ -178,6 +178,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "showPrevious": "Pokaż więcej",
+    "loading": "Ładowanie",
     "noNotifications": "Brak powiadomień!",
     "notifications": "Powiadomienia",
     "searchForType": "Search po typach eventów",

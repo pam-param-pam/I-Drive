@@ -240,7 +240,7 @@ class CheckFolderLock(CheckLockedFolderIP):
         else:
             # Resource is unlocked, but someone provided a password? validate it
             if self._password_provided(request) and not self._is_password_valid(request, resource):
-                raise MissingOrIncorrectResourcePasswordError([self._build_password_info(resource)])
+                raise MissingOrIncorrectResourcePasswordError([], "This resource is unlocked. Do not provide a password")
 
     def _password_provided(self, request):
         # helper to check if user provided any password
@@ -267,10 +267,13 @@ class CheckFolderLock(CheckLockedFolderIP):
             return not self._is_locked(resource)  # ok only if resource is unlocked
 
     def _build_password_info(self, resource):
-        return {
-            "id": self._require_attr(resource, "lockFrom_id"),
-            "name": get_attr(resource, "lockFrom__name"),
-        }
+        lockFrom_id = self._require_attr(resource, "lockFrom_id")
+        if lockFrom_id:
+            return {
+                "id": lockFrom_id,
+                "name": get_attr(resource, "lockFrom__name"),
+            }
+        return None
 
 
 class CheckShareItemBelongings(BaseResourceCheck):

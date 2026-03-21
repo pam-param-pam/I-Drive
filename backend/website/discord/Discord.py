@@ -2,6 +2,7 @@ import json
 import logging
 import random
 import time
+import traceback
 from dataclasses import dataclass
 from datetime import datetime, UTC
 from threading import Lock
@@ -331,7 +332,6 @@ class DiscordManager:
         errors = []
 
         for attempt in range(1, self.MAX_RETRIES + 1):
-            print(f"ATTEMPT: {attempt}")
             try:
                 response = self.execute_bot_once(user, method, url, bot=bot, json=json, params=params, files=files)
             except DiscordError as exc:
@@ -341,7 +341,9 @@ class DiscordManager:
                     continue
                 else:
                     raise exc
-            except CannotProcessDiscordRequestError:
+            except CannotProcessDiscordRequestError as e:
+                print(traceback.print_exc())
+                print(e)
                 time.sleep(min(2 ** attempt, 5))
                 continue
 

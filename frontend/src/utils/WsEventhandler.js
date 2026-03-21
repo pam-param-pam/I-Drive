@@ -107,7 +107,7 @@ export async function onEvent(message) {
    }
 
    if (op_code === WebsocketEvent.ITEM_CREATE) {
-      if (folder_context_id !== currentFolder?.id) return
+      if (folder_context_id !== currentFolder?.id || currentRoute === "Trash") return
       for (let item of event.data) {
          store.pushToItems(item)
          addToUsage(store, item)
