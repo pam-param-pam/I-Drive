@@ -195,7 +195,7 @@ def register_user(request, username: str, password: str) -> tuple[str, PerDevice
     if User.objects.filter(username=username):
         raise UsernameTakenError()
 
-    create_new_user(username, password, is_staff=False)
+    create_new_user(username, password, is_superuser=False)
     return login_device(request, username, password)
 
 def change_password(request, user: User, current_password: str, new_password: str) -> tuple[str, PerDeviceToken]:
@@ -210,6 +210,8 @@ def change_password(request, user: User, current_password: str, new_password: st
 
     logout_all_devices_for_user(request, user)
     raw_token, token_obj = login_device(request, username=user.username, password=new_password)
+    user_service.create_notification(user, NotificationType.IMPORTANT, "Account password change", "Your account password was recently changed")  # todo
+
     return raw_token, token_obj
 
 

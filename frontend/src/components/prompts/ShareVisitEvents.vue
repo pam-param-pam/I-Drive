@@ -270,13 +270,14 @@ export default {
   max-height: 55vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 0.5em;
   padding-bottom: 1rem;
 }
 
 .share-table-container table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: 2rem;
+
 }
 
 .share-table-container thead th {
@@ -297,7 +298,7 @@ export default {
 }
 
 .clickable-row:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .event-metadata {

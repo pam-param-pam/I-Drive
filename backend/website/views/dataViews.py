@@ -186,20 +186,20 @@ def get_breadcrumbs(request, folder_obj: Folder):
 def search(request):
     user = request.user
     # todo check if this is secure
-    query = request.GET.get('query', None)
-    file_type = request.GET.get('type', None)
-    extension = request.GET.get('extension', None)
+    query = request.GET.get('query')
+    file_type = request.GET.get('type')
+    extension = request.GET.get('extension')
 
-    lock_from = request.GET.get('lockFrom', None)
-    password = request.headers.get("X-resource-Password", None)
-    tags = request.GET.get('tags', None)
+    lock_from = request.GET.get('lockFrom')
+    password = request.headers.get("X-resource-Password")
+    tags = request.GET.get('tags')
 
-    attribute = request.GET.get('property', None)
+    attribute = request.GET.get('property')
     attribute_range = request.GET.get('range', "").replace(" ", "")
     exclude_folders = request.GET.get('excludeFolders', "").replace(" ", "")
     limit_to_folders = request.GET.get('limitToFolders', "").replace(" ", "")
 
-    order_by = request.GET.get('orderBy', None)
+    order_by = request.GET.get('orderBy')
     if order_by not in ('size', 'created_at'):
         order_by = 'created_at'
 

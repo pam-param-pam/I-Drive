@@ -178,7 +178,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
-    "showPrevious": "Pokaż więcej",
+    "showPrevious": "Więcej",
     "loading": "Ładowanie",
     "noNotifications": "Brak powiadomień!",
     "notifications": "Powiadomienia",
@@ -468,6 +468,7 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "updatingPassword": "Trwa zmiana hasła...",
     "credentialReenabled": "Wlączono webhook/bot",
     "subtitleRenamed": "Zmieniono język!",
     "subtitleRenameFailed": "Nie udało sie zmienić języka napisu",

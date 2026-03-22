@@ -174,26 +174,42 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings"]),
+      ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings", "setDeviceId"]),
 
       savePassword: throttle(async function(event) {
+         //todo move this somewhere
          if (this.password !== this.passwordConf || this.password === "") {
             return
          }
 
          let data = { current_password: this.currentPassword, new_password: this.password }
-
+         let device_id = localStorage.getItem("device_id")
          localStorage.setItem("device_id", ".") // change it so force logout will not affect this tab
+         let toastId
+         let res
+         try {
+            toastId = this.$toast.info(this.$t("toasts.updatingPassword"), {timeout: null})
+            res = await changePassword(data)
 
-         let res = await changePassword(data)
-
+         } catch(e) {
+            this.$toast.dismiss(toastId)
+            localStorage.setItem("device_id", device_id)
+            throw e
+         }
          localStorage.setItem("token", res.auth_token)
          localStorage.setItem("device_id", res.device_id)
+
          this.setToken(res.auth_token)
-         this.$toast.success(this.$t("settings.passwordUpdated"))
+         this.setDeviceId(res.device_id)
+
+         this.$toast.update(toastId, {
+            content: this.$t("toasts.passwordUpdated"),
+            options: { type: "success" }
+         }, true)
+
          setTimeout(() => {
             router.go(0)
-         }, 2000)
+         }, 1000)
       }, 1000),
 
       saveSettings: throttle(async function(event) {

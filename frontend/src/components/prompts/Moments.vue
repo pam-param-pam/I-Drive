@@ -189,7 +189,7 @@ export default {
             this.$toast.update(saving_id, {
                content: this.$t("toasts.momentUploaded"),
                options: { type: "success" }
-            })
+            }, true)
 
          } catch (error) {
             this.$toast.error(this.$t("toasts.momentUploadFailed"))

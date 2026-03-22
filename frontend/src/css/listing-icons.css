@@ -30,6 +30,10 @@
   content: 'description'
 }
 
+.file-icons [data-type=System] i::before {
+  content: 'description'
+}
+
 .file-icons [data-type="Raw image"] i::before {
   content: 'camera'
 }
@@ -162,6 +166,11 @@
   content: 'token'
 }
 
+/* 3D */
+.file-icons [aria-label$=".FCStd"] i:before,
+.file-icons [aria-label$=".stl"] i:before {
+  content: 'view_in_ar'
+}
 /* Colors */
 
 /* General */

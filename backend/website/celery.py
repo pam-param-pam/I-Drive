@@ -37,12 +37,6 @@ def setup_periodic_tasks(sender, **kwargs):
     # Executes every day at 1 AM.
     sender.add_periodic_task(
         crontab(hour="1", minute="0"),
-        delete_files_from_trash.s(),
-    )
-
-    # Executes every day at 1 AM.
-    sender.add_periodic_task(
-        crontab(hour="1", minute="0"),
         delete_expired_shares.s(),
     )
 
@@ -50,6 +44,12 @@ def setup_periodic_tasks(sender, **kwargs):
     sender.add_periodic_task(
         crontab(hour="1", minute="0"),
         prune_expired_tokens.s(),
+    )
+
+    # Executes every day at 2 AM.
+    sender.add_periodic_task(
+        crontab(hour="2", minute="0"),
+        delete_files_from_trash.s(),
     )
 
     # Executes every day at 3 AM.

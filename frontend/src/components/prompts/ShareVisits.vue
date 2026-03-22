@@ -118,7 +118,6 @@ export default {
   max-height: 55vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 0.5em;
 }
 
 .share-table-container table {

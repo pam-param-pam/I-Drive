@@ -73,7 +73,7 @@ def check_resource_permissions(checks: list, resource_key: Union[str, list[str]]
                 else:
                     raise ValueError(f"[check_resource_permissions] Missing required resource(s) {missing_keys} in kwargs")
 
-            print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
+            # print(f"[check_resource_permissions] Running checks: {checks} with resources: {resource_key}")
             for Check in checks:
                 Check().check(request, *resources)
 

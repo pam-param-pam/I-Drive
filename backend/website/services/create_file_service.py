@@ -92,7 +92,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
         except (ValueError, OverflowError):
             raise BadRequestError("Invalid 'created_at' timestamp format.")
 
-    total_attachments_size = sum(att['fragment_size'] for att in fragments)
+    total_attachments_size = sum(validate_key(att, "fragment_size", int) for att in fragments)
     if total_attachments_size != file_size:
         raise BadRequestError(f"Attachment sizes ({total_attachments_size}) do not match declared file size ({file_size}).")
 
@@ -178,7 +178,8 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
         iv_b64 = validate_key(file_data, "iv", str)
         key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
 
-        validate_crc(attachment_data['fragment_size'], crc)
+        fragment_size = validate_key(attachment_data, "fragment_size", int)
+        validate_crc(fragment_size, crc)
 
     if fragments.exists():
         fragment = fragments[0]

@@ -41,6 +41,9 @@ class URLInvalidOrExpired(IDriveException):
 class RootFolderError(IDriveException):
     """Raised when user has no root folder or has multiple root"""
 
+class DiscordBotAttachmentAuthor(IDriveException):
+    """Raised when a bot is a message author. This should not happen"""
+
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""
     def __init__(self, ip):

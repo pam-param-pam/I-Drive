@@ -219,31 +219,25 @@ def remove_moment(user, file_obj, moment_id) -> None:
 
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:
+    if file_obj.state != ItemState.ACTIVE:
+        raise BadRequestError("Item not ready")
+
+    if file_obj.type != "Video":
+        raise BadRequestError("Must be a video.")
+
     timestamp = validate_key(data, "timestamp", int, checks=[NotNegative])
     channel_id = validate_key(data, "channel_id", str, checks=[IsSnowflake])
     message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
     attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
     message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
     size = validate_key(data, "size", int, checks=[IsPositive])
-    iv = data.get('iv')
-    key = data.get('key')
+    key_b64 = data.get('key')
+    iv_b64 = data.get('iv')
 
     author = get_discord_author(user, message_author_id)
     channel = get_discord_channel(file_obj.owner, channel_id)
 
-    if iv:
-        iv = base64.b64decode(iv)
-    if key:
-        key = base64.b64decode(key)
-
-    if file_obj.is_encrypted() and not (iv and key):
-        raise BadRequestError("Encryption key and/or iv not provided")
-
-    if file_obj.type != "Video":
-        raise BadRequestError("Must be a video.")
-
-    if timestamp < 0:
-        raise BadRequestError("Timestamp cannot be < 0")
+    key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
 
     if Moment.objects.filter(timestamp=timestamp, file=file_obj).exists():
         raise BadRequestError("Moment with this timestamp already exists!")

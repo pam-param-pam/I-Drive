@@ -195,10 +195,12 @@ def mark_items_deleted(context: RequestContext, job_id: UUID, items: List[Messag
             .get(id=job_id)
         )
 
-        updated = Fragment.objects.filter(
-            id__in=fragment_ids,
-            state__ne=ItemState.DELETED
-        ).update(state=ItemState.DELETED)
+        updated = (
+            Fragment.objects
+            .filter(id__in=fragment_ids)
+            .exclude(state=ItemState.DELETED)
+            .update(state=ItemState.DELETED)
+        )
 
         job.deleted_fragments += updated
 

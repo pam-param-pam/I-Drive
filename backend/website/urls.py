@@ -107,7 +107,7 @@ urlpatterns = [
     path("items/<item_id>/rename", ["PATCH"], rename_view, name="rename an item"),
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
     path("items/ultraDownload/items/<item_id>", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
-    path("items/ultraDownload/fragments/<attachment_id>", ['GET'], get_fragment_url_view, name="download metadata for ultra download"),
+    path("items/ultraDownload/fragments/<fragment_id>", ['GET'], get_fragment_url_view, name="download metadata for ultra download"),
     path('zip/<token>', ['GET'], stream_zip_files),
 
     django_path("auth/token/login", login_per_device_view, name="login"),

@@ -1,16 +1,19 @@
+from datetime import timedelta
+
+from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms, AdminPerms
+from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms
 from ..auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
 from ..constants import EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, FILE_TYPES
-from ..core.Serializers import WebhookSerializer, BotSerializer, DeviceTokenSerializer, NotificationSerializer
+from ..core.Serializers import WebhookSerializer, BotSerializer, NotificationSerializer
 from ..core.decorators import check_resource_permissions, extract_folder
-from ..core.errors import BadRequestError, RootFolderError
+from ..core.errors import RootFolderError
 from ..core.helpers import extract_key
-from ..discord.Discord import discord
-from ..models import UserSettings, Folder, Webhook, Bot, UserPerms, Channel, PerDeviceToken
+from ..models import UserSettings, Folder, Webhook, Bot, UserPerms, Channel
 from ..models.other_models import Notification
 from ..queries.builders import build_discord_settings
 from ..services import user_service
@@ -73,50 +76,7 @@ def users_me(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & SettingsModifyPerms])
 def update_settings(request):
-    locale = request.data.get('locale')
-    hideLockedFolders = request.data.get('hideLockedFolders')
-    concurrentUploadRequests = request.data.get('concurrentUploadRequests')
-    dateFormat = request.data.get('dateFormat')
-    viewMode = request.data.get('viewMode')
-    sortingBy = request.data.get('sortingBy')
-    sortByAsc = request.data.get('sortByAsc')
-    subfoldersInShares = request.data.get('subfoldersInShares')
-    encryptionMethod = request.data.get('encryptionMethod')
-    keepCreationTimestamp = request.data.get('keepCreationTimestamp')
-    popupPreview = request.data.get('popupPreview')
-    itemInfoShortcut = request.data.get('itemInfoShortcut')
-    theme = request.data.get('theme')
-
-    settings = UserSettings.objects.get(user=request.user)
-    if locale in ["pl", "en", "uwu"]:
-        settings.locale = locale
-    if isinstance(dateFormat, bool):
-        settings.date_format = dateFormat
-    if isinstance(popupPreview, bool):
-        settings.popup_preview = popupPreview
-    if isinstance(itemInfoShortcut, bool):
-        settings.item_info_shortcut = itemInfoShortcut
-    if isinstance(hideLockedFolders, bool):
-        settings.hide_locked_folders = hideLockedFolders
-    if isinstance(concurrentUploadRequests, int):
-        settings.concurrent_upload_requests = concurrentUploadRequests
-    if viewMode in ["list", "height grid", "width grid"]:
-        settings.view_mode = viewMode
-    if sortingBy in ["name", "size", "created"]:
-        settings.sorting_by = sortingBy
-    if isinstance(sortByAsc, bool):
-        settings.sort_by_asc = sortByAsc
-    if isinstance(subfoldersInShares, bool):
-        settings.subfolders_in_shares = subfoldersInShares
-    if isinstance(keepCreationTimestamp, bool):
-        settings.keep_creation_timestamp = keepCreationTimestamp
-    if isinstance(encryptionMethod, int):
-        _ = EncryptionMethod(encryptionMethod)  # validate encryption_method if its wrong it will raise KeyError which will be caught
-        settings.encryption_method = encryptionMethod
-    if theme in ["dark", "light"]:
-        settings.theme = theme
-
-    settings.save()
+    user_service.update_user_settings(request.user, request.data)
     return HttpResponse(status=204)
 
 
@@ -132,7 +92,7 @@ def get_discord_settings_view(request):
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
 def add_webhook_view(request):
-    webhook_url = request.data.get('webhook_url')
+    webhook_url = extract_key(request.data, "webhook_url")
     webhook = user_service.create_webhook(request.user, webhook_url)
     return JsonResponse(WebhookSerializer().serialize_object(webhook), status=200)
 
@@ -207,7 +167,21 @@ def reset_discord_settings_view(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_notifications_view(request):
-    notifications = Notification.objects.filter(owner=request.user, is_deleted=False).all()
+    more = request.GET.get('more', 'false').lower() == 'true'
+
+    qs = Notification.objects.filter(
+        owner=request.user,
+        is_deleted=False
+    )
+
+    if not more:
+        cutoff = timezone.now() - timedelta(days=2)
+        qs = qs.filter(
+            Q(read_at__isnull=True) | Q(read_at__gte=cutoff)
+        )
+
+    notifications = qs.order_by("-created_at")
+
     serializer = NotificationSerializer()
     return JsonResponse(serializer.serialize_objects(notifications), status=200, safe=False)
 

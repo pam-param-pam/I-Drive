@@ -1,3 +1,4 @@
+from ..core.errors import DiscordBotAttachmentAuthor
 from ..discord.Discord import discord
 from ..models import DiscordAttachmentMixin, Webhook
 from ..queries.selectors import query_attachments
@@ -19,9 +20,9 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
         # we find message author
         author = resource.get_author()
         if isinstance(author, Webhook):
-            discord.edit_webhook_attachments(author.url, resource.message_id, attachment_ids_to_keep)
+            discord.edit_attachments_webhook(user, author, resource.message_id, attachment_ids_to_keep)
         else:
-            discord.edit_attachments(user, author.token, resource.message_id, attachment_ids_to_keep)
+            raise DiscordBotAttachmentAuthor()
     else:
         discord.delete_message(user, resource.channel.discord_id, resource.message_id)
 

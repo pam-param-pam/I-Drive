@@ -1,3 +1,4 @@
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta, datetime, timezone
 
@@ -7,10 +8,13 @@ from django.utils import timezone as django_timezone
 
 from .helper import bulk_deletable
 from ..celery import app
+from ..constants import MAX_TIME_FILES_IN_TRASH
+from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
-from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel
+from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Folder
 from ..queries.selectors import check_if_bots_exists, query_attachments
+from ..services import delete_service
 
 
 @app.task
@@ -56,7 +60,6 @@ def flush_bulk(user, channel_id, message_ids):
             delete_single_safe(user, channel_id, msg_id)
 
 def process_channel(user, channel, days):
-
     close_old_connections()
 
     bulk_candidates = []
@@ -65,7 +68,6 @@ def process_channel(user, channel, days):
     cutoff = now - timedelta(days=days)
 
     try:
-
         for discord_message in discord.fetch_all_messages(user, channel.discord_id):
 
             msg_id = discord_message["id"]
@@ -136,21 +138,20 @@ def delete_dangling_discord_files(days=3):
 
 @app.task
 def delete_files_from_trash():
-    #todo
-    pass
-    # current_datetime = django_timezone.now()
-    # cutoff = current_datetime - timedelta(days=MAX_TIME_FILES_IN_TRASH)
-    #
-    # owner_items_map = defaultdict(list)
-    #
-    # files = File.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
-    # folders = Folder.objects.filter(inTrash=True, inTrashSince__lte=cutoff)
-    #
-    # for file in files:
-    #     owner_items_map[file.owner_id].append(file.id)
-    #
-    # for folder in folders:
-    #     owner_items_map[folder.owner_id].append(folder.id)
-    #
-    # for owner_id, ids in owner_items_map.items():
-    #     smart_delete_task.delay(RequestContext.from_user(owner_id), ids)
+    current_datetime = django_timezone.now()
+    cutoff = current_datetime - timedelta(days=MAX_TIME_FILES_IN_TRASH)
+
+    owner_items_map = defaultdict(list)
+
+    files = File.objects.filter(inTrash=True, inTrashSince__lte=cutoff).select_related("owner")
+    folders = Folder.objects.filter(inTrash=True, inTrashSince__lte=cutoff).select_related("owner")
+
+    for file in files.iterator():
+        owner_items_map[file.owner].append(file)
+
+    for folder in folders.iterator():
+        owner_items_map[folder.owner].append(folder)
+
+    for owner, items in owner_items_map.items():
+        context = RequestContext.from_user(owner.id)
+        delete_service.delete_items(context, owner, items)

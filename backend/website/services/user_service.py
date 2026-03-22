@@ -3,18 +3,85 @@ from urllib.parse import urlparse
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from ..constants import EventCode
+from ..constants import EventCode, EncryptionMethod
 from ..core.dataModels.http import RequestContext
 from ..core.errors import BadRequestError
-from ..core.helpers import validate_ids_as_list, validate_value
+from ..core.helpers import validate_ids_as_list, validate_value, validate_key
 from ..discord.Discord import discord
 from ..discord.DiscordHelper import DiscordHelper
-from ..models import Webhook, Bot, DiscordSettings, Channel, File
+from ..models import Webhook, Bot, DiscordSettings, Channel, File, UserSettings
 from ..models.mixin_models import ItemState
 from ..models.other_models import Notification, NotificationType
 from ..queries.selectors import get_webhook, query_attachments
 from ..websockets.utils import send_event
 
+
+def update_user_settings(user, data: dict) -> UserSettings:
+    settings = UserSettings.objects.get(user=user)
+
+    locale = validate_key(data, "locale", str, required=False)
+    date_format = validate_key(data, "dateFormat", bool, required=False)
+    popup_preview = validate_key(data, "popupPreview", bool, required=False)
+    item_info_shortcut = validate_key(data, "itemInfoShortcut", bool, required=False)
+    hide_locked_folders = validate_key(data, "hideLockedFolders", bool, required=False)
+    concurrent_upload_requests = validate_key(data, "concurrentUploadRequests", int, required=False)
+    view_mode = validate_key(data, "viewMode", str, required=False)
+    sorting_by = validate_key(data, "sortingBy", str, required=False)
+    sort_by_asc = validate_key(data, "sortByAsc", bool, required=False)
+    subfolders_in_shares = validate_key(data, "subfoldersInShares", bool, required=False)
+    keep_creation_timestamp = validate_key(data, "keepCreationTimestamp", bool, required=False)
+    encryption_method = validate_key(data, "encryptionMethod", int, required=False)
+    theme = validate_key(data, "theme", str, required=False)
+
+    # ---- ENUM / VALUE VALIDATION ----
+    if locale:
+        if locale not in ["pl", "en", "uwu"]:
+            raise BadRequestError("Invalid locale")
+        settings.locale = locale
+
+    if view_mode:
+        if view_mode not in ["list", "height grid", "width grid"]:
+            raise BadRequestError("Invalid view mode")
+        settings.view_mode = view_mode
+
+    if sorting_by:
+        if sorting_by not in ["name", "size", "created"]:
+            raise BadRequestError("Invalid sorting")
+        settings.sorting_by = sorting_by
+
+    if theme:
+        if theme not in ["dark", "light"]:
+            raise BadRequestError("Invalid theme")
+        settings.theme = theme
+
+    if encryption_method:
+        try:
+            EncryptionMethod(encryption_method)
+        except Exception:
+            raise BadRequestError("Invalid encryption method")
+        settings.encryption_method = encryption_method
+
+    # ---- SIMPLE ASSIGNMENTS ----
+
+    if date_format is not None:
+        settings.date_format = date_format
+    if popup_preview is not None:
+        settings.popup_preview = popup_preview
+    if item_info_shortcut is not None:
+        settings.item_info_shortcut = item_info_shortcut
+    if hide_locked_folders is not None:
+        settings.hide_locked_folders = hide_locked_folders
+    if sort_by_asc is not None:
+        settings.sort_by_asc = sort_by_asc
+    if concurrent_upload_requests:
+        settings.concurrent_upload_requests = concurrent_upload_requests
+    if subfolders_in_shares:
+        settings.subfolders_in_shares = subfolders_in_shares
+    if keep_creation_timestamp:
+        settings.keep_creation_timestamp = keep_creation_timestamp
+
+    settings.save()
+    return settings
 
 def create_webhook(user: User, url: str) -> Webhook:
     if urlparse(url).netloc != "discord.com":

@@ -185,7 +185,7 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
-    "showPrevious": "Show previous",
+    "showPrevious": "More",
     "loading": "Loading",
     "noNotifications": "No notifications yet!",
     "notifications": "Notifications",
@@ -478,6 +478,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "updatingPassword": "Updating password...",
     "credentialReenabled": "Enabled webhook/bot",
     "subtitleRenamed": "Subtitle renamed!",
     "subtitleRenameFailed": "Failed to rename subtitle",

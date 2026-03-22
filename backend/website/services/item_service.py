@@ -8,12 +8,10 @@ from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_value, get_file_extension, get_attr
 from ..core.validators.GeneralChecks import MaxLength, NotEmpty
 from ..models import File, Folder
-from ..models.mixin_models import ItemState
-from ..queries.selectors import check_if_bots_exists
-from ..websockets.utils import send_event
-
 from ..tasks.moveTasks import move_task
 from ..tasks.trashTasks import restore_from_trash_task, move_to_trash_task
+from ..websockets.utils import send_event
+
 
 def rename_item(context:  RequestContext, item_obj: Item, new_name: str) -> None:
     validate_value(new_name, str, checks=[MaxLength(MAX_RESOURCE_NAME_LENGTH), NotEmpty])
@@ -62,10 +60,3 @@ def restore_items_from_trash(context:  RequestContext, items: list[Tuple[Item, d
 
     ids = [get_attr(item, 'id') for item in items]
     restore_from_trash_task.delay(context, ids)
-
-
-def delete_items(context:  RequestContext, items: list[Tuple[Item, dict]]):
-
-
-    ids = [get_attr(item, 'id') for item in items]
-    smart_delete_task.delay(context, ids)

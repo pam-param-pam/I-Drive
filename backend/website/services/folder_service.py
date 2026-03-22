@@ -39,7 +39,6 @@ def _clear_cache(folder_ids: list[str]) -> None:
 
 def create_folder(context: RequestContext, user: User, parent: Folder, name: str) -> Folder:
     name = validate_value(name, str, checks=[NotEmpty])
-    validate_value(name, str, checks=[NotEmpty])
 
     if parent.state != ItemState.ACTIVE:
         raise BadRequestError("Parent not ready")
