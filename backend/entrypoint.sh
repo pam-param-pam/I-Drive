@@ -6,8 +6,6 @@ celery -A website beat -l INFO --scheduler django_celery_beat.schedulers:Databas
 daphne \
   --bind 0.0.0.0 \
   --port 8000 \
-  --processes 4 \
-  --threads 6 \
   --verbosity 0 \
   --access-log - \
   --proxy-headers \
