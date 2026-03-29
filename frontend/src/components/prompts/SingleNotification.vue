@@ -30,7 +30,7 @@
             :aria-label="$t('buttons.close')"
             :title="$t('buttons.close')"
             class="button button--flat button--grey"
-            @click="closeHover()"
+            @click="cancel"
          >
             {{ $t("buttons.close") }}
          </button>

@@ -55,6 +55,7 @@ import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
 import { buf as crc32buf } from "crc-32"
 import { encryptionMethod } from "@/utils/constants.js"
 import { encrypt } from "@/upload/utils/encryption.js"
+//todo add share events
 
 export default {
    name: "editor",

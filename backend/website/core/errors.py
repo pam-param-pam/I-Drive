@@ -44,6 +44,9 @@ class RootFolderError(IDriveException):
 class DiscordBotAttachmentAuthor(IDriveException):
     """Raised when a bot is a message author. This should not happen"""
 
+class FailedToParseRawImage(IDriveException):
+    """Raised when metadata extraction fails for a raw image"""
+
 class LockedFolderWrongIpError(IDriveException):
     """Raised when locked folder is trying to be accessed from wrong IP"""
     def __init__(self, ip):

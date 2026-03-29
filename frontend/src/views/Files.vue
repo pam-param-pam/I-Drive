@@ -207,7 +207,6 @@ export default {
             const ids = this.selected.map((obj) => obj.id)
             let res = await createZIP({ ids: ids })
             window.open(res.download_url, "_blank")
-
             let message = this.$t("toasts.downloadingZIP")
             this.$toast.success(message)
          }

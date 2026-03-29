@@ -49,11 +49,8 @@ SIGNED_URL_EXPIRY_SECONDS = 7200
 # How long the QR code session is valid for in seconds: 5 mins
 QR_CODE_SESSION_EXPIRY = 300
 
-# Set of allowed sizes as a param on the thumbnail endpoint
-ALLOWED_THUMBNAIL_SIZES = ("64", "256", "512", "1024", "original")
-
-# Set of allowed sizes as a param on the thumbnail endpoint
-MAX_THUMBNAIL_SIZE = 1 * 1024 * 1024
+# Max allowed thumbnail size
+MAX_THUMBNAIL_SIZE = 0.5 * 1024 * 1024
 
 # How long a device control pending request is valid for
 DEVICE_CONTROL_PENDING_TTL = 60
@@ -176,8 +173,7 @@ class ShareEventType(str, Enum):
 
     # File
     FILE_OPEN = "file_open"
-    FILE_DOWNLOAD_START = "file_download_start"
-    FILE_DOWNLOAD_SUCCESSFUL = "file_download_successful"
+    FILE_DOWNLOAD = "file_download"
     FILE_STREAM = "file_stream"
 
     # Others
@@ -187,12 +183,10 @@ class ShareEventType(str, Enum):
     # Folder
     FOLDER_OPEN = "folder_open"
     FOLDER_CLOSE = "folder_close"
+    FOLDER_DOWNLOAD = "folder_download"
 
     # Movie
     MOVIE_WATCH = "movie_watch"
     MOVIE_SEEK = "movie_seek"
     MOVIE_TOGGLE = "movie_toggle"
 
-    # Zip
-    ZIP_DOWNLOAD_START = "zip_download_start"
-    ZIP_DOWNLOAD_SUCCESSFUL = "zip_download_successful"

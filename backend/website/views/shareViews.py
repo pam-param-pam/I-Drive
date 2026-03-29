@@ -159,6 +159,10 @@ def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
     is_range_header, start_byte, end_byte = parse_range_header(range_header)
     share_service.log_event_http(request, share_obj, ShareEventType.FILE_STREAM, file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte)
 
+    isDownload = request.GET.get('download', False)
+    if isDownload:
+        share_service.log_event_http(request, share_obj, ShareEventType.FILE_DOWNLOAD, file_id=file_obj.id)
+
     # Extremely hacky way,
     # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
     # request is changed into rest's framework's request with the decorators,

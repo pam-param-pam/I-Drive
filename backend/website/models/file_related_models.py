@@ -149,6 +149,7 @@ class Subtitle(DiscordAttachmentMixin):
 
 class VideoMetadata(models.Model):
     file = models.OneToOneField("File", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
     is_progressive = models.BooleanField()
     is_fragmented = models.BooleanField()
     has_moov = models.BooleanField()
@@ -161,6 +162,7 @@ class VideoMetadata(models.Model):
 
 class RawMetadata(models.Model):
     file = models.OneToOneField("File", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
     failed_to_process = models.BooleanField(default=False)
     camera = models.CharField(max_length=50)
     camera_owner = models.CharField(max_length=50)
@@ -174,6 +176,7 @@ class RawMetadata(models.Model):
 
 class PhotoMetadata(models.Model):
     file = models.OneToOneField("File", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
     height = models.IntegerField()
     width = models.IntegerField()
 
@@ -181,6 +184,7 @@ class PhotoMetadata(models.Model):
         return f"Photo metadata for {self.file}"
 
 class VideoMetadataTrackMixin(models.Model):
+    created_at = models.DateTimeField(default=timezone.now)
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
     bitrate = models.IntegerField()
     codec = models.CharField(max_length=100)

@@ -99,7 +99,7 @@ export default {
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            window.open(this.selected[0].download_url, "_blank")
+            window.open(this.selected[0].download_url + "?download=true", "_blank")
             let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
             this.$toast.success(message)
          } else {

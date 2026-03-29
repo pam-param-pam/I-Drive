@@ -11,10 +11,7 @@ class FileOpenEvent(BaseModel):
 class FileCloseEvent(BaseModel):
     file_id: str
 
-class FileDownloadStartEvent(BaseModel):
-    file_id: str
-
-class FileDownloadSuccessfulEvent(BaseModel):
+class FileDownloadEvent(BaseModel):
     file_id: str
 
 class FileStreamEvent(BaseModel):
@@ -23,6 +20,9 @@ class FileStreamEvent(BaseModel):
     to_byte: Optional[int]
 
 class FolderOpenEvent(BaseModel):
+    folder_id: str
+
+class FolderDownloadEvent(BaseModel):
     folder_id: str
 
 class FolderCloseEvent(BaseModel):
@@ -39,14 +39,6 @@ class MovieSeekEvent(BaseModel):
 class MovieToggleEvent(BaseModel):
     file_id: str
     is_paused: bool
-
-class ZipDownloadStartEvent(BaseModel):
-    files: list[str]
-    folders: list[str]
-
-class ZipDownloadSuccessfulEvent(BaseModel):
-    files: list[str]
-    folders: list[str]
 
 class ThumbnailStreamedEvent(BaseModel):
     file_id: str

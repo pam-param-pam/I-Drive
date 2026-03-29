@@ -5,17 +5,15 @@ import shortuuid
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
 from ..constants import ShareEventType, SHARE_ACCESS_DURATION
-from ..core.dataModels.dataModels import ViewShare, FileCloseEvent, FileOpenEvent, FileDownloadStartEvent, FileDownloadSuccessfulEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, \
-    ZipDownloadSuccessfulEvent, ZipDownloadStartEvent, MovieToggleEvent, MovieSeekEvent, MovieWatchEvent, SubtitleStreamedEvent, ThumbnailStreamedEvent
+from ..core.dataModels.dataModels import ViewShare, FileOpenEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, MovieToggleEvent, MovieSeekEvent, MovieWatchEvent, SubtitleStreamedEvent, ThumbnailStreamedEvent, \
+    FileDownloadEvent, FolderDownloadEvent
 from ..core.dataModels.http import ShareContext
-from ..core.helpers import get_ip
 
 
 class ShareableLink(models.Model):
@@ -23,7 +21,7 @@ class ShareableLink(models.Model):
     token = models.CharField(max_length=255, unique=True)
     expiration_time = models.DateTimeField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    password = models.TextField(max_length=100, null=True)
+    password = models.TextField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     # GenericForeignKey to point to either Folder or File
@@ -128,22 +126,18 @@ class ShareAccessEvent(models.Model):
 
         # File
         ShareEventType.FILE_OPEN: FileOpenEvent,
-        ShareEventType.FILE_DOWNLOAD_START: FileDownloadStartEvent,
-        ShareEventType.FILE_DOWNLOAD_SUCCESSFUL: FileDownloadSuccessfulEvent,
+        ShareEventType.FILE_DOWNLOAD: FileDownloadEvent,
         ShareEventType.FILE_STREAM: FileStreamEvent,
 
         # Folder
         ShareEventType.FOLDER_OPEN: FolderOpenEvent,
         ShareEventType.FOLDER_CLOSE: FolderCloseEvent,
+        ShareEventType.FOLDER_DOWNLOAD: FolderDownloadEvent,
 
         # Movie
         ShareEventType.MOVIE_WATCH: MovieWatchEvent,
         ShareEventType.MOVIE_SEEK: MovieSeekEvent,
         ShareEventType.MOVIE_TOGGLE: MovieToggleEvent,
-
-        # Zip
-        ShareEventType.ZIP_DOWNLOAD_START: ZipDownloadStartEvent,
-        ShareEventType.ZIP_DOWNLOAD_SUCCESSFUL: ZipDownloadSuccessfulEvent,
 
         # Other
         ShareEventType.SUBTITLE_STREAM: SubtitleStreamedEvent,

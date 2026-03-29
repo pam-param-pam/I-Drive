@@ -1,3 +1,4 @@
+import traceback
 import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -5,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional, Literal
 from uuid import UUID
 
+from celery.utils.log import get_task_logger
 from django.db import transaction, models, connection
 from django.utils import timezone
 
@@ -20,6 +22,9 @@ from ..models.mixin_models import ItemState
 from ..queries.selectors import query_attachments
 from ..services import file_service, folder_service
 from ..websockets.utils import send_event
+
+logger = get_task_logger(__name__)
+
 
 AuthorType = Literal["bot", "webhook"]
 ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
@@ -172,7 +177,7 @@ def process_file_batch(context_dict: dict, job_id: UUID) -> None:
                 finalize_file_deletions(job_id, file_ids, claim_token)
 
             except Exception as error:
-                mark_batch_failed(job_id, file_ids, claim_token, error)
+                mark_file_batch_failed(job_id, file_ids, claim_token, error)
                 raise
     finally:
         release_user_lock(context.user_id)
@@ -186,8 +191,6 @@ def mark_items_deleted(context: RequestContext, job_id: UUID, items: List[Messag
         return
 
     with transaction.atomic():
-        Fragment.objects.filter(id__in=fragment_ids).update(state=ItemState.DELETED)
-
         job = (
             DeletionJob.objects
             .select_for_update()
@@ -426,7 +429,9 @@ def delete_fragments(file_ids: list[str]) -> None:
     Fragment.objects.filter(file_id__in=file_ids).delete()
 
 
-def mark_batch_failed(job_id: UUID, file_ids: list[str], claim_token: UUID, error: Exception) -> None:
+def mark_file_batch_failed(job_id: UUID, file_ids: list[str], claim_token: UUID, error: Exception) -> None:
+    logger.error(f"mark_file_batch_failed: {str(error)}\n{traceback.print_exc()}")
+
     with transaction.atomic():
         DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFileWorkItem.State.FAILED,
@@ -497,6 +502,7 @@ def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: 
 
 
 def mark_folder_batch_failed(job_id: UUID, folder_ids: list[str], claim_token: UUID, error: Exception) -> None:
+    logger.error(f"mark_folder_batch_failed: {str(error)}\n{traceback.print_exc()}")
     with transaction.atomic():
         DeletionFolderWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFolderWorkItem.State.FAILED,

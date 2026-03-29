@@ -15,7 +15,7 @@ from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
-from .models.file_related_models import RawMetadata
+from .models.file_related_models import RawMetadata, PhotoMetadata
 from .models.other_models import Notification
 from .services import folder_service, file_service, delete_service
 
@@ -405,12 +405,30 @@ class MomentAdmin(admin.ModelAdmin):
 class VideoMetadataAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id')
     readonly_fields = ('file', 'is_progressive', 'is_fragmented', 'has_moov', 'has_IOD', 'brands', 'mime')
+    list_display = ['file', 'owner', 'created_at']
 
+    @easy.smart(short_description="Owner")
+    def owner(self, obj: RawMetadata):
+        return obj.file.owner
 
 @admin.register(RawMetadata)
 class RawMetadataAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id')
+    list_display = ['file', 'owner', 'created_at', 'failed_to_process']
     readonly_fields = ('file', 'camera', 'camera_owner', 'iso', 'shutter', 'aperture', 'focal_length')
+
+    @easy.smart(short_description="Owner")
+    def owner(self, obj: RawMetadata):
+        return obj.file.owner
+
+@admin.register(PhotoMetadata)
+class PhotoMetadataAdmin(admin.ModelAdmin):
+    search_fields = ('file__name', 'file__id')
+    list_display = ['file', 'owner', 'created_at']
+
+    @easy.smart(short_description="Owner")
+    def owner(self, obj: RawMetadata):
+        return obj.file.owner
 
 @admin.register(Subtitle)
 class SubtitleAdmin(admin.ModelAdmin):

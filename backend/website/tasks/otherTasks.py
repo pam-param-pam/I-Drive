@@ -16,6 +16,7 @@ from ..core.Serializers import FileSerializer
 from ..core.crypto.Decryptor import Decryptor
 from ..core.crypto.Encryptor import Encryptor
 from ..core.dataModels.http import RequestContext
+from ..core.errors import FailedToParseRawImage
 from ..discord.Discord import discord
 from ..models import (Folder, Fragment, File, DiscordSettings)
 from ..services import folder_service, file_service, create_file_service
@@ -59,22 +60,36 @@ def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
 
 
 def _extract_raw_metadata(raw_buffer):
-    raw_buffer.seek(0)
+    try:
+        raw_buffer.seek(0)
 
-    tags = exifread.process_file(raw_buffer, details=False)
+        tags = exifread.process_file(raw_buffer, details=False)
 
-    camera = str(tags.get("Image Model", ""))
-    iso = str(tags.get("EXIF ISOSpeedRatings", ""))
-    shutter = str(tags.get("EXIF ExposureTime", "")) + " sec"
-    aperture = str(tags.get("EXIF FNumber", "")) + "F"
-    focal_length = str(tags.get("EXIF FocalLength", "")) + " mm"
+        camera = str(tags["Image Model"])
+        iso = str(tags["EXIF ISOSpeedRatings"])
+        shutter = str(tags["EXIF ExposureTime"]) + " sec"
+        aperture = str(tags["EXIF FNumber"]) + "F"
+        focal_length = str(tags["EXIF FocalLength"]) + " mm"
 
-    raw_buffer.seek(0)
-
-    return camera, iso, shutter, aperture, focal_length, None
+        raw_buffer.seek(0)
+        logger.warning(
+            "EXIF parsed",
+            extra={
+                "camera": camera,
+                "iso": iso,
+                "shutter": shutter,
+                "aperture": aperture,
+                "focal_length": focal_length,
+            }
+        )
+        return camera, iso, shutter, aperture, focal_length, None
+    except Exception as e:
+        logger.warning("FailedToParseRawImage")
+        raise FailedToParseRawImage(e)
 
 @app.task(expires=5)
 def generate_raw_image_thumbnails():
+    return
     files = File.objects.filter(type="Raw image", thumbnail__isnull=True, rawmetadata__isnull=True, inTrash=False, parent__inTrash=False).select_related("owner")
 
     state = {
@@ -207,8 +222,7 @@ def generate_raw_image_thumbnails():
 
             state["current_size"] += size
 
-        except Exception:
-            traceback.print_exc()
+        except FailedToParseRawImage:
             meta = file_service.create_raw_metadata(
                 file,
                 {

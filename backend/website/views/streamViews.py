@@ -16,7 +16,7 @@ from zipFly.EmptyFolder import EmptyFolder
 from ..auth.Permissions import CheckLockedFolderIP
 from ..auth.throttle import MediaThrottle, defaultAuthUserThrottle
 from ..auth.utils import check_resource_perms
-from ..constants import ALLOWED_THUMBNAIL_SIZES, cache, MAX_MEDIA_CACHE_AGE, MAX_THUMBNAIL_SIZE, USE_CACHE
+from ..constants import cache, MAX_MEDIA_CACHE_AGE, MAX_THUMBNAIL_SIZE, USE_CACHE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
 from ..core.errors import BadRequestError
@@ -35,12 +35,7 @@ from ..tasks.helper import auto_prefetch
 @extract_file_from_signed_url
 @check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_thumbnail(request, file_obj: File):
-    size_param = request.GET.get("size", "original").lower()
     isInline = request.GET.get('inline', False)
-
-    # Only allow specific sizes
-    if size_param not in ALLOWED_THUMBNAIL_SIZES:
-        raise BadRequestError(f"Invalid size: must be one of {', '.join(ALLOWED_THUMBNAIL_SIZES)}")
 
     thumbnail = file_obj.thumbnail
 
