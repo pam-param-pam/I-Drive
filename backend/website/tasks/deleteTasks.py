@@ -162,6 +162,7 @@ def process_file_batch(context_dict: dict, job_id: UUID) -> None:
     context = RequestContext.deserialize(context_dict)
 
     if not acquire_user_lock(context.user_id):
+        logger.info("acquire_user_lock FALSE")
         # another worker already processing this user's deletions
         process_file_batch.apply_async((context_dict, job_id), countdown=10)
         return
