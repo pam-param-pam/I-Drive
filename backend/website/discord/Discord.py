@@ -392,6 +392,7 @@ class DiscordManager:
                     raise exc
             except CannotProcessDiscordRequestError as e:
                 print(f"CannotProcessDiscordRequestError: {str(e)}")
+                errors.append(str(e))
                 time.sleep(min(2 ** attempt, 10))
                 continue
 
