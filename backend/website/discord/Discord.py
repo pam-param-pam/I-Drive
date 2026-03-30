@@ -342,8 +342,7 @@ class DiscordManager:
                 else:
                     raise exc
             except CannotProcessDiscordRequestError as e:
-                print(traceback.print_exc())
-                print(e)
+                print(f"CannotProcessDiscordRequestError: {str(e)}")
                 time.sleep(min(2 ** attempt, 5))
                 continue
 
@@ -391,8 +390,8 @@ class DiscordManager:
                     continue
                 else:
                     raise exc
-            except CannotProcessDiscordRequestError:
-                print("CannotProcessDiscordRequestError")
+            except CannotProcessDiscordRequestError as e:
+                print(f"CannotProcessDiscordRequestError: {str(e)}")
                 time.sleep(min(2 ** attempt, 10))
                 continue
 
