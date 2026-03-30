@@ -11,6 +11,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from .constants import API_BASE_URL, EncryptionMethod
 from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
+from .core.errors import DiscordError
 from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
@@ -85,8 +86,11 @@ class FragmentAdmin(SimpleHistoryAdmin):
     @easy.with_tags()
     @easy.smart(short_description="URL", allow_tags=True)
     def fragment_url(self, obj: Fragment):
-        url = discord.get_attachment_url(obj.file.owner, obj)
-        return f'<a href="{url}" target="_blank">{url}</a><br>'
+        try:
+            url = discord.get_attachment_url(obj.file.owner, obj)
+            return f'<a href="{url}" target="_blank">{url}</a><br>'
+        except DiscordError as e:
+            return f"FAILED TO FETCH URL: {str(e)}"
 
     @easy.smart(short_description="CRC HEX", allow_tags=True)
     def crc_hex(self, obj: Fragment):

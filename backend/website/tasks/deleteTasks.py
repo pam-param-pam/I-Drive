@@ -32,6 +32,7 @@ ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
 
 @dataclass(frozen=True)
 class MessageItem:
+    message_id: str
     kind: ItemKind
     object_id: str
     attachment_id: str
@@ -273,6 +274,7 @@ def gather_message_structure(file_ids: list[str]) -> Dict[str, List[MessageItem]
         for (pk, message_id, attachment_id, channel_id,  author_id, author_model) in qs.values_list("id", "message_id", "attachment_id", "channel_id", "object_id",  "content_type__model"):
             message_structure[message_id].append(
                 MessageItem(
+                    message_id=message_id,
                     kind=kind,
                     object_id=pk,
                     attachment_id=attachment_id,
@@ -289,73 +291,75 @@ def gather_message_structure(file_ids: list[str]) -> Dict[str, List[MessageItem]
 
     return message_structure
 
-def bulk_delete_messages(user, channel_id, messages, context, job_id):
+def bulk_delete_messages(user, channel_id: str, message_ids: list[str]):
     BATCH_SIZE = 100
 
-    # filter again to avoid 14-day edge cases
-    valid = [
-        (msg_id, items)
-        for msg_id, items in messages
-        if bulk_deletable(msg_id)
-    ]
-
-    ids = [msg_id for msg_id, _ in valid]
-
-    for i in range(0, len(ids), BATCH_SIZE):
-        batch_ids = ids[i:i + BATCH_SIZE]
-
-        if len(batch_ids) < 2:
-            # Discord bulk delete requires at least 2 messages
-            for msg_id, items in valid:
-                if msg_id in batch_ids:
-                    delete_message_items(user, msg_id, items)
-                    mark_items_deleted(context, job_id, items)
-            continue
-
+    for i in range(0, len(message_ids), BATCH_SIZE):
+        batch_ids = message_ids[i:i + BATCH_SIZE]
         try:
             discord.bulk_delete_messages(user, channel_id, batch_ids)
 
-            for msg_id, items in valid:
-                if msg_id in batch_ids:
-                    mark_items_deleted(context, job_id, items)
+        except DiscordError as error:
+            if error.status == 404:
+                return
+            raise
 
-        except DiscordError:
-            # fallback to single deletes
-            for msg_id, items in valid:
-                if msg_id in batch_ids:
-                    delete_message_items(user, msg_id, items)
-                    mark_items_deleted(context, job_id, items)
 
-def process_channel_deletions(context, job_id: UUID, channel_id: str, messages):
+def delete_message_items(user, channel_id: str, message_id: str, attachments_ids_to_keep: set[str]) -> None:
+    try:
+        author = discord.get_author(message_id)
+
+        if not attachments_ids_to_keep:
+            discord.delete_message(user, channel_id, message_id)
+        else:
+            discord.edit_attachments_webhook(user, author, message_id, attachments_ids_to_keep)
+
+    except DiscordError as error:
+        if error.status == 404:
+            return
+        raise
+
+def process_channel_deletions(context, job_id: UUID, channel_id: str, messages: dict[str, list[MessageItem]]):
     user = context.get_user()
 
-    bulk_candidates = []
-    normal_deletes = []
+    normal_candidates: list[tuple[str, str, set[str], list[MessageItem]]] = []
+    bulk_candidates: list[tuple[str, str, set[str], list[MessageItem]]] = []
 
-    for message_id, items in messages:
-        if bulk_deletable(message_id):
-            bulk_candidates.append((message_id, items))
+    for message_id, items in messages.items():
+        all_attachments = query_attachments(message_id=message_id)
+        all_ids = {a.attachment_id for a in all_attachments}
+        attachment_ids_to_remove = {item.attachment_id for item in items}
+        attachments_ids_to_keep = set(all_ids) - set(attachment_ids_to_remove)
+
+        if len(attachments_ids_to_keep) == 0 and bulk_deletable(message_id):
+            bulk_candidates.append((message_id, channel_id, attachments_ids_to_keep, items))
         else:
-            normal_deletes.append((message_id, items))
+            normal_candidates.append((message_id, channel_id, attachments_ids_to_keep, items))
 
-    bulk_delete_messages(user, channel_id, bulk_candidates, context, job_id)
+    # at least 2 messages
+    if len(bulk_candidates) > 1:
+        message_ids = [element[0] for element in bulk_candidates]
+        bulk_delete_messages(user, channel_id=channel_id, message_ids=message_ids)
 
-    for message_id, items in normal_deletes:
-        delete_message_items(user, message_id, items)
+        for message_id, channel_id, attachments_ids_to_keep, items in bulk_candidates:
+            mark_items_deleted(context, job_id, items)
+    else:
+        normal_candidates.extend(bulk_candidates)
+
+    for message_id, channel_id, attachments_ids_to_keep, items in normal_candidates:
+        delete_message_items(user, channel_id=channel_id, message_id=message_id, attachments_ids_to_keep=attachments_ids_to_keep)
         mark_items_deleted(context, job_id, items)
 
 
 def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> None:
     message_structure = gather_message_structure(file_ids)
 
-    channel_map = defaultdict(list)
-
+    channel_map: dict[str, dict[str, list[MessageItem]]] = defaultdict(dict)
     for message_id, items in message_structure.items():
         channel_id = items[0].channel_id
-        channel_map[channel_id].append((message_id, items))
+        channel_map[channel_id][message_id] = items
 
     futures = []
-
     with ThreadPoolExecutor(max_workers=len(channel_map)) as executor:
         for channel_id, messages in channel_map.items():
             futures.append(
@@ -372,31 +376,6 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
         for future in as_completed(futures):
             future.result()
 
-
-def delete_message_items(user, message_id: str, items: list[MessageItem]) -> None:
-    attachment_ids_to_remove = [
-        item.attachment_id for item in items
-    ]
-
-    channel_id = items[0].channel_id
-
-    all_attachments = query_attachments(message_id=message_id)
-    all_ids = [obj.attachment_id for obj in all_attachments]
-
-    attachments_to_keep = set(all_ids) - set(attachment_ids_to_remove)
-
-    try:
-        author = discord.get_author(message_id)
-
-        if not attachments_to_keep:
-            discord.delete_message(user, channel_id, message_id)
-        else:
-            discord.edit_attachments_webhook(user, author, message_id, attachments_to_keep)
-
-    except DiscordError as error:
-        if error.status == 404:
-            return
-        raise
 
 def mark_remote_done(claim_token: UUID) -> None:
     DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(

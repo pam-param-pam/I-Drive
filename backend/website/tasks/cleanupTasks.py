@@ -47,17 +47,18 @@ def bulk_delete_messages(user, channel_id, message_ids):
 def delete_single_safe(user, channel_id, message_id):
     try:
         discord.delete_message(user, channel_id, message_id)
-    except DiscordError:
-        pass
+    except DiscordError as error:
+        if error.status == 404:
+            return
+        raise
 
 def flush_bulk(user, channel_id, message_ids):
     try:
         discord.bulk_delete_messages(user, channel_id, message_ids)
-
-    except DiscordError:
-        # fallback to individual deletion
-        for msg_id in message_ids:
-            delete_single_safe(user, channel_id, msg_id)
+    except DiscordError as error:
+        if error.status == 404:
+            return
+        raise
 
 def process_channel(user, channel, days):
     close_old_connections()
@@ -88,7 +89,6 @@ def process_channel(user, channel, days):
 
             # Decide deletion strategy
             if bulk_deletable(msg_id):
-
                 bulk_candidates.append(msg_id)
 
                 # Flush when reaching 100

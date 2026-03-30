@@ -59,7 +59,8 @@ export default {
 
    data() {
       return {
-         password: ""
+         password: "",
+         remainingFolderLockFromIds: []
       }
    },
 
@@ -77,12 +78,25 @@ export default {
    computed: {
       ...mapState(useMainStore, ["loading", "currentPrompt"]),
       folder() {
-         return this.requiredFolderPasswords[0]
+         return this.remainingFolderLockFromIds[0]
+      }
+   },
+   //todo fix for situation where: 2 prompts exist for the same lockFrom password
+   created() {
+      this.remainingFolderLockFromIds = this.requiredFolderPasswords.filter(folder => {
+         // assume: password stored by lockFrom (adjust if it’s folder.id instead)
+         const pwd = this.getFolderPassword(folder.lockFrom)
+         return !pwd
+      })
+      console.log(this.remainingFolderLockFromIds)
+      // nothing to unlock → immediately continue flow
+      if (this.remainingFolderLockFromIds.length === 0) {
+         this.finishAndShowAnotherPrompt()
       }
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "setError", "showHover"]),
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "setError", "showHover", "getFolderPassword"]),
 
       submit: throttle(async function(event) {
          if (this.isInShareContext) {
@@ -108,10 +122,9 @@ export default {
       },
 
       finishAndShowAnotherPrompt() {
-         let requiredFolderPasswordsCopy = [...this.requiredFolderPasswords]
-         requiredFolderPasswordsCopy.shift()
+         this.remainingFolderLockFromIds.shift()
 
-         if (requiredFolderPasswordsCopy.length === 0) {
+         if (this.remainingFolderLockFromIds.length === 0) {
             let confirmFunc = this.currentPrompt.confirm
             this.closeHover()
             if (confirmFunc) confirmFunc()
@@ -123,7 +136,7 @@ export default {
             this.$nextTick(() => {
                this.showHover({
                   prompt: "FolderPassword",
-                  props: { requiredFolderPasswords: requiredFolderPasswordsCopy },
+                  props: { requiredFolderPasswords: this.remainingFolderLockFromIds },
                   confirm: confirm,
                   cancel: cancel
                })

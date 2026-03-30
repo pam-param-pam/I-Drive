@@ -34,5 +34,5 @@ def snowflake_to_datetime(snowflake_id: str):
 def bulk_deletable(message_id: str):
     ts = snowflake_to_datetime(message_id)
     age = datetime.now(timezone.utc) - ts
-    return age < timedelta(days=14)
-
+    # avoid race conditions
+    return age < timedelta(days=13, hours=23)
