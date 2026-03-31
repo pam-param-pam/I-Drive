@@ -134,6 +134,8 @@ class UserState:
             # If specific secret requested
             if secret:
                 state = next((c for c in self._credentials.values() if c.secret == secret), None)
+                print("DISCORD CREDENTIAL STATE: ")
+                print(state)
                 if not state:
                     raise CannotProcessDiscordRequestError("Requested credential not found")
 
@@ -392,7 +394,6 @@ class DiscordManager:
                     raise exc
             except CannotProcessDiscordRequestError as e:
                 print(f"CannotProcessDiscordRequestError: {str(e)}")
-                errors.append(str(e))
                 time.sleep(min(2 ** attempt, 10))
                 continue
 
