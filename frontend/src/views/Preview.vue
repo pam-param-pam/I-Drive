@@ -3,6 +3,8 @@
       id="previewer"
       v-touch:swipe.left="onSwipeLeft"
       v-touch:swipe.right="onSwipeRight"
+      v-touch:swipe.top="onSwipeTop"
+      v-touch:swipe.bottom="onSwipeBottom"
       @mousemove="toggleNavigation"
       @touchstart="toggleNavigation"
    >
@@ -529,6 +531,14 @@ export default {
       onSwipeRight(event) {
          if (this.disableSwipe) return
          this.prev()
+      },
+      onSwipeTop(event) {
+         if (this.disableSwipe) return
+         this.showHover("info")
+      },
+      onSwipeBottom(event) {
+         if (this.disableSwipe) return
+         this.close()
       },
       async prefetch() {
          //todo make it better!
