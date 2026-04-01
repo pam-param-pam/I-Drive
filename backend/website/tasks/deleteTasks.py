@@ -7,7 +7,7 @@ from typing import List, Dict, Optional, Literal
 from uuid import UUID
 
 from celery.utils.log import get_task_logger
-from django.db import transaction, models, connection
+from django.db import transaction, models
 from django.utils import timezone
 
 from .helper import send_message, bulk_deletable
@@ -40,15 +40,6 @@ class MessageItem:
     author_id: int
     author_type: AuthorType
 
-def acquire_user_lock(user_id: int) -> bool:
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT pg_try_advisory_lock(%s)", [user_id])
-        return cursor.fetchone()[0]
-
-
-def release_user_lock(user_id: int) -> None:
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT pg_advisory_unlock(%s)", [user_id])
 
 def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], int]:
     input_file_ids = set(
@@ -158,31 +149,23 @@ def delete_cache(expanded_folder_ids: set[str], expanded_file_ids: set[str]):
     folder_service._clear_cache(list(expanded_folder_ids))
 
 
-@app.task()
+@app.task(queue="deletion")
 def process_file_batch(context_dict: dict, job_id: UUID) -> None:
     context = RequestContext.deserialize(context_dict)
 
-    if not acquire_user_lock(context.user_id):
-        logger.info("acquire_user_lock FALSE")
-        # another worker already processing this user's deletions
-        process_file_batch.apply_async((context_dict, job_id), countdown=10)
-        return
-    try:
-        claim_token, items = claim_file_work_items(job_id)
+    claim_token, items = claim_file_work_items(job_id)
 
-        file_ids = [item.file_id for item in items]
+    file_ids = [item.file_id for item in items]
 
-        if file_ids:
-            try:
-                dispatch_channel_deletions(context, job_id, file_ids)
-                mark_remote_done(claim_token)
-                finalize_file_deletions(job_id, file_ids, claim_token)
+    if file_ids:
+        try:
+            dispatch_channel_deletions(context, job_id, file_ids)
+            mark_remote_done(claim_token)
+            finalize_file_deletions(job_id, file_ids, claim_token)
 
-            except Exception as error:
-                mark_file_batch_failed(job_id, file_ids, claim_token, error)
-                raise
-    finally:
-        release_user_lock(context.user_id)
+        except Exception as error:
+            mark_file_batch_failed(job_id, file_ids, claim_token, error)
+            raise
 
     schedule_next_batch(context, job_id)
 
