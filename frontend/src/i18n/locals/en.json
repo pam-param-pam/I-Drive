@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "reEnable": "Re enable",
+    "enable": "Enable",
     "markUnread": "Mark unread",
     "markAllRead": "Mark all as read",
     "toggleSize": "Toggle image size",
@@ -185,6 +187,7 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "permanent": "Permanent",
     "showPrevious": "More",
     "loading": "Loading",
     "noNotifications": "No notifications yet!",

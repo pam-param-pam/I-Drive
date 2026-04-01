@@ -278,7 +278,7 @@ class DiscordManager:
             data = {}
 
         discord_code = data.get("code")
-        if status == 401:
+        if status == 401 or True:
             state.block_credential(credential, None, "unauthorized", discord_code)
             return
 
@@ -370,6 +370,7 @@ class DiscordManager:
                 files=files,
             )
             self._post_request_check(state, credential, response)
+            state.update_from_headers(credential, response.headers)
 
             if response.is_error:
                 raise DiscordError(response)

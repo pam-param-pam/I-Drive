@@ -154,7 +154,7 @@ urlpatterns = [
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     django_path('admin', admin.site.urls),
-    django_path('test', get_discord_state),
+    django_path('test/<user_id>', get_discord_state),
 
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 

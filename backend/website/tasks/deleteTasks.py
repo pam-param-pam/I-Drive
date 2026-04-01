@@ -298,7 +298,7 @@ def delete_message_items(user, channel_id: str, message_id: str, attachments_ids
             discord.edit_attachments_webhook(user, author, message_id, attachments_ids_to_keep)
 
     except DiscordError as error:
-        if error.status == 404:
+        if error.status == 404 or error.status == 400:
             return
         raise
 

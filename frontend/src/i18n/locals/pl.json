@@ -1,5 +1,7 @@
 {
   "buttons": {
+    "reEnable": "Spróbuj aktywować",
+    "enable": "Włącz",
     "markUnread": "Oznacz jako nieprzeczytane",
     "markAllRead": "Oznacz wszystkie jako przeczytane",
     "toggleSize": "Przełącz rozmiar zdjęcia",
@@ -178,6 +180,7 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "permanent": "Na zawsze",
     "showPrevious": "Więcej",
     "loading": "Ładowanie",
     "noNotifications": "Brak powiadomień!",
