@@ -278,7 +278,7 @@ class DiscordManager:
             data = {}
 
         discord_code = data.get("code")
-        if status == 401 or True:
+        if status == 401:
             state.block_credential(credential, None, "unauthorized", discord_code)
             return
 
