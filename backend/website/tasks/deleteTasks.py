@@ -29,6 +29,8 @@ logger = get_task_logger(__name__)
 AuthorType = Literal["bot", "webhook"]
 ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
 
+FILE_BATCH = 100
+FOLDER_BATCH = 50
 
 @dataclass(frozen=True)
 class MessageItem:
@@ -224,7 +226,7 @@ def claim_file_work_items(job_id: UUID) -> tuple[None, Optional[list]] | tuple[U
                 job_id=job_id,
                 state=DeletionFileWorkItem.State.PENDING
             )
-            .order_by("file__internal_created_at")[:25]
+            .order_by("file__internal_created_at")[:FILE_BATCH]
         )
 
         if not items:
@@ -428,7 +430,7 @@ def claim_folder_items(job_id: UUID) -> tuple[UUID, list[DeletionFolderWorkItem]
                 job_id=job_id,
                 state=DeletionFolderWorkItem.State.PENDING
             )
-            .order_by("-level")[:50]
+            .order_by("-level")[:FOLDER_BATCH]
         )
 
         now = timezone.now()

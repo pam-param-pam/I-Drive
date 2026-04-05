@@ -533,10 +533,12 @@ export default {
          this.prev()
       },
       onSwipeTop(event) {
+         if (this.isVideoFullScreen()) return
          if (this.disableSwipe) return
          this.showHover("info")
       },
       onSwipeBottom(event) {
+         if (this.isVideoFullScreen()) return
          if (this.disableSwipe) return
          this.close()
       },

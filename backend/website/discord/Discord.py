@@ -2,7 +2,6 @@ import json
 import logging
 import random
 import time
-import traceback
 from dataclasses import dataclass
 from datetime import datetime, UTC
 from threading import Lock

@@ -1,6 +1,7 @@
 import { defineStore } from "pinia"
 import i18n from "@/i18n/index.js"
 import dayjs from "@/utils/dayjsSetup.js"
+import { v4 as uuidv4 } from "uuid"
 
 export const useMainStore = defineStore("main", {
    state: () => ({
@@ -177,11 +178,13 @@ export const useMainStore = defineStore("main", {
       setUnreadNotifications(value) {
          this.user.unreadNotifications = value
       },
+
       showHover(value) {
          this.closeContextMenu()
 
          if (typeof value !== "object") {
             this.prompts.push({
+               id: uuidv4(),
                prompt: value,
                confirm: null,
                props: null,
@@ -191,6 +194,7 @@ export const useMainStore = defineStore("main", {
          }
 
          this.prompts.push({
+            id: uuidv4(),
             prompt: value.prompt,
             confirm: value?.confirm,
             props: value?.props,

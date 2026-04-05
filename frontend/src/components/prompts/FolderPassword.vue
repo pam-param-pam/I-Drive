@@ -8,10 +8,10 @@
 
       <div class="card-content">
          <p v-if="!isInShareContext">
-            {{ $t("prompts.enterFolderPassword") }} <code>{{ folder.name }}</code>
+            {{ $t("prompts.enterFolderPassword") }} <code>{{ folder?.name }}</code>
          </p>
          <p v-else>
-            {{ $t("prompts.enterSharePassword") }} <code>{{ folder.name }}</code>
+            {{ $t("prompts.enterSharePassword") }} <code>{{ folder?.name }}</code>
          </p>
          <input v-focus v-model.trim="password" class="input input--block" type="text" />
          <button
@@ -72,32 +72,39 @@ export default {
       isInShareContext: {
          type: Boolean,
          default: false
-      }
-   },
+      },
+      promptId: String
 
+   },
+   mounted() {
+      this.reCheckFolderIds()
+   },
    computed: {
       ...mapState(useMainStore, ["loading", "currentPrompt"]),
       folder() {
          return this.remainingFolderLockFromIds[0]
+      },
+      isActive() {
+         return this.currentPrompt?.id === this.promptId
       }
    },
-   //todo fix for situation where: 2 prompts exist for the same lockFrom password
-   created() {
-      this.remainingFolderLockFromIds = this.requiredFolderPasswords.filter(folder => {
-         // assume: password stored by lockFrom (adjust if it’s folder.id instead)
-         const pwd = this.getFolderPassword(folder.lockFrom)
-         return !pwd
-      })
-      console.log(this.remainingFolderLockFromIds)
-      // nothing to unlock → immediately continue flow
-      if (this.remainingFolderLockFromIds.length === 0) {
-         this.finishAndShowAnotherPrompt()
+   watch: {
+      async isActive() {
+         this.reCheckFolderIds()
       }
    },
 
    methods: {
       ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "setError", "showHover", "getFolderPassword"]),
-
+      reCheckFolderIds() {
+         this.remainingFolderLockFromIds = this.requiredFolderPasswords.filter(folder => {
+            const pwd = this.getFolderPassword(folder.id)
+            return !pwd
+         })
+         if (this.remainingFolderLockFromIds.length === 0) {
+            this.finishAndShowAnotherPrompt()
+         }
+      },
       submit: throttle(async function(event) {
          if (this.isInShareContext) {
             if ((await isSharePasswordCorrect(this.folder.id, this.password)) === true) {
@@ -125,7 +132,7 @@ export default {
          this.remainingFolderLockFromIds.shift()
 
          if (this.remainingFolderLockFromIds.length === 0) {
-            let confirmFunc = this.currentPrompt.confirm
+            let confirmFunc = this.currentPrompt?.confirm
             this.closeHover()
             if (confirmFunc) confirmFunc()
          } else {

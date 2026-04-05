@@ -105,7 +105,7 @@ backendInstance.interceptors.response.use(
       }
 
       //handle resource url expired
-      handleResourceURLExpiredIfNeeded(error)
+      await handleResourceURLExpiredIfNeeded(error)
 
       //Handle 469
       if (shouldRetry469(error)) {

@@ -283,6 +283,7 @@ export default {
             return
          }
          let route = this.getNewRoute(item)
+         //todo
          if (item.isLocked === true) {
             let password = this.getFolderPassword(item.lockFrom)
             if (!password) {

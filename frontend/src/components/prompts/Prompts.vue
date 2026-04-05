@@ -5,6 +5,7 @@
          v-for="(prompt, index) in prompts"
          v-show="prompt.prompt === currentPromptName"
          :key="index"
+         :promptId="prompt.id"
          :ref="prompt.prompt"
          v-bind="prompt.props"
       />
@@ -116,7 +117,7 @@ export default {
       ...mapState(useMainStore, ["currentPrompt", "currentPromptName", "prompts"]),
       showOverlay() {
          return this.currentPrompt !== null && this.currentPromptName !== "more"
-      }
+      },
    },
    watch: {
       currentPromptName(val) {
