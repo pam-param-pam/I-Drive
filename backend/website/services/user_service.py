@@ -151,7 +151,7 @@ def delete_bot(user: User, bot_id: str) -> None:
     discord.remove_user_state(user)
 
 def reenable_credential(user: User, credential_id: str) -> None:
-    state = discord._get_user_state(user)
+    state = discord.get_user_state(user)
     credential = state.get_credential_from_id(credential_id)
     if not credential:
         raise BadRequestError("Credential not found.")

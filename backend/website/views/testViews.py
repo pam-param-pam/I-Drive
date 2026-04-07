@@ -20,7 +20,7 @@ def get_discord_state(request, user_id):
         return HttpResponse(status=404)
 
     user = User.objects.get(id=user_id)
-    state = discord._get_user_state(user)
+    state = discord.get_user_state(user)
     return JsonResponse(state.to_dict(), safe=False)
 
 

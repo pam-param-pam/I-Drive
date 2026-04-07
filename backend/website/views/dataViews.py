@@ -81,7 +81,7 @@ def get_dirs(request, folder_obj: Folder):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
-@check_resource_permissions(default_checks - CheckTrash, resource_key="file_obj")
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def get_file_info(request, file_obj: File):
     file_content = FileSerializer().serialize_object(file_obj)
     return JsonResponse(file_content)

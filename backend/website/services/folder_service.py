@@ -53,7 +53,7 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
         folder_obj.save()
 
     folder_dict = FolderSerializer().serialize_object(folder_obj)
-    send_event(context, parent, EventCode.ITEM_CREATE, folder_dict)
+    send_event(context.without_device_id(), parent, EventCode.ITEM_CREATE, folder_dict)
     return folder_obj
 
 
@@ -68,7 +68,7 @@ def change_folder_password(context: RequestContext, folder_obj: Folder, new_pass
     is_locked = True if new_password else False
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(context.without_device_id(), folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': is_locked, 'lockFrom': lockFrom}])
 
     return is_locked
@@ -89,7 +89,7 @@ def reset_folder_password(context: RequestContext, user, folder_obj: Folder, acc
 
     lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-    send_event(context, folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
+    send_event(context.without_device_id(), folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
                [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': is_locked, 'lockFrom': lockFrom}])
 
     return is_locked

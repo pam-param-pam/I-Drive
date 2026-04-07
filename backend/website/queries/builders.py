@@ -214,8 +214,8 @@ def build_discord_settings(user) -> dict:
     channels = Channel.objects.filter(owner=user)
 
     if settings.auto_setup_complete:
-        state = discord._get_user_state(user)
-        credential_map = {c.secret: c for c in state._credentials.values()}
+        state = discord.get_user_state(user)
+        credential_map = state.get_all_credentials()
     else:
         credential_map = {}
 
@@ -224,7 +224,6 @@ def build_discord_settings(user) -> dict:
     webhook_dicts = []
     for webhook in webhooks:
         data = serializer.serialize_object(webhook)
-
         cred = credential_map.get(webhook.url)
 
         if cred:
@@ -232,7 +231,6 @@ def build_discord_settings(user) -> dict:
             data["blocked_until"] = normalize_blocked_until(cred.blocked_until)
             data["block_reason"] = cred.block_reason
             data["discord_error_code"] = cred.discord_error_code
-
         else:
             data["is_blocked"] = False
 
@@ -241,7 +239,6 @@ def build_discord_settings(user) -> dict:
     bots_dicts = []
     for bot in bots:
         data = BotSerializer().serialize_object(bot)
-
         cred = credential_map.get(bot.token)
 
         if cred:
@@ -256,12 +253,17 @@ def build_discord_settings(user) -> dict:
 
     can_add_bots_or_webhooks = bool(settings.guild_id and len(channels) > 0)
 
-    channel_dicts = []
-    for channel in channels:
-        channel_dicts.append({"name": channel.name, "id": channel.discord_id})
+    channel_dicts = [{"name": c.name, "id": c.discord_id} for c in channels]
 
-    return {"webhooks": webhook_dicts, "bots": bots_dicts, "guild_id": settings.guild_id, "channels": channel_dicts,
-            "attachment_name": settings.attachment_name, "can_add_bots_or_webhooks": can_add_bots_or_webhooks, "auto_setup_complete": settings.auto_setup_complete}
+    return {
+        "webhooks": webhook_dicts,
+        "bots": bots_dicts,
+        "guild_id": settings.guild_id,
+        "channels": channel_dicts,
+        "attachment_name": settings.attachment_name,
+        "can_add_bots_or_webhooks": can_add_bots_or_webhooks,
+        "auto_setup_complete": settings.auto_setup_complete,
+    }
 
 
 def create_share_events(events: Iterable[ShareAccessEvent]):

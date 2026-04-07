@@ -1,20 +1,19 @@
 import json
 import logging
-import random
 import time
-from dataclasses import dataclass
 from datetime import datetime, UTC
 from threading import Lock
-from typing import Optional, Dict, Literal, Any
+from typing import Optional
 from urllib.parse import urlparse, parse_qs
 
 import httpx
 from httpx import Response
 
+from .CredentialState import CredentialState
+from .UserState import UserState
 from ..constants import DISCORD_BASE_URL, cache, USE_CACHE
-from ..core.errors import DiscordError, DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError, DiscordTextError, DiscordErrorMaxRetries
-from ..core.helpers import normalize_blocked_until
-from ..models import DiscordSettings, Bot, Channel, DiscordAttachmentMixin, Webhook
+from ..core.errors import DiscordError, CannotProcessDiscordRequestError, BadRequestError, DiscordTextError, DiscordErrorMaxRetries
+from ..models import Bot, DiscordAttachmentMixin, Webhook
 from ..queries.selectors import query_attachments
 from ..services import cache_service
 
@@ -27,201 +26,6 @@ if not logger.hasHandlers():
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-
-CredentialType = Literal["bot", "webhook"]
-
-@dataclass
-class CredentialState:
-    name: str
-    secret: str          # bot token or webhook url
-    discord_id: str
-    credential_type: CredentialType
-    requests_remaining: int
-    reset_timestamp: Optional[float]
-    in_flight: int = 0
-    blocked_until: Optional[float] = None
-    block_reason: str = ""
-    discord_error_code: Optional[int] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        data = self.__dict__.copy()
-        data.pop("secret", None)
-        data["blocked_until"] = normalize_blocked_until(data.get("blocked_until"))
-        return data
-
-class UserState:
-    def __init__(self, user, max_concurrent_per_token: int = 3):
-        self.user = user
-        self.max_concurrent_per_token = max_concurrent_per_token
-
-        self.guild_id: Optional[str] = None
-        self.channels: list[str] = []
-
-        self._credentials: Dict[str, CredentialState] = {}
-        self._blocked_until: Optional[float] = None
-
-        self._lock = Lock()
-
-        self._initialize()
-
-    def to_dict(self) -> Dict[str, Any]:
-        with self._lock:
-            bots = []
-            webhooks = []
-
-            for state in self._credentials.values():
-                if state.credential_type == "bot":
-                    bots.append(state.to_dict())
-                elif state.credential_type == "webhook":
-                    webhooks.append(state.to_dict())
-
-            return {
-                "user_id": self.user.id,
-                "guild_id": self.guild_id,
-                "channels": self.channels,
-                "max_concurrent_per_token": self.max_concurrent_per_token,
-                "_blocked_until": normalize_blocked_until(self._blocked_until),
-                "bots": bots,
-                "webhooks": webhooks,
-            }
-
-    def _initialize(self):
-        settings = DiscordSettings.objects.get(user=self.user)
-        bots = Bot.objects.filter(owner=self.user).order_by("created_at")
-        webhooks = Webhook.objects.filter(owner=self.user).order_by("created_at")
-        channels = Channel.objects.filter(owner=self.user)
-
-        if not settings.auto_setup_complete:
-            raise BadRequestError("No discord settings. Perform auto complete")
-
-        self.guild_id = settings.guild_id
-        self.channels = [c.discord_id for c in channels]
-
-        for bot in bots:
-            self._credentials[bot.token] = CredentialState(
-                secret=bot.token,
-                credential_type="bot",
-                discord_id=bot.discord_id,
-                name=bot.name,
-                requests_remaining=5,
-                reset_timestamp=None,
-            )
-
-        for webhook in webhooks:
-            self._credentials[webhook.url] = CredentialState(
-                secret=webhook.url,
-                credential_type="webhook",
-                name=webhook.name,
-                discord_id=webhook.discord_id,
-                requests_remaining=5,
-                reset_timestamp=None,
-            )
-
-    def ensure_not_blocked(self):
-        with self._lock:
-            if self._blocked_until:
-                if time.time() < self._blocked_until:
-                    remaining = self._blocked_until - time.time()
-                    raise DiscordBlockError("Discord temporarily blocked us :(", retry_after=remaining)
-                self._blocked_until = None
-
-    def _acquire(self, credential_type: Optional[CredentialType] = None, secret: Optional[str] = None) -> CredentialState:
-        self.ensure_not_blocked()
-        now = time.time()
-
-        with self._lock:
-            # If specific secret requested
-            if secret:
-                state = next((c for c in self._credentials.values() if c.secret == secret), None)
-                print("DISCORD CREDENTIAL STATE: ")
-                print(state)
-                if not state:
-                    raise CannotProcessDiscordRequestError("Requested credential not found")
-
-                if credential_type and state.credential_type != credential_type:
-                    raise CannotProcessDiscordRequestError("Credential type mismatch")
-
-                if state.blocked_until and now < state.blocked_until:
-                    raise CannotProcessDiscordRequestError("Credential is temporarily blocked")
-
-                if state.reset_timestamp and now >= state.reset_timestamp:
-                    state.requests_remaining = 5
-                    state.reset_timestamp = None
-
-                if state.requests_remaining > 0 and state.in_flight < self.max_concurrent_per_token:
-                    state.requests_remaining -= 1
-                    state.in_flight += 1
-                    return state
-
-                raise CannotProcessDiscordRequestError("Credential currently unavailable")
-
-            # Otherwise iterate normally
-            for state in self._credentials.values():
-
-                if credential_type and state.credential_type != credential_type:
-                    continue
-
-                if state.blocked_until and now < state.blocked_until:
-                    continue
-
-                if state.reset_timestamp and now >= state.reset_timestamp:
-                    state.requests_remaining = 5
-                    state.reset_timestamp = None
-
-                if state.requests_remaining > 0 and state.in_flight < self.max_concurrent_per_token:
-                    state.requests_remaining -= 1
-                    state.in_flight += 1
-                    return state
-
-        raise CannotProcessDiscordRequestError("No credentials available right now")
-
-    def acquire_token(self, bot: Optional[Bot] = None) -> CredentialState:
-        secret = bot.token if bot else None
-        return self._acquire("bot", secret)
-
-    def acquire_webhook(self, webhook: Optional[Webhook] = None) -> CredentialState:
-        secret = webhook.url if webhook else None
-        return self._acquire("webhook", secret)
-
-    def release(self, credential: CredentialState):
-        with self._lock:
-            if credential.in_flight > 0:
-                credential.in_flight -= 1
-
-    def block_credential(self, credential: CredentialState, retry_after_seconds: Optional[float], reason: str, discord_error_code: int):
-        with self._lock:
-            credential.block_reason = reason
-            credential.discord_error_code = discord_error_code
-
-            if retry_after_seconds is None:
-                # Permanent block
-                credential.blocked_until = float("inf")
-            else:
-                credential.blocked_until = time.time() + float(retry_after_seconds)
-
-    def get_credential_from_id(self, credential_id: str) -> Optional[CredentialState]:
-        with self._lock:
-            for cred in self._credentials.values():
-                if cred.discord_id == credential_id:
-                    return cred
-            return None
-
-    def unblock_credential(self, credential: CredentialState):
-        with self._lock:
-            credential.blocked_until = None
-            credential.block_reason = ""
-            credential.discord_error_code = None
-
-    def update_from_headers(self, credential: CredentialState, headers: dict):
-        remaining = headers.get("X-RateLimit-Remaining")
-        reset = headers.get("X-RateLimit-Reset")
-
-        with self._lock:
-            if remaining is not None:
-                credential.requests_remaining = int(remaining)
-
-            if reset is not None:
-                credential.reset_timestamp = float(reset)
 
 class RawDiscordAPI:
     def __init__(self, timeout: float = 10.0):
@@ -255,7 +59,11 @@ class DiscordManager:
         self._users: dict[int, UserState] = {}
         self._lock = Lock()
 
-    def _get_user_state(self, user) -> UserState:
+    def get_user_state(self, user) -> UserState:
+        state = self._users.get(user.id)
+        if state:
+            return state
+
         with self._lock:
             if user.id not in self._users:
                 self._users[user.id] = UserState(user)
@@ -300,7 +108,7 @@ class DiscordManager:
                 return
 
     def execute_bot_once(self, user, method: str, url: str, bot: Optional[Bot] = None, json=None, params=None, files=None):
-        state = self._get_user_state(user)
+        state = self.get_user_state(user)
         credential = state.acquire_token(bot)
 
         headers = {}
@@ -355,7 +163,7 @@ class DiscordManager:
         raise DiscordErrorMaxRetries(errors)
 
     def execute_webhook_once(self, user, method: str, path: str, webhook: Optional[Webhook] = None, json=None, params=None, files=None):
-        state = self._get_user_state(user)
+        state = self.get_user_state(user)
         credential = state.acquire_webhook(webhook)
 
         url = f"{credential.secret}{path}"
@@ -393,7 +201,6 @@ class DiscordManager:
                 else:
                     raise exc
             except CannotProcessDiscordRequestError as e:
-                print(f"CannotProcessDiscordRequestError: {str(e)}")
                 time.sleep(min(2 ** attempt, 10))
                 continue
 
@@ -423,14 +230,8 @@ class DiscordService:
             return attachments[0].author
         raise DiscordTextError(f"Unable to find author associated with message ID={message_id}", 404)
 
-    def _get_user_state(self, user) -> UserState:
-        return self.manager._get_user_state(user)
-
-    def _choose_channel_id(self, user) -> str:
-        state = self._get_user_state(user)
-        if not state.channels:
-            raise BadRequestError("User has no channels configured")
-        return random.choice(state.channels)
+    def get_user_state(self, user) -> UserState:
+        return self.manager.get_user_state(user)
 
     def _get_channel_id_for_message(self, message_id: str) -> str:
         attachments = query_attachments(message_id=message_id)
@@ -465,7 +266,7 @@ class DiscordService:
     def get_message(self, user, channel_id: str, message_id: str) -> dict:
         key = cache_service.get_discord_message_key(message_id)
         cached = cache.get(key)
-        if cached and USE_CACHE:
+        if cached and USE_CACHE and False:
             return cached
 
         path = self._discord_path(f"/channels/{channel_id}/messages/{message_id}")

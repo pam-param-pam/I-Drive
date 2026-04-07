@@ -16,6 +16,9 @@ class RequestContext:
             self.user = User.objects.get(id=self.user_id)
         return self.user
 
+    def without_device_id(self) -> 'RequestContext':
+        return type(self)(self.user_id, None, self.request_id)
+
     def __json__(self):
         return {"user_id": self.user_id, "request_id": self.request_id, "device_id": self.device_id}
 

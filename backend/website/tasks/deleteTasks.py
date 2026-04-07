@@ -25,12 +25,12 @@ from ..websockets.utils import send_event
 
 logger = get_task_logger(__name__)
 
-
 AuthorType = Literal["bot", "webhook"]
 ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
 
 FILE_BATCH = 100
 FOLDER_BATCH = 50
+
 
 @dataclass(frozen=True)
 class MessageItem:
@@ -62,13 +62,13 @@ def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], 
     )
 
     expanded_file_ids = (
-        set(
-            File.objects.filter(
-                parent_id__in=expanded_folder_ids,
-                state=ItemState.ACTIVE
-            ).values_list("id", flat=True)
-        )
-        | input_file_ids
+            set(
+                File.objects.filter(
+                    parent_id__in=expanded_folder_ids,
+                    state=ItemState.ACTIVE
+                ).values_list("id", flat=True)
+            )
+            | input_file_ids
     )
 
     total_fragments = Fragment.objects.filter(
@@ -89,7 +89,7 @@ def plan_deletion_job(job_id: UUID) -> None:
     context = RequestContext.deserialize(job.request_context)
     send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
 
-    input_file_ids, input_folder_ids,  expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
+    input_file_ids, input_folder_ids, expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
 
     with transaction.atomic():
         file_items = [
@@ -171,6 +171,7 @@ def process_file_batch(context_dict: dict, job_id: UUID) -> None:
 
     schedule_next_batch(context, job_id)
 
+
 def mark_items_deleted(context: RequestContext, job_id: UUID, items: List[MessageItem]) -> None:
     fragment_ids = [item.object_id for item in items if item.kind == "fragment"]
 
@@ -247,6 +248,7 @@ def claim_file_work_items(job_id: UUID) -> tuple[None, Optional[list]] | tuple[U
 
     return claim_token, items
 
+
 def gather_message_structure(file_ids: list[str]) -> Dict[str, List[MessageItem]]:
     message_structure: Dict[str, List[MessageItem]] = defaultdict(list)
 
@@ -256,7 +258,7 @@ def gather_message_structure(file_ids: list[str]) -> Dict[str, List[MessageItem]
         if only_active:
             qs = qs.filter(state=ItemState.ACTIVE)
 
-        for (pk, message_id, attachment_id, channel_id,  author_id, author_model) in qs.values_list("id", "message_id", "attachment_id", "channel_id", "object_id",  "content_type__model"):
+        for (pk, message_id, attachment_id, channel_id, author_id, author_model) in qs.values_list("id", "message_id", "attachment_id", "channel_id", "object_id", "content_type__model"):
             message_structure[message_id].append(
                 MessageItem(
                     message_id=message_id,
@@ -276,6 +278,7 @@ def gather_message_structure(file_ids: list[str]) -> Dict[str, List[MessageItem]
 
     return message_structure
 
+
 def bulk_delete_messages(user, channel_id: str, message_ids: list[str]):
     BATCH_SIZE = 100
 
@@ -292,7 +295,8 @@ def bulk_delete_messages(user, channel_id: str, message_ids: list[str]):
 
 def delete_message_items(user, channel_id: str, message_id: str, attachments_ids_to_keep: set[str]) -> None:
     try:
-        author = discord.get_author(message_id)
+        attachments = query_attachments(message_id=message_id)  # todo lowkey unsafe and redundant call ngl
+        author = attachments[0].author
 
         if not attachments_ids_to_keep:
             discord.delete_message(user, channel_id, message_id)
@@ -303,6 +307,7 @@ def delete_message_items(user, channel_id: str, message_id: str, attachments_ids
         if error.status == 404 or error.status == 400:
             return
         raise
+
 
 def process_channel_deletions(context, job_id: UUID, channel_id: str, messages: dict[str, list[MessageItem]]):
     user = context.get_user()
@@ -480,6 +485,7 @@ def mark_folder_batch_failed(job_id: UUID, folder_ids: list[str], claim_token: U
             heartbeat_at=timezone.now()
         )
 
+
 @app.task
 def process_folder_batch(context_dict: dict, job_id: UUID) -> None:
     context = RequestContext.deserialize(context_dict)
@@ -544,4 +550,3 @@ def finalize_job_if_complete(context: RequestContext, job_id: UUID) -> None:
         job.delete()
     else:
         send_message(message="toasts.itemsDeletedPartially", args={}, finished=True, isError=True, context=context)
-
