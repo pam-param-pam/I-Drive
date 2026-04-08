@@ -116,9 +116,9 @@ def reset_folder_password_view(request, folder_obj):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def update_video_position_view(request, file_obj):
+def update_media_position_view(request, file_obj):
     new_position = extract_key(request.data, "position")
-    file_service.update_video_position(file_obj, new_position)
+    file_service.update_media_position(file_obj, new_position)
     return HttpResponse(status=204)
 
 

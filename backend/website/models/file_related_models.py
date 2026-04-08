@@ -78,7 +78,7 @@ class Moment(DiscordAttachmentMixin):
         return f"Moment[File={self.file}, Starts-At={self.timestamp}"
 
 
-class VideoPosition(models.Model):
+class MediaPosition(models.Model):
     file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
     modified_at = models.DateTimeField(auto_now=True)
     timestamp = models.IntegerField(default=0)
@@ -92,7 +92,7 @@ class VideoPosition(models.Model):
         ]
 
     def __str__(self):
-        return self.file.name
+        return f"Media position for file={self.file}"
 
 
 class Tag(models.Model):

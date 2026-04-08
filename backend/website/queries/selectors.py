@@ -152,7 +152,7 @@ def get_item_inside_share(share: ShareableLink):
 
 def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
     files = (File.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE)
-        .prefetch_related("tags", "videoposition__timestamp")
+        .prefetch_related("tags", "mediaposition__timestamp")
         .annotate(
             has_subtitle=Exists(
                 Subtitle.objects.filter(file_id=OuterRef("pk"))

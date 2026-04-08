@@ -74,7 +74,7 @@ class FileSerializer(AdvancedSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, video_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
+            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
         ) = tuple_data
 
         d = {
@@ -109,8 +109,8 @@ class FileSerializer(AdvancedSerializer):
             if has_thumbnail:
                 d["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_id}/thumbnail/stream"
 
-            if video_position:
-                d["video_position"] = video_position
+            if media_position:
+                d["media_position"] = media_position
 
         return d
 
@@ -123,7 +123,7 @@ class ShareFileSerializer(FileSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, video_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
+            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
         ) = tuple_data
 
         d = {
@@ -151,9 +151,6 @@ class ShareFileSerializer(FileSerializer):
 
             if has_thumbnail:
                 d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/thumbnail/stream"
-
-            if video_position:
-                d["video_position"] = video_position
 
         return d
 

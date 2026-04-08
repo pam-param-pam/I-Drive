@@ -13,7 +13,7 @@ from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, ge
     get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_file_stats, \
     check_message_id
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
-    delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_video_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
+    delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits, get_visit_events
@@ -75,7 +75,7 @@ urlpatterns = [
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
     path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail_view, name="create a thumbnail"),
-    path("files/<file_id>/video-position", ["PUT"], update_video_position_view, name="update video position"),
+    path("files/<file_id>/video-position", ["PUT"], update_media_position_view, name="update video position"),
 
     path("files/<file_id>/tags", ["POST"], add_tag_view, name="add a tag"),
     path("files/<file_id>/tags", ["GET"], get_tags, name="get file moments"),

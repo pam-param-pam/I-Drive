@@ -132,7 +132,8 @@
             <div v-else-if="file?.type === 'Audio' && file?.size > 0" style="height: 100%">
                <img v-if="file?.thumbnail_url" :src="file?.thumbnail_url" class="cover" />
                <audio
-                  ref="player"
+                  ref="audio"
+                  @timeupdate="audioTimeUpdate"
                   :autoplay="true"
                   :src="videoSrcUrl"
                   controls
@@ -267,9 +268,10 @@ export default {
          toc: [],
          fontSize: 100,
 
-         lastSentVideoPosition: 0,
+         lastSentMediaPosition: 0,
          prefetchTimeout: null,
          videoRef: null,
+         audioRef: null,
 
          disabledMoments: true,
 
@@ -372,6 +374,7 @@ export default {
          this.setError(null)
 
          this.videoRef = null
+         this.audioRef = null
          this.disabledMoments = true
          // Ensure file is updated in the DOM
          this.file = null
@@ -429,12 +432,21 @@ export default {
          this.setLastItem(this.file)
 
          await this.$nextTick() //this is vevy important
+
+         if (this.file?.type === "Audio" && this.$refs.audio) {
+            if (!this.isInShareContext) {
+               this.audioRef = this.$refs.audio
+               this.audioRef.currentTime = this.file.media_position || 0
+               this.lastSentMediaPosition = this.file.media_position || 0
+            }
+         }
+
          if (this.file?.type === "Video" && this.$refs.video) {
             this.videoRef = this.$refs.video
 
             if (!this.isInShareContext) {
-               this.videoRef.currentTime = this.file.video_position || 0
-               this.lastSentVideoPosition = this.file.video_position || 0
+               this.videoRef.currentTime = this.file.media_position || 0
+               this.lastSentMediaPosition = this.file.media_position || 0
             }
             if (this.file.hasSubtitles) {
                await this.fetchSubtitles()
@@ -632,18 +644,29 @@ export default {
          let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
          this.$toast.success(message)
       },
+      audioTimeUpdate() {
+         let audioRef = this.$refs.audio
+         if (!audioRef) return
+         let position = Math.floor(audioRef.currentTime) // round to seconds
+         if (Math.abs(position - this.lastSentMediaPosition) >= 10) {
 
+            if (audioRef.duration > 120) {
+               updateVideoPosition(this.file.id, this.file.lockFrom, { position })
+            }
+            this.lastSentMediaPosition = position
+         }
+      },
       videoTimeUpdate() {
          if (!this.videoRef) return
          let position = Math.floor(this.videoRef.currentTime) // round to seconds
-         if (Math.abs(position - this.lastSentVideoPosition) >= 10) {
+         if (Math.abs(position - this.lastSentMediaPosition) >= 10) {
 
             if (this.isInShareContext) {
                this.sendShareEvent({ "type": "movie_watch", "args": { "timestamp": Math.round(position), "file_id": this.file.id } })
             } else if (this.videoRef.duration > 120) {
                updateVideoPosition(this.file.id, this.file.lockFrom, { position })
             }
-            this.lastSentVideoPosition = position
+            this.lastSentMediaPosition = position
          }
       },
       onMovieSeek() {

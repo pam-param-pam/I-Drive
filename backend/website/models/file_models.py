@@ -103,7 +103,7 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
-        "parent__id", "crc", "videoposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "has_thumbnail", "has_videometadata"
+        "parent__id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "has_thumbnail", "has_videometadata"
     )
 
     LOCK_FROM_ANNOTATE = {

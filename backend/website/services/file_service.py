@@ -1,4 +1,3 @@
-import base64
 from typing import Type, Iterable
 
 from django.contrib.auth.models import User
@@ -10,7 +9,7 @@ from .attachment_service import delete_single_discord_attachment
 from ..core.errors import BadRequestError
 from ..core.helpers import validate_key, validate_encryption_fields, validate_value
 from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
-from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, VideoPosition, Tag, Moment, Folder
+from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, MediaPosition, Tag, Moment, Folder
 from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.mixin_models import ItemState
 from ..queries.selectors import get_discord_author, get_discord_channel
@@ -169,14 +168,14 @@ def create_photo_metadata(file_obj: File, metadata: dict) -> PhotoMetadata:
 
     return photo_metadata
 
-def update_video_position(file_obj: File, new_position) -> None:
-    if file_obj.type != "Video":
-        raise BadRequestError("Must be a video.")
+def update_media_position(file_obj: File, new_position) -> None:
+    if file_obj.type not in ("Video", "Audio"):
+        raise BadRequestError("Must be a video or audio.")
 
-    video_position, created = VideoPosition.objects.get_or_create(file=file_obj)
+    media_position, created = MediaPosition.objects.get_or_create(file=file_obj)
 
-    video_position.timestamp = new_position
-    video_position.save()
+    media_position.timestamp = new_position
+    media_position.save()
 
 
 def add_tag(file_obj: File, tag_name: str) -> Tag:

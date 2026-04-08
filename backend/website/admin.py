@@ -13,7 +13,7 @@ from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
 from .core.errors import DiscordError
 from .discord.Discord import discord
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, VideoPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
+from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata, PhotoMetadata
@@ -30,7 +30,7 @@ admin.site.register(VideoTrack)
 admin.site.register(AudioTrack)
 admin.site.register(SubtitleTrack)
 
-admin.site.register(VideoPosition)
+admin.site.register(MediaPosition)
 
 
 @admin.register(Fragment)

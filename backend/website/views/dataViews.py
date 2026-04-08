@@ -308,7 +308,7 @@ def search(request):
 
     if include_files:
         files = File.objects.filter(file_filters) \
-                    .select_related("parent", "videoposition", "thumbnail") \
+                    .select_related("parent", "mediaposition", "thumbnail") \
                     .prefetch_related("tags") \
                     .order_by(ascending + order_by).annotate(**File.DISPLAY_ANNOTATE).annotate(
                     has_subtitle=Exists(

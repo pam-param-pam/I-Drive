@@ -37,7 +37,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
         file_children = (
             folder_obj.files
             .filter(state=ItemState.ACTIVE, inTrash=False)
-            .prefetch_related("tags", "videoposition__timestamp")
+            .prefetch_related("tags", "mediaposition__timestamp")
             .annotate(
                 has_subtitle=Exists(
                     Subtitle.objects.filter(file_id=OuterRef("pk"))
