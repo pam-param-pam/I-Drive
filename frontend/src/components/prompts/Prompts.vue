@@ -43,8 +43,6 @@ import EditSubtitles from "@/components/prompts/EditSubtitles.vue"
 import { defineAsyncComponent } from "vue"
 import AbortAllWarning from "@/components/prompts/AbortAllWarning.vue"
 import NewFile from "@/components/prompts/newFile.vue"
-import ControlDevice from "@/components/prompts/ControlDevice.vue"
-import ControlConsentPrompt from "@/components/prompts/ControlConsentPrompt.vue"
 import FixCredential from "@/components/prompts/FixCredential.vue"
 import Notifications from "@/components/prompts/Notifications.vue"
 import ShareVisits from "@/components/prompts/ShareVisits.vue"
@@ -79,8 +77,6 @@ export default {
       EditSubtitles,
       AbortAllWarning,
       NewFile,
-      ControlDevice,
-      ControlConsentPrompt,
       FixCredential,
       Notifications,
       ShareVisits,

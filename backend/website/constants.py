@@ -144,11 +144,7 @@ class EventCode(Enum):
     FOLDER_LOCK_STATUS_CHANGE = 10
     FORCE_LOGOUT = 11
     NEW_DEVICE_LOG_IN = 12
-    DEVICE_CONTROL_REQUEST = 13
-    DEVICE_CONTROL_REPLY = 14
-    DEVICE_CONTROL_COMMAND = 15
-    DEVICE_CONTROL_STATUS = 16
-    NEW_NOTIFICATION = 17
+    NEW_NOTIFICATION = 13
 
 class EncryptionMethod(Enum):
     Not_Encrypted = 0
@@ -190,3 +186,4 @@ class ShareEventType(str, Enum):
     MOVIE_SEEK = "movie_seek"
     MOVIE_TOGGLE = "movie_toggle"
 
+    ZIP_DOWNLOAD = "zip_download"

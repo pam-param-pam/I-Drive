@@ -384,6 +384,45 @@ export default {
 }
 </script>
 <style scoped>
+.multi-select-toggle {
+   position: absolute;
+   top: -8px;
+   left: -8px;
+
+   width: 14px;
+   height: 14px;
+   border-radius: 50%;
+
+   background: #cfcfcf;
+   border: 2px solid #fff;
+
+   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+
+   cursor: pointer;
+   padding: 0;
+
+   touch-action: manipulation;
+}
+
+.multi-select-hitbox {
+   position: absolute;
+   top: 15px;
+   left: 15px;
+
+   width: 36px;
+   height: 36px;
+
+   display: flex;
+   align-items: center;
+   justify-content: center;
+
+   z-index: 5;
+}
+
+.multi-select-toggle[aria-pressed="true"] {
+   background: var(--dark-blue);
+}
+
 /* ========================= */
 /* 📝 GRID VIEW STYLES       */
 /* ========================= */
@@ -395,7 +434,7 @@ export default {
 }
 
 .grid .item-wrapper {
-  position: relative; /* positioning context for button */
+  position: relative;
   border-radius: 10px;
   margin: 0.5em;
   background-color: var(--surfacePrimary);
@@ -508,46 +547,5 @@ export default {
   color: #666;
 }
 
-.item-wrapper:hover .multi-select-toggle {
-}
-
-.multi-select-toggle {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-
-  background: #cfcfcf;
-  border: 2px solid #fff;
-
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
-
-  cursor: pointer;
-  padding: 0;
-
-  touch-action: manipulation;
-}
-
-.multi-select-hitbox {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-
-  width: 36px;
-  height: 36px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  z-index: 5;
-}
-
-.multi-select-toggle[aria-pressed="true"] {
-  background: var(--dark-blue);
-}
 
 </style>

@@ -47,3 +47,7 @@ class ThumbnailStreamedEvent(BaseModel):
 class SubtitleStreamedEvent(BaseModel):
     file_id: str
     subtitle_id: str
+
+class ZipDownloadEvent(BaseModel):
+    files: list[str]
+    folders: list[str]

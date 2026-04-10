@@ -3,9 +3,6 @@ from typing import Optional
 
 import requests
 import shortuuid
-from django.contrib.admin.utils import quote
-from django.utils.encoding import smart_str
-from urllib.parse import quote
 
 from ..dataModels.general import ResponseDict, ErrorDict
 from ..errors import BadRequestError
@@ -18,16 +15,6 @@ def build_response(task_id: str, message: str) -> ResponseDict:
 
 def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:
     return {"code": code, "error": error, "details": details}
-
-
-def get_content_disposition_string(name: str) -> tuple[str, str]:
-    name_ascii = smart_str(name, errors="ignore")
-    name_ascii = re.sub(r'[^\x20-\x7E]', '_', name_ascii)
-
-    # filename*= → RFC 5987 UTF-8 + percent encoding
-    name_encoded = quote(name, safe="")
-
-    return name_ascii, name_encoded
 
 
 def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
@@ -82,6 +69,7 @@ def parse_range_header(range_header: str) -> tuple[bool, int, Optional[int]]:
         if range_match:
             start_byte = int(range_match.group(1))
             end_byte = int(range_match.group(2)) if range_match.group(2) else None
+
         else:
             raise BadRequestError("Invalid range header")
     else:

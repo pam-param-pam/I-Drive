@@ -176,6 +176,7 @@ def update_media_position(file_obj: File, new_position) -> None:
 
     media_position.timestamp = new_position
     media_position.save()
+    file_obj.remove_cache()
 
 
 def add_tag(file_obj: File, tag_name: str) -> Tag:

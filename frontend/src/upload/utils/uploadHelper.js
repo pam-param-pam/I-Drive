@@ -9,6 +9,7 @@ import {
    generateRawImageThumbnail,
    slowVideoCover
 } from "@/upload/utils/thumbnailHelper.js"
+import { useMainStore } from "@/stores/mainStore.js"
 
 
 export async function checkFilesSizes(files) {
@@ -122,6 +123,10 @@ export function isVideoFile(extension) {
    return uploadStore.fileExtensions.Video.includes(extension)
 }
 
+export function isZipFile(extension) {
+   extension = extension.toLowerCase()
+   return extension === ".zip"
+}
 
 export function isImageFile(extension) {
    extension = extension.toLowerCase()
@@ -336,19 +341,12 @@ export function isErrorStatus(status) {
 
 
 export function getFileType(fileName) {
-   let uploadStore = useUploadStore()
+   let mainStore = useMainStore()
 
    let ext = detectExtension(fileName)
 
-   for (const [type, exts] of Object.entries(uploadStore.fileExtensions)) {
-      if (exts.includes(ext)) {
-         return type
-      }
-   }
-
-   return "Other"
+   return mainStore.config.extensions?.[ext] || "Other"
 }
-
 
 function cleanCodecString(input) {
    const codecsMatch = input.match(/codecs="([^"]+)"/)

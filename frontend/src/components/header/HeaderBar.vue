@@ -18,15 +18,6 @@
          @action="this.setMultiSelection(false)"
       />
 
-      <action
-         v-if="this.deviceControlStatus.status === 'active_master' || this.deviceControlStatus.status === 'active_slave'"
-         id="deviceControl"
-         :label="$t('buttons.deviceControl')"
-         class="hide-mobile-tap"
-         icon="cast"
-         @action="showHover('controlDevice')"
-      />
-
       <div id="dropdown" :class="{ active: this.currentPromptName === 'more' }">
          <slot name="actions" />
       </div>
@@ -77,7 +68,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["settings", "currentPromptName", "deviceControlStatus", "multiSelection"])
+      ...mapState(useMainStore, ["settings", "currentPromptName", "multiSelection"])
    },
    methods: {
       ...mapActions(useMainStore, ["showHover", "closeHover", "setMultiSelection"]),

@@ -2,9 +2,6 @@ from json import JSONDecodeError
 
 from httpx import Response
 
-from ..core.deviceControl.constants import ErrorType
-
-
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
@@ -32,6 +29,9 @@ class HttpxError(IDriveException):
 class CannotProcessDiscordRequestError(IDriveException):
     """Raised when we are unable to make requests to discord due to being overloaded"""
 
+class RangeNotSatisfiable(IDriveException):
+    """Raised when the supplied header range is not satisfiable"""
+
 class UsernameTakenError(IDriveException):
     """Raised on register, when a user with this username already exists"""
 
@@ -58,14 +58,6 @@ class DiscordBlockError(IDriveException):
         self.message = message
         self.retry_after = retry_after
         super().__init__(self.message)
-
-class DeviceControlBadStateError(IDriveException):
-    """Raised when attempted to do something illegal with device control state"""
-    def __init__(self, code: ErrorType):
-        self.code = code
-
-    def __str__(self):
-        return self.code
 
 class DiscordTextError(IDriveException):
     def __init__(self, message, status):

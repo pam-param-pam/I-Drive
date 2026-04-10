@@ -84,7 +84,10 @@ CORS_EXPOSE_HEADERS = (
     "retry-after",
     "X-RateLimit-Remaining",
     "X-RateLimit-Reset-After",
-    "X-RateLimit-Bucket"
+    "X-RateLimit-Bucket",
+    "Content-Range",
+    "Accept-Ranges",
+    "Content-Length"
 )
 
 ROOT_URLCONF = 'website.urls'

@@ -66,9 +66,17 @@ export const WebsocketEvent = {
    FOLDER_LOCK_STATUS_CHANGE: 10,
    FORCE_LOGOUT: 11,
    NEW_DEVICE_LOG_IN: 12,
-   DEVICE_CONTROL_REQUEST: 13,
-   DEVICE_CONTROL_REPLY: 14,
-   DEVICE_CONTROL_COMMAND: 15,
-   DEVICE_CONTROL_STATUS: 16,
-   NEW_NOTIFICATION: 17
+   NEW_NOTIFICATION: 13
+}
+
+export const PreviewEvent = {
+   OPEN: "file_open",
+   MEDIA_LOADED: "media_loaded",
+   MEDIA_TIME_UPDATE: "time_update",
+   MEDIA_SEEK: "seek",
+   MEDIA_VOLUME_CHANGE: "volume_change",
+   MEDIA_PLAY: "play",
+   MEDIA_PAUSE: "pause",
+   FULLSCREEN_CHANGE: "fullscreen_change",
+   SUBTITLE_CHANGE: "subtitle_change"
 }

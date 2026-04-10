@@ -67,7 +67,7 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     read_at = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False, db_index=True)
-    # device_id = models.
+    # device_id = models. todo
 
     class Meta:
         ordering = ["-created_at"]

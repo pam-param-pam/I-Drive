@@ -18,6 +18,7 @@
             @click="exit"
          >close</i>
          <i
+            v-if="advanced"
             :aria-label="$t('search.tuneSearch')"
             :title="$t('search.tuneSearch')"
             class="material-icons"
@@ -35,7 +36,9 @@ import throttle from "lodash.throttle"
 
 export default {
    name: "search",
-
+   props: {
+      advanced: false,
+   },
    emits: ["onSearchQuery", "exit"],
 
    data() {

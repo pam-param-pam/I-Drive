@@ -220,12 +220,10 @@ class CheckLockedFolderIP(BaseResourceCheck):
 
     def _check_ip(self, request):
         ip, _ = get_ip(request)
-        if self._is_ip_allowed(ip) or self._is_in_share_context(request):
+        if self._is_ip_allowed(ip):
             return True
         raise ResourceNotFoundError()
 
-    def _is_in_share_context(self, request):
-        return request.META.get('share_context')
 
 
 class CheckFolderLock(CheckLockedFolderIP):

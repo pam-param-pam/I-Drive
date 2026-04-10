@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@chenfengyuan/vue-qrcode": "^2.0.0",
+    "@zip.js/zip.js": "^2.8.26",
     "axios": "1.12.0",
     "chart.js": "^4.5.1",
     "clipboard": "^2.0.11",

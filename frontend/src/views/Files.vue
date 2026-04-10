@@ -39,6 +39,7 @@ import FileListing from "@/components/FileListing.vue"
 import { cancelRequestBySignature } from "@/axios/helper.js"
 import { getUploader } from "@/upload/Uploader.js"
 import axios from "axios"
+import { resolveItemAction } from "@/utils/common.js"
 
 export default {
    name: "files",
@@ -81,6 +82,7 @@ export default {
             lock: this.selectedCount === 1 && this.selected[0].isDir === true && this.perms.lock && this.perms.modify,
             locate: this.selectedCount === 1 && this.searchActive,
             search: true,
+            advancedSearch: true,
             openInNewWindow: this.selectedCount === 1,
             modifyFile: this.selectedCount === 1 && !this.selected[0].isDir && this.perms.modify
          }
@@ -142,10 +144,7 @@ export default {
          this.setSearchFilters(searchDict)
       },
       upload() {
-         if (
-            typeof window.DataTransferItem !== "undefined" &&
-            typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined"
-         ) {
+         if (typeof window.DataTransferItem !== "undefined" && typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined") {
             this.showHover("upload")
          } else {
             document.getElementById("upload-input").click()
@@ -258,14 +257,17 @@ export default {
       },
 
       getNewRoute(item) {
-         if (item.isDir) {
-            return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
-         } else {
-            if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
+         const action = resolveItemAction(item)
+
+         switch (action) {
+            case "dir":
+               return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
+            case "zip":
+               return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id } }
+            case "editor":
                return { name: "Editor", params: { folderId: item.parent_id, fileId: item.id, lockFrom: item.lockFrom } }
-            } else {
-               return { name: "Preview", params: { folderId: item.parent_id, fileId: item.id, lockFrom: item.lockFrom } }
-            }
+            case "preview":
+               return { name: "Preview", params: { ...this.$route.params, fileId: item.id } }
          }
       },
 

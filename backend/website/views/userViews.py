@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms
 from ..auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
-from ..constants import EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, FILE_TYPES
+from ..constants import EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, FILE_TYPES, EXTENSION_TO_FILE_TYPE
 from ..core.Serializers import WebhookSerializer, BotSerializer, NotificationSerializer
 from ..core.decorators import check_resource_permissions, extract_folder
 from ..core.errors import RootFolderError
@@ -66,7 +66,8 @@ def users_me(request):
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
                              "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp, "popupPreview": settings.popup_preview,
                              "itemInfoShortcut": settings.item_info_shortcut
-                             }
+                             },
+                "config": {"extensions": EXTENSION_TO_FILE_TYPE}
                 }
 
     return JsonResponse(response, safe=False, status=200)

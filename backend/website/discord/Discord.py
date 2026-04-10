@@ -263,14 +263,17 @@ class DiscordService:
     # Core Discord operations (bot)
     # -------------------------
 
-    def get_message(self, user, channel_id: str, message_id: str) -> dict:
+    def get_message(self, user, channel_id: str, message_id: str, retries: bool = True) -> dict:
         key = cache_service.get_discord_message_key(message_id)
         cached = cache.get(key)
-        if cached and USE_CACHE and False:
+        if cached and USE_CACHE:
             return cached
 
         path = self._discord_path(f"/channels/{channel_id}/messages/{message_id}")
-        response = self.manager.execute_bot_once(user, "GET", path)
+        if retries:
+            response = self.manager.execute_bot_with_retries(user, "GET", path)
+        else:
+            response = self.manager.execute_bot_once(user, "GET", path)
         message = response.json()
         key = cache_service.get_discord_message_key(message["id"])
         cache.set(key, message, timeout=self._calculate_expiry(message))
@@ -285,15 +288,15 @@ class DiscordService:
         payload = {"messages": message_ids}
         return self.manager.execute_bot_with_retries(user, "POST", path, json=payload)
 
-    def _get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str) -> str:
-        message = self.get_message(user, channel_id, message_id)
+    def _get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str, retries: bool = True) -> str:
+        message = self.get_message(user, channel_id, message_id, retries)
         for attachment in message.get("attachments", []):
             if attachment.get("id") == attachment_id:
                 return attachment.get("url")
         raise BadRequestError(f"File with attachment_id={attachment_id} not found in message_id={message_id}")
 
-    def get_attachment_url(self, user, resource: DiscordAttachmentMixin) -> str:
-        return self._get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id)
+    def get_attachment_url(self, user, resource: DiscordAttachmentMixin, retries: bool = False) -> str:
+        return self._get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id, retries=retries)
 
     # -------------------------
     # Attachment editing

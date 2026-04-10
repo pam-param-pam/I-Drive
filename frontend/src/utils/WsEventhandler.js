@@ -211,32 +211,6 @@ export async function onEvent(message) {
          await forceLogout()
       }
    }
-   if (op_code === WebsocketEvent.DEVICE_CONTROL_REQUEST) {
-      let device = event.data[0].master_device
-      let expiry = event.data[0].expiry
-
-      store.showHover({
-         "prompt": "ControlConsentPrompt",
-         "props": { "masterDevice": device, "expiry": expiry }
-      })
-   }
-   if (op_code === WebsocketEvent.DEVICE_CONTROL_COMMAND) {
-      let type = event.data[0].type
-      let args = event.data[0].args
-      if (type === "route_change") {
-         await router.push(args.route)
-      }
-   }
-
-   if (op_code === WebsocketEvent.DEVICE_CONTROL_STATUS) {
-      store.deviceControlStatus = {
-         ...event.data[0],
-         _receivedAt: Date.now()
-      }
-      if (store.deviceControlStatus.status === "idle" && store.currentPromptName === "ControlConsentPrompt") {
-         store.closeHover()
-      }
-   }
 
    if (op_code === WebsocketEvent.NEW_NOTIFICATION) {
       store.user.unreadNotifications++

@@ -52,23 +52,6 @@
             </div>
          </div>
       </div>
-      <div class="column" style="width: 100%; margin-top: 2rem;">
-         <div class="card">
-            <div class="card-title">
-               <h2>{{ $t("settings.deviceControl") }}</h2>
-            </div>
-            <div class="card-content">
-               <p>
-                  {{ $t("settings.deviceControlMessage") }}
-               </p>
-               <div class="card-action">
-                  <button class="button button--flat" @click="showDeviceControlPrompt">
-                     {{ $t("buttons.controlDevice") }}
-                  </button>
-               </div>
-            </div>
-         </div>
-      </div>
 
       <div class="column" style="width: 100%; margin-top: 2rem;">
          <div class="card">
@@ -143,10 +126,6 @@ export default {
          await logoutAllDevices()
          await forceLogout()
       }, 1000),
-      showDeviceControlPrompt: throttle(function() {
-         this.showHover({ prompt: "ControlDevice" })
-      }, 1000)
-
    }
 }
 </script>

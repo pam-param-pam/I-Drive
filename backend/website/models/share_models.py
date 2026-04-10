@@ -11,8 +11,9 @@ from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
 from ..constants import ShareEventType, SHARE_ACCESS_DURATION
-from ..core.dataModels.dataModels import ViewShare, FileOpenEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, MovieToggleEvent, MovieSeekEvent, MovieWatchEvent, SubtitleStreamedEvent, ThumbnailStreamedEvent, \
-    FileDownloadEvent, FolderDownloadEvent
+from ..core.dataModels.dataModels import ViewShare, FileOpenEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, MovieToggleEvent, MovieSeekEvent, MovieWatchEvent, \
+    SubtitleStreamedEvent, ThumbnailStreamedEvent, \
+    FileDownloadEvent, FolderDownloadEvent, ZipDownloadEvent
 from ..core.dataModels.http import ShareContext
 
 
@@ -142,6 +143,9 @@ class ShareAccessEvent(models.Model):
         # Other
         ShareEventType.SUBTITLE_STREAM: SubtitleStreamedEvent,
         ShareEventType.THUMBNAIL_STREAM: ThumbnailStreamedEvent,
+
+        # Zip
+        ShareEventType.ZIP_DOWNLOAD: ZipDownloadEvent,
 
     }
 

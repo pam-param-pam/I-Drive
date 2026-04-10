@@ -12,7 +12,6 @@ from . import user_service, cache_service
 from ..constants import TOKEN_EXPIRY_DAYS, QR_CODE_SESSION_EXPIRY, cache, EventCode
 from ..core.Serializers import DeviceTokenSerializer
 from ..core.dataModels.http import RequestContext
-from ..core.deviceControl.DeviceControlState import DeviceControlState
 from ..core.errors import BadRequestError, UsernameTakenError, ResourceNotFoundError, ResourcePermissionError
 from ..core.helpers import get_ip, validate_value
 from ..core.http.utils import get_device_metadata
@@ -146,7 +145,6 @@ def _revoke_device(user: User, device_id: str) -> None:
         if not token:
             return
 
-        DeviceControlState.clear_all(token.device_id)
         token.delete()
 
 

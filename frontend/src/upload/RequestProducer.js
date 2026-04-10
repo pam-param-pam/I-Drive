@@ -6,7 +6,7 @@ import {
    appendMp4BoxBuffer,
    generateIv,
    generateKey,
-   isVideoFile,
+   isVideoFile, isZipFile,
    makeThumbnailIfNeeded,
    parseVideoMetadata,
    roundUpTo64
@@ -18,13 +18,14 @@ import { buildVttFromSamples } from "@/utils/subtitleUtlis.js"
 import { getUploader } from "@/upload/Uploader.js"
 
 export class RequestProducer {
-   constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles }) {
+   constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles, zipWorker }) {
       this.uploadStore = useUploadStore()
       this.mainStore = useMainStore()
       this.uploadRuntime = uploadRuntime
       this.fileQueue = fileQueue
       this.requestQueue = requestQueue
       this.requestMoreFiles = requestMoreFiles
+      this.zipWorker = zipWorker
 
       this.createdFolders = new Map()
       this.mp4Boxes = new Map()
@@ -107,6 +108,12 @@ export class RequestProducer {
                   attachments.push({ type: attachmentType.thumbnail, fileObj: queueFile.fileObj, rawBlob: thumbnail })
                   totalSize += roundUpTo64(thumbnail.size)
                }
+            }
+
+            // ---------- ZIP HANDLING -----------
+            if (isZipFile(queueFile.fileObj.extension)) {
+               state.markZipExtractionRequired()
+
             }
 
             // ---------- MP4 BOX HANDLING ----------

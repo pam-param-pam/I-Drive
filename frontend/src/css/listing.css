@@ -146,14 +146,14 @@
 /*  display: none;*/
 /*}*/
 
-/*#listing.list {*/
+/*.list {*/
 /*  flex-direction: column;*/
 /*  width: 100%;*/
 /*  max-width: 100%;*/
 /*  margin: 0;*/
 /*}*/
 
-/*#listing.list .item {*/
+/*.list .item {*/
 /*  width: 100%;*/
 /*  margin: 0;*/
 /*  border: 1px solid rgba(0, 0, 0, 0.1);*/
@@ -161,54 +161,49 @@
 /*  border-top: 0;*/
 /*}*/
 
-/*#listing.list h2 {*/
+/*.list h2 {*/
 /*  display: none;*/
 /*}*/
 
-/*!*#listing .item[aria-selected=true] {*!*/
-/*!*  background: var(--blue) !important;*!*/
-/*!*  !*color: var(--item-selected) !important;*!*!*/
-/*!*}*!*/
-
-/*#listing.list .item div:first-of-type {*/
+/*.list .item div:first-of-type {*/
 /*  width: 3em;*/
 /*}*/
 
-/*#listing.list .item div:first-of-type i {*/
+/*.list .item div:first-of-type i {*/
 /*  font-size: 2em;*/
 /*}*/
 
-/*#listing.list .item div:first-of-type img {*/
+/*.list .item div:first-of-type img {*/
 /*  width: 2em;*/
 /*  height: 2em;*/
 /*}*/
 
-/*#listing.list .item div:last-of-type {*/
+/*.list .item div:last-of-type {*/
 /*  width: calc(100% - 3em);*/
 /*  display: flex;*/
 /*  align-items: center;*/
 /*}*/
 
-/*#listing.list .item .name {*/
+/*.list .item .name {*/
 /*  width: 50%;*/
 /*}*/
 
-/*#listing.list .item .size {*/
+/*.list .item .size {*/
 /*  width: 25%;*/
 /*}*/
 
-/*#listing .item.header {*/
+/*.item.header {*/
 /*  display: none !important;*/
 /*  background-color: #ccc;*/
 /*}*/
 
-/*#listing.list .header i {*/
+/*.list .header i {*/
 /*  font-size: 1.5em;*/
 /*  vertical-align: middle;*/
 /*  margin-left: .2em;*/
 /*}*/
 
-/*#listing.list .item.header {*/
+/*.list .item.header {*/
 /*  display: flex !important;*/
 /*  background: var(--background);*/
 /*  z-index: 999;*/
@@ -217,45 +212,45 @@
 /*  border-bottom: 1px solid rgba(0, 0, 0, 0.1);*/
 /*}*/
 
-/*#listing.list .item.header>div:first-child {*/
+/*.list .item.header>div:first-child {*/
 /*  width: 0;*/
 /*}*/
 
-/*#listing.list .item.header .name {*/
+/*.list .item.header .name {*/
 /*  margin-right: 3em;*/
 /*}*/
 
-/*#listing.list .header a {*/
+/*.list .header a {*/
 /*  color: inherit;*/
 /*}*/
 
-/*#listing.list .item.header>div:first-child {*/
+/*.list .item.header>div:first-child {*/
 /*  width: 0;*/
 /*}*/
 
-/*#listing.list .name {*/
+/*.list .name {*/
 /*  font-weight: normal;*/
 /*}*/
 
-/*#listing.list .item.header .name {*/
+/*.list .item.header .name {*/
 /*  margin-right: 3em;*/
 /*}*/
 
-/*#listing.list .header span {*/
+/*.list .header span {*/
 /*  vertical-align: middle;*/
 /*}*/
 
-/*#listing.list .header i {*/
+/*.list .header i {*/
 /*  opacity: 0;*/
 /*  transition: .1s ease all;*/
 /*}*/
 
-/*#listing.list .header p:hover i,*/
-/*#listing.list .header .active i {*/
+/*.list .header p:hover i,*/
+/*.list .header .active i {*/
 /*  opacity: 1;*/
 /*}*/
 
-/*#listing.list .item.header .active {*/
+/*.list .item.header .active {*/
 /*  font-weight: bold;*/
 /*}*/
 
@@ -291,3 +286,4 @@
   border: 1px solid #d3dce6;
   margin: 15px 1em 15px 0;
 }
+

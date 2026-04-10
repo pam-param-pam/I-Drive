@@ -33,7 +33,7 @@ import { mapActions, mapState } from "pinia"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
-import { humanTime } from "../utils/common.js"
+import { humanTime, resolveItemAction } from "../utils/common.js"
 
 export default {
    name: "files",
@@ -84,10 +84,6 @@ export default {
    },
 
    watch: {
-      selected() { console.log("Share rerender: selected changed") },
-      sortedItems() { console.log("Share rerender: items changed") },
-      loading() { console.log("Share rerender: loading changed") },
-
       '$route.params.folderId'() {
          this.fetchShare()
       }
@@ -113,20 +109,17 @@ export default {
       },
 
       getNewRoute(item) {
-         if (item.isDir) {
-            return { name: "Share", params: { token: this.token, folderId: item.id } }
-         } else {
-            if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
-               return {
-                  name: "ShareEditor",
-                  params: { folderId: item.parent_id, fileId: item.id, token: this.token }
-               }
-            } else {
-               return {
-                  name: "SharePreview",
-                  params: { folderId: item.parent_id, fileId: item.id, token: this.token }
-               }
-            }
+         const action = resolveItemAction(item)
+
+         switch (action) {
+            case "dir":
+               return { name: "Share", params: { ...this.$route.params, folderId: item.id }}
+            case "zip":
+               return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id }}
+            case "editor":
+               return { name: "ShareEditor", params: { ...this.$route.params, fileId: item.id }}
+            case "preview":
+               return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}
          }
       },
 

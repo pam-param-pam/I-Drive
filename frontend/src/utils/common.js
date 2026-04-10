@@ -101,5 +101,15 @@ export function lazyWithLoading(importer, delay = 150) {
    }
 }
 
+export function resolveItemAction(item) {
+   if (item.isDir) return "dir"
 
+   if (item.extension === ".zip") return "zip"
+
+   if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
+      return "editor"
+   }
+
+   return "preview"
+}
 

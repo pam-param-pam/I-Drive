@@ -4,8 +4,8 @@ import Layout from "@/views/Layout.vue"
 
 import { useMainStore } from "@/stores/mainStore.js"
 import { validateLogin } from "@/utils/auth.js"
-import { deviceControl } from "@/utils/deviceControl.js"
 import { lazyWithLoading } from "@/utils/common.js"
+import Zip from "@/views/Zip.vue"
 
 
 const router = createRouter({
@@ -46,7 +46,7 @@ const router = createRouter({
                },
                children: [
                   {
-                     path: "editor/:fileId", // The order of these two Editor children matters :3
+                     path: "editor/:fileId",
                      name: "ShareEditor",
                      component: lazyWithLoading(() => import("../views/Editor.vue")),
                      props: true,
@@ -56,9 +56,9 @@ const router = createRouter({
                   },
 
                   {
-                     path: "preview/:fileId", // kolejnosc tych dwóch Preview childrenów tu ma znaczenie :3
+                     path: "preview/:fileId",
                      name: "SharePreview",
-                     component: lazyWithLoading(() => import("../views/Preview.vue")),
+                     component: lazyWithLoading(() => import("../views/preview/SharePreview.vue")),
                      props: true,
                      meta: {
                         requiresAuth: false
@@ -70,7 +70,7 @@ const router = createRouter({
             {
                path: "/trash",
                name: "Trash",
-               component: Trash,  // idk why but lazy loading this doesnt work, css gets messed up, very weaird
+               component: Trash,  // idk why but lazy loading this doesnt work, css gets messed up, very weird
                meta: {
                   requiresAuth: true
                }
@@ -88,7 +88,7 @@ const router = createRouter({
                   {
                      path: "preview/:fileId",
                      name: "Preview",
-                     component: lazyWithLoading(() => import("../views/Preview.vue")),
+                     component: lazyWithLoading(() => import("../views/preview/NormalPreview.vue")),
                      props: true,
                      meta: {
                         requiresAuth: true
@@ -105,6 +105,27 @@ const router = createRouter({
                      }
                   },
                ]
+            },
+            {
+               path: "/zip/:folderId/:zipFileId/:path?",
+               name: "Zip",
+               component: Zip,
+               props: true,
+               meta: {
+                  requiresAuth: true
+               },
+               children: [
+                  {
+                     path: "preview/:fileId",
+                     name: "ZipPreview",
+                     component: lazyWithLoading(() => import("../views/preview/ZipPreview.vue")),
+                     props: true,
+                     meta: {
+                        requiresAuth: true
+                     }
+                  }
+               ]
+
             },
             {
                path: "/settings",
@@ -187,14 +208,6 @@ router.beforeEach((to, from, next) => {
    next()
 })
 
-router.afterEach((to, from) => {
-   const routeForPush = {
-      name: to.name,
-      params: { ...to.params },
-      query: { ...to.query }
-   }
-   deviceControl.sendRouteChangeEvent(routeForPush)
-})
 
 router.beforeResolve(async (to, from, next) => {
    const store = useMainStore()

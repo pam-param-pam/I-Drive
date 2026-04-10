@@ -8,6 +8,7 @@ export const useMainStore = defineStore("main", {
       user: null,
       perms: null,
       settings: null,
+      config: null,
       progress: 0,
       token: "",
       deviceId: "",
@@ -28,16 +29,7 @@ export const useMainStore = defineStore("main", {
       usage: { used: 0, total: 0 },
       popupPreview: {},
       isFilesActive: false,
-      deviceControlStatus: { "status": "unknown" },
-      deviceControlOptions: {
-         isVideoFullscreenActive: true,
-         isVideoSubtitlesActive: true,
-         isVideoSeekActive: true,
-         isVideoToggleActive: true,
-         isNavigationActive: true,
-         isDeviceControlActive: true,
-         isVideoVolumeChangeActive: true
-      },
+
       multiSelection: false,
       contextMenuState: {
          visible: false,
@@ -49,10 +41,6 @@ export const useMainStore = defineStore("main", {
       }
    }),
 
-   persist: {
-      key: "main:device-control",
-      pick: ["deviceControlOptions"]
-   },
 
    getters: {
       areImagesBlocked() {
@@ -211,11 +199,10 @@ export const useMainStore = defineStore("main", {
          this.deviceId = value
       },
       setUser(value) {
-         if (value === null) {
-            this.user = null
-            return
-         }
          this.user = value
+      },
+      setConfig(value) {
+         this.config = value
       },
       setLastItem(value) {
          this.lastItem = value

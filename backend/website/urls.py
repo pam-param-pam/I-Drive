@@ -17,8 +17,8 @@ from .views.itemManagmentViews import rename_view, move_items_to_trash_view, mov
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits, get_visit_events
-from .views.streamViews import stream_thumbnail, stream_file, stream_zip_files, stream_moment, stream_subtitle
-from .views.testViews import get_discord_state
+from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle, stream_zip_entry
+from .views.testViews import get_discord_state, get_zip_folder, test_stream_zip_entry
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
@@ -66,10 +66,11 @@ urlpatterns = [
     path("trash", ["GET"], get_trash, name="trash"),
     path("search", ["GET"], search, name="search"),
 
-    path("files/<signed_file_id>/thumbnail/stream", ["GET"], stream_thumbnail, name="stream_thumbnail"),
-    path("files/<signed_file_id>/moments/<moment_id>/stream", ["GET"], stream_moment, name="stream_moment"),
-    path("files/<signed_file_id>/subtitles/<subtitle_id>/stream", ["GET"], stream_subtitle, name="stream_subtitle"),
+    path("files/<signed_file_id>/thumbnail/stream", ["GET"], serve_thumbnail, name="stream_thumbnail"),
+    path("files/<signed_file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_moment"),
+    path("files/<signed_file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_subtitle"),
     path("files/<signed_file_id>/stream", ["GET"], stream_file, name="stream file"),
+    path("files/<signed_file_id>/stream/zip-entry", ["GET"], stream_zip_entry, name="stream zip entry"),
 
     path("files", ["POST"], create_file_view, name="create file"),
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
@@ -154,13 +155,17 @@ urlpatterns = [
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     django_path('admin', admin.site.urls),
-    django_path('test/<user_id>', get_discord_state),
 
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 
     path("cleanup/<message_id>", ['GET'], check_message_id, name="check if message id is used"),
 
+    django_path('test/<user_id>', get_discord_state),
+    django_path("test2", test_stream_zip_entry),
+    django_path("test3", get_zip_folder),
+
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+
     # 85 endpoints
 ]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

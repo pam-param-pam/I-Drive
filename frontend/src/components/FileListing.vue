@@ -4,6 +4,7 @@
       <header-bar>
          <Search
             v-if="headerButtons.search"
+            :advanced="headerButtons.advancedSearch"
             ref="search"
             @exit="$emit('onSearchClosed')"
             @onSearchQuery="(query) => $emit('onSearchQuery', query)"
@@ -857,4 +858,98 @@ export default {
   font-size: 14px;
   color: inherit;
 }
+
+
+
+
+
+
+
+
+/* ============================= */
+/* 📝 LIST SORT HEADER STYLES    */
+/* ============================= */
+
+.list .item.header {
+   display: flex;
+   align-items: center;
+
+   padding: 8px 12px;
+
+   background: var(--background);
+   border-bottom: 1px solid var(--divider);
+
+   position: sticky;   /* optional but usually desired */
+   top: 0;
+   z-index: 10;
+}
+
+/* inner container must behave like row */
+.list .item.header > div {
+   display: flex;
+   width: 100%;
+   align-items: center;
+}
+
+/* simulate "icon column" spacing */
+.list .item.header > div::before {
+   content: "";
+   flex: 0 0 48px;
+}
+
+/* header cells */
+.list .item.header p {
+   display: flex;
+   align-items: center;
+   gap: 6px;
+
+   margin: 0;
+   padding: 6px 0;
+
+   cursor: pointer;
+   font-size: 13px;
+
+   color: #666;
+   transition: color 0.2s;
+}
+
+/* COLUMN WIDTHS — must match row flex */
+
+/* name */
+.list .item.header .nameSort {
+   flex: 3;
+}
+
+/* size */
+.list .item.header .sizeSort {
+   flex: 1;
+   justify-content: flex-end;
+}
+
+/* created */
+.list .item.header .createdSort {
+   flex: 1.5;
+   justify-content: flex-end;
+}
+
+/* active sorting */
+.list .item.header p.active {
+   font-weight: 600;
+   color: var(--textPrimary);
+}
+
+/* sort icon */
+.list .item.header i.material-icons {
+   font-size: 14px;
+   opacity: 0.6;
+}
+
+/* show icon on hover or active */
+.list .item.header p:hover i,
+.list .item.header p.active i {
+   opacity: 1;
+}
+
+
+
 </style>

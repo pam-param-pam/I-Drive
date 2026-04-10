@@ -23,6 +23,7 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setUser(body.user)
    mainStore.setSettings(body.settings)
    mainStore.setPerms(body.perms)
+   mainStore.setConfig(body.config)
    mainStore.setToken(token)
    mainStore.setDeviceId(deviceId)
 
