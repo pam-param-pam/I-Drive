@@ -157,8 +157,14 @@ class FolderPasswordThrottle(MyUserRateThrottleBase):
 class MediaThrottle(MyUserRateThrottleBase):
     scope = 'media'
 
+class NonCacheMediaThrottle(MyUserRateThrottleBase):
+    scope = 'uncached_media'
+
 class AnonUserMediaThrottle(MyUserRateThrottleBase):
     scope = 'media_anon'
+
+class AnonUserNonCacheMediaThrottle(MyUserRateThrottleBase):
+    scope = 'uncached_media_anon'
 
 class SearchThrottle(MyUserRateThrottleBase):
     scope = 'search'

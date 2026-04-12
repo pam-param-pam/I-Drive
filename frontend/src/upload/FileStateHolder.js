@@ -13,7 +13,6 @@ export class FileStateHolder {
 
       this.thumbnailExtracted = undefined
       this.thumbnailUploaded = false
-      this.zipExtractionDone = false
 
       this.videoMetadataRequired = undefined
       this.videoMetadataExtracted = false
@@ -22,7 +21,6 @@ export class FileStateHolder {
       this.subtitlesUploaded = false
       this.expectedSubtitleCount = 0
       this.extractedSubtitleCount = 0
-      this.zipExtractionRequired = false
 
       this.status = fileUploadStatus.preparing
       this.progress = 0
@@ -88,10 +86,6 @@ export class FileStateHolder {
       this._set("videoMetadataExtracted", true)
    }
 
-   markZipExtractionRequired() {
-      this._set("zipExtractionRequired", true)
-   }
-
    markSubtitlesRequired() {
       this._set("subtitlesRequired", true)
    }
@@ -104,9 +98,6 @@ export class FileStateHolder {
       this._set("subtitlesUploaded", true)
    }
 
-   markZipExtractionDone() {
-      this._set("zipExtractionDone", true)
-   }
 
    setExpectedSubtitleCount(count) {
       this._set("expectedSubtitleCount", count)
@@ -200,8 +191,6 @@ export class FileStateHolder {
       const thumbnailDone = !this.thumbnailExtracted || this.thumbnailUploaded
       const videoMetadataDone = !this.videoMetadataRequired || this.videoMetadataExtracted || this.isFullySplit()
       const filledInfo = this.totalChunks !== undefined
-      // const zipDone = this.zipExtractionRequired && this.zipExtractionDone
-      const zipDone = true
 
       const subtitlesDone =
          !this.subtitlesRequired || //base case, no subs
@@ -218,7 +207,7 @@ export class FileStateHolder {
       // console.log("subtitlesDone: " + subtitlesDone)
       // console.log("isFullySplit: " + this.isFullySplit())
 
-      return (chunksDone && thumbnailDone && videoMetadataDone && filledInfo && zipDone && subtitlesDone) || this.fileObj.size === 0
+      return (chunksDone && thumbnailDone && videoMetadataDone && filledInfo && subtitlesDone) || this.fileObj.size === 0
    }
 
    isErrorStatus() {

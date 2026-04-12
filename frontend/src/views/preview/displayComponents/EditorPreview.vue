@@ -12,7 +12,7 @@
       <div class="editor-header">
          <div>
             <!-- theme selector -->
-            <select v-model="selectedTheme" @change="applyTheme">
+            <select v-if="!isPreview" v-model="selectedTheme" @change="applyTheme">
                <option
                   v-for="theme in currentThemes"
                   :key="theme.value"
@@ -23,13 +23,13 @@
             </select>
 
             <!-- font controls -->
-            <action icon="remove" @action="decreaseFontSize" />
-            <span class="font-size">{{ fontSize }}</span>
-            <action icon="add" @action="increaseFontSize" />
+            <action v-if="!isPreview" icon="remove" @action="decreaseFontSize" />
+            <span v-if="!isPreview" class="font-size">{{ fontSize }}</span>
+            <action v-if="!isPreview" icon="add" @action="increaseFontSize" />
             <action
+               v-if="isMarkdownFile"
                icon="preview"
                @action="preview()"
-               v-if="isMarkdownFile"
             />
             <action
                buttonId="copy"
@@ -37,10 +37,10 @@
                @action="copy()"
             />
             <action
+               v-if="!readonly"
                buttonId="save"
                icon="save"
                @action="save()"
-               v-if="!readonly"
             />
          </div>
       </div>
@@ -219,7 +219,7 @@ export default {
          undoManager.markClean()
          this.editor.session.on("change", () => {
             const isClean = this.editor.getValue() === this.originalContent
-            this.$emit("previewEvent", {type: PreviewEvent.EDITOR_CLEAN_CHANGE, payload: { is_clean: isClean }})
+            this.$emit("previewEvent", { type: PreviewEvent.EDITOR_CLEAN_CHANGE, payload: { is_clean: isClean } })
          })
 
          this.setLoading(false)
@@ -293,7 +293,7 @@ export default {
          buttons.done("save")
          buttons.success("save")
          this.originalContent = this.editor.getValue()
-         this.$emit("previewEvent", {type: PreviewEvent.EDITOR_CLEAN_CHANGE, payload: { is_clean: true }})
+         this.$emit("previewEvent", { type: PreviewEvent.EDITOR_CLEAN_CHANGE, payload: { is_clean: true } })
          let message = this.$t("toasts.fileSaved")
          this.$toast.success(message)
       },

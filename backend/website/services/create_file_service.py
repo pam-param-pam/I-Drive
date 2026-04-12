@@ -163,7 +163,7 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
     if file_obj.size > MAX_DISCORD_MESSAGE_SIZE:
         raise BadRequestError("You cannot edit a file larger than 10Mb!")
 
-    if file_obj.type not in ("Text", "Code", "Database"):
+    if file_obj.type not in ("Text", "Code", "Database", "Other"):
         raise BadRequestError("You can only edit text files!")
 
     fragments = Fragment.objects.filter(file=file_obj)

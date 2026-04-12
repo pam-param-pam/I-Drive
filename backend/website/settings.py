@@ -196,12 +196,14 @@ REST_FRAMEWORK = {
         'anon': '30/m',
         'user': '60/5s',
         'media': '1000/m',
-        'media_anon': '400/m',
+        'uncached_media': '60/m',
+        'media_anon': '500/m',
+        'uncached_media_anon': '30/m',
         'folder_password': '20/m',
         'password_change': '10/m',
         'search': '60/m',
         'register': '20/h',
-        'discord_settings': '2/1s',
+        'discord_settings': '30/m',
         'login': '5/10s'
 
     },

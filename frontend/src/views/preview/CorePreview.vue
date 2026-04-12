@@ -118,12 +118,12 @@
                   {{ $t("files.noPreview") }}
                </div>
                <div>
-                  <a
-                     :href="file?.download_url"
-                     class="button button--flat"
-                     download
-                     target="_blank"
-                  >
+                  <a v-if="file?.type === 'Other'" class="button button--flat" target="_blank" @click="openEditor">
+                     <div>
+                        <i class="material-icons">edit</i>{{ $t("buttons.openEditor") }}
+                     </div>
+                  </a>
+                  <a :href="file?.download_url" class="button button--flat" download target="_blank">
                      <div>
                         <i class="material-icons">file_download</i>{{ $t("buttons.download") }}
                      </div>
@@ -322,7 +322,12 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setCurrentFolderData", "setLastItem", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["updateItem", "setCurrentFolderData", "setLastItem", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      openEditor() {
+         const itemCopy = { ...this.file }
+         itemCopy.type = "Text"
+         this.updateItem(itemCopy)
+      },
       handleFileChange() {
          this.setError(null)
          if (!this.loading && !this.file) {

@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "openEditor": "Open Editor",
     "reEnable": "Spróbuj aktywować",
     "enable": "Włącz",
     "markUnread": "Oznacz jako nieprzeczytane",

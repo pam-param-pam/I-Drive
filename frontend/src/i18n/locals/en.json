@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "openEditor": "Open Editor",
     "reEnable": "Re enable",
     "enable": "Enable",
     "markUnread": "Mark unread",

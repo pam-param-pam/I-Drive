@@ -9,6 +9,7 @@
 <script>
 import { mapActions } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
+import { getFileRawData } from "@/api/files.js"
 
 export default {
    name: "PdfPreview",
@@ -37,7 +38,8 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["setTextError"]),
       onError(e) {
-         this.$emit("Failed to load pdf file")
+         this.$emit("error", "Failed to load pdf file")
+         getFileRawData(this.src, { responseType: "arraybuffer" })
       }
    }
 }

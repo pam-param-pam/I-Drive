@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
     CheckShareItemBelongings, CheckTrash, CheckState
-from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
+from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle, AnonUserNonCacheMediaThrottle
 from ..constants import API_BASE_URL, ShareEventType
 from ..core.Serializers import ShareSerializer, ShareAccessSerializer
 from ..core.crypto.signer import sign_resource_id_with_expiry
@@ -173,7 +173,7 @@ def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):
 
 @api_view(['GET'])
 @no_gzip
-@throttle_classes([AnonUserMediaThrottle])
+@throttle_classes([AnonUserNonCacheMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")

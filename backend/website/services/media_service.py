@@ -38,8 +38,7 @@ def get_thumbnail_response(request, file_obj: File, ):
         filename=f"thumbnail_{file_obj.get_name_no_extension()}.webp",
         content_type="image/webp",
         inline=isInline,
-        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
-        vary=["x-resource-password"],
+        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}"
     )
 
 
@@ -58,8 +57,7 @@ def get_moment_response(request, file_obj: File, moment: Moment):
         filename=f"moment_{file_obj.get_name_no_extension()}.webp",
         content_type="image/webp",
         inline=isInline,
-        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
-        vary=["x-resource-password"],
+        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}"
     )
 
 
@@ -78,8 +76,7 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
         filename=f"subtitle_{file_obj.get_name_no_extension()}.webp",
         content_type="image/webp",
         inline=isInline,
-        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
-        vary=["x-resource-password"],
+        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}"
     )
 
 
@@ -102,10 +99,8 @@ def get_file_response(request, file_obj: File):
         byte_source=source,
         filename=file_obj.name,
         inline=is_inline,
-        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
-        vary=["x-resource-password"],
         x_frame_from_referer=referer,
-        etag=str(hash(file_obj.last_modified_at))# todo? perhaps just not set cache for files that can modify, todo
+        etag=str(hash(file_obj.last_modified_at))
     )
     return response
 

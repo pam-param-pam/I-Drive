@@ -110,12 +110,6 @@ export class RequestProducer {
                }
             }
 
-            // ---------- ZIP HANDLING -----------
-            if (isZipFile(queueFile.fileObj.extension)) {
-               state.markZipExtractionRequired()
-
-            }
-
             // ---------- MP4 BOX HANDLING ----------
             let mp4boxFile = this.mp4Boxes.get(frontendId)
             if (isVideoFile(queueFile.fileObj.extension) && !mp4boxFile) {

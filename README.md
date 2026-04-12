@@ -19,7 +19,7 @@ It's basically like Google Drive, but instead it stores all files in Discord.
 
 
 # Demo
-~~It's vailable at `https://idrive.pamparampam.dev`~~
+~~It's available at `https://idrive.pamparampam.dev`~~
 
 ~~Credentials: `demo`/`demo`~~
 
@@ -43,6 +43,7 @@ Sorry, do demo currently.
 | Docker support                                                       | ✅       |
 | Dark theme                                                           | ✅       |
 | Virtual lists to render tens of thousand of files in a single folder | ✅       |
+| ZIP file archive viewer                                              | ✅       |
 | And a LOT more features!                                             | ✅       |
 
 For a list of bugs, and planned features
@@ -66,7 +67,7 @@ It has to:
 
 The same thing applies to pretty much every part of this app. Even if something looks simple at first glance. 
 It's most likely pretty complicated under the hood. 
-After all, this entire project has more than **36k** lines of code. 
+After all, this entire project has more than **38k** lines of code. 
 And another **2k** of configuration and translation lines
 
 
