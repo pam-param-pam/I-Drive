@@ -95,7 +95,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "setError", "showHover", "getFolderPassword"]),
+      ...mapActions(useMainStore, ["closeHover", "setFolderPassword", "showHover", "getFolderPassword"]),
       reCheckFolderIds() {
          this.remainingFolderLockFromIds = this.requiredFolderPasswords.filter(folder => {
             const pwd = this.getFolderPassword(folder.id)

@@ -1,9 +1,9 @@
 <template>
    <div style="height: 100%">
       <breadcrumbs v-if="!searchActive" :folderList="breadcrumbs" base="/files" />
-      <errors v-if="error" :error="error" />
+      <errors v-if="itemsError" :error="itemsError" />
 
-      <h4 v-if="!error && searchActive && !loading">
+      <h4 v-if="!itemsError && searchActive && !itemsLoading">
          {{ $t("files.searchItemsFound", { amount: searchItems.length }) }}
       </h4>
       <FileListing
@@ -14,13 +14,12 @@
          @dragLeave="onDragLeave"
          @dropUpload="onDropUpload"
          @onOpen="onOpen"
-         @onSearchClosed="onSearchClosed"
          @onSearchQuery="onSearchQuery"
          @openInNewWindow="openInNewWindow"
          @upload="upload"
          @uploadInput="onUploadInput"
       ></FileListing>
-      <router-view />
+      <router-view/>
    </div>
 </template>
 
@@ -40,11 +39,14 @@ import { cancelRequestBySignature } from "@/axios/helper.js"
 import { getUploader } from "@/upload/Uploader.js"
 import axios from "axios"
 import { resolveItemAction } from "@/utils/common.js"
+import HeaderBar from "@/components/header/HeaderBar.vue"
+import Search from "@/components/Search.vue"
 
 export default {
    name: "files",
 
    components: {
+      Search, HeaderBar,
       Breadcrumbs,
       Errors,
       FileListing
@@ -63,17 +65,17 @@ export default {
    data() {
       return {
          folderList: [],
-         dragCounter: 0,
-         isActive: true
+         dragCounter: 0
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ["currentPrompt", "searchItems", "searchFilters", "breadcrumbs", "error", "user", "settings", "loading", "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "currentPrompt", "searchItems", "breadcrumbs", "user", "settings",
+         "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
       headerButtons() {
          return {
-            info: !this.disabledCreation,
-            upload: this.perms.create && this.currentFolder,
+            info: !this.disabledCreation || this.selectedCount > 0,
+            upload: this.perms.create && this.currentFolder && !this.searchActive,
             download: this.perms.download && this.selectedCount > 0,
             moveToTrash: this.selectedCount > 0 && this.perms.delete,
             modify: this.selectedCount === 1 && this.perms.modify,
@@ -97,52 +99,31 @@ export default {
       this.fetchFolder()
    },
 
-   unmounted() {
-      this.isActive = false
-   },
-
    watch: {
-      '$route.params.folderId'() {
+      "$route.params.folderId"() {
          this.fetchFolder()
-      },
-      selected() { console.log("Files rerender: selected changed") },
-      sortedItems() { console.log("Files rerender: items changed") },
-      loading() { console.log("Files rerender: loading changed") },
+      }
 
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setSearchFilters", "setSearchItems", "setCurrentFolderData", "setLoading", "setError", "setDisabledCreation", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
+      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
 
       async onSearchQuery(searchParams) {
-         this.setLoading(true)
-         let lockFrom = this.currentFolder?.lockFrom
-         let password = this.getFolderPassword(lockFrom)
+         this.setItemsLoading(true)
          try {
-            this.setSearchActive(true)
-            this.setDisabledCreation(true)
+            let lockFrom = this.currentFolder?.lockFrom
+            let password = this.getFolderPassword(lockFrom)
             let items = await search(searchParams, lockFrom, password)
             this.setSearchItems(items)
          } catch (error) {
             if (axios.isCancel(error)) return
-            console.log(error)
-            this.setError(error)
-
+            this.setItemsError(error)
          } finally {
-            this.setLoading(false)
+            this.setItemsLoading(false)
          }
       },
 
-      async onSearchClosed() {
-         this.setSearchItems(null)
-         this.setSearchActive(false)
-         this.setDisabledCreation(false)
-         this.setError(null)
-         cancelRequestBySignature("getItems")
-         let searchDict = { ...this.searchFilters }
-         searchDict["query"] = ""
-         this.setSearchFilters(searchDict)
-      },
       upload() {
          if (typeof window.DataTransferItem !== "undefined" && typeof DataTransferItem.prototype.webkitGetAsEntry !== "undefined") {
             this.showHover("upload")
@@ -152,21 +133,21 @@ export default {
       },
 
       async fetchFolder() {
-         await this.onSearchClosed()
+         await this.$refs?.listing?.$refs?.search?.exit()
 
          if (this.currentFolder?.id === this.folderId && this.items) {
             this.folderList = this.currentFolder.breadcrumbs
          } else {
             try {
-               this.setLoading(true)
+               this.setItemsLoading(true)
                let res = await getItems(this.folderId, this.lockFrom)
                this.setCurrentFolderData(res)
             } catch (error) {
                if (axios.isCancel(error)) return
                console.log(error)
-               this.setError(error)
+               this.setItemsError(error)
             } finally {
-               if (this.isActive) this.setLoading(false)
+               this.setItemsLoading(false)
             }
          }
          //only set title if its not root folder and isn't locked
@@ -264,8 +245,6 @@ export default {
                return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
             case "zip":
                return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id } }
-            case "editor":
-               return { name: "Editor", params: { folderId: item.parent_id, fileId: item.id, lockFrom: item.lockFrom } }
             case "preview":
                return { name: "Preview", params: { ...this.$route.params, fileId: item.id } }
          }
@@ -281,7 +260,7 @@ export default {
          //if we are in search mode and we click to open a folder that we currently are in
          // routing won't work(as its already in that route, so we need to just quit the search)
          if (this.searchActive && item.id === this.currentFolder.id) {
-            this.onSearchClosed()
+            this.$refs?.listing?.$refs?.search?.exit()
             return
          }
          let route = this.getNewRoute(item)

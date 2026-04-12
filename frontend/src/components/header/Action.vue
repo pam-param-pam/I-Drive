@@ -1,5 +1,5 @@
 <template>
-   <button :aria-label="label" :title="label" class="action" @click="action">
+   <button :aria-label="label" :title="label" class="action" :id="buttonId" @click="action">
       <i class="material-icons">{{ icon }}</i>
       <span>{{ label }}</span>
       <span v-if="counter > 0" class="counter">{{ counter }}</span>
@@ -13,7 +13,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
    name: "action",
-   props: ["icon", "label", "counter", "show", "promptProps"],
+   props: ["icon", "label", "counter", "show", "promptProps", "buttonId"],
    emits: ["action"],
    methods: {
       ...mapActions(useMainStore, ["showHover"]),

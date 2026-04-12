@@ -46,16 +46,6 @@ const router = createRouter({
                },
                children: [
                   {
-                     path: "editor/:fileId",
-                     name: "ShareEditor",
-                     component: lazyWithLoading(() => import("../views/Editor.vue")),
-                     props: true,
-                     meta: {
-                        requiresAuth: false
-                     }
-                  },
-
-                  {
                      path: "preview/:fileId",
                      name: "SharePreview",
                      component: lazyWithLoading(() => import("../views/preview/SharePreview.vue")),
@@ -93,17 +83,7 @@ const router = createRouter({
                      meta: {
                         requiresAuth: true
                      }
-                  },
-                  {
-                     path: "editor/:fileId",
-                     name: "Editor",
-                     component: lazyWithLoading(() => import("../views/Editor.vue")),
-
-                     props: true,
-                     meta: {
-                        requiresAuth: true
-                     }
-                  },
+                  }
                ]
             },
             {
@@ -213,7 +193,7 @@ router.beforeResolve(async (to, from, next) => {
    const store = useMainStore()
    store.closeHovers()
    store.resetSelected()
-   store.setError(null)
+   store.setItemsError(null)
    store.setMultiSelection(false)
    store.closeContextMenu()
    // this will only be null on first route

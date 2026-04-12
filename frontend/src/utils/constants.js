@@ -78,5 +78,7 @@ export const PreviewEvent = {
    MEDIA_PLAY: "play",
    MEDIA_PAUSE: "pause",
    FULLSCREEN_CHANGE: "fullscreen_change",
-   SUBTITLE_CHANGE: "subtitle_change"
+   SUBTITLE_CHANGE: "subtitle_change",
+   EDITOR_CLEAN_CHANGE: "editor_clean_change",
+   DOWNLOAD: "download"
 }

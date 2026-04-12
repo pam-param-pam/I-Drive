@@ -1,7 +1,7 @@
 <template>
    <CorePreview
       :file="file"
-      :isInShareContext="false"
+      :readonly="true"
       :headerButtons="headerButtons"
       source="zip"
       @close="onClose"
@@ -38,9 +38,9 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["items"]),
+      ...mapState(useMainStore, ["sortedItems"]),
       file() {
-         return this.items.find(f => f.id === this.fileId)
+         return this.sortedItems.find(f => f.id === this.fileId)
       }
    },
    methods: {

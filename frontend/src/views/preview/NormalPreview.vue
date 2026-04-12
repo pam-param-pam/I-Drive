@@ -5,7 +5,7 @@
       :headerButtons="headerButtons"
       @close="onClose"
       @PreviewEvent="onPreviewEvent"
-      file-id="" />
+   />
 </template>
 
 <script>
@@ -29,15 +29,12 @@ export default {
 
    },
    watch: {
-
       file: {
          immediate: true,
          async handler(file) {
             if (!file) return
-            this.addSelected(file)
-
             if (file.hasSubtitles) {
-               this.subtitles = await getSubtitles(this.file.id, this.file.lockFrom)
+               this.subtitles = await getSubtitles(file.id, file.lockFrom)
 
             }
          }
@@ -63,7 +60,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["showHover", "addSelected"]),
+      ...mapActions(useMainStore, ["showHover", "addSelected", "setTextError", "setLastItem"]),
       onPreviewEvent({ type, payload }) {
          if (type === PreviewEvent.MEDIA_PLAY) {
          } else if (type === PreviewEvent.MEDIA_PAUSE) {

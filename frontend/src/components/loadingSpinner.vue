@@ -6,21 +6,23 @@
             <div class="bounce2"></div>
             <div class="bounce3"></div>
          </div>
-         <span>{{ $t("files.loading") }}</span>
+         <span v-if="showText">{{ $t("files.loading") }}</span>
       </h2>
    </div>
 </template>
 
 <script>
-import { mapState } from "pinia"
-import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
    name: "loadingSpinner",
-
-   computed: {
-      ...mapState(useMainStore, ["loading"])
-   }
+   props: {
+      loading: Boolean,
+      showText: {
+         type: Boolean,
+         required: false,
+         default: true
+      }
+   },
 
 }
 

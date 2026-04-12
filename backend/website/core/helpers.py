@@ -166,13 +166,19 @@ def extract_key(data: Optional[dict], key: str, *, required: bool = True, defaul
 
     return data[key]
 
-def validate_key(data: Optional[dict], key: str, expected_type, *, required: bool = True, default=None, checks: list = None):
+def validate_key(data: Optional[dict], key: str, expected_type, *, required: bool = True, default=None, checks: list = None, conversion: bool = False):
     value = extract_key(
         data,
         key,
         required=required,
         default=default
     )
+
+    if conversion is not None and value is not None:
+        try:
+            value = expected_type(value)
+        except (ValueError, TypeError) as e:
+            raise BadRequestError(f"Field '{key}': conversion failed ({e}). " f"Value: {value}")
 
     try:
         return validate_value(

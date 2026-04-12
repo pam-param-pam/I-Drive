@@ -34,7 +34,7 @@ import { PreviewEvent } from "@/utils/constants.js"
 
 export default {
    props: ["file", "subtitles"],
-   emits: ["previewEvent"],
+   emits: ["previewEvent", "error"],
    data() {
       return {
          videoRef: null,
@@ -53,11 +53,8 @@ export default {
       this.videoRef = this.$refs.video
 
       if (!this.videoRef) return
-
-      if (!this.isInShareContext) {
-         this.videoRef.currentTime = this.file.media_position || 0
-         this.lastSentMediaPosition = this.file.media_position || 0
-      }
+      this.videoRef.currentTime = this.file.media_position || 0
+      this.lastSentMediaPosition = this.file.media_position || 0
 
       if (this.subtitles) {
          this.loadSubtitleStyle()
@@ -134,7 +131,7 @@ export default {
       },
 
       fullscreenChange() {
-         if (!this.videoRef || this.isInShareContext) return
+         if (!this.videoRef) return
 
          this.isFullscreen = !this.isFullscreen
 

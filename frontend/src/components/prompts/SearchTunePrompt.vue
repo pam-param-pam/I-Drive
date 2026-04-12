@@ -230,7 +230,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc", "setError", "setLoading"]),
+      ...mapActions(useMainStore, ["setSearchFilters", "setDisabledCreation", "resetSelected", "closeHover", "setSortingBy", "setSortByAsc"]),
       onPropertyChange() {
          this.range = null
       },
@@ -269,8 +269,6 @@ export default {
 
          this.setSortByAsc(!this.ascending)
          this.setSortingBy(this.orderBy)
-         this.setError(null)
-         this.setLoading(true)
       })
    }
 }

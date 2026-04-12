@@ -1,7 +1,14 @@
 import * as zip from "https://cdn.jsdelivr.net/npm/@zip.js/zip.js/+esm"
 
 export function getFileType(fileName) {
-  return  "Image"
+   if (!fileName) return "Other"
+
+   const idx = fileName.lastIndexOf(".")
+   if (idx === -1) return "Other"
+
+   const ext = fileName.slice(idx).toLowerCase()
+
+   return extensionMap[ext] || "Other"
 }
 
 // ---- limits ----
@@ -10,13 +17,13 @@ const MAX_ENTRIES = 20_000
 let zipTree = {}
 let zipEntriesMap = {}
 
-function looksLikeArchive(name) {
-   return /\.(zip|7z|rar|gz)$/i.test(name)
-}
+let baseUrl = null
+let extensionMap = {}
 
 function safeNumber(v, d = 0) {
    return typeof v === "number" && isFinite(v) && v >= 0 ? v : d
 }
+
 // --------------------
 // TREE BUILD
 // --------------------
@@ -71,34 +78,67 @@ function resolveNode(folderId) {
    return node
 }
 
-function flatten(node, parentPath) {
+function makeDownloadUrl(entry, url) {
+   const params = new URLSearchParams({
+      offset: entry.offset,
+      compressed_size: entry.compressedSize,
+      uncompressed_size: entry.uncompressedSize,
+      compression_method: entry.compressionMethod,
+      filename: entry.filename,
+   })
+
+   return url + "/zip-entry?" + params.toString()
+}
+
+function flatten(node, parentPath, url) {
    return Object.values(node).map(item => {
       const entry = item.entry
-
-      let download = null
-      if (entry) {
-         const params = new URLSearchParams({
-            offset: entry.offset,
-            compressed_size: entry.compressedSize,
-            uncompressed_size: entry.uncompressedSize,
-            compression_method: entry.compressionMethod,
-            filename: entry.filename
-         })
-         download = params.toString()
-      }
 
       return {
          id: item.path,
          name: item.name,
          isDir: item.isDir,
          type: getFileType(item.name),
-         // extension: detectExtension(item.name),
          size: entry?.uncompressedSize || 0,
          parent_id: parentPath || null,
          rawEntry: entry,
-         download_query: download
+         thumbOff: true,
+         download_url: entry ? makeDownloadUrl(entry, url) : null
       }
    })
+}
+
+// --------------------
+// SEARCH
+// --------------------
+function normalizeQuery(query) {
+   return (query || "").toLowerCase().trim()
+}
+
+function searchEntries(query, url) {
+   const q = normalizeQuery(query)
+
+   if (!q) return []
+
+   return Object.entries(zipEntriesMap)
+      .filter(([path]) => path.toLowerCase().includes(q))
+      .map(([path, entry]) => {
+         const parts = path.split("/").filter(Boolean)
+         const name = parts[parts.length - 1]
+         const parentPath = parts.length > 1 ? parts.slice(0, -1).join("/") : null
+
+         return {
+            id: path,
+            name,
+            isDir: false,
+            type: getFileType(name),
+            size: entry?.uncompressedSize || 0,
+            parent_id: parentPath,
+            rawEntry: entry,
+            thumbOff: true,
+            download_url: makeDownloadUrl(entry, url)
+         }
+      })
 }
 
 // --------------------
@@ -109,31 +149,21 @@ self.onmessage = async (e) => {
 
    try {
       if (type === "init") {
-         const { url } = payload
+         const { url, extensions } = payload
 
-         const reader = new zip.ZipReader(
-            new zip.HttpReader(url, { useRangeHeader: true })
-         )
-         const entries = await reader.getEntries()
+         baseUrl = url
+         extensionMap = extensions || {}
 
-         if (entries.length > MAX_ENTRIES) throw new Error("Too many files")
-
-         let total = 0
-         const fileSize = reader.reader.size
+         const reader = new zip.ZipReader(new zip.HttpReader(baseUrl, { useRangeHeader: true }))
+         const generator = reader.getEntriesGenerator()
 
          const safeEntries = []
 
-         for (const entry of entries) {
+         for await (const entry of generator) {
+            if (safeEntries.length >= MAX_ENTRIES) throw new Error("Zip archive has too many files")
+
             const u = safeNumber(entry.uncompressedSize)
             const c = Math.max(safeNumber(entry.compressedSize), 1)
-
-            if (entry.offset < 0 || entry.offset > fileSize) {
-               throw new Error("Invalid offset")
-            }
-
-            if (!entry.directory && looksLikeArchive(entry.filename)) {
-               throw new Error("Nested archive")
-            }
 
             safeEntries.push({
                filename: entry.filename,
@@ -150,18 +180,32 @@ self.onmessage = async (e) => {
          zipEntriesMap = built.map
 
          self.postMessage({ type: "ready" })
+         return
       }
 
       if (type === "list") {
-         const { path } = payload
+         if (!baseUrl) throw new Error("Worker not initialized")
 
+         const { path } = payload
          const node = resolveNode(path)
-         const items = flatten(node, path)
+         const items = flatten(node, path, baseUrl)
 
          self.postMessage({ type: "list", items })
+         return
       }
 
+      if (type === "search") {
+         if (!baseUrl) throw new Error("Worker not initialized")
+
+         const { query } = payload
+         const items = searchEntries(query, baseUrl)
+
+         self.postMessage({ type: "search", items })
+         return
+      }
+
+      throw new Error(`Unknown worker message type: ${type}`)
    } catch (err) {
-      self.postMessage({ type: "error", error: err.message })
+      self.postMessage({ type: "error", error: err?.message || String(err) })
    }
 }

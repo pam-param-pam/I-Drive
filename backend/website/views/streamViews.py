@@ -1,4 +1,7 @@
+import time
+
 from django.views.decorators.cache import cache_page
+from redis.http.http_client import HttpResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 
@@ -55,6 +58,7 @@ def stream_file(request, file_obj: File):
 @permission_classes([AllowAny])
 def stream_zip_files(request, token):
     return get_zip_response(request, token)
+
 
 @api_view(['GET'])
 @no_gzip

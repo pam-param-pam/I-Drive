@@ -284,6 +284,7 @@ main .spinner .bounce2 {
 }
 
 #previewer > button {
+  z-index: 100000;
   margin: 0;
   position: fixed;
   top: calc(50% + 1.85em);
@@ -330,35 +331,6 @@ main .spinner .bounce2 {
 
 /* EDITOR */
 
-#editor-container {
-  display: flex;
-  flex-direction: column;
-  background-color: var(--background);
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  z-index: 9999;
-  overflow: hidden;
-}
-
-#editor-container #editor {
-  flex: 1;
-}
-
-#editor-container .breadcrumbs {
-  height: 2.3em;
-  padding: 0 1em;
-}
-
-#editor-container .breadcrumbs span {
-  font-size: 0.75rem;
-}
-
-#editor-container .breadcrumbs i {
-  font-size: 1rem;
-}
 
 
 /* * * * * * * * * * * * * * * *

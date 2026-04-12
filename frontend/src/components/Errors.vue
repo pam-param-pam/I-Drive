@@ -4,7 +4,7 @@
          <div v-if="error" class="info">
             <div class="title">
                <i class="material-icons">{{ info.icon }}</i>
-               <span> {{ $t(info.message) }}</span>
+               <span> {{ $t(info.title) }}</span>
             </div>
             <div class="details">
                <span v-if="errorDetails"> {{ errorDetails }}</span>
@@ -22,16 +22,12 @@
       <template v-else>
          <h2 class="message">
             <i class="material-icons">{{ info.icon }}</i>
-            <span>{{ $t(info.message, { code: errorCode, response: error?.response?.data }) }}</span>
+            <span>{{ $t(info.title) }}</span>
             <br />
             <span v-if="errorDetails" class="details">{{ errorDetails }}</span>
          </h2>
-         <!-- buttons always rendered -->
-         <button v-if="shouldRetry" class="message error-action-button" @click="retry">
-            {{ $t("errors.retry") }}
-         </button>
 
-         <button v-else class="message error-action-button" @click="goBack">
+         <button  class="message error-action-button" @click="goBack">
             {{ $t("errors.goBack") }}
          </button>
       </template>
@@ -42,43 +38,48 @@
 
 <script>
 import router from "@/router/index.js"
+import { normalizeError } from "@/utils/common.js"
 
 const errors = {
    0: {
       icon: "wifi_off",
-      message: "errors.connection"
+      title: "errors.connection"
    },
    400: {
       icon: "error_outline",
-      message: "errors.badRequest"
+      title: "errors.badRequest"
    },
    403: {
       icon: "error",
-      message: "errors.forbidden"
+      title: "errors.forbidden"
    },
    404: {
       icon: "gps_off",
-      message: "errors.notFound"
+      title: "errors.notFound"
    },
    429: {
       icon: "block",
-      message: "errors.rateLimit"
+      title: "errors.rateLimit"
    },
    469: {
       icon: "block",
-      message: "errors.folderPasswordRequired"
+      title: "errors.folderPasswordRequired"
    },
    500: {
       icon: "error_outline",
-      message: "errors.internal"
+      title: "errors.internal"
    },
    502: {
       icon: "cloud_off",
-      message: "errors.badGateway"
+      title: "errors.badGateway"
+   },
+   999: {
+      icon: "error_outline",
+      title: "errors.clientError"
    },
    1000: {
       icon: "error_outline",
-      message: "errors.unknownError"
+      title: "errors.unknownError"
    }
 }
 
@@ -86,7 +87,9 @@ export default {
    name: "errors",
 
    props: {
-      error: Object,
+      error: {
+         required: true
+      },
       simple: {
          type: Boolean,
          default: true
@@ -95,25 +98,25 @@ export default {
    emits: ["close"],
 
    computed: {
+      normalizedError() {
+         return normalizeError(this.error)
+      },
       errorCode() {
-         return this.error?.status
+         return this.normalizedError?.code
       },
       info() {
-         if (this.error.code === "ERR_NETWORK") {
-            return errors[0]
-         }
          return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]
       },
-      shouldRetry() {
-         return this.errorCode !== 404 && this.errorCode !== 401 && this.errorCode !== 403
-      },
       errorDetails() {
-         return this.error?.response?.data?.details
+         return this.normalizedError?.details
+      },
+      hasClose() {
+
       }
    },
 
    methods: {
-      retry() {
+      refresh() {
          router.go(0)
       },
 

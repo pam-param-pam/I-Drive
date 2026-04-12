@@ -12,11 +12,8 @@ export const useMainStore = defineStore("main", {
       progress: 0,
       token: "",
       deviceId: "",
-      loading: false,
-      reload: false,
       selected: [],
       prompts: [],
-      error: null,
       disabledCreation: false,
       folderPasswords: {},
       searchFilters: { "files": true, "folders": true },
@@ -28,7 +25,9 @@ export const useMainStore = defineStore("main", {
       items: [],
       usage: { used: 0, total: 0 },
       popupPreview: {},
-      isFilesActive: false,
+
+      itemsLoading: false,
+      itemsError: false,
 
       multiSelection: false,
       contextMenuState: {
@@ -114,9 +113,6 @@ export const useMainStore = defineStore("main", {
    },
 
    actions: {
-      setIsFilesActive(value) {
-         this.isFilesActive = value
-      },
       setUsage(value) {
          this.usage = value
       },
@@ -131,6 +127,12 @@ export const useMainStore = defineStore("main", {
          this.setItems(value.folder.children)
          this.setBreadcrumbs(value.breadcrumbs)
          this.setCurrentFolder(value.folder)
+      },
+      setItemsLoading(value) {
+        this.itemsLoading = value
+      },
+      setItemsError(value) {
+         this.itemsError = value
       },
       setItems(value) {
          if (!value) value = []
@@ -188,9 +190,6 @@ export const useMainStore = defineStore("main", {
             props: value?.props,
             cancel: value?.cancel
          })
-      },
-      setLoading(value) {
-         this.loading = value
       },
       setToken(value) {
          this.token = value
@@ -337,13 +336,6 @@ export const useMainStore = defineStore("main", {
             dayjs.locale(locale)
             i18n.global.locale = locale
          }
-      },
-      setTextError(errorCode, details) {
-         this.setError({ status: errorCode, response: { data: { details: details } } })
-      },
-      setError(value) {
-         this.error = value
-         this.loading = false
       },
       setTheme(theme) {
          this.settings.theme = theme

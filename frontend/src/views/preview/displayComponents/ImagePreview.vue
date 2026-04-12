@@ -50,6 +50,7 @@ export default {
          default: () => 0.25
       }
    },
+   emits: ["error"],
 
    data() {
       return {

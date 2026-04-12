@@ -1,5 +1,5 @@
 <template>
-   <div v-if="!loading" class="row">
+   <div class="row">
       <div class="column">
          <form class="card" @submit.prevent="saveSettings">
             <div class="card-title">
@@ -143,7 +143,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["user", "settings", "loading"]),
+      ...mapState(useMainStore, ["user", "settings"]),
 
       passwordClass() {
          const baseClass = "input input--block"
@@ -161,7 +161,6 @@ export default {
    },
 
    created() {
-      this.setLoading(false)
       this.locale = this.settings.locale
       this.hideLockedFolders = this.settings.hideLockedFolders
       this.subfoldersInShares = this.settings.subfoldersInShares
@@ -174,8 +173,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLoading", "setToken", "updateSettings", "setDeviceId"]),
-
+      ...mapActions(useMainStore, ["setToken", "updateSettings", "setDeviceId"]),
       savePassword: throttle(async function(event) {
          //todo move this somewhere
          if (this.password !== this.passwordConf || this.password === "") {

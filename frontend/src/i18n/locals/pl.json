@@ -111,9 +111,12 @@
     "unexpectedDiscordResponse": "Discord wysłał błędną odpowiedż",
     "noConnectionDetails": "Nie udało sie polączyć z serwerem, sprawdź swoje polączenie.",
     "noConnection": "Brak internetu",
-    "badGateway": "Serwer nie odpowiada"
+    "badGateway": "Serwer nie odpowiada",
+    "clientError": "Błąd po stronie klienta"
+
   },
   "files": {
+    "zipArchiveMode": "Tryb podglądu archiwów ZIP",
     "clear": "Wyczyść",
     "created": "Utworzone",
     "files": "Pliki",

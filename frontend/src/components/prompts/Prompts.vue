@@ -86,7 +86,27 @@ export default {
       FileStats: defineAsyncComponent(() => import("@/components/prompts/FileStats.vue"))
    },
    created() {
-      window.addEventListener("keydown", (event) => {
+      document.addEventListener("keydown", this.keyDown)
+   },
+   unmounted() {
+      document.removeEventListener("keydown", this.keyDown)
+   },
+   computed: {
+      ...mapState(useMainStore, ["currentPrompt", "currentPromptName", "prompts"]),
+      showOverlay() {
+         return this.currentPrompt !== null && this.currentPromptName !== "more"
+      },
+   },
+   watch: {
+      currentPromptName(val) {
+         if (this.currentPrompt && !this.isAvailable(val) && this.currentPromptName !== "more") {
+            this.$toast.error(this.$t("prompts.failedToLoadPrompt"))
+         }
+      }
+   },
+   methods: {
+      ...mapActions(useMainStore, ["closeHover"]),
+      keyDown(event) {
          if (this.currentPrompt == null) return
 
          // Esc!
@@ -106,24 +126,7 @@ export default {
                console.warn(this.currentPromptName)
             }
          }
-      })
-   },
-
-   computed: {
-      ...mapState(useMainStore, ["currentPrompt", "currentPromptName", "prompts"]),
-      showOverlay() {
-         return this.currentPrompt !== null && this.currentPromptName !== "more"
       },
-   },
-   watch: {
-      currentPromptName(val) {
-         if (this.currentPrompt && !this.isAvailable(val) && this.currentPromptName !== "more") {
-            this.$toast.error(this.$t("prompts.failedToLoadPrompt"))
-         }
-      }
-   },
-   methods: {
-      ...mapActions(useMainStore, ["closeHover"]),
       isAvailable(name) {
          if (!name) return false
 

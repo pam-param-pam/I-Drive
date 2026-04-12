@@ -4,6 +4,7 @@
       <header-bar>
          <Search
             v-if="headerButtons.search"
+            :disabled="itemsError !== null"
             :advanced="headerButtons.advancedSearch"
             ref="search"
             @exit="$emit('onSearchClosed')"
@@ -74,7 +75,6 @@
             <action
                v-if="headerButtons.upload"
                id="upload-button"
-               :disabled="searchActive"
                :label="$t('buttons.upload')"
                icon="file_upload"
                @action="$emit('upload')"
@@ -82,7 +82,7 @@
             <action :icon="viewIcon" :label="$t('buttons.switchView')" @action="switchView" />
             <action
                v-if="headerButtons.info"
-               :disabled="selectedCount <= 0 && (searchActive || !this.currentFolder)"
+               :disabled="!this.currentFolder"
                :label="$t('buttons.info')"
                icon="info"
                show="info"
@@ -90,9 +90,9 @@
 
          </template>
       </header-bar>
-      <loading-spinner />
+      <loading-spinner :loading="itemsLoading"/>
 
-      <template v-if="!error && !loading">
+      <template v-if="!itemsError && !itemsLoading">
          <div v-if="sortedItems?.length === 0">
             <h2 class="message">
                <a href="https://www.youtube.com/watch?app=desktop&v=nGBYEUNKPmo">
@@ -389,9 +389,7 @@ export default {
          })
       },
       "$route.name"(newName, oldName) {
-         if (newName === "Files" || newName === "Share") {
-            this.scrollToLastItem()
-         }
+         this.scrollToLastItem()
       }
    },
 
@@ -437,7 +435,8 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems", "lastItem", "items", "settings", "perms", "user", "selected", "loading", "error", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "searchActive"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems",
+         "lastItem", "items", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt"]),
 
       viewMode() {
          if (this.settings.viewMode === "list") return "list"

@@ -1,30 +1,34 @@
 <template>
-   <div id="search">
+   <div id="search" @keydown="keyEvent">
       <div id="input">
          <input
-            ref="input"
-            v-model="query"
-            :aria-label="$t('search.search')"
-            :placeholder="$t('search.search')"
-            :title="$t('search.search')"
-            autocomplete="off"
-            type="text"
+           :disabled="disabled"
+           :class="{ disabled }"
+           ref="input"
+           v-model="query"
+           :aria-label="$t('search.search')"
+           :placeholder="$t('search.search')"
+           :title="$t('search.search')"
+           autocomplete="off"
+           type="text"
          />
+
          <i
-            v-if="searchActive"
-            :aria-label="$t('search.close')"
-            :title="$t('search.close')"
-            class="material-icons"
-            @click="exit"
+           v-if="searchActive"
+           :aria-label="$t('search.close')"
+           :title="$t('search.close')"
+           class="material-icons"
+           @click="exit"
          >close</i>
+
          <i
-            v-if="advanced"
-            :aria-label="$t('search.tuneSearch')"
-            :title="$t('search.tuneSearch')"
-            class="material-icons"
-            @click="onTuneClick"
-         >tune</i
-         >
+           v-if="advanced"
+           :aria-label="$t('search.tuneSearch')"
+           :title="$t('search.tuneSearch')"
+           class="material-icons"
+           :class="{ disabled }"
+           @click="onTuneClick"
+         >tune</i>
       </div>
    </div>
 </template>
@@ -33,13 +37,15 @@
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import throttle from "lodash.throttle"
+import { cancelRequestBySignature } from "@/axios/helper.js"
 
 export default {
    name: "search",
    props: {
-      advanced: false,
+      advanced: Boolean,
+      disabled: Boolean
    },
-   emits: ["onSearchQuery", "exit"],
+   emits: ["onSearchQuery"],
 
    data() {
       return {
@@ -58,8 +64,22 @@ export default {
       await this.$nextTick() //this is vevy important
       this.exited = false
    },
-   created() {
-      window.addEventListener("keydown", (event) => {
+
+   methods: {
+      ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters", "setSearchActive", "setItemsError", "setSearchItems"]),
+
+      search: throttle(async function(override) {
+         if (!this.query && !override) return
+         this.setLastItem(null)
+         //copying to not mutate vuex store state
+         let searchDict = { ...this.searchFilters }
+         searchDict["query"] = this.query
+         this.setSearchFilters(searchDict)
+         this.setSearchActive(true)
+         this.$emit("onSearchQuery", searchDict)
+      }, 500),
+
+      keyEvent(event) {
          // Ctrl is pressed
          if ((event.ctrlKey || event.metaKey)) {
             let key = event.key.toLowerCase()
@@ -74,22 +94,9 @@ export default {
          if (event.code === "Escape" && this.searchActive && !this.currentPrompt) {
             this.exit()
          }
-      })
-   },
-   methods: {
-      ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters"]),
-
-      search: throttle(async function(override) {
-         if (!this.query && !override) return
-         this.setLastItem(null)
-         //copying to not mutate vuex store state
-         let searchDict = { ...this.searchFilters }
-         searchDict["query"] = this.query
-         this.setSearchFilters(searchDict)
-         this.$emit("onSearchQuery", searchDict)
-      }, 500),
-
+      },
       onTuneClick() {
+         if (this.disabled) return
          this.showHover({
             prompt: "SearchTunePrompt",
             confirm: () => {
@@ -100,14 +107,19 @@ export default {
 
       async exit() {
          this.resetSelected()
-         this.$emit("exit")
 
          this.exited = true
          this.query = ""
          this.exited = false
+
+         cancelRequestBySignature("getItems")
          let searchDict = { ...this.searchFilters }
          searchDict["query"] = ""
          this.setSearchFilters(searchDict)
+
+         this.setSearchItems(null)
+         this.setSearchActive(false)
+         this.setItemsError(null)
       }
    },
 
@@ -145,5 +157,21 @@ export default {
 #search input {
   color: var(--color-text);
    padding-right: 1.5em;
+}
+
+.material-icons.disabled {
+   cursor: not-allowed;
+   opacity: 0.4;
+   pointer-events: stroke;
+   transform: none;
+}
+
+.material-icons.disabled:hover {
+   color: inherit;
+   transform: none;
+}
+
+#search input:disabled {
+   cursor: not-allowed;
 }
 </style>

@@ -14,7 +14,7 @@
          <div v-if="perms.create">
             <button
                :aria-label="$t('sidebar.newFolder')"
-               :disabled="disabledCreation || !currentFolder"
+               :disabled="disabledCreation || !currentFolder || searchActive"
                :title="$t('sidebar.newFolder')"
                class="action"
                @click="showHover('newFolder')"
@@ -25,7 +25,7 @@
 
             <button
                :aria-label="$t('sidebar.newFile')"
-               :disabled="disabledCreation || !currentFolder"
+               :disabled="disabledCreation || !currentFolder || searchActive"
                :title="$t('sidebar.newFile')"
                class="action"
                @click="showHover('newFile')"

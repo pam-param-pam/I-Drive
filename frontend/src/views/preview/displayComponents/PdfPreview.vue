@@ -1,6 +1,6 @@
 <template>
    <object
-      :data="src"
+      :data="inlineSrc"
       class="pdf"
       @error="onError"
    ></object>
@@ -24,13 +24,20 @@ export default {
       }
    },
 
-   emits: ["error"],
+   emits: ["previewEvent", "error"],
+   computed: {
+      inlineSrc() {
+         if (!this.src) return ""
 
+         return this.src.includes("?")
+            ? `${this.src}&inline=true`
+            : `${this.src}?inline=true`
+      }
+   },
    methods: {
       ...mapActions(useMainStore, ["setTextError"]),
       onError(e) {
-         this.setTextError(500, "Failed to load pdf file. Reason unknown")
-
+         this.$emit("Failed to load pdf file")
       }
    }
 }

@@ -1,5 +1,5 @@
 function getButton(name) {
-   let selector = `#${name}-button > i`
+   let selector = `#${name} > i`
    let el = document.querySelector(selector)
 
    if (el === undefined || el === null) {
@@ -23,6 +23,21 @@ function loading(button) {
       el.classList.add("spin")
       el.innerHTML = "autorenew"
       el.style.opacity = 1
+   }, 100)
+}
+
+
+function done(button) {
+   let el = getButton(button)
+
+   el.style.opacity = "0"
+
+   setTimeout(() => {
+      if (el !== null) {
+         el.classList.remove("spin")
+         el.innerHTML = el?.dataset?.icon || ""
+         el.style.opacity = "1"
+      }
    }, 100)
 }
 
@@ -52,5 +67,6 @@ function success(button) {
 
 export default {
    loading,
-   success
+   success,
+   done
 }

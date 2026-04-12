@@ -34,6 +34,10 @@
   content: 'description'
 }
 
+.file-icons [data-type=Code] i::before {
+  content: 'description'
+}
+
 .file-icons [aria-label$=".cr2" i] i::before,
 .file-icons [aria-label$=".cr3" i] i::before,
 .file-icons [data-type="Raw image"] i::before {
@@ -112,6 +116,11 @@
   content: 'terminal'
 }
 
+
+.file-icons [aria-label$=".md" i] i::before {
+  content: 'article'
+
+}
 /* #999 - Installer */
 
 .file-icons [aria-label$=".deb" i] i::before,

@@ -2,14 +2,13 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .streamViews import stream_file, stream_thumbnail, stream_subtitle
 from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
     CheckShareItemBelongings, CheckTrash, CheckState
 from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
 from ..constants import API_BASE_URL, ShareEventType
-from ..core.Serializers import ShareSerializer, ShareAccessSerializer, ShareAccessEventSerializer
+from ..core.Serializers import ShareSerializer, ShareAccessSerializer
 from ..core.crypto.signer import sign_resource_id_with_expiry
-from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file
+from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file, no_gzip
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError
 from ..core.helpers import extract_key
 from ..core.http.utils import parse_range_header
@@ -17,6 +16,7 @@ from ..models import UserSettings, ShareableLink, Subtitle, File, ShareAccessEve
 from ..queries.builders import build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content, create_share_events
 from ..queries.selectors import get_item_inside_share
 from ..services import share_service
+from ..services.media_service import get_file_response, get_thumbnail_response, get_subtitle_response
 
 
 @api_view(['GET'])
@@ -141,7 +141,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 
     file_ids = list(user_zip.files.values_list("id", flat=True))
     folder_ids = list(user_zip.folders.values_list("id", flat=True))
-    share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD_START, files=file_ids, folders=folder_ids)
+    share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD, files=file_ids, folders=folder_ids)
 
     return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
 
@@ -151,64 +151,6 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
-    range_header = request.headers.get('Range')
-    is_range_header, start_byte, end_byte = parse_range_header(range_header)
-    share_service.log_event_http(request, share_obj, ShareEventType.FILE_STREAM, file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte)
-
-    isDownload = request.GET.get('download', False)
-    if isDownload:
-        share_service.log_event_http(request, share_obj, ShareEventType.FILE_DOWNLOAD, file_id=file_obj.id)
-
-    # Extremely hacky way,
-    # we do this instead of redirects to make this view not accessible immediately after the share has been deleted
-    # request is changed into rest's framework's request with the decorators,
-    # so wee need to access the django's request using _request
-    signed_file_id = request.META['signed_file_id']
-    request._request.META['share_context'] = True
-    return stream_file(request._request, signed_file_id)
-
-
-@api_view(['GET'])
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
-    # share_service.log_event_http(request, share_obj, ShareEventType.THUMBNAIL_STREAM, file_id=file_obj.id, thumbnail_id=file_obj.thumbnail.id)
-
-    signed_file_id = request.META['signed_file_id']
-    request._request.META['share_context'] = True
-    return stream_thumbnail(request._request, signed_file_id)
-
-
-@api_view(['GET'])
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
-    # share_service.log_event_http(request, share_obj, ShareEventType.THUMBNAIL_STREAM, file_id=file_obj.id, subtitle_id=subtitle_id)
-
-    signed_file_id = request.META['signed_file_id']
-    request._request.META['share_context'] = True
-    return stream_subtitle(request._request, signed_file_id, subtitle_id=subtitle_id)
-
-
-@api_view(['GET'])
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired], resource_key="share_obj")
 @extract_file()
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
@@ -223,3 +165,55 @@ def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):
         subtitle_dicts.append({"id": sub.id, "language": sub.language, "url": url})
 
     return JsonResponse(subtitle_dicts, safe=False)
+
+
+"""
+                 MEDIA SERVE VIEWS
+"""
+
+@api_view(['GET'])
+@no_gzip
+@throttle_classes([AnonUserMediaThrottle])
+@permission_classes([AllowAny])
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+@extract_file_from_signed_url
+@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
+@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
+def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
+    range_header = request.headers.get('Range')
+    is_range_header, start_byte, end_byte = parse_range_header(range_header)
+    share_service.log_event_http(request, share_obj, ShareEventType.FILE_STREAM, file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte)
+
+    # isDownload = request.GET.get('download', False) todo move this to client
+    # if isDownload:
+    #     share_service.log_event_http(request, share_obj, ShareEventType.FILE_DOWNLOAD, file_id=file_obj.id)
+
+    return get_file_response(request, file_obj)
+
+
+@api_view(['GET'])
+@no_gzip
+@throttle_classes([AnonUserMediaThrottle])
+@permission_classes([AllowAny])
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+@extract_file_from_signed_url
+@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
+@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
+def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
+    return get_thumbnail_response(request, file_obj)
+
+
+@api_view(['GET'])
+@no_gzip
+@throttle_classes([AnonUserMediaThrottle])
+@permission_classes([AllowAny])
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+@extract_file_from_signed_url
+@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
+@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
+def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
+    subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
+    return get_subtitle_response(request, file_obj, subtitle)

@@ -2,6 +2,7 @@
    <CorePreview
      :file="file"
      :subtitles="subtitles"
+     :readonly="true"
      :headerButtons="headerButtons"
      @close="onClose"
      @PreviewEvent="onPreviewEvent"

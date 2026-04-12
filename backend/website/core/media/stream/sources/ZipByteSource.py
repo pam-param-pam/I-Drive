@@ -3,13 +3,13 @@ from asgiref.sync import sync_to_async
 from zipFly import GenFile, ZipFly
 from zipFly.EmptyFolder import EmptyFolder
 
-from .ByteRange import ByteRange
-from .sources.ByteSource import ByteSource
-from ...crypto.Decryptor import Decryptor
-from ....discord.Discord import discord
-from ....models import File
-from ....tasks.helper import auto_prefetch
 
+from ..ByteRange import ByteRange
+from ....crypto.Decryptor import Decryptor
+from .....discord.Discord import discord
+from .ByteSource import ByteSource
+from .....models import File
+from .....tasks.helper import auto_prefetch
 
 class ZipByteSource(ByteSource):
     def __init__(self, user_zip, dict_files):

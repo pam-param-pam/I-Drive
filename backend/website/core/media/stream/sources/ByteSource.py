@@ -3,6 +3,7 @@ from typing import AsyncIterator
 
 from ..ByteRange import ByteRange
 
+# TODO allow for this to validate the byte_range before streamign starts
 
 class ByteSource(ABC):
     @abstractmethod

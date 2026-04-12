@@ -1,6 +1,7 @@
 <template>
-   <errors v-if="error" :error="error" />
-   <div v-else-if="!loading" class="row">
+   <loading-spinner v-if="loading" :loading="loading"/>
+   <errors v-else-if="error" :error="error" />
+   <div v-else class="row">
       <div class="column" style="width: 100%; margin-top: 2rem;">
          <div class="card">
             <div class="card-title">
@@ -85,17 +86,19 @@ import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
 import throttle from "lodash.throttle"
 import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/auth.js"
+import loadingSpinner from "@/components/loadingSpinner.vue"
 
 export default {
    name: "Devices",
-   components: { Errors },
+   components: { loadingSpinner, Errors },
    data() {
       return {
+         loading: false,
+         error: null,
          devices: []
       }
    },
    computed: {
-      ...mapState(useMainStore, ["loading", "error"]),
       localDeviceId() {
          return localStorage.getItem("device_id")
       }
@@ -105,7 +108,13 @@ export default {
    },
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLoading", "setError", "showHover"]),
+      ...mapActions(useMainStore, ["showHover"]),
+      setLoading(value) {
+         this.loading = value
+      },
+      setError(value) {
+         this.error = value
+      },
       async fetchDevices() {
          try {
             this.setLoading(true)

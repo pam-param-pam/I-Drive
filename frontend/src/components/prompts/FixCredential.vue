@@ -117,7 +117,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "setError"]),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       async reenable() {
          await reenableCredential({ "credential_id": this.credential.discord_id })

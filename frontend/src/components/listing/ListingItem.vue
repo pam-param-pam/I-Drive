@@ -101,7 +101,7 @@ export default {
       },
       imageSrcSmall() {
          let size = this.settings.viewMode === "height grid" ? "512" : "256"
-         if (!this.imageSrc) return
+         if (!this.imageSrc || this.item.thumbOff) return
          if (this.fallback || this.areImagesBlocked) return "/img/failed.svg"
          return this.imageSrc + "?size=" + size
       },

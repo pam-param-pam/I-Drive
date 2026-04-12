@@ -16,7 +16,8 @@
 import { PreviewEvent } from "@/utils/constants.js"
 
 export default {
-   props: ["file", "isInShareContext"],
+   props: ["file"],
+   emits: ["previewEvent", "error"],
 
    data() {
       return {
@@ -35,11 +36,9 @@ export default {
       this.audioRef = this.$refs.audio
 
       if (!this.audioRef) return
+      this.audioRef.currentTime = this.file.media_position || 0
+      this.lastSentMediaPosition = this.file.media_position || 0
 
-      if (!this.isInShareContext) {
-         this.audioRef.currentTime = this.file.media_position || 0
-         this.lastSentMediaPosition = this.file.media_position || 0
-      }
    },
 
    methods: {

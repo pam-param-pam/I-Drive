@@ -3,7 +3,8 @@ from ..auth.utils import check_resource_perms
 from ..constants import MAX_MEDIA_CACHE_AGE, USE_CACHE, cache, MAX_THUMBNAIL_SIZE
 from ..core.crypto.Decryptor import Decryptor
 from ..core.errors import BadRequestError
-from ..core.media.stream.ZipByteSource import ZipByteSource
+from ..core.helpers import validate_key
+from ..core.media.stream.sources.ZipByteSource import ZipByteSource
 from ..core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
 from ..core.media.stream.sources.EmptyByteSource import EmptyByteSource
 from ..core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
@@ -84,6 +85,7 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
 
 def get_file_response(request, file_obj: File):
     is_inline = request.GET.get("inline", False)
+    referer = request.headers.get('Referer')
 
     fragments = file_obj.fragments.all().order_by("sequence")
     user = file_obj.owner
@@ -95,14 +97,17 @@ def get_file_response(request, file_obj: File):
     else:
         source = FragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
 
-    return build_streaming_response(
+    response = build_streaming_response(
         request=request,
         byte_source=source,
         filename=file_obj.name,
         inline=is_inline,
         cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
         vary=["x-resource-password"],
+        x_frame_from_referer=referer,
+        etag=str(hash(file_obj.last_modified_at))# todo? perhaps just not set cache for files that can modify, todo
     )
+    return response
 
 
 def get_zip_response(request, token: str):
@@ -146,11 +151,14 @@ def get_zip_response(request, token: str):
 
 
 def get_zip_entry_response(request, file_obj: File):
-    offset = int(request.GET["offset"])  # todo
-    compressed_size = int(request.GET["compressed_size"])
-    uncompressed_size = int(request.GET["uncompressed_size"])
-    compression_method = int(request.GET["compression_method"])
-    filename = request.GET["filename"]
+    is_inline = validate_key(request.GET, "inline", expected_type=bool, required=False, default=False)
+    referer = request.headers.get('Referer')
+
+    offset = validate_key(request.GET, "offset", int)
+    compressed_size = validate_key(request.GET, "compressed_size", int)
+    uncompressed_size = validate_key(request.GET, "uncompressed_size", int)
+    compression_method = validate_key(request.GET, "compression_method", int)
+    filename = validate_key(request.GET, "filename", str)
 
     fragments = file_obj.fragments.all().order_by("sequence")
     user = file_obj.owner
@@ -166,8 +174,9 @@ def get_zip_entry_response(request, file_obj: File):
     return build_streaming_response(
         request=request,
         byte_source=source,
-        inline=True,
+        inline=is_inline,
         filename=filename,
         cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
+        x_frame_from_referer=referer,
         vary=["x-resource-password"],
     )

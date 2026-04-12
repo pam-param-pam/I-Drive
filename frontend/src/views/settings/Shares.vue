@@ -1,6 +1,7 @@
 <template>
-   <errors v-if="error" :error="error" />
-   <div v-else-if="!loading" class="row">
+   <loading-spinner v-if="loading" :loading="loading"/>
+   <errors v-else-if="error" :error="error" />
+   <div v-else class="row">
       <div class="column">
          <div class="card">
             <div class="card-title">
@@ -76,11 +77,13 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
+import loadingSpinner from "@/components/loadingSpinner.vue"
 
 export default {
    name: "shares",
 
    components: {
+      loadingSpinner,
       Errors
    },
 
@@ -91,7 +94,9 @@ export default {
    data() {
       return {
          shares: [],
-         clip: null
+         clip: null,
+         loading: false,
+         error: null,
       }
    },
 
@@ -120,8 +125,13 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLoading", "closeHover", "showHover", "setError"]),
-
+      ...mapActions(useMainStore, ["closeHover", "showHover"]),
+      setLoading(value) {
+        this.loading = value
+      },
+      setError(value) {
+        this.error = value
+      },
       async deleteLink(event, share) {
          event.preventDefault()
 

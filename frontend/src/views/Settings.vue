@@ -33,17 +33,6 @@
          </div>
       </div>
 
-      <div v-if="loading">
-         <h2 class="message delayed">
-            <div class="spinner">
-               <div class="bounce1"></div>
-               <div class="bounce2"></div>
-               <div class="bounce3"></div>
-            </div>
-            <span>{{ $t("files.loading") }}</span>
-         </h2>
-      </div>
-
       <router-view></router-view>
    </div>
 </template>
@@ -62,7 +51,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["loading", "perms"])
+      ...mapState(useMainStore, ["perms"])
    },
 
    methods: {

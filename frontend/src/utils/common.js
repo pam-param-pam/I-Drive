@@ -101,15 +101,70 @@ export function lazyWithLoading(importer, delay = 150) {
    }
 }
 
-export function resolveItemAction(item) {
-   if (item.isDir) return "dir"
+function isAxiosError(err) {
+   return (
+      err &&
+      typeof err === "object" &&
+      err.isAxiosError === true
+   )
+}
 
-   if (item.extension === ".zip") return "zip"
+function isPlainObject(obj) {
+   return (
+      obj &&
+      typeof obj === "object" &&
+      obj.constructor === Object
+   )
+}
+export function normalizeError(err) {
+   // 1. Axios error (most structured → handle first)
+   if (isAxiosError(err)) {
+      const status = err.response?.status ?? 1000
 
-   if ((item.type === "Text" || item.type === "Code" || item.type === "Database") && item.size < 1024 * 1024) {
-      return "editor"
+      return {
+         code: status,
+         details: err.response?.data?.details || "Request failed",
+         raw: err
+      }
    }
 
+   // 2. DOMException (e.g. DataCloneError, AbortError)
+   if (err instanceof DOMException) {
+      return {
+         code: 999,
+         details: err.message || "DOM operation failed",
+         raw: err
+      }
+   }
+
+   // 3. Standard JS Error
+   if (err instanceof Error) {
+      return {
+         code: 999,
+         details: err.message || "Unknown error",
+         raw: err
+      }
+   }
+
+   // 4. User-supplied object (message + code)
+   if (isPlainObject(err)) {
+      return {
+         code: err.code ?? 999,
+         details: err.details ?? String(err),
+         raw: err
+      }
+   }
+   // 5. String / unknown
+   return {
+      code: 999,
+      details: typeof err === "string" ? err : String(err),
+      raw: err
+   }
+}
+
+export function resolveItemAction(item) {
+   if (item.isDir) return "dir"
+   if (item.extension === ".zip") return "zip"
    return "preview"
 }
 

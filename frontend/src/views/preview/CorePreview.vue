@@ -9,7 +9,7 @@
       @touchstart="toggleNavigation"
    >
       <header-bar :showLogo="false">
-         <action :label="$t('buttons.close')" icon="close" @action="$emit('close')" />
+         <action :label="$t('buttons.close')" icon="close" @action="close" />
          <title v-if="file">{{ file?.name }}</title>
          <title v-else></title>
 
@@ -58,23 +58,27 @@
          </template>
       </header-bar>
 
-      <div v-if="loading" class="loading delayed">
-         <div class="spinner">
-            <div class="bounce1"></div>
-            <div class="bounce2"></div>
-            <div class="bounce3"></div>
-         </div>
-      </div>
+      <loading-spinner v-if="loading" :loading="loading" :show-text="false"/>
+
       <template v-else>
          <div class="preview">
             <errors v-if="error" :error="error" :simple="false" @close="close" />
 
             <VideoPreview
-              v-if="previewerType === 'video'"
+              v-else-if="previewerType === 'video'"
               ref="videoPreview"
               :file="file"
               :subtitles="subtitles"
               @previewEvent="onPreviewEvent"
+              @error="onPreviewError"
+            />
+
+            <EditorPreview
+              v-else-if="previewerType === 'editor'"
+              :file="file"
+              :readonly="readonly"
+              @previewEvent="onPreviewEvent"
+              @error="onPreviewError"
             />
 
             <ImagePreview
@@ -83,12 +87,14 @@
               :src="fileSrcUrl"
               :thumbSrc="thumbSrcUrl"
               @previewEvent="onPreviewEvent"
+              @error="onPreviewError"
             />
 
             <AudioPreview
               v-else-if="previewerType === 'audio'"
               :file="file"
               @previewEvent="onPreviewEvent"
+              @error="onPreviewError"
             />
 
             <PdfPreview
@@ -96,6 +102,7 @@
               :file="file"
               :src="fileSrcUrl"
               @previewEvent="onPreviewEvent"
+              @error="onPreviewError"
             />
 
             <OfficePreview
@@ -103,6 +110,7 @@
               :file="file"
               :file-url="fileSrcUrl"
               @previewEvent="onPreviewEvent"
+              @error="onPreviewError"
             />
             <div v-else-if="file" class="info">
                <div class="title">
@@ -167,6 +175,8 @@ import VideoPreview from "@/views/preview/displayComponents/VideoPreview.vue"
 import AudioPreview from "@/views/preview/displayComponents/AudioPreview.vue"
 import PdfPreview from "@/views/preview/displayComponents/PdfPreview.vue"
 import ImagePreview from "@/views/preview/displayComponents/ImagePreview.vue"
+import EditorPreview from "@/views/preview/displayComponents/EditorPreview.vue"
+import loadingSpinner from "@/components/loadingSpinner.vue"
 
 export default {
    name: "CorePreview",
@@ -174,6 +184,8 @@ export default {
    emits: ["PreviewEvent", "close"],
 
    components: {
+      loadingSpinner,
+      EditorPreview,
       PdfPreview,
       AudioPreview,
       VideoPreview,
@@ -199,10 +211,15 @@ export default {
       subtitles: {
          required: false,
       },
+      readonly: {
+         required: false,
+         default: false,
+      }
    },
 
    data() {
       return {
+         error: null,
          fullSize: false,
          showNav: true,
          navTimeout: null,
@@ -217,27 +234,38 @@ export default {
          imageFullSize: false,
 
          isFullscreen: false,
-         shareSocket: null
+         isEditorClean: true,
       }
    },
-
+   watch: {
+      file: {
+         async handler() {
+           this.handleFileChange(false)
+         }
+      }
+   },
+   created() {
+      this.handleFileChange(true)
+   },
    computed: {
-      ...mapState(useMainStore, ["error", "sortedItems", "user", "selected", "perms", "currentFolder", "currentPrompt", "loading"]),
+      ...mapState(useMainStore, ["itemsLoading", "sortedItems", "user", "selected", "perms", "currentFolder", "currentPrompt"]),
+      loading() {
+        return this.itemsLoading
+      },
       previewerType() {
-         if (!this.file || !this.notEmpty) return null
+         if (!this.file) return null
 
-         if (this.file.type === "Video") return "video"
+         if (this.file.type === "Video" && this.notEmpty) return "video"
 
-         if (
-           this.file.type === "Image" ||
-           (this.file.type === "Raw image" && this.file.thumbnail_url)
-         ) return "image"
+         if ((this.file.type === "Image" || (this.file.type === "Raw image" && this.file.thumbnail_url)) && this.notEmpty) return "image"
 
-         if (this.file.type === "Audio") return "audio"
+         if ((this.file.type === "Audio") && this.notEmpty) return "audio"
 
-         if (this.file.name?.endsWith(".pdf")) return "pdf"
+         if ((this.file.name?.endsWith(".pdf") && this.notEmpty)) return "pdf"
 
-         if (this.file.name?.endsWith(".docx")) return "office"
+         if ((this.file.name?.endsWith(".docx")) && this.notEmpty) return "office"
+
+         if (this.file.type === "Code" || this.file.type === "Text" || this.file.type === "Database") return "editor"
 
          return "unknown"
       },
@@ -280,27 +308,44 @@ export default {
          return this.files.length > 1 && this.currentIndex > 0
       },
       disableSwipe() {
-         return this.file?.type === "Image"
+         return this.previewerType === "image" || this.previewerType === "editor"
       }
    },
 
    async mounted() {
-      window.addEventListener("keydown", this.key)
+      document.addEventListener("keydown", this.key)
       this.onPreviewEvent(PreviewEvent.OPEN)
    },
 
-   beforeUnmount() {
-      window.removeEventListener("keydown", this.key)
+   unmounted() {
+      document.removeEventListener("keydown", this.key)
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setTextError", "setCurrentFolderData", "setLastItem", "setError", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["setCurrentFolderData", "setLastItem", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      handleFileChange() {
+         this.setError(null)
+         if (!this.loading && !this.file) {
+            this.setError({code: 404, details: "File not found"})
+         }
+         this.setLastItem(this.file)
+         this.addSelected(this.file)
+      },
+      onPreviewError(error) {
+        this.setError(error)
+      },
+      setError(value) {
+         this.error = value
+      },
       onPreviewEvent({type, payload}) {
          if (type === PreviewEvent.MEDIA_LOADED) {
             this.disabledMoments = false
          } else if (type === PreviewEvent.FULLSCREEN_CHANGE) {
-            console.log("setting to fullscreen!")
             this.isVideoFullscreen = payload.is_fullscreen
+         } else if (type === PreviewEvent.EDITOR_CLEAN_CHANGE) {
+            console.log("EDITOR_CLEAN_CHANGE")
+            console.log(payload.is_clean)
+            this.isEditorClean = payload.is_clean
          }
          this.$emit("PreviewEvent", {type, payload})
       },
@@ -335,9 +380,10 @@ export default {
       },
 
       download() {
-         window.open(this.selected[0].download_url + "?download=true", "_blank")
+         window.open(this.selected[0].download_url, "_blank")
          let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
          this.$toast.success(message)
+         this.onPreviewEvent(PreviewEvent.DOWNLOAD)
       },
 
       prev() {
@@ -417,6 +463,8 @@ export default {
       },
 
       key(event) {
+         console.log("key event preview")
+         console.log(this.currentPrompt)
          if (this.currentPrompt !== null) return
 
          if (event.which === 13 || event.which === 39) {
@@ -426,6 +474,7 @@ export default {
             // left arrow
             this.prev()
          } else if (event.which === 27) {
+            console.log("closee")
             // esc
             this.close()
          }
@@ -444,6 +493,18 @@ export default {
          }, 1500)
       }, 500),
 
+      close() {
+         if (!this.isEditorClean) {
+            this.showHover({
+               prompt: "discardEditorChanges",
+               confirm: () => {
+                  this.$emit('close')
+               }
+            })
+            return
+         }
+         this.$emit('close')
+      }
    },
 
 

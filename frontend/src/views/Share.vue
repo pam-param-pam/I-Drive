@@ -5,17 +5,12 @@
       {{ $t("share.info", { expiry: humanTime(expiry) }) }}
    </h4>
 
-   <breadcrumbs
-      v-if="shareState === 'success'"
-      :base="'/share/' + token"
-      :folderList="folderList"
-   />
-   <errors v-if="error" :error="error" />
+   <breadcrumbs v-if="shareState === 'success'" :base="'/share/' + token" :folderList="folderList"/>
+   <errors v-if="itemsError" :error="itemsError" />
 
    <FileListing
       ref="listing"
       :headerButtons="headerButtons"
-      :isSearchActive="false"
       :readonly="true"
       @copyFileShareUrl="copyFileShareUrl"
       @download="download"
@@ -59,12 +54,14 @@ export default {
          folderList: [],
          expiry: null,
          shareObj: {},
-         shareState: "fetching"
+         shareState: "fetching",
+         loading: false,
+         error: null
       }
    },
 
    computed: {
-      ...mapState(useMainStore, ["selected", "loading", "error", "disabledCreation", "settings", "selectedCount", "isLogged"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "selected", "disabledCreation", "settings", "selectedCount", "isLogged"]),
 
       headerButtons() {
          return {
@@ -91,7 +88,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLoading", "setError", "setDisabledCreation", "setItems", "getFolderPassword"]),
+      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "getFolderPassword"]),
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
@@ -115,9 +112,8 @@ export default {
             case "dir":
                return { name: "Share", params: { ...this.$route.params, folderId: item.id }}
             case "zip":
-               return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id }}
-            case "editor":
-               return { name: "ShareEditor", params: { ...this.$route.params, fileId: item.id }}
+               return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}
+               // return { name: "Zip", params: { folderId: item.parent_id || "aa", zipFileId: item.id }}
             case "preview":
                return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}
          }
@@ -142,9 +138,9 @@ export default {
       },
 
       async fetchShare() {
-         this.setError(null)
+         this.setItemsError(null)
          try {
-            this.setLoading(true)
+            this.setItemsLoading(true)
             let res = await getShare(this.token, this.folderId)
 
             this.shareObj = res
@@ -156,10 +152,9 @@ export default {
             this.shareState = "success"
          } catch (e) {
             this.shareState = "error"
-            this.setItems(null)
-            this.setError(e)
+            this.setItemsError(e)
          } finally {
-            this.setLoading(false)
+            this.setItemsLoading(false)
          }
       }
 

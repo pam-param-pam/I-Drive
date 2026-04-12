@@ -5,7 +5,6 @@
    <FileListing
       ref="listing"
       :headerButtons="headerButtons"
-      :isSearchActive="false"
       :readonly="true"
       @dropUpload="onDropUpload"
       @onOpen="onOpen"
@@ -29,15 +28,9 @@ export default {
       FileListing
    },
 
-   data() {
-      return {
-         isSearchActive: false,
-         isActive: true
-      }
-   },
 
    computed: {
-      ...mapState(useMainStore, ["error", "items", "selected", "perms", "loading", "currentFolder", "disabledCreation", "selectedCount", "setSearchActive", "setSearchItems"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "items", "selected", "perms", "currentFolder", "disabledCreation", "selectedCount", "setSearchActive", "setSearchItems"]),
       headerButtons() {
          return {
             info: this.selectedCount > 0,
@@ -61,13 +54,13 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["addSelected", "resetSelected", "setLoading", "setError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
+      ...mapActions(useMainStore, ["addSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
 
       async fetchFolder() {
          document.title = this.$t("trash.trashName") + " - " + name
 
-         this.setError(null)
-         this.setLoading(true)
+         this.setItemsError(null)
+         this.setItemsLoading(true)
 
          try {
             let res = await getTrash()
@@ -75,9 +68,9 @@ export default {
             this.setItems(items)
          } catch (error) {
             if (axios.isCancel(error)) return
-            this.setError(error)
+            this.setItemsError(error)
          } finally {
-            if (this.isActive) this.setLoading(false)
+            this.setItemsLoading(false)
          }
       },
 

@@ -1,6 +1,7 @@
 <template>
-   <errors v-if="error" :error="error" />
-   <div v-else-if="!loading" class="row">
+   <loading-spinner v-if="loading" :loading="loading"/>
+   <errors v-else-if="error" :error="error" />
+   <div v-else class="row">
       <!-- COLUMN 1 -->
       <div class="column">
          <div class="cards-wrapper">
@@ -284,11 +285,14 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
+import loadingSpinner from "@/components/loadingSpinner.vue"
 
 export default {
-   components: { Errors },
+   components: { loadingSpinner, Errors },
    data() {
       return {
+         loading: false,
+         error: null,
          bots: [],
          channels: [],
          autoSetupComplete: false,
@@ -305,7 +309,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["loading", "error", "settings"]),
+      ...mapState(useMainStore, ["settings"]),
       ...mapState(useUploadStore, ["webhooks"])
    },
 
@@ -315,10 +319,15 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setError", "setLoading", "showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
+      ...mapActions(useMainStore, ["showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
 
       ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
-
+      setLoading(value) {
+         this.loading = value
+      },
+      setError(value) {
+         this.error = value
+      },
       async fetchDiscordSettings() {
          this.setLoading(true)
          try {
