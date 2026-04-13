@@ -119,12 +119,39 @@ function isPlainObject(obj) {
 export function normalizeError(err) {
    // 1. Axios error (most structured → handle first)
    if (isAxiosError(err)) {
-      const status = err.response?.status ?? 1000
+      // 1. Server responded (HTTP error)
+      if (err.response) {
+         return {
+            code: err.response.status,
+            details: err.response.data?.details || "Request failed",
+            raw: err
+         }
+      }
 
-      return {
-         code: status,
-         details: err.response?.data?.details || "Request failed",
-         raw: err
+      // 2. Request sent but no response
+      if (err.request) {
+         // browser-specific network errors
+         if (!navigator.onLine) {
+            return {
+               code: 0,
+               details: "No internet connection",
+               raw: err
+            }
+         }
+
+         if (err.code === "ECONNABORTED") {
+            return {
+               code: 0,
+               details: "Request timeout",
+               raw: err
+            }
+         }
+
+         return {
+            code: 0,
+            details: "Server did not respond",
+            raw: err
+         }
       }
    }
 

@@ -23,7 +23,7 @@ It's basically like Google Drive, but instead it stores all files in Discord.
 
 ~~Credentials: `demo`/`demo`~~
 
-Sorry, do demo currently.
+Sorry, no demo currently.
 
 # Features
 
@@ -68,7 +68,7 @@ It has to:
 The same thing applies to pretty much every part of this app. Even if something looks simple at first glance. 
 It's most likely pretty complicated under the hood. 
 After all, this entire project has more than **38k** lines of code. 
-And another **2k** of configuration and translation lines
+And another **2k** of configuration and translation lines.
 
 
 ## Infrastructure

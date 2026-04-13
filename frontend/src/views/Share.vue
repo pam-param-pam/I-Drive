@@ -29,6 +29,8 @@ import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { humanTime, resolveItemAction } from "../utils/common.js"
+import { useWebSocketStore } from "@/stores/websocketStore.js"
+import { baseWS } from "@/utils/constants.js"
 
 export default {
    name: "files",
@@ -78,8 +80,11 @@ export default {
 
       this.setDisabledCreation(true)
       this.fetchShare()
+      this.startWebsocket()
    },
-
+   unmounted(){
+      this.disconnect("share")
+   },
    watch: {
       '$route.params.folderId'() {
          this.fetchShare()
@@ -89,12 +94,20 @@ export default {
    methods: {
       humanTime,
       ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "getFolderPassword"]),
+      ...mapActions(useWebSocketStore, ["connect", "send", "disconnect", "send"]),
+      startWebsocket() {
+         this.connect("share", baseWS + "/share", this.token)
+      },
 
       async download() {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
             window.open(this.selected[0].download_url + "?download=true", "_blank")
             let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
             this.$toast.success(message)
+            console.log("AAAAAAAAAAAAAA")
+            let data = { "type": "file_download", "args": { "file_id": this.selected[0].id } }
+            this.send("share", JSON.stringify(data))
+
          } else {
             const ids = this.selected.map((obj) => obj.id)
             let res = await createShareZIP(this.token, { ids: ids })

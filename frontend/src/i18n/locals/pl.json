@@ -69,6 +69,7 @@
     "editThumbnail": "Zmień podgląd"
   },
   "errors": {
+    "tryAgain": "Sprobój ponownie",
     "urlInvalidOrExpired": "URL wygasł, odswież strone",
     "rateLimitExceeded": "Za dużo zapytań >:(",
     "integrityError": "Błąd spójności danych!",
@@ -89,7 +90,7 @@
     "notAllowedToUpload": "Nie możesz jeszcze wysyłać plików. Skonfiguruj ustawienia discorda najpierw",
     "goBack": "Zabierz mnie stąd",
     "retry": "Spróbuj ponownie",
-    "unknownError": "Wystąpił nieznany błąd. Kod: {code}, Odpowiedż: {response}",
+    "unknownError": "Wystąpił nieznany błąd.",
     "unauthenticated": "Użytkownik nieuwierzytelniony",
     "badRequest": "Niepoprawne żądanie.",
     "connection": "Serwer nie odpowiada.",

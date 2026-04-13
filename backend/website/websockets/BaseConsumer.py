@@ -2,6 +2,7 @@ import json
 import threading
 import time
 import traceback
+import uuid
 from abc import abstractmethod, ABC
 from datetime import timedelta
 
@@ -12,6 +13,7 @@ from django.utils import timezone
 
 
 class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
+    max_connections_per_client = 5
     connection_limit = 5        # how many new connections allowed
     connection_window = 30       # seconds
 
@@ -27,6 +29,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         self.last_pong = time.time()
         self._heartbeat_thread = None
         self._heartbeat_running = None
+        self._connection_id = str(uuid.uuid4())
 
     @abstractmethod
     def authorize(self) -> tuple[bool, bool, str]:
@@ -76,12 +79,17 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         return entry["count"] <= limit
 
     def reject(self, code, reason):
+        # self.send_json({"type": "error", "reason": reason})
         self.close(code)
         return
 
     def connect(self):
         if not self._check_rate_limit("connect", self.connection_limit, self.connection_window):
             self.reject(code=4408, reason="Too many connection attempts")
+
+        if self._count_connections() > self.max_connections_per_client:
+            self.reject(4409, "Too many active connections")
+            return
 
         authorized, is_standard_protocol, token = self.authorize()
 
@@ -92,6 +100,8 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
             self.accept()
         else:
             self.accept(token)
+
+        self._register_connection()
 
         if self.ping_heartbeat:
             self.last_pong = time.time()
@@ -108,6 +118,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     def disconnect(self, close_code):
         async_to_sync(self.channel_layer.group_discard)(self.get_group_name(), self.channel_name)
+        self._unregister_connection()
         self.on_disconnect(close_code)
 
     def receive(self, text_data=None, bytes_data=None):
@@ -126,6 +137,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
         # 2) Handle heartbeat (application pong)
         if self.ping_heartbeat and text_data == "PONG":
+            self._refresh_connection()
             self.last_pong = time.time()
             return
 
@@ -176,7 +188,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
                 }
             )
 
-            if time.time() - self.last_pong > 25:
+            if time.time() - self.last_pong > self.ping_interval + self.ping_timeout:
                 async_to_sync(self.channel_layer.send)(
                     self.channel_name,
                     {
@@ -190,3 +202,36 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     def heartbeat_close(self, event):
         self.close()
+
+    def _count_connections(self) -> int:
+        ident = self.get_rate_limit_id()
+        cache = self.get_cache()
+        pattern = f"ws-active:{ident}:*"
+
+        keys = cache.keys(pattern)
+        return len(keys)
+
+    def _register_connection(self) -> None:
+        cache = self.get_cache()
+        ident = self.get_rate_limit_id()
+
+        ttl = self.ping_interval + self.ping_timeout
+
+        key = f"ws-active:{ident}:{self._connection_id}"
+        cache.set(key, 1, timeout=ttl)
+
+    def _refresh_connection(self) -> None:
+        cache = self.get_cache()
+        ident = self.get_rate_limit_id()
+
+        ttl = self.ping_interval + self.ping_timeout
+
+        key = f"ws-active:{ident}:{self._connection_id}"
+        cache.set(key, 1, timeout=ttl)
+
+    def _unregister_connection(self) -> None:
+        cache = self.get_cache()
+        ident = self.get_rate_limit_id()
+
+        key = f"ws-active:{ident}:{self._connection_id}"
+        cache.delete(key)

@@ -63,7 +63,7 @@ export default {
   min-width: 200px;
   border: 1px solid rgba(0, 0, 0, 0.2);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 100000;
   background-color: var(--surfacePrimary);
 }
 

@@ -314,7 +314,6 @@ export default {
 
    async mounted() {
       document.addEventListener("keydown", this.key)
-      this.onPreviewEvent(PreviewEvent.OPEN)
    },
 
    unmounted() {
@@ -333,6 +332,9 @@ export default {
          if (!this.loading && !this.file) {
             this.setError({code: 404, details: "File not found"})
          }
+         if (this.file) {
+            this.onPreviewEvent({type: PreviewEvent.OPEN, payload: {}})
+         }
          this.setLastItem(this.file)
          this.addSelected(this.file)
       },
@@ -348,8 +350,6 @@ export default {
          } else if (type === PreviewEvent.FULLSCREEN_CHANGE) {
             this.isVideoFullscreen = payload.is_fullscreen
          } else if (type === PreviewEvent.EDITOR_CLEAN_CHANGE) {
-            console.log("EDITOR_CLEAN_CHANGE")
-            console.log(payload.is_clean)
             this.isEditorClean = payload.is_clean
          }
          this.$emit("PreviewEvent", {type, payload})
@@ -388,7 +388,7 @@ export default {
          window.open(this.selected[0].download_url, "_blank")
          let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
          this.$toast.success(message)
-         this.onPreviewEvent(PreviewEvent.DOWNLOAD)
+         this.onPreviewEvent({type: PreviewEvent.DOWNLOAD, payload: {}})
       },
 
       prev() {

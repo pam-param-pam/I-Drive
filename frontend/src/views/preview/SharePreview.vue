@@ -15,6 +15,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { PreviewEvent } from "@/utils/constants.js"
 import { getShareSubtitles } from "@/api/share.js"
+import { useWebSocketStore } from "@/stores/websocketStore.js"
 
 export default {
    name: "SharePreview",
@@ -62,28 +63,24 @@ export default {
          }
       }
    },
-
    methods: {
       ...mapActions(useMainStore, ["showHover", "addSelected"]),
+      ...mapActions(useWebSocketStore, ["send"]),
       onPreviewEvent({ type, payload }) {
-         if (type === PreviewEvent.MEDIA_PLAY) {
-
-         } else if (type === PreviewEvent.MEDIA_PAUSE) {
-
-         } else if (type === PreviewEvent.MEDIA_SEEK) {
+         console.log(":onPreviewEvent")
+         console.log({ type, payload })
+         if (type === PreviewEvent.MEDIA_SEEK) {
             this.sendShareEvent({ type: "movie_seek", args: { "to_second": payload.toSeconds, "file_id": this.file.id } })
-         } else if (type === PreviewEvent.MEDIA_VOLUME_CHANGE) {
-
          } else if (type === PreviewEvent.MEDIA_TIME_UPDATE) {
             this.sendShareEvent({ "type": "movie_watch", "args": { "timestamp": payload.timestamp, "file_id": this.file.id } })
-         } else if (type === PreviewEvent.FULLSCREEN_CHANGE) {
-
-         } else if (type === PreviewEvent.SUBTITLE_CHANGE) {
-
+         } else if (type === PreviewEvent.OPEN) {
+            this.sendShareEvent({ "type": "file_open", "args": { "file_id": this.file.id } })
+         } else if (type === PreviewEvent.DOWNLOAD) {
+            this.sendShareEvent({ "type": "file_download", "args": { "file_id": this.file.id } })
          }
       },
       sendShareEvent(data) {
-         this.shareSocket.send(JSON.stringify(data))
+         this.send("share", JSON.stringify(data))
       },
       onClose() {
          try {

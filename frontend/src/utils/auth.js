@@ -7,6 +7,7 @@ import VueNativeSock from "vue-native-websocket-vue3"
 import { onEvent } from "@/utils/WsEventhandler.js"
 import { loginUser, logoutUser, registerUser } from "@/api/auth.js"
 import { WebSocketManager } from "@/utils/WebsocketManager.js"
+import { useWebSocketStore } from "@/stores/websocketStore.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
@@ -30,22 +31,11 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setTheme(body.settings.theme)
 
 
-   app.use(VueNativeSock, baseWS + "/user", {
-      reconnection: true,
-      protocol: token,
-      reconnectionDelay: 5000,
-      reconnectionAttempts: 5
-   })
+   const ws = useWebSocketStore()
 
-
-   new WebSocketManager(
-      () => app.config.globalProperties.$socket,
-      onEvent
-   )
-   app.config.globalProperties.$socket.send_obj = function(obj) {
-      app.config.globalProperties.$socket.send(JSON.stringify(obj))
-   }
-
+   ws.connect("user", baseWS + "/user", token)
+   ws.addListener("user", (event) => onEvent(event))
+   // ws.connect("share", baseWS + "/share")
 }
 
 

@@ -76,14 +76,14 @@ function removeFromUsage(store, item) {
 
 //todo currentFolder is no longer indicative of if the files route is currently active
 
-export async function onEvent(message) {
+export async function onEvent(data) {
    const store = useMainStore()
    /**
     Each event looks like this:
     {"is_encrypted": bool, "lockFrom": int/null, event: {"op_code": int, "folder_context_id", str, "data": [...], ...other data specific for op_code}}
     */
    let currentFolder = store.currentFolder
-   let jsonObject = JSON.parse(message.data)
+   let jsonObject = JSON.parse(data)
    let event = jsonObject.event
    let folder_context_id = jsonObject.folder_context_id
    let currentRoute = router.currentRoute.value.name

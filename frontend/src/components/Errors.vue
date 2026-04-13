@@ -27,8 +27,8 @@
             <span v-if="errorDetails" class="details">{{ errorDetails }}</span>
          </h2>
 
-         <button  class="message error-action-button" @click="goBack">
-            {{ $t("errors.goBack") }}
+         <button class="message error-action-button" @click="refresh">
+            {{ $t("errors.tryAgain") }}
          </button>
       </template>
 
@@ -110,19 +110,12 @@ export default {
       errorDetails() {
          return this.normalizedError?.details
       },
-      hasClose() {
-
-      }
    },
 
    methods: {
       refresh() {
          router.go(0)
       },
-
-      goBack() {
-         router.go(-1)
-      }
    }
 }
 </script>

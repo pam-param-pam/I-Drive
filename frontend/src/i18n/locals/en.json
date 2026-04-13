@@ -75,6 +75,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "tryAgain": "Try again",
     "urlInvalidOrExpired": "URL invalid or expired",
     "integrityError": "Integrity Error!",
     "masterSlaveEqual": "You cannot control yourself...",
@@ -94,7 +95,7 @@
     "notAllowedToUpload": "You are not allowed to upload yet. First configure discord settings.",
     "goBack": "Go back",
     "retry": "Try again",
-    "unknownError": "Unknown error has occurred. Status code: {code}, response: {response}",
+    "unknownError": "Unknown error has occurred.",
     "unauthenticated": "Unauthenticated",
     "badRequest": "Bad Request",
     "connection": "The server can't be reached.",

@@ -83,7 +83,7 @@ class DiscordError(IDriveException):
             self.message = self.response.text[:200]
             pass
 
-        self.retry_after = self._parse_float(headers.get("X-RateLimit-Reset-After"))# or 5
+        self.retry_after = self._parse_float(headers.get("X-RateLimit-Reset-After")) or 5
         super().__init__(self.message)
 
     @staticmethod

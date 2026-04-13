@@ -8,9 +8,12 @@ from ..websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
 
 class ShareConsumer(RateLimitedWebsocketConsumer):
+    connection_limit = 3
+    connection_window = 5
+
     message_limit = 60
     message_window = 60
-    ping_heartbeat = False
+    ping_heartbeat = True
 
     def __init__(self):
         super().__init__()
@@ -54,7 +57,8 @@ class ShareConsumer(RateLimitedWebsocketConsumer):
             share_service.log_event_websocket(self.scope, self.share, ShareEventType.MOVIE_TOGGLE, **args)
         elif event_type == ShareEventType.MOVIE_SEEK.value:
             share_service.log_event_websocket(self.scope, self.share, ShareEventType.MOVIE_SEEK, **args)
-
+        elif event_type == ShareEventType.FILE_DOWNLOAD.value:
+            share_service.log_event_websocket(self.scope, self.share, ShareEventType.FILE_DOWNLOAD, **args)
         else:
             print("NOT FOUND")
             print(event_type)
