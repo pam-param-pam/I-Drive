@@ -83,6 +83,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
+      - IP_API_KEY=${IP_API_KEY}
+
     deploy:
       resources:
         limits:
