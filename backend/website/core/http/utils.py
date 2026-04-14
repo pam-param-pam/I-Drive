@@ -21,6 +21,7 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     response = requests.get(f'https://ipapi.co/{ip}/json/')
     if not response.ok:
         print("===FAILED TO GET GEO LOCATION DATA===")
+        print(ip)
         return None, None
 
     data = response.json()

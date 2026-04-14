@@ -149,10 +149,10 @@ def get_zip_entry_response(request, file_obj: File):
     is_inline = validate_key(request.GET, "inline", expected_type=bool, required=False, default=False)
     referer = request.headers.get('Referer')
 
-    offset = validate_key(request.GET, "offset", int)
-    compressed_size = validate_key(request.GET, "compressed_size", int)
-    uncompressed_size = validate_key(request.GET, "uncompressed_size", int)
-    compression_method = validate_key(request.GET, "compression_method", int)
+    offset = validate_key(request.GET, "offset", int, converter=int)
+    compressed_size = validate_key(request.GET, "compressed_size", int, converter=int)
+    uncompressed_size = validate_key(request.GET, "uncompressed_size", int, converter=int)
+    compression_method = validate_key(request.GET, "compression_method", int, converter=int)
     filename = validate_key(request.GET, "filename", str)
 
     fragments = file_obj.fragments.all().order_by("sequence")
