@@ -1,3 +1,5 @@
+import ipaddress
+import os
 import re
 from typing import Optional
 
@@ -8,6 +10,7 @@ from ..dataModels.general import ResponseDict, ErrorDict
 from ..errors import BadRequestError
 from ..helpers import get_ip
 
+IP_API_KEY = os.environ['IP_API_KEY']
 
 def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}
@@ -18,15 +21,22 @@ def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:
 
 
 def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
-    response = requests.get(f'https://ipapi.co/{ip}/json/')
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+    except ValueError:
+        return None, None
+
+    if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast:
+        return None, None
+
+    response = requests.get(f'https://api.freeipapi.app/api/v1/lookup?ip={ip}', headers={'authorization': f"Bearer {IP_API_KEY}"})
     if not response.ok:
-        print("===FAILED TO GET GEO LOCATION DATA===")
-        print(ip)
+        print(f"===FAILED TO GET GEO LOCATION DATA===({response.status_code})")
         return None, None
 
     data = response.json()
 
-    country = data.get('country_name')
+    country = data.get('country')
     city = data.get('city')
     return country, city
 

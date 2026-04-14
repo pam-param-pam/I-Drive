@@ -167,6 +167,7 @@ POSTGRES_USER=admin
 POSTGRES_PASSWORD=1234
 
 BACKEND_PORT=8001
+IP_API_KEY= grab from here https://freeipapi.app/ (it's free)
 ```
 
 5) Run `docker-compose up`
@@ -220,6 +221,8 @@ POSTGRES_PORT=5432
 POSTGRES_NAME=dev_idrive_postgres
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=1234
+
+IP_API_KEY= grab from here https://freeipapi.app/ (it's free)
 ```
 7) Inside `backend` dir run these commands.
 

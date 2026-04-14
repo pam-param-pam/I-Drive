@@ -48,6 +48,8 @@ jobs:
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           
+          IP_API_KEY=${{ secrets.IP_API_KEY }}
+
           BACKEND_PORT=8001
           
           EOF
