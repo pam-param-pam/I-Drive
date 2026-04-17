@@ -42,7 +42,7 @@ export async function logoutUser(token) {
 
 
 export async function getQrSessionDeviceInfo(sessionId) {
-   let url = `/auth/qrcode/get/${sessionId}`
+   let url = `/auth/qrcode/${sessionId}`
    let response = await backendInstance.get(url, {
       __displayErrorToast: false
    })
@@ -51,8 +51,8 @@ export async function getQrSessionDeviceInfo(sessionId) {
 
 
 export async function closePendingQrSession(sessionId) {
-   let url = `/auth/qrcode/cancel/${sessionId}`
-   let response = await backendInstance.get(url, {
+   let url = `/auth/qrcode/${sessionId}`
+   let response = await backendInstance.delete(url, {
       __displayErrorToast: false
    })
    return response.data
@@ -61,7 +61,7 @@ export async function closePendingQrSession(sessionId) {
 
 export async function approveQrSession(sessionId) {
    let url = `/auth/qrcode/${sessionId}`
-   let response = await backendInstance.post(url)
+   let response = await backendInstance.patch(url)
    return response.data
 }
 

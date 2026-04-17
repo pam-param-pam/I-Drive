@@ -118,11 +118,15 @@ export class RequestProducer {
                state.markVideoMetadataRequired()
 
                mp4boxFile.onReady = info => {
+                  console.log("ON READY")
+                  console.log(info)
                   const videoMetadata = parseVideoMetadata(info)
                   state.setVideoMetadata(videoMetadata)
                   state.markVideoMetadataExtracted()
 
                   const subtitleTracks = info.tracks.filter(t => t.type === "subtitles") || []
+                  console.log(subtitleTracks)
+
                   state.setExpectedSubtitleCount(subtitleTracks.length)
                   if (subtitleTracks.length > 0) {
                      state.markSubtitlesRequired()
@@ -136,6 +140,7 @@ export class RequestProducer {
                }
 
                mp4boxFile.onSamples = async (id, subTrack, samples) => {
+                  console.log("onSamples")
                   if (!samples?.length) return
 
                   if (!mp4boxFile.collectedSamples) {
@@ -157,6 +162,7 @@ export class RequestProducer {
                         }
                         name = this.makeUniqueSubName(name, id)
                         let isForced = subTrack.kind?.value === "forced-subtitle"
+                        console.log("createAndPushSubtitleAttachment")
                         this.createAndPushSubtitleAttachment(frontendId, vtt, name, isForced)
                      }
                   }
@@ -286,6 +292,7 @@ export class RequestProducer {
    }
 
    createAndPushSubtitleAttachment(frontendId, blob, subName, isForced) {
+      console.log("createAndPushSubtitleAttachment1")
       const state = this.uploadRuntime.getFileState(frontendId)
       const fileObj = state.fileObj
 
@@ -300,6 +307,7 @@ export class RequestProducer {
    }
 
    tryEmitSubtitlesRequest(frontendId) {
+      console.log("tryEmitSubtitlesRequest")
       const state = this.uploadRuntime.getFileState(frontendId)
 
       const expectedCount = state.expectedSubtitleCount
@@ -316,8 +324,6 @@ export class RequestProducer {
          batches.push(attachments.slice(i, i + maxAttachments))
       }
 
-      state.markSubtitlesExtracted(frontendId)
-
       for (const batch of batches) {
          let totalSize = 0
          for (const att of batch) {
@@ -330,6 +336,7 @@ export class RequestProducer {
             attachments: batch
          })
       }
+      state.markSubtitlesExtracted(frontendId)
 
       this.subtitleAttachments.delete(frontendId)
    }

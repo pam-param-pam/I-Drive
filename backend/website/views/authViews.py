@@ -72,7 +72,7 @@ def get_qr_session_view(request):
     return JsonResponse(auth_dict, status=200)
 
 
-@api_view(['POST'])
+@api_view(['PATCH'])
 @throttle_classes([LoginThrottle])
 @permission_classes([IsAuthenticated])
 def authenticate_qr_session_view(request, session_id):
@@ -88,7 +88,7 @@ def get_qr_session_device_info_view(request, session_id):
     return JsonResponse(session_data, status=200)
 
 
-@api_view(['GET'])
+@api_view(['DELETE'])
 @throttle_classes([LoginThrottle])
 @permission_classes([IsAuthenticated])
 def cancel_pending_qr_session_view(request, session_id):

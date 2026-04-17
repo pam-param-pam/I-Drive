@@ -134,15 +134,7 @@ export default {
                device_type: data.device_type
             }
 
-            // Start 3-second countdown
-            this.countdown = 2
-            const interval = setInterval(() => {
-               this.countdown--
-               if (this.countdown <= 0) {
-                  clearInterval(interval)
-                  this.canApprove = true
-               }
-            }, 1000)
+            this.canApprove = true
 
          } catch (err) {
             console.error(err)

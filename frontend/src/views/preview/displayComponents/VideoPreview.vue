@@ -3,7 +3,7 @@
       id="video"
       ref="video"
       :autoplay="true"
-      :poster="file?.thumbnail_url"
+      :poster="posterSrcUrl"
       :src="videoSrcUrl"
       controls
       crossorigin="anonymous"
@@ -46,9 +46,26 @@ export default {
    computed: {
       videoSrcUrl() {
          return this.file?.download_url + "?inline=True"
+      },
+      posterSrcUrl() {
+         return this.file?.thumbnail_url
       }
    },
+   watch: {
+      file: {
+         //fix poster reload
+         handler() {
+            if (!this.videoRef) return
 
+            this.videoRef.pause()
+
+            // Hard reset
+            this.videoRef.removeAttribute("src")
+            this.videoRef.removeAttribute("poster")
+            this.videoRef.load()
+         }
+      }
+   },
    async mounted() {
       this.videoRef = this.$refs.video
 
@@ -63,6 +80,8 @@ export default {
             this.videoRef.textTracks.addEventListener("change", this.onSubtitleChanged)
          }
       }
+      console.log(this.videoRef.subtitleTracks)
+      console.log(this.videoRef.audioTracks)
 
       window.addEventListener("fullscreenchange", this.fullscreenChange)
    },
