@@ -101,7 +101,7 @@ export default {
    methods: {
       humanTime,
 
-      ...mapActions(useMainStore, ["setDisabledCreation", "setItems", "setSearchItems", "setCurrentFolderData", "setItemsLoading", "setItemsError"]),
+      ...mapActions(useMainStore, ["setDisabledCreation", "setItems", "setSearchItems", "setCurrentFolderData", "setItemsLoading", "setItemsError", "setLastItem"]),
 
       // -------------------------
       // INIT
@@ -129,8 +129,12 @@ export default {
             }
 
             this.realFolderList = this.breadcrumbs
+
             this.file = this.items.find(f => f.id === this.zipFileId)
-            console.log(this.config.extensions)
+
+            this.realFolderList.push({name: this.file?.name, id: this.file.parent_id})
+            this.setLastItem(this.file)
+
             await this.sendWorker("init", {url: this.file.download_url, extensions: {...this.config.extensions}})
 
             this.setItems(null)

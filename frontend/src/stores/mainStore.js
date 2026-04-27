@@ -18,7 +18,7 @@ export const useMainStore = defineStore("main", {
       folderPasswords: {},
       searchFilters: { "files": true, "folders": true },
       lastItem: null,
-      lastFolderId: null,
+      lastFolder: null,
       searchActive: false,
       searchItems: [],
       breadcrumbs: [],
@@ -127,6 +127,7 @@ export const useMainStore = defineStore("main", {
       setCurrentFolderData(value) {
          this.setItems(value.folder.children)
          this.setBreadcrumbs(value.breadcrumbs)
+         this.setLastFolder(this.currentFolder)
          this.setCurrentFolder(value.folder)
       },
       setItemsLoading(value) {
@@ -207,8 +208,8 @@ export const useMainStore = defineStore("main", {
       setLastItem(value) {
          this.lastItem = value
       },
-      setLastFolderId(value) {
-         this.lastFolderId = value
+      setLastFolder(value) {
+         this.lastFolder = value
       },
       setSelected(items) {
          this.selected = items

@@ -93,7 +93,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "setLastFolderId"]),
+      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "setLastFolder"]),
       ...mapActions(useWebSocketStore, ["connect", "send", "disconnect", "send"]),
       startWebsocket() {
          this.connect("share", baseWS + "/share", this.token)
@@ -122,7 +122,7 @@ export default {
 
          switch (action) {
             case "dir":
-               this.setLastFolderId(item.id)
+               this.setLastFolder(item)
                return { name: "Share", params: { ...this.$route.params, folderId: item.id }}
             case "zip":
                return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}

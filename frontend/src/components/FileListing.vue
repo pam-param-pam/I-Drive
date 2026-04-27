@@ -436,7 +436,7 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["itemsLoading", "itemsError", "multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems",
-         "lastItem", "items", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "lastFolderId"]),
+         "lastItem", "items", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "lastFolder"]),
 
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
@@ -505,7 +505,7 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "resetSelected", "showHover",
-         "setSortByAsc", "setSortingBy", "updateSettings"]),
+         "setSortByAsc", "setSortingBy", "updateSettings", "setLastFolder"]),
 
       isMobile,
 
@@ -759,9 +759,16 @@ export default {
             return new Promise(resolve => requestAnimationFrame(resolve))
          }
 
-         if (!this.lastItem && !this.lastFolderId) return
-
-         let itemId = this.lastFolderId || this.lastItem.id
+         if (!this.lastItem && !this.lastFolder) return
+         let itemId
+         if (this.lastFolder) {
+            itemId = this.lastFolder.id
+            // this.setLastFolder(null)
+         }
+         if (this.lastItem) {
+            itemId = this.lastItem.id
+            this.setLastItem(null)
+         }
 
          await this.$nextTick()
          await nextFrame()
@@ -779,7 +786,6 @@ export default {
 
          itemElement.$el.classList.add("pulse-animation")
 
-         this.setLastItem(null)
          this.scrollToAnimationTimeout = setTimeout(() => {
             if (itemElement?.$el) {
                itemElement.$el.classList.remove("pulse-animation")

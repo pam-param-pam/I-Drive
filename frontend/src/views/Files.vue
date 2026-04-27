@@ -108,7 +108,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLastFolderId", "setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation",
+      ...mapActions(useMainStore, ["setLastFolder", "setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation",
          "setCurrentFolder", "closeHover", "showHover"]),
 
       async onSearchQuery(searchParams) {
@@ -244,7 +244,6 @@ export default {
 
          switch (action) {
             case "dir":
-               this.setLastFolderId(item.id)
                return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
             case "zip":
                return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id } }
