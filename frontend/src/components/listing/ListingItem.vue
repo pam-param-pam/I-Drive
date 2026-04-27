@@ -69,7 +69,6 @@ import { move } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { humanTime, isMobile } from "@/utils/common.js"
-import { toRaw } from "vue"
 import { getFileRawData } from "@/api/files.js"
 
 export default {

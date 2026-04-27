@@ -32,9 +32,6 @@ import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { humanTime } from "../utils/common.js"
 import { getItems } from "@/api/folder.js"
-import { nextTick } from "vue"
-import { search } from "@/api/search.js"
-import axios from "axios"
 
 export default {
    name: "zip",
@@ -90,6 +87,7 @@ export default {
          this.worker.terminate()
          this.worker = null
       }
+      this.setLastItem(this.file)
    },
 
    watch: {
@@ -139,7 +137,6 @@ export default {
 
             this.setItems(null)
             await this.loadList()
-
          } catch (e) {
             console.error(e)
             this.setItemsError(e)

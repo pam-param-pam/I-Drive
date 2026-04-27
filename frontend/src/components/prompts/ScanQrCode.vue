@@ -67,7 +67,7 @@
 
 <script>
 import { QrcodeStream } from "vue-qrcode-reader"
-import { mapActions, mapState } from "pinia"
+import { mapActions } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { approveQrSession, closePendingQrSession, getQrSessionDeviceInfo } from "@/api/auth.js"
 

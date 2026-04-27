@@ -2,11 +2,8 @@ import router from "@/router"
 import { baseWS } from "@/utils/constants"
 import { getUser } from "@/api/user.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import app from "@/main.js"
-import VueNativeSock from "vue-native-websocket-vue3"
 import { onEvent } from "@/utils/WsEventhandler.js"
 import { loginUser, logoutUser, registerUser } from "@/api/auth.js"
-import { WebSocketManager } from "@/utils/WebsocketManager.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
 
 

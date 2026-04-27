@@ -95,11 +95,11 @@ def process_channel(user, channel, days):
             msg_id = discord_message["id"]
             timestamp = datetime.fromisoformat(discord_message["timestamp"])
 
-            if timestamp > six_hours_ago:
-                continue
-
-            if timestamp < cutoff:
-                break
+            # if timestamp > six_hours_ago:
+            #     continue
+            #
+            # if timestamp < cutoff:
+            #     break
 
             if query_attachments(message_id=msg_id):
                 continue

@@ -101,7 +101,6 @@ import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { mapActions, mapState } from "pinia"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { fileUploadStatus, uploadState } from "@/utils/constants.js"
-import { useMainStore } from "@/stores/mainStore.js"
 import { getFileType, isErrorStatus } from "@/upload/utils/uploadHelper.js"
 import { getUploader } from "@/upload/Uploader.js"
 
