@@ -1,6 +1,6 @@
 <template>
    <h4 class="listing-notice">{{ $t("trash.info") }}</h4>
-   <errors v-if="error" :error="error" />
+   <errors v-if="itemsError" :error="itemsError" />
 
    <FileListing
       ref="listing"
