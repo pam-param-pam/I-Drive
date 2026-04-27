@@ -57,7 +57,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["currentFolder", "currentPrompt", "settings"]),
+      ...mapState(useMainStore, ["currentFolder", "settings"]),
       canSubmit() {
          return this.name.length > 0
       }
@@ -90,7 +90,7 @@ export default {
                let res = await createFile({ files: [file_data] })
                let file = res[0]
                if (file.type === "Code" || file.type === "Text" || file.type === "Database") {
-                  this.$router.push({ name: "Editor", params: { fileId: file.file_id, lockFrom: file.lockFrom } })
+                  this.$router.replace({ name: "Editor", params: { fileId: file.file_id, lockFrom: file.lockFrom } })
                }
             } finally {
                this.closeHover()

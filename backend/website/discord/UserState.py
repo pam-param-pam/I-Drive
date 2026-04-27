@@ -424,10 +424,13 @@ class UserState:
             k.decode() if isinstance(k, bytes) else k
             for k in self._redis.smembers(self._credentials_set_key())
         ]
+
         for credential_key in credential_keys:
-            data = self._redis.hgetall(credential_key)
+            data = decode_redis_hash(self._redis.hgetall(credential_key))
+
             if data.get("discord_id") == credential_id:
                 return CredentialState.from_redis_hash(data)
+
         return None
 
     # ------------------------------------------------------------------

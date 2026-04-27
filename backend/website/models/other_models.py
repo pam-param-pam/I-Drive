@@ -23,13 +23,13 @@ class UserZIP(models.Model):
     constraints = [
         # token must not be empty
         CheckConstraint(
-            check=~Q(token__exact=""),
+            condition=~Q(token__exact=""),
             name="%(class)s_token_not_empty",
         ),
 
         # name must not be empty
         CheckConstraint(
-            check=~Q(name__exact=""),
+            condition=~Q(name__exact=""),
             name="%(class)s_name_not_empty",
         ),
     ]
@@ -77,7 +77,7 @@ class Notification(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=Q(type__in=NotificationType.values),
+                condition=Q(type__in=NotificationType.values),
                 name="notification_type_valid",
             )
         ]

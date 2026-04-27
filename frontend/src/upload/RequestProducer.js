@@ -6,8 +6,7 @@ import {
    appendMp4BoxBuffer,
    generateIv,
    generateKey,
-   isVideoFile, isZipFile,
-   makeThumbnailIfNeeded,
+   isVideoFile, makeThumbnailIfNeeded,
    parseVideoMetadata,
    roundUpTo64
 } from "@/upload/utils/uploadHelper.js"
@@ -18,14 +17,13 @@ import { buildVttFromSamples } from "@/utils/subtitleUtlis.js"
 import { getUploader } from "@/upload/Uploader.js"
 
 export class RequestProducer {
-   constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles, zipWorker }) {
+   constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles }) {
       this.uploadStore = useUploadStore()
       this.mainStore = useMainStore()
       this.uploadRuntime = uploadRuntime
       this.fileQueue = fileQueue
       this.requestQueue = requestQueue
       this.requestMoreFiles = requestMoreFiles
-      this.zipWorker = zipWorker
 
       this.createdFolders = new Map()
       this.mp4Boxes = new Map()

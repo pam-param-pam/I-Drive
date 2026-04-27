@@ -70,8 +70,9 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["itemsLoading", "itemsError", "currentPrompt", "searchItems", "breadcrumbs", "user", "settings",
-         "selected", "perms", "selected", "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "currentPrompt", "searchItems", "breadcrumbs", "user", "selected", "perms", "selected",
+         "currentFolder", "disabledCreation", "getFolderPassword", "selectedCount", "searchActive"]),
+
       headerButtons() {
          return {
             info: !this.disabledCreation || this.selectedCount > 0,
@@ -107,7 +108,8 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation", "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
+      ...mapActions(useMainStore, ["setLastFolderId", "setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation",
+         "setCurrentFolder", "closeHover", "showHover"]),
 
       async onSearchQuery(searchParams) {
          this.setItemsLoading(true)
@@ -242,6 +244,7 @@ export default {
 
          switch (action) {
             case "dir":
+               this.setLastFolderId(item.id)
                return { name: "Files", params: { folderId: item.id, lockFrom: item.lockFrom } }
             case "zip":
                return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id } }
@@ -273,14 +276,14 @@ export default {
 
                   props: { requiredFolderPasswords: [{ id: item.lockFrom, name: item.name }] },
                   confirm: () => {
-                     this.$router.push(route)
+                     this.$router.replace(route)
                   }
                })
                return
             }
          }
 
-         this.$router.push(route)
+         this.$router.replace(route)
       }
    }
 }

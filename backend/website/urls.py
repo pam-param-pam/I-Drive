@@ -114,11 +114,12 @@ urlpatterns = [
     django_path("auth/token/login", login_per_device_view, name="login"),
     django_path("auth/token/logout", logout_per_device_view, name="logout"),
     django_path("auth/register", register_user_view, name="register"),
+    django_path("auth/password", change_password_view, name="change password"),
+
     path('auth/qrcode', ['POST'], get_qr_session_view, name='get qr code session'),
     path('auth/qrcode/<session_id>', ['PATCH'], authenticate_qr_session_view, name='authenticate a qr session'),
     path('auth/qrcode/<session_id>', ['GET'], get_qr_session_device_info_view, name='get new device info by session id'),
     path('auth/qrcode/<session_id>', ['DELETE'], cancel_pending_qr_session_view, name='cancel new device pending session'),
-    django_path("auth/password", change_password_view, name="change password"),
     path("auth/devices", ['GET'], list_active_devices_view, name="list active devices"),
     path("auth/devices/logout-all", ['POST'], logout_all_devices_view, name="logouts all devices"),
     path("auth/devices/<device_id>", ['DELETE'], revoke_device_view, name="revoke a device"),
@@ -135,7 +136,7 @@ urlpatterns = [
     path("user/discordSettings/webhooks/<webhook_id>", ['DELETE'], delete_webhook_view, name="delete a webhook"),
     path("user/discordSettings/bots", ['POST'], add_bot_view, name="add a bot"),
     path("user/discordSettings/bots/<bot_id>", ['DELETE'], delete_bot_view, name="delete a bot"),
-    path("user/discordSettings/credentials", ['POST'], reenable_credential_view, name="reenable a credential"),
+    path("user/discordSettings/credentials/<credential_id>/:enable", ['POST'], reenable_credential_view, name="reenable a credential"),
 
     path("user/notifications", ['GET'], get_notifications_view, name="get user notifications"),
     path("user/notifications", ['POST'], set_notifications_read_status_view, name="set notifications read status"),

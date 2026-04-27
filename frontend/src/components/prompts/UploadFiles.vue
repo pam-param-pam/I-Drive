@@ -95,7 +95,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useUploadStore, ["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta", "state", "isAllUploadsFinished"]),
+      ...mapState(useUploadStore, ["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta", "state"]),
       uploadState() {
          return uploadState
       },

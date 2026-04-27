@@ -65,7 +65,7 @@ import HeaderBar from "@/components/header/HeaderBar.vue"
 import { marked } from "marked"
 import markedKatex from "marked-katex-extension"
 import { editFile, getFileRawData } from "@/api/files.js"
-import { mapActions, mapState } from "pinia"
+import { mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import buttons from "@/utils/buttons.js"
 import throttle from "lodash.throttle"
@@ -112,7 +112,7 @@ export default {
       file: "fetchData"
    },
    computed: {
-      ...mapState(useMainStore, ["perms", "settings"]),
+      ...mapState(useMainStore, ["settings"]),
       isMarkdownFile() {
          return (this.file.name.endsWith(".md") || this.file.name.endsWith(".markdown"))
       },

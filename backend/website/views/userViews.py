@@ -26,17 +26,15 @@ from ..services import user_service
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def can_upload(request, folder_obj: Folder):
     discordSettings = request.user.discordsettings
-    webhooks = Webhook.objects.filter(owner=request.user)
-    bots = Bot.objects.filter(owner=request.user)
     channels = Channel.objects.filter(owner=request.user)
 
-    webhook_dicts = []
+    discord_settings = build_discord_settings(request.user)
 
-    for webhook in webhooks:
-        webhook_dicts.append(WebhookSerializer().serialize_object(webhook))
+    bots = discord_settings["bots"]
+    webhooks = discord_settings["webhooks"]
 
-    allowed_to_upload = bool(discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and bots.exists() and channels.exists())
-    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhook_dicts, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id,
+    allowed_to_upload = bool(discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and len(bots) > 0 and channels.exists())
+    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhooks, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id,
                          "extensions": FILE_TYPES})
 
 
@@ -125,8 +123,7 @@ def delete_bot_view(request, bot_id):
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def reenable_credential_view(request):
-    credential_id = extract_key(request.data, "credential_id")
+def reenable_credential_view(request, credential_id):
     user_service.reenable_credential(request.user, credential_id)
     return HttpResponse(status=204)
 

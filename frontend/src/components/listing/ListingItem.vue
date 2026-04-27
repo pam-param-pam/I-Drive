@@ -100,10 +100,9 @@ export default {
          return null
       },
       imageSrcSmall() {
-         let size = this.settings.viewMode === "height grid" ? "512" : "256"
          if (!this.imageSrc || this.item.thumbOff) return
          if (this.fallback || this.areImagesBlocked) return "/img/failed.svg"
-         return this.imageSrc + "?size=" + size
+         return this.imageSrc
       },
       type() {
          if (this.item.isDir) return "folder"
@@ -157,7 +156,7 @@ export default {
    },
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setLastItem", "addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview", "setMultiSelection", "blockImagesFor"]),
+      ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview", "setMultiSelection", "blockImagesFor"]),
 
       onEsc(event) {
          if (event.key === "Escape" && this.multiSelection) {
@@ -349,8 +348,6 @@ export default {
       },
 
       open() {
-         if (this.item.isDir) this.setLastItem(this.item)
-
          this.$emit("onOpen", this.item)
       },
 

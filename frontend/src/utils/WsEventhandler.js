@@ -121,7 +121,7 @@ export async function onEvent(data) {
       }
       //if the deleted folder was the current folder, then let's redirect to root
       if (event.data.includes(currentFolder?.id)) {
-         this.$router.push({ name: `Files` })
+         this.$router.replace({ name: `Files` })
       }
 
    }

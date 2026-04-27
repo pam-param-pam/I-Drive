@@ -68,7 +68,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["settings", "currentPromptName", "multiSelection"])
+      ...mapState(useMainStore, ["currentPromptName", "multiSelection"])
    },
    methods: {
       ...mapActions(useMainStore, ["showHover", "closeHover", "setMultiSelection"]),

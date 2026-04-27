@@ -228,9 +228,11 @@ export default {
    margin-right: 10px;
 }
 
-.type-error { border-left: 3px solid #e57373; }
-.type-success { border-left: 3px solid #66bb6a; }
 .type-info { border-left: 3px solid #64b5f6; }
+.type-success { border-left: 3px solid #66bb6a; }
+.type-warning { border-left: 3px solid #ff8800; }
+.type-error { border-left: 3px solid rgba(155, 5, 5, 0.8); }
+.type-important { border-left: 3px solid #d31010; }
 
 .notifications-actions {
    justify-content: space-between;

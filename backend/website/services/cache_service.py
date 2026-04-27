@@ -1,5 +1,4 @@
 
-
 def get_thumbnail_key(file_id: str) -> str:
     return f"thumbnail:{file_id}"
 

@@ -88,7 +88,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "updateItem"]),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       onPaste(event) {
          let items = (event.clipboardData || window.clipboardData).items

@@ -1,5 +1,3 @@
-import os
-import tempfile
 import traceback
 from io import BytesIO
 

@@ -78,9 +78,6 @@ import { mapActions, mapState } from "pinia"
 import Errors from "@/components/Errors.vue"
 import { humanTime } from "@/utils/common.js"
 import loadingSpinner from "@/components/loadingSpinner.vue"
-import { useWebSocketStore } from "@/stores/websocketStore.js"
-import { baseWS } from "@/utils/constants.js"
-import { onEvent } from "@/utils/WsEventhandler.js"
 
 export default {
    name: "shares",
@@ -128,7 +125,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["closeHover", "showHover"]),
+      ...mapActions(useMainStore, ["showHover"]),
 
       setLoading(value) {
         this.loading = value

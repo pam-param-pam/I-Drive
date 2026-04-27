@@ -7,8 +7,6 @@
 </template>
 
 <script>
-import { mapActions } from "pinia"
-import { useMainStore } from "@/stores/mainStore.js"
 import { getFileRawData } from "@/api/files.js"
 
 export default {
@@ -36,7 +34,6 @@ export default {
       }
    },
    methods: {
-      ...mapActions(useMainStore, ["setTextError"]),
       onError(e) {
          this.$emit("error", "Failed to load pdf file")
          getFileRawData(this.src, { responseType: "arraybuffer" })

@@ -157,12 +157,6 @@ class AuditAction(Enum):
     USER_LOGGED_OUT = 2
     USER_LOGIN_FAILED = 3
 
-
-class NotificationType(Enum):
-    NEW_DEVICE_LOG_IN = 0
-    CUSTOM_MESSAGE = 1
-    ERROR_HAPPENED = 2
-
 class ShareEventType(str, Enum):
     # Share
     SHARE_VIEW = "share_view"

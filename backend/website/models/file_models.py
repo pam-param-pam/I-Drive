@@ -45,27 +45,27 @@ class File(models.Model):
     class Meta:
         constraints = [
             CheckConstraint(
-                check=Q(state__in=[state.value for state in ItemState]),
+                condition=Q(state__in=[state.value for state in ItemState]),
                 name="%(class)s_valid_state",
             ),
             CheckConstraint(
-                check=Q(type__in=[choice[0] for choice in FILE_TYPE_CHOICES]),
+                condition=Q(type__in=[choice[0] for choice in FILE_TYPE_CHOICES]),
                 name="%(class)s_valid_file_type"
             ),
             CheckConstraint(
-                check=Q(size__gte=0),
+                condition=Q(size__gte=0),
                 name="%(class)s_size_non_negative"
             ),
             CheckConstraint(
-                check=~Q(name__exact=""),
+                condition=~Q(name__exact=""),
                 name="%(class)s_name_not_empty",
             ),
             CheckConstraint(
-                check=~Q(extension__exact=""),
+                condition=~Q(extension__exact=""),
                 name="%(class)s_extension_not_empty",
             ),
             CheckConstraint(
-                check=(
+                condition=(
                         (
                             Q(encryption_method=EncryptionMethod.Not_Encrypted.value)
                             & Q(key__isnull=True)
@@ -81,15 +81,15 @@ class File(models.Model):
                 name="%(class)s_encryption_fields_consistent",
             ),
             CheckConstraint(
-                check=Q(last_modified_at__gte=F("created_at")),
+                condition=Q(last_modified_at__gte=F("created_at")),
                 name="%(class)s_last_modified_after_created"
             ),
             CheckConstraint(
-                check=Q(crc__gte=0) | Q(crc__isnull=True),
+                condition=Q(crc__gte=0) | Q(crc__isnull=True),
                 name="%(class)s_crc_non_negative_or_null"
             ),
             CheckConstraint(
-                check=(
+                condition=(
                         Q(size__lte=0, crc=0) |
                         Q(size__gt=0, crc__gt=0) |
                         Q(crc__isnull=True)
@@ -242,17 +242,17 @@ class Fragment(DiscordAttachmentMixin):
         constraints = [
             # valid fragment state
             CheckConstraint(
-                check=Q(state__in=[state.value for state in ItemState]),
+                condition=Q(state__in=[state.value for state in ItemState]),
                 name="%(class)s_valid_state",
             ),
             # sequence must be non-negative
             CheckConstraint(
-                check=Q(sequence__gt=0),
+                condition=Q(sequence__gt=0),
                 name="%(class)s_sequence_greater_than_zero",
             ),
             # offset must be non-negative
             CheckConstraint(
-                check=Q(offset__gte=0),
+                condition=Q(offset__gte=0),
                 name="%(class)s_offset_non_negative",
             ),
             # unique fragment sequence for a file
@@ -267,12 +267,12 @@ class Fragment(DiscordAttachmentMixin):
             ),
             # crc must me non-negative or null
             CheckConstraint(
-                check=Q(crc__gte=0) | Q(crc__isnull=True),
+                condition=Q(crc__gte=0) | Q(crc__isnull=True),
                 name="%(class)s_crc_non_negative_or_null"
             ),
             # crc must be > 0 or null if size > 0
             CheckConstraint(
-                check=(
+                condition=(
                         Q(size__lte=0, crc=0) |
                         Q(size__gt=0, crc__gt=0) |
                         Q(crc__isnull=True)

@@ -13,29 +13,48 @@ from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Folder
+from ..models.other_models import NotificationType
 from ..queries.selectors import check_if_bots_exists, query_attachments
-from ..services import delete_service
+from ..services import delete_service, user_service
 
 
-@app.task
-def delete_expired_shares():
-    shares = ShareableLink.objects.filter()
-    for share in shares:
+def cleanup_expired_shares(user) -> int:
+    removed = 0
+    for share in ShareableLink.objects.filter(owner=user):
         if share.is_expired():
             share.delete()
+            removed += 1
+    return removed
 
-@app.task
-def delete_expired_zips():
-    zips = UserZIP.objects.filter()
-    for zipObj in zips:
-        if zipObj.is_expired():
-            zipObj.delete()
 
-@app.task
-def prune_expired_tokens():
+def cleanup_expired_zips(user) -> int:
+    removed = 0
+    for zip_obj in UserZIP.objects.filter(owner=user):
+        if zip_obj.is_expired():
+            zip_obj.delete()
+            removed += 1
+    return removed
+
+def cleanup_tokens(user) -> int:
     now = django_timezone.now()
-    expired_tokens = PerDeviceToken.objects.filter(expires_at__lte=now)
-    count, _ = expired_tokens.delete()
+    removed, _ = PerDeviceToken.objects.filter(user=user, expires_at__lte=now).delete()
+    return removed
+
+
+def cleanup_trash(user) -> int:
+    now = django_timezone.now()
+    cutoff = now - timedelta(days=MAX_TIME_FILES_IN_TRASH)
+
+    files = File.objects.filter(owner=user, inTrash=True, inTrashSince__lte=cutoff)
+    folders = Folder.objects.filter(owner=user, inTrash=True, inTrashSince__lte=cutoff)
+
+    items = list(files) + list(folders)
+
+    if items:
+        ctx = RequestContext.from_user(user.id)
+        delete_service.delete_items(ctx, user, items)
+
+    return len(items)
 
 
 def bulk_delete_messages(user, channel_id, message_ids):
@@ -63,7 +82,9 @@ def flush_bulk(user, channel_id, message_ids):
 def process_channel(user, channel, days):
     close_old_connections()
 
+    deleted = 0
     bulk_candidates = []
+
     now = datetime.now(timezone.utc)
     six_hours_ago = now - timedelta(hours=6)
     cutoff = now - timedelta(days=days)
@@ -74,84 +95,142 @@ def process_channel(user, channel, days):
             msg_id = discord_message["id"]
             timestamp = datetime.fromisoformat(discord_message["timestamp"])
 
-            # Skip fresh messages
             if timestamp > six_hours_ago:
                 continue
 
-            # Stop when reaching old messages
             if timestamp < cutoff:
                 break
 
-            database_attachments = query_attachments(message_id=msg_id)
-
-            if database_attachments:
+            if query_attachments(message_id=msg_id):
                 continue
 
-            # Decide deletion strategy
             if bulk_deletable(msg_id):
                 bulk_candidates.append(msg_id)
 
-                # Flush when reaching 100
                 if len(bulk_candidates) == 100:
                     flush_bulk(user, channel.discord_id, bulk_candidates)
+                    deleted += len(bulk_candidates)
                     bulk_candidates.clear()
 
             else:
                 delete_single_safe(user, channel.discord_id, msg_id)
+                deleted += 1
 
-        # Flush remaining bulk candidates
         if bulk_candidates:
             flush_bulk(user, channel.discord_id, bulk_candidates)
+            deleted += len(bulk_candidates)
 
     except DiscordError:
         pass
 
+    return deleted
+
+
+def cleanup_dangling_discord_files(user, days: int = 1):
+    total_deleted = 0
+    errors = []
+
+    try:
+        number_of_bots = check_if_bots_exists(user)
+    except NoBotsError:
+        return {"deleted": 0, "errors": []}
+
+    channels = list(Channel.objects.filter(owner=user))
+    max_threads = min(number_of_bots, len(channels))
+
+    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+        futures = [
+            executor.submit(process_channel, user, channel, days)
+            for channel in channels
+        ]
+
+        for f in as_completed(futures):
+            try:
+                total_deleted += f.result()
+            except Exception as e:
+                errors.append(str(e))
+
+    return {"deleted": total_deleted, "errors": errors}
+
+
+def run_cleanup_for_user(user):
+    result = {}
+
+    try:
+        result["shares_removed"] = cleanup_expired_shares(user)
+    except Exception as e:
+        result["shares_error"] = str(e)
+
+    try:
+        result["zips_removed"] = cleanup_expired_zips(user)
+    except Exception as e:
+        result["zips_error"] = str(e)
+
+    try:
+        result["tokens_removed"] = cleanup_tokens(user)
+    except Exception as e:
+        result["tokens_error"] = str(e)
+
+    try:
+        discord_res = cleanup_dangling_discord_files(user)
+        result["discord_removed"] = discord_res.get("deleted", 0)
+        result["discord_errors"] = len(discord_res.get("errors", []))
+    except Exception as e:
+        result["discord_error"] = str(e)
+
+    try:
+        result["trash_removed"] = cleanup_trash(user)
+    except Exception as e:
+        result["trash_error"] = str(e)
+
+    return result
+
+
+def format_cleanup_summary(res: dict) -> str:
+    parts = []
+
+    if "shares_removed" in res:
+        parts.append(f"Shares: {res['shares_removed']} removed")
+    if "zips_removed" in res:
+        parts.append(f"ZIPs: {res['zips_removed']} removed")
+    if "tokens_removed" in res:
+        parts.append(f"Tokens: {res['tokens_removed']} removed")
+    if "trash_removed" in res:
+        parts.append(f"Trash: {res['trash_removed']} removed")
+    if "discord_removed" in res:
+        parts.append(f"Discord: {res['discord_removed']} removed")
+
+    # errors (optional, keep terse)
+    if res.get("discord_errors"):
+        parts.append(f"Discord errors: {res['discord_errors']}")
+
+    # generic errors
+    for k, v in res.items():
+        if k.endswith("_error"):
+            parts.append(f"{k.replace('_', ' ').capitalize()}: {v}")
+
+    return " | ".join(parts) if parts else "Nothing to clean"
 
 @app.task
-def delete_dangling_discord_files(days=3):
+def run_cleanup():
+    results = {}
 
-    users = User.objects.all()
-    for user in users:
-
+    for user in User.objects.all():
         try:
-            number_of_bots = check_if_bots_exists(user)
-        except NoBotsError:
-            continue
+            user_result = run_cleanup_for_user(user)
 
-        channels = list(Channel.objects.filter(owner=user))
+            results[user.id] = user_result
 
-        # limit threads to avoid hitting global rate limits
-        max_threads = min(number_of_bots, len(channels))
+            summary = format_cleanup_summary(user_result)
 
-        with ThreadPoolExecutor(max_workers=max_threads) as executor:
+            user_service.create_notification(
+                user,
+                NotificationType.INFO,
+                "Cleanup",
+                summary
+            )
+        except Exception as e:
+            results[user.id] = {"fatal_error": str(e)}
+            user_service.create_notification(user, NotificationType.ERROR, "Failed to cleanup state", f"During cleanup there was an unhandled error: {e}.")
 
-            futures = [
-                executor.submit(process_channel, user, channel, days)
-                for channel in channels
-            ]
-
-            for f in as_completed(futures):
-                try:
-                    f.result()
-                except Exception as e:
-                    print(f"Channel worker failed: {e}")
-
-@app.task
-def delete_files_from_trash():
-    current_datetime = django_timezone.now()
-    cutoff = current_datetime - timedelta(days=MAX_TIME_FILES_IN_TRASH)
-
-    owner_items_map = defaultdict(list)
-
-    files = File.objects.filter(inTrash=True, inTrashSince__lte=cutoff).select_related("owner")
-    folders = Folder.objects.filter(inTrash=True, inTrashSince__lte=cutoff).select_related("owner")
-
-    for file in files.iterator():
-        owner_items_map[file.owner].append(file)
-
-    for folder in folders.iterator():
-        owner_items_map[folder.owner].append(folder)
-
-    for owner, items in owner_items_map.items():
-        context = RequestContext.from_user(owner.id)
-        delete_service.delete_items(context, owner, items)
+    return results

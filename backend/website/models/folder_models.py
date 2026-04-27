@@ -40,31 +40,31 @@ class Folder(MPTTModel):
         constraints = [
             # 0. folder state must be valid
             CheckConstraint(
-                check=Q(state__in=[state.value for state in ItemState]),
+                condition=Q(state__in=[state.value for state in ItemState]),
                 name="%(class)s_valid_state",
             ),
             # 1. name must not be empty or whitespace
             CheckConstraint(
-                check=~Q(name__regex=r'^\s*$'),
+                condition=~Q(name__regex=r'^\s*$'),
                 name="%(class)s_name_not_blank"
             ),
 
             # 2. created_at <= last_modified_at
             CheckConstraint(
-                check=Q(last_modified_at__gte=F('created_at')),
+                condition=Q(last_modified_at__gte=F('created_at')),
                 name="%(class)s_last_modified_after_created"
             ),
 
             # 3. inTrash and inTrashSince consistency
             CheckConstraint(
-                check=Q(inTrash=False, inTrashSince__isnull=True) |
+                condition=Q(inTrash=False, inTrashSince__isnull=True) |
                       Q(inTrash=True, inTrashSince__isnull=False),
                 name="%(class)s_trash_consistent"
             ),
 
             # 4. lockFrom requires password
             CheckConstraint(
-                check=(
+                condition=(
                         Q(lockFrom__isnull=True) |                # unlocked (password may or may not be NULL)
                         (Q(lockFrom__isnull=False) & Q(password__isnull=False))  # locked requires password
                 ),
@@ -73,13 +73,13 @@ class Folder(MPTTModel):
 
             # 5. autoLock must be False unless lockFrom exists
             CheckConstraint(
-                check=Q(lockFrom__isnull=False) | Q(autoLock=False) | Q(state=ItemState.DELETING),
+                condition=Q(lockFrom__isnull=False) | Q(autoLock=False) | Q(state=ItemState.DELETING),
                 name="%(class)s_autoLock_valid",
             ),
 
             # 6. prevent folder from being its own parent
             CheckConstraint(
-                check=~Q(id=F('parent')),
+                condition=~Q(id=F('parent')),
                 name="%(class)s_parent_not_self"
             )
         ]

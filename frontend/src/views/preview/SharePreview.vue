@@ -46,7 +46,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["sortedItems", "perms"]),
+      ...mapState(useMainStore, ["sortedItems"]),
 
       file() {
          if (!this.sortedItems) return null
@@ -64,7 +64,7 @@ export default {
       }
    },
    methods: {
-      ...mapActions(useMainStore, ["showHover", "addSelected"]),
+      ...mapActions(useMainStore, ["addSelected"]),
       ...mapActions(useWebSocketStore, ["send"]),
       onPreviewEvent({ type, payload }) {
          console.log(":onPreviewEvent")
@@ -84,11 +84,11 @@ export default {
       },
       onClose() {
          try {
-            this.$router.push({ name: "Share", params: { ...this.$route.params } })
+            this.$router.replace({ name: "Share", params: { ...this.$route.params } })
             // catch every error so user can always close...
          } catch (e) {
             console.error(e)
-            this.$router.push({ name: `Share`, params: { folderId: this.user.root } })
+            this.$router.replace({ name: `Share`, params: { folderId: this.user.root } })
          }
       }
    },

@@ -16,7 +16,7 @@ from ..constants import EventCode
 from ..core.dataModels.http import RequestContext
 from ..core.errors import DiscordError
 from ..discord.Discord import discord
-from ..models import File, Folder, Fragment, Thumbnail, Moment, Subtitle
+from ..models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, Bot
 from ..models.delete_models import DeletionJob, DeletionFileWorkItem, DeletionFolderWorkItem
 from ..models.mixin_models import ItemState
 from ..queries.selectors import query_attachments
@@ -343,14 +343,16 @@ def process_channel_deletions(context, job_id: UUID, channel_id: str, messages: 
 
 def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> None:
     message_structure = gather_message_structure(file_ids)
-
+    bots = Bot.objects.filter(owner=context.get_user())
     channel_map: dict[str, dict[str, list[MessageItem]]] = defaultdict(dict)
     for message_id, items in message_structure.items():
         channel_id = items[0].channel_id
         channel_map[channel_id][message_id] = items
 
     futures = []
-    with ThreadPoolExecutor(max_workers=len(channel_map)) as executor:
+    max_workers = min(bots.count(), len(channel_map))
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for channel_id, messages in channel_map.items():
             futures.append(
                 executor.submit(

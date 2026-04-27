@@ -36,7 +36,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["perms", "isLogged"]),
+      ...mapState(useMainStore, ["isLogged"]),
       ...mapState(useUploadStore, ["progress"])
    },
 

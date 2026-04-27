@@ -88,10 +88,6 @@ export default {
       }
    },
 
-   computed: {
-      ...mapState(useMainStore, ["currentPrompt"])
-   },
-
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
 
@@ -207,6 +203,6 @@ export default {
 
 .material-icons {
   font-size: 20px !important;
-  vertical-align: -5px; /* moves it lower */
+  vertical-align: -5px;
 }
 </style>

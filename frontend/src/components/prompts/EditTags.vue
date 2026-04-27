@@ -105,7 +105,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["closeHover", "resetSelected", "updateItem"]),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       submit: onceAtATime(async function() {
          if (this.tagName === "") {

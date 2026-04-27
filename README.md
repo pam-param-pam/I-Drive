@@ -88,23 +88,23 @@ Why vue? Its data-driven approach makes it ideal for application which DOM is ba
 Main backend is made with 🐍 Python, Django, Daphne, Channels, Rest Framework 🐍
 It's responsible for authenticating users and communicating with a database. 
 It uses REST API to both serve & modify data.
-The main backend has more than 80 different endpoints.
+The main backend has more than 85 different endpoints.
 
 Backend uses websockets to communicate data changes to the clients. 
-A list of all websocket events can be found in [here](https://github.com/pam-param-pam/I-Drive/blob/9700a6fb1ef982ae10a2f976f75e9ee8b74ee37e/backend/website/constants.py#L102-L119)
 
 It's also responsible for streaming files from Discord. 
 It supports partial requests, streaming, in browser video/audio seeking, decryption.
 
-Thanks to a [custom zipFly](https://github.com/pam-param-pam/ZipFly) library it also supports streaming zip files "on the fly"
+Thanks to a [custom zipFly](https://github.com/pam-param-pam/ZipFly) library it also supports streaming zip files "on the fly".
 
 
 ### Database
-Postgres is currently used as a database
+Postgres is currently used as a database.
 
 ### Redis
 Redis is used as a fast in memory database for caching and message broker for celery.
-It also serves as a channel layer for django websockets
+It also serves as a channel layer for django websockets.
+It's also used as a global memory for all python processes to manage discord's ratelimits.
 
 ### Celery
 Asynchronous task queue for delegating long tasks like file deletion outside of HTTP call lifecycle.
@@ -118,7 +118,7 @@ The same thing applies to Discord channels and webhooks.
 Sadly discord still groups all requests per ip as well, so the ratelimits are still sometimes hit.
 
 Discord issues cloudflare bans if you make more than 10k 4xx requests in 10 minutes. 
-**iDrive** tries to avoid this as much as possible, including throwing 502 errors when it can't handle more requests
+**iDrive** tries to avoid this as much as possible, including throwing 502 errors when it can't handle more requests.
 
 
 ## Why use both webhooks and Discord bots? 
@@ -132,7 +132,7 @@ Discord bots if given too many permissions would also allow for easy raiding and
 Webhooks on the other hand can only send messages, and delete/modify their own.
 
 ## Why is this/that so slow!
-It's written is python, what do you expect. Rewrite it in rust!
+It's written in python, what do you expect. Rewrite it in rust!
 
 
 ## Docker support
@@ -144,6 +144,7 @@ I drive is fully dockerized! Yay. There are 4 containers managed by `docker comp
 * Postgres
 
 
+# THIS SECTION IS NOT TESTED. SEE ROADMAP
 
 # Deployment
 

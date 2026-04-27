@@ -75,23 +75,23 @@ class PerDeviceToken(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=models.Q(device_type__in=["mobile", "pc", "code"]) | models.Q(device_type__isnull=True),
+                condition=models.Q(device_type__in=["mobile", "pc", "code"]) | models.Q(device_type__isnull=True),
                 name="valid_device_type"
             ),
             CheckConstraint(
-                check=~Q(token_hash__exact=""),
+                condition=~Q(token_hash__exact=""),
                 name="%(class)s_token_hash_not_empty",
             ),
             CheckConstraint(
-                check=~Q(device_id__exact=""),
+                condition=~Q(device_id__exact=""),
                 name="%(class)s_device_id_not_empty",
             ),
             CheckConstraint(
-                check=(Q(expires_at__isnull=True) | Q(expires_at__gte=F("created_at"))),
+                condition=(Q(expires_at__isnull=True) | Q(expires_at__gte=F("created_at"))),
                 name="%(class)s_expires_after_created",
             ),
             CheckConstraint(
-                check=(Q(last_used_at__isnull=True) | Q(last_used_at__gte=F("created_at"))),
+                condition=(Q(last_used_at__isnull=True) | Q(last_used_at__gte=F("created_at"))),
                 name="%(class)s_last_used_after_created",
             ),
             UniqueConstraint(

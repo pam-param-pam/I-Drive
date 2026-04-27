@@ -11,7 +11,7 @@
 <script>
 import CorePreview from "@/views/preview/CorePreview.vue"
 import { useMainStore } from "@/stores/mainStore.js"
-import { mapActions, mapState } from "pinia"
+import { mapState } from "pinia"
 import { getSubtitles, updateVideoPosition } from "@/api/files.js"
 import { PreviewEvent, WebsocketEvent } from "@/utils/constants.js"
 
@@ -60,7 +60,6 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["showHover", "addSelected", "setTextError", "setLastItem"]),
       onPreviewEvent({ type, payload }) {
          if (type === PreviewEvent.MEDIA_PLAY) {
          } else if (type === PreviewEvent.MEDIA_PAUSE) {
@@ -73,7 +72,7 @@ export default {
          }
       },
       onClose() {
-         this.$router.push({ name: "Files", params: { ...this.$route.params } })
+         this.$router.replace({ name: "Files", params: { ...this.$route.params } })
       }
    },
    sockets: {

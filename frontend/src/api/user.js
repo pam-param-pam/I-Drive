@@ -72,9 +72,9 @@ export async function addDiscordBot(data) {
    return response.data
 }
 
-export async function reenableCredential(data) {
-   let url = `/user/discordSettings/credentials`
-   let response = await backendInstance.post(url, data)
+export async function reenableCredential(discordId) {
+   let url = `/user/discordSettings/credentials/${discordId}/:enable`
+   let response = await backendInstance.post(url)
    return response.data
 }
 

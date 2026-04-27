@@ -173,7 +173,9 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["items", "usage", "settings", "user", "perms", "currentFolder", "disabledCreation", "isLogged", "currentPrompt", "loading", "searchActive", "searchItems", "selected", "sortedItems"]),
+      ...mapState(useMainStore, ["items", "usage", "settings", "user", "perms", "currentFolder", "disabledCreation", "isLogged",
+         "currentPrompt", "searchActive", "searchItems", "selected"]),
+
       selectedFile() {
          if (this.selected.length > 1) return null
          return this.selected[0]
@@ -241,10 +243,10 @@ export default {
          // Called twice on same folder, or called in Files go to absolute root
          if (this.lastFolderId === currentId || this.$route.name === "Files") {
 
-            this.$router.push({ name: "Files", params: { folderId: this.user.root } })
+            this.$router.replace({ name: "Files", params: { folderId: this.user.root } })
          } else {
             // Normal navigation
-            this.$router.push({ name: "Files", params: { folderId: currentId } })
+            this.$router.replace({ name: "Files", params: { folderId: currentId } })
          }
 
          this.lastFolderId = currentId
@@ -253,13 +255,13 @@ export default {
 
       toTrash() {
          this.lastFolderId = null
-         this.$router.push({ name: `Trash` })
+         this.$router.replace({ name: `Trash` })
          this.closeHover()
       },
 
       toSettings() {
          this.lastFolderId = null
-         this.$router.push({ name: `Settings` })
+         this.$router.replace({ name: `Settings` })
          this.closeHover()
       },
 

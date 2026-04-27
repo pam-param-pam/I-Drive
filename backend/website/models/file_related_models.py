@@ -27,7 +27,7 @@ class Thumbnail(DiscordAttachmentMixin):
         constraints = [
             # key/iv consistency
             CheckConstraint(
-                check=(
+                condition=(
                         (Q(iv__isnull=True) & Q(key__isnull=True)) |
                         (Q(iv__isnull=False) & Q(key__isnull=False))
                 ),
@@ -61,12 +61,12 @@ class Moment(DiscordAttachmentMixin):
             ),
             # timestamp >= 0
             CheckConstraint(
-                check=Q(timestamp__gte=0),
+                condition=Q(timestamp__gte=0),
                 name="%(class)s_timestamp_non_negative",
             ),
             # encryption consistency
             CheckConstraint(
-                check=(
+                condition=(
                         (Q(key__isnull=True) & Q(iv__isnull=True)) |
                         (Q(key__isnull=False) & Q(iv__isnull=False))
                 ),
@@ -86,7 +86,7 @@ class MediaPosition(models.Model):
     class Meta:
         constraints = [
             CheckConstraint(
-                check=Q(timestamp__gte=0),
+                condition=Q(timestamp__gte=0),
                 name="%(class)s_timestamp_non_negative",
             ),
         ]
@@ -119,7 +119,7 @@ class Subtitle(DiscordAttachmentMixin):
         constraints = [
             # language cannot be empty
             CheckConstraint(
-                check=~Q(language__exact=""),
+                condition=~Q(language__exact=""),
                 name="%(class)s_language_not_empty",
             ),
             # Exactly one subtitle per language per file
@@ -129,7 +129,7 @@ class Subtitle(DiscordAttachmentMixin):
             ),
             # encryption consistency
             CheckConstraint(
-                check=(
+                condition=(
                         (Q(key__isnull=True) & Q(iv__isnull=True)) |
                         (Q(key__isnull=False) & Q(iv__isnull=False))
                 ),

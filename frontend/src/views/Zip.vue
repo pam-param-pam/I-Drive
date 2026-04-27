@@ -215,7 +215,7 @@ export default {
       },
 
       onOpen(item) {
-         this.$router.push(this.getNewRoute(item))
+         this.$router.replace(this.getNewRoute(item))
       },
 
       openInNewWindow(item) {

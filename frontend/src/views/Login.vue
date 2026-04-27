@@ -56,8 +56,6 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapState } from "pinia"
 import throttle from "lodash.throttle"
 import { isMobile, onceAtATime } from "@/utils/common.js"
-import app from "@/main.js"
-import VueNativeSock from "vue-native-websocket-vue3"
 import { validateLogin } from "@/utils/auth"
 import VueQrcode from "@chenfengyuan/vue-qrcode"
 import { createQrSession } from "@/api/auth.js"
@@ -199,7 +197,7 @@ export default {
             localStorage.setItem("device_id", data.device_id)
             await validateLogin()
             this.closeQrWebsocket()
-            await this.$router.push({ path: `/files/${this.user.root}` })
+            await this.$router.replace({ path: `/files/${this.user.root}` })
          } else if (data.opcode === 3) {
             this.qrSessionUser = null
          }
@@ -305,7 +303,7 @@ export default {
             }
             this.closeQrWebsocket()
 
-            await this.$router.push({ path: redirect })
+            await this.$router.replace({ path: redirect })
          } catch (e) {
             if (e.status === 409) {
                this.error = this.$t("login.usernameTaken")

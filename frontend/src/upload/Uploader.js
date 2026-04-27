@@ -27,7 +27,6 @@ export class Uploader {
 
       // workers
       this.fileProcessorWorker = null
-      this.zipWorker = null
 
       //consumers
       this.requestProducer = null
@@ -99,10 +98,6 @@ export class Uploader {
 
       if (!this.fileProcessorWorker) {
          this.fileProcessorWorker = new Worker(new URL("../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
-      }
-
-      if (!this.zipWorker) {
-         this.zipWorker = new Worker(new URL("../workers/zipWorker.js", import.meta.url), { type: "module" })
       }
 
       this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength + filesList.length)

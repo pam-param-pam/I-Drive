@@ -436,7 +436,7 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["itemsLoading", "itemsError", "multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems",
-         "lastItem", "items", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt"]),
+         "lastItem", "items", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "lastFolderId"]),
 
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
@@ -504,7 +504,9 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "addSelected", "resetSelected", "showHover", "setSortByAsc", "setSortingBy", "updateSettings"]),
+      ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "resetSelected", "showHover",
+         "setSortByAsc", "setSortingBy", "updateSettings"]),
+
       isMobile,
 
       async uploadInput(event) {
@@ -692,8 +694,8 @@ export default {
          await this.$refs.search.exit()
 
          this.setLastItem(item)
-         await this.$router.push({ name: "Settings" })
-         this.$router.push({ name: "Files", params: { folderId: parent_id } })
+         await this.$router.replace({ name: "Settings" })
+         this.$router.replace({ name: "Files", params: { folderId: parent_id } })
 
          this.closeContextMenu()
       },
@@ -757,8 +759,9 @@ export default {
             return new Promise(resolve => requestAnimationFrame(resolve))
          }
 
+         if (!this.lastItem && !this.lastFolderId) return
 
-         if (!this.lastItem) return
+         let itemId = this.lastFolderId || this.lastItem.id
 
          await this.$nextTick()
          await nextFrame()
@@ -766,13 +769,12 @@ export default {
          const filesScroller = this.$refs.filesScroller
          if (!filesScroller) return
 
-         const index = this.sortedItems.findIndex(file => file.id === this.lastItem.id) - this.numberOfTiles
-         const lastItemId = this.lastItem.id
+         const index = this.sortedItems.findIndex(file => file.id === itemId) - this.numberOfTiles
 
          filesScroller.scrollToItem(index)
          await nextFrame()
 
-         const itemElement = this.$refs[lastItemId]
+         const itemElement = this.$refs[itemId]
          if (!itemElement?.$el) return
 
          itemElement.$el.classList.add("pulse-animation")

@@ -120,7 +120,7 @@ export default {
       ...mapActions(useMainStore, ["closeHover"]),
 
       async reenable() {
-         await reenableCredential({ "credential_id": this.credential.discord_id })
+         await reenableCredential(this.credential.discord_id)
          this.$toast.success(this.$t("toasts.credentialReenabled"))
          if (this.currentPrompt.confirm) this.currentPrompt.confirm()
          this.closeHover()

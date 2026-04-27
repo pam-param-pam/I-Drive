@@ -63,7 +63,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["itemsLoading", "itemsError", "selected", "disabledCreation", "settings", "selectedCount", "isLogged"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "selected", "disabledCreation", "selectedCount"]),
 
       headerButtons() {
          return {
@@ -93,7 +93,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "getFolderPassword"]),
+      ...mapActions(useMainStore, ["setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "setLastFolderId"]),
       ...mapActions(useWebSocketStore, ["connect", "send", "disconnect", "send"]),
       startWebsocket() {
          this.connect("share", baseWS + "/share", this.token)
@@ -104,7 +104,6 @@ export default {
             window.open(this.selected[0].download_url + "?download=true", "_blank")
             let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
             this.$toast.success(message)
-            console.log("AAAAAAAAAAAAAA")
             let data = { "type": "file_download", "args": { "file_id": this.selected[0].id } }
             this.send("share", JSON.stringify(data))
 
@@ -123,6 +122,7 @@ export default {
 
          switch (action) {
             case "dir":
+               this.setLastFolderId(item.id)
                return { name: "Share", params: { ...this.$route.params, folderId: item.id }}
             case "zip":
                return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}
@@ -140,7 +140,7 @@ export default {
 
       onOpen(item) {
          let route = this.getNewRoute(item)
-         this.$router.push(route)
+         this.$router.replace(route)
       },
 
       copyFileShareUrl() {

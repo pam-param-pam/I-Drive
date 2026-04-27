@@ -69,37 +69,37 @@ class DiscordSettings(models.Model):
         constraints = [
             # guild_id must be empty OR a valid snowflake
             CheckConstraint(
-                check=(Q(guild_id__exact="") | Q(guild_id__regex=r'^[0-9]{17,19}$')),
+                condition=(Q(guild_id__exact="") | Q(guild_id__regex=r'^[0-9]{17,19}$')),
                 name="%(class)s_guild_id_valid_or_empty",
             ),
             # category_id must be empty OR a valid snowflake
             CheckConstraint(
-                check=(Q(category_id__exact="") | Q(category_id__regex=r'^[0-9]{17,19}$')),
+                condition=(Q(category_id__exact="") | Q(category_id__regex=r'^[0-9]{17,19}$')),
                 name="%(class)s_category_id_valid_or_empty",
             ),
             # role_id must be empty OR a valid snowflake
             CheckConstraint(
-                check=(Q(role_id__exact="") | Q(role_id__regex=r'^[0-9]{17,19}$')),
+                condition=(Q(role_id__exact="") | Q(role_id__regex=r'^[0-9]{17,19}$')),
                 name="%(class)s_role_id_valid_or_empty",
             ),
             # guild_id: required when setup is complete
             CheckConstraint(
-                check=(Q(auto_setup_complete=False) | ~Q(guild_id__exact="")),
+                condition=(Q(auto_setup_complete=False) | ~Q(guild_id__exact="")),
                 name="%(class)s_guild_id_required_when_setup_complete",
             ),
             # category_id: required when setup is complete
             CheckConstraint(
-                check=(Q(auto_setup_complete=False) | ~Q(category_id__exact="")),
+                condition=(Q(auto_setup_complete=False) | ~Q(category_id__exact="")),
                 name="%(class)s_category_id_required_when_setup_complete",
             ),
             # role_id: required when setup is complete
             CheckConstraint(
-                check=(Q(auto_setup_complete=False) | ~Q(role_id__exact="")),
+                condition=(Q(auto_setup_complete=False) | ~Q(role_id__exact="")),
                 name="%(class)s_role_id_required_when_setup_complete",
             ),
             # attachment_name: required when setup is complete
             CheckConstraint(
-                check=(Q(auto_setup_complete=False) | ~Q(attachment_name__exact="")),
+                condition=(Q(auto_setup_complete=False) | ~Q(attachment_name__exact="")),
                 name="%(class)s_attachment_name_required_when_setup_complete",
             ),
         ]

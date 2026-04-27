@@ -20,27 +20,27 @@ class Webhook(models.Model):
         constraints = [
             # Discord ID must not be empty
             CheckConstraint(
-                check=~Q(discord_id__exact=""),
+                condition=~Q(discord_id__exact=""),
                 name="%(class)s_discord_id_not_empty",
             ),
             # URL must not be empty
             CheckConstraint(
-                check=~Q(url__exact=""),
+                condition=~Q(url__exact=""),
                 name="%(class)s_url_not_empty",
             ),
             # guild_id must snowflake
             CheckConstraint(
-                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(guild_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_guild_id_snowflake_format",
             ),
             # discord_id must snowflake
             CheckConstraint(
-                check=Q(discord_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(discord_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_discord_id_snowflake_format",
             ),
             # name must not be empty
             CheckConstraint(
-                check=~Q(name__exact=""),
+                condition=~Q(name__exact=""),
                 name="%(class)s_name_not_empty",
             )
         ]
@@ -63,17 +63,17 @@ class Bot(models.Model):
         constraints = [
             # token can't be empty
             CheckConstraint(
-                check=~Q(token__exact=""),
+                condition=~Q(token__exact=""),
                 name="%(class)s_token_not_empty",
             ),
             # discord is must be a snowflake
             CheckConstraint(
-                check=Q(discord_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(discord_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_discord_id_snowflake_format",
             ),
             # name can't be empty
             CheckConstraint(
-                check=~Q(name__exact=""),
+                condition=~Q(name__exact=""),
                 name="%(class)s_name_not_empty",
             )
         ]
@@ -99,17 +99,17 @@ class Channel(models.Model):
         constraints = [
             # name must not be empty
             CheckConstraint(
-                check=~Q(name__exact=""),
+                condition=~Q(name__exact=""),
                 name="%(class)s_name_not_empty",
             ),
             # guild is must be a snowflake
             CheckConstraint(
-                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(guild_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_guild_id_snowflake_format",
             ),
             # discord_id must be a snowflake
             CheckConstraint(
-                check=Q(discord_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(discord_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_discord_id_snowflake_format",
             )
         ]

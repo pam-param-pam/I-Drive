@@ -79,7 +79,7 @@
 </template>
 
 <script>
-import { mapActions, mapState } from "pinia"
+import { mapActions } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { forceLogout } from "@/utils/auth.js"
 import Errors from "@/components/Errors.vue"

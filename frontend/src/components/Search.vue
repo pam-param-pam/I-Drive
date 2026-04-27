@@ -66,11 +66,10 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setLastItem", "showHover", "resetSelected", "setSearchFilters", "setSearchActive", "setItemsError", "setSearchItems"]),
+      ...mapActions(useMainStore, ["showHover", "resetSelected", "setSearchFilters", "setSearchActive", "setItemsError", "setSearchItems"]),
 
       search: throttle(async function(override) {
          if (!this.query && !override) return
-         this.setLastItem(null)
          //copying to not mutate vuex store state
          let searchDict = { ...this.searchFilters }
          searchDict["query"] = this.query

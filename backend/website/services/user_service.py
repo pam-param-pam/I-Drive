@@ -154,7 +154,10 @@ def reenable_credential(user: User, credential_id: str) -> None:
     state = discord.get_user_state(user)
     credential = state.get_credential_from_id(credential_id)
     if not credential:
-        raise BadRequestError("Credential not found.")
+        raise BadRequestError(f"Credential with id={credential_id} not found.")
+
+    if not credential.blocked_until:
+        raise BadRequestError("Credential is not blocked")
 
     state.unblock_credential(credential)
 

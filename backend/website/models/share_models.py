@@ -38,13 +38,13 @@ class ShareableLink(models.Model):
         constraints = [
             # Token must not be an empty string
             CheckConstraint(
-                check=~Q(token__exact=""),
+                condition=~Q(token__exact=""),
                 name="%(class)s_token_not_empty",
             ),
 
             # Password cannot be empty string
             CheckConstraint(
-                check=(Q(password__isnull=True) | ~Q(password__exact="")),
+                condition=(Q(password__isnull=True) | ~Q(password__exact="")),
                 name="%(class)s_password_not_empty_string",
             ),
         ]

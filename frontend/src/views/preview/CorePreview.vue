@@ -248,7 +248,7 @@ export default {
       this.handleFileChange(true)
    },
    computed: {
-      ...mapState(useMainStore, ["itemsLoading", "sortedItems", "user", "selected", "perms", "currentFolder", "currentPrompt"]),
+      ...mapState(useMainStore, ["itemsLoading", "sortedItems", "selected", "currentFolder", "currentPrompt"]),
       loading() {
         return this.itemsLoading
       },
@@ -321,7 +321,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["updateItem", "setCurrentFolderData", "setLastItem", "setItems", "setCurrentFolder", "addSelected", "showHover", "closeHover"]),
+      ...mapActions(useMainStore, ["updateItem", "setLastItem", "addSelected", "showHover"]),
       openEditor() {
          const itemCopy = { ...this.file }
          itemCopy.type = "Text"
@@ -398,7 +398,7 @@ export default {
 
          const previousFile = this.files[this.currentIndex - 1]
 
-         this.$router.push({
+         this.$router.replace({
             name: this.$route.name,
             params: {
                ...this.$route.params,
@@ -414,7 +414,7 @@ export default {
 
          const nextFile = this.files[this.currentIndex + 1]
 
-         this.$router.push({
+         this.$router.replace({
             name: this.$route.name,
             params: {
                ...this.$route.params,

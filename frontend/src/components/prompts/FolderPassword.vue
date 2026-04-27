@@ -80,7 +80,7 @@ export default {
       this.reCheckFolderIds()
    },
    computed: {
-      ...mapState(useMainStore, ["loading", "currentPrompt"]),
+      ...mapState(useMainStore, ["currentPrompt"]),
       folder() {
          return this.remainingFolderLockFromIds[0]
       },

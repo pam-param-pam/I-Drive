@@ -118,8 +118,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useUploadStore, ["isInternet", "state"]),
-      ...mapState(useMainStore, ["user"]),
+      ...mapState(useUploadStore, ["state"]),
       uploadState() {
          return uploadState
       },
@@ -146,7 +145,7 @@ export default {
    methods: {
       getFileType,
       isErrorStatus,
-      ...mapActions(useUploadStore, ["pauseAll", "resumeAll", "dismissFile", "retryFailSaveFile", "retryGoneFile", "retryUploadFile"]),
+      ...mapActions(useUploadStore, ["dismissFile", "retryGoneFile"]),
       dismiss() {
          getUploader().dismissFile(this.fileState.frontendId)
       },

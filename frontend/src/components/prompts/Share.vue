@@ -141,7 +141,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["closeHover", "showHover"]),
+      ...mapActions(useMainStore, ["closeHover"]),
 
       async fetchShares() {
          let links = await getAllShares()

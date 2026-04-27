@@ -20,7 +20,7 @@
 
 <script>
 import { getDirs } from "@/api/folder.js"
-import { mapActions, mapState } from "pinia"
+import { mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
@@ -45,8 +45,6 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["showHover"]),
-
       async fetchData(folder) {
          let res = await getDirs(folder.id)
 

@@ -32,27 +32,27 @@ class DiscordAttachmentMixin(models.Model):
         abstract = True
         constraints = [
             CheckConstraint(
-                check=Q(message_id__isnull=False) & ~Q(message_id__exact=""),
+                condition=Q(message_id__isnull=False) & ~Q(message_id__exact=""),
                 name="%(class)s_message_id_required",
             ),
             CheckConstraint(
-                check=Q(attachment_id__isnull=False) & ~Q(attachment_id__exact=""),
+                condition=Q(attachment_id__isnull=False) & ~Q(attachment_id__exact=""),
                 name="%(class)s_attachment_id_required",
             ),
             CheckConstraint(
-                check=Q(size__gte=0),
+                condition=Q(size__gte=0),
                 name="%(class)s_size_non_negative",
             ),
             CheckConstraint(
-                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(guild_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_object_id_snowflake_format",
             ),
             CheckConstraint(
-                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(guild_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_message_id_snowflake_format",
             ),
             CheckConstraint(
-                check=Q(guild_id__regex=r'^[0-9]{17,19}$'),
+                condition=Q(guild_id__regex=r'^[0-9]{17,19}$'),
                 name="%(class)s_attachment_id_snowflake_format",
             ),
         ]

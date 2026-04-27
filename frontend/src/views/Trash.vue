@@ -30,7 +30,9 @@ export default {
 
 
    computed: {
-      ...mapState(useMainStore, ["itemsLoading", "itemsError", "items", "selected", "perms", "currentFolder", "disabledCreation", "selectedCount", "setSearchActive", "setSearchItems"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "items", "selected", "perms", "currentFolder", "disabledCreation", "selectedCount",
+         "setSearchActive", "setSearchItems"]),
+
       headerButtons() {
          return {
             info: this.selectedCount > 0,
@@ -54,7 +56,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["addSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "setCurrentFolder", "showHover"]),
+      ...mapActions(useMainStore, ["addSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "showHover"]),
 
       async fetchFolder() {
          document.title = this.$t("trash.trashName") + " - " + name
