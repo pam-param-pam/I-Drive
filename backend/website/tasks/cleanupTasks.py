@@ -211,7 +211,7 @@ def format_cleanup_summary(res: dict) -> str:
 
     return " | ".join(parts) if parts else "Nothing to clean"
 
-@app.task
+@app.task(expires=60 * 60 * 12)
 def run_cleanup():
     results = {}
 

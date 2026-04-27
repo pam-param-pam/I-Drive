@@ -218,7 +218,7 @@ def _fix_orphan_jobs():
 
     print(f"Fixed {orphaned_jobs} orphaned jobs")
 
-@app.task
+@app.task(expires=30)
 def supervise_deletion_system():
     _reclaim_stale_file_claims()
     _reclaim_stale_folder_claims()
