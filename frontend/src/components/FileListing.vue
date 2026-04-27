@@ -694,10 +694,12 @@ export default {
          await this.$refs.search.exit()
 
          this.setLastItem(item)
-         await this.$router.replace({ name: "Settings" })
+
+         this.$router.replace({ name: "Settings" })
          this.$router.replace({ name: "Files", params: { folderId: parent_id } })
 
          this.closeContextMenu()
+         this.setLastFolder(null)
       },
 
       async switchView() {
@@ -865,8 +867,6 @@ export default {
   font-size: 14px;
   color: inherit;
 }
-
-
 
 
 
