@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 from datetime import datetime, timedelta
@@ -530,7 +531,7 @@ def get_fragment_url_view(request, fragment_id):
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
-def get_file_stats(request, folder_obj):
+def get_folder_file_stats(request, folder_obj):
     files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False, parent__inTrash=False)
 
     # Annotate lock-related fields
@@ -575,3 +576,64 @@ def check_message_id(request, message_id):
     if database_attachments:
         return HttpResponse(status=204)
     return HttpResponse(status=404)
+
+
+@api_view(['GET'])
+@throttle_classes([FolderPasswordThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
+def get_folder_hash(request, folder_obj: Folder):
+    subfolders = folder_obj.get_all_subfolders()
+
+    files = File.objects.filter(parent__in=subfolders).only("name", "crc")
+    folders = subfolders.only("name")
+
+    hasher = hashlib.sha256()
+
+    for f in files.order_by("id"):
+        hasher.update(f.name.encode("utf-8"))
+        hasher.update(str(f.crc).encode())
+
+    for d in folders.order_by("id"):
+        hasher.update(d.name.encode("utf-8"))
+
+    return JsonResponse({"hash": hasher.hexdigest()})
+
+
+"""
+def get_folder_hash(request, folder_obj):
+    hasher = hashlib.sha256()
+
+    folders = (
+        Folder.objects
+        .filter(
+            tree_id=folder_obj.tree_id,
+            lft__gte=folder_obj.lft,
+            rght__lte=folder_obj.rght,
+        )
+        .values_list("id", "name")
+        .order_by("id")
+        .iterator()
+    )
+
+    files = (
+        File.objects
+        .filter(
+            parent__tree_id=folder_obj.tree_id,
+            parent__lft__gte=folder_obj.lft,
+            parent__rght__lte=folder_obj.rght,
+        )
+        .values_list("id", "name", "crc")
+        .order_by("id")
+        .iterator()
+    )
+
+    for folder_id, name in folders:
+        hasher.update(f"folder:{folder_id}:{name}\n".encode("utf-8"))
+
+    for file_id, name, crc in files:
+        hasher.update(f"file:{file_id}:{name}:{crc}\n".encode("utf-8"))
+
+    return HttpResponse(hasher.hexdigest())
+    """

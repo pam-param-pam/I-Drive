@@ -4,7 +4,7 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import ChangePassword, ReadPerms
+from ..auth.Permissions import ChangePassword, ReadPerms, AllowedIP
 from ..auth.throttle import LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAnonUserThrottle, defaultAuthUserThrottle
 from ..core.Serializers import DeviceTokenSerializer
 from ..core.helpers import extract_key
@@ -40,9 +40,8 @@ def logout_per_device_view(request):
 
 @api_view(['POST'])
 @throttle_classes([RegisterThrottle])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny & AllowedIP])
 def register_user_view(request):
-    # raise ResourcePermissionError("This functionality is turned off.")
     username = extract_key(request.data, "username")
     password = extract_key(request.data, "password")
 

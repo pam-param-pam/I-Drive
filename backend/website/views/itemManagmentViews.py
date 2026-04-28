@@ -2,14 +2,15 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, ModifyPerms, default_checks, CheckRoot, CheckTrash, DeletePerms, LockPerms, ResetLockPerms
+from ..auth.Permissions import CreatePerms, ModifyPerms, default_checks, CheckRoot, CheckTrash, DeletePerms, LockPerms, ResetLockPerms, CheckFolderLock
 from ..auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
 from ..core.Serializers import FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
 from ..core.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file, \
     accumulate_password_errors
+from ..core.errors import BadRequestError
 from ..core.helpers import extract_key
 from ..core.http.utils import build_response
-from ..models import File
+from ..models import File, Folder
 from ..services import folder_service, item_service, file_service, delete_service
 
 
@@ -101,10 +102,13 @@ def change_folder_password_view(request, folder_obj):
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & ResetLockPerms])
 @extract_folder()
-@check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
-def reset_folder_password_view(request, folder_obj):
+@check_resource_permissions((default_checks & CheckRoot) - CheckFolderLock, resource_key="folder_obj")
+def reset_folder_password_view(request, folder_obj: Folder):
     account_password = extract_key(request.data, "accountPassword")
     new_folder_password = extract_key(request.data, "folderPassword")
+    if not folder_obj.is_locked:
+        raise BadRequestError("There is nothing to reset, folder is unlocked.")
+
     is_locked = folder_service.reset_folder_password(request.context, request.user, folder_obj, account_password, new_folder_password)
     if is_locked:
         return JsonResponse(build_response(request.context.request_id, "Folder password is being changed..."))

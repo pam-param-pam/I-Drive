@@ -10,15 +10,15 @@ from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
     cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_breadcrumbs, get_usage, search, \
-    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_file_stats, \
-    check_message_id
+    get_trash, check_password, get_dirs, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_folder_file_stats, \
+    check_message_id, get_folder_hash
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
     share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle, stream_zip_entry
-from .views.testViews import get_discord_state, get_zip_folder, test_stream_zip_entry
+from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
@@ -96,7 +96,8 @@ urlpatterns = [
     path("folders/<folder_id>/breadcrumbs", ["GET"], get_breadcrumbs, name="get folder's breadcrumbs"),
     path("folders/<folder_id>/password", ["POST"], change_folder_password_view, name="change folder password"),
     path("folders/<folder_id>/password/reset", ["POST"], reset_folder_password_view, name="reset folder's password"),
-    path("folders/<folder_id>/stats", ['GET'], get_file_stats, name="get file stats for folder"),
+    path("folders/<folder_id>/stats", ['GET'], get_folder_file_stats, name="get file stats for folder"),
+    path("folders/<folder_id>/hash", ['GET'], get_folder_hash, name="get folder hash"),
 
     path("items/move", ["PATCH"], move_items_view, name="bulk move items"),
     path("items/moveToTrash", ["PATCH"], move_items_to_trash_view, name="bulk move items to trash"),
@@ -162,8 +163,6 @@ urlpatterns = [
     path("cleanup/<message_id>", ['GET'], check_message_id, name="check if message id is used"),
 
     django_path('test/<user_id>', get_discord_state),
-    django_path("test2", test_stream_zip_entry),
-    django_path("test3", get_zip_folder),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

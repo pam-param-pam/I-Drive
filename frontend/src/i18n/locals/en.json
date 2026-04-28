@@ -169,6 +169,8 @@
     "uwu": "UwU"
   },
   "login": {
+    "signingUp": "Creating workspace...",
+    "loggingIn": "Logging in...",
     "QrLoginInfo": "Open iDrive on your phone and scan this QR code to login instantly!",
     "QrCheckPhone": "Check your phone!",
     "QrLoggingInAs": "Logging in as {user}",

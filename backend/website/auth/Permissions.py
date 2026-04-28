@@ -21,8 +21,11 @@ class BasePermissionWithMessage(BasePermission):
 
     def has_permission(self, request, view):
         if not hasattr(request, '_user_perms_cache'):
-            request._user_perms_cache = UserPerms.objects.get(user=request.user)
-        self.user_perms = request._user_perms_cache
+            if request.user.is_authenticated:
+                request._user_perms_cache = UserPerms.objects.get(user=request.user)
+                self.user_perms = request._user_perms_cache
+        else:
+            self.user_perms = request._user_perms_cache
 
         if not self.check_permission(request, view):
             raise PermissionDenied(self.message)
@@ -134,6 +137,14 @@ class ResetLockPerms(BasePermissionWithMessage):
         perms = self.user_perms
         return (perms.reset_lock or perms.admin) and not perms.globalLock
 
+class AllowedIP(BasePermissionWithMessage):
+    message = "IP validation failed."
+
+    def check_permission(self, request, view):
+        ip, _ = get_ip(request)
+        ip_obj = ipaddress.ip_address(ip)
+        return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED
+
 
 """============RESOURCE PERMS============"""
 
@@ -223,7 +234,6 @@ class CheckLockedFolderIP(BaseResourceCheck):
         if self._is_ip_allowed(ip):
             return True
         raise ResourceNotFoundError()
-
 
 
 class CheckFolderLock(CheckLockedFolderIP):

@@ -157,6 +157,8 @@
     "uwu": "UwU"
   },
   "login": {
+    "signingUp": "Tworzenie konta...",
+    "loggingIn": "Logowanie...",
     "QrLoginInfo": "Otwórz iDrive na telefonie i zeskanuj ten kod QR by zalogować bez użycia hasła!",
     "QrCheckPhone": "Sprawdż swój telefon!",
     "QrLoggingInAs": "Logowanie jako {user}",

@@ -36,7 +36,7 @@
                type="password"
             />
 
-            <input :value="createMode ? $t('login.signup') : $t('login.submit')" type="submit" />
+            <input :disabled="operationInProgress" :value="buttonText" type="submit" />
 
          </div>
          <p v-if="!createMode" @click="toggleQRMode()">
@@ -71,11 +71,23 @@ export default {
       logoURL: () => logoURL,
       qrCodeData() {
          return baseURL + `/auth/qrcode/${this.qrSessionId}`
+      },
+      buttonText() {
+         if (this.operationInProgress) {
+            return this.createMode
+              ? this.$t('login.signingUp')
+              : this.$t('login.loggingIn')
+         }
+
+         return this.createMode
+           ? this.$t('login.signup')
+           : this.$t('login.submit')
       }
    },
 
    data() {
       return {
+         operationInProgress: false,
          createMode: false,
          qrMode: false,
          qrSessionId: null,
@@ -291,8 +303,10 @@ export default {
                return
             }
          }
-
+         this.error = ""
          try {
+            this.operationInProgress = true
+
             if (this.createMode) {
                await auth.signup(this.username, this.password)
             } else {
@@ -319,6 +333,8 @@ export default {
                this.error = this.$t("login.unknownError")
                alert(e)
             }
+         } finally {
+            this.operationInProgress = false
          }
       }, 1000)
    }
@@ -397,6 +413,12 @@ export default {
   background: rgba(0, 0, 0, 0.1);
 }
 
+#login input:disabled {
+   opacity: 0.85;
+   background: rgba(0, 0, 0, 0.05);
+   box-shadow: none;
+   cursor: wait !important;
+}
 
 #login form {
   top: 65%;

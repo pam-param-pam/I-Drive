@@ -468,18 +468,15 @@ export default {
       },
 
       key(event) {
-         console.log("key event preview")
-         console.log(this.currentPrompt)
          if (this.currentPrompt !== null) return
 
-         if (event.which === 13 || event.which === 39) {
+         if (event.which === 39) {
             // right arrow
             this.next()
          } else if (event.which === 37) {
             // left arrow
             this.prev()
          } else if (event.which === 27) {
-            console.log("closee")
             // esc
             this.close()
          }
