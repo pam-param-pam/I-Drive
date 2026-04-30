@@ -36,7 +36,7 @@ const router = createRouter({
             {
                path: "/share/:token/:folderId?",
                name: "Share",
-               component: () => import("../views/Share.vue"),
+               component: lazyWithLoading(() => import("../views/Share.vue")),
                props: route => ({
                   token: route.params.token,
                   folderId: route.params.folderId
@@ -121,23 +121,22 @@ const router = createRouter({
                   {
                      path: "/settings/profile",
                      name: "Profile",
-                     component: () => import("../views/settings/Profile.vue")
-
+                     component: lazyWithLoading(() => import("../views/settings/Profile.vue"))
                   },
                   {
                      path: "/settings/shares",
                      name: "Shares",
-                     component: () => import("../views/settings/Shares.vue")
+                     component: lazyWithLoading(() => import("../views/settings/Shares.vue"))
                   },
                   {
                      path: "/settings/discord",
                      name: "DiscordSettings",
-                     component: () => import("../views/settings/Discord.vue")
+                     component: lazyWithLoading(() => import("../views/settings/Discord.vue"))
                   },
                   {
                      path: "/settings/devices",
                      name: "ActiveDevices",
-                     component: () => import("../views/settings/Devices.vue")
+                     component: lazyWithLoading(() => import("../views/settings/Devices.vue"))
                   }
                ]
             }

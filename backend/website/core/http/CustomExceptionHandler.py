@@ -23,6 +23,8 @@ from ...models import ShareableLink
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 def custom_exception_handler(exception, context):
+    traceback.print_exc()
+
     if not isinstance(exception, (IDriveException, APIException)):
         traceback.print_exc()
 

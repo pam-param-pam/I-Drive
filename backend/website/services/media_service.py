@@ -146,7 +146,7 @@ def get_zip_response(request, token: str):
 
 
 def get_zip_entry_response(request, file_obj: File):
-    is_inline = validate_key(request.GET, "inline", expected_type=bool, required=False, default=False)
+    is_inline = request.GET.get('inline', False)
     referer = request.headers.get('Referer')
 
     offset = validate_key(request.GET, "offset", int, converter=int)

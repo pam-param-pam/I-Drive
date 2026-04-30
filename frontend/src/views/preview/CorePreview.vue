@@ -175,7 +175,6 @@ import VideoPreview from "@/views/preview/displayComponents/VideoPreview.vue"
 import AudioPreview from "@/views/preview/displayComponents/AudioPreview.vue"
 import PdfPreview from "@/views/preview/displayComponents/PdfPreview.vue"
 import ImagePreview from "@/views/preview/displayComponents/ImagePreview.vue"
-import EditorPreview from "@/views/preview/displayComponents/EditorPreview.vue"
 import loadingSpinner from "@/components/loadingSpinner.vue"
 
 export default {
@@ -185,14 +184,16 @@ export default {
 
    components: {
       loadingSpinner,
-      EditorPreview,
-      PdfPreview,
-      AudioPreview,
-      VideoPreview,
       Errors,
-      ImagePreview,
       HeaderBar,
       Action,
+      VideoPreview,
+      ImagePreview,
+      AudioPreview,
+      PdfPreview,
+      EditorPreview: defineAsyncComponent(() =>
+        import("@/views/preview/displayComponents/EditorPreview.vue")
+      ),
       OfficePreview: defineAsyncComponent(() =>
          import("@/views/preview/displayComponents/OfficePreview.vue")
       ),

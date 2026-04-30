@@ -87,13 +87,13 @@ export function lazyWithLoading(importer, delay = 150) {
          const store = useMainStore()
 
          let timer = setTimeout(() => {
-            store.loading = true
+            store.itemsLoading = true
          }, delay)
 
          promise = importer()
             .finally(() => {
                clearTimeout(timer)
-               store.loading = false
+               store.itemsLoading = false
             })
       }
 

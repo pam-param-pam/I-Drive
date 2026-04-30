@@ -35,6 +35,7 @@ export default {
    },
    methods: {
       onError(e) {
+         console.log(e)
          this.$emit("error", "Failed to load pdf file")
          getFileRawData(this.src, { responseType: "arraybuffer" })
       }
