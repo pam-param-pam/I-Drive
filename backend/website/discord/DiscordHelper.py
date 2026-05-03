@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import List, Callable
 
@@ -78,61 +79,136 @@ class DiscordApiClient:
             "Content-Type": "application/json"
         }
 
+    # ---------- core request wrapper ----------
+
+    def _request(self, method: str, url: str, error_msg: str, **kwargs):
+        retries = 2
+
+        for attempt in range(retries + 1):
+            res = self.client.request(method, url, headers=self.headers, **kwargs)
+
+            if res.status_code != 429:
+                return self._check(res, error_msg)
+
+            # 429 handling
+            if attempt == retries:
+                retry_after_text = res.json()['retry_after']
+                raise DiscordTextError(f"[Rate Limit] {error_msg} (max retries exceeded, retry in {retry_after_text} seconds)", 429)
+
+            retry_after = self._get_retry_after(res)
+
+            time.sleep(retry_after)
+
+        # should never happen
+        raise RuntimeError("Unexpected request flow")
+
+    def _get_retry_after(self, res):
+        try:
+            return max(
+                float(res.headers.get("retry-after", 0)),
+                float(res.headers.get("x-ratelimit-reset-after", 0))
+            )
+        except (TypeError, ValueError):
+            return 1.0
+
+    # ---------- response handling ----------
+
     def _check(self, res, msg):
         if not res.is_success:
+            if res.status_code == 429:
+                msg = "[Rate Limit] " + msg
             raise DiscordTextError(msg, res.status_code)
+
         if res.status_code != 204:
             return res.json()
+
         return None
 
+    # ---------- API methods ----------
+
     def get_bot(self):
-        res = self.client.get(f"{DISCORD_BASE_URL}/users/@me", headers=self.headers)
-        data = self._check(res, "Invalid bot token")
+        data = self._request(
+            "GET",
+            f"{DISCORD_BASE_URL}/users/@me",
+            "Invalid bot token"
+        )
         return data["id"], data["username"]
 
     def get_guild(self, guild_id):
-        res = self.client.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}", headers=self.headers)
-        self._check(res, "Bot not in guild or guild not found")
+        self._request(
+            "GET",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}",
+            "Bot not in guild or guild not found"
+        )
 
     def get_member(self, guild_id, bot_id):
-        res = self.client.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}", headers=self.headers)
-        return self._check(res, "Failed to fetch member")
+        return self._request(
+            "GET",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}",
+            "Failed to fetch member"
+        )
 
     def get_roles(self, guild_id):
-        res = self.client.get(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles", headers=self.headers)
-        return self._check(res, "Failed to fetch roles")
+        return self._request(
+            "GET",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles",
+            "Failed to fetch roles"
+        )
 
     def create_role(self, guild_id, payload):
-        res = self.client.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles", headers=self.headers, json=payload)
-        return self._check(res, "Failed to create role")
+        return self._request(
+            "POST",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles",
+            "Failed to create role",
+            json=payload
+        )
 
     def delete_role(self, guild_id, role_id):
-        self.client.delete(f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles/{role_id}", headers=self.headers)
+        self._request(
+            "DELETE",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/roles/{role_id}",
+            "Failed to delete role"
+        )
 
     def assign_role(self, guild_id, bot_id, role_id):
-        res = self.client.put(f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}/roles/{role_id}", headers=self.headers)
-        self._check(res, "Failed to assign role")
+        self._request(
+            "PUT",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}/roles/{role_id}",
+            "Failed to assign role"
+        )
 
     def create_channel(self, guild_id, payload):
-        res = self.client.post(f"{DISCORD_BASE_URL}/guilds/{guild_id}/channels", headers=self.headers, json=payload)
-        data = self._check(res, "Failed to create channel")
+        data = self._request(
+            "POST",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/channels",
+            "Failed to create channel",
+            json=payload
+        )
         return data["id"], data["name"]
 
     def delete_channel(self, channel_id):
-        self.client.delete(f"{DISCORD_BASE_URL}/channels/{channel_id}", headers=self.headers)
+        self._request(
+            "DELETE",
+            f"{DISCORD_BASE_URL}/channels/{channel_id}",
+            "Failed to delete channel"
+        )
 
     def create_webhook(self, channel_id, payload):
-        res = self.client.post(f"{DISCORD_BASE_URL}/channels/{channel_id}/webhooks", headers=self.headers, json=payload)
-        data = self._check(res, "Failed to create webhook")
+        data = self._request(
+            "POST",
+            f"{DISCORD_BASE_URL}/channels/{channel_id}/webhooks",
+            "Failed to create webhook",
+            json=payload
+        )
         return data["id"], data["url"], data["name"]
 
     def channel_has_messages(self, channel_id):
-        res = self.client.get(
+        data = self._request(
+            "GET",
             f"{DISCORD_BASE_URL}/channels/{channel_id}/messages",
-            headers=self.headers,
+            "Failed to fetch messages",
             params={"limit": 1}
         )
-        data = self._check(res, "Failed to fetch messages")
         return bool(data)
 
 

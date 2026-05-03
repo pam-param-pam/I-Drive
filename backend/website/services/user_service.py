@@ -82,29 +82,29 @@ def update_user_settings(user, data: dict) -> UserSettings:
     return settings
 
 def create_new_channel_and_webhooks(user: User) -> tuple[Channel, list[Webhook]]:
-    settings = DiscordSettings.objects.get(user=user)
-
-    if not settings.auto_setup_complete:
-        raise BadRequestError("Run auto setup first!")
-
-    primary_bot = Bot.objects.filter(owner=user, primary=True).first()
-    if not primary_bot:
-        raise BadRequestError("No primary bot found.")
-
-    bot_token = primary_bot.token
-    guild_id = settings.guild_id
-    role_id = settings.role_id
-    category_id = settings.category_id
-
-    channels_num = Channel.objects.filter(owner=user).count()
-    if channels_num >= MAX_NUMBER_OF_CHANNELS:
-        raise BadRequestError("Reached max number of webhooks and channels")
-
-    rb, channel, webhooks = DiscordHelperService(bot_token).create_channel_with_webhooks(guild_id, role_id, category_id, channels_num+1)
-
-    channel_obj = None
-    webhook_objs = []
     with transaction.atomic():
+        settings = DiscordSettings.objects.select_for_update(nowait=True).get(user=user)
+
+        if not settings.auto_setup_complete:
+            raise BadRequestError("Run auto setup first!")
+
+        primary_bot = Bot.objects.filter(owner=user, primary=True).first()
+        if not primary_bot:
+            raise BadRequestError("No primary bot found.")
+
+        bot_token = primary_bot.token
+        guild_id = settings.guild_id
+        role_id = settings.role_id
+        category_id = settings.category_id
+
+        channels_num = Channel.objects.filter(owner=user).count()
+        if channels_num >= MAX_NUMBER_OF_CHANNELS:
+            raise BadRequestError("Reached max number of webhooks and channels")
+
+        rb, channel, webhooks = DiscordHelperService(bot_token).create_channel_with_webhooks(guild_id, role_id, category_id, channels_num+1)
+
+        channel_obj = None
+        webhook_objs = []
         try:
             channel_obj = Channel.objects.create(discord_id=channel.id, name=channel.name, owner=user, guild_id=guild_id)
 
@@ -192,14 +192,14 @@ def reenable_credential(user: User, credential_id: str) -> None:
     state.unblock_credential(credential)
 
 def auto_setup_discord_settings(user: User, guild_id: str, bot_token: str, attachment_name: str) -> None:
-    settings = DiscordSettings.objects.get(user=user)
+    with transaction.atomic():
+        settings = DiscordSettings.objects.select_for_update(nowait=True).get(user=user)
 
-    if settings.auto_setup_complete:
-        raise BadRequestError("Auto setup was already done")
+        if settings.auto_setup_complete:
+            raise BadRequestError("Auto setup was already done")
 
-    result = DiscordHelperService(bot_token).setup(guild_id)
-    try:
-        with transaction.atomic():
+        result = DiscordHelperService(bot_token).setup(guild_id)
+        try:
             settings.guild_id = guild_id
             settings.role_id = result.role_id
             settings.category_id = result.category_id
@@ -215,9 +215,9 @@ def auto_setup_discord_settings(user: User, guild_id: str, bot_token: str, attac
 
             settings.auto_setup_complete = True
             settings.save()
-    except Exception as e:
-        result.rollbackState.rollback()
-        raise e
+        except Exception as e:
+            result.rollbackState.rollback()
+            raise e
 
     discord.remove_user_state(user)
 

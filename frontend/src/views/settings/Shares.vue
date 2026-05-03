@@ -61,10 +61,19 @@
                   </tr>
                </table>
             </div>
-            <h2 v-else class="message">
-               <i class="material-icons">sentiment_dissatisfied</i>
-               <span>{{ $t("files.lonely") }}</span>
-            </h2>
+            <div v-else class="empty-state">
+               <div class="empty-icon">
+                  <i class="material-icons">share</i>
+               </div>
+
+               <h3 class="empty-title">
+                  {{ $t('settings.noSharesTitle') }}
+               </h3>
+
+               <p class="empty-desc">
+                  {{ $t('settings.noSharesDesc') }}
+               </p>
+            </div>
          </div>
       </div>
    </div>
@@ -88,7 +97,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["settings", "loading", "error"])
+      ...mapState(useMainStore, ["settings", "loading"])
    },
 
    data() {
@@ -167,3 +176,31 @@ export default {
    }
 }
 </script>
+<style>
+.empty-state {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   padding: 40px 20px;
+   text-align: center;
+   color: var(--textPrimary);
+}
+
+.empty-icon i {
+   font-size: 48px;
+   color: var(--textPrimary);
+   margin-bottom: 10px;
+}
+
+.empty-title {
+   margin: 10px 0 5px;
+   font-weight: 500;
+}
+
+.empty-desc {
+   margin-bottom: 20px;
+   max-width: 300px;
+   color: var(--textSecondary);
+}
+</style>

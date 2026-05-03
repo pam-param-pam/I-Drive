@@ -75,6 +75,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "databaseResourceLocked": "Database Locked",
     "tryAgain": "Try again",
     "urlInvalidOrExpired": "URL invalid or expired",
     "integrityError": "Integrity Error!",
@@ -131,7 +132,6 @@
     "home": "Home",
     "lastModified": "Last modified",
     "loading": "Loading...",
-    "lonely": "It feels lonely here...",
     "name": "Name",
     "noFiles": "You look lonely, I can fix that~",
     "noPreview": "Preview is not available for this file.",
@@ -367,6 +367,8 @@
     "video": "Video"
   },
   "settings": {
+    "noSharesTitle": "No shares yet",
+    "noSharesDesc": "Share files and folders with links. Revoke access anytime and see who viewed your content.",
     "itemInfoShortcut": "Display item info on sidebar",
     "qrDeviceInfo": "Verify device's information before confirming the login!",
     "qrCodeExplained": "Scan QR code to instantly log in another device!",

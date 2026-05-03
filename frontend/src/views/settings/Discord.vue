@@ -379,7 +379,7 @@ export default {
          this.$toast.success(this.$t("toasts.botDeleted"))
       }, 1000),
 
-      async resetAll() {
+      resetAll: onceAtATime(async function() {
          const toastId = this.$toast.info(this.$t("toasts.discordSettingsDeleting"),
             { type: "info", timeout: null, draggable: false, closeOnClick: false, closeButton: false }
          )
@@ -402,7 +402,7 @@ export default {
             console.error(err)
             this.$toast.dismiss(toastId)
          }
-      },
+      }),
       async doAutoSetup() {
          if (!this.guildId || !this.botToken || !this.attachmentName) {
             this.$toast.error(this.$t("toasts.fillAllFields"))

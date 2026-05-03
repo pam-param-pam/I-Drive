@@ -69,6 +69,7 @@
     "editThumbnail": "Zmień podgląd"
   },
   "errors": {
+    "databaseResourceLocked": "Baza danych zablokowana",
     "tryAgain": "Sprobój ponownie",
     "urlInvalidOrExpired": "URL wygasł, odswież strone",
     "rateLimitExceeded": "Za dużo zapytań >:(",
@@ -125,7 +126,6 @@
     "home": "Główny folder",
     "lastModified": "Ostatnio zmodyfikowane",
     "loading": "Ładowanie...",
-    "lonely": "Smutno gdy tak pusto...",
     "name": "Nazwa",
     "noFiles": "You look lonely, I can fix that~",
     "noPreview": "Podgląd nie jest dostępny dla tego pliku",
@@ -352,6 +352,8 @@
     "video": "Filmy"
   },
   "settings": {
+    "noSharesTitle": "Brak linków",
+    "noSharesDesc": "Udostępniaj pliki i foldery za pomocą linków. Możesz w każdej chwili cofnąć dostęp i sprawdzić, kto przeglądał Twoje treści.",
     "itemInfoShortcut": "Wyświetlaj informacje o plikach/folderach na bocznym pasku",
     "qrDeviceInfo": "Zweryfikuj dane urządzenia przed potwierdzeniem!",
     "qrCodeExplained": "Zeskanuj kod QR by zalogować drugie urządzenie",

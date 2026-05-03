@@ -124,6 +124,8 @@ def custom_exception_handler(exception, context):
         return JsonResponse(build_http_error_response(code=503, error="errors.serviceUnavailable", details=str(exception)), status=503)
 
     elif isinstance(exception, OperationalError):
+        if "could not obtain lock on row in relation" in str(exception):
+            return JsonResponse(build_http_error_response(code=429, error="errors.databaseResourceLocked", details="This resource is currently locked"), status=429)
         return JsonResponse(build_http_error_response(code=503, error="errors.databaseError", details=str(exception)), status=503)
 
     # OTHER
