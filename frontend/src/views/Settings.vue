@@ -19,7 +19,7 @@
                   </li>
                </router-link>
 
-               <router-link :draggable="false" to="/settings/discord">
+               <router-link :draggable="false" to="/settings/discord" data-tour="discord-settings">
                   <li :class="{ active: $route.path === '/settings/discord' }" :draggable="false">
                      {{ $t("settings.discordSettings") }}
                   </li>

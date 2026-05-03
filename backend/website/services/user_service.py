@@ -1,14 +1,12 @@
-from urllib.parse import urlparse
-
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from ..constants import EventCode, EncryptionMethod
+from ..constants import EventCode, EncryptionMethod, MAX_NUMBER_OF_CHANNELS
 from ..core.dataModels.http import RequestContext
 from ..core.errors import BadRequestError
 from ..core.helpers import validate_ids_as_list, validate_value, validate_key
 from ..discord.Discord import discord
-from ..discord.DiscordHelper import DiscordHelper
+from ..discord.DiscordHelper import DiscordHelperService
 from ..models import Webhook, Bot, DiscordSettings, Channel, File, UserSettings
 from ..models.mixin_models import ItemState
 from ..models.other_models import Notification, NotificationType
@@ -83,25 +81,41 @@ def update_user_settings(user, data: dict) -> UserSettings:
     settings.save()
     return settings
 
-def create_webhook(user: User, url: str) -> Webhook:
-    if urlparse(url).netloc != "discord.com":
-        raise BadRequestError("Webhook URL is invalid")
+def create_new_channel_and_webhooks(user: User) -> tuple[Channel, list[Webhook]]:
+    settings = DiscordSettings.objects.get(user=user)
 
-    if Webhook.objects.filter(url=url, owner=user).exists():
-        raise BadRequestError("Webhook with this URL already exists!")
+    if not settings.auto_setup_complete:
+        raise BadRequestError("Run auto setup first!")
 
-    guild_id, channel, discord_id, name = DiscordHelper().get_and_check_webhook(user, url)
+    primary_bot = Bot.objects.filter(owner=user, primary=True).first()
+    if not primary_bot:
+        raise BadRequestError("No primary bot found.")
 
-    webhook = Webhook.objects.create(
-        url=url,
-        owner=user,
-        guild_id=guild_id,
-        channel=channel,
-        discord_id=discord_id,
-        name=name,
-    )
-    discord.remove_user_state(user)
-    return webhook
+    bot_token = primary_bot.token
+    guild_id = settings.guild_id
+    role_id = settings.role_id
+    category_id = settings.category_id
+
+    channels_num = Channel.objects.filter(owner=user).count()
+    if channels_num >= MAX_NUMBER_OF_CHANNELS:
+        raise BadRequestError("Reached max number of webhooks and channels")
+
+    rb, channel, webhooks = DiscordHelperService(bot_token).create_channel_with_webhooks(guild_id, role_id, category_id, channels_num+1)
+
+    channel_obj = None
+    webhook_objs = []
+    with transaction.atomic():
+        try:
+            channel_obj = Channel.objects.create(discord_id=channel.id, name=channel.name, owner=user, guild_id=guild_id)
+
+            for webhook in webhooks:
+                webhook_obj = Webhook.objects.create(discord_id=webhook.id, url=webhook.url, name=webhook.name, owner=user, guild_id=guild_id, channel_id=webhook.channel_id)
+                webhook_objs.append(webhook_obj)
+        except Exception:
+            rb.rollback()
+            raise
+
+    return channel_obj, webhook_objs
 
 def delete_webhook(user: User, webhook_id: str) -> None:
     webhook = get_webhook(user, webhook_id)
@@ -109,7 +123,23 @@ def delete_webhook(user: User, webhook_id: str) -> None:
     if query_attachments(author_id=webhook.discord_id):
         raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
 
-    webhook.delete()
+    primary_bot = Bot.objects.filter(owner=user, primary=True).first()
+    if not primary_bot:
+        raise BadRequestError("No primary bot found")
+
+    webhooks_num = Webhook.objects.filter(channel=webhook.channel).count()
+    webhooks_channel = webhook.channel
+
+    with transaction.atomic():
+        if webhooks_num == 1:
+            error = DiscordHelperService(primary_bot.token).delete_channel(webhooks_channel.discord_id)
+            if error:
+                raise BadRequestError(error)
+
+            webhooks_channel.delete()
+
+        webhook.delete()
+
     discord.remove_user_state(user)
 
 
@@ -123,11 +153,11 @@ def add_bot(user: User, token: str) -> Bot:
     if not primary_bot:
         raise BadRequestError("No primary bot found.")
 
-    bot_id, bot_name = DiscordHelper().check_bot(settings.guild_id, primary_bot.token, settings.role_id, token)
+    info = DiscordHelperService(primary_bot.token).add_bot(settings.guild_id, settings.role_id, token)
     bot = Bot(
         token=token,
-        discord_id=bot_id,
-        name=bot_name,
+        discord_id=info.id,
+        name=info.name,
         owner=user,
     )
 
@@ -167,30 +197,26 @@ def auto_setup_discord_settings(user: User, guild_id: str, bot_token: str, attac
     if settings.auto_setup_complete:
         raise BadRequestError("Auto setup was already done")
 
-    bot, role_id, category_id, channels, webhooks = DiscordHelper().start(guild_id, bot_token)
+    result = DiscordHelperService(bot_token).setup(guild_id)
     try:
         with transaction.atomic():
             settings.guild_id = guild_id
-            settings.role_id = role_id
-            settings.category_id = category_id
+            settings.role_id = result.role_id
+            settings.category_id = result.category_id
             settings.attachment_name = attachment_name
 
-            Bot.objects.create(token=bot_token, discord_id=bot[0], name=bot[1], owner=user, primary=True)
+            Bot.objects.create(token=bot_token, discord_id=result.bot_id, name=result.bot_name, owner=user, primary=True)
 
-            for channel in channels:
-                Channel.objects.create(discord_id=channel[0], name=channel[1], owner=user, guild_id=guild_id)
+            for channel in result.channels:
+                Channel.objects.create(discord_id=channel.id, name=channel.name, owner=user, guild_id=guild_id)
 
-            for webhook in webhooks:
-                Webhook.objects.create(discord_id=webhook[0], url=webhook[1], name=webhook[2], owner=user, guild_id=guild_id, channel=Channel.objects.get(discord_id=webhook[3]))
+            for webhook in result.webhooks:
+                Webhook.objects.create(discord_id=webhook.id, url=webhook.url, name=webhook.name, owner=user, guild_id=guild_id, channel_id=webhook.channel_id)
 
             settings.auto_setup_complete = True
             settings.save()
     except Exception as e:
-        DiscordHelper()._create_role_cleanup(guild_id, bot_token, role_id)
-        DiscordHelper()._create_category_cleanup(bot_token, category_id)
-        for channel in channels:
-            DiscordHelper()._create_channel_in_category_cleanup(bot_token, channel[0])
-
+        result.rollbackState.rollback()
         raise e
 
     discord.remove_user_state(user)
@@ -210,13 +236,15 @@ def reset_discord_settings(user: User) -> str:
         raise BadRequestError("Cannot reset discord settings. Remove all files first")
 
     discord_settings = DiscordSettings.objects.get(user=user)
+    if not discord_settings.auto_setup_complete:
+        raise BadRequestError("Run auto complete first")
 
     bots = Bot.objects.filter(owner=user)
     primary_bot = bots.filter(primary=True).first()
     if not primary_bot:
         raise BadRequestError("No bot found, please remove state manually via admin page")
 
-    errors = DiscordHelper().remove_all(user=user)
+    errors = DiscordHelperService(primary_bot.token).remove_all(user=user)
     error_string = ", ".join(e for e in errors if e)
 
     Webhook.objects.filter(owner=user).delete()

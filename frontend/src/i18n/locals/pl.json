@@ -115,7 +115,6 @@
     "noConnection": "Brak internetu",
     "badGateway": "Serwer nie odpowiada",
     "clientError": "Błąd po stronie klienta"
-
   },
   "files": {
     "zipArchiveMode": "Tryb podglądu archiwów ZIP",
@@ -180,6 +179,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "skipOnboardingTitle": "Pomiń konfigurację",
+    "skipOnboardingMessage": "Czy na pewno chcesz pominąć samouczek konfiguracji początkowej? Możesz go ponownie wyświetlić, odświeżając stronę.",
     "permanent": "Na zawsze",
     "showPrevious": "Więcej",
     "loading": "Ładowanie",
@@ -547,6 +548,40 @@
     "toggleUploadList": "Przełącz liste",
     "fatal": "Krytyczny błąd",
     "fileGone": "Brak pliku na dysku"
+  },
+  "tour": {
+    "buttons": {
+      "skip": "Pomiń",
+      "next": "Następny",
+      "previous": "Poprzedni"
+    },
+    "settings": {
+      "title": "Wymagana konfiguracja",
+      "description": "Kliknij tutaj, aby skonfigurować iDrive."
+    },
+    "discordSettings": {
+      "title": "Ustawienia Discorda",
+      "description": "Kliknij tutaj, aby skonfigurować ustawienia Discorda, takie jak serwer (guild), boty, webhooki itp."
+    },
+    "guildId": {
+      "title": "ID serwera (Guild ID)",
+      "description": "ID serwera Discord, na którym będą przechowywane pliki. Upewnij się, że masz odpowiednie uprawnienia. Jeśli serwer, jego kanały lub webhooki zostaną usunięte, wszystkie zapisane pliki zostaną utracone.",
+      "buttons": {
+        "next": "Dalej"
+      }
+    },
+    "primaryToken": {
+      "title": "Główny bot",
+      "description": "Token bota używany do przesyłania plików. Po zapisaniu plików nie można go zmienić. Jeśli bot zostanie usunięty lub utraci uprawnienia, iDrive przestanie działać."
+    },
+    "attachmentName": {
+      "title": "Nazwa załącznika",
+      "description": "Nazwa używana dla przesyłanych załączników. Możesz wybrać dowolną nazwę."
+    },
+    "autoSetup": {
+      "title": "Automatyczna konfiguracja",
+      "description": "To skonfiguruje wszystko za Ciebie na Discordzie. Po prostu poczekaj chwilę."
+    }
   }
 }
 

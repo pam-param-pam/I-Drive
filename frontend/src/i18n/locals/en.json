@@ -192,6 +192,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "skipOnboardingTitle": "Skip configuration",
+    "skipOnboardingMessage": "Are you sure you want to skip the onboarding configuration tutorial? You can always show it again by refreshing the page!",
     "permanent": "Permanent",
     "showPrevious": "More",
     "loading": "Loading",
@@ -562,5 +564,39 @@
     "toggleUploadList": "Toggle file upload list",
     "fatal": "Fatal error",
     "fileGone": "File is gone, moved or deleted"
+  },
+  "tour": {
+    "buttons": {
+      "skip": "Skip",
+      "next": "Next",
+      "previous": "Previous"
+    },
+    "settings": {
+      "title": "Setup is required",
+      "description": "Click here to configure iDrive."
+    },
+    "discordSettings": {
+      "title": "Discord settings",
+      "description": "Click here to configure Discord settings such as guild, bots, webhooks, etc."
+    },
+    "guildId": {
+      "title": "Guild ID",
+      "description": "ID of the Discord server where files will be stored. Ensure you have proper permissions. If the server, its channels, or webhooks are removed, all stored files will be lost.",
+      "buttons": {
+        "next": "Next"
+      }
+    },
+    "primaryToken": {
+      "title": "Primary token",
+      "description": "Primary bot token used for uploads. Once files exist, it cannot be changed. If the bot is deleted or loses permissions, iDrive will stop working."
+    },
+    "attachmentName": {
+      "title": "Attachment name",
+      "description": "Filename used for uploaded attachments. You can choose any name."
+    },
+    "autoSetup": {
+      "title": "Auto setup",
+      "description": "This will configure everything for you on Discord. Just hang tight!"
+    }
   }
 }

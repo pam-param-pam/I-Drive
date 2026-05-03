@@ -591,11 +591,11 @@ def get_folder_hash(request, folder_obj: Folder):
 
     hasher = hashlib.sha256()
 
-    for f in files.order_by("id"):
+    for f in files.order_by("name"):
         hasher.update(f.name.encode("utf-8"))
         hasher.update(str(f.crc).encode())
 
-    for d in folders.order_by("id"):
+    for d in folders.order_by("name"):
         hasher.update(d.name.encode("utf-8"))
 
     return JsonResponse({"hash": hasher.hexdigest()})

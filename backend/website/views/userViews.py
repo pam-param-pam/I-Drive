@@ -13,7 +13,7 @@ from ..core.Serializers import WebhookSerializer, BotSerializer, NotificationSer
 from ..core.decorators import check_resource_permissions, extract_folder
 from ..core.errors import RootFolderError
 from ..core.helpers import extract_key
-from ..models import UserSettings, Folder, Webhook, Bot, UserPerms, Channel
+from ..models import UserSettings, Folder, UserPerms, Channel, DiscordSettings
 from ..models.other_models import Notification
 from ..queries.builders import build_discord_settings
 from ..services import user_service
@@ -45,18 +45,19 @@ def users_me(request):
     user = request.user
     settings: UserSettings = user.usersettings
     perms: UserPerms = user.userperms
+    discord: DiscordSettings = user.discordsettings
 
     try:
         root = Folder.objects.get(owner=user, parent=None)
-    except (Folder.DoesNotExist, Folder.MultipleObjectsReturned) as error:
+    except (Folder.DoesNotExist, Folder.MultipleObjectsReturned):
         raise RootFolderError("Root folder error.")
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
     unread_notifications = Notification.objects.filter(owner=request.user, is_deleted=False, is_read=False).count()
 
     response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE,
-                         "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE, "unreadNotifications": unread_notifications
-                         },
+                         "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE, "unreadNotifications": unread_notifications,
+                         "autoSetupComplete": discord.auto_setup_complete},
                 "perms": {"admin": perms.admin, "create": perms.create, "lock": perms.lock, "modify": perms.modify,
                           "delete": perms.delete, "share": perms.share, "download": perms.download},
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
@@ -90,10 +91,9 @@ def get_discord_settings_view(request):
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
-def add_webhook_view(request):
-    webhook_url = extract_key(request.data, "webhook_url")
-    webhook = user_service.create_webhook(request.user, webhook_url)
-    return JsonResponse(WebhookSerializer().serialize_object(webhook), status=200)
+def create_channel_and_webhook_view(request):
+    channel, webhooks = user_service.create_new_channel_and_webhooks(request.user)
+    return JsonResponse(WebhookSerializer().serialize_objects(webhooks), safe=False, status=200)
 
 
 @api_view(['DELETE'])

@@ -10,6 +10,9 @@ DISCORD_BASE_URL = "https://discord.com/api/v10"
 # Amount of channels to be created during auto setup
 NUMBER_OF_CHANNELS = 5
 
+# Max number of channels allowed for 1 user
+MAX_NUMBER_OF_CHANNELS = 11
+
 # Amount of webhooks in each channel to be created during auto setup
 NUMBER_OF_WEBHOOKS_PER_CHANNEL = 2
 

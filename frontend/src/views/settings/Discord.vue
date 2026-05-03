@@ -15,6 +15,7 @@
                   <h3>{{ $t("settings.guildId") }}</h3>
                   <input
                      v-model="guildId"
+                     data-tour="discord-settings-guild-id"
                      :placeholder="$t('settings.enterGuildId')"
                      class="input"
                      type="text"
@@ -23,6 +24,7 @@
                   <h3>{{ $t("settings.primaryBot") }}</h3>
                   <input
                      v-model="botToken"
+                     data-tour="discord-settings-primary-token"
                      :placeholder="$t('settings.enterBotToken')"
                      class="input"
                      type="text"
@@ -31,6 +33,7 @@
                   <h3>{{ $t("settings.attachmentName") }}</h3>
                   <input
                      v-model="attachmentName"
+                     data-tour="discord-settings-attachment-name"
                      :placeholder="$t('settings.enterAttachmentName')"
                      class="input"
                      type="text"
@@ -39,6 +42,7 @@
                </div>
                <div class="card-action">
                   <button
+                     data-tour="discord-settings-auto-setup"
                      :aria-label="$t('buttons.autoSetup')"
                      :title="$t('buttons.autoSetup')"
                      class="button button--flat"
@@ -107,21 +111,13 @@
                    </span>
                   </div>
                   <br>
-                  <input
-                     v-if="showWebhookInput || webhooks.length === 0"
-                     v-model="webhookUrl"
-                     :placeholder="$t('settings.newWebhookPlaceholder')"
-                     class="input"
-                     type="text"
-                     @keyup.enter="addWebhook"
-                  />
                </div>
                <div class="card-action">
                   <button
                      :aria-label="$t('buttons.add')"
                      :title="$t('buttons.add')"
                      class="button button--flat"
-                     @click="addWebhook"
+                     @click="createWebhooks"
                   >
                      {{ $t("buttons.add") }}
                   </button>
@@ -271,8 +267,8 @@
 <script>
 import {
    addDiscordBot,
-   addDiscordWebhook,
    autoSetup,
+   createWebhooks,
    deleteDiscordBot,
    deleteDiscordSettings,
    deleteDiscordWebhook,
@@ -284,7 +280,7 @@ import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import Errors from "@/components/Errors.vue"
-import { humanTime } from "@/utils/common.js"
+import { humanTime, onceAtATime } from "@/utils/common.js"
 import loadingSpinner from "@/components/loadingSpinner.vue"
 
 export default {
@@ -319,7 +315,7 @@ export default {
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["showHover", "setWebhooks", "removeWebhook", "addToWebhooks"]),
+      ...mapActions(useMainStore, ["showHover"]),
 
       ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
       setLoading(value) {
@@ -350,19 +346,14 @@ export default {
          this.channels = res.channels
          this.res = res
       },
-      addWebhook: throttle(async function() {
-         if (this.webhookUrl === "") {
-            this.showWebhookInput = true
-            return
+
+      createWebhooks: onceAtATime(async function() {
+         let webhooks = await createWebhooks()
+         for (let webhook of webhooks) {
+            this.addToWebhooks(webhook)
          }
-         let res = await addDiscordWebhook({ webhook_url: this.webhookUrl })
-
-         this.webhookUrl = ""
-
-         this.addToWebhooks(res)
-         this.showWebhookInput = false
          this.$toast.success(this.$t("toasts.webhookAdded"))
-      }, 1000),
+      }),
 
       addBot: throttle(async function() {
          if (this.botToken === "") {
@@ -432,11 +423,11 @@ export default {
                   }, true)
 
                   this.setDiscordSettings(res)
+                  this.botToken = ""
                } catch (e) {
                   console.error(e)
                   this.$toast.dismiss(toastId)
                }
-               this.botToken = ""
             }
          })
       },

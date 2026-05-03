@@ -20,7 +20,7 @@ from .views.shareViews import get_shares, delete_share, create_share, view_share
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle, stream_zip_entry
 from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
-from .views.userViews import users_me, update_settings, get_discord_settings_view, add_webhook_view, delete_webhook_view, add_bot_view, \
+from .views.userViews import users_me, update_settings, get_discord_settings_view, create_channel_and_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
     reenable_credential_view, get_notifications_view, set_notifications_read_status_view
 
@@ -133,7 +133,7 @@ urlpatterns = [
     path("user/discordSettings", ['PATCH'], update_attachment_name_view, name="update upload destination"),
     path("user/discordSettings", ['DELETE'], reset_discord_settings_view, name="reset discord settings"),
     path("user/discordSettings/autoSetup", ['POST'], discord_settings_start_view, name="do auto setup"),
-    path("user/discordSettings/webhooks", ['POST'], add_webhook_view, name="add a webhook"),
+    path("user/discordSettings/create-webhooks", ['POST'], create_channel_and_webhook_view, name="add a channel and webhooks"),
     path("user/discordSettings/webhooks/<webhook_id>", ['DELETE'], delete_webhook_view, name="delete a webhook"),
     path("user/discordSettings/bots", ['POST'], add_bot_view, name="add a bot"),
     path("user/discordSettings/bots/<bot_id>", ['DELETE'], delete_bot_view, name="delete a bot"),

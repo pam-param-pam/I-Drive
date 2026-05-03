@@ -52,9 +52,9 @@ export async function getDiscordSettings() {
 }
 
 
-export async function addDiscordWebhook(data) {
-   let url = `/user/discordSettings/webhooks`
-   let response = await backendInstance.post(url, data)
+export async function createWebhooks() {
+   let url = `/user/discordSettings/create-webhooks`
+   let response = await backendInstance.post(url)
    return response.data
 }
 

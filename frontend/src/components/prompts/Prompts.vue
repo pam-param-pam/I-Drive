@@ -48,6 +48,7 @@ import Notifications from "@/components/prompts/Notifications.vue"
 import ShareVisits from "@/components/prompts/ShareVisits.vue"
 import ShareVisitEvents from "@/components/prompts/ShareVisitEvents.vue"
 import SingleNotification from "@/components/prompts/SingleNotification.vue"
+import SkipOnboarding from "@/components/prompts/SkipOnboarding.vue"
 
 export default {
    name: "prompts",
@@ -82,6 +83,7 @@ export default {
       ShareVisits,
       ShareVisitEvents,
       SingleNotification,
+      SkipOnboarding,
       ScanQrCode: defineAsyncComponent(() => import("@/components/prompts/ScanQrCode.vue")),
       FileStats: defineAsyncComponent(() => import("@/components/prompts/FileStats.vue"))
    },

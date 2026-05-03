@@ -186,7 +186,7 @@ class PhotoMetadata(models.Model):
 class VideoMetadataTrackMixin(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     video_metadata = models.ForeignKey(VideoMetadata, on_delete=models.CASCADE, related_name="tracks")
-    bitrate = models.IntegerField()
+    bitrate = models.IntegerField(null=True)
     codec = models.CharField(max_length=100)
     size = models.PositiveBigIntegerField()
     duration = models.IntegerField()

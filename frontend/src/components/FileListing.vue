@@ -765,11 +765,12 @@ export default {
          let itemId
          if (this.lastFolder) {
             itemId = this.lastFolder.id
-            // this.setLastFolder(null)
          }
          if (this.lastItem) {
             itemId = this.lastItem.id
             this.setLastItem(null)
+         } else {
+            this.setLastFolder(null)
          }
 
          await this.$nextTick()

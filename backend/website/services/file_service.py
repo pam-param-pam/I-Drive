@@ -91,9 +91,9 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
     for index, track in enumerate(metadata[track_type]):
         kwargs = {
             "video_metadata": video_metadata,
-            "bitrate": validate_key(track, "bitrate", (int, float), checks=[IsPositive]),
+            "bitrate": validate_key(track, "bitrate", (int, float), checks=[IsPositive], required=False),
             "codec": validate_key(track, "codec", str, checks=[MaxLength(100)]),
-            "size": validate_key(track, "size", (int, float), checks=[IsPositive]),
+            "size": validate_key(track, "size", (int, float), checks=[NotNegative]),
             "duration": validate_key(track, "duration", (int, float), checks=[NotNegative]),
             "language": validate_key(track, "language", str, required=False, checks=[MaxLength(100)]),
             "track_number": index + 1,
@@ -108,7 +108,7 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
             kwargs.update({
                 "name": validate_key(track, "name", str, checks=[MaxLength(100)]),
                 "channel_count": validate_key(track, "channel_count", int, checks=[IsPositive]),
-                "sample_rate": validate_key(track, "sample_rate", int, checks=[IsPositive]),
+                "sample_rate": validate_key(track, "sample_rate", int, checks=[NotNegative]),
                 "sample_size": validate_key(track, "sample_size", int, checks=[IsPositive]),
             })
         elif track_type == "subtitle_tracks":

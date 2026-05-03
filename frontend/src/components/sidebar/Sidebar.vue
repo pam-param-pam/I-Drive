@@ -50,6 +50,7 @@
                :aria-label="$t('sidebar.settings')"
                :title="$t('sidebar.settings')"
                class="action"
+               data-tour="settings"
                @click="toSettings"
             >
                <i class="material-icons">settings_applications</i>
