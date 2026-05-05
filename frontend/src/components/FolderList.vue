@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import { getDirs } from "@/api/folder.js"
+import { getItems } from "@/api/folder.js"
 import { mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
@@ -46,17 +46,19 @@ export default {
 
    methods: {
       async fetchData(folder) {
-         let res = await getDirs(folder.id)
+         let res = await getItems(folder.id, folder.lockFrom)
 
-         let dirs = res.children
+         let dirs = res.folder.children.filter(item => item.isDir)
 
-         if (res.parent_id) {
-            let folderBack = { name: "..", id: res.parent_id }
+         if (res.folder.parent_id) {
+            let folderBack = { name: "..", id: res.folder.parent_id }
             dirs.unshift(folderBack)
          }
 
+         const folder_path = "root/" + res.breadcrumbs.map(b => b.name).join("/")
+
          this.dirs = dirs.filter((folder) => this.selected[0].id !== folder.id)
-         this.nav = { name: res.name, id: res.id, folder_path: res.folder_path }
+         this.nav = { name: res.folder.name, id: res.folder.id, folder_path: folder_path }
          this.$emit("update:current", this.nav)
       },
 

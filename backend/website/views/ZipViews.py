@@ -17,4 +17,4 @@ from ..services import zip_service
 @check_bulk_permissions(default_checks)
 def create_zip_model(request, items):
     user_zip = zip_service.create_zip_model(request.user, items)
-    return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
+    return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}/stream"}, status=200)

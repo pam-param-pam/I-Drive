@@ -40,8 +40,8 @@ export async function editFile(fileId, file_data) {
 }
 
 
-export async function updateVideoPosition(fileId, lockFrom, data) {
-   let url = `/files/${fileId}/video-position`
+export async function updateMediaPosition(fileId, lockFrom, data) {
+   let url = `/files/${fileId}/media-position`
 
    let store = useMainStore()
    let password = store.getFolderPassword(lockFrom)

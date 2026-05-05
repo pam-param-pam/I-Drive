@@ -33,9 +33,12 @@ from ..services import cache_service
 
 def etag_func(request, folder_obj):
     key = cache_service.get_folder_content_key(folder_obj.id)
+
     folder_content = cache.get(key)
     if folder_content:
-        return str(hash(str(folder_content)))
+        payload = json.dumps(folder_content, sort_keys=True)
+        return hashlib.md5(payload.encode()).hexdigest()
+
     return None
 
 
@@ -59,23 +62,6 @@ def get_folder_info(request, folder_obj: Folder):
         content_type="application/json",
         status=200
     )
-
-
-@api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
-def get_dirs(request, folder_obj: Folder):
-    folder_content = build_folder_content(folder_obj, include_files=False)
-    breadcrumbs = build_breadcrumbs(folder_obj)
-
-    folder_path = "root"
-    for folder in breadcrumbs:
-        folder_path += f"/{folder['name']}"
-
-    folder_content['folder_path'] = folder_path
-    return JsonResponse(folder_content)
 
 
 @api_view(['GET'])
@@ -171,15 +157,6 @@ def fetch_additional_info(request, item_obj):
         else:
             raise ResourceNotFoundError("Wrong item type.")
 
-
-@api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
-def get_breadcrumbs(request, folder_obj: Folder):
-    breadcrumbs = build_breadcrumbs(folder_obj)
-    return JsonResponse(breadcrumbs, safe=False)
 
 @api_view(['GET'])
 @throttle_classes([SearchThrottle])

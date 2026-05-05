@@ -29,7 +29,7 @@ export async function remove(data) {
 
 
 export async function createZIP(data) {
-   let url = `items/zip`
+   let url = `zip`
    let response = await backendInstance.post(url, data)
    return response.data
 }
@@ -43,7 +43,7 @@ export async function rename(itemId, data) {
 
 
 export async function fetchAdditionalInfo(itemId, isTrash) {
-   let url = `/items/${itemId}/moreinfo?isTrash=${isTrash}`
+   let url = `/items/${itemId}/more-info?isTrash=${isTrash}`
    let response = await backendInstance.get(url)
    return response.data
 }

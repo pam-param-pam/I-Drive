@@ -9,6 +9,9 @@ from ..services import cache_service
 class QrLoginConsumer(RateLimitedWebsocketConsumer):
     message_limit = 5
     message_window = 60
+
+    connection_limit = 15        # how many new connections allowed
+    connection_window = 30       # seconds
     ping_heartbeat = False
 
     def __init__(self, *args, **kwargs):

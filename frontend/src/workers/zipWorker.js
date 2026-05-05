@@ -79,6 +79,8 @@ function resolveNode(folderId) {
 }
 
 function makeDownloadUrl(entry, url) {
+   const baseUrl = url.replace(/\/stream$/, "")
+
    const params = new URLSearchParams({
       offset: entry.offset,
       compressed_size: entry.compressedSize,
@@ -87,7 +89,7 @@ function makeDownloadUrl(entry, url) {
       filename: entry.filename,
    })
 
-   return url + "/zip-entry?" + params.toString()
+   return baseUrl + "/zip-entry/stream?" + params.toString()
 }
 
 function flatten(node, parentPath, url) {

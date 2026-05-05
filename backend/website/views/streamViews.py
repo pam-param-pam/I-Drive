@@ -4,7 +4,7 @@ from rest_framework.permissions import AllowAny
 from ..auth.Permissions import CheckLockedFolderIP
 from ..auth.throttle import MediaThrottle, NonCacheMediaThrottle
 from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
-from ..models import File, Moment, Subtitle
+from ..models import File, Moment, Subtitle, UserZIP
 from ..services.media_service import get_thumbnail_response, get_moment_response, get_subtitle_response, get_file_response, get_zip_response, get_zip_entry_response
 
 
@@ -52,8 +52,10 @@ def stream_file(request, file_obj: File):
 @throttle_classes([NonCacheMediaThrottle])
 @permission_classes([AllowAny])
 def stream_zip_files(request, token):
-    return get_zip_response(request, token)
-
+    user_zip = UserZIP.objects.get(token=token)
+    response = get_zip_response(request, user_zip)
+    user_zip.delete()
+    return response
 
 @api_view(['GET'])
 @no_gzip

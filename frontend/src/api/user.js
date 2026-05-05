@@ -46,54 +46,54 @@ export async function getTrash() {
 
 
 export async function getDiscordSettings() {
-   let url = `/user/discordSettings`
+   let url = `/user/discord-settings`
    let response = await backendInstance.get(url)
    return response.data
 }
 
 
 export async function createWebhooks() {
-   let url = `/user/discordSettings/create-webhooks`
+   let url = `/user/discord-settings/create-webhooks`
    let response = await backendInstance.post(url)
    return response.data
 }
 
 
 export async function deleteDiscordWebhook(discordId) {
-   let url = `/user/discordSettings/webhooks/${discordId}`
+   let url = `/user/discord-settings/webhooks/${discordId}`
    let response = await backendInstance.delete(url)
    return response.data
 }
 
 
 export async function addDiscordBot(data) {
-   let url = `/user/discordSettings/bots`
+   let url = `/user/discord-settings/bots`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
 export async function reenableCredential(discordId) {
-   let url = `/user/discordSettings/credentials/${discordId}/:enable`
+   let url = `/user/discord-settings/credentials/${discordId}/enable`
    let response = await backendInstance.post(url)
    return response.data
 }
 
 export async function deleteDiscordBot(discordId) {
-   let url = `/user/discordSettings/bots/${discordId}`
+   let url = `/user/discord-settings/bots/${discordId}`
    let response = await backendInstance.delete(url)
    return response.data
 }
 
 
 export async function updateDiscordSettings(data) {
-   let url = `/user/discordSettings`
+   let url = `/user/discord-settings`
    let response = await backendInstance.patch(url, data)
    return response.data
 }
 
 
 export async function canUpload(folderContext) {
-   let url = `/user/canUpload/${folderContext}`
+   let url = `/user/can-upload/${folderContext}`
    let response = await backendInstance.get(url)
    if (response.data.can_upload) {
       let uploadStore = useUploadStore()
@@ -109,14 +109,14 @@ export async function canUpload(folderContext) {
 
 
 export async function autoSetup(data) {
-   let url = `/user/discordSettings/autoSetup`
+   let url = `/user/discord-settings/setup`
    let response = await backendInstance.post(url, data)
    return response.data
 }
 
 
 export async function deleteDiscordSettings() {
-   let url = `/user/discordSettings`
+   let url = `/user/discord-settings`
    let response = await backendInstance.delete(url)
    return response.data
 }

@@ -17,14 +17,6 @@ export async function getItems(folderId, lockFrom) {
 }
 
 
-export async function getDirs(folderId) {
-   let url = `/folders/${folderId}/dirs`
-
-   let response = await backendInstance.get(url)
-   return response.data
-}
-
-
 export async function lockWithPassword(folderId, password, oldPassword) {
    let url = `/folders/${folderId}/password`
    let headers = {}
@@ -50,13 +42,6 @@ export async function lockWithPassword(folderId, password, oldPassword) {
 export async function create(data, config = {}) {
    let url = "/folders"
    let response = await backendInstance.post(url, data, config)
-   return response.data
-}
-
-
-export async function breadcrumbs(folderId) {
-   let url = `/folders/${folderId}/breadcrumbs`
-   let response = await backendInstance.get(url)
    return response.data
 }
 

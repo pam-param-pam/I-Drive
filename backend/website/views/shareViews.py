@@ -12,11 +12,11 @@ from ..core.decorators import extract_item, check_resource_permissions, extract_
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError
 from ..core.helpers import extract_key
 from ..core.http.utils import parse_range_header
-from ..models import UserSettings, ShareableLink, Subtitle, File, ShareAccessEvent, ShareAccess
+from ..models import UserSettings, ShareableLink, Subtitle, File, ShareAccessEvent, ShareAccess, UserZIP
 from ..queries.builders import build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content, create_share_events
 from ..queries.selectors import get_item_inside_share
 from ..services import share_service
-from ..services.media_service import get_file_response, get_thumbnail_response, get_subtitle_response
+from ..services.media_service import get_file_response, get_thumbnail_response, get_subtitle_response, get_zip_response
 
 
 @api_view(['GET'])
@@ -143,7 +143,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):
     folder_ids = list(user_zip.folders.values_list("id", flat=True))
     share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD, files=file_ids, folders=folder_ids)
 
-    return JsonResponse({"download_url": f"{API_BASE_URL}/zip/{user_zip.token}"}, status=200)
+    return JsonResponse({"download_url": f"{API_BASE_URL}/shares/{share_obj.token}/zip/{user_zip.token}/stream"}, status=200)
 
 
 @api_view(['GET'])
@@ -217,3 +217,19 @@ def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
 def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
     return get_subtitle_response(request, file_obj, subtitle)
+
+
+@api_view(['GET'])
+@no_gzip
+@throttle_classes([AnonUserMediaThrottle])
+@permission_classes([AllowAny])
+@extract_share()
+@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+def share_stream_zip_files(request, share_obj: ShareableLink, zip_token: str):
+    user_zip = UserZIP.objects.get(token=zip_token)
+    if user_zip.owner != share_obj.owner:
+        raise ResourceNotFoundError()
+
+    response = get_zip_response(request, user_zip)
+    user_zip.delete()
+    return response

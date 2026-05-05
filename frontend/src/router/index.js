@@ -192,7 +192,6 @@ router.beforeResolve(async (to, from, next) => {
    const store = useMainStore()
    store.closeHovers()
    store.resetSelected()
-   store.setItemsError(null)
    store.setMultiSelection(false)
    store.closeContextMenu()
    // this will only be null on first route

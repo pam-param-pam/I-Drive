@@ -12,7 +12,7 @@
 import CorePreview from "@/views/preview/CorePreview.vue"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapState } from "pinia"
-import { getSubtitles, updateVideoPosition } from "@/api/files.js"
+import { getSubtitles, updateMediaPosition } from "@/api/files.js"
 import { PreviewEvent, WebsocketEvent } from "@/utils/constants.js"
 
 export default {
@@ -66,7 +66,7 @@ export default {
          } else if (type === PreviewEvent.MEDIA_SEEK) {
          } else if (type === PreviewEvent.MEDIA_VOLUME_CHANGE) {
          } else if (type === PreviewEvent.MEDIA_TIME_UPDATE) {
-            updateVideoPosition(this.file.id, this.file.lockFrom, {position: payload.timestamp})
+            updateMediaPosition(this.file.id, this.file.lockFrom, {position: payload.timestamp})
          } else if (type === PreviewEvent.FULLSCREEN_CHANGE) {
          } else if (type === PreviewEvent.SUBTITLE_CHANGE) {
          }

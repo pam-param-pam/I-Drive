@@ -57,30 +57,10 @@ def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
         discord.get_attachment_url(user=fragment.file.owner, resource=fragment)
 
 
-def _extract_raw_metadata(raw_buffer):
+def _extract_raw_metadata(other, lens):
     try:
-        raw_buffer.seek(0)
-
-        tags = exifread.process_file(raw_buffer, details=False)
-
-        camera = str(tags["Image Model"])
-        iso = str(tags["EXIF ISOSpeedRatings"])
-        shutter = str(tags["EXIF ExposureTime"]) + " sec"
-        aperture = str(tags["EXIF FNumber"]) + "F"
-        focal_length = str(tags["EXIF FocalLength"]) + " mm"
-
-        raw_buffer.seek(0)
-        logger.warning(
-            "EXIF parsed",
-            extra={
-                "camera": camera,
-                "iso": iso,
-                "shutter": shutter,
-                "aperture": aperture,
-                "focal_length": focal_length,
-            }
-        )
-        return camera, iso, shutter, aperture, focal_length, None
+        print(other)
+        print(lens)
     except Exception as e:
         logger.warning("FailedToParseRawImage")
         raise FailedToParseRawImage(e)
@@ -120,20 +100,7 @@ def generate_raw_image_thumbnails():
                 }
             )
 
-            if metadata:
-                camera, iso, shutter, aperture, focal_length, camera_owner = metadata
-
-                file_service.create_raw_metadata(
-                    file_obj,
-                    {
-                        "camera": camera,
-                        "camera_owner": camera_owner,
-                        "iso": iso,
-                        "shutter": shutter,
-                        "aperture": aperture,
-                        "focal_length": focal_length
-                    }
-                )
+            file_service.create_raw_metadata(file_obj, metadata)
 
             file_obj.remove_cache()
 
@@ -166,13 +133,14 @@ def generate_raw_image_thumbnails():
 
                 raw_buffer.write(decryptor.decrypt(r.content))
 
-            metadata = _extract_raw_metadata(raw_buffer)
+            raw_buffer.seek(0)
 
             with rawpy.imread(raw_buffer) as raw:
                 rgb = raw.postprocess(
                     use_camera_wb=True,
                     half_size=True
                 )
+                metadata = _extract_raw_metadata(raw.other, raw.lens)
 
             del raw_buffer
 

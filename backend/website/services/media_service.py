@@ -105,11 +105,10 @@ def get_file_response(request, file_obj: File):
     return response
 
 
-def get_zip_response(request, token: str):
-    user_zip = UserZIP.objects.get(token=token)
+def get_zip_response(request, user_zip: UserZIP):
     user = user_zip.owner
 
-    check_if_bots_exists(user)
+    num_bots = check_if_bots_exists(user)
 
     if user_zip.files.exists():
         check_resource_perms(request, user_zip.files.first(), [CheckLockedFolderIP])
@@ -133,7 +132,7 @@ def get_zip_response(request, token: str):
 
     zip_name = (folders[0].name if single_root else user_zip.name) + ".zip"
 
-    source = ZipByteSource(user_zip=user_zip, dict_files=dict_files)
+    source = ZipByteSource(dict_files=dict_files, num_bots=num_bots)
 
     return build_streaming_response(
         request=request,

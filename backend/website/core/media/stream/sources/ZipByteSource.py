@@ -12,10 +12,9 @@ from .....models import File
 from .....tasks.helper import auto_prefetch
 
 class ZipByteSource(ByteSource):
-    def __init__(self, user_zip, dict_files):
-        self.user_zip = user_zip
+    def __init__(self, dict_files, num_bots: int):
+        self.num_bots = num_bots
         self.entries = []
-
         for entry in dict_files:
             if entry["isDir"]:
                 self.entries.append({
@@ -92,7 +91,7 @@ class ZipByteSource(ByteSource):
         sent = 0
         max_bytes = byte_range.length
 
-        async for chunk in zipfly.async_stream_parallel():
+        async for chunk in zipfly.async_stream_parallel(prefetch_files=self.num_bots):
             if sent >= max_bytes:
                 break
 
