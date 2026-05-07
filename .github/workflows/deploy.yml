@@ -14,7 +14,7 @@ jobs:
     steps:
     # SSH into the server and execute commands
     - name: Deploy to Virtual Machine
-      uses: appleboy/ssh-action@master
+      uses: ghcr.io/appleboy/drone-ssh
       with:
         host: ${{ secrets.CI_DEPLOYMENT_HOST }}
         port: ${{ secrets.CI_DEPLOYMENT_PORT }}
