@@ -75,9 +75,6 @@ jobs:
             docker compose pull
 
             echo "Restarting containers..."
-            docker compose up -d --remove-orphans
-
-            echo "Cleaning old images..."
-            docker image prune -af
+            docker compose up -d
 
             echo "Deployment finished."
