@@ -192,6 +192,8 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "noFileStats": "No stats available. Folder is empty!",
+    "loadingChart": "Loading chart...",
     "skipOnboardingTitle": "Skip configuration",
     "skipOnboardingMessage": "Are you sure you want to skip the onboarding configuration tutorial? You can always show it again by refreshing the page!",
     "permanent": "Permanent",

@@ -4,11 +4,14 @@
          <h2>{{ $t("prompts.fileStats") }}</h2>
       </div>
 
-      <div v-if="stats" class="card-content">
+      <div v-if="loaded && !isEmpty" class="card-content">
          <PieChart :data="stats" :options="options" />
       </div>
+      <div v-else-if="loaded" class="card-content">
+         {{$t('prompts.noFileStats')}}
+      </div>
       <div v-else class="card-content">
-         Loading chart...
+         {{$t('prompts.loadingChart')}}
       </div>
 
       <div class="card-action">
@@ -44,6 +47,7 @@ export default {
       return {
          stats: null,
          rawStats: null,
+         loaded: false,
          options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -69,7 +73,10 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["currentFolder"])
+      ...mapState(useMainStore, ["currentFolder"]),
+      isEmpty() {
+         return Object.keys(this.rawStats).length === 0
+      }
    },
    async created() {
       this.rawStats = await getFileStats(this.currentFolder.id)
@@ -84,6 +91,7 @@ export default {
             }
          ]
       }
+      this.loaded = true
    },
    methods: {
       ...mapActions(useMainStore, ["closeHover"])

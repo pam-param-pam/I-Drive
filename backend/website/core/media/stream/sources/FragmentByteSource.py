@@ -84,7 +84,7 @@ class FragmentedDiscordByteSource(ByteSource):
             for mapping in mappings:
                 fragment = mapping.fragment
 
-                auto_prefetch(self.file_obj, fragment.id)
+                auto_prefetch(fragment.id)
 
                 url = await sync_to_async(discord.get_attachment_url)(self.file_obj.owner, fragment)
 

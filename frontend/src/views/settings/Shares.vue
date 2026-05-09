@@ -97,7 +97,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["settings", "loading"])
+      ...mapState(useMainStore, ["settings"])
    },
 
    data() {

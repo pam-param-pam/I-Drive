@@ -1,9 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Iterable
 
-from django.db.models import Exists, OuterRef
-
-from .crypto.signer import sign_resource_id_with_expiry
+from .crypto.signer import sign_resource
 from ..constants import API_BASE_URL, ShareEventType
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken, \
     ShareAccessEvent
@@ -14,67 +12,82 @@ from ..queries.selectors import get_item_inside_share
 
 class SimpleSerializer(ABC):
 
+    @staticmethod
     @abstractmethod
-    def serialize_object(self, obj: object) -> dict:
+    def serialize_object(obj: object) -> dict:
         raise NotImplementedError
 
-    def serialize_objects(self, objs: list[object] | Iterable[object]) -> list:
+    @classmethod
+    def serialize_objects(cls, objs: list[object] | Iterable[object]) -> list:
         dicts_list = []
+
         for obj in objs:
-            dicts_list.append(self.serialize_object(obj))
+            dicts_list.append(cls.serialize_object(obj))
+
         return dicts_list
 
 
 class AdvancedSerializer(ABC):
 
-    def serialize_tuple(self, tuple_data: tuple, hide=False) -> dict:
-        return self._serialize(tuple_data, hide)
+    @classmethod
+    def serialize_tuple(cls, tuple_data: tuple, hide: bool = False, sign_urls: bool = True) -> dict:
+        return cls._serialize(tuple_data, hide, sign_urls)
 
-    def serialize_object(self, obj: object, hide=False) -> dict:
-        tuple_data = self._object_to_tuple(obj)
-        return self._serialize(tuple_data, hide)
+    @classmethod
+    def serialize_object(cls, obj: object, hide=False, sign_urls: bool = True) -> dict:
+        tuple_data = cls._object_to_tuple(obj)
+        return cls._serialize(tuple_data, hide, sign_urls)
 
-    def serialize_dict(self, dict_data: dict, hide=False) -> dict:
-        tuple_data = self._dict_to_tuple(dict_data)
-        return self._serialize(tuple_data, hide)
+    @classmethod
+    def serialize_dict(cls, dict_data: dict, hide=False, sign_urls: bool = True) -> dict:
+        tuple_data = cls._dict_to_tuple(dict_data)
+        return cls._serialize(tuple_data, hide, sign_urls)
 
+    @staticmethod
     @abstractmethod
-    def _dict_to_tuple(self, data: dict) -> tuple:
+    def _dict_to_tuple(data: dict) -> tuple:
         raise NotImplementedError
 
+    @staticmethod
     @abstractmethod
-    def _object_to_tuple(self, obj) -> tuple:
+    def _object_to_tuple(obj) -> tuple:
         raise NotImplementedError
 
+    @staticmethod
     @abstractmethod
-    def _serialize(self, tuple_data: tuple, hide=False) -> dict:
+    def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         raise NotImplementedError
 
 
 class FileSerializer(AdvancedSerializer):
-    def _object_to_tuple(self, obj) -> tuple:
+
+    @staticmethod
+    def _object_to_tuple(obj) -> tuple:
         file_tuple = (
             File.objects
             .filter(id=obj.id)
-            .annotate(**File.DISPLAY_ANNOTATE)
-            .annotate(has_subtitle=Exists(Subtitle.objects.filter(file_id=OuterRef("pk"))))
+            .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)
             .first()
         )
+
         if not file_tuple:
             raise ValueError("File not found during fallback.")
+
         return file_tuple
 
-    def _dict_to_tuple(self, dict_data: dict) -> tuple:
+    @staticmethod
+    def _dict_to_tuple(dict_data: dict) -> tuple:
         tuple_data = tuple(dict_data.get(key) for key in File.DISPLAY_VALUES)
         return tuple_data
 
-    def _serialize(self, tuple_data: tuple, hide=False) -> dict:
+    @staticmethod
+    def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
+            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata
         ) = tuple_data
 
         d = {
@@ -103,27 +116,30 @@ class FileSerializer(AdvancedSerializer):
             d["in_trash_since"] = in_trash_since.isoformat()
 
         if not hide and not (is_locked and in_trash):
-            signed_id = sign_resource_id_with_expiry(id)
+            signed = ""
+            if sign_urls:
+                signed = sign_resource(id)
 
-            d["download_url"] = f"{API_BASE_URL}/files/{signed_id}/stream"
-            if has_thumbnail:
-                d["thumbnail_url"] = f"{API_BASE_URL}/files/{signed_id}/thumbnail/stream"
+            d["download_url"] = f"{API_BASE_URL}/files/{id}/stream{signed}"
+
+            if thumbnail_id:
+                d["thumbnail_url"] = f"{API_BASE_URL}/files/{id}/thumbnail/{thumbnail_id}/stream{signed}"
 
             if media_position:
                 d["media_position"] = media_position
 
         return d
 
-class ShareFileSerializer(FileSerializer):
-    def __init__(self, share: ShareableLink):
-        self.share = share
 
-    def _serialize(self, tuple_data: tuple, hide=False) -> dict:
+class ShareFileSerializer(FileSerializer):
+
+    @staticmethod
+    def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, has_thumbnail, has_videometadata
+            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata
         ) = tuple_data
 
         d = {
@@ -145,18 +161,25 @@ class ShareFileSerializer(FileSerializer):
         }
 
         if not hide and not (is_locked and in_trash):
-            signed_id = sign_resource_id_with_expiry(id)
+            signed = ""
+            if sign_urls:
+                signed = sign_resource(id)
 
-            d["download_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/stream"
+            d["download_url"] = f"{API_BASE_URL}/files/{id}/stream{signed}"
 
-            if has_thumbnail:
-                d["thumbnail_url"] = f"{API_BASE_URL}/shares/{self.share.token}/files/{signed_id}/thumbnail/stream"
+            if thumbnail_id:
+                d["thumbnail_url"] = f"{API_BASE_URL}/files/{id}/thumbnail/{thumbnail_id}/stream{signed}"
+
+            if media_position:
+                d["media_position"] = media_position
 
         return d
 
 
 class FolderSerializer(SimpleSerializer):
-    def serialize_object(self, folder_obj: Folder) -> dict:
+
+    @staticmethod
+    def serialize_object(folder_obj: Folder) -> dict:
         folder_dict = {
             'isDir': True,
             'id': folder_obj.id,
@@ -165,8 +188,8 @@ class FolderSerializer(SimpleSerializer):
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
             'isLocked': folder_obj.is_locked,
-
         }
+
         if folder_obj.is_locked:
             folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
@@ -175,8 +198,11 @@ class FolderSerializer(SimpleSerializer):
 
         return folder_dict
 
+
 class ShareFolderSerializer(SimpleSerializer):
-    def serialize_object(self, folder_obj: Folder) -> dict:
+
+    @staticmethod
+    def serialize_object(folder_obj: Folder) -> dict:
         folder_dict = {
             'isDir': True,
             'id': folder_obj.id,
@@ -185,14 +211,17 @@ class ShareFolderSerializer(SimpleSerializer):
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
         }
+
         return folder_dict
 
 
 class ShareSerializer(SimpleSerializer):
-    def serialize_object(self, share: ShareableLink) -> dict:
+
+    @staticmethod
+    def serialize_object(share: ShareableLink) -> dict:
         obj = get_item_inside_share(share)
 
-        isDir = True if isinstance(obj, Folder) else False
+        isDir = isinstance(obj, Folder)
 
         item = {
             "expire": share.expiration_time.isoformat(),
@@ -202,10 +231,14 @@ class ShareSerializer(SimpleSerializer):
             "resource_id": share.object_id,
             "id": share.id,
         }
+
         return item
 
+
 class ShareAccessSerializer(SimpleSerializer):
-    def serialize_object(self, access: ShareAccess) -> dict:
+
+    @staticmethod
+    def serialize_object(access: ShareAccess) -> dict:
         return {
             "id": access.id,
             "user": access.accessed_by.username if access.accessed_by else None,
@@ -214,8 +247,11 @@ class ShareAccessSerializer(SimpleSerializer):
             "access_time": access.access_time.isoformat() if access.access_time else None,
         }
 
+
 class ShareAccessEventSerializer(SimpleSerializer):
-    def serialize_object(self, event: ShareAccessEvent) -> dict:
+
+    @staticmethod
+    def serialize_object(event: ShareAccessEvent) -> dict:
         event_enum = ShareEventType(event.event_type)
         event_type = event_enum.name
 
@@ -227,35 +263,73 @@ class ShareAccessEventSerializer(SimpleSerializer):
             "metadata": event.metadata or {},
         }
 
+
 class WebhookSerializer(SimpleSerializer):
-    def serialize_object(self, webhook: Webhook) -> dict:
-        return {"name": webhook.name, "created_at": webhook.created_at.isoformat(), "discord_id": webhook.discord_id, "url": webhook.url, "channel":
-                {"id": webhook.channel.discord_id, "name": webhook.channel.name}}
+
+    @staticmethod
+    def serialize_object(webhook: Webhook) -> dict:
+        return {
+            "name": webhook.name,
+            "created_at": webhook.created_at.isoformat(),
+            "discord_id": webhook.discord_id,
+            "url": webhook.url,
+            "channel": {
+                "id": webhook.channel.discord_id,
+                "name": webhook.channel.name
+            }
+        }
 
 
 class BotSerializer(SimpleSerializer):
-    def serialize_object(self, bot: Bot) -> dict:
-        return {"name": bot.name, "created_at": bot.created_at.isoformat(), "discord_id": bot.discord_id, "primary": bot.primary}
+
+    @staticmethod
+    def serialize_object(bot: Bot) -> dict:
+        return {
+            "name": bot.name,
+            "created_at": bot.created_at.isoformat(),
+            "discord_id": bot.discord_id,
+            "primary": bot.primary
+        }
 
 
 class MomentSerializer(SimpleSerializer):
-    def serialize_object(self, moment: Moment) -> dict:
+
+    @staticmethod
+    def serialize_object(moment: Moment) -> dict:
         signed_file_id = sign_resource_id_with_expiry(moment.file.id)
         url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.id}/stream"
 
-        return {"file_id": moment.file.id, "id": moment.id, "timestamp": moment.timestamp, "created_at": moment.created_at, "url": url}
-
+        return {
+            "file_id": moment.file.id,
+            "id": moment.id,
+            "timestamp": moment.timestamp,
+            "created_at": moment.created_at,
+            "url": url
+        }
 
 class TagSerializer(SimpleSerializer):
-    def serialize_object(self, tag: Tag) -> dict:
-        return {"name": tag.name, "id": tag.id}
+
+    @staticmethod
+    def serialize_object(tag: Tag) -> dict:
+        return {
+            "name": tag.name,
+            "id": tag.id
+        }
+
 
 class SubtitleSerializer(SimpleSerializer):
-    def serialize_object(self, subtitle: Subtitle) -> dict:
-        signed_file_id = sign_resource_id_with_expiry(subtitle.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{subtitle.id}/stream"
 
-        return {"file_id": subtitle.file.id, "id": subtitle.id, "language": subtitle.language, "url": url, "is_forced": subtitle.forced}
+    @staticmethod
+    def serialize_object(subtitle: Subtitle) -> dict:
+        signed = sign_resource(subtitle.file.id)
+        url = f"{API_BASE_URL}/files/{subtitle.file.id}/subtitles/{subtitle.id}/stream{signed}"
+        return {
+            "file_id": subtitle.file.id,
+            "id": subtitle.id,
+            "language": subtitle.language,
+            "url": url,
+            "is_forced": subtitle.forced
+        }
 
 
 def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
@@ -270,35 +344,47 @@ def create_track_dict(track: VideoMetadataTrackMixin) -> dict:
 
 
 class VideoTrackSerializer(SimpleSerializer):
-    def serialize_object(self, track: VideoTrack) -> dict:
+
+    @staticmethod
+    def serialize_object(track: VideoTrack) -> dict:
         track_dict = create_track_dict(track)
         track_dict["height"] = track.height
         track_dict["width"] = track.width
         track_dict["fps"] = track.fps
         track_dict["type"] = "Video"
+
         return track_dict
 
 
 class AudioTrackSerializer(SimpleSerializer):
-    def serialize_object(self, track: AudioTrack) -> dict:
+
+    @staticmethod
+    def serialize_object(track: AudioTrack) -> dict:
         track_dict = create_track_dict(track)
         track_dict["name"] = track.name
         track_dict["channel_count"] = track.channel_count
         track_dict["sample_rate"] = track.sample_rate
         track_dict["sample_size"] = track.sample_size
         track_dict["type"] = "Audio"
+
         return track_dict
 
 
 class SubtitleTrackSerializer(SimpleSerializer):
-    def serialize_object(self, track: SubtitleTrack) -> dict:
+
+    @staticmethod
+    def serialize_object(track: SubtitleTrack) -> dict:
         track_dict = create_track_dict(track)
         track_dict["name"] = track.name
         track_dict["type"] = "Subtitle"
+
         return track_dict
 
+
 class RawMetadataSerializer(SimpleSerializer):
-    def serialize_object(self, metadata: RawMetadata) -> dict:
+
+    @staticmethod
+    def serialize_object(metadata: RawMetadata) -> dict:
         return {
             "camera": metadata.camera,
             "camera_owner": metadata.camera_owner,
@@ -308,15 +394,21 @@ class RawMetadataSerializer(SimpleSerializer):
             "focal_length": metadata.focal_length
         }
 
+
 class PhotoMetadataSerializer(SimpleSerializer):
-    def serialize_object(self, metadata: PhotoMetadata) -> dict:
+
+    @staticmethod
+    def serialize_object(metadata: PhotoMetadata) -> dict:
         return {
             "height": metadata.height,
             "width": metadata.width,
         }
 
+
 class DeviceTokenSerializer(SimpleSerializer):
-    def serialize_object(self, token: PerDeviceToken) -> dict:
+
+    @staticmethod
+    def serialize_object(token: PerDeviceToken) -> dict:
         return {
             'device_name': token.device_name,
             'device_id': token.device_id,
@@ -330,8 +422,11 @@ class DeviceTokenSerializer(SimpleSerializer):
             'device_type': token.device_type
         }
 
+
 class NotificationSerializer(SimpleSerializer):
-    def serialize_object(self, notification: Notification) -> dict:
+
+    @staticmethod
+    def serialize_object(notification: Notification) -> dict:
         return {
             "id": notification.id,
             "type": notification.type,

@@ -15,8 +15,7 @@ from .views.dataViews import get_folder_info, get_file_info, get_usage, search, 
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
-from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_view_stream, share_view_thumbnail, share_view_subtitle, \
-    share_get_subtitles, check_share_password, get_share_visits, get_visit_events, share_stream_zip_files
+from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle, stream_zip_entry
 from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
@@ -66,11 +65,11 @@ urlpatterns = [
     path("trash", ["GET"], get_trash, name="trash"),
     path("search", ["GET"], search, name="search"),
 
-    path("files/<signed_file_id>/thumbnail/stream", ["GET"], serve_thumbnail, name="stream_thumbnail"),
-    path("files/<signed_file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_moment"),
-    path("files/<signed_file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_subtitle"),
-    path("files/<signed_file_id>/stream", ["GET"], stream_file, name="stream file"),
-    path("files/<signed_file_id>/zip-entry/stream", ["GET"], stream_zip_entry, name="stream zip entry"),
+    path("files/<file_id>/thumbnail/<thumbnail_id>/stream", ["GET"], serve_thumbnail, name="stream_thumbnail"),
+    path("files/<file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_moment"),
+    path("files/<file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_subtitle"),
+    path("files/<file_id>/zip-entry/stream", ["GET"], stream_zip_entry, name="stream zip entry"),
+    path("files/<file_id>/stream", ["GET"], stream_file, name="stream file"),
 
     path("files", ["POST"], create_file_view, name="create file"),
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
@@ -149,13 +148,9 @@ urlpatterns = [
     path('shares/<token>', ['GET'], view_share, name='view_share'),
     path('shares/<token>/folders/<folder_id>', ['GET'], view_share, name='view_share'),
     path("shares/<token>/files/<file_id>/subtitles", ['GET'], share_get_subtitles, name="view share file all subtitles"),
-    path("shares/<token>/files/<signed_file_id>/stream", ['GET'], share_view_stream, name="view share file stream"),
-    path("shares/<token>/files/<signed_file_id>/thumbnail/stream", ['GET'], share_view_thumbnail, name="view share file thumbnail"),
-    path("shares/<token>/files/<signed_file_id>/subtitles/<subtitle_id>/stream", ['GET'], share_view_subtitle, name="view share file subtitle"),
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     path("shares/<token>/zip", ['POST'], create_share_zip_model, name="create zip for share"),
-    path("shares/<token>/zip/<zip_token>/stream", ['GET'], share_stream_zip_files, name="share zip stream files"),
 
     django_path('admin', admin.site.urls),
 
@@ -167,6 +162,6 @@ urlpatterns = [
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 
-    # 85 endpoints
+    # 80 endpoints
 ]
 # urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

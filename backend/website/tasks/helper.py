@@ -4,7 +4,6 @@ from typing import Optional
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
 from ..core.dataModels.http import RequestContext
-from ..models import File
 from ..websockets.utils import send_event
 
 folder_serializer = FolderSerializer()
@@ -21,7 +20,7 @@ def send_message(message: str, args: Optional[dict], finished: bool, context: Re
     })
 
 
-def auto_prefetch(file_obj: File, fragment_id: str) -> None:
+def auto_prefetch(fragment_id: str) -> None:
     from .otherTasks import prefetch_next_fragments
     fragments_to_prefetch = 5
     prefetch_next_fragments.delay(fragment_id, fragments_to_prefetch)

@@ -13,7 +13,7 @@ from ..services.media_service import get_thumbnail_response, get_moment_response
 @permission_classes([AllowAny])
 @extract_file_from_signed_url
 @check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
-def serve_thumbnail(request, file_obj: File):
+def serve_thumbnail(request, file_obj: File, thumbnail_id):
     return get_thumbnail_response(request, file_obj)
 
 

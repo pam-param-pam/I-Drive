@@ -47,7 +47,7 @@ DISCORD_MESSAGE_EXPIRY = 79200
 MAX_RESOURCE_NAME_LENGTH = 75
 
 # How long the resource urls are valid for
-SIGNED_URL_EXPIRY_SECONDS = 7200
+SIGNED_URL_EXPIRY_SECONDS = 10
 
 # How long the QR code session is valid for in seconds: 5 mins
 QR_CODE_SESSION_EXPIRY = 300

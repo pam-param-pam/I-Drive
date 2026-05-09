@@ -67,15 +67,15 @@ class File(models.Model):
             CheckConstraint(
                 condition=(
                         (
-                            Q(encryption_method=EncryptionMethod.Not_Encrypted.value)
-                            & Q(key__isnull=True)
-                            & Q(iv__isnull=True)
+                                Q(encryption_method=EncryptionMethod.Not_Encrypted.value)
+                                & Q(key__isnull=True)
+                                & Q(iv__isnull=True)
                         )
                         |
                         (
-                            Q(encryption_method__gt=EncryptionMethod.Not_Encrypted.value)
-                            & Q(key__isnull=False)
-                            & Q(iv__isnull=False)
+                                Q(encryption_method__gt=EncryptionMethod.Not_Encrypted.value)
+                                & Q(key__isnull=False)
+                                & Q(iv__isnull=False)
                         )
                 ),
                 name="%(class)s_encryption_fields_consistent",
@@ -103,47 +103,54 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
-        "parent__id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "has_thumbnail", "has_videometadata"
+        "parent__id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata"
     )
 
-    LOCK_FROM_ANNOTATE = {
-        "is_locked": Case(
-            When(parent__password__isnull=False, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField()
-        ),
-        "lockFrom_id": F("parent__lockFrom__id"),
-        "lockFrom__name": F("parent__lockFrom__name"),
-        "password": F("parent__password"),
-        "is_dir": Value(False, output_field=BooleanField()),
-    }
+    @classmethod
+    def get_lock_from_annotate(cls):
+        return {
+            "is_locked": Case(
+                When(parent__password__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField()
+            ),
+            "lockFrom_id": F("parent__lockFrom__id"),
+            "lockFrom__name": F("parent__lockFrom__name"),
+            "password": F("parent__password"),
+            "is_dir": Value(False, output_field=BooleanField()),
+        }
 
-    FILE_METADATA_ANNOTATE = {
-        "has_thumbnail": Case(
-            When(thumbnail__isnull=False, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-        "has_videometadata": Case(
-            When(videometadata__isnull=False, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-        "has_rawmetadata": Case(
-            When(rawmetadata__isnull=False, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-        "has_photometadata": Case(
-            When(photometadata__isnull=False, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-    }
-    DISPLAY_ANNOTATE = {
-        **FILE_METADATA_ANNOTATE,
-        **LOCK_FROM_ANNOTATE,
-    }
+    @classmethod
+    def get_file_metadata_annotate(cls):
+        from . import Subtitle
+
+        return {
+            "has_videometadata": Case(
+                When(videometadata__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+            "has_rawmetadata": Case(
+                When(rawmetadata__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+            "has_photometadata": Case(
+                When(photometadata__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            ),
+            "has_subtitle": Exists(
+                Subtitle.objects.filter(file_id=OuterRef("pk"))
+            ),
+        }
+
+    @classmethod
+    def get_display_annotate(cls):
+        return {
+            **cls.get_file_metadata_annotate(),
+            **cls.get_lock_from_annotate(),
+        }
 
     def get_name_no_extension(self):
         return os.path.splitext(self.name)[0]
@@ -221,6 +228,7 @@ class File(models.Model):
     def _check_folder_file_limit(self):
         if (self.parent.files.count() + self.parent.subfolders.count() + 1) > MAX_FILES_IN_FOLDER:
             raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
+
 
 class Fragment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)

@@ -10,7 +10,6 @@ from celery.utils.log import get_task_logger
 from .helper import send_message
 from ..celery import app
 from ..constants import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, EventCode, MAX_DISCORD_MESSAGE_SIZE
-from ..core.Serializers import FileSerializer
 from ..core.crypto.Decryptor import Decryptor
 from ..core.crypto.Encryptor import Encryptor
 from ..core.dataModels.http import RequestContext
@@ -46,7 +45,7 @@ def unlock_folder_task(context: dict, folder_id: str):
         traceback.print_exc()
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
-@app.task(expires=5)
+@app.task(expires=2)
 def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)

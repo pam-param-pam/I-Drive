@@ -30,7 +30,7 @@ def create_folder_view(request, parent):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_folder(source="data", key="new_parent_id", inject_as="new_parent_obj")
-@extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
+@extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.get_lock_from_annotate())
 @accumulate_password_errors(
     check_resource_permissions(default_checks, resource_key="new_parent_obj"),
     check_bulk_permissions(default_checks & CheckRoot)
@@ -44,7 +44,7 @@ def move_items_view(request, new_parent_obj, items):
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def move_items_to_trash_view(request, items):
     """This view uses values instead of ORM objects for files"""
@@ -55,7 +55,7 @@ def move_items_to_trash_view(request, items):
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def restore_from_trash(request, items):
     """This view uses values instead of ORM objects for files"""
@@ -66,7 +66,7 @@ def restore_from_trash(request, items):
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & DeletePerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def delete(request, items):
     """This view uses values instead of ORM objects for files"""

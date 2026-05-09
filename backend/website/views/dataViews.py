@@ -1,15 +1,15 @@
 import hashlib
 import json
 import re
+import time
 from datetime import datetime, timedelta
 
 from django.db import models
-from django.db.models import Count, Sum, Case, When, Value, CharField, Exists, OuterRef
+from django.db.models import Count, Sum, Case, When, Value, CharField
 from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseNotModified
 from django.views.decorators.cache import cache_page
-from django.views.decorators.http import etag
 from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
@@ -20,6 +20,7 @@ from ..auth.utils import check_resource_perms
 from ..constants import cache, SIGNED_URL_EXPIRY_SECONDS
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
     RawMetadataSerializer, PhotoMetadataSerializer
+from ..core.crypto.signer import sign_resource
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..discord.Discord import discord
@@ -31,37 +32,71 @@ from ..queries.selectors import query_attachments, check_if_bots_exists, get_tra
 from ..services import cache_service
 
 
-def etag_func(request, folder_obj):
-    key = cache_service.get_folder_content_key(folder_obj.id)
-
-    folder_content = cache.get(key)
-    if folder_content:
-        payload = json.dumps(folder_content, sort_keys=True)
-        return hashlib.md5(payload.encode()).hexdigest()
-
-    return None
-
-
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks - CheckTrash, resource_key="folder_obj")
-@etag(etag_func)
 def get_folder_info(request, folder_obj: Folder):
     key = cache_service.get_folder_content_key(folder_obj.id)
+
     folder_content = cache.get(key)
 
     if not folder_content:
         folder_content = build_folder_content(folder_obj)
-        cache.set(key, folder_content, timeout=SIGNED_URL_EXPIRY_SECONDS)
+        cache.set(key, folder_content, timeout=None)
 
     breadcrumbs = build_breadcrumbs(folder_obj)
-    return HttpResponse(
-        json.dumps({"folder": folder_content, "breadcrumbs": breadcrumbs}),
+
+    unsigned_payload = {
+        "folder": folder_content,
+        "breadcrumbs": breadcrumbs,
+        "_signature_epoch": int(time.time() // SIGNED_URL_EXPIRY_SECONDS)
+    }
+
+    unsigned_json = json.dumps(unsigned_payload, sort_keys=True)
+
+    etag_value = hashlib.md5(unsigned_json.encode()).hexdigest()
+
+    request_etag = request.headers.get("If-None-Match")
+    if request_etag:
+        request_etag = request_etag.removeprefix('W/').strip('"')
+
+    if request_etag == etag_value:
+        response = HttpResponseNotModified()
+        response["ETag"] = f'"{etag_value}"'
+        response["Cache-Control"] = "private, no-cache"
+
+        return response
+
+    for file in folder_content["children"]:
+        download_url = file.get("download_url")
+        thumbnail_url = file.get("thumbnail_url")
+
+        if download_url or thumbnail_url:
+            signed = sign_resource(file["id"])
+
+            if thumbnail_url:
+                file["thumbnail_url"] += signed
+
+            if download_url:
+                file["download_url"] += signed
+
+    response_payload = {
+        "folder": folder_content,
+        "breadcrumbs": breadcrumbs
+    }
+
+    response = HttpResponse(
+        json.dumps(response_payload),
         content_type="application/json",
         status=200
     )
+
+    response["ETag"] = f'"{etag_value}"'
+    response["Cache-Control"] = "private, no-cache"
+
+    return response
 
 
 @api_view(['GET'])
@@ -72,6 +107,7 @@ def get_folder_info(request, folder_obj: Folder):
 def get_file_info(request, file_obj: File):
     file_content = FileSerializer().serialize_object(file_obj)
     return JsonResponse(file_content)
+
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -288,11 +324,9 @@ def search(request):
         files = File.objects.filter(file_filters) \
                     .select_related("parent", "mediaposition", "thumbnail") \
                     .prefetch_related("tags") \
-                    .order_by(ascending + order_by).annotate(**File.DISPLAY_ANNOTATE).annotate(
-                    has_subtitle=Exists(
-                        Subtitle.objects.filter(file_id=OuterRef("pk"))
-                    )
-                    ).values_list(*File.DISPLAY_VALUES)[:result_limit]
+                    .order_by(ascending + order_by) \
+                    .annotate(**File.get_display_annotate()) \
+                    .values_list(*File.DISPLAY_VALUES)[:result_limit]
 
     if include_folders:
         folders = Folder.objects.filter(folder_filters) \

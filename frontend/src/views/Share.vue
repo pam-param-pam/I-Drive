@@ -144,10 +144,9 @@ export default {
       },
 
       copyFileShareUrl() {
-         let url = this.selected[0].download_url + "?inline=True"
+         let url = this.selected[0].download_url + "&inline=True"
          navigator.clipboard.writeText(url)
          this.$toast.success(this.$t("toasts.linkCopied"))
-
       },
 
       async fetchShare() {

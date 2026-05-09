@@ -7,63 +7,75 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
-      packages: write
+      packages: read
 
     steps:
-    # SSH into the server and execute commands
-    - name: Deploy to Virtual Machine
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.CI_DEPLOYMENT_HOST }}
-        port: ${{ secrets.CI_DEPLOYMENT_PORT }}
-        username: ${{ secrets.CI_RPI_USERNAME }}
-        key: ${{ secrets.CI_RPI_SSH_KEY }}
-        timeout: 900s
-        script: |
-          
-          echo "Logging in to GitHub Container Registry..."
-          echo "${{ secrets.MY_GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-        
-          echo "navigating to idrive"
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
 
-          mkdir -p idrive
-          cd idrive
-          echo "Removing existing .env file (if any)..."
-          rm -f .env
-        
-          echo "Setting environment variables..."
-          cat <<EOF > .env
-          IS_DEV_ENV=False
-          DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
-          NGINX_PORT=8080
-          PROTOCOL=https
-          
-          BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
-          BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api
-          
-          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-          
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          
-          IP_API_KEY=${{ secrets.IP_API_KEY }}
+        with:
+          host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+          username: ${{ secrets.CI_RPI_USERNAME }}
+          key: ${{ secrets.CI_RPI_SSH_KEY }}
+          timeout: 900s
 
-          BACKEND_PORT=8001
-          
-          EOF
-          
-          echo "Pulling docker-compose.yml..."
-          
-          curl -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
-            -o docker-compose.yml \
-            -L https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/docker-compose.yml
-          
-          docker compose pull
-          docker compose down
-          docker compose up -d
-          
-          echo "Docker Compose started successfully."
+          script: |
+            set -e
 
-          
+            APP_DIR="$HOME/idrive"
+
+            echo "Creating application directory..."
+            mkdir -p "$APP_DIR"
+
+            cd "$APP_DIR"
+
+            echo "Logging into GHCR..."
+            echo "${{ secrets.MY_GITHUB_TOKEN }}" \
+              | docker login ghcr.io \
+                  -u "${{ github.repository_owner }}" \
+                  --password-stdin
+
+            echo "Writing environment file..."
+
+            cat > .env <<EOF
+            IS_DEV_ENV=False
+
+            DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
+
+            NGINX_PORT=8080
+            PROTOCOL=https
+
+            BACKEND_PORT=8001
+
+            BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
+            BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api
+
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+
+            IP_API_KEY=${{ secrets.IP_API_KEY }}
+            EOF
+
+            echo "Downloading docker-compose.yml..."
+
+            curl -fsSL \
+              -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -o docker-compose.yml \
+              https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/docker-compose.yml
+
+            echo "Pulling latest images..."
+            docker compose pull
+
+            echo "Restarting containers..."
+            docker compose up -d --remove-orphans
+
+            echo "Cleaning old images..."
+            docker image prune -af
+
+            echo "Deployment finished."

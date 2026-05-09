@@ -9,7 +9,6 @@ from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
 
 from .constants import API_BASE_URL, EncryptionMethod
-from .core.crypto.signer import sign_resource_id_with_expiry
 from .core.dataModels.http import RequestContext
 from .core.errors import DiscordError
 from .discord.Discord import discord

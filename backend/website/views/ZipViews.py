@@ -13,7 +13,7 @@ from ..services import zip_service
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms & DownloadPerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.LOCK_FROM_ANNOTATE)
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions(default_checks)
 def create_zip_model(request, items):
     user_zip = zip_service.create_zip_model(request.user, items)

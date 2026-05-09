@@ -6,8 +6,7 @@ from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_check
     CheckShareItemBelongings, CheckTrash, CheckState
 from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle, AnonUserNonCacheMediaThrottle
 from ..constants import API_BASE_URL, ShareEventType
-from ..core.Serializers import ShareSerializer, ShareAccessSerializer
-from ..core.crypto.signer import sign_resource_id_with_expiry
+from ..core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer
 from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file, no_gzip
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError
 from ..core.helpers import extract_key
@@ -156,80 +155,5 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 @check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
 def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
+    return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
 
-    subtitle_dicts = []
-
-    for sub in subtitles:
-        signed_file_id = sign_resource_id_with_expiry(file_obj.id)
-        url = f"{API_BASE_URL}/shares/{share_obj.token}/files/{signed_file_id}/subtitles/{sub.id}/stream"
-        subtitle_dicts.append({"id": sub.id, "language": sub.language, "url": url})
-
-    return JsonResponse(subtitle_dicts, safe=False)
-
-
-"""
-                 MEDIA SERVE VIEWS
-"""
-
-@api_view(['GET'])
-@no_gzip
-@throttle_classes([AnonUserNonCacheMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_view_stream(request, share_obj: ShareableLink, file_obj: File):
-    range_header = request.headers.get('Range')
-    is_range_header, start_byte, end_byte = parse_range_header(range_header)
-    share_service.log_event_http(request, share_obj, ShareEventType.FILE_STREAM, file_id=file_obj.id, from_byte=start_byte, to_byte=end_byte)
-
-    # isDownload = request.GET.get('download', False) todo move this to client
-    # if isDownload:
-    #     share_service.log_event_http(request, share_obj, ShareEventType.FILE_DOWNLOAD, file_id=file_obj.id)
-
-    return get_file_response(request, file_obj)
-
-
-@api_view(['GET'])
-@no_gzip
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_view_thumbnail(request, share_obj: ShareableLink, file_obj: File):
-    return get_thumbnail_response(request, file_obj)
-
-
-@api_view(['GET'])
-@no_gzip
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file_from_signed_url
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_view_subtitle(request, share_obj: ShareableLink, file_obj: File, subtitle_id: str):
-    subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
-    return get_subtitle_response(request, file_obj, subtitle)
-
-
-@api_view(['GET'])
-@no_gzip
-@throttle_classes([AnonUserMediaThrottle])
-@permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-def share_stream_zip_files(request, share_obj: ShareableLink, zip_token: str):
-    user_zip = UserZIP.objects.get(token=zip_token)
-    if user_zip.owner != share_obj.owner:
-        raise ResourceNotFoundError()
-
-    response = get_zip_response(request, user_zip)
-    user_zip.delete()
-    return response

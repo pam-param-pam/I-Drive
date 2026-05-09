@@ -179,6 +179,8 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "noFileStats": "Brak statystyk. Folder jest pusty!",
+    "loadingChart": "Ładowanie wykresu...",
     "skipOnboardingTitle": "Pomiń konfigurację",
     "skipOnboardingMessage": "Czy na pewno chcesz pominąć samouczek konfiguracji początkowej? Możesz go ponownie wyświetlić, odświeżając stronę.",
     "permanent": "Na zawsze",

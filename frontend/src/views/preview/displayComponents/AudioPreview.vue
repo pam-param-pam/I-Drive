@@ -28,7 +28,7 @@ export default {
 
    computed: {
       audioSrcUrl() {
-         return this.file?.download_url + "?inline=True"
+         return this.file?.download_url
       }
    },
 

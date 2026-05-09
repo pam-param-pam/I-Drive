@@ -4,11 +4,11 @@ from typing import Callable, Union
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from .crypto.signer import verify_signed_resource_id
+from .crypto.signer import unsign_resource
 from .helpers import validate_ids_as_list
 from ..auth.Permissions import CheckGroup
 from ..models import File, Folder, ShareableLink
-from ..core.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError
+from ..core.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError, URLInvalidOrExpired
 from ..queries.selectors import get_file
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
@@ -33,17 +33,41 @@ def disable_common_errors(view_func):
 
     return wrapper
 
-
 def extract_file_from_signed_url(view_func):
+
     @wraps(view_func)
-    def wrapper(request, signed_file_id, *args, **kwargs):
-        file_id = verify_signed_resource_id(signed_file_id)
-        file_obj = get_file(file_id)
+    def wrapper(request, file_id, *args, **kwargs):
+        try:
+            expires = int(request.GET["expires"])
+            sig = request.GET["sig"]
+        except (KeyError, ValueError):
+            raise URLInvalidOrExpired("Malformed signed URL.")
+
+        resource_id = unsign_resource(
+            resource_id=str(file_id),
+            expires=expires,
+            sig=sig
+        )
+
+        file_obj = get_file(resource_id)
+
         kwargs["file_obj"] = file_obj
-        request.META['signed_file_id'] = signed_file_id
+
         return view_func(request, *args, **kwargs)
 
     return wrapper
+
+
+# def extract_file_from_signed_url(view_func):
+#     @wraps(view_func)
+#     def wrapper(request, signed_file_id, *args, **kwargs):
+#         file_id = unsign_resource("thumbnail", signed_file_id)
+#         file_obj = get_file(file_id)
+#         kwargs["file_obj"] = file_obj
+#         request.META['signed_file_id'] = signed_file_id
+#         return view_func(request, *args, **kwargs)
+#
+#     return wrapper
 
 
 def check_resource_permissions(checks: list, resource_key: Union[str, list[str]], optional: bool = False):

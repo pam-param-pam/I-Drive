@@ -31,7 +31,7 @@
 import throttle from "lodash.throttle"
 import { backendInstance } from "@/axios/networker.js"
 import { PreviewEvent } from "@/utils/constants.js"
-
+//todo add prefetch here again
 export default {
    props: ["file", "subtitles"],
    emits: ["previewEvent", "error"],
@@ -45,7 +45,7 @@ export default {
 
    computed: {
       videoSrcUrl() {
-         return this.file?.download_url + "?inline=True"
+         return this.file?.download_url + "&inline=True"
       },
       posterSrcUrl() {
          return this.file?.thumbnail_url

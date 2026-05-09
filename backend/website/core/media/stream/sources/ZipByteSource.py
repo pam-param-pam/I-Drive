@@ -49,7 +49,7 @@ class ZipByteSource(ByteSource):
 
             for fragment in fragments:
                 url = await sync_to_async(discord.get_attachment_url)(owner, fragment, True)
-                auto_prefetch(file_obj, fragment.id)
+                auto_prefetch(fragment.id)
 
                 async with session.get(url) as response:
                     response.raise_for_status()

@@ -1,18 +1,15 @@
-import math
 import time
 from collections import defaultdict
 from typing import List, Dict, Iterable
 
-from django.db.models import Q, OuterRef, Exists, F, Value, Case, BooleanField, When
+from django.db.models import Q, OuterRef, Exists
 from django.db.models.aggregates import Sum
-from django.db.models.functions import Coalesce
 
-from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer, ShareAccessSerializer, \
-    ShareAccessEventSerializer
+from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer, ShareAccessEventSerializer
 from ..core.dataModels.general import Item, ZipFileDict, Breadcrumbs, FolderDict
 from ..core.helpers import get_attr, normalize_blocked_until
 from ..discord.Discord import discord
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccess, ShareAccessEvent, Subtitle
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccessEvent, Subtitle
 from ..models.mixin_models import ItemState
 
 
@@ -37,13 +34,8 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
         file_children = (
             folder_obj.files
             .filter(state=ItemState.ACTIVE, inTrash=False)
-            .prefetch_related("tags", "mediaposition__timestamp")
-            .annotate(
-                has_subtitle=Exists(
-                    Subtitle.objects.filter(file_id=OuterRef("pk"))
-                )
-            )
-            .annotate(**File.DISPLAY_ANNOTATE)
+            .prefetch_related("tags", "mediaposition__timestamp", "thumbnail__id")
+            .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)
         )
 
@@ -51,12 +43,10 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     if include_folders:
         folder_children = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False).select_related("parent")
 
-    folder_serializer = FolderSerializer()
-    file_serializer = FileSerializer()
-    file_dicts = [file_serializer.serialize_tuple(file) for file in file_children]
-    folder_dicts = [folder_serializer.serialize_object(folder) for folder in folder_children]
+    file_dicts = [FileSerializer.serialize_tuple(file, sign_urls=False) for file in file_children]
+    folder_dicts = [FolderSerializer.serialize_object(folder) for folder in folder_children]
 
-    folder_dict = folder_serializer.serialize_object(folder_obj)
+    folder_dict = FolderSerializer.serialize_object(folder_obj)
     folder_dict["children"] = file_dicts + folder_dicts
 
     return folder_dict
@@ -174,7 +164,7 @@ def build_flattened_children(folder: Folder, full_path="", root_folder=None) -> 
 
 def build_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> Dict:
     folder_serializer = ShareFolderSerializer()
-    file_serializer = ShareFileSerializer(share)
+    file_serializer = ShareFileSerializer()
 
     if isinstance(resource_in_share, Folder):
         resource_dict = folder_serializer.serialize_object(resource_in_share)
@@ -186,14 +176,10 @@ def build_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> 
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
     folder_serializer = ShareFolderSerializer()
-    file_serializer = ShareFileSerializer(share)
+    file_serializer = ShareFileSerializer()
 
     files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False).select_related(
-        "parent", "thumbnail").prefetch_related("tags").annotate(**File.DISPLAY_ANNOTATE).annotate(
-                has_subtitle=Exists(
-                    Subtitle.objects.filter(file_id=OuterRef("pk"))
-                )
-            ).values(*File.DISPLAY_VALUES))
+        "parent", "thumbnail").prefetch_related("tags").annotate(**File.get_display_annotate()).values(*File.DISPLAY_VALUES))
 
     folders = []
     if include_folders:
@@ -211,7 +197,7 @@ def build_discord_settings(user) -> dict:
     settings = user.discordsettings
     webhooks = Webhook.objects.filter(owner=user).order_by('created_at')
     bots = Bot.objects.filter(owner=user).order_by('created_at')
-    channels = Channel.objects.filter(owner=user)
+    channels_count = Channel.objects.filter(owner=user).count()
 
     if settings.auto_setup_complete:
         state = discord.get_user_state(user)
@@ -251,15 +237,12 @@ def build_discord_settings(user) -> dict:
 
         bots_dicts.append(data)
 
-    can_add_bots_or_webhooks = bool(settings.guild_id and len(channels) > 0)
-
-    channel_dicts = [{"name": c.name, "id": c.discord_id} for c in channels]
+    can_add_bots_or_webhooks = bool(settings.guild_id and channels_count > 0)
 
     return {
         "webhooks": webhook_dicts,
         "bots": bots_dicts,
         "guild_id": settings.guild_id,
-        "channels": channel_dicts,
         "attachment_name": settings.attachment_name,
         "can_add_bots_or_webhooks": can_add_bots_or_webhooks,
         "auto_setup_complete": settings.auto_setup_complete,
