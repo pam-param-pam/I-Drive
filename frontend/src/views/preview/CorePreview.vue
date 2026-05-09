@@ -397,6 +397,8 @@ export default {
          this.hoverNav = false
          if (!this.hasPrevious) return
 
+         this.prefetch()
+
          const previousFile = this.files[this.currentIndex - 1]
 
          this.$router.replace({
@@ -413,6 +415,7 @@ export default {
          this.hoverNav = false
          if (!this.hasNext) return
 
+         this.prefetch()
          const nextFile = this.files[this.currentIndex + 1]
 
          this.$router.replace({
@@ -442,7 +445,6 @@ export default {
          this.close()
       },
       async prefetch() {
-         //todo make it better!
          this.prefetchTimeout = setTimeout(() => {
             let file1 = this.files[this.currentIndex + 1]
             let file2 = this.files[this.currentIndex + 2]

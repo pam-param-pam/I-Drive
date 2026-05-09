@@ -1,0 +1,24 @@
+name: Restart App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Restart docker compose
+        uses: appleboy/ssh-action@v1.2.0
+
+        with:
+          host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+          username: ${{ secrets.CI_RPI_USERNAME }}
+          key: ${{ secrets.CI_RPI_SSH_KEY }}
+
+          script: |
+            set -e
+            cd idrive
+            docker compose restart
+            docker compose ps

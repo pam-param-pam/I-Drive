@@ -26,22 +26,24 @@ jobs:
           script: |
             set -e
 
-            APP_DIR="$HOME/idrive"
+            echo "Logging in to GitHub Container Registry..."
 
-            echo "Creating application directory..."
-            mkdir -p "$APP_DIR"
-
-            cd "$APP_DIR"
-
-            echo "Logging into GHCR..."
             echo "${{ secrets.MY_GITHUB_TOKEN }}" \
               | docker login ghcr.io \
-                  -u "${{ github.repository_owner }}" \
+                  -u ${{ github.repository_owner }} \
                   --password-stdin
+
+            echo "Navigating to idrive..."
+
+            mkdir -p ~/idrive
+            cd ~/idrive
+
+            echo "Removing existing .env file..."
+            rm -f .env
 
             echo "Writing environment file..."
 
-            cat > .env <<EOF
+            cat <<EOF > .env
             IS_DEV_ENV=False
 
             DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
