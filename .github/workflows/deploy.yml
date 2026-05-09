@@ -73,7 +73,9 @@ jobs:
 
             echo "Pulling latest images..."
             docker compose pull
-
+            
+            docker compose down
+            
             echo "Restarting containers..."
             docker compose up -d
 
