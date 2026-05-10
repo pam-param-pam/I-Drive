@@ -1,6 +1,7 @@
 volumes:
   postgres_data:
   nginx_cache:
+
 services:
   ### redis
   redis:
