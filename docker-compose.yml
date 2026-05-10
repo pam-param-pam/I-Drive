@@ -90,7 +90,6 @@ services:
         limits:
           memory: 2G
 
-
  ### nginx
   nginx:
     image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG:-latest}
@@ -111,8 +110,9 @@ services:
     environment:
       - VITE_BACKEND_BASE_URL=${PROTOCOL}://${DEPLOYMENT_HOST}/api
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/auth.js:/etc/nginx/auth.js
+      - nginx_cache:/var/cache/nginx
     deploy:
       resources:
         limits:

@@ -3,6 +3,7 @@ import json
 import re
 import time
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 from django.db import models
 from django.db.models import Count, Sum, Case, When, Value, CharField
@@ -73,14 +74,14 @@ def get_folder_info(request, folder_obj: Folder):
         download_url = file.get("download_url")
         thumbnail_url = file.get("thumbnail_url")
 
-        if download_url or thumbnail_url:
-            signed = sign_resource(file["id"])
+        if thumbnail_url:
+            thumbnail_path = urlparse(thumbnail_url).path.replace("/api", "")
+            print(f"thumbnail_path: {thumbnail_path}")
+            file["thumbnail_url"] += sign_resource(thumbnail_path)
 
-            if thumbnail_url:
-                file["thumbnail_url"] += signed
-
-            if download_url:
-                file["download_url"] += signed
+        if download_url:
+            download_path = urlparse(download_url).path.replace("/api", "")
+            file["download_url"] += sign_resource(download_path)
 
     response_payload = {
         "folder": folder_content,

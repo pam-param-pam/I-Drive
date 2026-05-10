@@ -43,13 +43,15 @@ def extract_file_from_signed_url(view_func):
         except (KeyError, ValueError):
             raise URLInvalidOrExpired("Malformed signed URL.")
 
-        resource_id = unsign_resource(
-            resource_id=str(file_id),
+        path = request.path
+
+        unsign_resource(
+            path=path,
             expires=expires,
             sig=sig
         )
 
-        file_obj = get_file(resource_id)
+        file_obj = get_file(file_id)
 
         kwargs["file_obj"] = file_obj
 

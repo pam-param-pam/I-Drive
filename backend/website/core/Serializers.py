@@ -117,13 +117,23 @@ class FileSerializer(AdvancedSerializer):
 
         if not hide and not (is_locked and in_trash):
             signed = ""
-            if sign_urls:
-                signed = sign_resource(id)
 
-            d["download_url"] = f"{API_BASE_URL}/files/{id}/stream{signed}"
+            download_path = f"/files/{id}/stream"
+
+            if sign_urls:
+                signed = sign_resource(download_path)
+
+            d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
             if thumbnail_id:
-                d["thumbnail_url"] = f"{API_BASE_URL}/files/{id}/thumbnail/{thumbnail_id}/stream{signed}"
+                thumbnail_path = f"/files/{id}/thumbnail/{thumbnail_id}/stream"
+
+                thumbnail_signed = ""
+
+                if sign_urls:
+                    thumbnail_signed = sign_resource(thumbnail_path)
+
+                d["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{thumbnail_signed}"
 
             if media_position:
                 d["media_position"] = media_position
@@ -162,16 +172,23 @@ class ShareFileSerializer(FileSerializer):
 
         if not hide and not (is_locked and in_trash):
             signed = ""
-            if sign_urls:
-                signed = sign_resource(id)
 
-            d["download_url"] = f"{API_BASE_URL}/files/{id}/stream{signed}"
+            download_path = f"/files/{id}/stream"
+
+            if sign_urls:
+                signed = sign_resource(download_path)
+
+            d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
             if thumbnail_id:
-                d["thumbnail_url"] = f"{API_BASE_URL}/files/{id}/thumbnail/{thumbnail_id}/stream{signed}"
+                thumbnail_path = f"/files/{id}/thumbnail/{thumbnail_id}/stream"
 
-            if media_position:
-                d["media_position"] = media_position
+                thumbnail_signed = ""
+
+                if sign_urls:
+                    thumbnail_signed = sign_resource(thumbnail_path)
+
+                d["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{thumbnail_signed}"
 
         return d
 
@@ -321,8 +338,9 @@ class SubtitleSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(subtitle: Subtitle) -> dict:
-        signed = sign_resource(subtitle.file.id)
-        url = f"{API_BASE_URL}/files/{subtitle.file.id}/subtitles/{subtitle.id}/stream{signed}"
+        path = f"/files/{subtitle.file.id}/subtitles/{subtitle.id}/stream"
+        signed = sign_resource(path)
+        url = f"{API_BASE_URL}{path}{signed}"
         return {
             "file_id": subtitle.file.id,
             "id": subtitle.id,

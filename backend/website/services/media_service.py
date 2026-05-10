@@ -74,7 +74,7 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
     return build_binary_response(
         content=subtitle_content,
         filename=f"subtitle_{file_obj.get_name_no_extension()}.webp",
-        content_type="image/webp",
+        content_type="text/vtt",
         inline=isInline,
         cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}"
     )

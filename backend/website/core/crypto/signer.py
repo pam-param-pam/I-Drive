@@ -9,10 +9,10 @@ from ...constants import SIGNED_URL_EXPIRY_SECONDS
 SECRET = b"super-secret"
 
 
-def sign_resource(resource_id: str) -> str:
+def sign_resource(path: str) -> str:
     expires = int(time.time()) + SIGNED_URL_EXPIRY_SECONDS
 
-    payload = f"{resource_id}:{expires}".encode()
+    payload = f"{path}:{expires}".encode()
 
     digest = hmac.new(
         SECRET,
@@ -24,11 +24,12 @@ def sign_resource(resource_id: str) -> str:
 
     return f"?sig={sig}&expires={expires}"
 
-def unsign_resource(resource_id: str, expires: int, sig: str) -> str:
+
+def unsign_resource(path: str, expires: int, sig: str) -> str:
     if time.time() > expires:
         raise URLInvalidOrExpired("URL expired.")
 
-    payload = f"{resource_id}:{expires}".encode()
+    payload = f"{path}:{expires}".encode()
 
     expected_digest = hmac.new(
         SECRET,
@@ -39,6 +40,11 @@ def unsign_resource(resource_id: str, expires: int, sig: str) -> str:
     expected_sig = base64.urlsafe_b64encode(expected_digest).rstrip(b'=').decode()
 
     if not hmac.compare_digest(sig, expected_sig):
+        print(f"Path: {path}")
+        print(f"Expires: {expires}")
+        print(f"Signature: {sig}")
+        print(f"Expected_sig: {expected_sig}")
+
         raise URLInvalidOrExpired("Bad signature.")
 
-    return resource_id
+    return path
