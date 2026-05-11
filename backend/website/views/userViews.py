@@ -93,7 +93,7 @@ def get_discord_settings_view(request):
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
 def create_channel_and_webhook_view(request):
     channel, webhooks = user_service.create_new_channel_and_webhooks(request.user)
-    return JsonResponse(WebhookSerializer().serialize_objects(webhooks), safe=False, status=200)
+    return JsonResponse(WebhookSerializer.serialize_objects(webhooks), safe=False, status=200)
 
 
 @api_view(['DELETE'])
@@ -110,7 +110,7 @@ def delete_webhook_view(request, webhook_id):
 def add_bot_view(request):
     token = extract_key(request.data, "token")
     bot = user_service.add_bot(request.user, token)
-    return JsonResponse(BotSerializer().serialize_object(bot), status=200)
+    return JsonResponse(BotSerializer.serialize_object(bot), status=200)
 
 
 @api_view(['DELETE'])
@@ -179,9 +179,7 @@ def get_notifications_view(request):
         )
 
     notifications = qs.order_by("-created_at")
-
-    serializer = NotificationSerializer()
-    return JsonResponse(serializer.serialize_objects(notifications), status=200, safe=False)
+    return JsonResponse(NotificationSerializer.serialize_objects(notifications), status=200, safe=False)
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])

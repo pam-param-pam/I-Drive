@@ -1,8 +1,9 @@
 import traceback
 
-from .helper import folder_serializer, send_message
+from .helper import send_message
 from ..celery import app
 from ..constants import EventCode
+from ..core.Serializers import FolderSerializer
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
 from ..services import folder_service, file_service
@@ -23,7 +24,7 @@ def move_to_trash_task(context: dict, ids: list[str]):
         total_length = len(folders)
         last_percentage = 0
         for index, folder in enumerate(folders):
-            folder_dict = folder_serializer.serialize_object(folder)
+            folder_dict = FolderSerializer.serialize_object(folder)
             send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
             folder_service.internal_move_to_trash(folder=folder)
             percentage = round((index + 1) / total_length * 100)
@@ -51,7 +52,7 @@ def restore_from_trash_task(context: dict, ids: list[str]):
         total_length = len(folders)
         last_percentage = 0
         for index, folder in enumerate(folders):
-            folder_dict = folder_serializer.serialize_object(folder)
+            folder_dict = FolderSerializer.serialize_object(folder)
             send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
             folder_service.internal_restore_from_trash(folder=folder)
             percentage = round((index + 1) / total_length * 100)

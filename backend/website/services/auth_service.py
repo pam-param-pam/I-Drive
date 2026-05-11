@@ -172,7 +172,7 @@ def login_device(request, username: str, password: str) -> tuple[str, PerDeviceT
     raw_token, token_obj = _create_token(request, user)
 
     user_logged_in.send(sender=user.__class__, request=request, user=user)
-    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer().serialize_object(token_obj))
+    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer.serialize_object(token_obj))
     user_service.create_notification(user, NotificationType.IMPORTANT, "New device login.", "A new device has logged into your account. Check it in device settings")  # todo
     return raw_token, token_obj
 

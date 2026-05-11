@@ -1,13 +1,14 @@
 import base64
 import hashlib
 import hmac
+import os
 import time
 
 from ..errors import URLInvalidOrExpired
 from ...constants import SIGNED_URL_EXPIRY_SECONDS
 
-SECRET = b"super-secret"
 
+SECRET = os.environ["SIGNING_SECRET"].encode()
 
 def sign_resource(path: str) -> str:
     expires = int(time.time()) + SIGNED_URL_EXPIRY_SECONDS

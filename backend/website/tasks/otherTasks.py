@@ -10,12 +10,14 @@ from celery.utils.log import get_task_logger
 from .helper import send_message
 from ..celery import app
 from ..constants import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, EventCode, MAX_DISCORD_MESSAGE_SIZE
+from ..core.Serializers import FileSerializer
 from ..core.crypto.Decryptor import Decryptor
 from ..core.crypto.Encryptor import Encryptor
 from ..core.dataModels.http import RequestContext
 from ..core.errors import FailedToParseRawImage
 from ..discord.Discord import discord
 from ..models import (Folder, Fragment, File, DiscordSettings)
+from ..models.file_related_models import RawMetadata
 from ..services import folder_service, file_service, create_file_service
 from ..websockets.utils import send_event
 
@@ -56,17 +58,40 @@ def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
         discord.get_attachment_url(user=fragment.file.owner, resource=fragment)
 
 
-def _extract_raw_metadata(other, lens):
+def format_shutter(speed: float | None) -> str:
+    if speed is None:
+        return ""
+
+    if speed >= 1:
+        return f"{speed:.1f}s"
+
+    denominator = round(1 / speed)
+    return f"1/{denominator}s"
+
+
+def format_aperture(aperture: float | None) -> str:
+    if aperture is None:
+        return ""
+
+    return f"f/{aperture:g}"
+
+def _extract_raw_metadata(other, lens) -> dict:
     try:
-        print(other)
-        print(lens)
+        return {
+            "iso": str(other.iso_speed) if other.iso_speed is not None else "",
+            "shutter": format_shutter(other.shutter_speed),
+            "aperture": format_aperture(other.aperture),
+            "focal_length": str(other.focal_length) if other.focal_length is not None else "",
+            "camera": lens.model if lens and lens.model else "",
+            "camera_owner": other.artist if other.artist else "",
+        }
     except Exception as e:
         logger.warning("FailedToParseRawImage")
         raise FailedToParseRawImage(e)
 
 @app.task(expires=5)
 def generate_raw_image_thumbnails():
-    return
+
     files = File.objects.filter(type="Raw image", thumbnail__isnull=True, rawmetadata__isnull=True, inTrash=False, parent__inTrash=False).select_related("owner")
 
     state = {
@@ -103,7 +128,7 @@ def generate_raw_image_thumbnails():
 
             file_obj.remove_cache()
 
-            send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
+            send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
 
         state["upload_queue"].clear()
         state["upload_map"].clear()

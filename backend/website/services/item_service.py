@@ -23,10 +23,10 @@ def rename_item(context: RequestContext, item_obj: Item, new_name: str) -> None:
         extension = get_file_extension(new_name)
         item_obj.type = get_file_type(extension)
         item_obj.save()
-        data = FileSerializer().serialize_object(item_obj)
+        data = FileSerializer.serialize_object(item_obj)
     else:
         item_obj.save()
-        data = FolderSerializer().serialize_object(item_obj)
+        data = FolderSerializer.serialize_object(item_obj)
 
     send_event(context.without_device_id(), item_obj.parent, EventCode.ITEM_UPDATE, data)
 

@@ -100,8 +100,7 @@ def cancel_pending_qr_session_view(request, session_id):
 @permission_classes([IsAuthenticated & ReadPerms])
 def list_active_devices_view(request):
     tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
-    serializer = DeviceTokenSerializer()
-    data = serializer.serialize_objects(tokens)
+    data = DeviceTokenSerializer.serialize_objects(tokens)
     return JsonResponse(data, safe=False)
 
 

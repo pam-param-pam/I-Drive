@@ -199,7 +199,7 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
 
         file_obj.save()
 
-    send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer().serialize_object(file_obj))
+    send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
 
 
 def create_or_edit_thumbnail(user: User, file_obj: File, data: dict) -> None:
@@ -216,5 +216,5 @@ def create_or_edit_thumbnail(user: User, file_obj: File, data: dict) -> None:
     file_service.create_thumbnail(file_obj, data)
     file_obj.remove_cache()
 
-    file_dict = FileSerializer().serialize_object(file_obj)
+    file_dict = FileSerializer.serialize_object(file_obj)
     send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, file_dict)

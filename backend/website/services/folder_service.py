@@ -52,7 +52,7 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
 
         folder_obj.save()
 
-    folder_dict = FolderSerializer().serialize_object(folder_obj)
+    folder_dict = FolderSerializer.serialize_object(folder_obj)
     send_event(context.without_device_id(), parent, EventCode.ITEM_CREATE, folder_dict)
     return folder_obj
 

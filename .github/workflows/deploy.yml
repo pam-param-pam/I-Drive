@@ -54,6 +54,7 @@ jobs:
             BACKEND_PORT=8001
 
             BACKEND_SECRET_KEY=${{ secrets.DJANGO_BACKEND_SECRET_KEY }}
+            SIGNING_SECRET=${{ secrets.SIGNING_SECRET }}
             BACKEND_BASE_URL=https://${{ secrets.DEPLOYMENT_HOST }}/api
 
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}

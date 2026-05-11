@@ -69,6 +69,7 @@
     "editThumbnail": "Zmień podgląd"
   },
   "errors": {
+    "nginxError": "Błąd nginx",
     "databaseResourceLocked": "Baza danych zablokowana",
     "tryAgain": "Sprobój ponownie",
     "urlInvalidOrExpired": "URL wygasł, odswież strone",

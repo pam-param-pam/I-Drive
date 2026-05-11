@@ -173,8 +173,8 @@ IP_API_KEY= grab from here https://freeipapi.app/ (it's free)
 
 5) Run `docker-compose up`
 6) Run `docker exec -it idrive-backend bash`
-7) Run `python manage.py migrate website` to setup a database
-8) Run `python manage.py createsuperuser` to create admin user
+7) Run `python manage.py migrate` to setup a database
+8) Run `python manage.py createuser` to create admin user
 9) Go to browser and type `localhost`
 
 

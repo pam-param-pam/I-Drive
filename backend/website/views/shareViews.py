@@ -27,7 +27,7 @@ def get_shares(request):
 
     for share in shares:
         try:
-            item = ShareSerializer().serialize_object(share)
+            item = ShareSerializer.serialize_object(share)
             items.append(item)
         except ResourceNotFoundError:
             pass
@@ -46,7 +46,7 @@ def create_share(request, item_obj):
     password = extract_key(request.data, "password")
 
     share = share_service.create_share(request.user, item_obj, unit, value, password)
-    item = ShareSerializer().serialize_object(share)
+    item = ShareSerializer.serialize_object(share)
     return JsonResponse(item, status=200, safe=False)
 
 
@@ -67,8 +67,7 @@ def delete_share(request, share_obj):
 @check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
 def get_share_visits(request, share_obj):
     accesses = ShareAccess.objects.filter(share=share_obj)
-    serializer = ShareAccessSerializer()
-    return JsonResponse(serializer.serialize_objects(accesses), status=200, safe=False)
+    return JsonResponse(ShareAccessSerializer.serialize_objects(accesses), status=200, safe=False)
 
 
 @api_view(['GET'])

@@ -14,15 +14,12 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
     grouped_files = defaultdict(list)
     parent_mapping = {}
 
-    folder_serializer = FolderSerializer()
-    file_serializer = FileSerializer()
-
     for resource in resources:
         parent_mapping[resource.parent_id] = resource.parent
         if isinstance(resource, Folder):
-            grouped_files[resource.parent.id].append(folder_serializer.serialize_object(resource))
+            grouped_files[resource.parent.id].append(FolderSerializer.serialize_object(resource))
         else:
-            grouped_files[resource.parent_id].append(file_serializer.serialize_object(resource))
+            grouped_files[resource.parent_id].append(FileSerializer.serialize_object(resource))
 
     for parent_id, file_dicts in grouped_files.items():
         parent = parent_mapping[parent_id]

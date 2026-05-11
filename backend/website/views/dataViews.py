@@ -105,7 +105,7 @@ def get_folder_info(request, folder_obj: Folder):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_file_info(request, file_obj: File):
-    file_content = FileSerializer().serialize_object(file_obj)
+    file_content = FileSerializer.serialize_object(file_obj)
     return JsonResponse(file_content)
 
 
@@ -151,18 +151,15 @@ def fetch_additional_info(request, item_obj):
     else:
         if item_obj.type == "Video":
             tracks = []
-            videoSerializer = VideoTrackSerializer()
-            audioSerializer = AudioTrackSerializer()
-            subtitleSerializer = SubtitleTrackSerializer()
 
             for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
-                tracks.append(videoSerializer.serialize_object(track))
+                tracks.append(VideoTrackSerializer.serialize_object(track))
 
             for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
-                tracks.append(audioSerializer.serialize_object(track))
+                tracks.append(AudioTrackSerializer.serialize_object(track))
 
             for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
-                tracks.append(subtitleSerializer.serialize_object(track))
+                tracks.append(SubtitleTrackSerializer.serialize_object(track))
             try:
                 metadata = VideoMetadata.objects.get(file=item_obj)
             except VideoMetadata.DoesNotExist:
@@ -177,7 +174,7 @@ def fetch_additional_info(request, item_obj):
         elif item_obj.type == "Raw image":
             try:
                 raw_metadata = RawMetadata.objects.get(file=item_obj)
-                metadata_dict = RawMetadataSerializer().serialize_object(raw_metadata)
+                metadata_dict = RawMetadataSerializer.serialize_object(raw_metadata)
                 return JsonResponse(metadata_dict, status=200)
             except RawMetadata.DoesNotExist:
                 raise ResourceNotFoundError("No raw metadata for this file :(")
@@ -185,7 +182,7 @@ def fetch_additional_info(request, item_obj):
         elif item_obj.type == "Image":
             try:
                 photo_metadata = PhotoMetadata.objects.get(file=item_obj)
-                photo_metadata = PhotoMetadataSerializer().serialize_object(photo_metadata)
+                photo_metadata = PhotoMetadataSerializer.serialize_object(photo_metadata)
                 return JsonResponse(photo_metadata, status=200)
             except RawMetadata.DoesNotExist:
                 raise ResourceNotFoundError("No photo metadata for this file :(")
@@ -340,16 +337,13 @@ def search(request):
     folder_dicts = []
     file_dicts = []
 
-    folder_serializer = FolderSerializer()
-    file_serializer = FileSerializer()
-
     if include_folders and not (extension or file_type):
         for folder in folders:
-            folder_dict = folder_serializer.serialize_object(folder)
+            folder_dict = FolderSerializer.serialize_object(folder)
             folder_dicts.append(folder_dict)
 
     if include_files:
-        file_dicts = [file_serializer.serialize_tuple(file) for file in files]
+        file_dicts = [FileSerializer.serialize_tuple(file) for file in files]
 
     return JsonResponse(file_dicts + folder_dicts, safe=False)
 
@@ -359,11 +353,8 @@ def search(request):
 def get_trash(request):
     files, folders = get_trash_files_and_folders(request.user)
 
-    file_serializer = FileSerializer()
-    folder_serializer = FolderSerializer()
-
-    file_dicts = [file_serializer.serialize_tuple(file) for file in files]
-    folder_dicts = [folder_serializer.serialize_object(folder) for folder in folders]
+    file_dicts = [FileSerializer.serialize_tuple(file) for file in files]
+    folder_dicts = [FolderSerializer.serialize_object(folder) for folder in folders]
 
     return JsonResponse({"trash": file_dicts + folder_dicts})
 
@@ -388,9 +379,8 @@ def check_password(request, item_obj):
 def get_moments(request, file_obj: File):
     moments = Moment.objects.filter(file=file_obj).all()
     moments_list = []
-    serializer = MomentSerializer()
     for moment in moments:
-        moments_list.append(serializer.serialize_object(moment))
+        moments_list.append(MomentSerializer.serialize_object(moment))
 
     return JsonResponse(moments_list, safe=False)
 
@@ -401,9 +391,8 @@ def get_moments(request, file_obj: File):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_tags(request, file_obj: File):
     tags_list = []
-    serializer = TagSerializer()
     for tag in file_obj.tags.all():
-        tags_list.append(serializer.serialize_object(tag))
+        tags_list.append(TagSerializer.serialize_object(tag))
 
     return JsonResponse(tags_list, safe=False)
 
@@ -416,10 +405,9 @@ def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
 
     subtitle_dicts = []
-    serializer = SubtitleSerializer()
 
     for sub in subtitles:
-        subtitle_dicts.append(serializer.serialize_object(sub))
+        subtitle_dicts.append(SubtitleSerializer.serialize_object(sub))
 
     return JsonResponse(subtitle_dicts, safe=False)
 

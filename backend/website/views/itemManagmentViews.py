@@ -22,7 +22,7 @@ from ..services import folder_service, item_service, file_service, delete_servic
 def create_folder_view(request, parent):
     name = extract_key(request.data, "name")
     folder_obj = folder_service.create_folder(request.context, request.user, parent, name)
-    folder_dict = FolderSerializer().serialize_object(folder_obj)
+    folder_dict = FolderSerializer.serialize_object(folder_obj)
     return JsonResponse(folder_dict, status=200)
 
 
@@ -134,7 +134,7 @@ def update_media_position_view(request, file_obj):
 def add_tag_view(request, file_obj):
     tag_name = extract_key(request.data, "tag_name")
     tag = file_service.add_tag(file_obj, tag_name)
-    return JsonResponse(TagSerializer().serialize_object(tag), status=200)
+    return JsonResponse(TagSerializer.serialize_object(tag), status=200)
 
 
 @api_view(['DELETE'])
@@ -154,7 +154,7 @@ def remove_tag_view(request, file_obj, tag_id):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_moment_view(request, file_obj):
     moment = file_service.add_moment(request.user, file_obj, request.data)
-    return JsonResponse(MomentSerializer().serialize_object(moment), status=200)
+    return JsonResponse(MomentSerializer.serialize_object(moment), status=200)
 
 
 @api_view(['DELETE'])
@@ -174,7 +174,7 @@ def remove_moment_view(request, file_obj, moment_id):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def add_subtitle_view(request, file_obj):
     subtitle = file_service.create_subtitle(file_obj, request.data)
-    return JsonResponse(SubtitleSerializer().serialize_object(subtitle), status=200)
+    return JsonResponse(SubtitleSerializer.serialize_object(subtitle), status=200)
 
 
 @api_view(['PATCH'])

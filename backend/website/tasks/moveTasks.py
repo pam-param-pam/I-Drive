@@ -2,9 +2,10 @@ from collections import defaultdict
 
 from django.core.exceptions import ValidationError
 
-from .helper import file_serializer, folder_serializer, send_message
+from .helper import send_message
 from ..celery import app
 from ..constants import EventCode
+from ..core.Serializers import FolderSerializer, FileSerializer
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
 from ..queries.selectors import get_folder
@@ -31,7 +32,7 @@ def move_group(context: RequestContext, grouped_items, new_parent, processed_cou
 
         send_event(context, old_parent, EventCode.ITEM_MOVE_OUT, [first_item.id])
 
-        first_item_dict = folder_serializer.serialize_object(first_item) if is_folder else file_serializer.serialize_object(first_item)
+        first_item_dict = FolderSerializer.serialize_object(first_item) if is_folder else FileSerializer.serialize_object(first_item)
         send_event(context, new_parent, EventCode.ITEM_MOVE_IN, [first_item_dict])
 
         while item_group:
@@ -52,7 +53,7 @@ def move_group(context: RequestContext, grouped_items, new_parent, processed_cou
                 file_service.internal_move_to_new_parent(file_ids=file_ids, new_parent=new_parent)
 
             for item in batch:
-                item_dict = folder_serializer.serialize_object(item) if is_folder else file_serializer.serialize_object(item)
+                item_dict = FolderSerializer.serialize_object(item) if is_folder else FileSerializer.serialize_object(item)
                 item_dicts_batch.append(item_dict)
                 ids.append(item.id)
 

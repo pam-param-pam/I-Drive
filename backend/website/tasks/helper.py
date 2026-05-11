@@ -2,12 +2,9 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from ..constants import EventCode
-from ..core.Serializers import FolderSerializer, FileSerializer
 from ..core.dataModels.http import RequestContext
 from ..websockets.utils import send_event
 
-folder_serializer = FolderSerializer()
-file_serializer = FileSerializer()
 DISCORD_EPOCH = 1420070400000  # ms
 
 def send_message(message: str, args: Optional[dict], finished: bool, context: RequestContext, isError=False):

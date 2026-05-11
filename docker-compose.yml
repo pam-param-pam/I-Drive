@@ -70,6 +70,7 @@ services:
 
       # Backend Configuration
       - BACKEND_SECRET_KEY=${BACKEND_SECRET_KEY}
+      - SIGNING_SECRET=${SIGNING_SECRET}
       - BACKEND_BASE_URL=${PROTOCOL}://${DEPLOYMENT_HOST}/api
 
       # Redis Configuration

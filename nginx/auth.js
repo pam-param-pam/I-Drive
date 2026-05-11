@@ -1,6 +1,7 @@
 var crypto = require('crypto');
 
 const SECRET = Buffer.from( process.env.SIGNING_SECRET, "utf8" );
+//const SECRET = Buffer.from('super-secret');
 
 function base64url(buffer) {
     return buffer

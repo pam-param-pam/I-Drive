@@ -163,21 +163,15 @@ def build_flattened_children(folder: Folder, full_path="", root_folder=None) -> 
 
 
 def build_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> Dict:
-    folder_serializer = ShareFolderSerializer()
-    file_serializer = ShareFileSerializer()
-
     if isinstance(resource_in_share, Folder):
-        resource_dict = folder_serializer.serialize_object(resource_in_share)
+        resource_dict = ShareFolderSerializer.serialize_object(resource_in_share)
     else:
-        resource_dict = file_serializer.serialize_object(resource_in_share)
+        resource_dict = ShareFileSerializer.serialize_object(resource_in_share)
 
     return resource_dict
 
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
-    folder_serializer = ShareFolderSerializer()
-    file_serializer = ShareFileSerializer()
-
     files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False).select_related(
         "parent", "thumbnail").prefetch_related("tags").annotate(**File.get_display_annotate()).values(*File.DISPLAY_VALUES))
 
@@ -185,8 +179,8 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
     if include_folders:
         folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False).select_related("parent")
 
-    file_dicts = [file_serializer.serialize_dict(file) for file in files]
-    folder_dicts = [folder_serializer.serialize_object(folder) for folder in folders]
+    file_dicts = [ShareFileSerializer.serialize_dict(file) for file in files]
+    folder_dicts = [ShareFolderSerializer.serialize_object(folder) for folder in folders]
     folder_dict = build_share_resource_dict(share, folder_obj)
 
     folder_dict["children"] = file_dicts + folder_dicts
@@ -205,11 +199,9 @@ def build_discord_settings(user) -> dict:
     else:
         credential_map = {}
 
-    serializer = WebhookSerializer()
-
     webhook_dicts = []
     for webhook in webhooks:
-        data = serializer.serialize_object(webhook)
+        data = WebhookSerializer.serialize_object(webhook)
         cred = credential_map.get(webhook.url)
 
         if cred:
@@ -224,7 +216,7 @@ def build_discord_settings(user) -> dict:
 
     bots_dicts = []
     for bot in bots:
-        data = BotSerializer().serialize_object(bot)
+        data = BotSerializer.serialize_object(bot)
         cred = credential_map.get(bot.token)
 
         if cred:
@@ -250,8 +242,7 @@ def build_discord_settings(user) -> dict:
 
 
 def create_share_events(events: Iterable[ShareAccessEvent]):
-    serializer = ShareAccessEventSerializer()
-    serialized = serializer.serialize_objects(events)
+    serialized = ShareAccessEventSerializer.serialize_objects(events)
 
     file_ids = {
         e.metadata.get("file_id")

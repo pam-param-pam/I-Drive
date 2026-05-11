@@ -75,6 +75,7 @@
     "editSubtitles": "Subtitles"
   },
   "errors": {
+    "nginxError": "Nginx error",
     "databaseResourceLocked": "Database Locked",
     "tryAgain": "Try again",
     "urlInvalidOrExpired": "URL invalid or expired",

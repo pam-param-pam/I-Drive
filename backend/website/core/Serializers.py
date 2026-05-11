@@ -313,8 +313,9 @@ class MomentSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(moment: Moment) -> dict:
-        signed_file_id = sign_resource_id_with_expiry(moment.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{moment.id}/stream"
+        path = f"/files/{moment.file.id}/moments/{moment.id}/stream"
+        signed = sign_resource(path)
+        url = f"{API_BASE_URL}{path}{signed}"
 
         return {
             "file_id": moment.file.id,
