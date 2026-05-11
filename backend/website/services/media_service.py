@@ -38,7 +38,7 @@ def get_thumbnail_response(request, file_obj: File, ):
         filename=f"thumbnail_{file_obj.get_name_no_extension()}.webp",
         content_type="image/webp",
         inline=isInline,
-        cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}"
+        # cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}"
     )
 
 

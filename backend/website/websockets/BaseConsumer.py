@@ -86,6 +86,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
     def connect(self):
         if not self._check_rate_limit("connect", self.connection_limit, self.connection_window):
             self.reject(code=4408, reason="Too many connection attempts")
+            return
 
         if self._count_connections() > self.max_connections_per_client:
             self.reject(4409, "Too many active connections")
@@ -95,6 +96,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
         if not authorized:
             self.reject(code=4401, reason="Unauthorized")
+            return
 
         if is_standard_protocol:
             self.accept()

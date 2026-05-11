@@ -76,7 +76,6 @@ def get_folder_info(request, folder_obj: Folder):
 
         if thumbnail_url:
             thumbnail_path = urlparse(thumbnail_url).path.replace("/api", "")
-            print(f"thumbnail_path: {thumbnail_path}")
             file["thumbnail_url"] += sign_resource(thumbnail_path)
 
         if download_url:

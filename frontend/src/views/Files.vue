@@ -135,6 +135,7 @@ export default {
 
       async fetchFolder() {
          await this.$refs?.listing?.$refs?.search?.exit()
+         this.setItemsError(null)
 
          if (this.currentFolder?.id === this.folderId && this.items) {
             this.folderList = this.currentFolder.breadcrumbs
