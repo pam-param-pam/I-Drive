@@ -9,6 +9,7 @@ from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
 
 from .constants import API_BASE_URL, EncryptionMethod
+from .core.crypto.signer import sign_resource
 from .core.dataModels.http import RequestContext
 from .core.errors import DiscordError
 from .discord.Discord import discord
@@ -177,40 +178,48 @@ class FileAdmin(SimpleHistoryAdmin):
     @easy.with_tags()
     @easy.smart(short_description="Preview")
     def media_tag(self, obj: File):
-        signed_file_id = sign_resource_id_with_expiry(obj.id)
+        file_path = f"/files/{obj.id}/stream"
+        file_signed = sign_resource(file_path)
+        file_url = f"{API_BASE_URL}{file_path}{file_signed}"
+
+        thumb_path = f"/files/{obj.id}/thumbnail/{obj.thumbnail.id}/stream"
+        thumb_signed = sign_resource(thumb_path)
+        thumb_url = f"{API_BASE_URL}{thumb_path}{thumb_signed}"
 
         # Video preview
         if obj.type == "Video":
-            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            poster_url = f"{API_BASE_URL}/files/thumbnail/{signed_file_id}"
             return (
-                f'<video controls style="width:100%; height:auto;" poster="{poster_url}">'
-                f'<source src="{url}" type="video/mp4"></video>'
+                f'<video controls style="width:100%; height:auto;" poster="{thumb_url}">'
+                f'<source src="{file_url}" type="video/mp4"></video>'
             )
 
         # Audio preview
         if obj.type == "Audio":
-            url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-            poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
             return (
                 '<div style="display:flex; align-items:center;">'
-                f'<img src="{poster_url}" style="width:100px; height:100px; margin-right:10px;">'
-                f'<audio controls><source src="{url}" type="audio/mpeg"></audio>'
+                f'<img src="{thumb_url}" style="width:100px; height:100px; margin-right:10px;">'
+                f'<audio controls><source src="{file_url}" type="audio/mpeg"></audio>'
                 '</div>'
             )
-        if obj.type == "Image" or obj.type == "Raw image":
-            url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream?inline=True"
+        if obj.type == "Image":
             return (
-                f'<a href="{url}" target="_blank" style="display:inline-block;">'
-                f'<img src="{url}" '
+                f'<a href="{file_url}" target="_blank" style="display:inline-block;">'
+                f'<img src="{file_url}" '
+                f'style="max-width:100%; height:auto; width:auto; object-fit:contain; '
+                f'border-radius:6px; border:1px solid #ddd;" />'
+                f'</a>'
+            )
+        if obj.type == "Raw image":
+            return (
+                f'<a href="{thumb_url}" target="_blank" style="display:inline-block;">'
+                f'<img src="{thumb_url}" '
                 f'style="max-width:100%; height:auto; width:auto; object-fit:contain; '
                 f'border-radius:6px; border:1px solid #ddd;" />'
                 f'</a>'
             )
 
         # Otherwise: default link
-        url = f"{API_BASE_URL}/files/{signed_file_id}/stream?inline=True"
-        return f'<a href="{url}" target="_blank">{url}</a>'
+        return f'<a href="{file_url}" target="_blank">{file_url}</a>'
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
@@ -265,10 +274,11 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
     @easy.with_tags()
     @easy.smart(short_description="Preview thumbnail", allow_tags=True)
     def thumbnail_media(self, obj: Thumbnail):
-        signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        poster_url = f"{API_BASE_URL}/files/{signed_file_id}/thumbnail/stream"
+        thumb_path = f"/files/{obj.file.id}/thumbnail/{obj.id}/stream"
+        thumb_signed = sign_resource(thumb_path)
+        thumb_url = f"{API_BASE_URL}{thumb_path}{thumb_signed}"
 
-        return f'<img src="{poster_url}" style="width:350px; height:auto;">'
+        return f'<img src="{thumb_url}" style="width:350px; height:auto;">'
 
     @easy.smart(short_description="Encryption method")
     def encryption_method(self, obj: Thumbnail):
@@ -383,9 +393,11 @@ class MomentAdmin(admin.ModelAdmin):
     @easy.with_tags()
     @easy.smart(short_description="Preview", allow_tags=True)
     def moment_preview(self, obj: Moment):
-        signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/moments/{obj.id}/stream"
-        return f'<img src="{url}" style="width:350px; height:auto;">'
+        moment_path = f"/files/{obj.file.id}/moments/{obj.id}/stream"
+        moment_signed = sign_resource(moment_path)
+        moment_url = f"{API_BASE_URL}{moment_path}{moment_signed}"
+
+        return f'<img src="{moment_url}" style="width:350px; height:auto;">'
 
     @easy.smart(short_description="Owner", admin_order_field="file__owner__username")
     def owner(self, obj: Moment):
@@ -445,9 +457,11 @@ class SubtitleAdmin(admin.ModelAdmin):
     @easy.with_tags()
     @easy.smart(short_description="Subtitle Preview", allow_tags=True)
     def sub_preview(self, obj: Subtitle):
-        signed_file_id = sign_resource_id_with_expiry(obj.file.id)
-        url = f"{API_BASE_URL}/files/{signed_file_id}/subtitles/{obj.id}/stream?inline=True"
-        return f'<a href="{url}" target="_blank">Preview Subtitle</a>'
+        subtitle_path = f"/files/{obj.file.id}/subtitles/{obj.id}/stream"
+        subtitle_signed = sign_resource(subtitle_path)
+        subtitle_url = f"{API_BASE_URL}{subtitle_path}{subtitle_signed}&inline=true"
+
+        return f'<a href="{subtitle_url}" target="_blank">Preview Subtitle</a>'
 
     @easy.smart(short_description="Size", admin_order_field="size")
     def readable_size(self, obj: Subtitle):

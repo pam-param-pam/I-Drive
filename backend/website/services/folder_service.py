@@ -130,6 +130,7 @@ def internal_move_to_new_parent(folder: Folder, new_parent: 'Folder'):
         folder.move_to(new_parent, "last-child")
         folder.save()
 
+        folder.parent.remove_cache()
 
 def internal_move_to_trash(folder: Folder) -> None:
     now = timezone.now()
