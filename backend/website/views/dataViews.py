@@ -39,13 +39,17 @@ from ..services import cache_service
 @extract_folder()
 @check_resource_permissions(default_checks - CheckTrash, resource_key="folder_obj")
 def get_folder_info(request, folder_obj: Folder):
+    # todo
     key = cache_service.get_folder_content_key(folder_obj.id)
 
     folder_content = cache.get(key)
 
     if not folder_content:
+        print("folder NOT cached")
         folder_content = build_folder_content(folder_obj)
         cache.set(key, folder_content, timeout=None)
+    else:
+        print("folder cached")
 
     breadcrumbs = build_breadcrumbs(folder_obj)
 

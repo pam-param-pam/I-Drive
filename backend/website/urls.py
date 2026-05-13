@@ -16,7 +16,7 @@ from .views.itemManagmentViews import rename_view, move_items_to_trash_view, mov
     delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_get_subtitles, check_share_password, get_share_visits, get_visit_events
-from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle, stream_zip_entry
+from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle
 from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, create_channel_and_webhook_view, delete_webhook_view, add_bot_view, \
@@ -68,7 +68,6 @@ urlpatterns = [
     path("files/<file_id>/thumbnail/<thumbnail_id>/stream", ["GET"], serve_thumbnail, name="stream_thumbnail"),
     path("files/<file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_moment"),
     path("files/<file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_subtitle"),
-    path("files/<file_id>/zip-entry/stream", ["GET"], stream_zip_entry, name="stream zip entry"),
     path("files/<file_id>/stream", ["GET"], stream_file, name="stream file"),
 
     path("files", ["POST"], create_file_view, name="create file"),

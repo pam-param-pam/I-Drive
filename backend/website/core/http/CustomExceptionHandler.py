@@ -73,7 +73,7 @@ def custom_exception_handler(exception, context):
         return JsonResponse(build_http_error_response(code=403, error="errors.rootFolderNoAccess", details="You cannot perform this action on a 'root' folder"), status=403)
 
     elif isinstance(exception, URLInvalidOrExpired):
-        return JsonResponse(build_http_error_response(code=403, error="errors.urlInvalidOrExpired", details="URL is expired or invalid"), status=403)
+        return JsonResponse(build_http_error_response(code=403, error="errors.urlInvalidOrExpired", details=str(exception)), status=403)
 
     # 404 NOT FOUND
     elif isinstance(exception, ObjectDoesNotExist):

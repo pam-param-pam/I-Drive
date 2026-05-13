@@ -44,6 +44,9 @@ def serve_moment(request, file_obj: File, moment_id):
 @extract_file_from_signed_url
 @check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
 def stream_file(request, file_obj: File):
+    zip_mode = request.GET.get("zip_mode", False)
+    if zip_mode:
+        return get_zip_entry_response(request, file_obj)
     return get_file_response(request, file_obj)
 
 
@@ -56,12 +59,3 @@ def stream_zip_files(request, token):
     response = get_zip_response(request, user_zip)
     user_zip.delete()
     return response
-
-@api_view(['GET'])
-@no_gzip
-@throttle_classes([NonCacheMediaThrottle])
-@permission_classes([AllowAny])
-@extract_file_from_signed_url
-@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
-def stream_zip_entry(request, file_obj: File):
-    return get_zip_entry_response(request, file_obj)

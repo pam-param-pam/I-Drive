@@ -11,6 +11,7 @@ export function getFileType(fileName) {
    return extensionMap[ext] || "Other"
 }
 
+
 // ---- limits ----
 const MAX_ENTRIES = 20_000
 
@@ -20,9 +21,11 @@ let zipEntriesMap = {}
 let baseUrl = null
 let extensionMap = {}
 
+
 function safeNumber(v, d = 0) {
    return typeof v === "number" && isFinite(v) && v >= 0 ? v : d
 }
+
 
 // --------------------
 // TREE BUILD
@@ -62,6 +65,7 @@ function buildTree(entries) {
    return { root, map }
 }
 
+
 // --------------------
 // NAV
 // --------------------
@@ -78,19 +82,20 @@ function resolveNode(folderId) {
    return node
 }
 
+
 function makeDownloadUrl(entry, url) {
-   const baseUrl = url.replace(/\/stream$/, "")
+   const u = new URL(url)
 
-   const params = new URLSearchParams({
-      offset: entry.offset,
-      compressed_size: entry.compressedSize,
-      uncompressed_size: entry.uncompressedSize,
-      compression_method: entry.compressionMethod,
-      filename: entry.filename,
-   })
+   u.searchParams.set("zip_mode", true)
+   u.searchParams.set("offset", entry.offset)
+   u.searchParams.set("compressed_size", entry.compressedSize)
+   u.searchParams.set("uncompressed_size", entry.uncompressedSize)
+   u.searchParams.set("compression_method", entry.compressionMethod)
+   u.searchParams.set("filename", entry.filename)
 
-   return baseUrl + "/zip-entry/stream?" + params.toString()
+   return u.toString()
 }
+
 
 function flatten(node, parentPath, url) {
    return Object.values(node).map(item => {
@@ -110,12 +115,14 @@ function flatten(node, parentPath, url) {
    })
 }
 
+
 // --------------------
 // SEARCH
 // --------------------
 function normalizeQuery(query) {
    return (query || "").toLowerCase().trim()
 }
+
 
 function searchEntries(query, url) {
    const q = normalizeQuery(query)
@@ -142,6 +149,7 @@ function searchEntries(query, url) {
          }
       })
 }
+
 
 // --------------------
 // MAIN

@@ -29,27 +29,46 @@ export function cancelRequestBySignature(signature) {
 
 
 export async function parseBinaryJsonResponse(response, config) {
-   if (!response) return
+   if (!response) return;
 
-   const contentType = response.headers["content-type"] || ""
-   const isBinary = config.responseType === "arraybuffer" || config.responseType === "blob"
-   const isJson = contentType.includes("application/json")
+   const contentType = response.headers["content-type"] || "";
+   const isJson = contentType.includes("application/json");
 
-   if (!isBinary || !isJson) return
+   if (!isJson) return;
 
-   let errorText = ""
-
-   if (response.data instanceof ArrayBuffer) {
-      const decoder = new TextDecoder("utf-8")
-      errorText = decoder.decode(response.data)
-   } else if (response.data instanceof Blob) {
-      errorText = await response.data.text()
+   // --- handle binary ---
+   if (config.responseType === "arraybuffer" && response.data instanceof ArrayBuffer) {
+      const decoder = new TextDecoder("utf-8");
+      try {
+         response.data = JSON.parse(decoder.decode(response.data));
+      } catch (e) {
+         console.warn("Failed to parse ArrayBuffer JSON:", e);
+      }
+      return;
    }
 
-   try {
-      response.data = JSON.parse(errorText)
-   } catch (e) {
-      console.warn("Failed to parse binary JSON response:", e)
+   if (config.responseType === "blob" && response.data instanceof Blob) {
+      try {
+         response.data = JSON.parse(await response.data.text());
+      } catch (e) {
+         console.warn("Failed to parse Blob JSON:", e);
+      }
+      return;
+   }
+
+   if (config.responseType === "text" && typeof response.data === "string") {
+      try {
+         let parsed = JSON.parse(response.data);
+
+         // handle double-encoded JSON
+         if (typeof parsed === "string") {
+            parsed = JSON.parse(parsed);
+         }
+
+         response.data = parsed;
+      } catch (e) {
+         // silently ignore — it wasn't JSON
+      }
    }
 }
 

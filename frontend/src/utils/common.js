@@ -121,9 +121,10 @@ export function normalizeError(err) {
    if (isAxiosError(err)) {
       // 1. Server responded (HTTP error)
       if (err.response) {
+         console.log("normalizeError 1")
          return {
             code: err.response.status,
-            details: err.response.data?.details || "Request failed",
+            details: err.response.data?.details ?? "Request failed",
             raw: err
          }
       }
