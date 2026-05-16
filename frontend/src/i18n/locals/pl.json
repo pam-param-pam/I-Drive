@@ -116,7 +116,13 @@
     "noConnectionDetails": "Nie udało sie polączyć z serwerem, sprawdź swoje polączenie.",
     "noConnection": "Brak internetu",
     "badGateway": "Serwer nie odpowiada",
-    "clientError": "Błąd po stronie klienta"
+    "clientError": "Błąd po stronie klienta",
+    "requestFailed": "Żądanie nie powiodło się",
+    "noInternet": "Brak połączenia z internetem",
+    "timeout": "Przekroczono czas żądania",
+    "serverNoResponse": "Serwer nie odpowiedział",
+    "domError": "Operacja nie powiodła się",
+    "unknown": "Wystąpił nieoczekiwany błąd"
   },
   "files": {
     "zipArchiveMode": "Tryb podglądu archiwów ZIP",
@@ -187,7 +193,8 @@
     "permanent": "Na zawsze",
     "showPrevious": "Więcej",
     "loading": "Ładowanie",
-    "noNotifications": "Brak powiadomień!",
+    "noNotifications": "Brak powiadomień",
+    "notificationsWillAppearHere": "Jesteś na bieżąco",
     "notifications": "Powiadomienia",
     "searchForType": "Search po typach eventów",
     "searchForIds": "Szukaj po ID",
@@ -360,7 +367,7 @@
     "itemInfoShortcut": "Wyświetlaj informacje o plikach/folderach na bocznym pasku",
     "qrDeviceInfo": "Zweryfikuj dane urządzenia przed potwierdzeniem!",
     "qrCodeExplained": "Zeskanuj kod QR by zalogować drugie urządzenie",
-    "qrCodeWarning": "Uwaga. Nigdy nie skanuj kodów qr wysłanych przez kogoś!",
+    "qrCodeWarning": "Nigdy nie skanuj kodów QR wysłanych przez kogoś!",
     "popupPreview": "Podgląd obrazu",
     "devices": "Aktywne Urządzenia",
     "qrCode": "Kod QR",

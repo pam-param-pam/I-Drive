@@ -63,8 +63,11 @@
                <p>
                   {{ $t("settings.qrCodeExplained") }}
                </p>
-               <p class="text--red">
-                  {{ $t("settings.qrCodeWarning") }}
+               <p class="qr-warning">
+                  <i class="material-icons qr-warning__icon">warning</i>
+                  <span class="qr-warning__text">
+                   {{ $t("settings.qrCodeWarning") }}
+                 </span>
                </p>
                <div class="card-action">
                   <button class="button button--flat" @click="showHover('ScanQrCode')">
@@ -153,5 +156,22 @@ table th, table td {
   font-size: 0.85em;
   color: var(--textSecondary);
   margin-left: 4px;
+}
+.qr-warning {
+   display: flex;
+   align-items: center;
+   gap: 0.5rem;
+
+   padding: 0.5rem 0.75rem;
+   border-radius: 6px;
+   font-weight: 500;
+}
+
+.qr-warning__icon {
+   font-size: 1rem;
+}
+
+.qr-warning__text {
+   color: var(--dark-red);
 }
 </style>

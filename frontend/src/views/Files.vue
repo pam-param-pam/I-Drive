@@ -150,6 +150,7 @@ export default {
                this.setItemsError(error)
             } finally {
                this.setItemsLoading(false)
+
             }
          }
          //only set title if its not root folder and isn't locked

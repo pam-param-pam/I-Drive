@@ -407,7 +407,6 @@ def get_tags(request, file_obj: File):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
-
     subtitle_dicts = []
 
     for sub in subtitles:
@@ -534,6 +533,7 @@ def get_fragment_url_view(request, fragment_id):
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
+@cache_page(60 * 1)
 def get_folder_file_stats(request, folder_obj):
     files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False, parent__inTrash=False)
 

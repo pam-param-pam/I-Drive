@@ -105,10 +105,25 @@ export default {
          return this.normalizedError?.code
       },
       info() {
-         return errors[this.errorCode] ? errors[this.errorCode] : errors[1000]
+         const err = this.normalizedError
+         if (err.error) {
+            return {
+               icon: this.fallbackInfo.icon,
+               title: this.$t(err.error)
+            }
+         }
+
+         return this.fallbackInfo
+      },
+      fallbackInfo() {
+         return errors[this.errorCode] || errors[1000]
       },
       errorDetails() {
-         return this.normalizedError?.details
+         const err = this.normalizedError
+         if (err.details) {
+            return this.$t(err.details)
+         }
+         return err.details
       },
    },
 

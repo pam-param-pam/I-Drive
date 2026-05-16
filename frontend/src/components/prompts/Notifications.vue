@@ -9,7 +9,15 @@
         class="card-content notifications-content"
       >
          <div v-if="!notifications.length && !loadingMore" class="notif-empty">
-            {{ $t("prompts.noNotifications") }}
+            <i class="material-icons notif-empty-icon">notifications_none</i>
+
+            <div class="notif-empty-title">
+               {{ $t("prompts.noNotifications") }}
+            </div>
+
+            <div class="notif-empty-subtitle">
+               {{ $t("prompts.notificationsWillAppearHere") }}
+            </div>
          </div>
 
          <div
@@ -237,4 +245,32 @@ export default {
 .notifications-actions {
    justify-content: space-between;
 }
+.notif-empty {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   justify-content: center;
+   text-align: center;
+
+   padding: 40px 20px;
+   opacity: 0.8;
+}
+
+.notif-empty-icon {
+   font-size: 48px;
+   margin-bottom: 12px;
+   opacity: 0.5;
+}
+
+.notif-empty-title {
+   font-weight: 600;
+   font-size: 15px;
+   margin-bottom: 6px;
+}
+
+.notif-empty-subtitle {
+   font-size: 13px;
+   opacity: 0.6;
+}
+
 </style>

@@ -163,7 +163,6 @@ self.onmessage = async (e) => {
 
          baseUrl = url
          extensionMap = extensions || {}
-
          const reader = new zip.ZipReader(new zip.HttpReader(baseUrl, { useRangeHeader: true }))
          const generator = reader.getEntriesGenerator()
 

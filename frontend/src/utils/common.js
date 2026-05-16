@@ -116,26 +116,24 @@ function isPlainObject(obj) {
       obj.constructor === Object
    )
 }
+
 export function normalizeError(err) {
-   // 1. Axios error (most structured → handle first)
    if (isAxiosError(err)) {
-      // 1. Server responded (HTTP error)
       if (err.response) {
-         console.log("normalizeError 1")
          return {
             code: err.response.status,
-            details: err.response.data?.details ?? "Request failed",
+            error: err.response.data?.error,
+            details: err.response.data?.details || "errors.requestFailed",
             raw: err
          }
       }
 
-      // 2. Request sent but no response
       if (err.request) {
-         // browser-specific network errors
          if (!navigator.onLine) {
             return {
                code: 0,
-               details: "No internet connection",
+               error: null,
+               details: "errors.noInternet",
                raw: err
             }
          }
@@ -143,50 +141,53 @@ export function normalizeError(err) {
          if (err.code === "ECONNABORTED") {
             return {
                code: 0,
-               details: "Request timeout",
+               error: null,
+               details: "errors.timeout",
                raw: err
             }
          }
 
          return {
             code: 0,
-            details: "Server did not respond",
+            error: null,
+            details: "errors.noResponse",
             raw: err
          }
       }
    }
 
-   // 2. DOMException (e.g. DataCloneError, AbortError)
    if (err instanceof DOMException) {
       return {
          code: 999,
-         details: err.message || "DOM operation failed",
-         raw: err
+         error: "errors.domError",
+         details: err.message,
+         raw: err,
       }
    }
 
-   // 3. Standard JS Error
    if (err instanceof Error) {
       return {
          code: 999,
-         details: err.message || "Unknown error",
-         raw: err
+         error: "errors.clientError",
+         details: err.message,
+         raw: err,
       }
    }
 
-   // 4. User-supplied object (message + code)
    if (isPlainObject(err)) {
       return {
          code: err.code ?? 999,
-         details: err.details ?? String(err),
-         raw: err
+         error: err.error ?? null,
+         details: err.details,
+         raw: err,
       }
    }
-   // 5. String / unknown
+
    return {
       code: 999,
+      error: "errors.clientError",
       details: typeof err === "string" ? err : String(err),
-      raw: err
+      raw: err,
    }
 }
 

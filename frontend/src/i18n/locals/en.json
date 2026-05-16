@@ -122,7 +122,13 @@
     "noConnectionDetails": "Couldn't connect to the server, check your internet connection.",
     "noConnection": "No internet connection",
     "badGateway": "Bad gateway, server doesn't respond",
-    "clientError": "Client Error"
+    "clientError": "Client Error",
+    "requestFailed": "Request failed",
+    "noInternet": "No internet connection",
+    "timeout": "Request timeout",
+    "serverNoResponse": "Server did not respond",
+    "domError": "Operation failed",
+    "unknown": "Unexpected error occurred"
   },
   "files": {
     "zipArchiveMode": "ZIP archive mode",
@@ -200,7 +206,8 @@
     "permanent": "Permanent",
     "showPrevious": "More",
     "loading": "Loading",
-    "noNotifications": "No notifications yet!",
+    "noNotifications": "No notifications",
+    "notificationsWillAppearHere": "You're all caught up",
     "notifications": "Notifications",
     "searchForIds": "Search for IDs",
     "searchForType": "Search for event type",
@@ -375,7 +382,7 @@
     "itemInfoShortcut": "Display item info on sidebar",
     "qrDeviceInfo": "Verify device's information before confirming the login!",
     "qrCodeExplained": "Scan QR code to instantly log in another device!",
-    "qrCodeWarning": "Warning! Never scan other's QR Codes",
+    "qrCodeWarning": "Never scan other's QR Codes!",
     "popupPreview": "Image popup preview",
     "devices": "Active Devices",
     "qrCode": "QR Code",
