@@ -1,3 +1,5 @@
+import base64
+
 from ..auth.Permissions import CheckLockedFolderIP
 from ..auth.utils import check_resource_perms
 from ..constants import MAX_MEDIA_CACHE_AGE, USE_CACHE, cache, MAX_THUMBNAIL_SIZE
@@ -152,8 +154,9 @@ def get_zip_entry_response(request, file_obj: File):
     compressed_size = validate_key(request.GET, "compressed_size", int, converter=int)
     uncompressed_size = validate_key(request.GET, "uncompressed_size", int, converter=int)
     compression_method = validate_key(request.GET, "compression_method", int, converter=int)
-    filename = validate_key(request.GET, "filename", str)
+    filename_b64 = validate_key(request.GET, "filename", str)
 
+    filename = base64.b64decode(filename_b64).decode()
     fragments = file_obj.fragments.all().order_by("sequence")
     user = file_obj.owner
 

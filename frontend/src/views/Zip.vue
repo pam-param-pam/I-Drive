@@ -30,7 +30,7 @@ import { mapActions, mapState } from "pinia"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
-import { humanTime } from "../utils/common.js"
+import { decodePath, encodePath, humanTime } from "../utils/common.js"
 import { getItems } from "@/api/folder.js"
 
 export default {
@@ -67,7 +67,15 @@ export default {
             search: true,
             advancedSearch: false
          }
-      }
+      },
+
+      encodedPath() {
+         return this.path || ""
+      },
+
+      decodedPath() {
+         return this.encodedPath ? decodePath(this.encodedPath) : ""
+      },
    },
 
    async created() {
@@ -169,7 +177,7 @@ export default {
 
       async loadList() {
          await this.sendWorker("list", {
-            path: this.path || ""
+            path: this.decodedPath
          })
       },
 
@@ -180,13 +188,13 @@ export default {
                this.setItems(items)
             })
 
-            this.zipFolderList = this.buildBreadcrumbs(this.path)
+            this.zipFolderList = this.buildBreadcrumbs(this.decodedPath)
          }
 
          if (e.data.type === "search") {
             const items = e.data.items
 
-            requestAnimationFrame(() => { // keep same rendering behavior
+            requestAnimationFrame(() => {
                this.setSearchItems(items)
             })
 
@@ -205,12 +213,12 @@ export default {
          if (item.isDir) {
             return {
                name: "Zip",
-               params: { ...this.$route.params, path: item.id }
+               params: { ...this.$route.params, path: encodePath(item.id)}
             }
          } else {
             return {
                name: "ZipPreview",
-               params: { ...this.$route.params, fileId: item.id }
+               params: { ...this.$route.params, fileId: encodePath(item.id) }
             }
          }
       },
@@ -242,10 +250,14 @@ export default {
 
          const parts = folderId.split("/").filter(Boolean)
 
-         return parts.map((part, i) => ({
-            name: part,
-            id: parts.slice(0, i + 1).join("/")
-         }))
+         return parts.map((part, i) => {
+            const rawPath = parts.slice(0, i + 1).join("/")
+
+            return {
+               name: part,
+               id: encodePath(rawPath)
+            }
+         })
       },
       onDropUpload() {
          this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))

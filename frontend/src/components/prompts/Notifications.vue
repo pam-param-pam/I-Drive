@@ -164,7 +164,7 @@ export default {
          list.forEach(n => n.is_read = isRead)
 
          const delta = isRead ? -ids.length : ids.length
-         this.setUnreadNotifications(this.user.unreadNotifications + delta)
+         this.setUnreadNotifications(Math.max(this.user.unreadNotifications + delta, 0))
       }
    }
 }

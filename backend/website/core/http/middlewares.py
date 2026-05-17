@@ -1,7 +1,4 @@
 import time
-
-from django.utils.deprecation import MiddlewareMixin
-
 from ...constants import cache
 
 

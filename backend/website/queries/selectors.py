@@ -1,10 +1,10 @@
 from typing import Union
 
-from django.db.models import Q, Value, BooleanField, Case, When, Exists, OuterRef
+from django.db.models import Q
 
-from ..core.dataModels.general import Item, FolderDict
+from ..core.dataModels.general import Item
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
-from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin, Channel, Subtitle
+from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin, Channel
 from ..models.mixin_models import ItemState
 from ..safety.helper import get_classes_extending_discordAttachmentMixin
 

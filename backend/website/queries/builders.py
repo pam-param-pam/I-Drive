@@ -2,14 +2,14 @@ import time
 from collections import defaultdict
 from typing import List, Dict, Iterable
 
-from django.db.models import Q, OuterRef, Exists
+from django.db.models import Q
 from django.db.models.aggregates import Sum
 
 from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer, ShareAccessEventSerializer
 from ..core.dataModels.general import Item, ZipFileDict, Breadcrumbs, FolderDict
 from ..core.helpers import get_attr, normalize_blocked_until
 from ..discord.Discord import discord
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccessEvent, Subtitle
+from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccessEvent
 from ..models.mixin_models import ItemState
 
 

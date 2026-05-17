@@ -83,6 +83,13 @@ function resolveNode(folderId) {
 }
 
 
+function base64Encode(str) {
+   return btoa(
+      encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+         String.fromCharCode("0x" + p1)
+      )
+   )
+}
 function makeDownloadUrl(entry, url) {
    const u = new URL(url)
 
@@ -91,8 +98,7 @@ function makeDownloadUrl(entry, url) {
    u.searchParams.set("compressed_size", entry.compressedSize)
    u.searchParams.set("uncompressed_size", entry.uncompressedSize)
    u.searchParams.set("compression_method", entry.compressionMethod)
-   u.searchParams.set("filename", entry.filename)
-
+   u.searchParams.set("filename", base64Encode(entry.filename))
    return u.toString()
 }
 

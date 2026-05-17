@@ -1,7 +1,6 @@
 import traceback
 from io import BytesIO
 
-import exifread
 import rawpy
 import requests
 from PIL import Image
@@ -17,7 +16,6 @@ from ..core.dataModels.http import RequestContext
 from ..core.errors import FailedToParseRawImage
 from ..discord.Discord import discord
 from ..models import (Folder, Fragment, File, DiscordSettings)
-from ..models.file_related_models import RawMetadata
 from ..services import folder_service, file_service, create_file_service
 from ..websockets.utils import send_event
 

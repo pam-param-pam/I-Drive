@@ -1,11 +1,6 @@
 from django.contrib.auth.models import User
-from django.db import models, transaction
+from django.db import models
 from django.db.models import CheckConstraint, Q
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from simple_history.models import HistoricalRecords
-
-from .folder_models import Folder
 
 
 class UserSettings(models.Model):

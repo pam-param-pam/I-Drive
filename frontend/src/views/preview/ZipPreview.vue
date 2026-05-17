@@ -13,6 +13,7 @@
 import CorePreview from "@/views/preview/CorePreview.vue"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
+import { decodePath } from "@/utils/common.js"
 
 export default {
    components: { CorePreview },
@@ -40,7 +41,7 @@ export default {
    computed: {
       ...mapState(useMainStore, ["sortedItems"]),
       file() {
-         return this.sortedItems.find(f => f.id === this.fileId)
+         return this.sortedItems.find(f => f.id === decodePath(this.fileId))
       }
    },
    methods: {
