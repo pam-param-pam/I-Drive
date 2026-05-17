@@ -2,6 +2,7 @@ from typing import Type, Iterable
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.utils import timezone
 
 from . import folder_service
@@ -72,7 +73,7 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
     if Subtitle.objects.filter(file=file_obj, language=language).exists():
         raise BadRequestError("Subtitle with this language already exists")
 
-    return Subtitle.objects.create(
+    sub = Subtitle.objects.create(
         language=language,
         file=file_obj,
         forced=is_forced,
@@ -85,6 +86,8 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
         key=key,
         iv=iv
     )
+    file_obj.remove_cache()
+    return sub
 
 
 def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetadataTrackMixin], video_metadata: VideoMetadata):
@@ -210,12 +213,14 @@ def rename_subtitle(file_obj: File, subtitle_id: str, new_language: str) -> None
     subtitle.save()
 
 def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
-    subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
-    delete_single_discord_attachment(user, subtitle)
+    with transaction.atomic():
+        subtitle = Subtitle.objects.select_for_update().get(file=file_obj, id=subtitle_id)
+        delete_single_discord_attachment(user, subtitle)
 
 def remove_moment(user, file_obj, moment_id) -> None:
-    moment = Moment.objects.get(file=file_obj, id=moment_id)
-    delete_single_discord_attachment(user, moment)
+    with transaction.atomic():
+        moment = Moment.objects.select_for_update().get(file=file_obj, id=moment_id)
+        delete_single_discord_attachment(user, moment)
 
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:

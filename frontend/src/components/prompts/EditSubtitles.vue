@@ -5,7 +5,9 @@
       </div>
 
       <div class="card-content">
-         <p v-if="subtitles.length !== 0">{{ $t("prompts.existingSubtitles") }}: </p>
+         <p v-if="subtitles.length !== 0">
+            <strong>{{ $t("prompts.existingSubtitles") }}:</strong>
+         </p>
          <ul class="subtitle-list">
             <li v-for="sub in subtitles" :key="sub.id">
                <!-- DISPLAY MODE -->
@@ -133,6 +135,7 @@ import { detectExtension } from "@/utils/common.js"
 import { capitalize } from "vue"
 import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
+import throttle from "lodash.throttle"
 
 export default {
    name: "EditSubtitles",
@@ -185,7 +188,7 @@ export default {
       }
    },
    methods: {
-      ...mapActions(useMainStore, ["closeHover"]),
+      ...mapActions(useMainStore, ["closeHover", "updateItem"]),
       startEdit(sub) {
          this.editingId = sub.id
          this.editingValue = sub.language
@@ -329,6 +332,9 @@ export default {
       },
 
       async saveSubtitle(fileId, subtitleData) {
+         let itemCopy = { ...this.selected[0] }
+         itemCopy.hasSubtitles = true
+         this.updateItem(itemCopy)
          return await addSubtitle(fileId, subtitleData)
       },
 
@@ -344,11 +350,11 @@ export default {
          console.error(error)
          this.$toast.error(this.$t("toasts.subtitleUploadFailed"))
       },
-      async removeSubtitle(subtitle_id) {
+      removeSubtitle: throttle(async function(subtitle_id) {
          await deleteSubtitle(this.selected[0].id, subtitle_id)
          this.subtitles = this.subtitles.filter(subtitle => subtitle.id !== subtitle_id)
          this.$toast.success(this.$t("toasts.subtitleRemoved"))
-      },
+      }, 500),
 
       cancel() {
          if (this.cancelTokenSource) {
@@ -362,9 +368,18 @@ export default {
 
 <style scoped>
 .subtitle-list {
-  list-style: none;
-  padding: 0;
+   list-style: none;
+   max-height: 25vh;
+   overflow-y: auto;
 }
+
+.subtitle-list:empty {
+   max-height: none;
+}
+.subtitle-list {
+   position: relative;
+}
+
 
 .subtitle-list li {
   display: flex;
