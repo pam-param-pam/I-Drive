@@ -386,7 +386,7 @@ class DiscordHelperService:
         return BotInfo(id=bot_id, name=bot_name)
 
     def remove_all(self, user):
-        # todo fix this
+        # todo this breaks encapsulation
         discord_settings = DiscordSettings.objects.get(user=user)
 
         guild_id = discord_settings.guild_id

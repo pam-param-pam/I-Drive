@@ -6,15 +6,14 @@ from django.urls import re_path
 from django.views.decorators.csrf import csrf_exempt
 from django.views.static import serve
 
-from .views.ZipViews import create_zip_model
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
     cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_usage, search, \
     get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_folder_file_stats, \
     check_message_id, get_folder_hash
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
-    delete, change_folder_password_view, restore_from_trash, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
-    add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view
+    delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
+    add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, create_zip_model_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle
 from .views.testViews import get_discord_state
@@ -96,8 +95,8 @@ urlpatterns = [
 
     path("items/move", ["PATCH"], move_items_view, name="bulk move items"),
     path("items/moveToTrash", ["PATCH"], move_items_to_trash_view, name="bulk move items to trash"),
-    path("items/restoreFromTrash", ["PATCH"], restore_from_trash, name="move items to trash"),
-    path("items/delete", ["POST"], delete, name="bulk delete items"),
+    path("items/restoreFromTrash", ["PATCH"], restore_from_trash_view, name="move items to trash"),
+    path("items/delete", ["POST"], delete_view, name="bulk delete items"),
 
     path("items/<item_id>/more-info", ["GET"], fetch_additional_info, name="fetch more info about an item"),
     path("items/<item_id>/rename", ["PATCH"], rename_view, name="rename an item"),
@@ -106,7 +105,7 @@ urlpatterns = [
     path("ultraDownload/items/<item_id>", ['POST'], ultra_download_metadata, name="download metadata for ultra download, user supplies ids"),
     path("ultraDownload/fragments/<fragment_id>", ['GET'], get_fragment_url_view, name="download metadata for ultra download"),
 
-    path("zip", ["POST"], create_zip_model, name="create zip model"),
+    path("zip", ["POST"], create_zip_model_view, name="create zip model"),
     path('zip/<token>/stream', ['GET'], stream_zip_files),
 
     django_path("auth/token/login", login_per_device_view, name="login"),

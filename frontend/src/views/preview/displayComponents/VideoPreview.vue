@@ -96,7 +96,7 @@ export default {
 
    methods: {
       sendPreviewEvent(type, payload = {}) {
-         this.$emit("previewEvent", {type, payload})
+         this.$emit("previewEvent", { type, payload })
       },
       getVideo() {
          return this.videoRef
@@ -107,7 +107,12 @@ export default {
       },
 
       async onVideoError() {
-         await backendInstance.get(this.file.download_url)
+         await backendInstance.get(this.file.download_url, {
+               headers: {
+                  Range: `bytes=0-1`
+               },
+               __skipAuth: true,
+         })
          this.$toast.error(this.$t("toasts.videoUnplayable"))
       },
 
@@ -128,7 +133,7 @@ export default {
          this.sendPreviewEvent(PreviewEvent.MEDIA_SEEK, { to_second: toSecond })
       },
 
-      onMovieVolumeChange: throttle(function () {
+      onMovieVolumeChange: throttle(function() {
          if (!this.videoRef) return
 
          let volume = Math.floor(this.videoRef.volume)

@@ -2,6 +2,7 @@ import axios from "axios"
 import { logout } from "@/utils/auth.js"
 import { useToast } from "vue-toastification"
 import i18n from "@/i18n/index.js"
+import router from "@/router/index.js"
 
 const cancelTokenMap = new Map()
 const toast = useToast()
@@ -107,10 +108,11 @@ export async function displayErrorToastIfNeeded(error) {
 
 
 export async function handleResourceURLExpiredIfNeeded(error) {
-   // if (error.response && error.response.status === 403) {
-   //    let errorMessage = error.response?.data?.error
-   //    if (errorMessage === "errors.urlInvalidOrExpired") {
-   //       router.go(0)
-   //    }
-   // }
+   if (error.response && error.response.status === 403) {
+      let errorMessage = error.response?.data?.error
+      let errorDetails = error.response?.data?.details
+      if (errorMessage === "errors.urlInvalidOrExpired" || errorDetails === "Invalid signature params") {
+         router.go(0)
+      }
+   }
 }

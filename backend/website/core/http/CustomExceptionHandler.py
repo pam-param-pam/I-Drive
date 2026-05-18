@@ -16,7 +16,7 @@ from rest_framework.views import exception_handler
 from .utils import build_http_error_response
 from ..errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, ResourceNotFoundError, \
     MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, DiscordBlockError, DiscordTextError, DiscordError, \
-    UsernameTakenError, URLInvalidOrExpired
+    UsernameTakenError, URLInvalidOrExpired, RangeNotSatisfiable
 from ..helpers import format_wait_time
 from ..helpers import get_attr
 from ...models import ShareableLink
@@ -85,8 +85,13 @@ def custom_exception_handler(exception, context):
     elif isinstance(exception, ResourceNotFoundError):
         return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(exception)), status=404)
 
+    # 409 CONFLICT
     elif isinstance(exception, UsernameTakenError):
         return JsonResponse(build_http_error_response(code=409, error="errors.usernameTakenError", details=""), status=409)
+
+    # 416 RANGE NOT SATISFIABLE
+    elif isinstance(exception, RangeNotSatisfiable):
+        return JsonResponse(build_http_error_response(code=416, error="errors.rangeNotSatisfiable", details=str(exception)), status=416)
 
     # 429 RATE LIMIT
     elif isinstance(exception, Throttled):

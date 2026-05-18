@@ -4,7 +4,6 @@ from ..ByteRange import ByteRange
 
 import zlib
 
-
 class DeflateZipEntryByteSource(ByteSource):
     def __init__(self, file_obj, fragments, offset: int, compression_method: int, compressed_size: int, uncompressed_size: int):
         self.file_obj = file_obj

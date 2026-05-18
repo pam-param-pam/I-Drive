@@ -3,9 +3,7 @@ import { backendInstance } from "@/axios/networker.js"
 export async function createQrSession() {
    let url = "/auth/qrcode"
    let response = await backendInstance.post(url, {}, {
-      headers: {
-         "Authorization": false
-      }
+      __skipAuth: true
    })
    return response.data
 }
@@ -21,9 +19,7 @@ export async function changePassword(data) {
 export async function registerUser(data) {
    let url = "/auth/register"
    let response = await backendInstance.post(url, data, {
-      headers: {
-         "Authorization": false
-      },
+      __skipAuth: true,
       __displayErrorToast: false
    })
    return response.data
@@ -90,9 +86,7 @@ export async function logoutAllDevices() {
 export async function loginUser(data) {
    let url = "/auth/token/login"
    let response = await backendInstance.post(url, data, {
-      headers: {
-         "Authorization": false
-      },
+      __skipAuth: true,
       __displayErrorToast: false
    })
    return response.data

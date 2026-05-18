@@ -28,8 +28,8 @@ class PerDeviceTokenAuthentication(BaseAuthentication):
         if not token_obj:
             raise exceptions.AuthenticationFailed('Invalid token')
 
-        if token_obj.user_agent != str(request.user_agent):
-            raise exceptions.AuthenticationFailed('Invalid user agent')
+        # if token_obj.user_agent != str(request.user_agent):
+        #     raise exceptions.AuthenticationFailed('Invalid user agent')
 
         request_id = random.randint(0, 100000)
         request.context = RequestContext(user_id=token_obj.user_id, device_id=token_obj.device_id, request_id=request_id)

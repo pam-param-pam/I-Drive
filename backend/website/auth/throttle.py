@@ -6,6 +6,7 @@ from django.core.exceptions import ImproperlyConfigured
 from rest_framework.throttling import UserRateThrottle
 
 from ..constants import cache
+from ..core.helpers import get_ip
 
 
 class MyUserRateThrottleBase(UserRateThrottle):
@@ -24,6 +25,8 @@ class MyUserRateThrottleBase(UserRateThrottle):
         self.request = request
         if not self.bucket:
             raise ImproperlyConfigured("Throttle class must define a bucket.")
+        print('ratelimit key')
+        print(super().get_cache_key(request, view))
         return super().get_cache_key(request, view)
 
     def allow_request(self, request, view):
@@ -143,7 +146,9 @@ class MyUserRateThrottleBase(UserRateThrottle):
     def _get_fail_key(self, request):
         if request.user.is_authenticated:
             return f"fail:{request.user.pk}"
-        return f"fail_ip:{request.META.get('REMOTE_ADDR')}"
+
+        ip, _ = get_ip(request)
+        return f"fail_ip:{ip}"
 
 class defaultAnonUserThrottle(MyUserRateThrottleBase):
     scope = 'anon'

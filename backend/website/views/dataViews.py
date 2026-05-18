@@ -39,7 +39,7 @@ from ..services import cache_service
 @extract_folder()
 @check_resource_permissions(default_checks - CheckTrash, resource_key="folder_obj")
 def get_folder_info(request, folder_obj: Folder):
-    # todo
+    # todo optimize this
     key = cache_service.get_folder_content_key(folder_obj.id)
 
     folder_content = cache.get(key)
@@ -200,7 +200,6 @@ def fetch_additional_info(request, item_obj):
 @permission_classes([IsAuthenticated & ReadPerms])
 def search(request):
     user = request.user
-    # todo check if this is secure
     query = request.GET.get('query')
     file_type = request.GET.get('type')
     extension = request.GET.get('extension')

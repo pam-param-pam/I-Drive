@@ -4,7 +4,7 @@ from typing import Iterable
 from .crypto.signer import sign_resource
 from ..constants import API_BASE_URL, ShareEventType
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken, \
-    ShareAccessEvent
+    ShareAccessEvent, UserZIP
 from ..models.file_related_models import RawMetadata, PhotoMetadata
 from ..models.other_models import Notification
 from ..queries.selectors import get_item_inside_share
@@ -325,6 +325,7 @@ class MomentSerializer(SimpleSerializer):
             "url": url
         }
 
+
 class TagSerializer(SimpleSerializer):
 
     @staticmethod
@@ -453,4 +454,14 @@ class NotificationSerializer(SimpleSerializer):
             "message": notification.message,
             "is_read": notification.is_read,
             "created_at": notification.created_at
+        }
+
+
+class ZipSerializer(SimpleSerializer):
+
+    @staticmethod
+    def serialize_object(user_zip: UserZIP) -> dict:
+        url = f"{API_BASE_URL}/zip/{user_zip.token}/stream"
+        return {
+            "download_url": url
         }

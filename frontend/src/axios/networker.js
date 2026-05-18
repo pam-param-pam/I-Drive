@@ -29,59 +29,13 @@ export const uploadInstance = axios.create({
    headers: { "Content-Type": "multipart/form-data" }
 })
 
-uploadInstance.interceptors.response.use(
-   function(response) {
-      upload_429_errors = Math.max(upload_429_errors - 1, 0)
-      if (response?.config?.onRequestFinish) response.config.onRequestFinish(response)
-      return response
-   },
-   function(error) {
-      if (error?.config?.onErrorCallback) error.config.onErrorCallback(error)
-      const mainStore = useMainStore()
-
-      if (upload_429_errors > 4) {
-         upload_429_errors = -10
-         toast.warning(`${i18n.global.t("toasts.ALotOF429")}\n${i18n.global.t("toasts.ALotOF429Explained")}`, {
-            timeout: 10000,
-            position: "bottom-right"
-         })
-         if (mainStore.settings.concurrentUploadRequests > 6) {
-            mainStore.settings.concurrentUploadRequests = 4
-         } else {
-            mainStore.settings.concurrentUploadRequests = 2
-         }
-
-      }
-
-      // Check if the error is 429 Too Many Requests errors
-      if (error.response && error.response.status === 429) {
-         upload_429_errors++
-         let retryAfter = error.response.headers["x-ratelimit-reset-after"]
-         if (retryAfter) {
-            retryAfter = parseInt(retryAfter) * 1000
-         }
-         retryAfter = retryAfter || 0
-         console.log(`Received 429, retrying after ${retryAfter} milliseconds.`)
-         return retryRequest(uploadInstance, error, retryAfter)
-
-      } else if (noWifi(error)) {
-         return retryRequest(uploadInstance, error, 1500, 1)
-      }
-      //handle discord fucking itself up
-      else if (error.response && error.response.status >= 500) {
-         return retryRequest(uploadInstance, error, 5000)
-      }
-
-      //else just return the error
-      return Promise.reject(error)
-   }
-)
 
 backendInstance.interceptors.request.use(
    function(config) {
       attachCancelSignature(config)
       let token = localStorage.getItem("token")
-      if (token && !config.headers["Authorization"]) {
+
+      if (token && (config.__skipAuth === undefined || config.__skipAuth === false)) {
          config.headers["Authorization"] = `Token ${token}`
       }
       return config
@@ -137,6 +91,55 @@ backendInstance.interceptors.response.use(
 
       await displayErrorToastIfNeeded(error)
 
+      return Promise.reject(error)
+   }
+)
+
+
+uploadInstance.interceptors.response.use(
+   function(response) {
+      upload_429_errors = Math.max(upload_429_errors - 1, 0)
+      if (response?.config?.onRequestFinish) response.config.onRequestFinish(response)
+      return response
+   },
+   function(error) {
+      if (error?.config?.onErrorCallback) error.config.onErrorCallback(error)
+      const mainStore = useMainStore()
+
+      if (upload_429_errors > 4) {
+         upload_429_errors = -10
+         toast.warning(`${i18n.global.t("toasts.ALotOF429")}\n${i18n.global.t("toasts.ALotOF429Explained")}`, {
+            timeout: 10000,
+            position: "bottom-right"
+         })
+         if (mainStore.settings.concurrentUploadRequests > 6) {
+            mainStore.settings.concurrentUploadRequests = 4
+         } else {
+            mainStore.settings.concurrentUploadRequests = 2
+         }
+
+      }
+
+      // Check if the error is 429 Too Many Requests errors
+      if (error.response && error.response.status === 429) {
+         upload_429_errors++
+         let retryAfter = error.response.headers["x-ratelimit-reset-after"]
+         if (retryAfter) {
+            retryAfter = parseInt(retryAfter) * 1000
+         }
+         retryAfter = retryAfter || 0
+         console.log(`Received 429, retrying after ${retryAfter} milliseconds.`)
+         return retryRequest(uploadInstance, error, retryAfter)
+
+      } else if (noWifi(error)) {
+         return retryRequest(uploadInstance, error, 1500, 1)
+      }
+      //handle discord fucking itself up
+      else if (error.response && error.response.status >= 500) {
+         return retryRequest(uploadInstance, error, 5000)
+      }
+
+      //else just return the error
       return Promise.reject(error)
    }
 )

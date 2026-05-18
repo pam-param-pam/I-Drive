@@ -13,9 +13,7 @@ export async function getShare(token, folderId = "") {
 
 
    let response = await backendInstance.get(url, {
-      headers: {
-         "Authorization": false
-      },
+      __skipAuth: true,
       __shareContext: true
 
    })

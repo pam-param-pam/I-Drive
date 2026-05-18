@@ -2,16 +2,17 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, ModifyPerms, default_checks, CheckRoot, CheckTrash, DeletePerms, LockPerms, ResetLockPerms, CheckFolderLock
+from ..auth.Permissions import CreatePerms, ModifyPerms, default_checks, CheckRoot, CheckTrash, DeletePerms, LockPerms, ResetLockPerms, CheckFolderLock, ReadPerms, DownloadPerms
 from ..auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
-from ..core.Serializers import FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer
+from ..constants import API_BASE_URL
+from ..core.Serializers import FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, ZipSerializer
 from ..core.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file, \
     accumulate_password_errors
 from ..core.errors import BadRequestError
 from ..core.helpers import extract_key
 from ..core.http.utils import build_response
 from ..models import File, Folder
-from ..services import folder_service, item_service, file_service, delete_service
+from ..services import folder_service, item_service, file_service, delete_service, zip_service
 
 
 @api_view(['POST'])
@@ -57,7 +58,7 @@ def move_items_to_trash_view(request, items):
 @permission_classes([IsAuthenticated & ModifyPerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
-def restore_from_trash(request, items):
+def restore_from_trash_view(request, items):
     """This view uses values instead of ORM objects for files"""
     item_service.restore_items_from_trash(request.context, items)
     return JsonResponse(build_response(request.context.request_id, "Restoring from Trash..."))
@@ -68,10 +69,21 @@ def restore_from_trash(request, items):
 @permission_classes([IsAuthenticated & DeletePerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
-def delete(request, items):
+def delete_view(request, items):
     """This view uses values instead of ORM objects for files"""
     delete_service.delete_items(request.context, request.user, items)
     return JsonResponse(build_response(request.context.request_id, f"{len(items)} items are being deleted..."))
+
+
+@api_view(['POST'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms & DownloadPerms])
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
+@check_bulk_permissions(default_checks)
+def create_zip_model_view(request, items):
+    """This view uses values instead of ORM objects for files"""
+    user_zip = zip_service.create_zip_model(request.user, items)
+    return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
 
 
 @api_view(['PATCH'])

@@ -40,9 +40,6 @@ export default {
    },
    async mounted() {
       // ensure anon state first
-      if (!this.isLogged) {
-         this.setAnonState()
-      }
       if (!this.user.autoSetupComplete && this.isLogged) {
          this.startTour()
       }

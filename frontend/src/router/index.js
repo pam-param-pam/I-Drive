@@ -197,6 +197,9 @@ router.beforeResolve(async (to, from, next) => {
    // this will only be null on first route
    if (from.name == null) {
       await initAuth()
+      if (!store.isLogged) {
+         store.setAnonState()
+      }
    }
 
    if (to.matched.some((record) => record.meta.requiresAuth)) {

@@ -17,9 +17,7 @@ export async function getUser(token) {
 export async function checkWifi() {
    let url = "/healthcheck/"
    let response = await backendInstance.get(url, {
-      headers: {
-         "Authorization": false
-      },
+      __skipAuth: true,
       __displayErrorToast: false
 
    })

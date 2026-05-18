@@ -12,8 +12,6 @@ from ..tasks.moveTasks import move_task
 from ..tasks.trashTasks import restore_from_trash_task, move_to_trash_task
 from ..websockets.utils import send_event
 
-#todo fix context being hard to device id
-
 def rename_item(context: RequestContext, item_obj: Item, new_name: str) -> None:
     validate_value(new_name, str, checks=[MaxLength(MAX_RESOURCE_NAME_LENGTH), NotEmpty])
 

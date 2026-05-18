@@ -16,10 +16,7 @@ class MyStreamingResponse(StreamingHttpResponse):
         self.chunk_size = chunk_size
 
         byte_range, is_partial = self._resolve_range()
-        try:
-            self.byte_source.check_byte_range(byte_range)
-        except ValueError as exc:
-            raise RangeNotSatisfiable(str(exc)) from exc
+        self.byte_source.check_byte_range(byte_range)
 
         # --- init parent ---
         super().__init__(
@@ -59,11 +56,7 @@ class MyStreamingResponse(StreamingHttpResponse):
             return ByteRange(start=0, end=self.total_size - 1, total=self.total_size), False
 
         start, end, suffix = self._parse_range_header(range_header)
-
-        try:
-            byte_range = self._normalize_range(start, end, suffix)
-        except ValueError as exc:
-            raise RangeNotSatisfiable(str(exc)) from exc
+        byte_range = self._normalize_range(start, end, suffix)
 
         return byte_range, True
 
@@ -98,12 +91,12 @@ class MyStreamingResponse(StreamingHttpResponse):
         total = self.total_size
 
         if total == 0:
-            raise ValueError("Empty resource")
+            raise RangeNotSatisfiable("Empty resource")
 
         # suffix range: bytes=-500
         if suffix is not None:
             if suffix <= 0:
-                raise ValueError("Invalid suffix")
+                raise RangeNotSatisfiable("Invalid suffix")
 
             if suffix >= total:
                 return ByteRange(0, total - 1, total)
@@ -115,7 +108,7 @@ class MyStreamingResponse(StreamingHttpResponse):
             start = 0
 
         if start >= total:
-            raise ValueError("Range start exceeds size")
+            raise RangeNotSatisfiable("Range start exceeds size")
 
         if end is None or end >= total:
             end = total - 1

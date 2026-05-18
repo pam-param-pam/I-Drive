@@ -8,6 +8,7 @@
 
 <script>
 import { getFileRawData } from "@/api/files.js"
+import { backendInstance } from "@/axios/networker.js"
 
 export default {
    name: "PdfPreview",
@@ -35,9 +36,13 @@ export default {
    },
    methods: {
       onError(e) {
-         console.log(e)
          this.$emit("error", "Failed to load pdf file")
-         getFileRawData(this.src, { responseType: "arraybuffer" })
+         backendInstance.get(this.src, {
+            headers: {
+               Range: `bytes=0-1`
+            },
+            __skipAuth: true,
+         })
       }
    }
 }

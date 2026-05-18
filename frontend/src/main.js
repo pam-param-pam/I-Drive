@@ -59,7 +59,6 @@ app.mixin({
       this.$el.__vue__ = this
       //expose toast instance to components to not have to call const toast = useToast() everywhere
       this.$toast = useToast()
-
    }
 })
 

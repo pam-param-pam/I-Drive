@@ -12,7 +12,7 @@ from .....models import File
 from .....tasks.helper import auto_prefetch
 
 class ZipByteSource(ByteSource):
-    def __init__(self, dict_files, num_bots: int):
+    def __init__(self, dict_files: list[dict], num_bots: int):
         self.num_bots = num_bots
         self.entries = []
         for entry in dict_files:

@@ -4,18 +4,16 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
     CheckShareItemBelongings, CheckTrash, CheckState
-from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle, AnonUserNonCacheMediaThrottle
+from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
 from ..constants import API_BASE_URL, ShareEventType
 from ..core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer
-from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file_from_signed_url, extract_file, no_gzip
+from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError
 from ..core.helpers import extract_key
-from ..core.http.utils import parse_range_header
-from ..models import UserSettings, ShareableLink, Subtitle, File, ShareAccessEvent, ShareAccess, UserZIP
+from ..models import UserSettings, ShareableLink, Subtitle, File, ShareAccessEvent, ShareAccess
 from ..queries.builders import build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content, create_share_events
 from ..queries.selectors import get_item_inside_share
 from ..services import share_service
-from ..services.media_service import get_file_response, get_thumbnail_response, get_subtitle_response, get_zip_response
 
 
 @api_view(['GET'])
