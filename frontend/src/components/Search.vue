@@ -51,18 +51,11 @@ export default {
       return {
          selected: {},
          query: "",
-         exited: false
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["searchFilters", "searchActive", "currentPrompt"])
-   },
-   async mounted() {
-      this.exited = true
-      this.query = this.searchFilters.query
-      await this.$nextTick() //this is vevy important
-      this.exited = false
    },
 
    methods: {
@@ -110,10 +103,7 @@ export default {
 
       async exit() {
          this.resetSelected()
-
-         this.exited = true
          this.query = ""
-         this.exited = false
 
          cancelRequestBySignature("getItems")
          let searchDict = { ...this.searchFilters }
@@ -127,14 +117,7 @@ export default {
    },
 
    watch: {
-      "searchFilters.query"() {
-         if (!this.searchFilters.query) this.query = ""
-      },
       query() {
-         if (this.exited) {
-            this.exited = false
-            return
-         }
          if (this.query === "") {
             this.exit()
          } else {

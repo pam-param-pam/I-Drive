@@ -124,11 +124,12 @@
             <template v-if="type === 'Video' && isVideoMetadata">
 
                <div v-if="primaryMetadata">
+                  <p><strong>{{ $t("prompts.duration") }}:</strong> {{ formatDuration(primaryMetadata.duration) }}</p>
                   <p><strong>{{ $t("prompts.codec") }}:</strong> {{ primaryMetadata.codec }}</p>
                   <p><strong>{{ $t("prompts.resolution") }}:</strong> {{ primaryMetadata.resolution }}</p>
 
                   <p>
-                     <strong>{{ $t("prompts.audioType") }}:</strong>
+                     <strong>{{ $t("prompts.audioType") }}: </strong>
                      <span v-if="primaryMetadata.audioType">
                         {{ primaryMetadata.audioType }}
                      </span>
@@ -138,7 +139,7 @@
                   </p>
 
                   <p>
-                     <strong>{{ $t("prompts.isSubs") }}:</strong>
+                     <strong>{{ $t("prompts.isSubs") }}: </strong>
                      <span v-if="primaryMetadata.isSubs">
                         {{ $t("prompts.isSubsYes") }}
                      </span>
@@ -222,7 +223,7 @@ import { fetchAdditionalInfo } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
-import { formatSeconds, humanTime } from "@/utils/common.js"
+import { formatDuration, formatSeconds, humanTime } from "@/utils/common.js"
 
 export default {
    name: "info",
@@ -439,11 +440,13 @@ export default {
          primary.resolution = videoTrack.width + " x " + videoTrack.height
          primary.audioType = audioTrack ? (audioTrack.channel_count > 1 ? "Stereo" : "Mono") : "No audio"
          primary.isSubs = subsLength > 0
+         primary.duration = videoTrack.duration
          return primary
       }
    },
 
    methods: {
+      formatDuration,
       humanTime,
       formatSeconds,
 

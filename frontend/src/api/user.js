@@ -32,9 +32,14 @@ export async function updateSettings(data) {
 
 }
 
+export async function getTags() {
+   let url = `/user/tags`
+   let response = await backendInstance.get(url)
+   return response.data
+}
 
 export async function getTrash() {
-   let url = `/trash`
+   let url = `/user/trash`
    let response = await backendInstance.get(url, {
       __cancelSignature: "getItems"
 

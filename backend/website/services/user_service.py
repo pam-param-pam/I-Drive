@@ -10,7 +10,7 @@ from ..discord.DiscordHelper import DiscordHelperService
 from ..models import Webhook, Bot, DiscordSettings, Channel, File, UserSettings
 from ..models.mixin_models import ItemState
 from ..models.other_models import Notification, NotificationType
-from ..queries.selectors import get_webhook, query_attachments
+from ..queries.selectors import query_attachments
 from ..websockets.utils import send_event
 
 
@@ -118,19 +118,18 @@ def create_new_channel_and_webhooks(user: User) -> tuple[Channel, list[Webhook]]
     return channel_obj, webhook_objs
 
 def delete_webhook(user: User, webhook_id: str) -> None:
-    webhook = get_webhook(user, webhook_id)
-
-    if query_attachments(author_id=webhook.discord_id):
-        raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
-
-    primary_bot = Bot.objects.filter(owner=user, primary=True).first()
-    if not primary_bot:
-        raise BadRequestError("No primary bot found")
-
-    webhooks_num = Webhook.objects.filter(channel=webhook.channel).count()
-    webhooks_channel = webhook.channel
-
     with transaction.atomic():
+        webhook = Webhook.objects.select_for_update().get(discord_id=webhook_id, owner=user)
+        if query_attachments(author_id=webhook.discord_id):
+            raise BadRequestError("Cannot remove webhook. There are files associated with this webhook")
+
+        primary_bot = Bot.objects.filter(owner=user, primary=True).first()
+        if not primary_bot:
+            raise BadRequestError("No primary bot found")
+
+        webhooks_num = Webhook.objects.filter(channel=webhook.channel).count()
+        webhooks_channel = webhook.channel
+
         if webhooks_num == 1:
             error = DiscordHelperService(primary_bot.token).delete_channel(webhooks_channel.discord_id)
             if error:

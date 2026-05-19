@@ -35,7 +35,23 @@
 }
 
 .file-icons [data-type=Code] i::before {
-  content: 'description'
+  content: 'code'
+}
+
+.file-icons [data-type=Executable] i::before {
+  content: "terminal";
+}
+
+.file-icons [data-type=Document] i::before {
+  content: "article";
+}
+
+.file-icons [data-type=Archive] i::before {
+  content: "folder_zip";
+}
+
+.file-icons [data-type=System] i::before {
+  content: "settings_applications";
 }
 
 .file-icons [aria-label$=".cr2" i] i::before,
@@ -185,6 +201,10 @@
 /* Colors */
 
 /* General */
+
+.file-icons [data-type=Archive] i::before {
+  color: var(--icon-yellow)
+}
 
 .file-icons [data-type=Audio] i {
   color: var(--icon-yellow)

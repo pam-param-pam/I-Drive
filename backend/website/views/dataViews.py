@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
+from django.core.exceptions import BadRequest
 from django.db import models
 from django.db.models import Count, Sum, Case, When, Value, CharField
 from django.db.models import F, BooleanField
@@ -26,7 +27,7 @@ from ..core.decorators import check_resource_permissions, extract_folder, extrac
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
-from ..models.file_related_models import RawMetadata, PhotoMetadata
+from ..models.file_related_models import RawMetadata, PhotoMetadata, Tag
 from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
 from ..queries.selectors import query_attachments, check_if_bots_exists, get_trash_files_and_folders
@@ -195,160 +196,11 @@ def fetch_additional_info(request, item_obj):
             raise ResourceNotFoundError("Wrong item type.")
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @throttle_classes([SearchThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def search(request):
-    user = request.user
-    query = request.GET.get('query')
-    file_type = request.GET.get('type')
-    extension = request.GET.get('extension')
-
-    lock_from = request.GET.get('lockFrom')
-    password = request.headers.get("X-resource-Password")
-    tags = request.GET.get('tags')
-
-    attribute = request.GET.get('property')
-    attribute_range = request.GET.get('range', "").replace(" ", "")
-    exclude_folders = request.GET.get('excludeFolders', "").replace(" ", "")
-    limit_to_folders = request.GET.get('limitToFolders', "").replace(" ", "")
-
-    order_by = request.GET.get('orderBy')
-    if order_by not in ('size', 'created_at'):
-        order_by = 'created_at'
-
-    result_limit = min(int(request.GET.get('resultLimit', 100)), 1000)
-
-    include_files = request.GET.get('files', 'True').lower() != "false"
-
-    include_folders = request.GET.get('folders', 'True').lower() != "false"
-
-    ascending = "-" if request.GET.get("ascending", 'True').lower() == "false" else ""
-
-    if tags:
-        tags = [tag.strip() for tag in tags.split(" ")]
-        include_folders = False
-
-    if not (query or file_type or extension or tags or include_files or include_folders):
-        raise BadRequestError("Please specify at least one search parameter")
-
-    if attribute:
-        include_folders = False
-
-    if bool(attribute) != bool(attribute_range):
-        raise BadRequestError("Both property and rage must be specified, not just one.")
-
-    # Initialize query filters
-    file_filters = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-    folder_filters = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__isnull=False)
-
-    # Handle lockFrom and password logic
-    if lock_from and password:
-        file_filters &= Q(parent__lockFrom__isnull=True, parent__password__isnull=True) | Q(parent__lockFrom=lock_from, parent__password=password)
-        folder_filters &= Q(lockFrom__isnull=True, password__isnull=True) | Q(lockFrom=lock_from, password=password) | Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
-    else:
-        file_filters &= Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
-        folder_filters &= Q(lockFrom__isnull=True, password__isnull=True) | Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
-
-    # Apply search filtering
-    if query:
-        file_filters &= Q(name__icontains=query)
-        folder_filters &= Q(name__icontains=query)
-
-    if file_type:
-        file_filters &= Q(type=file_type)
-
-    if extension:
-        file_filters &= Q(extension="." + extension)
-
-    if tags:
-        file_filters &= Q(tags__name__in=tags)
-
-    # Apply attributeRange filtering
-    if attribute_range:
-        # Try to get the field type from the model
-        if attribute not in ("name", "extension", "size", "created_at", "last_modified_at", "number"):
-            raise BadRequestError(f"Invalid property: {attribute}")
-
-        field = File._meta.get_field(attribute)
-
-        if isinstance(field, (models.IntegerField, models.FloatField, models.DecimalField, models.BigIntegerField)):
-            # Numeric filters
-            if attribute_range.startswith(">"):
-                file_filters &= Q(**{f"{attribute}__gt": attribute_range[1:]})
-            elif attribute_range.startswith("<"):
-                file_filters &= Q(**{f"{attribute}__lt": attribute_range[1:]})
-            elif "-" in attribute_range:
-                try:
-                    start, end = map(str.strip, attribute_range.split("-"))
-                    file_filters &= Q(**{f"{attribute}__range": (start, end)})
-                except ValueError:
-                    raise BadRequestError("Invalid numeric range format (use start-end)")
-            else:
-                file_filters &= Q(**{f"{attribute}": attribute_range})
-
-        elif isinstance(field, models.DateTimeField):
-            # For DateTimeField, filter for the whole day range
-            date_value = datetime.strptime(attribute_range, "%Y-%m-%d")
-            start_of_day = date_value
-            end_of_day = date_value + timedelta(days=1)
-            file_filters &= Q(**{f"{attribute}__gte": start_of_day}) & Q(**{f"{attribute}__lt": end_of_day})
-
-        elif isinstance(field, models.CharField) or isinstance(field, models.TextField):
-            # String / regex filters
-            try:
-                re.compile(attribute_range)
-                file_filters &= Q(**{f"{attribute}__regex": attribute_range})
-            except re.error:
-                file_filters &= Q(**{f"{attribute}": attribute_range})
-
-        else:
-            raise BadRequestError("Unsupported field type")
-
-    # Apply excludeFolders filtering (exclude files from these folder IDs)
-    if exclude_folders:
-        exclude_folder_ids = [folder_id.strip() for folder_id in exclude_folders.split(',')]
-        file_filters &= ~Q(parent__id__in=exclude_folder_ids)
-        folder_filters &= ~Q(id__in=exclude_folder_ids)
-
-    # Apply limitToFolders filtering (only include files from these folder IDs)
-    if limit_to_folders:
-        limit_folder_ids = [folder_id.strip() for folder_id in limit_to_folders.split(',')]
-        file_filters &= Q(parent__id__in=limit_folder_ids)
-        folder_filters &= Q(id__in=limit_folder_ids)
-
-    files = []
-    folders = []
-
-    if include_files:
-        files = File.objects.filter(file_filters) \
-                    .select_related("parent", "mediaposition", "thumbnail") \
-                    .prefetch_related("tags") \
-                    .order_by(ascending + order_by) \
-                    .annotate(**File.get_display_annotate()) \
-                    .values_list(*File.DISPLAY_VALUES)[:result_limit]
-
-    if include_folders:
-        folders = Folder.objects.filter(folder_filters) \
-                      .select_related("parent") \
-                      .order_by("-created_at")[:result_limit]
-
-        if order_by == 'size':
-            # Sort folders by calculated size
-            folders = sorted(folders, key=calculate_size, reverse=(ascending != ""))
-
-    folder_dicts = []
-    file_dicts = []
-
-    if include_folders and not (extension or file_type):
-        for folder in folders:
-            folder_dict = FolderSerializer.serialize_object(folder)
-            folder_dicts.append(folder_dict)
-
-    if include_files:
-        file_dicts = [FileSerializer.serialize_tuple(file) for file in files]
-
-    return JsonResponse(file_dicts + folder_dicts, safe=False)
+    pass
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -381,11 +233,7 @@ def check_password(request, item_obj):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_moments(request, file_obj: File):
     moments = Moment.objects.filter(file=file_obj).all()
-    moments_list = []
-    for moment in moments:
-        moments_list.append(MomentSerializer.serialize_object(moment))
-
-    return JsonResponse(moments_list, safe=False)
+    return JsonResponse(MomentSerializer.serialize_objects(moments), safe=False)
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -393,26 +241,24 @@ def get_moments(request, file_obj: File):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_tags(request, file_obj: File):
-    tags_list = []
-    for tag in file_obj.tags.all():
-        tags_list.append(TagSerializer.serialize_object(tag))
-
-    return JsonResponse(tags_list, safe=False)
+    return JsonResponse(TagSerializer.serialize_objects(file_obj.tags.all()), safe=False)
 
 @api_view(['GET'])
-@throttle_classes([MediaThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
-    subtitle_dicts = []
+    return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
 
-    for sub in subtitles:
-        subtitle_dicts.append(SubtitleSerializer.serialize_object(sub))
 
-    return JsonResponse(subtitle_dicts, safe=False)
-
+@api_view(['GET'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+def get_all_tags(request):
+    tags = Tag.objects.filter(owner=request.user)
+    return JsonResponse(TagSerializer.serialize_objects(tags), safe=False)
 
 """====================================================HERE BE DRAGONS=========================================================="""
 

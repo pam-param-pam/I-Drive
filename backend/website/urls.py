@@ -10,7 +10,7 @@ from .views.authViews import login_per_device_view, logout_per_device_view, regi
     cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_usage, search, \
     get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_folder_file_stats, \
-    check_message_id, get_folder_hash
+    check_message_id, get_folder_hash, get_all_tags
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, create_zip_model_view
@@ -61,9 +61,6 @@ def path(route, methods, view_func, **kwargs):
 
 
 urlpatterns = [
-    path("trash", ["GET"], get_trash, name="trash"),
-    path("search", ["GET"], search, name="search"),
-
     path("files/<file_id>/thumbnail/<thumbnail_id>/stream", ["GET"], serve_thumbnail, name="stream_thumbnail"),
     path("files/<file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_moment"),
     path("files/<file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_subtitle"),
@@ -137,6 +134,9 @@ urlpatterns = [
 
     path("user/notifications", ['GET'], get_notifications_view, name="get user notifications"),
     path("user/notifications", ['POST'], set_notifications_read_status_view, name="set notifications read status"),
+    path("user/trash", ["GET"], get_trash, name="trash"),
+    path("user/search", ["POST"], search, name="search"),
+    path("user/tags", ["GET"], get_all_tags, name="get tags"),
 
     path("shares", ['GET'], get_shares, name="get user's shares"),
     path("shares", ['POST'], create_share, name="create share"),

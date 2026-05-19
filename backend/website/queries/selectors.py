@@ -82,13 +82,6 @@ def check_if_item_belongs_to_share(share: ShareableLink, requested_item: Union[F
         raise ResourcePermissionError("This resource is locked. Ask the owner of this resource to share it separately")
 
 
-def get_webhook(user, discord_id: str) -> Webhook:
-    try:
-        return Webhook.objects.get(discord_id=discord_id, owner=user)
-    except Webhook.DoesNotExist:
-        raise BadRequestError(f"Could not find webhook with id: {discord_id}")
-
-
 def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
     try:
         return Webhook.objects.get(discord_id=message_author_id, owner=user)

@@ -67,6 +67,16 @@ class Max(Check):
 
         return value <= self.max_value
 
+class Min(Check):
+    def __init__(self, min_value: int | float):
+        self.min_value = min_value
+
+    def check(self, value):
+        if not self.is_number_type(value):
+            return False
+
+        return value <= self.min_value
+
 class RequireLength(Check):
     def __init__(self, length: int | float):
         self.length = length

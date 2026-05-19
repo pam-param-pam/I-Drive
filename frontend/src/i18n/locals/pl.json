@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "clearAll": "Wyczyść",
     "openEditor": "Open Editor",
     "reEnable": "Spróbuj aktywować",
     "enable": "Włącz",
@@ -186,6 +187,10 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "lessThan": "Mniej niż",
+    "greaterThan": "Wiecej niż",
+    "min": "Min",
+    "max": "Max",
     "noFileStats": "Brak statystyk. Folder jest pusty!",
     "loadingChart": "Ładowanie wykresu...",
     "skipOnboardingTitle": "Pomiń konfigurację",
@@ -267,7 +272,7 @@
     "duration": "Czas trwania",
     "uploadDestination": "Miejsce przesyłania pików",
     "uploadDestinationWarning": "Czy jesteś pewien że ID kanału oraz ID serwera są poprawne? Nie będziesz wstanie zmienić tego pózniej, chyba że usuniesz wszystkie pliki.",
-    "enterExtension": "mp4",
+    "enterExtension": ".mp4",
     "enterResultLimit": "Wpisz maksymalną ilość itemów",
     "tags": "Tagi",
     "enterTags": "Wpisz tagi, użyj spacji by je odzielić",
@@ -275,7 +280,7 @@
     "editTags": "Edytuj tagi",
     "editTagsDescription": "Dodaj lub usuń tagi",
     "accountPassword": "Hasło do konta",
-    "all": "wszystkie",
+    "all": "Wszystkie",
     "aperture": "Przesłona",
     "created": "Utworzone",
     "currentFolder": "Obecny folder: ",
@@ -393,9 +398,9 @@
     "uploadDestination": "Miejsce przesyłania plików",
     "newWebhookPlaceholder": "Wpisz URL webhooka",
     "newBotPlaceholder": "Wpisz token bota",
-    "webhookInfo": "Dodaj webhooki by przesyłać pliki. Wszystkie webhooki muszą być przypisane do tego samego serwera i kanału.",
-    "webhookAdvice": "Zalecane jest nie używać więcej niż 3 webhooki.",
-    "botInfo": "Dodaj więcej botów by iDrive działał szybciej. Wszystkie boty muszą być na serwerze.",
+    "webhookInfo": "Webhooki są wymagane by przesyłać pliki. Im szybszy internet tym więcej webhooków potrzeba.",
+    "webhookAdvice": "Zalecane jest używanie od 10 do 20 webhooków.",
+    "botInfo": "Dodaj więcej botów by iDrive działał szybciej. Wszystkie boty muszą być na serwerze (Guild ID).",
     "botAdvice": "Zalecane jest używanie conajmniej 5 botów.",
     "discordSettings": "Ustawienia discorda",
     "AES_CTR": "AES CTR",

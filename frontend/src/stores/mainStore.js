@@ -3,6 +3,15 @@ import i18n from "@/i18n/index.js"
 import dayjs from "@/utils/dayjsSetup.js"
 import { v4 as uuidv4 } from "uuid"
 
+const defaultSearchFilters = {
+   files: true,
+      folders: true,
+      resultLimit: 100,
+      orderBy: "name",
+      ascending: true,
+      type: "All",
+}
+
 export const useMainStore = defineStore("main", {
    state: () => ({
       user: null,
@@ -16,7 +25,6 @@ export const useMainStore = defineStore("main", {
       prompts: [],
       disabledCreation: false,
       folderPasswords: {},
-      searchFilters: { "files": true, "folders": true },
       lastItem: null,
       lastFolder: null,
       searchActive: false,
@@ -38,7 +46,12 @@ export const useMainStore = defineStore("main", {
       imagesBlock: {
          lastError: null,
          blockedUntil: null
-      }
+      },
+
+      searchFilters: {
+         internal: defaultSearchFilters,
+         external: defaultSearchFilters
+      },
    }),
 
 
@@ -154,6 +167,12 @@ export const useMainStore = defineStore("main", {
       },
       setSearchFilters(payload) {
          this.searchFilters = payload
+      },
+      resetSearchFilters() {
+         this.searchFilters = {
+            internal: defaultSearchFilters,
+            external: defaultSearchFilters
+         }
       },
       updateFolderPassword(payload) {
          this.folderPasswords[payload.folderId] = payload.password
