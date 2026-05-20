@@ -5,11 +5,11 @@ import { v4 as uuidv4 } from "uuid"
 
 const defaultSearchFilters = {
    files: true,
-      folders: true,
-      resultLimit: 100,
-      orderBy: "name",
-      ascending: true,
-      type: "All",
+   folders: true,
+   resultLimit: 100,
+   orderBy: "name",
+   ascending: true,
+   type: null,
 }
 
 export const useMainStore = defineStore("main", {

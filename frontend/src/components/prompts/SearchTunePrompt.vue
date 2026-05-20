@@ -9,7 +9,7 @@
             <div>
                <label>{{ $t("prompts.fileType") }}</label>
                <select v-model="fileType" class="input input--block styled-select">
-                  <option value="All">{{ $t("prompts.all") }}</option>
+                  <option :value="null">{{ $t("prompts.all") }}</option>
                   <option v-for="type in fileTypes" :key="type" :value="type">{{ type }}</option>
                </select>
             </div>
@@ -106,6 +106,9 @@
                         </button>
                      </span>
                   </div>
+                  <div v-if="!tagSuggestionsInclude.length && tagQueryInclude" class="suggestion suggestion--empty">
+                     {{ $t("prompts.notFoundWithThatQuery") }}
+                  </div>
                   <input
                     v-model="tagQueryInclude"
                     class="input input--block"
@@ -115,15 +118,17 @@
                     @blur="clearSuggestions('tagSuggestionsInclude')"
                   />
                   <Transition name="fade">
-                     <div v-if="tagSuggestionsInclude.length" class="suggestions">
-                        <div
-                          v-for="tag in tagSuggestionsInclude"
-                          :key="tag.id"
-                          class="suggestion"
-                          @mousedown.prevent
-                          @click="addSelectedTag(tag)"
-                        >
-                           {{ tag.name }}
+                     <div>
+                        <div v-if="tagSuggestionsInclude.length" class="suggestions">
+                           <div
+                             v-for="tag in tagSuggestionsInclude"
+                             :key="tag.id"
+                             class="suggestion"
+                             @mousedown.prevent
+                             @click="addSelectedTag(tag)"
+                           >
+                              {{ tag.name }}
+                           </div>
                         </div>
                      </div>
                   </Transition>
@@ -139,6 +144,9 @@
                            <i class="material-icons close-icon">close</i>
                         </button>
                      </span>
+                  </div>
+                  <div v-if="!folderSuggestionsLimit.length && folderQueryLimit" class="suggestion suggestion--empty">
+                     {{ $t("prompts.notFoundWithThatQuery") }}
                   </div>
                   <input
                     v-model="folderQueryLimit"
@@ -173,6 +181,9 @@
                            <i class="material-icons close-icon">close</i>
                         </button>
                      </span>
+                  </div>
+                  <div v-if="!folderSuggestionsExclude.length && folderQueryExclude" class="suggestion suggestion--empty">
+                     {{ $t("prompts.notFoundWithThatQuery") }}
                   </div>
                   <input
                     v-model="folderQueryExclude"
@@ -253,12 +264,14 @@
                           v-model="range.from"
                           class="input"
                           type="date"
+                          :placeholder="placeholderFromDate"
                         />
                         <input
                           v-if="range.mode !== 'after'"
                           v-model="range.to"
                           class="input"
                           type="date"
+                          :placeholder="placeholderToDate"
                         />
                      </div>
                   </div>
@@ -350,7 +363,7 @@ export default {
 
       allExtensions() {
          const map = this.config.extensions || {}
-         if (this.fileType === "All") {
+         if (this.fileType === null) {
             return Object.keys(map)
          }
          return Object.entries(map)
@@ -403,7 +416,7 @@ export default {
       fileSpecificFiltersPresent() {
          if (this.selectedExtensions.length > 0) return true
          if (this.selectedTags.length > 0) return true
-         if (this.fileType !== "All") return true
+         if (this.fileType !== null) return true
          if (this.property && this.isFilterComplete) {
             const fileOnlyFields = ["size", "duration", "extension"]
             if (fileOnlyFields.includes(this.property)) return true
@@ -421,12 +434,24 @@ export default {
          if (this.range.mode === "between") return this.$t("prompts.max")
          if (this.range.mode === "before")  return this.$t("prompts.lessThan")
          return ""
+      },
+
+      placeholderFromDate() {
+         if (this.range.mode === "between") return this.$t("prompts.fromDate")
+         if (this.range.mode === "after")   return this.$t("prompts.afterDate")
+         return ""
+      },
+
+      placeholderToDate() {
+         if (this.range.mode === "between") return this.$t("prompts.toDate")
+         if (this.range.mode === "before")  return this.$t("prompts.beforeDate")
+         return ""
       }
    },
 
    watch: {
       fileType(newType) {
-         if (newType === "All") return
+         if (newType === null) return
          this.selectedExtensions = this.selectedExtensions.filter(ext => {
             const typeOfExt = (this.config.extensions || {})[ext]
             return typeOfExt === newType
@@ -520,7 +545,7 @@ export default {
             resultLimit: this.resultLimit,
             orderBy: this.orderBy,
             ascending: this.ascending,
-            type: this.fileType !== "All" ? this.fileType : undefined,
+            type: this.fileType,
             extensions: [...this.selectedExtensions],
             tags: this.selectedTags.map(t => t.id),
             limitToFolders: this.limitToFolders.map(f => f.id),
@@ -593,7 +618,7 @@ export default {
          const tags = await getTags()
          const availableTags = tags.filter(t => !this.selectedTags.some(x => x.id === t.id))
          let filtered = availableTags.filter(t => t.name.toLowerCase().includes(query)).slice(0, 4)
-         if (filtered.length === 0) {
+         if (filtered.length === 0 && query === "") {
             filtered = availableTags.slice(0, 4)
          }
          this.tagSuggestionsInclude = filtered
@@ -760,5 +785,10 @@ export default {
 .fade-leave-to {
    opacity: 0;
    transform: translateY(-4px);
+}
+.suggestion--empty {
+   cursor: default;
+   color: var(--red);
+   opacity: 0.7;
 }
 </style>

@@ -187,7 +187,12 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "prompts": {
+    "beforeDate": "Przed datą",
+    "toDate": "Do daty",
+    "afterDate": "Po dacie",
+    "fromDate": "Od daty",
     "lessThan": "Mniej niż",
+    "notFoundWithThatQuery": "Nic nie znaleziono",
     "greaterThan": "Wiecej niż",
     "min": "Min",
     "max": "Max",

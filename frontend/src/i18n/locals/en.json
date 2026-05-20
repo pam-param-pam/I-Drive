@@ -200,7 +200,12 @@
     "wrongCredentials": "Wrong credentials"
   },
   "prompts": {
+    "beforeDate": "Before date",
+    "toDate": "To date",
+    "afterDate": "After date",
+    "fromDate": "From date",
     "lessThan": "Less than",
+    "notFoundWithThatQuery": "Nothing matching found",
     "greaterThan": "Greater than",
     "min": "Min",
     "max": "Max",
