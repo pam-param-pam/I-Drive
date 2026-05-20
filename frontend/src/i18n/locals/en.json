@@ -477,6 +477,8 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "filtersCleared": "Cleared filters!",
+    "foldersDisabledFileFilters": "Folders disabled due to file filters",
     "updatingPassword": "Updating password...",
     "credentialReenabled": "Enabled webhook/bot",
     "subtitleRenamed": "Subtitle renamed!",

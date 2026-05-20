@@ -1,12 +1,8 @@
 import hashlib
 import json
-import re
 import time
-from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
-from django.core.exceptions import BadRequest
-from django.db import models
 from django.db.models import Count, Sum, Case, When, Value, CharField
 from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
@@ -24,14 +20,14 @@ from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackS
     RawMetadataSerializer, PhotoMetadataSerializer
 from ..core.crypto.signer import sign_resource
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
-from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError
+from ..core.errors import ResourceNotFoundError, ResourcePermissionError
 from ..discord.Discord import discord
 from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
 from ..models.file_related_models import RawMetadata, PhotoMetadata, Tag
 from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
 from ..queries.selectors import query_attachments, check_if_bots_exists, get_trash_files_and_folders
-from ..services import cache_service
+from ..services import cache_service, search_service
 
 
 @api_view(['GET'])
@@ -200,7 +196,8 @@ def fetch_additional_info(request, item_obj):
 @throttle_classes([SearchThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def search(request):
-    pass
+    data = search_service.perform_search(request)
+    return JsonResponse(data, safe=False)
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])

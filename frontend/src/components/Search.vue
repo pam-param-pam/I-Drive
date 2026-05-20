@@ -59,7 +59,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["showHover", "resetSelected", "setSearchFilters", "setSearchActive", "setItemsError", "setSearchItems",
+      ...mapActions(useMainStore, ["showHover", "resetSelected", "setSearchActive", "setItemsError", "setSearchItems",
          "setLastItem", "setLastFolder"]),
 
       search: throttle(async function(override) {
@@ -68,9 +68,8 @@ export default {
          this.setLastFolder(null)
          
          //copying to not mutate vuex store state
-         let searchDict = { ...this.searchFilters }
+         let searchDict = { ...this.searchFilters.external }
          searchDict["query"] = this.query
-         this.setSearchFilters(searchDict)
          this.setSearchActive(true)
          this.$emit("onSearchQuery", searchDict)
       }, 500),
@@ -106,9 +105,6 @@ export default {
          this.query = ""
 
          cancelRequestBySignature("getItems")
-         let searchDict = { ...this.searchFilters }
-         searchDict["query"] = ""
-         this.setSearchFilters(searchDict)
 
          this.setSearchItems(null)
          this.setSearchActive(false)

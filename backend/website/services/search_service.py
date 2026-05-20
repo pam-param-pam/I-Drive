@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+from typing import Optional
 
 from django.core.exceptions import BadRequest
 from django.db.models.query_utils import Q
@@ -8,11 +9,75 @@ from django.http import JsonResponse
 from ..core.Serializers import FileSerializer, FolderSerializer
 from ..core.errors import BadRequestError
 from ..core.helpers import validate_key, validate_ids_as_list
-from ..core.validators.GeneralChecks import Min, Max
+from ..core.validators.GeneralChecks import Min, Max, MaxLength
 from ..models import File, Folder
 from ..models.mixin_models import ItemState
 from ..queries.builders import calculate_size
 
+def validate_filter(f: Optional[dict]) -> Optional[dict]:
+    ALLOWED_OPS = {
+        "string": {"regex"},
+        "number": {"between", "lt", "gt"},
+        "date": {"between", "lt", "gt"},
+    }
+
+    ALLOWED_FIELDS = {
+        "name": "string",
+        "extension": "string",
+        "size": "number",
+        "created_at": "date",
+        "last_modified_at": "date",
+    }
+
+    if f is None:
+        return None
+
+    if not isinstance(f, dict):
+        raise BadRequestError("Filter must be an object.")
+
+    field = f.get("field")
+    op = f.get("op")
+    value = f.get("value")
+
+    if field not in ALLOWED_FIELDS:
+        raise BadRequestError(f"Invalid filter field: {field}")
+
+    field_type = ALLOWED_FIELDS[field]
+
+    if op not in ALLOWED_OPS[field_type]:
+        raise BadRequestError(f"Invalid operator '{op}' for field '{field}'")
+
+    if field_type == "string":
+        if not isinstance(value, str) or not value:
+            raise BadRequestError("String filter requires non-empty string value")
+
+        # optional: safe regex check
+        if len(value) > 50:
+            raise BadRequestError("Regex too long")
+
+    elif field_type in ("number", "date"):
+        if op in ("lt", "gt"):
+            if not isinstance(value, (int, float, str)):
+                raise BadRequestError("Invalid value for comparison filter")
+
+        elif op == "between":
+            if not isinstance(value, dict):
+                raise BadRequestError("Between filter requires object value")
+
+            if "from" not in value or "to" not in value:
+                raise BadRequestError("Between requires both 'from' and 'to'")
+
+            if value["from"] is None or value["to"] is None:
+                raise BadRequestError("Between values cannot be null")
+
+            if value["from"] > value["to"]:
+                raise BadRequestError("'from' cannot be greater than 'to'")
+
+    return {
+        "field": field,
+        "op": op,
+        "value": value,
+    }
 
 def validate_search_request(data: dict) -> dict:
     out = {}
@@ -20,7 +85,7 @@ def validate_search_request(data: dict) -> dict:
     # -----------------------------
     # Basic
     # -----------------------------
-    out["query"] = validate_key(data, "query", str, required=False, default="")
+    out["query"] = validate_key(data, "query", str, required=False, default="", checks=[MaxLength(50)])
     out["files"] = validate_key(data, "files", bool, required=False, default=True)
     out["folders"] = validate_key(data, "folders", bool, required=False, default=True)
     out["type"] = validate_key(data, "type", str, required=False)
@@ -34,29 +99,28 @@ def validate_search_request(data: dict) -> dict:
     out["resultLimit"] = validate_key(data, "resultLimit", int, required=False, default=100, checks=[Min(1), Max(1000)])
 
     order_by = validate_key(data, "orderBy", str, required=False, default="created_at")
-    allowed_order_by = {"size", "created_at", "name", "duration"}
+    allowed_order_by = {"size", "created_at", "name"}
 
     if order_by not in allowed_order_by:
-        raise BadRequestError(f"Order by must one one of: {allowed_order_by}")
+        raise BadRequestError(f"Order by must be one of: {allowed_order_by}")
 
     out["orderBy"] = order_by
-
     out["ascending"] = validate_key(data, "ascending", bool, required=False, default=True)
 
     # -----------------------------
     # Arrays
     # -----------------------------
     extensions = validate_key(data, "extensions", list, required=False, default=[])
-    validate_ids_as_list(extensions, max_length=50)
+    validate_ids_as_list(extensions, max_length=50, child_type=str, empty_allowed=True)
 
     tags = validate_key(data, "tags", list, required=False, default=[])
-    validate_ids_as_list(tags, max_length=50)
+    validate_ids_as_list(tags, max_length=50, child_type=str, empty_allowed=True)
 
     limitToFolders = validate_key(data, "limitToFolders", list, required=False, default=[])
-    validate_ids_as_list(limitToFolders, max_length=50)
+    validate_ids_as_list(limitToFolders, max_length=50, child_type=str, empty_allowed=True)
 
     excludeFolders = validate_key(data, "excludeFolders", list, required=False, default=[])
-    validate_ids_as_list(excludeFolders, max_length=50)
+    validate_ids_as_list(excludeFolders, max_length=50, child_type=str, empty_allowed=True)
 
     if set(limitToFolders) & set(excludeFolders):
         raise BadRequestError("limitToFolders and excludeFolders overlap.")
@@ -69,235 +133,258 @@ def validate_search_request(data: dict) -> dict:
     # -----------------------------
     # Filter
     # -----------------------------
-    out["filter"] = validate_filter(validate_key(data, "filter", dict, required=False, default=None))
+    out["filter"] = validate_filter(validate_key(data, "filter", dict, required=False))
+
+    # -----------------------------
+    # LOCK
+    # -----------------------------
+    out["lockFrom"] = validate_key(data, "lockFrom", str, required=False)
+    out["password"] = validate_key(data, "password", str, required=False)
+
+    # -----------------------------
+    # CROSS-FIELD RULES (CRITICAL)
+    # -----------------------------
+
+    # Disable folders if file-specific filters present
+    file_specific = (
+        bool(out["extensions"]) or
+        bool(out["tags"]) or
+        bool(out["type"])
+    )
+
+    filter_field = out["filter"]["field"] if out["filter"] else None
+    filter_is_file_only = filter_field in {"size", "extension"}
+
+    if (file_specific or filter_is_file_only) and out["folders"]:
+        raise BadRequestError("Folders is not allowed with these filters.")
 
     return out
 
-def perform_search(request):
-    # todo fix this
-    user = request.user
-    data = request.data
-
-    # Basic parameters
-    query = data.get('query')
-    file_type = data.get('type')
-    extension = data.get('extension')
-
-    lock_from = data.get('lockFrom')
-    password = request.headers.get("X-resource-Password")  # keep header for password security
-
-    # Tags: array of objects -> list of tag names
-    tags_include = data.get('tagsInclude', [])
-    if tags_include:
-        tags = [tag['name'] for tag in tags_include]
-    else:
-        tags = None
-
-    # Folder filters: arrays of objects -> extract IDs
-    limit_to_folders = data.get('limitToFolders', [])
-    exclude_folders = data.get('excludeFolders', [])
-
-    if limit_to_folders:
-        limit_folder_ids = [f['id'] for f in limit_to_folders]
-    else:
-        limit_folder_ids = []
-
-    if exclude_folders:
-        exclude_folder_ids = [f['id'] for f in exclude_folders]
-    else:
-        exclude_folder_ids = []
-
-    # Ordering
-    order_by = data.get('orderBy', 'created_at')
-    if order_by not in ('size', 'created_at', 'name'):
-        order_by = 'created_at'
-    ascending = data.get('ascending', True)
-    order_prefix = "" if ascending else "-"
-
-    # Result limits
-    result_limit = min(int(data.get('resultLimit', 100)), 1000)
-    include_files = data.get('files', True)
-    include_folders = data.get('folders', True)
-
-    # Property filter
-    filter_obj = data.get('filter')
-    if filter_obj:
-        # Validate both field and op/value are present
-        if not filter_obj.get('field') or not filter_obj.get('op'):
-            raise BadRequest("Both property and filter parameters must be specified.")
-        attribute = filter_obj['field']
-        op = filter_obj['op']
-        value = filter_obj.get('value')
-
-        if op not in ('regex', 'between', 'lt', 'gt'):
-            raise BadRequest(f"Invalid filter operation: {op}")
-
-        # Map field to model field type
-        allowed_fields = {
-            'name': 'string',
-            'extension': 'string',
-            'size': 'number',
-            'duration': 'duration',
-            'created_at': 'date',
-            'last_modified_at': 'date',
-        }
-        if attribute not in allowed_fields:
-            raise BadRequest(f"Invalid property: {attribute}")
-
-        field_type = allowed_fields[attribute]
-        if field_type == 'string' and op != 'regex':
-            raise BadRequest("String properties only support 'regex' operation.")
-        if field_type == 'number' and op not in ('between', 'lt', 'gt'):
-            raise BadRequest("Number properties only support 'between', 'lt', or 'gt'.")
-        if field_type == 'date' and op not in ('between', 'lt', 'gt'):
-            raise BadRequest("Date properties only support 'between', 'lt', or 'gt'.")
-
-        # Build the Q object based on op and value
-        if op == 'regex':
-            if not isinstance(value, str):
-                raise BadRequest("Regex value must be a string.")
-            try:
-                re.compile(value)
-                attr_filter = Q(**{f"{attribute}__regex": value})
-            except re.error:
-                raise BadRequest("Invalid regex pattern.")
-        else:
-            # Numeric or date operations
-            if op in ('lt', 'gt'):
-                if value is None:
-                    raise BadRequest("A value is required for 'lt'/'gt' operations.")
-                try:
-                    numeric_value = float(value) if field_type == 'number' else None
-                except (ValueError, TypeError):
-                    raise BadRequest("Invalid numeric value.")
-                if field_type == 'date':
-                    try:
-                        date_value = datetime.strptime(value, "%Y-%m-%d")
-                    except ValueError:
-                        raise BadRequest("Invalid date format. Use YYYY-MM-DD.")
-                    if op == 'lt':
-                        attr_filter = Q(**{f"{attribute}__lt": date_value})
-                    else:  # 'gt'
-                        attr_filter = Q(**{f"{attribute}__gt": date_value})
-                else:  # number
-                    if op == 'lt':
-                        attr_filter = Q(**{f"{attribute}__lt": numeric_value})
-                    else:
-                        attr_filter = Q(**{f"{attribute}__gt": numeric_value})
-            elif op == 'between':
-                if not isinstance(value, dict) or 'from' not in value or 'to' not in value:
-                    raise BadRequest("'between' requires a dict with 'from' and 'to'.")
-                from_val = value['from']
-                to_val = value['to']
-                if field_type == 'date':
-                    try:
-                        start = datetime.strptime(from_val, "%Y-%m-%d")
-                        end = datetime.strptime(to_val, "%Y-%m-%d")
-                    except ValueError:
-                        raise BadRequest("Invalid date format. Use YYYY-MM-DD.")
-                    attr_filter = Q(**{f"{attribute}__gte": start}) & Q(**{f"{attribute}__lt": end + timedelta(days=1)})
-                else:  # number
-                    try:
-                        from_num = float(from_val)
-                        to_num = float(to_val)
-                    except (ValueError, TypeError):
-                        raise BadRequest("Invalid numeric values in range.")
-                    attr_filter = Q(**{f"{attribute}__range": (from_num, to_num)})
-    else:
-        attribute = None
-        attr_filter = Q()
-
-    # ------------------------------------------------------------------
-    # Base querysets for files and folders
-    file_base = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-    folder_base = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-
-    # ------------------------------------------------------------------
-    # Lock / password handling
+def build_lock_q(lock_from, password):
     if lock_from and password:
-        # Password provided – include matching locked folders and their subtree
-        file_base &= Q(
-            Q(parent__lockFrom__isnull=True, parent__password__isnull=True) |
-            Q(parent__lockFrom=lock_from, parent__password=password)
+        # access to specific locked subtree
+        return (
+            Q(lockFrom__isnull=True) |
+            Q(lockFrom=lock_from, password=password)
         )
-        folder_base &= Q(
-            Q(lockFrom__isnull=True, password__isnull=True) |
-            Q(lockFrom=lock_from, password=password) |
+    else:
+        # no access to locked content
+        return Q(lockFrom__isnull=True)
+
+def file_lock_q(lock_from, password):
+    if lock_from and password:
+        return (
+            Q(parent__lockFrom__isnull=True) |
             Q(parent__lockFrom=lock_from, parent__password=password)
         )
     else:
-        # No password: show only unlocked items + top-level locked folders (no subfolders)
-        file_base &= Q(parent__lockFrom__isnull=True, parent__password__isnull=True)
-        folder_base &= Q(
-            Q(lockFrom__isnull=True, password__isnull=True) |
-            Q(lockFrom__isnull=False, parent__isnull=True)  # top-level locked folders
+        return Q(parent__lockFrom__isnull=True)
+
+def folder_lock_q(lock_from, password):
+    if lock_from and password:
+        return (
+            Q(lockFrom__isnull=True) |
+            Q(lockFrom=lock_from, password=password) |
+            Q(parent__lockFrom__isnull=True) |
+            Q(parent__lockFrom=lock_from, parent__password=password)
+        )
+    else:
+        return (
+            Q(lockFrom__isnull=True) |
+            Q(parent__lockFrom__isnull=True)
         )
 
-    # ------------------------------------------------------------------
-    # Search query
+
+def build_attr_filter(filter_obj):
+    if not filter_obj:
+        return None
+
+    field = filter_obj.get("field")
+    op = filter_obj.get("op")
+    value = filter_obj.get("value")
+
+    # -------------------------
+    # whitelist fields
+    # -------------------------
+    FIELD_TYPES = {
+        "name": "string",
+        "extension": "string",
+        "size": "number",
+        "created_at": "date",
+        "last_modified_at": "date",
+    }
+
+    if field not in FIELD_TYPES:
+        raise BadRequest(f"Invalid filter field: {field}")
+
+    field_type = FIELD_TYPES[field]
+
+    # -------------------------
+    # operator validation
+    # -------------------------
+    if field_type == "string":
+        if op != "regex":
+            raise BadRequest("String fields only support 'regex'")
+    else:
+        if op not in ("between", "lt", "gt"):
+            raise BadRequest(f"Invalid op '{op}' for {field}")
+
+    # -------------------------
+    # build Q
+    # -------------------------
+    if field_type == "string":
+        if not isinstance(value, str) or not value:
+            raise BadRequest("Regex must be non-empty string")
+
+        try:
+            re.compile(value)
+        except re.error:
+            raise BadRequest("Invalid regex")
+
+        return Q(**{f"{field}__regex": value})
+
+    # -------------------------
+    # number / date
+    # -------------------------
+    if op in ("lt", "gt"):
+        if value is None:
+            raise BadRequest("Value required")
+
+        if field_type == "date":
+            try:
+                value = datetime.strptime(value, "%Y-%m-%d")
+            except Exception:
+                raise BadRequest("Invalid date format")
+        else:
+            try:
+                value = float(value)
+            except Exception:
+                raise BadRequest("Invalid numeric value")
+
+        lookup = "lt" if op == "lt" else "gt"
+        return Q(**{f"{field}__{lookup}": value})
+
+    if op == "between":
+        if not isinstance(value, dict):
+            raise BadRequest("Between requires dict")
+
+        v_from = value.get("from")
+        v_to = value.get("to")
+
+        if v_from is None or v_to is None:
+            raise BadRequest("Between requires both from/to")
+
+        if field_type == "date":
+            try:
+                start = datetime.strptime(v_from, "%Y-%m-%d")
+                end = datetime.strptime(v_to, "%Y-%m-%d")
+            except Exception:
+                raise BadRequest("Invalid date format")
+
+            if start > end:
+                raise BadRequest("from > to")
+
+            return Q(**{f"{field}__gte": start}) & Q(**{f"{field}__lt": end + timedelta(days=1)})
+
+        else:
+            try:
+                start = float(v_from)
+                end = float(v_to)
+            except Exception:
+                raise BadRequest("Invalid numeric range")
+
+            if start > end:
+                raise BadRequest("from > to")
+
+            return Q(**{f"{field}__range": (start, end)})
+
+    return None
+
+def perform_search(request):
+    user = request.user
+    validated = validate_search_request(request.data)
+
+    query = validated["query"]
+    include_files = validated["files"]
+    include_folders = validated["folders"]
+
+    lock_from = validated.get("lockFrom")
+    password = validated.get("password")
+
+    result_limit = validated["resultLimit"]
+    order_by = validated["orderBy"]
+    order_prefix = "" if validated["ascending"] else "-"
+
+    base = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
+
+    file_q = base & file_lock_q(lock_from, password)
+    folder_q = base & folder_lock_q(lock_from, password)
+
+    # ------------------------
+    # query
+    # ------------------------
     if query:
-        file_base &= Q(name__icontains=query)
-        folder_base &= Q(name__icontains=query)
+        file_q &= Q(name__icontains=query)
+        folder_q &= Q(name__icontains=query)
 
-    if file_type:
-        file_base &= Q(type=file_type)
+    # ------------------------
+    # FILE filters (already validated)
+    # ------------------------
+    if include_files:
+        if validated["type"]:
+            file_q &= Q(type=validated["type"])
 
-    if extension:
-        file_base &= Q(extension=extension)
+        if validated["extensions"]:
+            file_q &= Q(extension__in=validated["extensions"])
 
-    if tags:
-        file_base &= Q(tags__name__in=tags)
+        if validated["tags"]:
+            file_q &= Q(tags__id__in=validated["tags"])
 
+    # ------------------------
+    # Folder scope filters
+    # ------------------------
+    if validated["limitToFolders"]:
+        file_q &= Q(parent__id__in=validated["limitToFolders"])
+        folder_q &= Q(id__in=validated["limitToFolders"])
+
+    if validated["excludeFolders"]:
+        file_q &= ~Q(parent__id__in=validated["excludeFolders"])
+        folder_q &= ~Q(id__in=validated["excludeFolders"])
+
+    # ------------------------
     # Property filter
-    if attribute:
-        file_base &= attr_filter
-        folder_base &= attr_filter
+    # ------------------------
+    attr_filter = build_attr_filter(validated["filter"])
 
-    # Exclude folders
-    if exclude_folder_ids:
-        file_base &= ~Q(parent__id__in=exclude_folder_ids)
-        folder_base &= ~Q(id__in=exclude_folder_ids)
+    if attr_filter is not None:
+        file_q &= attr_filter
 
-    # Limit to folders
-    if limit_folder_ids:
-        file_base &= Q(parent__id__in=limit_folder_ids)
-        folder_base &= Q(id__in=limit_folder_ids)
+        # folders only get safe subset
+        if include_folders and validated["filter"]["field"] in {"name", "created_at", "last_modified_at"}:
+            folder_q &= attr_filter
 
-    # ------------------------------------------------------------------
-    # Execute queries
-    files = []
-    folders = []
+    # ------------------------
+    # EXECUTION
+    # ------------------------
+    result = []
 
     if include_files:
-        files = File.objects.filter(file_base) \
-            .select_related("parent", "mediaposition", "thumbnail") \
-            .prefetch_related("tags") \
-            .order_by(f"{order_prefix}{order_by}") \
-            .annotate(**File.get_display_annotate()) \
+        files = (
+            File.objects.filter(file_q)
+            .select_related("parent", "mediaposition", "thumbnail")
+            .prefetch_related("tags")
+            .order_by(f"{order_prefix}{order_by}")
+            .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)[:result_limit]
+        )
+        result.extend(FileSerializer.serialize_tuple(f) for f in files)
 
     if include_folders:
-        folders_qs = Folder.objects.filter(folder_base) \
-            .select_related("parent") \
-            .order_by("-created_at")[:result_limit]
+        folders = (
+            Folder.objects.filter(folder_q)
+            .select_related("parent")
+            .order_by(f"{order_prefix}{order_by}")[:result_limit]
+        )
+        result.extend(FolderSerializer.serialize_object(f) for f in folders)
 
-        if order_by == 'size':
-            # Sort by calculated size (client‑side sort after fetching)
-            folders_list = list(folders_qs)
-            folders_list.sort(key=calculate_size, reverse=(order_prefix == "-"))
-            folders = folders_list[:result_limit]
-        else:
-            folders = folders_qs
-
-    # Serialize
-    folder_dicts = []
-    file_dicts = []
-
-    if include_folders and not (extension or file_type):
-        for folder in folders:
-            folder_dicts.append(FolderSerializer.serialize_object(folder))
-
-    if include_files:
-        file_dicts = [FileSerializer.serialize_tuple(file) for file in files]
-
-    return JsonResponse(file_dicts + folder_dicts, safe=False)
+    return result

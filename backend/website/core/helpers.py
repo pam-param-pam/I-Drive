@@ -92,11 +92,11 @@ def get_ip(request) -> tuple[str, bool]:
     return ip, from_nginx
 
 
-def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Type, Tuple[Type, ...]] = (str, dict)) -> None:
+def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Type, Tuple[Type, ...]] = (str, dict), empty_allowed: bool = False) -> None:
     if not isinstance(ids, list):
         raise BadRequestError("'ids' must be a list.")
 
-    if len(ids) == 0:
+    if len(ids) == 0 and not empty_allowed:
         raise BadRequestError("'ids' length cannot be 0.")
 
     if len(ids) > max_length:

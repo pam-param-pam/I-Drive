@@ -464,6 +464,8 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "foldersDisabledFileFilters": "Foldery wyłączone przez filtry plików",
+    "filtersCleared": "Zresetowano filtry!",
     "updatingPassword": "Trwa zmiana hasła...",
     "credentialReenabled": "Wlączono webhook/bot",
     "subtitleRenamed": "Zmieniono język!",

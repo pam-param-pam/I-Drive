@@ -25,8 +25,6 @@ class MyUserRateThrottleBase(UserRateThrottle):
         self.request = request
         if not self.bucket:
             raise ImproperlyConfigured("Throttle class must define a bucket.")
-        print('ratelimit key')
-        print(super().get_cache_key(request, view))
         return super().get_cache_key(request, view)
 
     def allow_request(self, request, view):

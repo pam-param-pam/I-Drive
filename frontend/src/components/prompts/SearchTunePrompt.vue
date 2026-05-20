@@ -55,7 +55,11 @@
             </div>
             <div class="checkbox-group">
                <label>
-                  <input v-model="includeFolders" type="checkbox" />
+                  <input
+                    v-model="includeFolders"
+                    type="checkbox"
+                    :disabled="fileSpecificFiltersPresent"
+                  />
                   {{ $t("prompts.includeFolders") }}
                </label>
             </div>
@@ -75,7 +79,6 @@
                   <option value="created_at">{{ $t("prompts.orderByCreatedAt") }}</option>
                   <option value="size">{{ $t("prompts.orderBySize") }}</option>
                   <option value="name">{{ $t("prompts.orderByName") }}</option>
-                  <option value="name">{{ $t("prompts.duration") }}</option>
                </select>
             </div>
             <div class="checkbox-group">
@@ -223,18 +226,18 @@
                      </select>
                      <div class="range-inputs">
                         <input
-                          v-if="range.mode !== 'after'"
-                          v-model.number="range.to"
-                          class="input"
-                          type="number"
-                          :placeholder="placeholderTo"
-                        />
-                        <input
                           v-if="range.mode !== 'before'"
                           v-model.number="range.from"
                           class="input"
                           type="number"
                           :placeholder="placeholderFrom"
+                        />
+                        <input
+                          v-if="range.mode !== 'after'"
+                          v-model.number="range.to"
+                          class="input"
+                          type="number"
+                          :placeholder="placeholderTo"
                         />
                      </div>
                   </div>
@@ -246,14 +249,14 @@
                      </select>
                      <div class="range-inputs">
                         <input
-                          v-if="range.mode !== 'after'"
-                          v-model="range.to"
+                          v-if="range.mode !== 'before'"
+                          v-model="range.from"
                           class="input"
                           type="date"
                         />
                         <input
-                          v-if="range.mode !== 'before'"
-                          v-model="range.from"
+                          v-if="range.mode !== 'after'"
+                          v-model="range.to"
                           class="input"
                           type="date"
                         />
@@ -325,10 +328,11 @@ export default {
             { label: "Name", value: "name", type: "string" },
             { label: "Extension", value: "extension", type: "string" },
             { label: "Size", value: "size", type: "number" },
-            { label: "Duration", value: "duration", type: "number" },
             { label: "Created At", value: "created_at", type: "date" },
             { label: "Last Modified At", value: "last_modified_at", type: "date" }
-         ]
+         ],
+
+         previousIncludeFolders: null
       }
    },
 
@@ -396,6 +400,17 @@ export default {
          return false
       },
 
+      fileSpecificFiltersPresent() {
+         if (this.selectedExtensions.length > 0) return true
+         if (this.selectedTags.length > 0) return true
+         if (this.fileType !== "All") return true
+         if (this.property && this.isFilterComplete) {
+            const fileOnlyFields = ["size", "duration", "extension"]
+            if (fileOnlyFields.includes(this.property)) return true
+         }
+         return false
+      },
+
       placeholderFrom() {
          if (this.range.mode === "between") return this.$t("prompts.min")
          if (this.range.mode === "after")   return this.$t("prompts.greaterThan")
@@ -416,7 +431,25 @@ export default {
             const typeOfExt = (this.config.extensions || {})[ext]
             return typeOfExt === newType
          })
-         this.searchExtensions()
+      },
+
+      // Disable folders when file‑specific filters appear, re‑enable when cleared
+      fileSpecificFiltersPresent: {
+         handler(newVal, oldVal) {
+            if (newVal && !oldVal) {
+               if (this.previousIncludeFolders === null) {
+                  this.previousIncludeFolders = this.includeFolders
+               }
+               if (this.includeFolders) {
+                  this.includeFolders = false
+                  this.$toast.warning(this.$t("toasts.foldersDisabledFileFilters"))
+               }
+            } else if (!newVal && oldVal && this.previousIncludeFolders !== null) {
+               this.includeFolders = this.previousIncludeFolders
+               this.previousIncludeFolders = null
+            }
+         },
+         immediate: false
       }
    },
 
@@ -458,6 +491,8 @@ export default {
             this.property = ""
             this.range = { from: null, to: null, value: null, mode: "between" }
          }
+
+         this.previousIncludeFolders = null
       },
 
       clearSuggestions(field) {
@@ -507,6 +542,7 @@ export default {
       clearAll() {
          this.resetSearchFilters()
          this.initState()
+         this.$toast.success(this.$t("toasts.filtersCleared"))
       },
 
       async searchFolders(type) {

@@ -75,7 +75,7 @@ class Min(Check):
         if not self.is_number_type(value):
             return False
 
-        return value <= self.min_value
+        return value >= self.min_value
 
 class RequireLength(Check):
     def __init__(self, length: int | float):
