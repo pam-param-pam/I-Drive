@@ -1,4 +1,5 @@
 import * as zip from "https://cdn.jsdelivr.net/npm/@zip.js/zip.js/+esm"
+import { detectExtension } from "@/utils/common.js"
 
 export function getFileType(fileName) {
    if (!fileName) return "Other"
@@ -112,6 +113,7 @@ function flatten(node, parentPath, url) {
          name: item.name,
          isDir: item.isDir,
          type: getFileType(item.name),
+         extension: detectExtension(item.name),
          size: entry?.uncompressedSize || 0,
          parent_id: parentPath || null,
          rawEntry: entry,

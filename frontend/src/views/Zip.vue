@@ -30,7 +30,7 @@ import { mapActions, mapState } from "pinia"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
-import { decodePath, encodePath, humanTime } from "../utils/common.js"
+import { decodePath, encodePath, humanTime, resolveItemAction } from "../utils/common.js"
 import { getItems } from "@/api/folder.js"
 
 export default {
@@ -210,17 +210,21 @@ export default {
       // NAVIGATION
       // -------------------------
       getNewRoute(item) {
-         if (item.isDir) {
-            return {
-               name: "Zip",
-               params: { ...this.$route.params, path: encodePath(item.id)}
-            }
-         } else {
-            return {
-               name: "ZipPreview",
-               params: { ...this.$route.params, fileId: encodePath(item.id) }
-            }
+         const action = resolveItemAction(item)
+         switch (action) {
+            case "dir":
+               return {
+                  name: "Zip",
+                  params: { ...this.$route.params, path: encodePath(item.id)}
+               }
+            case "zip":
+            case "preview":
+               return {
+                  name: "ZipPreview",
+                  params: { ...this.$route.params, fileId: encodePath(item.id) }
+               }
          }
+
       },
 
       onOpen(item) {

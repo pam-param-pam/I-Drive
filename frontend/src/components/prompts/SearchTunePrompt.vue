@@ -112,7 +112,7 @@
                   <input
                     v-model="tagQueryInclude"
                     class="input input--block"
-                    placeholder="Search tags..."
+                    :placeholder="$t('prompts.searchTags')"
                     @input="searchTags"
                     @focus="searchTags"
                     @blur="clearSuggestions('tagSuggestionsInclude')"
@@ -151,7 +151,7 @@
                   <input
                     v-model="folderQueryLimit"
                     class="input input--block"
-                    placeholder="Search folders..."
+                    :placeholder="$t('prompts.searchFolders')"
                     @input="searchFolders('limit')"
                     @focus="searchFolders('limit')"
                     @blur="clearSuggestions('folderSuggestionsLimit')"
@@ -188,7 +188,7 @@
                   <input
                     v-model="folderQueryExclude"
                     class="input input--block"
-                    placeholder="Search folders..."
+                    :placeholder="$t('prompts.searchFolders')"
                     @input="searchFolders('exclude')"
                     @focus="searchFolders('exclude')"
                     @blur="clearSuggestions('folderSuggestionsExclude')"

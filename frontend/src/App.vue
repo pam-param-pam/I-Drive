@@ -34,4 +34,8 @@ body.enable-scroll,
 #app.enable-scroll {
   overflow: auto !important;
 }
+
+.Vue-Toastification__toast--warning.vt-custom {
+   background-color: #ff6600;
+}
 </style>

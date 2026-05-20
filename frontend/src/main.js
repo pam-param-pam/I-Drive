@@ -48,7 +48,9 @@ const options = {
    position: "bottom-right",
    timeout: 2500,
    newestOnTop: true,
-   filterBeforeCreate: filterBeforeCreate
+   filterBeforeCreate: filterBeforeCreate,
+   toastClassName: 'vt-custom',
+   bodyClassName: ['vt-custom'],
 
 }
 app.use(Toast, options)

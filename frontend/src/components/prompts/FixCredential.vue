@@ -26,7 +26,7 @@
             </p>
 
             <p v-if="credential.discord_error_code">
-               <strong>{{ $t("prompts.discord_error_code") }}:</strong>
+               <strong>{{ $t("prompts.discordErrorCode") }}:</strong>
                {{ credential.discord_error_code }}
             </p>
 

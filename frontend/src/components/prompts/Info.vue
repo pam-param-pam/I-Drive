@@ -150,6 +150,7 @@
                </div>
 
                <select v-model="currentTrack" class="input input--block styled-select">
+                  <option :value="null">{{ $t("prompts.selectTrack") }}</option>
                   <option v-for="track in metadata.tracks" :key="track.number" :value="track">
                      {{ track.number }} - {{ track.type }} {{ $t("prompts.track") }}
                   </option>
@@ -514,4 +515,5 @@ export default {
   color: #d31010;
   margin-left: 5px;
 }
+
 </style>
