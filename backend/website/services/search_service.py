@@ -4,7 +4,6 @@ from typing import Optional
 
 from django.core.exceptions import BadRequest
 from django.db.models.query_utils import Q
-from django.http import JsonResponse
 
 from ..core.Serializers import FileSerializer, FolderSerializer
 from ..core.errors import BadRequestError
@@ -12,7 +11,6 @@ from ..core.helpers import validate_key, validate_ids_as_list
 from ..core.validators.GeneralChecks import Min, Max, MaxLength
 from ..models import File, Folder
 from ..models.mixin_models import ItemState
-from ..queries.builders import calculate_size
 
 def validate_filter(f: Optional[dict]) -> Optional[dict]:
     ALLOWED_OPS = {
@@ -142,7 +140,7 @@ def validate_search_request(data: dict) -> dict:
     out["password"] = validate_key(data, "password", str, required=False)
 
     # -----------------------------
-    # CROSS-FIELD RULES (CRITICAL)
+    # CROSS-FIELD RULES
     # -----------------------------
 
     # Disable folders if file-specific filters present
@@ -160,16 +158,17 @@ def validate_search_request(data: dict) -> dict:
 
     return out
 
-def build_lock_q(lock_from, password):
-    if lock_from and password:
-        # access to specific locked subtree
-        return (
-            Q(lockFrom__isnull=True) |
-            Q(lockFrom=lock_from, password=password)
+def get_subtree_q(folder_ids):
+    folders = Folder.objects.filter(id__in=folder_ids).only("lft", "rght", "tree_id")
+
+    q = Q()
+    for f in folders:
+        q |= Q(
+            tree_id=f.tree_id,
+            lft__gte=f.lft,
+            rght__lte=f.rght
         )
-    else:
-        # no access to locked content
-        return Q(lockFrom__isnull=True)
+    return q
 
 def file_lock_q(lock_from, password):
     if lock_from and password:
@@ -328,7 +327,7 @@ def perform_search(request):
         folder_q &= Q(name__icontains=query)
 
     # ------------------------
-    # FILE filters (already validated)
+    # FILE filters
     # ------------------------
     if include_files:
         if validated["type"]:
@@ -344,12 +343,16 @@ def perform_search(request):
     # Folder scope filters
     # ------------------------
     if validated["limitToFolders"]:
-        file_q &= Q(parent__id__in=validated["limitToFolders"])
-        folder_q &= Q(id__in=validated["limitToFolders"])
+        subtree_q = get_subtree_q(validated["limitToFolders"])
+
+        folder_q &= subtree_q
+        file_q &= Q(parent__in=Folder.objects.filter(subtree_q))
 
     if validated["excludeFolders"]:
-        file_q &= ~Q(parent__id__in=validated["excludeFolders"])
-        folder_q &= ~Q(id__in=validated["excludeFolders"])
+        subtree_q = get_subtree_q(validated["excludeFolders"])
+
+        folder_q &= ~subtree_q
+        file_q &= ~Q(parent__in=Folder.objects.filter(subtree_q))
 
     # ------------------------
     # Property filter
