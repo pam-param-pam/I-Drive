@@ -360,7 +360,8 @@ def perform_search(request):
     attr_filter = build_attr_filter(validated["filter"])
 
     if attr_filter is not None:
-        file_q &= attr_filter
+        if include_files:
+            file_q &= attr_filter
 
         # folders only get safe subset
         if include_folders and validated["filter"]["field"] in {"name", "created_at", "last_modified_at"}:
@@ -374,7 +375,7 @@ def perform_search(request):
     if include_files:
         files = (
             File.objects.filter(file_q)
-            .select_related("parent", "mediaposition", "thumbnail")
+            .select_related("mediaposition", "thumbnail")
             .prefetch_related("tags")
             .order_by(f"{order_prefix}{order_by}")
             .annotate(**File.get_display_annotate())

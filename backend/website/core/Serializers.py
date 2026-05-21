@@ -66,6 +66,8 @@ class FileSerializer(AdvancedSerializer):
         file_tuple = (
             File.objects
             .filter(id=obj.id)
+            .select_related("mediaposition", "thumbnail")
+            .prefetch_related("tags")
             .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)
             .first()

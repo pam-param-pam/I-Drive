@@ -574,15 +574,22 @@ export default {
          const query = type === "limit" ? this.folderQueryLimit : this.folderQueryExclude
          const lockFrom = this.currentFolder?.lockFrom
          const password = this.getFolderPassword(lockFrom)
+         const alreadySelected = type === "limit" ? this.limitToFolders : this.excludeFolders
+
          const res = await search(
-           { query: query || "", files: false, folders: true, resultLimit: 10 },
+           {
+              query: query || "",
+              files: false,
+              folders: true,
+              resultLimit: 10,
+              excludeFolders: alreadySelected.map(x => x.id)
+           },
            lockFrom,
            password
          )
-         const alreadySelected = type === "limit" ? this.limitToFolders : this.excludeFolders
-         const filtered = res.filter(f => !alreadySelected.some(x => x.id === f.id))
-         if (type === "limit") this.folderSuggestionsLimit = filtered
-         else this.folderSuggestionsExclude = filtered
+
+         if (type === "limit") this.folderSuggestionsLimit = res
+         else this.folderSuggestionsExclude = res
       },
 
       addLimitFolder(folder) {

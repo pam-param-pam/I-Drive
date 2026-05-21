@@ -34,7 +34,8 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
         file_children = (
             folder_obj.files
             .filter(state=ItemState.ACTIVE, inTrash=False)
-            .prefetch_related("tags", "mediaposition__timestamp", "thumbnail__id")
+            .select_related("mediaposition", "thumbnail")
+            .prefetch_related("tags")
             .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)
         )
@@ -172,8 +173,13 @@ def build_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> 
 
 
 def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
-    files = list(folder_obj.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False).select_related(
-        "parent", "thumbnail").prefetch_related("tags").annotate(**File.get_display_annotate()).values(*File.DISPLAY_VALUES))
+    files = list(
+        folder_obj.files
+        .filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
+        .select_related("mediaposition", "thumbnail")
+        .prefetch_related("tags")
+        .annotate(**File.get_display_annotate()).values(*File.DISPLAY_VALUES)
+    )
 
     folders = []
     if include_folders:
