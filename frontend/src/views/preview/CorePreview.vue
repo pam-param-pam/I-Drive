@@ -322,7 +322,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["updateItem", "setLastItem", "addSelected", "showHover"]),
+      ...mapActions(useMainStore, ["updateItem", "setLastFile", "addSelected", "showHover"]),
       openEditor() {
          const itemCopy = { ...this.file }
          itemCopy.type = "Text"
@@ -336,7 +336,7 @@ export default {
          if (this.file) {
             this.onPreviewEvent({type: PreviewEvent.OPEN, payload: {}})
          }
-         this.setLastItem(this.file)
+         this.setLastFile(this.file)
          this.addSelected(this.file)
       },
       onPreviewError(error) {

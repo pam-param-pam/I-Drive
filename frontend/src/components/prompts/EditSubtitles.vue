@@ -367,19 +367,35 @@ export default {
 </script>
 
 <style scoped>
+.subtitle-manager {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.subtitle-manager .card-title {
+  flex-shrink: 0;
+}
+
+.subtitle-manager .card-content {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.subtitle-manager .card-action {
+  flex-shrink: 0;
+}
+
 .subtitle-list {
-   list-style: none;
-   max-height: 25vh;
-   overflow-y: auto;
+  list-style: none;
+  max-height: 25vh;
+  overflow-y: auto;
+  position: relative;
 }
 
 .subtitle-list:empty {
-   max-height: none;
+  max-height: none;
 }
-.subtitle-list {
-   position: relative;
-}
-
 
 .subtitle-list li {
   display: flex;
@@ -387,7 +403,6 @@ export default {
   justify-content: space-between;
   margin: 0.5em 0;
 }
-
 
 .input-group.input {
   background: transparent;
@@ -422,7 +437,6 @@ export default {
   height: 25px;
 }
 
-
 .advanced-settings input,
 .advanced-settings select {
   margin-top: 0.5em;
@@ -439,14 +453,6 @@ export default {
 .subtitle-lang {
   color: var(--textSecondary);
   padding-left: 0.5em;
-}
-
-.subtitle-list li {
-  display: flex;
-  align-items: center;
-}
-
-.subtitle-lang {
   margin-right: auto;
 }
 

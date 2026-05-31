@@ -41,9 +41,7 @@ def build_binary_response(content: bytes, filename: str, content_type: str, inli
     name_ascii, name_encoded = get_content_disposition_string(filename)
     disposition = "inline" if inline else "attachment"
 
-    response["Content-Disposition"] = (
-        f'{disposition}; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
-    )
+    response["Content-Disposition"] = f'{disposition}; filename="{name_ascii}"; filename*=UTF-8\'\'{name_encoded}'
 
     if cache_control:
         response["Cache-Control"] = cache_control

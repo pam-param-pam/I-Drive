@@ -17,7 +17,7 @@ from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPassw
 from ..auth.utils import check_resource_perms
 from ..constants import cache, SIGNED_URL_EXPIRY_SECONDS
 from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
-    RawMetadataSerializer, PhotoMetadataSerializer
+    RawMetadataSerializer, PhotoMetadataSerializer, MediaPositionSerializer
 from ..core.crypto.signer import sign_resource
 from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
 from ..core.errors import ResourceNotFoundError, ResourcePermissionError
@@ -34,7 +34,7 @@ from ..services import cache_service, search_service
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
-@check_resource_permissions(default_checks - CheckTrash, resource_key="folder_obj")
+@check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_folder_info(request, folder_obj: Folder):
     # todo optimize this
     key = cache_service.get_folder_content_key(folder_obj.id)
@@ -245,6 +245,14 @@ def get_tags(request, file_obj: File):
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
+def get_media_position(request, file_obj: File):
+    return JsonResponse(MediaPositionSerializer.serialize_object(file_obj.mediaposition), safe=False)
+
+@api_view(['GET'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
     return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
@@ -265,8 +273,6 @@ def get_all_tags(request):
 @extract_item()
 @check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="item_obj")
 def ultra_download_metadata(request, item_obj):
-    check_if_bots_exists(request.user)
-
     if isinstance(item_obj, File):
         files = [item_obj]
         base_folder = item_obj.parent
@@ -424,17 +430,25 @@ def check_message_id(request, message_id):
 
 
 @api_view(['GET'])
-@throttle_classes([FolderPasswordThrottle])
+@throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_folder_hash(request, folder_obj: Folder):
-    subfolders = folder_obj.get_all_subfolders()
-
-    files = File.objects.filter(parent__in=subfolders).only("name", "crc")
+    print(f"get_folder_hash called for folder: {folder_obj}")
+    subfolders = folder_obj.get_all_subfolders(include_self=True).filter(inTrash=False)
+    files = File.objects.filter(parent__in=subfolders, inTrash=False).distinct().only("name", "crc")
     folders = subfolders.only("name")
 
     hasher = hashlib.sha256()
+
+    print("REMOTE FILES:")
+    for f in files.order_by("name"):
+        print(f"{f.name} | {f.crc}")
+
+    print("REMOTE DIRS:")
+    for d in folders.order_by("name"):
+        print(d.name)
 
     for f in files.order_by("name"):
         hasher.update(f.name.encode("utf-8"))

@@ -202,17 +202,20 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
     send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
 
 
-def create_or_edit_thumbnail(user: User, file_obj: File, data: dict) -> None:
-    check_if_bots_exists(user)
-
+def delete_thumbnail(file_obj, must_exist=False):
     if file_obj.state != ItemState.ACTIVE:
-        raise BadRequestError("Item not ready")
+        raise BadRequestError("Item not active")
+
+    check_if_bots_exists(file_obj.owner)
 
     try:
-        delete_single_discord_attachment(user, file_obj.thumbnail)
-    except Thumbnail.DoesNotExist:
-        pass
+        delete_single_discord_attachment(file_obj.owner, file_obj.thumbnail)
+    except Thumbnail.DoesNotExist as e:
+        if must_exist:
+            raise e
 
+def create_or_edit_thumbnail(user: User, file_obj: File, data: dict) -> None:
+    delete_thumbnail(file_obj)
     file_service.create_thumbnail(file_obj, data)
     file_obj.remove_cache()
 

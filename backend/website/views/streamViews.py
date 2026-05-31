@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 
-from ..auth.Permissions import CheckLockedFolderIP
+from ..auth.Permissions import CheckLockedFolderIP, CheckTrash
 from ..auth.throttle import MediaThrottle, NonCacheMediaThrottle
 from ..core.decorators import extract_file_from_signed_url, no_gzip, check_resource_permissions
 from ..core.errors import ResourceNotFoundError
@@ -22,7 +22,7 @@ def serve_thumbnail(request, file_obj: File, thumbnail_id):
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
 @extract_file_from_signed_url
-@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
+@check_resource_permissions([CheckLockedFolderIP, CheckTrash], resource_key="file_obj")
 def serve_subtitle(request, file_obj: File, subtitle_id):
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
     return get_subtitle_response(request, file_obj, subtitle)
@@ -32,7 +32,7 @@ def serve_subtitle(request, file_obj: File, subtitle_id):
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
 @extract_file_from_signed_url
-@check_resource_permissions([CheckLockedFolderIP], resource_key="file_obj")
+@check_resource_permissions([CheckLockedFolderIP, CheckTrash], resource_key="file_obj")
 def serve_moment(request, file_obj: File, moment_id):
     moment = Moment.objects.get(file=file_obj, id=moment_id)
     return get_moment_response(request, file_obj, moment)

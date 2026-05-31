@@ -17,8 +17,8 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata, PhotoMetadata
-from .models.other_models import Notification
-from .services import folder_service, file_service, delete_service
+from .models.other_models import Notification, RawExtractionClaim
+from .services import folder_service, file_service, delete_service, create_file_service
 
 admin.site.register(PerDeviceToken)
 
@@ -32,6 +32,7 @@ admin.site.register(SubtitleTrack)
 
 admin.site.register(MediaPosition)
 
+admin.site.register(RawExtractionClaim)
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
@@ -41,6 +42,9 @@ class FragmentAdmin(SimpleHistoryAdmin):
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
     search_fields = ["file__name", 'file__owner__username', "message_id"]
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.with_tags()
     @easy.smart(short_description="Open fragment by sequence", allow_tags=True)
@@ -104,6 +108,9 @@ class FolderAdmin(SimpleHistoryAdmin):
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock', 'force_ready']
     search_fields = ["id", "name"]
 
+    def has_add_permission(self, request):
+        return False
+
     @easy.smart(short_description="Is locked", admin_order_field="password", boolean=True)
     def is_locked(self, obj: File):
         return obj._is_locked()
@@ -147,13 +154,17 @@ class FolderAdmin(SimpleHistoryAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'inTrashSince', 'state', 'is_locked', 'created_at', 'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag")
+    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'inTrashSince', 'state', 'is_locked', 'created_at',
+                       'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag", "iv_hex", "key_hex")
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
                     'inTrash', 'is_locked']
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'force_ready']
     search_fields = ['name', 'id', 'type', 'owner__username']
     filter_horizontal = ('tags',)
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.smart(short_description="Locked", admin_order_field="parent__password", boolean=True)
     def is_locked(self, obj: File):
@@ -170,6 +181,14 @@ class FileAdmin(SimpleHistoryAdmin):
     @easy.smart(short_description="Encryption IV (base64)")
     def formatted_iv(self, obj: File):
         return obj.get_base64_iv()
+
+    @easy.smart(short_description="Encryption key (HEX)")
+    def key_hex(self, obj: File):
+        return obj.key.hex()
+
+    @easy.smart(short_description="Encryption IV (HEX)")
+    def iv_hex(self, obj: File):
+        return obj.iv.hex()
 
     @easy.smart(short_description="Encryption method")
     def formatted_encryption_method(self, obj: File):
@@ -259,6 +278,20 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
     list_display = ['file_name', 'owner', 'readable_size', 'created_at']
     readonly_fields = ['created_at', 'channel', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'object_id', 'content_type']
 
+    def delete_queryset(self, request, queryset: QuerySet[Thumbnail]):
+        for thumb in queryset:
+            create_file_service.delete_thumbnail(thumb.file)
+
+    def delete_model(self, request, obj: Union[Thumbnail, List[Thumbnail]]):
+        if isinstance(obj, Thumbnail):
+            create_file_service.delete_thumbnail(obj.file)
+        else:
+            for thumb in obj:
+                create_file_service.delete_thumbnail(thumb.file)
+
+    def has_add_permission(self, request):
+        return False
+
     @easy.smart(short_description="File name", admin_order_field="file__name")
     def file_name(self, obj: Thumbnail):
         return obj.file.name
@@ -289,6 +322,9 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 class ShareableLinkAdmin(admin.ModelAdmin):
     list_display = ('token', 'resource_link', 'content_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
     readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner', 'is_expired')
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.with_tags()
     @easy.smart(short_description="Resource")
@@ -323,6 +359,9 @@ class UserZIPAdmin(admin.ModelAdmin):
     filter_horizontal = ("files", "folders")
     ordering = ["-created_at"]
 
+    def has_add_permission(self, request):
+        return False
+
     @easy.smart(short_description="Owner", admin_order_field="owner__username")
     def owner_name(self, obj: UserZIP):
         return obj.owner.username
@@ -333,6 +372,9 @@ class TagAdmin(SimpleHistoryAdmin):
     list_display = ['name', 'owner', 'amount_of_files']
     search_fields = ('name',)
     readonly_fields = ('id', 'file_list', 'created_at')
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.with_tags()
     @easy.smart(short_description="Files", allow_tags=True)
@@ -358,6 +400,9 @@ class ChannelAdmin(admin.ModelAdmin):
     search_fields = ('discord_id', 'name')
     list_display = ['name', 'discord_id', 'guild_id', 'created_at']
 
+    def has_add_permission(self, request):
+        return False
+
     def get_readonly_fields(self, request, obj=None):
         if obj:
             return 'discord_id', 'guild_id', 'owner'
@@ -368,6 +413,9 @@ class WebhookAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
 
+    def has_add_permission(self, request):
+        return False
+
     def get_readonly_fields(self, request, obj=None):
         if obj:
             return 'url', 'owner', 'discord_id', 'guild_id', 'channel'
@@ -377,6 +425,9 @@ class WebhookAdmin(admin.ModelAdmin):
 class BotAdmin(admin.ModelAdmin):
     search_fields = ('name', 'discord_id')
     list_display = ['name', 'owner', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -389,6 +440,9 @@ class MomentAdmin(admin.ModelAdmin):
     list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
     readonly_fields = ('channel', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
     exclude = ['size', 'timestamp']
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.with_tags()
     @easy.smart(short_description="Preview", allow_tags=True)
@@ -422,6 +476,9 @@ class VideoMetadataAdmin(admin.ModelAdmin):
     readonly_fields = ('file', 'is_progressive', 'is_fragmented', 'has_moov', 'has_IOD', 'brands', 'mime')
     list_display = ['file', 'owner', 'created_at']
 
+    def has_add_permission(self, request):
+        return False
+
     @easy.smart(short_description="Owner")
     def owner(self, obj: RawMetadata):
         return obj.file.owner
@@ -432,6 +489,9 @@ class RawMetadataAdmin(admin.ModelAdmin):
     list_display = ['file', 'owner', 'created_at', 'failed_to_process']
     readonly_fields = ('file', 'camera', 'camera_owner', 'iso', 'shutter', 'aperture', 'focal_length')
 
+    def has_add_permission(self, request):
+        return False
+
     @easy.smart(short_description="Owner")
     def owner(self, obj: RawMetadata):
         return obj.file.owner
@@ -440,6 +500,9 @@ class RawMetadataAdmin(admin.ModelAdmin):
 class PhotoMetadataAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__id')
     list_display = ['file', 'owner', 'created_at']
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.smart(short_description="Owner")
     def owner(self, obj: RawMetadata):
@@ -453,6 +516,9 @@ class SubtitleAdmin(admin.ModelAdmin):
     list_display = ['file_name', 'language', 'owner', 'readable_size']
     readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
     exclude = ['size']
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.with_tags()
     @easy.smart(short_description="Subtitle Preview", allow_tags=True)
@@ -495,6 +561,9 @@ class ShareAccessAdmin(admin.ModelAdmin):
     list_display = ['share', 'readable_accessed_by', 'ip', 'user_agent']
     exclude = ['accessed_by']
 
+    def has_add_permission(self, request):
+        return False
+
     @easy.smart(short_description="Accessed by")
     def readable_accessed_by(self, obj: ShareAccess):
         return obj.accessed_by.username if obj.accessed_by else "Unknown (Anonymous)"
@@ -505,6 +574,9 @@ class ShareAccessEventAdmin(admin.ModelAdmin):
     ordering = ["-timestamp"]
     search_fields = ('event_type', 'metadata')
     list_display = ('readable_accessed_by', 'event_type', 'ip', 'user_agent', 'timestamp')
+
+    def has_add_permission(self, request):
+        return False
 
     @easy.smart(short_description="Accessed by")
     def readable_accessed_by(self, obj: ShareAccessEvent):
@@ -523,6 +595,9 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ['owner', 'type', 'title', 'message', 'is_read', 'is_deleted']
     actions = ['mark_as_read', 'mark_as_unread']
 
+    def has_add_permission(self, request):
+        return False
+
     def mark_as_read(self, request, queryset: QuerySet[Notification]):
         for notif in queryset:
             notif.mark_as_read()
@@ -537,6 +612,9 @@ class DeletionFileWorkItemAdmin(admin.ModelAdmin):
     list_display = ['file_id', 'state', 'job_id', 'claimed_at']
     actions = ['reset_attempts_to_1']
 
+    def has_add_permission(self, request):
+        return False
+
     def reset_attempts_to_1(self, request, queryset):
         updated = queryset.update(attempts=1)
         self.message_user(request, f"{updated} items updated")
@@ -546,6 +624,9 @@ class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
     list_display = ['folder_id', 'state', 'job_id', 'claimed_at']
     actions = ['reset_attempts_to_1']
 
+    def has_add_permission(self, request):
+        return False
+
     def reset_attempts_to_1(self, request, queryset):
         updated = queryset.update(attempts=1)
         self.message_user(request, f"{updated} items updated")
@@ -554,3 +635,6 @@ class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
 class DeletionJobAdmin(admin.ModelAdmin):
     ordering = ["-started_at"]
     list_display = ['state', 'started_at', 'heartbeat_at', 'last_progress_percentage']
+
+    def has_add_permission(self, request):
+        return False

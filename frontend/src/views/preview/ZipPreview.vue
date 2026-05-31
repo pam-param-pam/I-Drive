@@ -45,7 +45,7 @@ export default {
       }
    },
    methods: {
-      ...mapActions(useMainStore, ["addSelected", "setLastItem"]),
+      ...mapActions(useMainStore, ["addSelected"]),
       onClose() {
          this.$router.replace({ name: "Zip", params: { ...this.$route.params } })
       }

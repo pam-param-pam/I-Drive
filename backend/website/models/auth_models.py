@@ -111,7 +111,7 @@ class PerDeviceToken(models.Model):
         return self.expires_at is not None and timezone.now() >= self.expires_at
 
     def check_token(self, raw_token: str) -> bool:
-        hashed = hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
+        hashed = hashlib.sha256(raw_token.encode()).hexdigest()
         # constant-time comparison
         return hmac.compare_digest(hashed, self.token_hash)
 

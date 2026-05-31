@@ -161,13 +161,13 @@ class VideoMetadata(models.Model):
 class RawMetadata(models.Model):
     file = models.OneToOneField("File", on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)
-    failed_to_process = models.BooleanField(default=False)
     camera = models.CharField(max_length=50)
     camera_owner = models.CharField(max_length=50)
     iso = models.CharField(max_length=50)
     shutter = models.CharField(max_length=50)
     aperture = models.CharField(max_length=50)
     focal_length = models.CharField(max_length=50)
+    failed_to_process = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Raw metadata for {self.file}"

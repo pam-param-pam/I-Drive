@@ -95,7 +95,7 @@ export default {
          this.worker.terminate()
          this.worker = null
       }
-      this.setLastItem(this.file)
+      this.setLastFile(this.file)
    },
 
    watch: {
@@ -107,7 +107,7 @@ export default {
    methods: {
       humanTime,
 
-      ...mapActions(useMainStore, ["setDisabledCreation", "setItems", "setSearchItems", "setCurrentFolderData", "setItemsLoading", "setItemsError", "setLastItem"]),
+      ...mapActions(useMainStore, ["setDisabledCreation", "setItems", "setSearchItems", "setCurrentFolderData", "setItemsLoading", "setItemsError", "setLastFile"]),
 
       // -------------------------
       // INIT
@@ -139,7 +139,7 @@ export default {
             this.file = this.items.find(f => f.id === this.zipFileId)
 
             this.realFolderList.push({name: this.file?.name, id: this.file.parent_id})
-            this.setLastItem(this.file)
+            this.setLastFile(this.file)
 
             await this.sendWorker("init", {url: this.file.download_url, extensions: {...this.config.extensions}})
 

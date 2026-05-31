@@ -375,8 +375,6 @@ def perform_search(request):
     if include_files:
         files = (
             File.objects.filter(file_q)
-            .select_related("mediaposition", "thumbnail")
-            .prefetch_related("tags")
             .order_by(f"{order_prefix}{order_by}")
             .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)[:result_limit]

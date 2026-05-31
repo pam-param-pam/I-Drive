@@ -131,10 +131,13 @@ input[type="file"] {
   transition: background-color 0.2s ease, border 0.2s ease;
   border: 2px dashed transparent;
   margin-top: 2em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .file-input-wrapper.drag-over .file-label {
   background-color: rgba(128, 128, 128, 0.1);
-  border-color: var(--accent, #4da3ff);
+  border-color: var(--dark-blue);
 }
 </style>

@@ -35,7 +35,7 @@ const filterBeforeCreate = (toast, toasts) => {
 
    for (let i = 0; i < toasts.length; i++) {
       if (toast.content === toasts[i].content) {
-         toasts[i].timeout = 500
+         toasts[i].timeout = 250
       }
    }
    return toast

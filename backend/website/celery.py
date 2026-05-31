@@ -24,7 +24,7 @@ def setup_periodic_tasks(sender, **kwargs):
 
     # Executes every 5 minutes.
     sender.add_periodic_task(
-        timedelta(minutes=5),
+        timedelta(minutes=1),
         generate_raw_image_thumbnails.s(),
     )
 

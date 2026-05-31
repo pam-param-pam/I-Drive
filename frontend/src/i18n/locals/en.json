@@ -234,6 +234,7 @@
     "enterNewFolderPassword": "Enter new password",
     "enterOldFolderPassword": "Enter old password",
     "enterSharePassword": "This share requires a password. Please enter it to unlock: ",
+    "enterTagName": "Enter tag name",
     "error": "Something went wrong",
     "excludeFolders": "Excluded Folders",
     "existingSubtitles": "Subtitles",

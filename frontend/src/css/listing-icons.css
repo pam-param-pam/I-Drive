@@ -6,10 +6,6 @@
   content: 'volume_up'
 }
 
-.file-icons [data-type=Blob] i::before {
-  content: 'insert_drive_file'
-}
-
 .file-icons [data-type=Image] i::before {
   content: 'image'
 }
@@ -54,7 +50,6 @@
   content: "settings_applications";
 }
 
-.file-icons [aria-label$=".cr2" i] i::before,
 .file-icons [aria-label$=".cr3" i] i::before,
 .file-icons [data-type="Raw image"] i::before {
   content: 'camera'
@@ -207,7 +202,7 @@
 }
 
 .file-icons [data-type=Audio] i {
-  color: var(--icon-yellow)
+  color: var(--icon-orange)
 }
 
 .file-icons [data-type=Image] i {
@@ -310,7 +305,3 @@
 .file-icons [data-dir=true] i::before {
   content: 'folder'
 }
-
-/*.file-icons [aria-selected=true] i { color: var(--item-selected) }*/
-
-

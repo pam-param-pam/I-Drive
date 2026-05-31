@@ -16,6 +16,5 @@ class ByteSource(ABC):
 
     def check_byte_range(self, byte_range: ByteRange) -> None:
         size = self.size()
-
-        if byte_range.end >= size:
+        if byte_range.end > size:
             raise RangeNotSatisfiable("Range end beyond file size")

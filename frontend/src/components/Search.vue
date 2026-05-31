@@ -59,12 +59,11 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["showHover", "resetSelected", "setSearchActive", "setItemsError", "setSearchItems",
-         "setLastItem", "setLastFolder"]),
+      ...mapActions(useMainStore, ["showHover", "resetSelected", "setSearchActive", "setItemsError", "setSearchItems", "setLastFile", "setLastFolder"]),
 
       search: throttle(async function(override) {
          if (!this.query && !override) return
-         this.setLastItem(null)
+         this.setLastFile(null)
          this.setLastFolder(null)
          
          //copying to not mutate vuex store state

@@ -87,7 +87,7 @@ def get_file_response(request, file_obj: File):
     referer = request.headers.get('Referer')
 
     fragments = file_obj.fragments.all().order_by("sequence")
-    user = file_obj.owner
+    user = file_obj.owner # without this call it will break cuz lol
 
     check_if_bots_exists(user)
 

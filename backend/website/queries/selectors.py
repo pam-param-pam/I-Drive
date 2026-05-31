@@ -145,8 +145,6 @@ def get_item_inside_share(share: ShareableLink):
 
 def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
     files = (File.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE)
-        .select_related("mediaposition", "thumbnail")
-        .prefetch_related("tags")
         .annotate(**File.get_display_annotate())
         .values_list(*File.DISPLAY_VALUES)
     )

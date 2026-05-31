@@ -102,3 +102,24 @@ class FragmentedDiscordByteSource(ByteSource):
             tail = decryptor.finalize()
             if tail:
                 yield tail
+
+class EncryptedFragmentedDiscordByteSource(FragmentedDiscordByteSource):
+
+    async def read(self, byte_range: ByteRange, chunk_size: int = 128 * 1024):
+        mappings = self.map_range(byte_range)
+
+        async with aiohttp.ClientSession() as session:
+            for mapping in mappings:
+                fragment = mapping.fragment
+
+                auto_prefetch(fragment.id)
+
+                url = await sync_to_async(discord.get_attachment_url)(self.file_obj.owner, fragment)
+
+                headers = {"Range": f"bytes={mapping.local_start}-{mapping.local_end}"}
+
+                async with session.get(url, headers=headers) as response:
+                    response.raise_for_status()
+
+                    async for raw_chunk in response.content.iter_chunked(chunk_size):
+                        yield raw_chunk

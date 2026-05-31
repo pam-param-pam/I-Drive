@@ -103,7 +103,7 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
-        "parent__id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata"
+        "parent_id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata"
     )
 
     @classmethod
@@ -206,9 +206,13 @@ class File(models.Model):
         return EncryptionMethod(self.encryption_method)
 
     def get_base64_key(self):
+        if not self.key:
+            return None
         return base64.b64encode(self.key).decode()
 
     def get_base64_iv(self):
+        if not self.iv:
+            return None
         return base64.b64encode(self.iv).decode()
 
     def is_encrypted(self):
@@ -229,6 +233,9 @@ class File(models.Model):
         if (self.parent.files.count() + self.parent.subfolders.count() + 1) > MAX_FILES_IN_FOLDER:
             raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
 
+    def _check_unique_name(self):
+        # todo make a constraint
+        pass
 
 class Fragment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)

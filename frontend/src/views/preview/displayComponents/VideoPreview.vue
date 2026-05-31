@@ -80,9 +80,6 @@ export default {
             this.videoRef.textTracks.addEventListener("change", this.onSubtitleChanged)
          }
       }
-      console.log(this.videoRef.subtitleTracks)
-      console.log(this.videoRef.audioTracks)
-
       window.addEventListener("fullscreenchange", this.fullscreenChange)
    },
 

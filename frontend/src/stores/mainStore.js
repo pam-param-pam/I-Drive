@@ -25,7 +25,8 @@ export const useMainStore = defineStore("main", {
       prompts: [],
       disabledCreation: false,
       folderPasswords: {},
-      lastItem: null,
+      locateItem: null,
+      lastFile: null,
       lastFolder: null,
       searchActive: false,
       searchItems: [],
@@ -224,8 +225,11 @@ export const useMainStore = defineStore("main", {
       setConfig(value) {
          this.config = value
       },
-      setLastItem(value) {
-         this.lastItem = value
+      setLocateItem(value) {
+         this.locateItem = value
+      },
+      setLastFile(value) {
+         this.lastFile = value
       },
       setLastFolder(value) {
          this.lastFolder = value

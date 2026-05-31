@@ -9,22 +9,26 @@ from ...constants import EncryptionMethod
 
 
 class StreamCipherBase:
-    def __init__(self, method: EncryptionMethod, key, iv=None, start_byte=0):
+    def __init__(self, method: EncryptionMethod, key, iv, start_byte=0):
         self.method = method
         self.key = key
+
+        # IV / nonce base:
+        # - AES-CTR: full counter block (16 bytes)
+        # - ChaCha20: 12-byte nonce (counter added separately)
         self.iv = iv
-        self.start_byte = start_byte
+        self._start_byte = start_byte
 
         self._ctx = None
 
         if self.method == EncryptionMethod.AES_CTR:
-            counter_offset = self._increment_iv(self.start_byte)
-            cipher = Cipher(algorithms.AES(self.key), modes.CTR(self.iv), backend=default_backend())
+            new_iv, counter_offset = self._increment_iv(self._start_byte)
+            cipher = Cipher(algorithms.AES(self.key), modes.CTR(new_iv), backend=default_backend())
             self._ctx = self._create_ctx(cipher)
             self._discard_initial_bytes(counter_offset)
 
         elif self.method == EncryptionMethod.CHA_CHA_20:
-            nonce, counter_offset = self._calculate_nonce(self.start_byte)
+            nonce, counter_offset = self._calculate_nonce(self._start_byte)
             cipher = Cipher(algorithms.ChaCha20(key=self.key, nonce=nonce), mode=None, backend=default_backend())
             self._ctx = self._create_ctx(cipher)
             self._discard_initial_bytes(counter_offset)
@@ -39,14 +43,21 @@ class StreamCipherBase:
         raise NotImplementedError
 
     def _increment_iv(self, bytes_to_skip):
+        if self.method != EncryptionMethod.AES_CTR:
+            raise ValueError("Wrong method")
+
         blocks_to_skip = bytes_to_skip // 16
         counter_offset = bytes_to_skip % 16
+
         counter_int = int.from_bytes(self.iv)
-        counter_int += blocks_to_skip
-        self.iv = counter_int.to_bytes(len(self.iv))
-        return counter_offset
+        new_counter = counter_int + blocks_to_skip
+
+        return new_counter.to_bytes(len(self.iv)), counter_offset
 
     def _calculate_nonce(self, bytes_to_skip: int):
+        if self.method != EncryptionMethod.CHA_CHA_20:
+            raise ValueError("Wrong method")
+
         blocks_to_skip = bytes_to_skip // 64
         counter_offset = bytes_to_skip % 64
         counter_prefix = blocks_to_skip.to_bytes(4, "little")

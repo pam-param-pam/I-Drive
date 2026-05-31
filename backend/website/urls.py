@@ -10,13 +10,13 @@ from .views.authViews import login_per_device_view, logout_per_device_view, regi
     cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_usage, search, \
     get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_folder_file_stats, \
-    check_message_id, get_folder_hash, get_all_tags
+    check_message_id, get_folder_hash, get_all_tags, get_media_position
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, create_zip_model_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle
-from .views.testViews import get_discord_state
+from .views.testViews import get_discord_state, stream_file_test
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, create_channel_and_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
@@ -70,7 +70,8 @@ urlpatterns = [
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
     path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail_view, name="create a thumbnail"),
-    path("files/<file_id>/media-position", ["PUT"], update_media_position_view, name="update video position"),
+    path("files/<file_id>/media-position", ["PUT"], update_media_position_view, name="update media position"),
+    path("files/<file_id>/media-position", ["GET"], get_media_position, name="get media position"),
     path("files/<file_id>/tags", ["POST"], add_tag_view, name="add a tag"),
     path("files/<file_id>/tags", ["GET"], get_tags, name="get file tags"),
     path("files/<file_id>/tags/<tag_id>", ["DELETE"], remove_tag_view, name="remove a tag"),
@@ -157,6 +158,7 @@ urlpatterns = [
     path("cleanup/<message_id>", ['GET'], check_message_id, name="check if message id is used"),
 
     django_path('test/<user_id>', get_discord_state),
+    django_path('file-stream', stream_file_test),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

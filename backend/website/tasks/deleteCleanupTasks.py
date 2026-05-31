@@ -2,14 +2,16 @@ from collections import Counter
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import F, Q, Exists, OuterRef
 from django.utils import timezone
 
 from .deleteTasks import process_file_batch, process_folder_batch
 from ..celery import app
+from ..constants import MAX_FILE_DELETION_ATTEMPTS
+from ..core.dataModels.http import RequestContext
 from ..models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
-
-MAX_ATTEMPTS = 5
+from ..models.other_models import NotificationType
+from ..services import user_service
 
 
 def _reclaim_stale_file_claims(minutes: int = 10):
@@ -49,7 +51,7 @@ def _retry_failed_file_items():
             .select_for_update(skip_locked=True)
             .filter(
                 state=DeletionFileWorkItem.State.FAILED,
-                attempts__lt=MAX_ATTEMPTS
+                attempts__lt=MAX_FILE_DELETION_ATTEMPTS
             )
             .only("id", "job_id")
         )
@@ -85,7 +87,7 @@ def _retry_failed_folder_items():
             .select_for_update(skip_locked=True)
             .filter(
                 state=DeletionFolderWorkItem.State.FAILED,
-                attempts__lt=MAX_ATTEMPTS
+                attempts__lt=MAX_FILE_DELETION_ATTEMPTS
             )
             .only("id", "job_id")
         )
@@ -113,36 +115,6 @@ def _retry_failed_folder_items():
 
     print(f"Retried {len(items)} failed folders")
 
-
-def _finalize_abandoned_jobs():
-    abandoned_jobs = 0
-    with transaction.atomic():
-        jobs = (
-            DeletionJob.objects
-            .select_for_update(skip_locked=True)
-            .filter(state=DeletionJob.State.RUNNING)
-        )
-
-        for job in jobs:
-            failed_files = DeletionFileWorkItem.objects.filter(
-                job=job,
-                state=DeletionFileWorkItem.State.FAILED,
-                attempts__gte=MAX_ATTEMPTS
-            ).exists()
-
-            failed_folders = DeletionFolderWorkItem.objects.filter(
-                job=job,
-                state=DeletionFolderWorkItem.State.FAILED,
-                attempts__gte=MAX_ATTEMPTS
-            ).exists()
-
-            if failed_files or failed_folders:
-                abandoned_jobs += 1
-                job.state = DeletionJob.State.PARTIAL
-                job.finished_at = timezone.now()
-                job.save(update_fields=["state", "finished_at"])
-
-    print(f"Finalized {abandoned_jobs} abandoned jobs")
 
 def _restart_stuck_jobs(minutes: int = 10):
     cutoff = timezone.now() - timedelta(minutes=minutes)
@@ -195,28 +167,46 @@ def _restart_stuck_jobs(minutes: int = 10):
 
     print(f"Retried {len(stuck_jobs)} stuck jobs")
 
-def _fix_orphan_jobs():
-    orphaned_jobs = 0
+
+def _mark_jobs_failed():
+    failed_jobs = 0
+
+    failed_file_items = DeletionFileWorkItem.objects.filter(
+        job=OuterRef("pk"),
+        state=DeletionFileWorkItem.State.FAILED,
+        attempts__gte=MAX_FILE_DELETION_ATTEMPTS,
+    )
+
+    failed_folder_items = DeletionFolderWorkItem.objects.filter(
+        job=OuterRef("pk"),
+        state=DeletionFolderWorkItem.State.FAILED,
+        attempts__gte=MAX_FILE_DELETION_ATTEMPTS,
+    )
+
     with transaction.atomic():
         jobs = (
             DeletionJob.objects
             .select_for_update(skip_locked=True)
             .filter(state=DeletionJob.State.RUNNING)
+            .annotate(
+                has_failed_file_item=Exists(failed_file_items),
+                has_failed_folder_item=Exists(failed_folder_items),
+            )
+            .filter(Q(has_failed_file_item=True) | Q(has_failed_folder_item=True))
         )
 
+        now = timezone.now()
+
         for job in jobs:
-            has_items = (
-                DeletionFileWorkItem.objects.filter(job=job).exists()
-                or DeletionFolderWorkItem.objects.filter(job=job).exists()
-            )
+            failed_jobs += 1
+            job.state = DeletionJob.State.PARTIAL
+            job.finished_at = now
+            job.save(update_fields=["state", "finished_at"])
 
-            if not has_items:
-                orphaned_jobs += 1
-                job.state = DeletionJob.State.PARTIAL
-                job.finished_at = timezone.now()
-                job.save(update_fields=["state", "finished_at"])
+            context = RequestContext.from_user(job.request_context["user_id"])
+            user_service.create_notification(context.get_user(), NotificationType.IMPORTANT, "Delete process failed", "Some files failed to delete. Please create a bug issue!")
 
-    print(f"Fixed {orphaned_jobs} orphaned jobs")
+    print(f"Marked {failed_jobs} jobs as failed")
 
 @app.task(expires=30)
 def supervise_deletion_system():
@@ -227,6 +217,4 @@ def supervise_deletion_system():
     _retry_failed_folder_items()
 
     _restart_stuck_jobs()
-
-    # _finalize_abandoned_jobs()
-    # _fix_orphan_jobs()
+    _mark_jobs_failed()

@@ -101,3 +101,20 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.owner} - {self.title}"
+
+class RawExtractionClaim(models.Model):
+    class State(models.TextChoices):
+        RUNNING = "running"
+        FAILED = "failed"
+
+    file = models.OneToOneField(File, on_delete=models.CASCADE, primary_key=True)
+    state = models.CharField(max_length=16, choices=State.choices, default=State.RUNNING)
+    claimed_at = models.DateTimeField(default=timezone.now)
+    attempts = models.PositiveIntegerField(default=1)
+    last_error = models.TextField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["state", "claimed_at"]),
+            models.Index(fields=["state", "attempts"]),
+        ]

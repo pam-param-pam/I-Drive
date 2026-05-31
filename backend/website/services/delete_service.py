@@ -20,7 +20,7 @@ def delete_items(context: RequestContext, user, items: list[Union[Item, dict]]) 
     for item in items:
         state = get_attr(item, 'state')
         if state != ItemState.ACTIVE:
-            raise BadRequestError("Cannot delete. At least one item is not ready.")
+            raise BadRequestError("Cannot delete. At least one item is not active.")
 
     job = DeletionJob.objects.create(
         requested_by=user,

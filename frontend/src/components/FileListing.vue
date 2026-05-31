@@ -17,7 +17,7 @@
                   v-if="headerButtons.locate"
                   :label="$t('buttons.locate')"
                   icon="location_on"
-                  @action="locateItem"
+                  @action="onLocateItem"
                />
                <action
                   v-if="headerButtons.share"
@@ -220,7 +220,7 @@
                v-if="headerButtons.locate"
                :label="$t('buttons.locate')"
                icon="location_on"
-               @action="locateItem"
+               @action="onLocateItem"
             />
             <action
                v-if="headerButtons.openInNewWindow && selected[0]?.isDir"
@@ -364,16 +364,12 @@ export default {
 
    data() {
       return {
-         dragCounter: 0,
-         itemWeight: 0,
-         searchItemsFound: null,
-
          //experimental
-         tileWidth: 200,
-         tileHeight: 200,
-         imageHeight: 100,
-         imageWidth: 100,
-         numberOfTiles: 5,
+         tileWidth: 0,
+         tileHeight: 1,
+         imageHeight: 0,
+         imageWidth: 0,
+         numberOfTiles: 0,
 
          scrollInterval: null
 
@@ -411,9 +407,7 @@ export default {
       document.addEventListener("drag", this.autoScroll)
       document.addEventListener("dragend", this.stopAutoScroll)
    },
-   beforeRouteLeave() {
-      clearTimeout(this.scrollToAnimationTimeout)
-   },
+
    beforeUnmount() {
       this.resetSelected()
 
@@ -435,8 +429,8 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["itemsLoading", "itemsError", "multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems",
-         "lastItem", "items", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "lastFolder"]),
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "multiSelection", "contextMenuState", "selectedCount", "searchActive", "sortedItems", "items",
+         "lastFile", "settings", "perms", "user", "selected", "currentFolder", "selectedCount", "isLogged", "currentPrompt", "lastFolder", "locateItem"]),
 
       viewMode() {
          if (this.settings.viewMode === "list") return "list"
@@ -504,8 +498,8 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastItem", "resetSelected", "showHover",
-         "setSortByAsc", "setSortingBy", "updateSettings", "setLastFolder"]),
+      ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastFile", "resetSelected", "showHover",
+         "setSortByAsc", "setSortingBy", "updateSettings", "setLastFolder", "setLocateItem"]),
 
       isMobile,
 
@@ -683,7 +677,7 @@ export default {
          await updateSettings({ sortingBy: by, sortByAsc: asc })
       },
 
-      async locateItem() {
+      async onLocateItem() {
          this.$emit("onSearchClosed")
          let message = this.$t("toasts.locating")
          this.$toast.info(message)
@@ -693,13 +687,11 @@ export default {
 
          await this.$refs.search.exit()
 
-         this.setLastItem(item)
+         this.setLocateItem(item)
+         this.closeContextMenu()
 
          this.$router.replace({ name: "Settings" })
          this.$router.replace({ name: "Files", params: { folderId: parent_id } })
-
-         this.closeContextMenu()
-         this.setLastFolder(null)
       },
 
       async switchView() {
@@ -735,7 +727,6 @@ export default {
          }
          // Calculate the maximum number of tiles that can fit using the minimum width
          let numberOfTiles = Math.ceil(containerWidth / maxTileWidth)
-         // if (numberOfTiles === 1) numberOfTiles = 2
 
          // Calculate the actual width of each tile
          let tileWidth = containerWidth / numberOfTiles
@@ -757,21 +748,23 @@ export default {
       },
 
       async scrollToLastItem() {
+         console.log("scrollToLastItem")
          function nextFrame() {
             return new Promise(resolve => requestAnimationFrame(resolve))
          }
 
-         if (!this.lastItem && !this.lastFolder) return
-         let itemId
-         if (this.lastFolder) {
+         let itemId = null
+
+         if (this.locateItem) {
+            itemId = this.locateItem.id
+         } else if (this.lastFolder) {
             itemId = this.lastFolder.id
-         }
-         if (this.lastItem) {
-            itemId = this.lastItem.id
-            this.setLastItem(null)
-         } else {
             this.setLastFolder(null)
+         } else if (this.lastFile) {
+            itemId = this.lastFile.id
+            this.setLastFile(null)
          }
+         if (!itemId) return
 
          await this.$nextTick()
          await nextFrame()
@@ -792,6 +785,7 @@ export default {
          this.scrollToAnimationTimeout = setTimeout(() => {
             if (itemElement?.$el) {
                itemElement.$el.classList.remove("pulse-animation")
+               this.setLocateItem(null)
             }
          }, 3500)
       }

@@ -5,7 +5,7 @@ from .crypto.signer import sign_resource
 from ..constants import API_BASE_URL, ShareEventType
 from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken, \
     ShareAccessEvent, UserZIP
-from ..models.file_related_models import RawMetadata, PhotoMetadata
+from ..models.file_related_models import RawMetadata, PhotoMetadata, MediaPosition
 from ..models.other_models import Notification
 from ..queries.selectors import get_item_inside_share
 
@@ -66,8 +66,6 @@ class FileSerializer(AdvancedSerializer):
         file_tuple = (
             File.objects
             .filter(id=obj.id)
-            .select_related("mediaposition", "thumbnail")
-            .prefetch_related("tags")
             .annotate(**File.get_display_annotate())
             .values_list(*File.DISPLAY_VALUES)
             .first()
@@ -335,6 +333,16 @@ class TagSerializer(SimpleSerializer):
         return {
             "name": tag.name,
             "id": tag.id
+        }
+
+
+class MediaPositionSerializer(SimpleSerializer):
+
+    @staticmethod
+    def serialize_object(position: MediaPosition) -> dict:
+        return {
+            "timestamp": position.timestamp,
+            "modified_at": position.modified_at
         }
 
 

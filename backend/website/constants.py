@@ -73,10 +73,16 @@ cache = caches["default"]
 USE_CACHE = True
 
 # Controls the max size of a raw image that is allowed to be converted to webp in celery task
-MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION = 50 * 1024 * 1024
+MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION = 75 * 1024 * 1024
 
 # Controls after how long files from trash are deleted, in DAYS
 MAX_TIME_FILES_IN_TRASH = 30
+
+# How many retries allowed for files before they are marked as fatally failed
+MAX_FILE_DELETION_ATTEMPTS = 5
+
+# How many retries allowed for raw extraction before they are marked as fatally failed
+MAX_RAW_EXTRACTION_ATTEMPTS = 3
 
 FILE_TYPES = {
     "Video": (

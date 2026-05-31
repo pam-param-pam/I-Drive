@@ -87,7 +87,6 @@ def plan_deletion_job(job_id: UUID) -> None:
 
     ids = job.requested_ids
     context = RequestContext.deserialize(job.request_context)
-    send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
 
     input_file_ids, input_folder_ids, expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
 
@@ -143,6 +142,8 @@ def plan_deletion_job(job_id: UUID) -> None:
         )
 
     delete_cache(expanded_folder_ids, expanded_file_ids)
+    send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
+
     process_file_batch.delay(job.request_context, job.id)
 
 
@@ -174,9 +175,6 @@ def process_file_batch(context_dict: dict, job_id: UUID) -> None:
 
 def mark_items_deleted(context: RequestContext, job_id: UUID, items: List[MessageItem]) -> None:
     fragment_ids = [item.object_id for item in items if item.kind == "fragment"]
-
-    if not fragment_ids:
-        return
 
     with transaction.atomic():
         job = (
@@ -343,6 +341,10 @@ def process_channel_deletions(context, job_id: UUID, channel_id: str, messages: 
 
 def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> None:
     message_structure = gather_message_structure(file_ids)
+
+    if not message_structure:
+        return
+
     bots = Bot.objects.filter(owner=context.get_user())
     channel_map: dict[str, dict[str, list[MessageItem]]] = defaultdict(dict)
     for message_id, items in message_structure.items():

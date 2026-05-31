@@ -18,7 +18,7 @@ from ..queries.selectors import get_discord_author, get_discord_channel
 
 def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
     if file_obj.state != ItemState.ACTIVE:
-        raise BadRequestError("Item not ready")
+        raise BadRequestError("Item not active")
 
     if file_obj.type not in ("Video", "Raw image", "Image", "Audio"):
         raise BadRequestError(f"Thumbnail is not allowed for file type: {file_obj.type}")
