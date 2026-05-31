@@ -278,45 +278,9 @@ export function appendMp4BoxBuffer(mp4box, chunk, offset) {
       })
 }
 
-
-export function ivToBase64(iv) {
-   // First, convert the Uint8Array to a regular binary string
-   let binary = ""
-   iv.forEach((byte) => binary += String.fromCharCode(byte))
-
-   // Then, encode the binary string in Base64
-   return btoa(binary)
-}
-
-
-export function generateIv(method) {
-   let iv
-   if (method === encryptionMethod.AesCtr) {
-      iv = crypto.getRandomValues(new Uint8Array(16))
-   } else if (method === encryptionMethod.ChaCha20) {
-      iv = crypto.getRandomValues(new Uint8Array(12))
-   } else if (method === encryptionMethod.NotEncrypted) {
-      return null
-   } else {
-      throw Error(`unable to match encryptionMethod: ${method}`)
-   }
-   return ivToBase64(iv)
-}
-
-
 export function roundUpTo64(size) {
    return Math.ceil(size / 64) * 64
 }
-
-
-export function generateKey(method) {
-   if (method === encryptionMethod.NotEncrypted) {
-      return null
-   }
-   let key = crypto.getRandomValues(new Uint8Array(32))
-   return ivToBase64(key)
-}
-
 
 export async function upload(formData, config) {
    let headers = {}
@@ -344,8 +308,7 @@ export function getFileType(fileName) {
    let mainStore = useMainStore()
 
    let ext = detectExtension(fileName)
-
-   return mainStore.config.extensions?.[ext] || "Other"
+   return mainStore.config.extensions?.[ext.toLowerCase()] ?? "Other"
 }
 
 function cleanCodecString(input) {

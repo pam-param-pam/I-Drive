@@ -12,8 +12,9 @@ from .views.dataViews import get_folder_info, get_file_info, get_usage, search, 
     get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, ultra_download_metadata, get_fragment_url_view, get_folder_file_stats, \
     check_message_id, get_folder_hash, get_all_tags, get_media_position
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
-    delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, remove_moment_view, \
-    add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, create_zip_model_view
+    delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, \
+    remove_moment_view, \
+    add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, create_zip_model_view, delete_thumbnail_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle
 from .views.testViews import get_discord_state, stream_file_test
@@ -69,7 +70,8 @@ urlpatterns = [
     path("files", ["POST"], create_file_view, name="create file"),
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
-    path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail_view, name="create a thumbnail"),
+    path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail_view, name="create or edit thumbnail"),
+    path("files/<file_id>/thumbnail", ["DELETE"], delete_thumbnail_view, name="delete a thumbnail"),
     path("files/<file_id>/media-position", ["PUT"], update_media_position_view, name="update media position"),
     path("files/<file_id>/media-position", ["GET"], get_media_position, name="get media position"),
     path("files/<file_id>/tags", ["POST"], add_tag_view, name="add a tag"),

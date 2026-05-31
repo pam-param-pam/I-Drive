@@ -59,7 +59,7 @@
          <div class="file-input-wrapper">
             <SmartFileInput
                ref="subtitleFileInput"
-               :label="$t('buttons.addSubtitleFile')"
+               :label="$t('buttons.selectSubtitleFile')"
                accept=".vtt,.srt"
                @file-selected="onSubtitleInput"
             />
@@ -125,12 +125,12 @@ import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { canUpload } from "@/api/user.js"
-import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
+import { upload } from "@/upload/utils/uploadHelper.js"
 
 import axios from "axios"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { encrypt } from "@/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
 import { detectExtension } from "@/utils/common.js"
 import { capitalize } from "vue"
 import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"

@@ -2,17 +2,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta, datetime, timezone
 
 from django.contrib.auth.models import User
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.utils import timezone as django_timezone
 
 from .helper import bulk_deletable
+from .otherTasks import _handle_parse_failure
 from ..celery import app
-from ..constants import MAX_TIME_FILES_IN_TRASH
+from ..constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS
 from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Folder
-from ..models.other_models import NotificationType
+from ..models.other_models import NotificationType, RawExtractionClaim
 from ..queries.selectors import check_if_bots_exists, query_attachments
 from ..services import delete_service, user_service
 
@@ -54,6 +55,28 @@ def cleanup_trash(user) -> int:
         delete_service.delete_items(ctx, user, items)
 
     return len(items)
+
+def cleanup_raw_claims(user) -> int:
+    claims = list(
+        RawExtractionClaim.objects
+        .select_related("file")
+        .filter(file__owner=user, attempts__gte=MAX_RAW_EXTRACTION_ATTEMPTS)
+    )
+
+    if not claims:
+        return 0
+
+    with transaction.atomic():
+        for claim in claims:
+            _handle_parse_failure(claim.file)
+
+        deleted_count, _ = (
+            RawExtractionClaim.objects
+            .filter(id__in=[claim.id for claim in claims])
+            .delete()
+        )
+
+    return deleted_count
 
 
 def bulk_delete_messages(user, channel_id, message_ids):

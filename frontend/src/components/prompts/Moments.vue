@@ -75,7 +75,7 @@
 </template>
 
 <script>
-import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
+import { upload } from "@/upload/utils/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
@@ -84,7 +84,7 @@ import { useUploadStore } from "@/stores/uploadStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
 import ProgressBar from "@/components/upload/UploadProgressBar.vue"
-import { encrypt } from "@/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
 import { getMomentFrame } from "@/upload/utils/thumbnailHelper.js"
 
 export default {

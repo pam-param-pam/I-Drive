@@ -22,6 +22,12 @@ export async function createThumbnail(fileId, data) {
    return response.data
 }
 
+export async function deleteThumbnail(fileId, data) {
+   let url = `/files/${fileId}/thumbnail`
+   let response = await backendInstance.delete(url, data)
+   return response.data
+}
+
 
 export async function createFile(data, config = {}) {
    let url = `/files`

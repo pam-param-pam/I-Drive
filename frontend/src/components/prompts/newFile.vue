@@ -38,7 +38,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { detectExtension, onceAtATime } from "@/utils/common.js"
 import { createFile } from "@/api/files.js"
 import { v4 as uuidv4 } from "uuid"
-import { generateIv, generateKey } from "@/upload/utils/uploadHelper.js"
+import { generateIv, generateKey } from "@/upload/utils/encryption.js"
 
 export default {
    name: "NewFile",

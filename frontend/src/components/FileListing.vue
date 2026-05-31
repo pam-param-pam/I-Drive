@@ -301,11 +301,7 @@
                show="EditTags"
             />
             <action
-               v-show="
-                  headerButtons.modifyFile &&
-                  contextMenuState.advanced &&
-                  (this.selected[0]?.type === 'Video' || this.selected[0]?.type === 'Image')
-               "
+               v-show="headerButtons.modifyFile && contextMenuState.advanced && canEditThumbnail"
                id="thumbnail"
                :label="$t('buttons.editThumbnail')"
                icon="image"
@@ -494,6 +490,13 @@ export default {
       },
       scrollerClass() {
          return `height: calc(100% - ${this.minusSize}px);`
+      },
+
+      canEditThumbnail() {
+         let item = this.selected[0]
+         let thumbnailTypes = ["Image", "Raw image", "Video", "Audio"]
+
+         return item && !item.isDir && (item.thumbnail_url || thumbnailTypes.some(type => item.type?.includes(type)))
       }
    },
 

@@ -4,8 +4,6 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { attachmentType, encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
 import {
    appendMp4BoxBuffer,
-   generateIv,
-   generateKey,
    isVideoFile, makeThumbnailIfNeeded,
    parseVideoMetadata,
    roundUpTo64
@@ -15,6 +13,7 @@ import { v4 as uuidv4 } from "uuid"
 import { showToast } from "@/utils/common.js"
 import { buildVttFromSamples } from "@/utils/subtitleUtlis.js"
 import { getUploader } from "@/upload/Uploader.js"
+import { generateIv, generateKey } from "@/upload/utils/encryption.js"
 
 export class RequestProducer {
    constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles }) {

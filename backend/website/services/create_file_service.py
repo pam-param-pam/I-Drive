@@ -4,6 +4,7 @@ from typing import Optional
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from . import file_service
@@ -166,6 +167,18 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
     if file_obj.type not in ("Text", "Code", "Database", "Other"):
         raise BadRequestError("You can only edit text files!")
 
+    has_any_metadata = File.objects.filter(
+        Q(thumbnail__isnull=False) |
+        Q(videometadata__isnull=False) |
+        Q(rawmetadata__isnull=False) |
+        Q(moment__isnull=False) |
+        Q(subtitles__isnull=False) |
+        Q(photometadata__isnull=False)
+    )
+    if has_any_metadata:
+        raise BadRequestError("You can't edit this file. It has thumbnail/metadata/moments/subtitles")
+
+
     fragments = Fragment.objects.filter(file=file_obj)
     if len(fragments) > 1:
         raise BadRequestError("Fragments > 1")
@@ -210,6 +223,8 @@ def delete_thumbnail(file_obj, must_exist=False):
 
     try:
         delete_single_discord_attachment(file_obj.owner, file_obj.thumbnail)
+        file_obj.remove_cache()
+
     except Thumbnail.DoesNotExist as e:
         if must_exist:
             raise e

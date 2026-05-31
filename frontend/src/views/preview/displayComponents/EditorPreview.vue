@@ -1,5 +1,5 @@
 <template>
-   <div id="editor-container">
+   <div id="editor-container" @wheel.ctrl.prevent="onCtrlWheel">
       <!-- preview container -->
       <div class="loading delayed" v-show="loading">
          <div class="spinner">
@@ -71,8 +71,8 @@ import buttons from "@/utils/buttons.js"
 import throttle from "lodash.throttle"
 import { canUpload } from "@/api/user.js"
 import { encryptionMethod, PreviewEvent } from "@/utils/constants.js"
-import { generateIv, generateKey, upload } from "@/upload/utils/uploadHelper.js"
-import { encrypt } from "@/upload/utils/encryption.js"
+import { upload } from "@/upload/utils/uploadHelper.js"
+import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
 import { buf as crc32buf } from "crc-32"
 
 export default {
@@ -296,6 +296,14 @@ export default {
          this.$emit("previewEvent", { type: PreviewEvent.EDITOR_CLEAN_CHANGE, payload: { is_clean: true } })
          let message = this.$t("toasts.fileSaved")
          this.$toast.success(message)
+      },
+
+      onCtrlWheel(event) {
+         if (event.deltaY < 0) {
+            this.increaseFontSize()
+         } else if (event.deltaY > 0) {
+            this.decreaseFontSize()
+         }
       },
 
       increaseFontSize() {

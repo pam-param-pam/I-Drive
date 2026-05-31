@@ -32,7 +32,7 @@
                :disabled="loading || error"
                :label="$t('buttons.rename')"
                icon="mode_edit"
-               @action="rename()"
+               @action="rename"
             />
             <action
               v-if="headerButtons.delete"
@@ -118,7 +118,7 @@
                   {{ $t("files.noPreview") }}
                </div>
                <div>
-                  <a v-if="file?.type === 'Other'" class="button button--flat" target="_blank" @click="openEditor">
+                  <a v-if="file?.type === 'Other' && sizeAllowedForEditor" class="button button--flat" target="_blank" @click="openEditor">
                      <div>
                         <i class="material-icons">edit</i>{{ $t("buttons.openEditor") }}
                      </div>
@@ -266,14 +266,16 @@ export default {
 
          if ((this.file.name?.endsWith(".docx")) && this.notEmpty) return "office"
 
-         if (this.file.type === "Code" || this.file.type === "Text" || this.file.type === "Database") return "editor"
+         if ((this.file.type === "Code" || this.file.type === "Text" || this.file.type === "Database") && this.sizeAllowedForEditor) return "editor"
 
          return "unknown"
       },
       notEmpty() {
          return this.file?.size > 0
       },
-
+      sizeAllowedForEditor() {
+        return this.file?.size < 2 * 1024 * 1024
+      },
       thumbSrcUrl() {
          return this.file?.thumbnail_url
       },
@@ -380,6 +382,10 @@ export default {
          })
       },
       rename() {
+         if (!this.isEditorClean) {
+            this.$toast.error(this.$t("toasts.saveFileFirst"))
+            return
+         }
          this.showHover({
             prompt: "rename"
          })
@@ -444,6 +450,7 @@ export default {
          if (this.disableSwipe) return
          this.close()
       },
+
       async prefetch() {
          this.prefetchTimeout = setTimeout(() => {
             let file1 = this.files[this.currentIndex + 1]

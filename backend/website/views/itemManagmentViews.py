@@ -12,7 +12,7 @@ from ..core.errors import BadRequestError
 from ..core.helpers import extract_key
 from ..core.http.utils import build_response
 from ..models import File, Folder
-from ..services import folder_service, item_service, file_service, delete_service, zip_service
+from ..services import folder_service, item_service, file_service, delete_service, zip_service, create_file_service
 
 
 @api_view(['POST'])
@@ -199,6 +199,15 @@ def rename_subtitle_view(request, file_obj, subtitle_id):
     file_service.rename_subtitle(file_obj, subtitle_id, new_language)
     return HttpResponse(status=204)
 
+
+@api_view(['DELETE'])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & DeletePerms])
+@extract_file()
+@check_resource_permissions(default_checks, resource_key="file_obj")
+def delete_thumbnail_view(request, file_obj):
+    create_file_service.delete_thumbnail(file_obj, must_exist=True)
+    return HttpResponse(status=204)
 
 @api_view(['DELETE'])
 @throttle_classes([defaultAuthUserThrottle])

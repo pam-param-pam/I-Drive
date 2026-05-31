@@ -2,7 +2,7 @@ from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms
+from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, DeletePerms
 from ..auth.throttle import defaultAuthUserThrottle
 from ..core.decorators import extract_file, check_resource_permissions
 from ..core.helpers import extract_key
@@ -46,7 +46,7 @@ def edit_file_view(request, file_obj):
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & CreatePerms])
+@permission_classes([IsAuthenticated & CreatePerms & ModifyPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def create_or_edit_thumbnail_view(request, file_obj):
