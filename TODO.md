@@ -18,4 +18,3 @@
 4) Use select for update everywhere
 5) add geo ip to nginx itself
 6) add auto db backups
-7) Fix raw image generating. Ensure files are picked. locked. reclaimed etc

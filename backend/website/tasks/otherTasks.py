@@ -245,7 +245,6 @@ def _claim_raw_image_files():
                 if file_obj is None:
                     continue
 
-                # Check eligibility separately, without FOR UPDATE.
                 file_still_needs_work = (
                     File.objects
                     .filter(
