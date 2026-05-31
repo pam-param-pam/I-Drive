@@ -5,44 +5,105 @@
       </div>
 
       <div class="card-content">
-         <p v-if="canUploadThumbnail">
-            {{ $t("prompts.selectThumbnail") }}
-         </p>
-         <p v-else>
-            {{ $t("prompts.thumbnailNotAllowed") }}
-         </p>
+         <div v-if="!isAdvancedExpanded">
+            <p v-if="canUploadThumbnail">
+               {{ $t("prompts.selectThumbnail") }}
+            </p>
+            <p v-else>
+               {{ $t("prompts.thumbnailNotAllowed") }}
+            </p>
 
-         <div v-if="imagePreview" class="image-preview">
-            <img :src="imagePreview" alt="Selected Thumbnail" />
+            <div v-if="localImagePreview" class="image-preview">
+               <img :src="localImagePreview" alt="Selected Thumbnail" />
+            </div>
+
+            <div class="thumbnail-options">
+               <SmartFileInput
+                 v-if="canUploadThumbnail"
+                 ref="smartFileInput"
+                 :label="$t('buttons.selectImageFile')"
+                 accept="image/*"
+                 @file-selected="processFile"
+               />
+
+               <button
+                 v-if="file?.thumbnail_url"
+                 :aria-label="$t('buttons.removeThumbnail')"
+                 :disabled="uploading || removing"
+                 :title="$t('buttons.removeThumbnail')"
+                 class="thumbnail-remove-button"
+                 type="button"
+                 @click="removeCurrentThumbnail()"
+               >
+                  {{ $t("buttons.removeThumbnail") }}
+               </button>
+            </div>
          </div>
 
-         <div class="thumbnail-options">
-            <SmartFileInput
-              v-if="canUploadThumbnail"
-              ref="smartFileInput"
-              :label="$t('buttons.selectImageFile')"
-              accept="image/*"
-              @file-selected="processFile"
-            />
 
-            <button
-              v-if="file?.thumbnail_url"
-              :aria-label="$t('buttons.removeThumbnail')"
-              :disabled="uploading || removing"
-              :title="$t('buttons.removeThumbnail')"
-              class="thumbnail-remove-button"
-              type="button"
-              @click="removeCurrentThumbnail()"
-            >
-               {{ $t("buttons.removeThumbnail") }}
-            </button>
+         <video
+           v-if="isVideo"
+           ref="video"
+           class="hidden-video"
+           :src="file?.download_url"
+           crossorigin="anonymous"
+           preload="metadata"
+           @error="onVideoError"
+           @loadedmetadata="onVideoMetadataLoaded"
+         />
+
+         <div v-if="isVideo" class="expandable-section">
+
+            <div class="expandable-header" @click="toggleAdvanced">
+               <strong>{{ $t("prompts.captureFromVideo") }}</strong>
+               <i :class="{ expanded: isAdvancedExpanded }" class="material-icons expand-icon">
+                  keyboard_arrow_down
+               </i>
+            </div>
+
+            <div v-if="isAdvancedExpanded" class="expandable-content">
+               <p v-if="videoError">
+                  {{ $t("prompts.videoThumbnailError") }}
+               </p>
+               <div v-else-if="videoFramePreview && !isCapturingFrame && videoReady" class="image-preview">
+                  <img :src="videoFramePreview" alt="Selected Thumbnail" />
+               </div>
+               <div v-else class="image-preview skeleton-preview">
+                  <div class="skeleton-image"></div>
+               </div>
+
+               <label v-if="!videoError" class="thumbnail-time-label">
+                  {{ $t("prompts.thumbnailSecond") }}
+               </label>
+
+               <div v-if="!videoError" class="thumbnail-time-controls">
+                  <input
+                    v-model.number="thumbnailSecond"
+                    :max="videoDuration"
+                    min="0"
+                    step="0.1"
+                    type="number"
+                    class="thumbnail-second-input"
+                  />
+
+                  <input
+                    v-model.number="thumbnailSecond"
+                    :max="videoDuration"
+                    min="0"
+                    step="0.1"
+                    type="range"
+                    class="thumbnail-second-slider"
+                  />
+               </div>
+
+            </div>
          </div>
 
          <div v-if="uploading" class="prompts-progress-bar-wrapper">
             <ProgressBar :progress="uploadProgress" />
             <span>
-         <b>{{ uploadProgress }}%</b>
-      </span>
+               <b>{{ uploadProgress }}%</b>
+            </span>
          </div>
       </div>
 
@@ -59,7 +120,7 @@
          <button
            v-if="canUploadThumbnail"
            :aria-label="$t('buttons.upload')"
-           :disabled="!thumbnailFile || uploading || removing"
+           :disabled="isUploadDisabled"
            :title="$t('buttons.upload')"
            class="button button--flat"
            @click="submit()"
@@ -82,6 +143,8 @@ import axios from "axios"
 import { filesize } from "@/utils/index.js"
 import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
+import { getMomentFrame } from "@/upload/utils/thumbnailHelper.js"
+import { backendInstance } from "@/axios/networker.js"
 
 export default {
    name: "edit-thumbnail",
@@ -91,11 +154,20 @@ export default {
    data() {
       return {
          thumbnailFile: null,
-         imagePreview: null,
+         localImagePreview: null,
          uploadProgress: 0,
          uploading: false,
          removing: false,
-         cancelTokenSource: null
+         cancelTokenSource: null,
+         thumbnailSecond: 0,
+         videoDuration: 0,
+         videoReady: false,
+         currentThumbnailData: null,
+         isCapturingFrame: false,
+         isAdvancedExpanded: false,
+         videoFramePreview: null,
+         videoFile: null,
+         videoError: false
       }
    },
 
@@ -106,16 +178,41 @@ export default {
       file() {
          return this.selected[0]
       },
+
+      isVideo() {
+         return this.file?.type === "Video"
+      },
+
       canUploadThumbnail() {
          let thumbnailTypes = ["Image", "Raw image", "Video", "Audio"]
-         return thumbnailTypes.some(type => this.file.type?.includes(type))
+         return thumbnailTypes.some(type => this.file?.type?.includes(type))
       },
+      isUploadDisabled() {
+         if (this.uploading || this.removing) return true
+         if (this.isAdvancedExpanded) {
+            return !this.videoFile || this.videoError || this.isCapturingFrame
+         } else {
+            return !this.thumbnailFile
+         }
+      }
+   },
+
+   watch: {
+      thumbnailSecond() {
+         if (!this.isVideo || !this.videoReady) return
+         this.captureFrame()
+      }
    },
 
    methods: {
       ...mapActions(useMainStore, ["closeHover"]),
 
+      toggleAdvanced() {
+         this.isAdvancedExpanded = !this.isAdvancedExpanded
+      },
+
       onPaste(event) {
+         if (this.isAdvancedExpanded) return
          let items = (event.clipboardData || window.clipboardData).items
          for (let item of items) {
             if (item.type.startsWith("image/")) {
@@ -124,6 +221,15 @@ export default {
                break
             }
          }
+      },
+      async onVideoError() {
+         this.videoError = true
+         await backendInstance.get(this.file.download_url, {
+            headers: {
+               Range: `bytes=0-1`
+            },
+            __skipAuth: true,
+         })
       },
 
       processFile(file) {
@@ -141,12 +247,64 @@ export default {
          }
 
          this.thumbnailFile = file
+         this.currentThumbnailData = null
 
          let reader = new FileReader()
          reader.onload = (e) => {
-            this.imagePreview = e.target.result
+            this.localImagePreview = e.target.result
          }
          reader.readAsDataURL(file)
+      },
+
+      onVideoMetadataLoaded() {
+         let video = this.$refs.video
+         if (!video) return
+
+         this.videoDuration = Number.isFinite(video.duration) ? video.duration : 0
+         this.videoReady = true
+
+         this.captureFrame()
+      },
+
+      seekVideoToThumbnailSecond() {
+         return new Promise((resolve) => {
+            let video = this.$refs.video
+            if (!video) {
+               resolve()
+               return
+            }
+
+            let targetSecond = Math.min(Math.max(this.thumbnailSecond || 0, 0), this.videoDuration || 0)
+
+            let onSeeked = () => {
+               video.removeEventListener("seeked", onSeeked)
+               resolve()
+            }
+
+            video.addEventListener("seeked", onSeeked)
+            video.currentTime = targetSecond
+         })
+      },
+
+      async captureFrame() {
+         if (!this.isVideo || !this.videoReady || this.isCapturingFrame) return
+
+         this.isCapturingFrame = true
+         try {
+            await this.seekVideoToThumbnailSecond()
+            const frameBlob = await getMomentFrame(this.$refs.video)
+            if (frameBlob) {
+               if (this.videoFramePreview && this.videoFramePreview.startsWith('blob:')) {
+                  URL.revokeObjectURL(this.videoFramePreview)
+               }
+               this.videoFramePreview = URL.createObjectURL(frameBlob)
+               this.videoFile = new File([frameBlob], "video-thumbnail.webp", { type: frameBlob.type || "image/webp" })
+            }
+         } catch (err) {
+            console.warn("Failed to capture video frame", err)
+         } finally {
+            this.isCapturingFrame = false
+         }
       },
 
       async submit() {
@@ -162,15 +320,21 @@ export default {
                return
             }
 
-            let fileFormList = new FormData()
+            const fileToUpload = this.isAdvancedExpanded ? this.videoFile : this.thumbnailFile
+            if (!fileToUpload) {
+               this.$toast.error(this.$t("toasts.noFileSelected"))
+               this.uploading = false
+               return
+            }
 
             let method = this.file.encryption_method
             let iv = generateIv(method)
             let key = generateKey(method)
-            let encryptedBlob = await encrypt(this.thumbnailFile, method, key, iv, 0)
+
+            let encryptedBlob = await encrypt(fileToUpload, method, key, iv, 0)
 
             this.cancelTokenSource = axios.CancelToken.source()
-
+            let fileFormList = new FormData()
             fileFormList.append("file", encryptedBlob, this.attachmentName)
 
             let config = {
@@ -196,11 +360,12 @@ export default {
 
             await createThumbnail(this.file.id, thumbnail_data)
             this.$toast.success(this.$t("toasts.thumbnailChanged"))
-
             this.closeHover()
          } catch (error) {
             if (axios.isCancel(error)) return
+            console.error("Upload error:", error)
             this.$toast.error(this.$t("toasts.thumbnailUploadFailed"))
+         } finally {
             this.uploading = false
             this.uploadProgress = 0
          }
@@ -230,30 +395,15 @@ export default {
 </script>
 
 <style scoped>
-.file-input-wrapper {
-   position: relative;
+.thumbnail-options {
    display: flex;
-   align-items: center;
+   flex-direction: column;
+   gap: 0.75rem;
    width: 100%;
 }
 
-input[type='file'] {
-   opacity: 0;
-   width: 0;
-   height: 0;
-   position: absolute;
-}
-
-.file-label {
-   display: inline-block;
-   padding: 10px 15px;
-   background-color: var(--divider);
-   color: var(--textPrimary);
-   border-radius: 5px;
-   cursor: pointer;
-   text-align: center;
-   width: 100%;
-   font-size: 14px;
+.hidden-video {
+   display: none;
 }
 
 .image-preview {
@@ -270,8 +420,35 @@ input[type='file'] {
    border-radius: 5px;
    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
+
+.skeleton-preview {
+   width: 100%;
+   min-height: 200px;
+   border-radius: 5px;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+}
+
+.skeleton-image {
+   width: 100%;
+   height: 200px;
+   background: linear-gradient(90deg, var(--divider) 25%, var(--background) 50%, var(--divider) 75%);
+   background-size: 200% 100%;
+   animation: skeleton-loading 1.5s infinite;
+   border-radius: 5px;
+}
+
+@keyframes skeleton-loading {
+   0% {
+      background-position: 200% 0;
+   }
+   100% {
+      background-position: -200% 0;
+   }
+}
+
 .thumbnail-remove-button {
-   margin-top: 1em;
    width: 100%;
    min-height: 48px;
    border: transparent;
@@ -292,4 +469,76 @@ input[type='file'] {
    cursor: not-allowed;
 }
 
+.expandable-header {
+   color: var(--textSecondary);
+}
+
+.expandable-header strong {
+   font-weight: 600;
+}
+
+.expand-icon {
+   transition: transform 0.2s ease;
+}
+
+.expand-icon.expanded {
+   transform: rotate(180deg);
+}
+
+.expandable-content {
+   padding-bottom: 1rem;
+}
+
+.thumbnail-time-label {
+   display: block;
+   margin-bottom: 0.5rem;
+   color: var(--textPrimary);
+   font-size: 14px;
+}
+
+.thumbnail-time-controls {
+   display: flex;
+   gap: 0.75rem;
+   align-items: center;
+}
+
+.thumbnail-second-input {
+   width: 90px;
+   min-height: 40px;
+   padding: 0 0.5rem;
+   border: 1px solid var(--divider);
+   border-radius: 5px;
+   background: var(--background);
+   color: var(--textPrimary);
+}
+
+.thumbnail-second-slider {
+   flex: 1;
+}
+
+.thumbnail-frame-button {
+   width: 100%;
+   min-height: 44px;
+   margin-top: 0.85rem;
+   border: 1px solid var(--divider);
+   border-radius: 5px;
+   background: var(--divider);
+   color: var(--textPrimary);
+   font-size: 14px;
+   font-weight: 600;
+   cursor: pointer;
+}
+
+.thumbnail-frame-button:hover:not(:disabled) {
+   filter: brightness(1.08);
+}
+
+.thumbnail-frame-button:disabled {
+   opacity: 0.45;
+   cursor: not-allowed;
+}
+
+.prompts-progress-bar-wrapper {
+   margin-top: 1rem;
+}
 </style>
