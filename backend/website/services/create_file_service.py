@@ -4,7 +4,7 @@ from typing import Optional
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from . import file_service
@@ -17,7 +17,8 @@ from ..core.dataModels.http import RequestContext
 from ..core.errors import BadRequestError
 from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc, get_file_extension
 from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
-from ..models import File, Fragment, Thumbnail
+from ..models import File, Fragment, Thumbnail, VideoMetadata
+from ..models.file_related_models import RawMetadata, Moment, Subtitle, PhotoMetadata
 from ..models.mixin_models import ItemState
 from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists, get_discord_channel
 from ..websockets.utils import group_and_send_event, send_event
@@ -53,6 +54,7 @@ def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
     )
 
     return fragment
+
 
 # todo remove request param
 def _create_single_file(request, user: User, file: dict) -> Optional[File]:
@@ -167,17 +169,24 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
     if file_obj.type not in ("Text", "Code", "Database", "Other"):
         raise BadRequestError("You can only edit text files!")
 
-    has_any_metadata = File.objects.filter(
-        Q(thumbnail__isnull=False) |
-        Q(videometadata__isnull=False) |
-        Q(rawmetadata__isnull=False) |
-        Q(moment__isnull=False) |
-        Q(subtitles__isnull=False) |
-        Q(photometadata__isnull=False)
-    )
+    has_any_metadata = File.objects.filter(id=file_obj.id).annotate(
+        has_thumbnail=Exists(Thumbnail.objects.filter(file_id=OuterRef("id"))),
+        has_video_metadata=Exists(VideoMetadata.objects.filter(file_id=OuterRef("id"))),
+        has_raw_metadata=Exists(RawMetadata.objects.filter(file_id=OuterRef("id"))),
+        has_moment=Exists(Moment.objects.filter(file_id=OuterRef("id"))),
+        has_subtitles=Exists(Subtitle.objects.filter(file_id=OuterRef("id"))),
+        has_photo_metadata=Exists(PhotoMetadata.objects.filter(file_id=OuterRef("id"))),
+    ).filter(
+        Q(has_thumbnail=True) |
+        Q(has_video_metadata=True) |
+        Q(has_raw_metadata=True) |
+        Q(has_moment=True) |
+        Q(has_subtitles=True) |
+        Q(has_photo_metadata=True)
+    ).exists()
+
     if has_any_metadata:
         raise BadRequestError("You can't edit this file. It has thumbnail/metadata/moments/subtitles")
-
 
     fragments = Fragment.objects.filter(file=file_obj)
     if len(fragments) > 1:
@@ -230,6 +239,7 @@ def delete_thumbnail(file_obj, must_exist=False):
     except Thumbnail.DoesNotExist as e:
         if must_exist:
             raise e
+
 
 def create_or_edit_thumbnail(user: User, file_obj: File, data: dict) -> None:
     delete_thumbnail(file_obj)
