@@ -364,4 +364,5 @@ def generate_raw_image_thumbnails():
         if state["upload_queue"]:
             _flush_uploads_and_clear_claims(owner, state)
 
-    generate_raw_image_thumbnails.delay()
+    if len(files) > 0:
+        generate_raw_image_thumbnails.delay()

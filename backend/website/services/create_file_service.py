@@ -224,6 +224,8 @@ def delete_thumbnail(file_obj, must_exist=False):
     try:
         delete_single_discord_attachment(file_obj.owner, file_obj.thumbnail)
         file_obj.remove_cache()
+        file_dict = FileSerializer.serialize_object(file_obj)
+        send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
     except Thumbnail.DoesNotExist as e:
         if must_exist:
