@@ -155,8 +155,8 @@ export default {
 
    methods: {
       async fetchData() {
-         this.editor?.destroy()
          this.setLoading(true)
+         this.editor?.destroy()
          try {
             let fileContent = await getFileRawData(this.file.download_url, { responseType: "text" })
             this.originalContent = fileContent
@@ -221,8 +221,6 @@ export default {
             const isClean = this.editor.getValue() === this.originalContent
             this.$emit("previewEvent", { type: PreviewEvent.EDITOR_CLEAN_CHANGE, payload: { is_clean: isClean } })
          })
-
-         this.setLoading(false)
       },
 
       save: throttle(async function(event) {
@@ -408,5 +406,13 @@ export default {
   outline: none;
 
   transition: border-color 0.2s, background-color 0.2s;
+}
+.loading {
+   position: absolute;
+   inset: 0;
+   z-index: 1000;
+   display: flex;
+   align-items: center;
+   justify-content: center;
 }
 </style>
