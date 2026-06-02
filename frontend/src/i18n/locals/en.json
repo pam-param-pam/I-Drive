@@ -370,7 +370,8 @@
     "videoMetadata": "Video metadata",
     "videoThumbnailError": "Video encountered an error. Couldn't extract video frame",
     "visitEvents": "Visit events",
-    "visitEventsFor": "All events for"
+    "visitEventsFor": "All events for",
+    "webOptimized": "Web optimized"
   },
   "search": {
     "close": "Close",
@@ -564,6 +565,7 @@
     "uploadDestinationUpdated": "Saved!",
     "uploadFinished": "Upload finished!",
     "uploadNotAllowedHere": "Upload is not allowed here",
+    "videoNotOptimizedWarning": "This video is not web optimized for streaming. It may take some time for it to load!",
     "videoUnplayable": "Sorry, this video is unplayable",
     "webhookAdded": "Webhook added!",
     "webhookDeleted": "Webhook deleted!",

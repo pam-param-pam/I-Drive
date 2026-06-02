@@ -457,7 +457,6 @@ export default {
             let file2 = this.files[this.currentIndex + 2]
             let thumb_url1 = file1?.thumbnail_url
             let thumb_url2 = file2?.thumbnail_url
-
             if (thumb_url1) {
                let img1 = new Image()
                img1.src = thumb_url1

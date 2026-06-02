@@ -127,6 +127,11 @@
                   <p><strong>{{ $t("prompts.duration") }}:</strong> {{ formatDuration(primaryMetadata.duration) }}</p>
                   <p><strong>{{ $t("prompts.codec") }}:</strong> {{ primaryMetadata.codec }}</p>
                   <p><strong>{{ $t("prompts.resolution") }}:</strong> {{ primaryMetadata.resolution }}</p>
+                  <p>
+                     <strong>{{ $t("prompts.webOptimized") }}:</strong>
+                     <span v-if="primaryMetadata.webOptimized" class="checkmark-true"></span>
+                     <span v-else class="checkmark-false"></span>
+                  </p>
 
                   <p>
                      <strong>{{ $t("prompts.audioType") }}: </strong>
@@ -442,6 +447,8 @@ export default {
          primary.audioType = audioTrack ? (audioTrack.channel_count > 1 ? "Stereo" : "Mono") : "No audio"
          primary.isSubs = subsLength > 0
          primary.duration = videoTrack.duration
+         primary.webOptimized = this.metadata.is_progressive
+
          return primary
       }
    },

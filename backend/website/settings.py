@@ -196,7 +196,7 @@ REST_FRAMEWORK = {
         'anon': '30/m',
         'user': '60/5s',
         'media': '1000/m',
-        'uncached_media': '60/m',
+        'uncached_media': '120/m',
         'media_anon': '500/m',
         'uncached_media_anon': '30/m',
         'folder_password': '20/m',

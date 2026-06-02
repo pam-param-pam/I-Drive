@@ -370,7 +370,8 @@
     "videoMetadata": "Metadane filmu",
     "videoThumbnailError": "Nie udało sie stworzyć miniaturki",
     "visitEvents": "Eventy",
-    "visitEventsFor": "Wszystkie eventy dla"
+    "visitEventsFor": "Wszystkie eventy dla",
+    "webOptimized": "Zoptymalizowany do strumieniowania"
   },
   "search": {
     "close": "Zamknij",
@@ -564,6 +565,7 @@
     "uploadDestinationUpdated": "Zapisano!",
     "uploadFinished": "Przesyłanie zakończone!",
     "uploadNotAllowedHere": "Nie można tutaj przesyłac plików",
+    "videoNotOptimizedWarning": "To video nie jest zooptymalizowane pod streaming. Załadowanie go może chwile zająć",
     "videoUnplayable": "Tego filmu nie da sie odtworzyć",
     "webhookAdded": "Dodano webhook!",
     "webhookDeleted": "Usunięto webhook!",

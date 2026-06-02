@@ -370,7 +370,8 @@
     "videoMetadata": "Video metadata",
     "videoThumbnailError": "",
     "visitEvents": "Visit events",
-    "visitEventsFor": "Aww events fow"
+    "visitEventsFor": "Aww events fow",
+    "webOptimized": ""
   },
   "search": {
     "close": "Cwose",
@@ -564,6 +565,7 @@
     "uploadDestinationUpdated": "Saved!",
     "uploadFinished": "Upwoad finished!",
     "uploadNotAllowedHere": "Upwoad is nyot awwowed hewe",
+    "videoNotOptimizedWarning": "",
     "videoUnplayable": "Sowwy, this video is unplayabwe",
     "webhookAdded": "Webhook added!",
     "webhookDeleted": "Webhook deweted!",
