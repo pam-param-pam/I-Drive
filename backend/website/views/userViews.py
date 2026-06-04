@@ -173,10 +173,7 @@ def get_notifications_view(request):
     )
 
     if not more:
-        cutoff = timezone.now() - timedelta(days=2)
-        qs = qs.filter(
-            Q(read_at__isnull=True) | Q(read_at__gte=cutoff)
-        )
+        qs = qs.filter(Q(read_at__isnull=True))
 
     notifications = qs.order_by("-created_at")
     return JsonResponse(NotificationSerializer.serialize_objects(notifications), status=200, safe=False)

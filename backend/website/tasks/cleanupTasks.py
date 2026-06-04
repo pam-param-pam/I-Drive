@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta, datetime, timezone
+from typing import LiteralString
 
 from django.contrib.auth.models import User
 from django.db import close_old_connections, transaction
@@ -13,9 +14,20 @@ from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Folder
-from ..models.other_models import NotificationType, RawExtractionClaim
+from ..models.other_models import NotificationType, RawExtractionClaim, Notification
 from ..queries.selectors import check_if_bots_exists, query_attachments
 from ..services import delete_service, user_service
+
+
+def cleanup_old_notifications(user) -> int:
+    cutoff = django_timezone.now() - timedelta(days=30)
+
+    deleted_count, _ = Notification.objects.filter(
+        owner=user,
+        created_at__lt=cutoff,
+    ).delete()
+
+    return deleted_count
 
 
 def cleanup_expired_shares(user) -> int:
@@ -184,6 +196,11 @@ def run_cleanup_for_user(user):
         result["shares_error"] = str(e)
 
     try:
+        result["notifications_removed"] = cleanup_old_notifications(user)
+    except Exception as e:
+        result["notifications_error"] = str(e)
+
+    try:
         result["zips_removed"] = cleanup_expired_zips(user)
     except Exception as e:
         result["zips_error"] = str(e)
@@ -196,7 +213,6 @@ def run_cleanup_for_user(user):
     try:
         discord_res = cleanup_dangling_discord_files(user)
         result["discord_removed"] = discord_res.get("deleted", 0)
-        result["discord_errors"] = len(discord_res.get("errors", []))
     except Exception as e:
         result["discord_error"] = str(e)
 
@@ -208,30 +224,29 @@ def run_cleanup_for_user(user):
     return result
 
 
-def format_cleanup_summary(res: dict) -> str:
+def format_cleanup_summary(res: dict) -> LiteralString | None:
     parts = []
 
-    if "shares_removed" in res:
-        parts.append(f"Shares: {res['shares_removed']} removed")
-    if "zips_removed" in res:
-        parts.append(f"ZIPs: {res['zips_removed']} removed")
-    if "tokens_removed" in res:
-        parts.append(f"Tokens: {res['tokens_removed']} removed")
-    if "trash_removed" in res:
-        parts.append(f"Trash: {res['trash_removed']} removed")
-    if "discord_removed" in res:
-        parts.append(f"Discord: {res['discord_removed']} removed")
+    labels = {
+        "shares_removed": "Shares",
+        "zips_removed": "ZIPs",
+        "tokens_removed": "Tokens",
+        "trash_removed": "Trash",
+        "discord_removed": "Discord",
+        "notifications_removed": "Notifications",
+    }
 
-    # errors (optional, keep terse)
-    if res.get("discord_errors"):
-        parts.append(f"Discord errors: {res['discord_errors']}")
+    for key, label in labels.items():
+        count = res.get(key, 0)
+        if count > 0:
+            parts.append(f"{label}: {count} removed")
 
     # generic errors
     for k, v in res.items():
         if k.endswith("_error"):
             parts.append(f"{k.replace('_', ' ').capitalize()}: {v}")
 
-    return " | ".join(parts) if parts else "Nothing to clean"
+    return " | ".join(parts) if parts else None
 
 @app.task(expires=60 * 60 * 12)
 def run_cleanup():
@@ -245,14 +260,14 @@ def run_cleanup():
 
             summary = format_cleanup_summary(user_result)
 
-            user_service.create_notification(
-                user,
-                NotificationType.INFO,
-                "Cleanup",
-                summary
-            )
+            if summary:
+                user_service.create_notification(
+                    user,
+                    NotificationType.INFO,
+                    "Cleanup",
+                    summary
+                )
         except Exception as e:
-            results[user.id] = {"fatal_error": str(e)}
             user_service.create_notification(user, NotificationType.ERROR, "Failed to cleanup state", f"During cleanup there was an unhandled error: {e}.")
 
     return results

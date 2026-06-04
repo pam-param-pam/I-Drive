@@ -447,7 +447,7 @@ export default {
          primary.audioType = audioTrack ? (audioTrack.channel_count > 1 ? "Stereo" : "Mono") : "No audio"
          primary.isSubs = subsLength > 0
          primary.duration = videoTrack.duration
-         primary.webOptimized = this.metadata.is_progressive
+         primary.webOptimized = this.metadata.is_progressive && !this.metadata.is_fragmented
 
          return primary
       }

@@ -2,9 +2,11 @@ import re
 
 from django.http import StreamingHttpResponse
 
+from ....tasks.helper import send_message
 from .ByteRange import ByteRange
 from .sources.ByteSource import ByteSource
-from ...errors import RangeNotSatisfiable
+from ...dataModels.http import RequestContext
+from ...errors import RangeNotSatisfiable, DiscordError
 
 
 class MyStreamingResponse(StreamingHttpResponse):
@@ -20,7 +22,7 @@ class MyStreamingResponse(StreamingHttpResponse):
 
         # --- init parent ---
         super().__init__(
-            streaming_content=self.byte_source.read(byte_range, chunk_size=self.chunk_size),
+            streaming_content=self._streaming_content(byte_range),
             content_type=content_type,
             status=206 if is_partial else 200,
         )
@@ -40,6 +42,15 @@ class MyStreamingResponse(StreamingHttpResponse):
 
         if cache_control is not None:
             self["Cache-Control"] = cache_control
+
+    async def _streaming_content(self, byte_range):
+        try:
+            async for chunk in self.byte_source.read(byte_range, chunk_size=self.chunk_size):
+                yield chunk
+        except DiscordError as e:
+            if self.request.user and self.request.user.is_authenticated:
+                send_message(message="errors.discordErrorStream", args={"error": e.message, "code": e.status}, finished=False, context=RequestContext.from_user(self.request.user.id), isError=True)
+            raise e
 
     # =========================================================
     # Range handling (internal)

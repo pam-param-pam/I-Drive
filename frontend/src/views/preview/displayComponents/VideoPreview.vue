@@ -47,7 +47,7 @@ export default {
          videoLoadStartedAt: null,
          firstFrameReported: false,
          videoLoadTimeoutId: null,
-         videoLoadTimeout: 2500
+         videoLoadTimeout: 5000
       }
    },
 
@@ -109,7 +109,7 @@ export default {
             if (this.firstFrameReported) return
 
             let res = await fetchAdditionalInfo(this.file.id)
-            if (!res.is_progressive) {
+            if (!res.is_progressive || res.is_fragmented) {
                this.$toast.error(this.$t("toasts.videoNotOptimizedWarning"))
             }
          }, this.videoLoadTimeout)

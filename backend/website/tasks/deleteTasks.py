@@ -354,6 +354,9 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
     futures = []
     max_workers = min(bots.count(), len(channel_map))
 
+    if not max_workers:
+        return
+
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for channel_id, messages in channel_map.items():
             futures.append(

@@ -410,7 +410,7 @@ export default {
 .loading {
    position: absolute;
    inset: 0;
-   z-index: 1000;
+   z-index: 999;
    display: flex;
    align-items: center;
    justify-content: center;
