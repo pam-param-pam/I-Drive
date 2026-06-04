@@ -1,6 +1,6 @@
-from ..core.errors import BadRequestError
-from ..core.helpers import get_attr
-from ..models import UserZIP
+from website.core.errors import BadRequestError
+from website.core.helpers import get_attr
+from website.models import UserZIP
 
 
 def create_zip_model(user, items: list[dict]) -> UserZIP:

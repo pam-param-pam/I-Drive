@@ -1,13 +1,13 @@
 from abc import abstractmethod, ABC
 from typing import Iterable
 
-from .crypto.signer import sign_resource
-from ..constants import API_BASE_URL, ShareEventType
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Moment, Subtitle, VideoTrack, VideoMetadataTrackMixin, AudioTrack, SubtitleTrack, ShareAccess, Tag, PerDeviceToken, \
-    ShareAccessEvent, UserZIP
-from ..models.file_related_models import RawMetadata, PhotoMetadata, MediaPosition
-from ..models.other_models import Notification
-from ..queries.selectors import get_item_inside_share
+from website.constants import API_BASE_URL, ShareEventType
+from website.core.crypto.signer import sign_resource
+from website.models import File, Folder, ShareableLink, ShareAccessEvent, ShareAccess, Bot, Webhook, Tag, MediaPosition, VideoMetadataTrackMixin, Subtitle, AudioTrack, VideoTrack, \
+    PerDeviceToken, UserZIP
+from website.models.file_related_models import PhotoMetadata, RawMetadata, SubtitleTrack, Moment
+from website.models.other_models import Notification
+from website.queries.selectors import get_item_inside_share
 
 
 class SimpleSerializer(ABC):

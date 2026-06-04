@@ -1,10 +1,10 @@
 import json
 from typing import Optional
 
-from ..constants import ShareEventType
-from ..models import ShareableLink
-from ..services import share_service
-from ..websockets.BaseConsumer import RateLimitedWebsocketConsumer
+from website.constants import ShareEventType
+from website.models import ShareableLink
+from website.services import share_service
+from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
 
 class ShareConsumer(RateLimitedWebsocketConsumer):
@@ -41,9 +41,6 @@ class ShareConsumer(RateLimitedWebsocketConsumer):
         self.share = share
         return True, is_standard_protocol, token_key
 
-    def on_ratelimit(self):
-        print("rate limit")
-
     def on_message(self, text_data, bytes_data):
         json_data = json.loads(text_data)
         event_type = json_data['type']
@@ -59,7 +56,3 @@ class ShareConsumer(RateLimitedWebsocketConsumer):
             share_service.log_event_websocket(self.scope, self.share, ShareEventType.MOVIE_SEEK, **args)
         elif event_type == ShareEventType.FILE_DOWNLOAD.value:
             share_service.log_event_websocket(self.scope, self.share, ShareEventType.FILE_DOWNLOAD, **args)
-        else:
-            print("NOT FOUND")
-            print(event_type)
-            print(args)

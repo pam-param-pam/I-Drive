@@ -5,13 +5,13 @@ from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 
-from ..auth.Permissions import AllowedIP
-from ..auth.throttle import defaultAuthUserThrottle
-from ..core.helpers import get_ip
-from ..core.media.stream.sources.FragmentByteSource import EncryptedFragmentedDiscordByteSource, FragmentedDiscordByteSource
-from ..core.media.utils import build_streaming_response
-from ..discord.Discord import discord
-from ..models import File
+from website.auth.Permissions import AllowedIP
+from website.auth.throttle import defaultAuthUserThrottle
+from website.core.helpers import get_ip
+from website.core.media.stream.sources.FragmentByteSource import EncryptedFragmentedDiscordByteSource
+from website.core.media.utils import build_streaming_response
+from website.discord.Discord import discord
+from website.models import File
 
 
 @api_view(['GET'])

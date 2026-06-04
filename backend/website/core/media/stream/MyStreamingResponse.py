@@ -2,11 +2,11 @@ import re
 
 from django.http import StreamingHttpResponse
 
-from ....tasks.helper import send_message
-from .ByteRange import ByteRange
-from .sources.ByteSource import ByteSource
-from ...dataModels.http import RequestContext
-from ...errors import RangeNotSatisfiable, DiscordError
+from website.core.dataModels.http import RequestContext
+from website.core.errors import DiscordError, RangeNotSatisfiable
+from website.core.media.stream.ByteRange import ByteRange
+from website.core.media.stream.sources.ByteSource import ByteSource
+from website.websockets.utils import send_message
 
 
 class MyStreamingResponse(StreamingHttpResponse):

@@ -5,16 +5,16 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 from user_agents import parse as parse_ua
 
-from ..auth.Permissions import CheckTrash, CheckState
-from ..auth.utils import check_resource_perms
-from ..constants import ShareEventType
-from ..core.dataModels.general import Item
-from ..core.dataModels.http import ShareContext
-from ..core.errors import BadRequestError
-from ..core.helpers import validate_ids_as_list, validate_value, get_ip
-from ..core.validators.GeneralChecks import IsPositive, MaxLength, NotEmpty
-from ..models import ShareableLink, UserZIP, Folder, ShareAccessEvent
-from ..queries.selectors import check_if_item_belongs_to_share, get_item
+from website.auth.Permissions import CheckState, CheckTrash
+from website.auth.utils import check_resource_perms
+from website.constants import ShareEventType
+from website.core.dataModels.general import Item
+from website.core.dataModels.http import ShareContext
+from website.core.errors import BadRequestError
+from website.core.helpers import validate_value, validate_ids_as_list, get_ip
+from website.core.validators.GeneralChecks import IsPositive, MaxLength, NotEmpty
+from website.models import ShareableLink, UserZIP, Folder, ShareAccessEvent
+from website.queries.selectors import check_if_item_belongs_to_share, get_item
 
 
 def create_share(user: User, item_obj: Item, unit: str, value: int, password: str) -> ShareableLink:

@@ -1,4 +1,5 @@
-from ...core.validators.Check import Check
+from website.core.validators.Check import Check
+
 
 class NotEmpty(Check):
     def check(self, value) -> bool:

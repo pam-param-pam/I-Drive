@@ -5,7 +5,7 @@ from django.db.models import PositiveBigIntegerField
 from shortuuidfield import ShortUUIDField
 from typing_extensions import NotRequired
 
-from ...models import Folder, File
+from website.models import Folder, File
 
 Item = Union[Folder, File]
 

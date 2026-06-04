@@ -2,14 +2,14 @@ from typing import Union
 
 from django.utils import timezone
 
-from ..core.dataModels.general import Item
-from ..core.errors import BadRequestError
-from ..core.helpers import get_attr
-from ..models.delete_models import DeletionJob
-from ..models.mixin_models import ItemState
-from ..queries.selectors import check_if_bots_exists
-from ..core.dataModels.http import RequestContext
-from ..tasks.deleteTasks import plan_deletion_job
+from website.core.dataModels.general import Item
+from website.core.dataModels.http import RequestContext
+from website.core.errors import BadRequestError
+from website.core.helpers import get_attr
+from website.models.delete_models import DeletionJob
+from website.models.mixin_models import ItemState
+from website.queries.selectors import check_if_bots_exists
+from website.tasks.deleteTasks import plan_deletion_job
 
 
 def delete_items(context: RequestContext, user, items: list[Union[Item, dict]]) -> None:

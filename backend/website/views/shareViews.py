@@ -2,18 +2,18 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from ..auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareReady, CheckShareTrash, \
+from website.auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady, \
     CheckShareItemBelongings, CheckTrash, CheckState
-from ..auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
-from ..constants import API_BASE_URL, ShareEventType
-from ..core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer
-from ..core.decorators import extract_item, check_resource_permissions, extract_share, extract_folder, extract_file
-from ..core.errors import ResourceNotFoundError, ResourcePermissionError
-from ..core.helpers import extract_key
-from ..models import UserSettings, ShareableLink, Subtitle, File, ShareAccessEvent, ShareAccess
-from ..queries.builders import build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content, create_share_events
-from ..queries.selectors import get_item_inside_share
-from ..services import share_service
+from website.auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
+from website.constants import ShareEventType, API_BASE_URL
+from website.core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer
+from website.core.decorators import check_resource_permissions, extract_item, extract_share, extract_folder, extract_file
+from website.core.errors import ResourceNotFoundError, ResourcePermissionError
+from website.core.helpers import extract_key
+from website.models import ShareableLink, ShareAccess, ShareAccessEvent, UserSettings, Subtitle, File
+from website.queries.builders import create_share_events, build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content
+from website.queries.selectors import get_item_inside_share
+from website.services import share_service
 
 
 @api_view(['GET'])
@@ -111,14 +111,14 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
     else:
         breadcrumbs = []
 
-    response_dict = build_share_resource_dict(share_obj, obj_in_share)
+    response_dict = build_share_resource_dict(obj_in_share)
     del response_dict["parent_id"]
 
     if folder_obj:
         share_service.log_event_http(request, share_obj, ShareEventType.FOLDER_OPEN, folder_id=folder_obj.id)
 
         breadcrumbs = build_share_breadcrumbs(folder_obj, obj_in_share, True)
-        folder_content = build_share_folder_content(share_obj, folder_obj, include_folders=settings.subfolders_in_shares)["children"]
+        folder_content = build_share_folder_content(folder_obj, include_folders=settings.subfolders_in_shares)["children"]
 
     else:
         folder_content = [response_dict]

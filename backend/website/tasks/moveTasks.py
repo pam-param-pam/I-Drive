@@ -2,15 +2,14 @@ from collections import defaultdict
 
 from django.core.exceptions import ValidationError
 
-from .helper import send_message
-from ..celery import app
-from ..constants import EventCode
-from ..core.Serializers import FolderSerializer, FileSerializer
-from ..core.dataModels.http import RequestContext
-from ..models import File, Folder
-from ..queries.selectors import get_folder
-from ..services import folder_service, file_service
-from ..websockets.utils import send_event
+from website.celery import app
+from website.constants import EventCode
+from website.core.Serializers import FolderSerializer, FileSerializer
+from website.core.dataModels.http import RequestContext
+from website.models import Folder, File
+from website.queries.selectors import get_folder
+from website.services import folder_service, file_service
+from website.websockets.utils import send_event, send_message
 
 
 def move_group(context: RequestContext, grouped_items, new_parent, processed_count, last_percentage, total_length, is_folder):

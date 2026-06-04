@@ -10,11 +10,9 @@ from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from ..constants import ShareEventType, SHARE_ACCESS_DURATION
-from ..core.dataModels.dataModels import ViewShare, FileOpenEvent, FileStreamEvent, FolderOpenEvent, FolderCloseEvent, MovieToggleEvent, MovieSeekEvent, MovieWatchEvent, \
-    SubtitleStreamedEvent, ThumbnailStreamedEvent, \
-    FileDownloadEvent, FolderDownloadEvent, ZipDownloadEvent
-from ..core.dataModels.http import ShareContext
+from website.constants import SHARE_ACCESS_DURATION, ShareEventType
+from website.core.dataModels import dataModels
+from website.core.dataModels.http import ShareContext
 
 
 class ShareableLink(models.Model):
@@ -123,29 +121,29 @@ class ShareAccessEvent(models.Model):
         ]
 
     EVENT_SCHEMAS: dict[ShareEventType, type] = {
-        ShareEventType.SHARE_VIEW: ViewShare,
+        ShareEventType.SHARE_VIEW: dataModels.ViewShare,
 
         # File
-        ShareEventType.FILE_OPEN: FileOpenEvent,
-        ShareEventType.FILE_DOWNLOAD: FileDownloadEvent,
-        ShareEventType.FILE_STREAM: FileStreamEvent,
+        ShareEventType.FILE_OPEN: dataModels.FileOpenEvent,
+        ShareEventType.FILE_DOWNLOAD: dataModels.FileDownloadEvent,
+        ShareEventType.FILE_STREAM: dataModels.FileStreamEvent,
 
         # Folder
-        ShareEventType.FOLDER_OPEN: FolderOpenEvent,
-        ShareEventType.FOLDER_CLOSE: FolderCloseEvent,
-        ShareEventType.FOLDER_DOWNLOAD: FolderDownloadEvent,
+        ShareEventType.FOLDER_OPEN: dataModels.FolderOpenEvent,
+        ShareEventType.FOLDER_CLOSE: dataModels.FolderCloseEvent,
+        ShareEventType.FOLDER_DOWNLOAD: dataModels.FolderDownloadEvent,
 
         # Movie
-        ShareEventType.MOVIE_WATCH: MovieWatchEvent,
-        ShareEventType.MOVIE_SEEK: MovieSeekEvent,
-        ShareEventType.MOVIE_TOGGLE: MovieToggleEvent,
+        ShareEventType.MOVIE_WATCH: dataModels.MovieWatchEvent,
+        ShareEventType.MOVIE_SEEK: dataModels.MovieSeekEvent,
+        ShareEventType.MOVIE_TOGGLE: dataModels.MovieToggleEvent,
 
         # Other
-        ShareEventType.SUBTITLE_STREAM: SubtitleStreamedEvent,
-        ShareEventType.THUMBNAIL_STREAM: ThumbnailStreamedEvent,
+        ShareEventType.SUBTITLE_STREAM: dataModels.SubtitleStreamedEvent,
+        ShareEventType.THUMBNAIL_STREAM: dataModels.ThumbnailStreamedEvent,
 
         # Zip
-        ShareEventType.ZIP_DOWNLOAD: ZipDownloadEvent,
+        ShareEventType.ZIP_DOWNLOAD: dataModels.ZipDownloadEvent,
 
     }
 

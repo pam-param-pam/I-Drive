@@ -7,9 +7,9 @@ import requests
 from django.http import HttpResponse, HttpRequest
 from django.utils.encoding import smart_str
 
-from .stream.MyStreamingResponse import MyStreamingResponse
-from ..crypto.Decryptor import Decryptor
-from ..errors import DiscordError
+from website.core.crypto.Decryptor import Decryptor
+from website.core.errors import DiscordError
+from website.core.media.stream.MyStreamingResponse import MyStreamingResponse
 
 
 def decrypt_bytes(content: bytes, decryptor: Decryptor) -> bytes:

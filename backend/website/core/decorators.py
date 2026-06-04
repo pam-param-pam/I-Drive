@@ -4,12 +4,12 @@ from typing import Callable, Union
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from .crypto.signer import unsign_resource
-from .helpers import validate_ids_as_list
-from ..auth.Permissions import CheckGroup
-from ..models import File, Folder, ShareableLink
-from ..core.errors import ResourceNotFoundError, MissingOrIncorrectResourcePasswordError, BadRequestError, URLInvalidOrExpired
-from ..queries.selectors import get_file
+from website.auth.Permissions import CheckGroup
+from website.core.crypto.signer import unsign_resource
+from website.core.errors import URLInvalidOrExpired, ResourceNotFoundError, BadRequestError, MissingOrIncorrectResourcePasswordError
+from website.core.helpers import validate_ids_as_list
+from website.models import Folder, File, ShareableLink
+from website.queries.selectors import get_file
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 

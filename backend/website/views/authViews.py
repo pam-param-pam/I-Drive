@@ -4,12 +4,12 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import ChangePassword, ReadPerms, AllowedIP
-from ..auth.throttle import LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAnonUserThrottle, defaultAuthUserThrottle
-from ..core.Serializers import DeviceTokenSerializer
-from ..core.helpers import extract_key
-from ..models import PerDeviceToken
-from ..services import auth_service
+from website.auth.Permissions import AllowedIP, ChangePassword, ReadPerms
+from website.auth.throttle import defaultAnonUserThrottle, LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAuthUserThrottle
+from website.core.Serializers import DeviceTokenSerializer
+from website.core.helpers import extract_key
+from website.models import PerDeviceToken
+from website.services import auth_service
 
 
 @api_view(['GET'])

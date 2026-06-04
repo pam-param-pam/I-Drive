@@ -2,17 +2,16 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, ModifyPerms, default_checks, CheckRoot, CheckTrash, DeletePerms, LockPerms, ResetLockPerms, CheckFolderLock, ReadPerms, DownloadPerms
-from ..auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
-from ..constants import API_BASE_URL
-from ..core.Serializers import FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, ZipSerializer
-from ..core.decorators import extract_folder, check_resource_permissions, extract_items_from_ids_annotated, check_bulk_permissions, extract_item, extract_file, \
-    accumulate_password_errors
-from ..core.errors import BadRequestError
-from ..core.helpers import extract_key
-from ..core.http.utils import build_response
-from ..models import File, Folder
-from ..services import folder_service, item_service, file_service, delete_service, zip_service, create_file_service
+from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, CheckRoot, CheckTrash, DeletePerms, ReadPerms, DownloadPerms, LockPerms, ResetLockPerms, CheckFolderLock
+from website.auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
+from website.core.Serializers import FolderSerializer, ZipSerializer, TagSerializer, MomentSerializer, SubtitleSerializer
+from website.core.decorators import check_resource_permissions, extract_folder, extract_items_from_ids_annotated, accumulate_password_errors, check_bulk_permissions, extract_item, \
+    extract_file
+from website.core.errors import BadRequestError
+from website.core.helpers import extract_key
+from website.core.http.utils import build_response
+from website.models import File, Folder
+from website.services import folder_service, item_service, delete_service, zip_service, file_service, create_file_service
 
 
 @api_view(['POST'])

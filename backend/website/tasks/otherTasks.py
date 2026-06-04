@@ -11,19 +11,18 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from .helper import send_message
-from ..celery import app
-from ..constants import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, EventCode, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, MAX_RAW_EXTRACTION_ATTEMPTS
-from ..core.Serializers import FileSerializer
-from ..core.crypto.Decryptor import Decryptor
-from ..core.crypto.Encryptor import Encryptor
-from ..core.dataModels.http import RequestContext
-from ..core.errors import FailedToParseRawImage
-from ..discord.Discord import discord
-from ..models import (Folder, Fragment, File, DiscordSettings)
-from ..models.other_models import RawExtractionClaim
-from ..services import folder_service, file_service, create_file_service
-from ..websockets.utils import send_event
+from website.celery import app
+from website.constants import EventCode, MAX_RAW_EXTRACTION_ATTEMPTS, MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE
+from website.core.Serializers import FileSerializer
+from website.core.crypto.Decryptor import Decryptor
+from website.core.crypto.Encryptor import Encryptor
+from website.core.dataModels.http import RequestContext
+from website.core.errors import FailedToParseRawImage
+from website.discord.Discord import discord
+from website.models import Folder, Fragment, File, DiscordSettings
+from website.models.other_models import RawExtractionClaim
+from website.services import folder_service, create_file_service, file_service
+from website.websockets.utils import send_event, send_message
 
 logger = get_task_logger(__name__)
 
@@ -136,12 +135,7 @@ def _save_thumbnail_and_metadata(user, file_obj: File, thumbnail_info: dict, met
     create_file_service.create_or_edit_thumbnail(user, file_obj, thumbnail_info)
     file_service.create_raw_metadata(file_obj, metadata)
     file_obj.remove_cache()
-    send_event(
-        RequestContext.from_user(file_obj.owner.id),
-        file_obj.parent,
-        EventCode.ITEM_UPDATE,
-        FileSerializer.serialize_object(file_obj)
-    )
+    send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
 
 
 def _handle_parse_failure(file_obj: File):

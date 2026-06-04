@@ -1,5 +1,6 @@
 import time
-from ...constants import cache
+
+from website.constants import cache
 
 
 class ApplyRateLimitHeadersMiddleware:

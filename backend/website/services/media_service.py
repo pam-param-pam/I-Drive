@@ -1,24 +1,24 @@
 import base64
 
-from ..auth.Permissions import CheckLockedFolderIP
-from ..auth.utils import check_resource_perms
-from ..constants import MAX_MEDIA_CACHE_AGE, USE_CACHE, cache, MAX_THUMBNAIL_SIZE
-from ..core.crypto.Decryptor import Decryptor
-from ..core.errors import BadRequestError
-from ..core.helpers import validate_key
-from ..core.media.stream.sources.ZipByteSource import ZipByteSource
-from ..core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
-from ..core.media.stream.sources.EmptyByteSource import EmptyByteSource
-from ..core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
-from ..core.media.utils import build_binary_response, decrypt_bytes, fetch_discord_file, build_streaming_response
-from ..discord.Discord import discord
-from ..models import File, Moment, Subtitle, UserZIP
-from ..models.mixin_models import ItemState
-from ..queries.builders import build_flattened_children, build_zip_file_dict
-from ..queries.selectors import check_if_bots_exists
+from website.auth.Permissions import CheckLockedFolderIP
+from website.auth.utils import check_resource_perms
+from website.constants import cache, MAX_THUMBNAIL_SIZE, USE_CACHE, MAX_MEDIA_CACHE_AGE
+from website.core.crypto.Decryptor import Decryptor
+from website.core.errors import BadRequestError
+from website.core.helpers import validate_key
+from website.core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
+from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
+from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
+from website.core.media.stream.sources.ZipByteSource import ZipByteSource
+from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
+from website.discord.Discord import discord
+from website.models import File, Moment, Subtitle, UserZIP
+from website.models.mixin_models import ItemState
+from website.queries.builders import build_flattened_children, build_zip_file_dict
+from website.queries.selectors import check_if_bots_exists
 
 
-def get_thumbnail_response(request, file_obj: File, ):
+def get_thumbnail_response(request, file_obj: File):
     isInline = request.GET.get('inline', False)
     thumbnail = file_obj.thumbnail
 
@@ -87,7 +87,7 @@ def get_file_response(request, file_obj: File):
     referer = request.headers.get('Referer')
 
     fragments = file_obj.fragments.all().order_by("sequence")
-    user = file_obj.owner # without this call it will break cuz lol
+    user = file_obj.owner  # without this call it will break cuz lol
 
     check_if_bots_exists(user)
 

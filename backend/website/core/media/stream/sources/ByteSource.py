@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import AsyncIterator
 
-from ....errors import RangeNotSatisfiable
-from ..ByteRange import ByteRange
+from website.core.errors import RangeNotSatisfiable
+from website.core.media.stream.ByteRange import ByteRange
 
 
 class ByteSource(ABC):

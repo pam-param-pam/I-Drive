@@ -1,5 +1,5 @@
-from ...constants import EncryptionMethod
-from ...core.crypto.StreamCipherBase import StreamCipherBase
+from website.constants import EncryptionMethod
+from website.core.crypto.StreamCipherBase import StreamCipherBase
 
 
 class Decryptor(StreamCipherBase):

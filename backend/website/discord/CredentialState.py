@@ -2,9 +2,9 @@ import math
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, Literal
 
-from .utils import decode_redis_hash
-from ..core.helpers import normalize_blocked_until
-from ..models import Bot, Webhook
+from website.core.helpers import normalize_blocked_until
+from website.discord.utils import decode_redis_hash
+from website.models import Bot, Webhook
 
 CredentialType = Literal["bot", "webhook"]
 

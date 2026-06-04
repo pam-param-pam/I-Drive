@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from django.core.exceptions import ImproperlyConfigured
 from rest_framework.throttling import UserRateThrottle
 
-from ..constants import cache
-from ..core.helpers import get_ip
+from website.constants import cache
+from website.core.helpers import get_ip
 
 
 class MyUserRateThrottleBase(UserRateThrottle):

@@ -1,8 +1,10 @@
-from .ByteSource import ByteSource
-from .FragmentByteSource import FragmentedDiscordByteSource
-from ..ByteRange import ByteRange
 
 import zlib
+
+from website.core.media.stream.ByteRange import ByteRange
+from website.core.media.stream.sources.ByteSource import ByteSource
+from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
+
 
 class DeflateZipEntryByteSource(ByteSource):
     def __init__(self, file_obj, fragments, offset: int, compression_method: int, compressed_size: int, uncompressed_size: int):

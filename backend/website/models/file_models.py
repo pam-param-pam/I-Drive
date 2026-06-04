@@ -10,10 +10,10 @@ from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
+from website.constants import FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER
+from website.core.helpers import check_name, chop_long_file_name
+from website.models.mixin_models import ItemState, DiscordAttachmentMixin
 from .folder_models import Folder
-from .mixin_models import DiscordAttachmentMixin, ItemState
-from ..constants import FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER
-from ..core.helpers import chop_long_file_name, check_name
 
 
 class File(models.Model):

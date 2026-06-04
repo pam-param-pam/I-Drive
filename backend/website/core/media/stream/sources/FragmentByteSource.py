@@ -3,12 +3,12 @@ from dataclasses import dataclass
 import aiohttp
 from asgiref.sync import sync_to_async
 
-from ..ByteRange import ByteRange
-from ....crypto.Decryptor import Decryptor
-from .....discord.Discord import discord
-from .....models import Fragment
-from .ByteSource import ByteSource
-from .....tasks.helper import auto_prefetch
+from website.core.crypto.Decryptor import Decryptor
+from website.core.media.stream.ByteRange import ByteRange
+from website.core.media.stream.sources.ByteSource import ByteSource
+from website.discord.Discord import discord
+from website.models import Fragment
+from website.tasks.helper import auto_prefetch
 
 
 @dataclass(frozen=True)

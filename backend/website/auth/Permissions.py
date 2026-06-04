@@ -5,12 +5,12 @@ from urllib.parse import unquote
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from ..constants import ALLOWED_IPS_LOCKED
-from ..core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from ..core.helpers import get_ip, get_attr
-from ..models import UserPerms, File, Folder, ShareableLink
-from ..models.mixin_models import ItemState
-from ..queries.selectors import check_if_item_belongs_to_share, get_item_inside_share
+from website.constants import ALLOWED_IPS_LOCKED
+from website.core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
+from website.core.helpers import get_ip, get_attr
+from website.models import UserPerms, Folder, File, ShareableLink
+from website.models.mixin_models import ItemState
+from website.queries.selectors import check_if_item_belongs_to_share, get_item_inside_share
 
 
 class BasePermissionWithMessage(BasePermission):

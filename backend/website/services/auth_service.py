@@ -8,18 +8,18 @@ from django.contrib.auth import user_logged_in, user_logged_out
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from . import user_service, cache_service
-from ..constants import TOKEN_EXPIRY_DAYS, QR_CODE_SESSION_EXPIRY, cache, EventCode
-from ..core.Serializers import DeviceTokenSerializer
-from ..core.dataModels.http import RequestContext
-from ..core.errors import BadRequestError, UsernameTakenError, ResourceNotFoundError, ResourcePermissionError
-from ..core.helpers import get_ip, validate_value
-from ..core.http.utils import get_device_metadata
-from ..core.validators.GeneralChecks import NotEmpty
-from ..models import PerDeviceToken, UserPerms, UserSettings, Folder, DiscordSettings
-from ..models.other_models import NotificationType
-from ..tasks.queueTasks import queue_ws_event
-from ..websockets.utils import send_event
+from website.constants import TOKEN_EXPIRY_DAYS, cache, QR_CODE_SESSION_EXPIRY, EventCode
+from website.core.Serializers import DeviceTokenSerializer
+from website.core.dataModels.http import RequestContext
+from website.core.errors import ResourceNotFoundError, BadRequestError, ResourcePermissionError, UsernameTakenError
+from website.core.helpers import get_ip, validate_value
+from website.core.http.utils import get_device_metadata
+from website.core.validators.GeneralChecks import NotEmpty
+from website.models import PerDeviceToken, UserPerms, Folder, UserSettings, DiscordSettings
+from website.models.other_models import NotificationType
+from website.services import cache_service, user_service
+from website.tasks.queueTasks import queue_ws_event
+from website.websockets.utils import send_event
 
 
 def _create_token_internal(user: User, device_info: dict) -> tuple[str, PerDeviceToken]:

@@ -1,6 +1,6 @@
 from typing import Union
 
-from ..core.dataModels.general import Item
+from website.core.dataModels.general import Item
 
 
 def check_resource_perms(request, resource: Union[Item, dict], checks) -> None:

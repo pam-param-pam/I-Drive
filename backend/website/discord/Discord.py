@@ -9,13 +9,13 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
-from .CredentialState import CredentialState
-from .UserState import UserState
-from ..constants import DISCORD_BASE_URL, cache, USE_CACHE
-from ..core.errors import DiscordError, CannotProcessDiscordRequestError, BadRequestError, DiscordTextError, DiscordErrorMaxRetries
-from ..models import Bot, DiscordAttachmentMixin, Webhook
-from ..queries.selectors import query_attachments
-from ..services import cache_service
+from website.constants import DISCORD_BASE_URL, USE_CACHE, cache
+from website.core.errors import DiscordError, CannotProcessDiscordRequestError, DiscordErrorMaxRetries, DiscordTextError, BadRequestError
+from website.discord.CredentialState import CredentialState
+from website.discord.UserState import UserState
+from website.models import Bot, Webhook, DiscordAttachmentMixin
+from website.queries.selectors import query_attachments
+from website.services import cache_service
 
 logger = logging.getLogger("Discord")
 logger.setLevel(logging.INFO)
@@ -209,7 +209,6 @@ class DiscordManager:
 
             errors.append(response)
 
-        print(errors)
         raise DiscordErrorMaxRetries(errors)
 
 

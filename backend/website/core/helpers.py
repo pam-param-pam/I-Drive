@@ -5,9 +5,9 @@ import time
 from functools import wraps
 from typing import Union, Type, Tuple, Optional, Any
 
-from .errors import BadRequestError
-from .validators.Check import Check
-from ..constants import MAX_RESOURCE_NAME_LENGTH, EncryptionMethod, EXTENSION_TO_FILE_TYPE
+from website.constants import MAX_RESOURCE_NAME_LENGTH, EXTENSION_TO_FILE_TYPE, EncryptionMethod
+from website.core.errors import BadRequestError
+from website.core.validators.Check import Check
 
 _SENTINEL = object()  # Unique object to detect omitted default
 

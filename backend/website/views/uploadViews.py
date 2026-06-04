@@ -2,11 +2,11 @@ from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, DeletePerms
-from ..auth.throttle import defaultAuthUserThrottle
-from ..core.decorators import extract_file, check_resource_permissions
-from ..core.helpers import extract_key
-from ..services import create_file_service
+from website.auth.Permissions import CreatePerms, ModifyPerms, default_checks
+from website.auth.throttle import defaultAuthUserThrottle
+from website.core.decorators import extract_file, check_resource_permissions
+from website.core.helpers import extract_key
+from website.services import create_file_service
 
 
 @api_view(['POST'])

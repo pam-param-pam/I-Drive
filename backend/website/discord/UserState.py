@@ -4,11 +4,11 @@ from typing import Optional, Dict, Any
 
 from django_redis import get_redis_connection
 
-from .CredentialState import CredentialState, CredentialType
-from .utils import decode_redis_hash
-from ..core.errors import DiscordBlockError, CannotProcessDiscordRequestError, BadRequestError
-from ..core.helpers import normalize_blocked_until
-from ..models import DiscordSettings, Bot, Channel, Webhook
+from website.core.errors import BadRequestError, DiscordBlockError, CannotProcessDiscordRequestError
+from website.core.helpers import normalize_blocked_until
+from website.discord.CredentialState import CredentialState, CredentialType
+from website.discord.utils import decode_redis_hash
+from website.models import DiscordSettings, Webhook, Bot, Channel
 
 
 class UserState:

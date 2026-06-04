@@ -5,12 +5,12 @@ from typing import List, Dict, Iterable
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 
-from ..core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, FolderSerializer, FileSerializer, ShareAccessEventSerializer
-from ..core.dataModels.general import Item, ZipFileDict, Breadcrumbs, FolderDict
-from ..core.helpers import get_attr, normalize_blocked_until
-from ..discord.Discord import discord
-from ..models import File, Folder, ShareableLink, Webhook, Bot, Channel, ShareAccessEvent
-from ..models.mixin_models import ItemState
+from website.core.Serializers import FileSerializer, FolderSerializer, ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
+from website.core.dataModels.general import FolderDict, Item, Breadcrumbs, ZipFileDict
+from website.core.helpers import get_attr, normalize_blocked_until
+from website.discord.Discord import discord
+from website.models import Folder, File, ShareableLink, Channel, Webhook, Bot, ShareAccessEvent
+from website.models.mixin_models import ItemState
 
 
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
@@ -161,7 +161,7 @@ def build_flattened_children(folder: Folder, full_path="", root_folder=None) -> 
     return children
 
 
-def build_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> Dict:
+def build_share_resource_dict(resource_in_share: Item) -> Dict:
     if isinstance(resource_in_share, Folder):
         resource_dict = ShareFolderSerializer.serialize_object(resource_in_share)
     else:
@@ -170,7 +170,7 @@ def build_share_resource_dict(share: ShareableLink, resource_in_share: Item) -> 
     return resource_dict
 
 
-def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include_folders: bool) -> FolderDict:
+def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> FolderDict:
     files = list(
         folder_obj.files
         .filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
@@ -183,7 +183,7 @@ def build_share_folder_content(share: ShareableLink, folder_obj: Folder, include
 
     file_dicts = [ShareFileSerializer.serialize_dict(file) for file in files]
     folder_dicts = [ShareFolderSerializer.serialize_object(folder) for folder in folders]
-    folder_dict = build_share_resource_dict(share, folder_obj)
+    folder_dict = build_share_resource_dict(folder_obj)
 
     folder_dict["children"] = file_dicts + folder_dicts
     return folder_dict

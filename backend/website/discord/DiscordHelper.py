@@ -4,29 +4,30 @@ from typing import List, Callable
 
 import httpx
 
-from ..constants import NUMBER_OF_CHANNELS, DISCORD_BASE_URL, NUMBER_OF_WEBHOOKS_PER_CHANNEL, WEBHOOK_NAME_TEMPLATE
-from ..discord.constants import *
-from ..core.errors import BadRequestError, DiscordTextError
-from ..models import DiscordSettings, Channel, Bot
-from ..queries.selectors import query_attachments
+from website.constants import DISCORD_BASE_URL, NUMBER_OF_CHANNELS, NUMBER_OF_WEBHOOKS_PER_CHANNEL, WEBHOOK_NAME_TEMPLATE
+from website.core.errors import DiscordTextError, BadRequestError
+from website.discord import constants
+from website.discord.constants import ADMINISTRATOR, PERMISSION_NAMES, CATEGORY_TYPE
+from website.models import Channel, DiscordSettings, Bot
+from website.queries.selectors import query_attachments
 
 ALL_BOTS_ROLE_PERMS = (
-        VIEW_CHANNEL |
-        READ_MESSAGE_HISTORY |
-        SEND_MESSAGES |
-        ATTACH_FILES |
-        MANAGE_MESSAGES
+        constants.VIEW_CHANNEL |
+        constants.READ_MESSAGE_HISTORY |
+        constants.SEND_MESSAGES |
+        constants.ATTACH_FILES |
+        constants.MANAGE_MESSAGES
 )
 
 PRIMARY_BOT_REQUIRED_PERMS = (
-        MANAGE_CHANNELS |
-        MANAGE_WEBHOOKS |
-        VIEW_CHANNEL |
-        SEND_MESSAGES |
-        READ_MESSAGE_HISTORY |
-        ATTACH_FILES |
-        MANAGE_MESSAGES |
-        MANAGE_ROLES
+        constants.MANAGE_CHANNELS |
+        constants.MANAGE_WEBHOOKS |
+        constants.VIEW_CHANNEL |
+        constants.SEND_MESSAGES |
+        constants.READ_MESSAGE_HISTORY |
+        constants.ATTACH_FILES |
+        constants.MANAGE_MESSAGES |
+        constants.MANAGE_ROLES
 )
 
 

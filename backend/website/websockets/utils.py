@@ -9,6 +9,15 @@ from ..models import File, Folder
 from ..tasks.queueTasks import queue_ws_event
 
 
+def send_message(message: str, args: Optional[dict], finished: bool, context: RequestContext, isError=False):
+    send_event(context, None, EventCode.MESSAGE_SENT, {
+        "message": message,
+        "args": args,
+        "isFinished": finished,
+        "isError": isError,
+        "task_id": context.request_id
+    })
+
 def group_and_send_event(context: RequestContext, op_code: EventCode, resources: List[Union[File, Folder]]) -> None:
     """Group files by parent object and send event for each parent"""
     grouped_files = defaultdict(list)

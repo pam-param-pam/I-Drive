@@ -2,7 +2,7 @@ import os
 import ast
 import importlib
 
-from ..models import DiscordAttachmentMixin
+from website.models import DiscordAttachmentMixin
 
 
 def get_classes_extending_discordAttachmentMixin() -> list[type[DiscordAttachmentMixin]]:

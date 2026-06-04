@@ -1,22 +1,19 @@
-from datetime import timedelta
-
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
-from django.utils import timezone
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms
-from ..auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
-from ..constants import EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, FILE_TYPES, EXTENSION_TO_FILE_TYPE
-from ..core.Serializers import WebhookSerializer, BotSerializer, NotificationSerializer
-from ..core.decorators import check_resource_permissions, extract_folder
-from ..core.errors import RootFolderError
-from ..core.helpers import extract_key
-from ..models import UserSettings, Folder, UserPerms, Channel, DiscordSettings
-from ..models.other_models import Notification
-from ..queries.builders import build_discord_settings
-from ..services import user_service
+from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms
+from website.auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
+from website.constants import FILE_TYPES, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, EXTENSION_TO_FILE_TYPE
+from website.core.Serializers import WebhookSerializer, BotSerializer, NotificationSerializer
+from website.core.decorators import check_resource_permissions, extract_folder
+from website.core.errors import RootFolderError
+from website.core.helpers import extract_key
+from website.models import Channel, Folder, UserSettings, UserPerms, DiscordSettings
+from website.models.other_models import Notification
+from website.queries.builders import build_discord_settings
+from website.services import user_service
 
 
 @api_view(['GET'])
@@ -187,4 +184,3 @@ def set_notifications_read_status_view(request):
 
     user_service.set_notifications_read_status(request.user, notifications_ids, read=is_read)
     return HttpResponse(status=204)
-

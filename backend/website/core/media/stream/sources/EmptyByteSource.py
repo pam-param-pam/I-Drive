@@ -1,5 +1,5 @@
-from .ByteSource import ByteSource
-from ..ByteRange import ByteRange
+from website.core.media.stream.ByteRange import ByteRange
+from website.core.media.stream.sources.ByteSource import ByteSource
 
 
 class EmptyByteSource(ByteSource):

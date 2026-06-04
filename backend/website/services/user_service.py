@@ -1,17 +1,17 @@
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from ..constants import EventCode, EncryptionMethod, MAX_NUMBER_OF_CHANNELS
-from ..core.dataModels.http import RequestContext
-from ..core.errors import BadRequestError
-from ..core.helpers import validate_ids_as_list, validate_value, validate_key
-from ..discord.Discord import discord
-from ..discord.DiscordHelper import DiscordHelperService
-from ..models import Webhook, Bot, DiscordSettings, Channel, File, UserSettings
-from ..models.mixin_models import ItemState
-from ..models.other_models import Notification, NotificationType
-from ..queries.selectors import query_attachments
-from ..websockets.utils import send_event
+from website.constants import EncryptionMethod, MAX_NUMBER_OF_CHANNELS, EventCode
+from website.core.dataModels.http import RequestContext
+from website.core.errors import BadRequestError
+from website.core.helpers import validate_key, validate_value, validate_ids_as_list
+from website.discord.Discord import discord
+from website.discord.DiscordHelper import DiscordHelperService
+from website.models import UserSettings, DiscordSettings, Webhook, Channel, Bot, File
+from website.models.mixin_models import ItemState
+from website.models.other_models import Notification, NotificationType
+from website.queries.selectors import query_attachments
+from website.websockets.utils import send_event
 
 
 def update_user_settings(user, data: dict) -> UserSettings:

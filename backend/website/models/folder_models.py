@@ -9,10 +9,10 @@ from mptt.models import MPTTModel
 from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 
+from website.constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH
+from website.core.helpers import check_name
 from .mixin_models import ItemState
-from ..constants import MAX_RESOURCE_NAME_LENGTH, cache, MAX_FOLDER_DEPTH
-from ..core.helpers import check_name
-from ..services import cache_service
+from website.services import cache_service
 
 
 class Folder(MPTTModel):

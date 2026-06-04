@@ -5,13 +5,13 @@ from django.db import transaction
 from django.db.models import F, Q, Exists, OuterRef
 from django.utils import timezone
 
-from .deleteTasks import process_file_batch, process_folder_batch
-from ..celery import app
-from ..constants import MAX_FILE_DELETION_ATTEMPTS
-from ..core.dataModels.http import RequestContext
-from ..models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
-from ..models.other_models import NotificationType
-from ..services import user_service
+from website.celery import app
+from website.constants import MAX_FILE_DELETION_ATTEMPTS
+from website.core.dataModels.http import RequestContext
+from website.models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
+from website.models.other_models import NotificationType
+from website.services import user_service
+from website.tasks.deleteTasks import process_file_batch, process_folder_batch
 
 
 def _reclaim_stale_file_claims(minutes: int = 10):

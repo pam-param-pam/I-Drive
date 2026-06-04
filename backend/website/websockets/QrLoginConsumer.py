@@ -1,9 +1,9 @@
 import json
 import threading
 
-from .BaseConsumer import RateLimitedWebsocketConsumer
-from ..constants import QR_CODE_SESSION_EXPIRY, cache
-from ..services import cache_service
+from website.constants import cache, QR_CODE_SESSION_EXPIRY
+from website.services import cache_service
+from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
 
 class QrLoginConsumer(RateLimitedWebsocketConsumer):

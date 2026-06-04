@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.db import close_old_connections, transaction
 from django.utils import timezone as django_timezone
 
-from .helper import bulk_deletable
+from .helper import is_bulk_deletable
 from .otherTasks import _handle_parse_failure
 from ..celery import app
 from ..constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS
@@ -138,7 +138,7 @@ def process_channel(user, channel, days):
             if query_attachments(message_id=msg_id):
                 continue
 
-            if bulk_deletable(msg_id):
+            if is_bulk_deletable(msg_id):
                 bulk_candidates.append(msg_id)
 
                 if len(bulk_candidates) == 100:

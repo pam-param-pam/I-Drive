@@ -12,22 +12,22 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
-from ..auth.Permissions import ReadPerms, default_checks, CheckOwnership, CheckLockedFolderIP, CheckTrash
-from ..auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
-from ..auth.utils import check_resource_perms
-from ..constants import cache, SIGNED_URL_EXPIRY_SECONDS
-from ..core.Serializers import FileSerializer, VideoTrackSerializer, AudioTrackSerializer, SubtitleTrackSerializer, FolderSerializer, MomentSerializer, SubtitleSerializer, TagSerializer, \
-    RawMetadataSerializer, PhotoMetadataSerializer, MediaPositionSerializer
-from ..core.crypto.signer import sign_resource
-from ..core.decorators import check_resource_permissions, extract_folder, extract_item, extract_file
-from ..core.errors import ResourceNotFoundError, ResourcePermissionError
-from ..discord.Discord import discord
-from ..models import File, Folder, Moment, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadata, Subtitle, Fragment, Thumbnail
-from ..models.file_related_models import RawMetadata, PhotoMetadata, Tag
-from ..models.mixin_models import ItemState
-from ..queries.builders import calculate_size, calculate_file_and_folder_count, build_breadcrumbs, build_folder_content
-from ..queries.selectors import query_attachments, check_if_bots_exists, get_trash_files_and_folders
-from ..services import cache_service, search_service
+from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckLockedFolderIP
+from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
+from website.auth.utils import check_resource_perms
+from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS
+from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, FolderSerializer, \
+    MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
+from website.core.crypto.signer import sign_resource
+from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
+from website.core.errors import ResourceNotFoundError, ResourcePermissionError
+from website.discord.Discord import discord
+from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
+from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag
+from website.models.mixin_models import ItemState
+from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count
+from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists, query_attachments
+from website.services import cache_service, search_service
 
 
 @api_view(['GET'])
@@ -122,9 +122,11 @@ def get_usage(request, folder_obj: Folder):
     total_used_size = cache.get(key)
     if not total_used_size:
         file_used = File.objects.filter(owner=request.user, inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))[
+                             'size__sum'] or 0
         moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
+        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))[
+                            'size__sum'] or 0
 
         total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
         cache.set(key, total_used_size, 60)
@@ -135,6 +137,7 @@ def get_usage(request, folder_obj: Folder):
         folder_used_size = total_used_size
 
     return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
+
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -199,6 +202,7 @@ def search(request):
     data = search_service.perform_search(request)
     return JsonResponse(data, safe=False)
 
+
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -209,6 +213,7 @@ def get_trash(request):
     folder_dicts = [FolderSerializer.serialize_object(folder) for folder in folders]
 
     return JsonResponse({"trash": file_dicts + folder_dicts})
+
 
 @api_view(['GET'])
 @throttle_classes([FolderPasswordThrottle])
@@ -223,6 +228,7 @@ def check_password(request, item_obj):
 
     raise ResourcePermissionError("Folder password is incorrect")
 
+
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -232,6 +238,7 @@ def get_moments(request, file_obj: File):
     moments = Moment.objects.filter(file=file_obj).all()
     return JsonResponse(MomentSerializer.serialize_objects(moments), safe=False)
 
+
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -240,6 +247,7 @@ def get_moments(request, file_obj: File):
 def get_tags(request, file_obj: File):
     return JsonResponse(TagSerializer.serialize_objects(file_obj.tags.all()), safe=False)
 
+
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
@@ -247,6 +255,7 @@ def get_tags(request, file_obj: File):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def get_media_position(request, file_obj: File):
     return JsonResponse(MediaPositionSerializer.serialize_object(file_obj.mediaposition), safe=False)
+
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -265,7 +274,9 @@ def get_all_tags(request):
     tags = Tag.objects.filter(owner=request.user)
     return JsonResponse(TagSerializer.serialize_objects(tags), safe=False)
 
+
 """====================================================HERE BE DRAGONS=========================================================="""
+
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])
@@ -435,20 +446,20 @@ def check_message_id(request, message_id):
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_folder_hash(request, folder_obj: Folder):
-    print(f"get_folder_hash called for folder: {folder_obj}")
+    # print(f"get_folder_hash called for folder: {folder_obj}")
     subfolders = folder_obj.get_all_subfolders(include_self=True).filter(inTrash=False)
     files = File.objects.filter(parent__in=subfolders, inTrash=False).distinct().only("name", "crc")
     folders = subfolders.only("name")
 
     hasher = hashlib.sha256()
 
-    print("REMOTE FILES:")
-    for f in files.order_by("name"):
-        print(f"{f.name} | {f.crc}")
-
-    print("REMOTE DIRS:")
-    for d in folders.order_by("name"):
-        print(d.name)
+    # print("REMOTE FILES:")
+    # for f in files.order_by("name"):
+    #     print(f"{f.name} | {f.crc}")
+    #
+    # print("REMOTE DIRS:")
+    # for d in folders.order_by("name"):
+    #     print(d.name)
 
     for f in files.order_by("name"):
         hasher.update(f.name.encode("utf-8"))
@@ -458,41 +469,3 @@ def get_folder_hash(request, folder_obj: Folder):
         hasher.update(d.name.encode("utf-8"))
 
     return JsonResponse({"hash": hasher.hexdigest()})
-
-
-"""
-def get_folder_hash(request, folder_obj):
-    hasher = hashlib.sha256()
-
-    folders = (
-        Folder.objects
-        .filter(
-            tree_id=folder_obj.tree_id,
-            lft__gte=folder_obj.lft,
-            rght__lte=folder_obj.rght,
-        )
-        .values_list("id", "name")
-        .order_by("id")
-        .iterator()
-    )
-
-    files = (
-        File.objects
-        .filter(
-            parent__tree_id=folder_obj.tree_id,
-            parent__lft__gte=folder_obj.lft,
-            parent__rght__lte=folder_obj.rght,
-        )
-        .values_list("id", "name", "crc")
-        .order_by("id")
-        .iterator()
-    )
-
-    for folder_id, name in folders:
-        hasher.update(f"folder:{folder_id}:{name}\n".encode("utf-8"))
-
-    for file_id, name, crc in files:
-        hasher.update(f"file:{file_id}:{name}:{crc}\n".encode("utf-8"))
-
-    return HttpResponse(hasher.hexdigest())
-    """

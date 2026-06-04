@@ -7,21 +7,20 @@ from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
-from . import file_service
-from .attachment_service import delete_single_discord_attachment
-from ..auth.Permissions import default_checks
-from ..auth.utils import check_resource_perms
-from ..constants import EventCode, MAX_DISCORD_MESSAGE_SIZE
-from ..core.Serializers import FileSerializer
-from ..core.dataModels.http import RequestContext
-from ..core.errors import BadRequestError
-from ..core.helpers import get_file_type, validate_ids_as_list, validate_key, validate_encryption_fields, validate_crc, get_file_extension
-from ..core.validators.GeneralChecks import IsSnowflake, IsPositive, NotNegative, MaxLength, NotEmpty, Max
-from ..models import File, Fragment, Thumbnail, VideoMetadata
-from ..models.file_related_models import RawMetadata, Moment, Subtitle, PhotoMetadata
-from ..models.mixin_models import ItemState
-from ..queries.selectors import get_discord_author, get_folder, check_if_bots_exists, get_discord_channel
-from ..websockets.utils import group_and_send_event, send_event
+from website.auth.Permissions import default_checks
+from website.auth.utils import check_resource_perms
+from website.constants import MAX_DISCORD_MESSAGE_SIZE, EventCode
+from website.core.Serializers import FileSerializer
+from website.core.dataModels.http import RequestContext
+from website.core.errors import BadRequestError
+from website.core.helpers import validate_key, validate_encryption_fields, validate_crc, get_file_extension, get_file_type, validate_ids_as_list
+from website.core.validators.GeneralChecks import IsPositive, IsSnowflake, Max, NotNegative, MaxLength, NotEmpty
+from website.models import Fragment, File, Moment
+from website.models.file_related_models import PhotoMetadata, Subtitle, RawMetadata, Thumbnail, VideoMetadata
+from website.models.mixin_models import ItemState
+from website.queries.selectors import get_discord_author, get_discord_channel, get_folder, check_if_bots_exists
+from website.services import file_service, attachment_service
+from website.websockets.utils import group_and_send_event, send_event
 
 
 def _create_fragment(file_obj: File, fragment: dict) -> Fragment:
@@ -205,7 +204,7 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
 
     if fragments.exists():
         fragment = fragments[0]
-        delete_single_discord_attachment(user, fragment)
+        attachment_service.delete_single_discord_attachment(user, fragment)
 
     with transaction.atomic():
         if file_data:
@@ -231,7 +230,7 @@ def delete_thumbnail(file_obj, must_exist=False):
     check_if_bots_exists(file_obj.owner)
 
     try:
-        delete_single_discord_attachment(file_obj.owner, file_obj.thumbnail)
+        attachment_service.delete_single_discord_attachment(file_obj.owner, file_obj.thumbnail)
         file_obj.remove_cache()
         file_dict = FileSerializer.serialize_object(file_obj)
         send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, file_dict)

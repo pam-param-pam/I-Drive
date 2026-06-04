@@ -7,16 +7,6 @@ from ..websockets.utils import send_event
 
 DISCORD_EPOCH = 1420070400000  # ms
 
-def send_message(message: str, args: Optional[dict], finished: bool, context: RequestContext, isError=False):
-    send_event(context, None, EventCode.MESSAGE_SENT, {
-        "message": message,
-        "args": args,
-        "isFinished": finished,
-        "isError": isError,
-        "task_id": context.request_id
-    })
-
-
 def auto_prefetch(fragment_id: str) -> None:
     from .otherTasks import prefetch_next_fragments
     fragments_to_prefetch = 5
@@ -27,7 +17,7 @@ def snowflake_to_datetime(snowflake_id: str):
     timestamp_ms = (snowflake >> 22) + DISCORD_EPOCH
     return datetime.fromtimestamp(timestamp_ms / 1000, timezone.utc)
 
-def bulk_deletable(message_id: str):
+def is_bulk_deletable(message_id: str):
     ts = snowflake_to_datetime(message_id)
     age = datetime.now(timezone.utc) - ts
     # avoid race conditions

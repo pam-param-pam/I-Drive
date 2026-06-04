@@ -5,15 +5,14 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils import timezone
 
-from . import folder_service
-from .attachment_service import delete_single_discord_attachment
-from ..core.errors import BadRequestError
-from ..core.helpers import validate_key, validate_encryption_fields, validate_value
-from ..core.validators.GeneralChecks import IsPositive, IsSnowflake, NotEmpty, MaxLength, NoSpaces, NotNegative
-from ..models import File, Thumbnail, Subtitle, VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, VideoMetadataTrackMixin, MediaPosition, Tag, Moment, Folder
-from ..models.file_related_models import RawMetadata, PhotoMetadata
-from ..models.mixin_models import ItemState
-from ..queries.selectors import get_discord_author, get_discord_channel
+from website.core.errors import BadRequestError
+from website.core.helpers import validate_key, validate_encryption_fields, validate_value
+from website.core.validators.GeneralChecks import IsSnowflake, IsPositive, NotEmpty, MaxLength, NotNegative, NoSpaces
+from website.models import Thumbnail, File, Subtitle, VideoMetadataTrackMixin, VideoMetadata, VideoTrack, SubtitleTrack, AudioTrack, Folder
+from website.models.file_related_models import RawMetadata, PhotoMetadata, MediaPosition, Tag, Moment
+from website.models.mixin_models import ItemState
+from website.queries.selectors import get_discord_author, get_discord_channel
+from website.services import attachment_service, folder_service
 
 
 def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
@@ -215,12 +214,12 @@ def rename_subtitle(file_obj: File, subtitle_id: str, new_language: str) -> None
 def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     with transaction.atomic():
         subtitle = Subtitle.objects.select_for_update().get(file=file_obj, id=subtitle_id)
-        delete_single_discord_attachment(user, subtitle)
+        attachment_service.delete_single_discord_attachment(user, subtitle)
 
 def remove_moment(user, file_obj, moment_id) -> None:
     with transaction.atomic():
         moment = Moment.objects.select_for_update().get(file=file_obj, id=moment_id)
-        delete_single_discord_attachment(user, moment)
+        attachment_service.delete_single_discord_attachment(user, moment)
 
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:

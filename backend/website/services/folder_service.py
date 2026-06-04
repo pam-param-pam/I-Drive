@@ -2,17 +2,17 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
-from . import cache_service
-from ..constants import EventCode, cache
-from ..core.Serializers import FolderSerializer
-from ..core.dataModels.http import RequestContext
-from ..core.errors import ResourcePermissionError, BadRequestError
-from ..core.helpers import validate_value
-from ..core.validators.GeneralChecks import NotEmpty
-from ..models import Folder, File
-from ..models.mixin_models import ItemState
-from ..tasks.otherTasks import unlock_folder_task, lock_folder_task
-from ..websockets.utils import send_event
+from website.constants import cache, EventCode
+from website.core.Serializers import FolderSerializer
+from website.core.dataModels.http import RequestContext
+from website.core.errors import BadRequestError, ResourcePermissionError
+from website.core.helpers import validate_value
+from website.core.validators.GeneralChecks import NotEmpty
+from website.models import Folder, File
+from website.models.mixin_models import ItemState
+from website.services import cache_service
+from website.tasks.otherTasks import lock_folder_task, unlock_folder_task
+from website.websockets.utils import send_event
 
 
 def _clear_cache(folder_ids: list[str]) -> None:

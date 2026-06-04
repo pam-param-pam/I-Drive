@@ -1,11 +1,10 @@
 import json
 from typing import Optional
 
-from .BaseConsumer import RateLimitedWebsocketConsumer
-from ..constants import EventCode
-from ..core.dataModels.http import RequestContext
-from ..core.dataModels.websocket import WebsocketEvent, WebsocketLogoutEvent
-from ..models import PerDeviceToken
+from website.constants import EventCode
+from website.core.dataModels.websocket import WebsocketEvent, WebsocketLogoutEvent
+from website.models import PerDeviceToken
+from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
 
 class UserConsumer(RateLimitedWebsocketConsumer):
@@ -61,8 +60,3 @@ class UserConsumer(RateLimitedWebsocketConsumer):
                     self.close()
             else:  # close all connections
                 self.close()
-
-    def get_context(self, device_id: str) -> RequestContext:
-        context = RequestContext.from_user(self.user.id)
-        context.device_id = device_id
-        return context

@@ -13,13 +13,12 @@ from rest_framework.exceptions import PermissionDenied, APIException
 from rest_framework.exceptions import Throttled
 from rest_framework.views import exception_handler
 
-from .utils import build_http_error_response
-from ..errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, ResourceNotFoundError, \
-    MissingOrIncorrectResourcePasswordError, MalformedDatabaseRecord, CannotProcessDiscordRequestError, DiscordBlockError, DiscordTextError, DiscordError, \
-    UsernameTakenError, URLInvalidOrExpired, RangeNotSatisfiable
-from ..helpers import format_wait_time
-from ..helpers import get_attr
-from ...models import ShareableLink
+from website.core.errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, URLInvalidOrExpired, \
+    ResourceNotFoundError, UsernameTakenError, RangeNotSatisfiable, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, DiscordBlockError, \
+    DiscordError, DiscordTextError
+from website.core.helpers import format_wait_time, get_attr
+from website.core.http.utils import build_http_error_response
+from website.models import ShareableLink
 
 is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 def custom_exception_handler(exception, context):

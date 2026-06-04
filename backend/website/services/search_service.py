@@ -5,12 +5,13 @@ from typing import Optional
 from django.core.exceptions import BadRequest
 from django.db.models.query_utils import Q
 
-from ..core.Serializers import FileSerializer, FolderSerializer
-from ..core.errors import BadRequestError
-from ..core.helpers import validate_key, validate_ids_as_list
-from ..core.validators.GeneralChecks import Min, Max, MaxLength
-from ..models import File, Folder
-from ..models.mixin_models import ItemState
+from website.core.Serializers import FileSerializer, FolderSerializer
+from website.core.errors import BadRequestError
+from website.core.helpers import validate_key, validate_ids_as_list
+from website.core.validators.GeneralChecks import MaxLength, Max, Min
+from website.models import Folder, File
+from website.models.mixin_models import ItemState
+
 
 def validate_filter(f: Optional[dict]) -> Optional[dict]:
     ALLOWED_OPS = {

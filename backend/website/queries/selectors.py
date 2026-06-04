@@ -2,11 +2,11 @@ from typing import Union
 
 from django.db.models import Q
 
-from ..core.dataModels.general import Item
-from ..core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
-from ..models import File, Folder, ShareableLink, UserSettings, Webhook, Bot, DiscordAttachmentMixin, Channel
-from ..models.mixin_models import ItemState
-from ..safety.helper import get_classes_extending_discordAttachmentMixin
+from website.core.dataModels.general import Item
+from website.core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
+from website.models import File, Folder, ShareableLink, UserSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
+from website.models.mixin_models import ItemState
+from website.safety.helper import get_classes_extending_discordAttachmentMixin
 
 
 def get_file(file_id: str) -> File:
@@ -143,12 +143,9 @@ def get_item_inside_share(share: ShareableLink):
         share.delete()
         raise ResourceNotFoundError()
 
-def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
-    files = (File.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE)
-        .annotate(**File.get_display_annotate())
-        .values_list(*File.DISPLAY_VALUES)
-    )
 
+def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
+    files = File.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE).annotate(**File.get_display_annotate()) .values_list(*File.DISPLAY_VALUES)
     folders = Folder.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE).select_related("parent")
 
     return files, folders

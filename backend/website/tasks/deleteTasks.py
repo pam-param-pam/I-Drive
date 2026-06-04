@@ -10,18 +10,18 @@ from celery.utils.log import get_task_logger
 from django.db import transaction, models
 from django.utils import timezone
 
-from .helper import send_message, bulk_deletable
-from ..celery import app
-from ..constants import EventCode
-from ..core.dataModels.http import RequestContext
-from ..core.errors import DiscordError
-from ..discord.Discord import discord
-from ..models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, Bot
-from ..models.delete_models import DeletionJob, DeletionFileWorkItem, DeletionFolderWorkItem
-from ..models.mixin_models import ItemState
-from ..queries.selectors import query_attachments
-from ..services import file_service, folder_service
-from ..websockets.utils import send_event
+from website.celery import app
+from website.constants import EventCode
+from website.core.dataModels.http import RequestContext
+from website.core.errors import DiscordError
+from website.discord.Discord import discord
+from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, Bot
+from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
+from website.models.mixin_models import ItemState
+from website.queries.selectors import query_attachments
+from website.services import file_service, folder_service
+from website.tasks.helper import is_bulk_deletable
+from website.websockets.utils import send_event, send_message
 
 logger = get_task_logger(__name__)
 
@@ -319,7 +319,7 @@ def process_channel_deletions(context, job_id: UUID, channel_id: str, messages: 
         attachment_ids_to_remove = {item.attachment_id for item in items}
         attachments_ids_to_keep = set(all_ids) - set(attachment_ids_to_remove)
 
-        if len(attachments_ids_to_keep) == 0 and bulk_deletable(message_id):
+        if len(attachments_ids_to_keep) == 0 and is_bulk_deletable(message_id):
             bulk_candidates.append((message_id, channel_id, attachments_ids_to_keep, items))
         else:
             normal_candidates.append((message_id, channel_id, attachments_ids_to_keep, items))

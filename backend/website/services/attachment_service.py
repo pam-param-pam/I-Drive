@@ -1,7 +1,7 @@
-from ..core.errors import DiscordBotAttachmentAuthor
-from ..discord.Discord import discord
-from ..models import DiscordAttachmentMixin, Webhook
-from ..queries.selectors import query_attachments
+from website.core.errors import DiscordBotAttachmentAuthor
+from website.discord.Discord import discord
+from website.models import DiscordAttachmentMixin, Webhook
+from website.queries.selectors import query_attachments
 
 
 def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> None:
