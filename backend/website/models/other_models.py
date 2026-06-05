@@ -57,17 +57,22 @@ class NotificationType(models.TextChoices):
     ERROR = "error", "Error"
     IMPORTANT = "important", "Important"
 
+class NotificationKind(models.TextChoices):
+    GENERAL = "general", "General"
+    NEW_DEVICE_LOGIN = "new_device_login", "New device login"
+
 class Notification(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications", db_index=True)
     type = models.CharField(max_length=20, choices=NotificationType.choices)
-    title = models.CharField(max_length=255)
-    message = models.TextField()
+    kind = models.CharField(max_length=50, choices=NotificationKind.choices)
+    title = models.CharField(max_length=50, null=True)
+    message = models.CharField(max_length=255, null=True)
+    data = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     read_at = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False, db_index=True)
-    # device_id = models. todo
 
     class Meta:
         ordering = ["-created_at"]
@@ -79,6 +84,10 @@ class Notification(models.Model):
             models.CheckConstraint(
                 condition=Q(type__in=NotificationType.values),
                 name="notification_type_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(kind__in=NotificationKind.values),
+                name="notification_kind_valid",
             )
         ]
 

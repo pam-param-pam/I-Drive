@@ -235,8 +235,8 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
     attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
     message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
     size = validate_key(data, "size", int, checks=[IsPositive])
-    key_b64 = data.get('key')
-    iv_b64 = data.get('iv')
+    key_b64 = validate_key(data, "key", str, default=None)
+    iv_b64 = validate_key(data, "iv", str, default=None)
 
     author = get_discord_author(user, message_author_id)
     channel = get_discord_channel(file_obj.owner, channel_id)

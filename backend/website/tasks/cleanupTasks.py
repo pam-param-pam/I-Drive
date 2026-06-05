@@ -14,7 +14,7 @@ from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Folder
-from ..models.other_models import NotificationType, RawExtractionClaim, Notification
+from ..models.other_models import NotificationType, RawExtractionClaim, Notification, NotificationKind
 from ..queries.selectors import check_if_bots_exists, query_attachments
 from ..services import delete_service, user_service
 
@@ -22,10 +22,12 @@ from ..services import delete_service, user_service
 def cleanup_old_notifications(user) -> int:
     cutoff = django_timezone.now() - timedelta(days=30)
 
-    deleted_count, _ = Notification.objects.filter(
+    deleted_count = Notification.objects.filter(
         owner=user,
         created_at__lt=cutoff,
-    ).delete()
+        read_at__isnull=False,
+        is_deleted=False,
+    ).update(is_deleted=True)
 
     return deleted_count
 
@@ -170,9 +172,12 @@ def cleanup_dangling_discord_files(user, days: int = 1):
         return {"deleted": 0, "errors": []}
 
     channels = list(Channel.objects.filter(owner=user))
-    max_threads = min(number_of_bots, len(channels))
+    max_workers = min(number_of_bots, len(channels))
 
-    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+    if max_workers == 0:
+        return {"deleted": 0, "errors": []}
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(process_channel, user, channel, days)
             for channel in channels
@@ -255,19 +260,12 @@ def run_cleanup():
     for user in User.objects.all():
         try:
             user_result = run_cleanup_for_user(user)
-
             results[user.id] = user_result
-
             summary = format_cleanup_summary(user_result)
-
             if summary:
-                user_service.create_notification(
-                    user,
-                    NotificationType.INFO,
-                    "Cleanup",
-                    summary
-                )
+                user_service.create_notification(user, NotificationType.INFO, NotificationKind.GENERAL, "notifications.cleanupTitle", summary)
+
         except Exception as e:
-            user_service.create_notification(user, NotificationType.ERROR, "Failed to cleanup state", f"During cleanup there was an unhandled error: {e}.")
+            user_service.create_notification(user, NotificationType.ERROR, NotificationKind.GENERAL, "notifications.cleanupFailedTitle", str(e))
 
     return results

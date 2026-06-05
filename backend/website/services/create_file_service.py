@@ -192,6 +192,7 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
         raise BadRequestError("Fragments > 1")
 
     attachment_data = validate_key(file_data, "attachment", dict, default=None)
+
     if file_data:
         crc = validate_key(file_data, "crc", int, checks=[MaxLength(10), NotNegative])
 
@@ -210,9 +211,9 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
         if file_data:
             fragment = _create_fragment(file_obj, attachment_data)
 
+            file_obj.size = fragment.size
             file_obj.key = key
             file_obj.iv = iv
-            file_obj.size = fragment.size
             file_obj.crc = crc
         else:
             file_obj.crc = 0

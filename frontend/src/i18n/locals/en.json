@@ -628,5 +628,23 @@
     "uploadFailed": "Uploading to discord failed",
     "waitingForInternet": "Waiting for internet...",
     "waitingForSave": "Saving..."
+  },
+  "notifications": {
+    "fields": {
+      "device_id": "Device ID",
+      "device": "Device",
+      "ipAddress": "IP address",
+      "device_type": "Device type",
+      "country": "Country",
+      "city": "City"
+    },
+    "newDeviceLoginTitle": "New device login",
+    "newDeviceLoginMessage": "A new device has logged into your account.",
+    "accountPasswordChangedTitle": "Account password changed",
+    "accountPasswordChangedMessage": "Your account password was recently changed.",
+    "deleteProcessFailedTitle": "Delete process failed",
+    "deleteProcessMessage": "Some files failed to delete. Please create a bug issue.",
+    "cleanupTitle": "Cleanup",
+    "cleanupFailedTitle": "Cleanup failed"
   }
 }

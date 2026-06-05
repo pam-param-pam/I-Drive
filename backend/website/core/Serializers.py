@@ -460,6 +460,8 @@ class NotificationSerializer(SimpleSerializer):
         return {
             "id": notification.id,
             "type": notification.type,
+            "kind": notification.kind,
+            "data": notification.data,
             "title": notification.title,
             "message": notification.message,
             "is_read": notification.is_read,

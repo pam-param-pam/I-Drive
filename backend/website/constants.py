@@ -153,7 +153,7 @@ class EventCode(Enum):
     FOLDER_LOCK_STATUS_CHANGE = 10
     FORCE_LOGOUT = 11
     NEW_DEVICE_LOG_IN = 12
-    NEW_NOTIFICATION = 13
+    NOTIFICATIONS_UPDATE = 13
 
 class EncryptionMethod(Enum):
     Not_Encrypted = 0

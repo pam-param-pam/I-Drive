@@ -16,7 +16,7 @@ from website.core.helpers import get_ip, validate_value
 from website.core.http.utils import get_device_metadata
 from website.core.validators.GeneralChecks import NotEmpty
 from website.models import PerDeviceToken, UserPerms, Folder, UserSettings, DiscordSettings
-from website.models.other_models import NotificationType
+from website.models.other_models import NotificationType, NotificationKind
 from website.services import cache_service, user_service
 from website.tasks.queueTasks import queue_ws_event
 from website.websockets.utils import send_event
@@ -172,12 +172,16 @@ def login_device(request, username: str, password: str) -> tuple[str, PerDeviceT
     raw_token, token_obj = _create_token(request, user)
 
     user_logged_in.send(sender=user.__class__, request=request, user=user)
-    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, DeviceTokenSerializer.serialize_object(token_obj))
-    user_service.create_notification(user, NotificationType.IMPORTANT, "New device login.", "A new device has logged into your account. Check it in device settings")  # todo
+    device_data = DeviceTokenSerializer.serialize_object(token_obj)
+
+    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, device_data)
+    user_service.create_notification(user, NotificationType.IMPORTANT, NotificationKind.NEW_DEVICE_LOGIN, data=device_data)
     return raw_token, token_obj
 
-def logout_all_devices_for_user(request, user) -> None:
+def logout_all_devices_for_user(request, user, ignore_device_id: str = None) -> None:
     for device in PerDeviceToken.objects.filter(user=user):
+        if device.device_id == ignore_device_id:
+            continue
         logout_device(request, user, device.device_id)
 
 def logout_device(request, user: User, device_id: str) -> None:
@@ -196,21 +200,19 @@ def register_user(request, username: str, password: str) -> tuple[str, PerDevice
     create_new_user(username, password, is_superuser=False)
     return login_device(request, username, password)
 
-def change_password(request, user: User, current_password: str, new_password: str) -> tuple[str, PerDeviceToken]:
+def change_password(request, context: RequestContext, current_password: str, new_password: str) -> None:
     current_password = validate_value(current_password, str, checks=[NotEmpty])
     new_password = validate_value(new_password, str, checks=[NotEmpty])
 
+    user = context.get_user()
     if not user.check_password(current_password):
         raise ResourcePermissionError("Password is incorrect!")
 
     user.set_password(new_password)
     user.save()
 
-    logout_all_devices_for_user(request, user)
-    raw_token, token_obj = login_device(request, username=user.username, password=new_password)
-    user_service.create_notification(user, NotificationType.IMPORTANT, "Account password change", "Your account password was recently changed")  # todo
-
-    return raw_token, token_obj
+    logout_all_devices_for_user(request, user, ignore_device_id=context.device_id)
+    user_service.create_notification(user, NotificationType.IMPORTANT, NotificationKind.GENERAL, "notifications.accountPasswordChangedTitle", "notifications.accountPasswordChangedMessage")
 
 
 def create_new_user(username: str, password: str, is_superuser: bool):

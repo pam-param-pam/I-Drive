@@ -9,12 +9,12 @@ class RequestContext:
         self.user_id = user_id
         self.device_id = device_id
         self.request_id = request_id
-        self.user = None
+        self._user = None
 
     def get_user(self) -> Optional[User]:
-        if not self.user and self.user_id:
-            self.user = User.objects.get(id=self.user_id)
-        return self.user
+        if not self._user and self.user_id:
+            self._user = User.objects.get(id=self.user_id)
+        return self._user
 
     def without_device_id(self) -> 'RequestContext':
         return type(self)(self.user_id, None, self.request_id)

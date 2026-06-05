@@ -57,9 +57,8 @@ def change_password_view(request):
     current_password = extract_key(request.data, "current_password")
     new_password = extract_key(request.data, "new_password")
 
-    raw_token, token_obj = auth_service.change_password(request, request.user, current_password, new_password)
-    auth_data = {"auth_token": raw_token, "device_id": token_obj.device_id}
-    return JsonResponse(auth_data, status=200)
+    auth_service.change_password(request, request.context, current_password, new_password)
+    return HttpResponse(status=204)
 
 
 @api_view(['POST'])

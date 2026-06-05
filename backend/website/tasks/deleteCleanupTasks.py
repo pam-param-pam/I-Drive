@@ -9,7 +9,7 @@ from website.celery import app
 from website.constants import MAX_FILE_DELETION_ATTEMPTS
 from website.core.dataModels.http import RequestContext
 from website.models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
-from website.models.other_models import NotificationType
+from website.models.other_models import NotificationType, NotificationKind
 from website.services import user_service
 from website.tasks.deleteTasks import process_file_batch, process_folder_batch
 
@@ -204,7 +204,7 @@ def _mark_jobs_failed():
             job.save(update_fields=["state", "finished_at"])
 
             context = RequestContext.from_user(job.request_context["user_id"])
-            user_service.create_notification(context.get_user(), NotificationType.IMPORTANT, "Delete process failed", "Some files failed to delete. Please create a bug issue!")
+            user_service.create_notification(context.get_user(), NotificationType.INFO, NotificationKind.GENERAL, "notifications.deleteProcessFailedTitle", "notifications.deleteProcessMessage")
 
     print(f"Marked {failed_jobs} jobs as failed")
 

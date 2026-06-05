@@ -66,7 +66,7 @@ export const WebsocketEvent = {
    FOLDER_LOCK_STATUS_CHANGE: 10,
    FORCE_LOGOUT: 11,
    NEW_DEVICE_LOG_IN: 12,
-   NEW_NOTIFICATION: 13
+   NOTIFICATIONS_UPDATE: 13
 }
 
 export const PreviewEvent = {
@@ -81,4 +81,9 @@ export const PreviewEvent = {
    SUBTITLE_CHANGE: "subtitle_change",
    EDITOR_CLEAN_CHANGE: "editor_clean_change",
    DOWNLOAD: "download"
+}
+
+export const NotificationKind = {
+   GENERAL: "general",
+   NEW_DEVICE_LOGIN: "new_device_login"
 }

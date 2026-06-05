@@ -27,12 +27,12 @@
            @click="openNotification(n)"
          >
             <div class="notif-header-row">
-               <div class="notif-title">{{ n.title }}</div>
+               <div class="notif-title">{{ displayTitle(n) }}</div>
                <span v-if="!n.is_read" class="notif-dot"></span>
             </div>
 
-            <div class="notif-message">{{ n.message }}</div>
-            <div class="notif-time">{{ n.time }}</div>
+            <div class="notif-message">{{ displayMessage(n) }}</div>
+            <div class="notif-time">{{ humanTime(n.created_at) }}</div>
          </div>
 
          <!-- Loading skeletons -->
@@ -80,6 +80,8 @@
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { getNotifications, setNotificationsStatus } from "@/api/user.js"
+import { NotificationKind } from "@/utils/constants.js"
+import { humanTime } from "../../utils/common.js"
 
 export default {
    name: "notifications",
@@ -116,9 +118,25 @@ export default {
    },
 
    methods: {
+      humanTime,
       ...mapActions(useMainStore, ["closeHover", "showHover", "setUnreadNotifications"]),
 
-      // Scroll the notifications container to the bottom (useful after loading more)
+      displayTitle(notification) {
+         if (notification.kind === NotificationKind.NEW_DEVICE_LOGIN) {
+            return this.$t("notifications.newDeviceLoginTitle")
+         }
+
+         return this.$t(notification.title)
+      },
+
+      displayMessage(notification) {
+         if (notification.kind === NotificationKind.NEW_DEVICE_LOGIN) {
+            return this.$t("notifications.newDeviceLoginMessage")
+         }
+
+         return this.$t(notification.message)
+      },
+
       scrollToBottom() {
          const container = this.$refs.notificationsContainer
          if (container) {
@@ -207,9 +225,6 @@ export default {
          await setNotificationsStatus({ ids, is_read: isRead })
 
          changed.forEach(n => n.is_read = isRead)
-
-         const delta = isRead ? -ids.length : ids.length
-         this.setUnreadNotifications(Math.max(this.user.unreadNotifications + delta, 0))
       }
    }
 }

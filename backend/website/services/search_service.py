@@ -87,7 +87,7 @@ def validate_search_request(data: dict) -> dict:
     out["query"] = validate_key(data, "query", str, default="", checks=[MaxLength(50)])
     out["files"] = validate_key(data, "files", bool, default=True)
     out["folders"] = validate_key(data, "folders", bool, default=True)
-    out["type"] = validate_key(data, "type", str)
+    out["type"] = validate_key(data, "type", str, default=None)
 
     if not out["files"] and not out["folders"]:
         raise BadRequestError("At least one of 'files' or 'folders' must be true.")

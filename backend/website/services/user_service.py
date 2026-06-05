@@ -9,7 +9,7 @@ from website.discord.Discord import discord
 from website.discord.DiscordHelper import DiscordHelperService
 from website.models import UserSettings, DiscordSettings, Webhook, Channel, Bot, File
 from website.models.mixin_models import ItemState
-from website.models.other_models import Notification, NotificationType
+from website.models.other_models import Notification, NotificationType, NotificationKind
 from website.queries.selectors import query_attachments
 from website.websockets.utils import send_event
 
@@ -260,9 +260,15 @@ def reset_discord_settings(user: User) -> str:
 
     return error_string
 
-def create_notification(user: User, notification_type: NotificationType, title: str, message: str) -> Notification:
-    notification = Notification.objects.create(owner=user, type=notification_type, title=title, message=message)
-    send_event(RequestContext.from_user(user.id), None, EventCode.NEW_NOTIFICATION)
+def create_notification(user: User, notification_type: NotificationType, notification_kind: NotificationKind, title: str = None, message: str = None, data: dict = None) -> Notification:
+    if notification_kind != NotificationKind.GENERAL and (title or message):
+        raise ValueError("title and message allowed only for NotificationKind = GENERAL")
+
+    if not data:
+        data = {}
+
+    notification = Notification.objects.create(owner=user, type=notification_type, kind=notification_kind, title=title, message=message, data=data)
+    transaction.on_commit(lambda: send_notifications_update(user))
     return notification
 
 
@@ -280,3 +286,9 @@ def set_notifications_read_status(user, notification_ids: list[str], read=True):
             notif.mark_as_read()
         else:
             notif.mark_as_unread()
+
+    send_notifications_update(user)
+
+def send_notifications_update(user):
+    unread_notifications = Notification.objects.filter(owner=user, is_read=False, is_deleted=False).count()
+    send_event(RequestContext.from_user(user.id), None, EventCode.NOTIFICATIONS_UPDATE, {"unreadNotifications": unread_notifications})

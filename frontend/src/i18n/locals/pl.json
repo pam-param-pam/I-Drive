@@ -628,5 +628,23 @@
     "uploadFailed": "Błąd w przesyłaniu pliku na discorda",
     "waitingForInternet": "Brak internetu...",
     "waitingForSave": "Zapisywanie..."
+  },
+  "notifications": {
+    "fields": {
+      "device_id": "ID urządzenia",
+      "device": "Urządzenie",
+      "ipAddress": "Adres IP",
+      "device_type": "Typ urządzenia",
+      "country": "Kraj",
+      "city": "Miasto"
+    },
+    "newDeviceLoginTitle": "Logowanie z nowego urządzenia",
+    "newDeviceLoginMessage": "Na Twoje konto zalogowano się z nowego urządzenia.",
+    "accountPasswordChangedTitle": "Hasło konta zostało zmienione",
+    "accountPasswordChangedMessage": "Hasło do Twojego konta zostało niedawno zmienione.",
+    "deleteProcessFailedTitle": "Proces usuwania plików nie powiódł się",
+    "deleteProcessMessage": "Nie udało się usunąć części plików. Zgloś ten problem na githubie.",
+    "cleanupTitle": "Czyszczenie",
+    "cleanupFailedTitle": "Czyszczenie nie powiodło się"
   }
 }

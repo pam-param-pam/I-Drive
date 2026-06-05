@@ -19,4 +19,3 @@ def get_discord_message_key(message_id: str) -> str:
 
 def get_total_used_size_key(user_id: int) -> str:
     return f"total-used-size:{user_id}"
-

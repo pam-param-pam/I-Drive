@@ -212,8 +212,8 @@ export async function onEvent(data) {
       }
    }
 
-   if (op_code === WebsocketEvent.NEW_NOTIFICATION) {
-      store.user.unreadNotifications++
+   if (op_code === WebsocketEvent.NOTIFICATIONS_UPDATE) {
+      store.setUnreadNotifications(event.data[0].unreadNotifications)
    }
 
 }
