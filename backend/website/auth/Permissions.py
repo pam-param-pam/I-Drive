@@ -251,7 +251,6 @@ class CheckFolderLock(CheckLockedFolderIP):
                 raise MissingOrIncorrectResourcePasswordError([], "This resource is unlocked. Do not provide a password")
 
     def _password_provided(self, request):
-        # helper to check if user provided any password
         header_pw = request.headers.get("X-Resource-Password")
         body_pw = request.data.get('resourcePasswords') or {}
         return bool(header_pw or body_pw)

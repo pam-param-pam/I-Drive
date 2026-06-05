@@ -1,4 +1,4 @@
-from website.core.errors import DiscordBotAttachmentAuthor
+from website.core.errors import DiscordBotAttachmentAuthor, DiscordError
 from website.discord.Discord import discord
 from website.models import DiscordAttachmentMixin, Webhook
 from website.queries.selectors import query_attachments
@@ -24,6 +24,10 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
         else:
             raise DiscordBotAttachmentAuthor()
     else:
-        discord.delete_message(user, resource.channel.discord_id, resource.message_id)
+        try:
+            discord.delete_message(user, resource.channel.discord_id, resource.message_id)
+        except DiscordError as e:
+            if e.code != 10008:  # Unknown message
+                raise e
 
     resource.delete()

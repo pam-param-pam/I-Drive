@@ -65,15 +65,15 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     crc = validate_key(file, "crc", int, checks=[MaxLength(10), NotNegative])
     fragments = validate_key(file, "fragments", list)
 
-    thumbnail = validate_key(file, "thumbnail", dict, required=False)
-    created_at = validate_key(file, "created_at", int, required=False)
-    key_b64 = validate_key(file, "key", str, required=False)
-    iv_b64 = validate_key(file, "iv", str, required=False)
-    video_metadata = validate_key(file, "videoMetadata", dict, required=False)
-    raw_metadata = validate_key(file, "rawMetadata", dict, required=False)
-    photo_metadata = validate_key(file, "photoMetadata", dict, required=False)
+    thumbnail = validate_key(file, "thumbnail", dict, default=None)
+    created_at = validate_key(file, "created_at", int, default=None)
+    key_b64 = validate_key(file, "key", str, default=None)
+    iv_b64 = validate_key(file, "iv", str, default=None)
+    video_metadata = validate_key(file, "videoMetadata", dict, default=None)
+    raw_metadata = validate_key(file, "rawMetadata", dict, default=None)
+    photo_metadata = validate_key(file, "photoMetadata", dict, default=None)
 
-    subtitles = validate_key(file, "subtitles", list, required=False, default=[])
+    subtitles = validate_key(file, "subtitles", list, default=[])
 
     key, iv = validate_encryption_fields(encryption_method, key_b64, iv_b64)
     validate_crc(file_size, crc)
@@ -191,7 +191,7 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
     if len(fragments) > 1:
         raise BadRequestError("Fragments > 1")
 
-    attachment_data = validate_key(file_data, "attachment", dict, required=False)
+    attachment_data = validate_key(file_data, "attachment", dict, default=None)
     if file_data:
         crc = validate_key(file_data, "crc", int, checks=[MaxLength(10), NotNegative])
 

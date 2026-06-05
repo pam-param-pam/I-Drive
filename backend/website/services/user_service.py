@@ -17,19 +17,19 @@ from website.websockets.utils import send_event
 def update_user_settings(user, data: dict) -> UserSettings:
     settings = UserSettings.objects.get(user=user)
 
-    locale = validate_key(data, "locale", str, required=False)
-    date_format = validate_key(data, "dateFormat", bool, required=False)
-    popup_preview = validate_key(data, "popupPreview", bool, required=False)
-    item_info_shortcut = validate_key(data, "itemInfoShortcut", bool, required=False)
-    hide_locked_folders = validate_key(data, "hideLockedFolders", bool, required=False)
-    concurrent_upload_requests = validate_key(data, "concurrentUploadRequests", int, required=False)
-    view_mode = validate_key(data, "viewMode", str, required=False)
-    sorting_by = validate_key(data, "sortingBy", str, required=False)
-    sort_by_asc = validate_key(data, "sortByAsc", bool, required=False)
-    subfolders_in_shares = validate_key(data, "subfoldersInShares", bool, required=False)
-    keep_creation_timestamp = validate_key(data, "keepCreationTimestamp", bool, required=False)
-    encryption_method = validate_key(data, "encryptionMethod", int, required=False)
-    theme = validate_key(data, "theme", str, required=False)
+    locale = validate_key(data, "locale", str, default=None)
+    date_format = validate_key(data, "dateFormat", bool, default=None)
+    popup_preview = validate_key(data, "popupPreview", bool, default=None)
+    item_info_shortcut = validate_key(data, "itemInfoShortcut", bool, default=None)
+    hide_locked_folders = validate_key(data, "hideLockedFolders", bool, default=None)
+    concurrent_upload_requests = validate_key(data, "concurrentUploadRequests", int, default=None)
+    view_mode = validate_key(data, "viewMode", str, default=None)
+    sorting_by = validate_key(data, "sortingBy", str, default=None)
+    sort_by_asc = validate_key(data, "sortByAsc", bool, default=None)
+    subfolders_in_shares = validate_key(data, "subfoldersInShares", bool, default=None)
+    keep_creation_timestamp = validate_key(data, "keepCreationTimestamp", bool, default=None)
+    encryption_method = validate_key(data, "encryptionMethod", int, default=None)
+    theme = validate_key(data, "theme", str, default=None)
 
     # ---- ENUM / VALUE VALIDATION ----
     if locale:

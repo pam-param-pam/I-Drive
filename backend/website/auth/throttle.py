@@ -183,4 +183,3 @@ class LoginThrottle(MyUserRateThrottleBase):
 
 class DiscordSettingsThrottle(MyUserRateThrottleBase):
     scope = 'discord_settings'
-

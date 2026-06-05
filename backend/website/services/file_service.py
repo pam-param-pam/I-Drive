@@ -26,9 +26,9 @@ def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
     message_id = validate_key(data, "message_id", str, checks=[IsSnowflake])
     attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
     message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
-    key_b64 = validate_key(data, "key", str, required=False)
-    iv_b64 = validate_key(data, "iv", str, required=False)
-    size = validate_key(data, "size", int, required=False, checks=[IsPositive])
+    key_b64 = validate_key(data, "key", str, default=None)
+    iv_b64 = validate_key(data, "iv", str, default=None)
+    size = validate_key(data, "size", int, default=None, checks=[IsPositive])
 
     author = get_discord_author(file_obj.owner, message_author_id)
     channel = get_discord_channel(file_obj.owner, channel_id)
@@ -62,8 +62,8 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
     attachment_id = validate_key(data, "attachment_id", str, checks=[IsSnowflake])
     message_author_id = validate_key(data, "message_author_id", str, checks=[IsSnowflake])
     size = validate_key(data, "size", int, checks=[IsPositive])
-    key_b64 = validate_key(data, "key", str, required=False)
-    iv_b64 = validate_key(data, "iv", str, required=False)
+    key_b64 = validate_key(data, "key", str, default=None)
+    iv_b64 = validate_key(data, "iv", str, default=None)
 
     key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
     author = get_discord_author(file_obj.owner, message_author_id)
@@ -93,11 +93,11 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
     for index, track in enumerate(metadata[track_type]):
         kwargs = {
             "video_metadata": video_metadata,
-            "bitrate": validate_key(track, "bitrate", (int, float), checks=[IsPositive], required=False),
+            "bitrate": validate_key(track, "bitrate", (int, float), checks=[IsPositive], default=None),
             "codec": validate_key(track, "codec", str, checks=[MaxLength(100)]),
             "size": validate_key(track, "size", (int, float), checks=[NotNegative]),
             "duration": validate_key(track, "duration", (int, float), checks=[NotNegative]),
-            "language": validate_key(track, "language", str, required=False, checks=[MaxLength(100)]),
+            "language": validate_key(track, "language", str, default=None, checks=[MaxLength(100)]),
             "track_number": index + 1,
         }
         if track_type == "video_tracks":
@@ -144,7 +144,7 @@ def create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
     if file_obj.type != "Raw image":
         raise BadRequestError(f"Raw metadata is not allowed for file type: {file_obj.type}")
 
-    camera_owner = validate_key(metadata, "camera_owner", str, required=False, default="", checks=[MaxLength(50)])
+    camera_owner = validate_key(metadata, "camera_owner", str, default="", checks=[MaxLength(50)])
 
     raw_metadata = RawMetadata.objects.create(
         file=file_obj,

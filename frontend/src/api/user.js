@@ -125,9 +125,9 @@ export async function deleteDiscordSettings() {
 }
 
 
-export async function getNotifications(more) {
-   let url = `/user/notifications?more=${more}`
-   let response = await backendInstance.get(url)
+export async function getNotifications(params = {}) {
+   let url = `/user/notifications`
+   let response = await backendInstance.get(url, {params})
    return response.data
 }
 

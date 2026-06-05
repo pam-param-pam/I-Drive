@@ -3,7 +3,8 @@ import math
 import re
 import time
 from functools import wraps
-from typing import Union, Type, Tuple, Optional, Any
+from typing import Optional, Callable, Any, List
+from typing import Union, Type, Tuple
 
 from website.constants import MAX_RESOURCE_NAME_LENGTH, EXTENSION_TO_FILE_TYPE, EncryptionMethod
 from website.core.errors import BadRequestError
@@ -118,41 +119,12 @@ def get_file_extension(filename: str) -> str:
         return ".txt"
     return "." + filename.rsplit(".", 1)[1]
 
-def validate_value(value: Any, expected_type: Type, *, required: bool = False, default=None, checks: list = None):
-    if value is None:
-        if not required and default is not None:
-            return default
-        if not required:
-            return None
-        raise BadRequestError("Value cannot be null.")
 
-    if expected_type is str and isinstance(value, str):
-        if "\x00" in value:
-            value = value.replace("\x00", "")
+_REQUIRED = object()  # Sentinel to indicate no default provided (field is required)
 
-    if not isinstance(value, expected_type):
-        raise BadRequestError(f"Value must be of type {expected_type}, got {type(value).__name__}")
-
-    if checks is None:
-        checks = []
-
-    normalized_checks = []
-    for check in checks:
-        if isinstance(check, type) and issubclass(check, Check):
-            check = check()
-        normalized_checks.append(check)
-
-    # Run checks
-    for check in normalized_checks:
-        if not check.check(value):
-            raise BadRequestError(f"Validation failed on {type(check).__name__} with value '{value}'")
-
-    return value
-
-
-def extract_key(data: Optional[dict], key: str, *, required: bool = True, default=None):
+def extract_key(data: Optional[dict], key: str, *, default: Any = _REQUIRED) -> Any:
     if data is None:
-        if required:
+        if default is _REQUIRED:
             raise BadRequestError("'data' cannot be None.")
         return default
 
@@ -160,36 +132,63 @@ def extract_key(data: Optional[dict], key: str, *, required: bool = True, defaul
         raise BadRequestError("'data' must be a dict.")
 
     if key not in data:
-        if required:
+        if default is _REQUIRED:
             raise BadRequestError(f"Missing required field '{key}'.")
         return default
 
     return data[key]
 
-def validate_key(data: Optional[dict], key: str, expected_type, *, required: bool = True, default=None, checks: list = None, converter: type = None):
-    value = extract_key(
-        data,
-        key,
-        required=required,
-        default=default
-    )
+
+def validate_value(value: Any, expected_types: Union[Type, Tuple[Type, ...]], *, default: Any = _REQUIRED, checks: Optional[List[Callable]] = None) -> Any:
+    # Handle None
+    if value is None:
+        if default is _REQUIRED:
+            raise BadRequestError("Value cannot be null (required field).")
+        return default
+
+    # Normalize expected_types to a tuple for easy checking
+    if not isinstance(expected_types, tuple):
+        expected_types = (expected_types,)
+
+    # # String sanitisation for str type
+    # if str in expected_types and isinstance(value, str):
+    #     if "\x00" in value:
+    #         value = value.replace("\x00", "")
+
+    # Type check against any of the allowed types
+    if not any(isinstance(value, t) for t in expected_types):
+        type_names = ", ".join(t.__name__ for t in expected_types)
+        raise BadRequestError(f"Value must be of type {type_names}, got {type(value).__name__}")
+
+    # Run checks
+    if checks:
+        normalized_checks = []
+        for check in checks:
+            if isinstance(check, type) and issubclass(check, Check):
+                check = check()
+            normalized_checks.append(check)
+        for check in normalized_checks:
+            if not check.check(value):
+                raise BadRequestError(f"Validation failed on {type(check).__name__} with value '{value}'")
+
+    return value
+
+
+def validate_key(data: Optional[dict], key: str, expected_types: Union[Type, Tuple[Type, ...]], *, default: Any = _REQUIRED,
+                 checks: Optional[List[Callable]] = None, converter: Optional[Callable[[Any], Any]] = None) -> Any:
+    value = extract_key(data, key, default=default)
 
     if converter is not None and value is not None:
         try:
             value = converter(value)
         except (ValueError, TypeError) as e:
-            raise BadRequestError(f"Field '{key}': conversion failed ({e}). " f"Value: {value}")
+            raise BadRequestError(f"Field '{key}': conversion failed ({e}). Value: {value}")
 
     try:
-        return validate_value(
-            value,
-            expected_type,
-            required=required,
-            default=default,
-            checks=checks
-        )
+        return validate_value(value, expected_types, default=default, checks=checks)
     except BadRequestError as e:
-        raise BadRequestError(f"Field '{key}': {e}.\nDefault: {default}\nRequired: {required}")
+        default_display = "None (required)" if default is _REQUIRED else f"{default!r}"
+        raise BadRequestError(f"Field '{key}': {e}\nDefault: {default_display}\nRequired: {default is _REQUIRED}")
 
 
 def validate_encryption_fields(encryption_method: int, key_b64: str, iv_b64: str) -> tuple[Optional[bytes], Optional[bytes]]:

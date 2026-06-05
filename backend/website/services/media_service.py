@@ -3,6 +3,7 @@ import base64
 from website.auth.Permissions import CheckLockedFolderIP
 from website.auth.utils import check_resource_perms
 from website.constants import cache, MAX_THUMBNAIL_SIZE, USE_CACHE, MAX_MEDIA_CACHE_AGE
+from website.core.converters import param_to_bool
 from website.core.crypto.Decryptor import Decryptor
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key
@@ -19,7 +20,7 @@ from website.queries.selectors import check_if_bots_exists
 
 
 def get_thumbnail_response(request, file_obj: File):
-    isInline = request.GET.get('inline', False)
+    isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
     thumbnail = file_obj.thumbnail
 
     cache_key = f"thumbnail:{thumbnail.id}"
@@ -45,7 +46,7 @@ def get_thumbnail_response(request, file_obj: File):
 
 
 def get_moment_response(request, file_obj: File, moment: Moment):
-    isInline = request.GET.get('inline', False)
+    isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
 
     check_if_bots_exists(file_obj.owner)
 
@@ -64,7 +65,7 @@ def get_moment_response(request, file_obj: File, moment: Moment):
 
 
 def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
-    isInline = request.GET.get('inline', False)
+    isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
 
     check_if_bots_exists(file_obj.owner)
 
@@ -83,11 +84,11 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
 
 
 def get_file_response(request, file_obj: File):
-    is_inline = request.GET.get("inline", False)
+    isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
     referer = request.headers.get('Referer')
 
     fragments = file_obj.fragments.all().order_by("sequence")
-    user = file_obj.owner  # without this call it will break cuz lol
+    user = file_obj.owner  # without this call it will break lol
 
     check_if_bots_exists(user)
 
@@ -100,7 +101,7 @@ def get_file_response(request, file_obj: File):
         request=request,
         byte_source=source,
         filename=file_obj.name,
-        inline=is_inline,
+        inline=isInline,
         x_frame_from_referer=referer,
         etag=str(hash(file_obj.last_modified_at))
     )
@@ -147,7 +148,7 @@ def get_zip_response(request, user_zip: UserZIP):
 
 
 def get_zip_entry_response(request, file_obj: File):
-    is_inline = request.GET.get('inline', False)
+    isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
     referer = request.headers.get('Referer')
 
     offset = validate_key(request.GET, "offset", int, converter=int)
@@ -171,7 +172,7 @@ def get_zip_entry_response(request, file_obj: File):
     return build_streaming_response(
         request=request,
         byte_source=source,
-        inline=is_inline,
+        inline=isInline,
         filename=filename,
         cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
         x_frame_from_referer=referer,

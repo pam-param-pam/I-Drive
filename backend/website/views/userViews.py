@@ -1,15 +1,17 @@
-from django.db.models import Q
-from django.http import HttpResponse, JsonResponse
-from rest_framework.decorators import permission_classes, api_view, throttle_classes
+from django.core.paginator import Paginator
+from django.http import HttpResponse
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
 from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms
 from website.auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
 from website.constants import FILE_TYPES, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, EXTENSION_TO_FILE_TYPE
 from website.core.Serializers import WebhookSerializer, BotSerializer, NotificationSerializer
+from website.core.converters import param_to_bool
 from website.core.decorators import check_resource_permissions, extract_folder
 from website.core.errors import RootFolderError
-from website.core.helpers import extract_key
+from website.core.helpers import extract_key, validate_key
 from website.models import Channel, Folder, UserSettings, UserPerms, DiscordSettings
 from website.models.other_models import Notification
 from website.queries.builders import build_discord_settings
@@ -117,6 +119,7 @@ def delete_bot_view(request, bot_id):
     user_service.delete_bot(request.user, bot_id)
     return HttpResponse(status=204)
 
+
 @api_view(['POST'])
 @throttle_classes([DiscordSettingsThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & DiscordModifyPerms])
@@ -162,18 +165,31 @@ def reset_discord_settings_view(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_notifications_view(request):
-    more = request.GET.get('more', 'false').lower() == 'true'
+    unread_only = validate_key(request.GET, "unreadOnly", bool, default=True, converter=param_to_bool)
+    page_number = request.GET.get("page", 1)
 
-    qs = Notification.objects.filter(
-        owner=request.user,
-        is_deleted=False
-    )
+    qs = Notification.objects.filter(owner=request.user, is_deleted=False)
 
-    if not more:
-        qs = qs.filter(Q(read_at__isnull=True))
+    if unread_only:
+        qs = qs.filter(read_at__isnull=True)
 
-    notifications = qs.order_by("-created_at")
-    return JsonResponse(NotificationSerializer.serialize_objects(notifications), status=200, safe=False)
+    qs = qs.order_by("-created_at", "-id")
+
+    paginator = Paginator(qs, 10)
+    page = paginator.get_page(page_number)
+
+    data = {
+        "items": NotificationSerializer.serialize_objects(page.object_list),
+        "page": page.number,
+        "page_size": 10,
+        "total_pages": paginator.num_pages,
+        "total_items": paginator.count,
+        "has_next": page.has_next(),
+        "has_previous": page.has_previous(),
+    }
+
+    return JsonResponse(data, status=200)
+
 
 @api_view(['POST'])
 @throttle_classes([defaultAuthUserThrottle])

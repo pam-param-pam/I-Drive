@@ -84,10 +84,10 @@ def validate_search_request(data: dict) -> dict:
     # -----------------------------
     # Basic
     # -----------------------------
-    out["query"] = validate_key(data, "query", str, required=False, default="", checks=[MaxLength(50)])
-    out["files"] = validate_key(data, "files", bool, required=False, default=True)
-    out["folders"] = validate_key(data, "folders", bool, required=False, default=True)
-    out["type"] = validate_key(data, "type", str, required=False)
+    out["query"] = validate_key(data, "query", str, default="", checks=[MaxLength(50)])
+    out["files"] = validate_key(data, "files", bool, default=True)
+    out["folders"] = validate_key(data, "folders", bool, default=True)
+    out["type"] = validate_key(data, "type", str)
 
     if not out["files"] and not out["folders"]:
         raise BadRequestError("At least one of 'files' or 'folders' must be true.")
@@ -95,30 +95,30 @@ def validate_search_request(data: dict) -> dict:
     # -----------------------------
     # Limits / sorting
     # -----------------------------
-    out["resultLimit"] = validate_key(data, "resultLimit", int, required=False, default=100, checks=[Min(1), Max(1000)])
+    out["resultLimit"] = validate_key(data, "resultLimit", int, default=100, checks=[Min(1), Max(1000)])
 
-    order_by = validate_key(data, "orderBy", str, required=False, default="created_at")
+    order_by = validate_key(data, "orderBy", str, default="created_at")
     allowed_order_by = {"size", "created_at", "name"}
 
     if order_by not in allowed_order_by:
         raise BadRequestError(f"Order by must be one of: {allowed_order_by}")
 
     out["orderBy"] = order_by
-    out["ascending"] = validate_key(data, "ascending", bool, required=False, default=True)
+    out["ascending"] = validate_key(data, "ascending", bool, default=True)
 
     # -----------------------------
     # Arrays
     # -----------------------------
-    extensions = validate_key(data, "extensions", list, required=False, default=[])
+    extensions = validate_key(data, "extensions", list, default=[])
     validate_ids_as_list(extensions, max_length=50, child_type=str, empty_allowed=True)
 
-    tags = validate_key(data, "tags", list, required=False, default=[])
+    tags = validate_key(data, "tags", list, default=[])
     validate_ids_as_list(tags, max_length=50, child_type=str, empty_allowed=True)
 
-    limitToFolders = validate_key(data, "limitToFolders", list, required=False, default=[])
+    limitToFolders = validate_key(data, "limitToFolders", list, default=[])
     validate_ids_as_list(limitToFolders, max_length=50, child_type=str, empty_allowed=True)
 
-    excludeFolders = validate_key(data, "excludeFolders", list, required=False, default=[])
+    excludeFolders = validate_key(data, "excludeFolders", list, default=[])
     validate_ids_as_list(excludeFolders, max_length=50, child_type=str, empty_allowed=True)
 
     if set(limitToFolders) & set(excludeFolders):
@@ -132,13 +132,13 @@ def validate_search_request(data: dict) -> dict:
     # -----------------------------
     # Filter
     # -----------------------------
-    out["filter"] = validate_filter(validate_key(data, "filter", dict, required=False))
+    out["filter"] = validate_filter(validate_key(data, "filter", dict))
 
     # -----------------------------
     # LOCK
     # -----------------------------
-    out["lockFrom"] = validate_key(data, "lockFrom", str, required=False)
-    out["password"] = validate_key(data, "password", str, required=False)
+    out["lockFrom"] = validate_key(data, "lockFrom", str)
+    out["password"] = validate_key(data, "password", str)
 
     # -----------------------------
     # CROSS-FIELD RULES

@@ -8,13 +8,12 @@
         ref="notificationsContainer"
         class="card-content notifications-content"
       >
-         <div v-if="!notifications.length && !loadingMore" class="notif-empty">
+         <!-- Empty state: show only when no notifications and not loading -->
+         <div v-if="!notifications.length && !isLoading" class="notif-empty">
             <i class="material-icons notif-empty-icon">notifications_none</i>
-
             <div class="notif-empty-title">
                {{ $t("prompts.noNotifications") }}
             </div>
-
             <div class="notif-empty-subtitle">
                {{ $t("prompts.notificationsWillAppearHere") }}
             </div>
@@ -36,11 +35,12 @@
             <div class="notif-time">{{ n.time }}</div>
          </div>
 
+         <!-- Loading skeletons -->
          <div
-           v-if="loadingMore"
+           v-if="isLoading"
            class="notif-skeleton-wrapper"
          >
-            <div v-for="i in 4" :key="'skeleton-'+i" class="notif-skeleton">
+            <div v-for="i in 5" :key="'skeleton-' + i" class="notif-skeleton">
                <div class="skeleton-line skeleton-title"></div>
                <div class="skeleton-line skeleton-text"></div>
                <div class="skeleton-line skeleton-time"></div>
@@ -50,18 +50,16 @@
 
       <div class="card-action notifications-actions">
          <button
-           v-if="!showAll"
-           :disabled="loadingMore"
+           v-if="canLoadMore"
+           :disabled="isLoading"
            class="button button--flat"
            @click="loadMore"
          >
-            {{ loadingMore
-           ? $t("prompts.loading")
-           : $t("prompts.showPrevious") }}
+            {{ isLoading ? $t("prompts.loading") : $t("prompts.showPrevious") }}
          </button>
 
          <button
-           :disabled="loadingMore || !unread.length"
+           :disabled="isLoading || !unread.length"
            class="button button--flat button--red"
            @click="markAllRead()"
          >
@@ -88,9 +86,12 @@ export default {
 
    data() {
       return {
+         initialLoading: false,
          loadingMore: false,
          notifications: [],
-         showAll: false
+         page: 1,
+         hasNext: false,
+         unreadOnly: true
       }
    },
 
@@ -99,30 +100,79 @@ export default {
 
       unread() {
          return this.notifications.filter(n => !n.is_read)
+      },
+
+      canLoadMore() {
+         return this.unreadOnly || this.hasNext
+      },
+
+      isLoading() {
+         return this.initialLoading || this.loadingMore
       }
    },
 
    created() {
-      this.fetchNotifications(false)
+      this.fetchNotifications({ page: 1, replace: true, initial: true })
    },
 
    methods: {
       ...mapActions(useMainStore, ["closeHover", "showHover", "setUnreadNotifications"]),
 
-      async fetchNotifications(more) {
-         try {
-            this.loadingMore = true
+      // Scroll the notifications container to the bottom (useful after loading more)
+      scrollToBottom() {
+         const container = this.$refs.notificationsContainer
+         if (container) {
+            container.scrollTop = container.scrollHeight
+         }
+      },
 
-            this.notifications = await getNotifications(more)
-            this.showAll = more
+      async fetchNotifications({ page, replace = false, initial = false, scrollToBottomOnLoad = false }) {
+         if (this.isLoading) return
+
+         try {
+            if (initial) {
+               this.initialLoading = true
+            } else {
+               this.loadingMore = true
+            }
+
+            // If requested, scroll to bottom after loading skeletons appear
+            if (scrollToBottomOnLoad) {
+               await this.$nextTick()
+               this.scrollToBottom()
+            }
+
+            const res = await getNotifications({ unreadOnly: this.unreadOnly, page })
+            const items = res.items || []
+
+            this.notifications = replace ? items : this.mergeNotifications(this.notifications, items)
+            this.page = res.page
+            this.hasNext = res.has_next
          } finally {
+            this.initialLoading = false
             this.loadingMore = false
          }
       },
 
+      mergeNotifications(current, incoming) {
+         const existingIds = new Set(current.map(n => n.id))
+         return [...current, ...incoming.filter(n => !existingIds.has(n.id))]
+      },
+
       async loadMore() {
-         if (this.loadingMore) return
-         await this.fetchNotifications(true)
+         if (this.isLoading) return
+
+         // Switch from "unread only" to "all" if needed
+         if (this.unreadOnly && !this.hasNext) {
+            this.unreadOnly = false
+            this.page = 0
+            this.hasNext = true
+         }
+
+         if (!this.hasNext) return
+
+         // Fetch next page and scroll to show the loading skeleton
+         await this.fetchNotifications({ page: this.page + 1, scrollToBottomOnLoad: true })
       },
 
       openNotification(notification) {
@@ -130,15 +180,8 @@ export default {
             prompt: "SingleNotification",
             props: { notification },
             confirm: (value) => {
-               if (value) {
-                  if (!notification.is_read) {
-                     this.markAsRead([notification])
-                  }
-               } else {
-                  if (notification.is_read) {
-                     this.markAsUnread([notification])
-                  }
-               }
+               if (value && !notification.is_read) this.markAsRead([notification])
+               if (!value && notification.is_read) this.markAsUnread([notification])
             }
          })
       },
@@ -156,12 +199,14 @@ export default {
       },
 
       async setReadState(list, isRead) {
-         const ids = list.map(n => n.id)
+         const changed = list.filter(n => n.is_read !== isRead)
+         const ids = changed.map(n => n.id)
+
          if (!ids.length) return
 
          await setNotificationsStatus({ ids, is_read: isRead })
 
-         list.forEach(n => n.is_read = isRead)
+         changed.forEach(n => n.is_read = isRead)
 
          const delta = isRead ? -ids.length : ids.length
          this.setUnreadNotifications(Math.max(this.user.unreadNotifications + delta, 0))
@@ -234,24 +279,39 @@ export default {
    background: #64b5f6;
    border-radius: 50%;
    margin-right: 10px;
+   flex: 0 0 auto;
 }
 
-.type-info { border-left: 3px solid #64b5f6; }
-.type-success { border-left: 3px solid #66bb6a; }
-.type-warning { border-left: 3px solid #ff8800; }
-.type-error { border-left: 3px solid rgba(155, 5, 5, 0.8); }
-.type-important { border-left: 3px solid #d31010; }
+.type-info {
+   border-left: 3px solid #64b5f6;
+}
+
+.type-success {
+   border-left: 3px solid #66bb6a;
+}
+
+.type-warning {
+   border-left: 3px solid #ff8800;
+}
+
+.type-error {
+   border-left: 3px solid rgba(155, 5, 5, 0.8);
+}
+
+.type-important {
+   border-left: 3px solid #d31010;
+}
 
 .notifications-actions {
    justify-content: space-between;
 }
+
 .notif-empty {
    display: flex;
    flex-direction: column;
    align-items: center;
    justify-content: center;
    text-align: center;
-
    padding: 40px 20px;
    opacity: 0.8;
 }
@@ -273,4 +333,47 @@ export default {
    opacity: 0.6;
 }
 
+.notif-skeleton-wrapper {
+   padding: 8px 0;
+}
+
+.notif-skeleton {
+   padding: 12px 0 12px 10px;
+   border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+}
+
+.skeleton-line {
+   height: 10px;
+   border-radius: 4px;
+   background: rgba(255, 255, 255, 0.12);
+   animation: notif-skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton-title {
+   width: 55%;
+   margin-bottom: 8px;
+}
+
+.skeleton-text {
+   width: 85%;
+   margin-bottom: 8px;
+}
+
+.skeleton-time {
+   width: 30%;
+}
+
+@keyframes notif-skeleton-pulse {
+   0% {
+      opacity: 0.45;
+   }
+
+   50% {
+      opacity: 1;
+   }
+
+   100% {
+      opacity: 0.45;
+   }
+}
 </style>
