@@ -121,7 +121,7 @@ input[type="file"] {
 .file-label {
   display: inline-block;
   padding: 10px 15px;
-  background-color: var(--divider);
+  background-color: var(--surfaceSecondary);
   color: var(--textPrimary);
   border-radius: 5px;
   cursor: pointer;

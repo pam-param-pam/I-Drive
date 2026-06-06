@@ -518,7 +518,7 @@ export default {
 
 .list .item-wrapper .name {
   flex: 2;
-  margin-left: 1em;
+  margin-left: 0.5em;
 
   min-width: 0;
   overflow: hidden;
@@ -563,6 +563,10 @@ export default {
 
 .list .item-wrapper .material-icons {
   font-size: 48px;
+}
+
+.list .item-wrapper [aria-selected='true'] {
+   background: #c4e6ff;
 }
 
 </style>

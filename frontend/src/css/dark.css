@@ -1,4 +1,3 @@
-/* Define a class .dark-mode for dark mode styles */
 .dark-mode {
   --background: #141D24;
   --surfacePrimary: #20292F;
@@ -27,11 +26,11 @@
   background: var(--background);
 }
 
-/* Loading */
 .dark-mode #loading {
   background: var(--background);
 }
 
+/* File listing */
 .dark-mode .grid .item-wrapper:hover {
   background: var(--surfacePrimary);
 }
@@ -40,7 +39,18 @@
   background: var(--surfaceSecondary);
 }
 
-/* Login */
+.dark-mode .list .item-wrapper .item {
+  background-color: var(--background) !important;
+}
+
+.dark-mode .list .item-wrapper .item:hover {
+  background-color: var(--surfaceSecondary) !important;
+}
+
+.dark-mode .list .item-wrapper [aria-selected=true] {
+  background: var(--surfaceSecondary) !important;
+}
+
 .dark-mode #login {
   background: var(--background);
 }
@@ -53,7 +63,6 @@
   border-color: white;
 }
 
-/* Search input */
 .dark-mode #search #input {
   background: var(--surfaceSecondary);
   border-color: var(--surfaceSecondary);
@@ -63,7 +72,6 @@
   color: var(--textSecondary);
 }
 
-/* Active Search input */
 .dark-mode #search.active #input {
   background: var(--surfacePrimary);
   border-color: white;
@@ -73,18 +81,7 @@
   color: var(--textPrimary);
 }
 
-/* Search result */
-.dark-mode #search #result {
-  background: var(--background);
-  color: var(--textPrimary);
-}
 
-/* Search boxes */
-.dark-mode #search .boxes h3 {
-  color: var(--textPrimary);
-}
-
-/* Action */
 .dark-mode .action {
   color: var(--textPrimary) !important;
 }
@@ -93,12 +90,10 @@
   background-color: rgba(255, 255, 255, .1);
 }
 
-/* Action counter */
 .dark-mode .action .counter {
   border-color: var(--surfacePrimary);
 }
 
-/* Navigation */
 .dark-mode nav > div {
   border-color: var(--divider);
 }
@@ -140,10 +135,6 @@
 
 .dark-mode .dashboard #nav ul li:hover {
   background: var(--surfaceSecondary);
-}
-
-#search.active.dark-mode #result {
-  background-color: black;
 }
 
 .dark-mode .card h3,
@@ -203,10 +194,7 @@
   color: var(--textPrimary);
 }
 
-.dark-mode .list .item-wrapper .item {
-  background-color: var(--background) !important;
+.dark-mode .file-label {
+  background-color: var(--divider) !important;
 }
 
-.dark-mode .list .item-wrapper .item:hover {
-  background-color: var(--surfaceSecondary) !important;
-}
