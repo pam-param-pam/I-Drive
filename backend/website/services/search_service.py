@@ -132,13 +132,13 @@ def validate_search_request(data: dict) -> dict:
     # -----------------------------
     # Filter
     # -----------------------------
-    out["filter"] = validate_filter(validate_key(data, "filter", dict))
+    out["filter"] = validate_filter(validate_key(data, "filter", dict, default=None))
 
     # -----------------------------
     # LOCK
     # -----------------------------
-    out["lockFrom"] = validate_key(data, "lockFrom", str)
-    out["password"] = validate_key(data, "password", str)
+    out["lockFrom"] = validate_key(data, "lockFrom", str, default=None)
+    out["password"] = validate_key(data, "password", str, default=None)
 
     # -----------------------------
     # CROSS-FIELD RULES
