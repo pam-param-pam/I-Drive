@@ -268,8 +268,6 @@ export default {
   transition: opacity 0.2s ease-in-out;
 }
 
-/* hidden measurement row */
-
 .breadcrumbs-measure {
   position: absolute;
   visibility: hidden;

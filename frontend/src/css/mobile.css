@@ -184,6 +184,10 @@
   body {
     font-size: 85%;
   }
+
+  .list .item-wrapper .created {
+    padding-right: 2em !important;
+  }
 }
 
 @media (max-width: 450px) {
@@ -201,6 +205,18 @@
 
   .scroller {
     padding-bottom: 0.5em !important;
+  }
+
+
+  .list .item.header .createdSort {
+    display: none !important;
+  }
+
+  .list .item-wrapper .created {
+    display: none !important;
+  }
+  .list .item-wrapper .size {
+    padding-right: 1em;
   }
 
 }

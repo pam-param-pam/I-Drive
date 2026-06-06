@@ -41,7 +41,7 @@ def get_shares(request):
 def create_share(request, item_obj):
     value = extract_key(request.data, "value")
     unit = extract_key(request.data, "unit")
-    password = extract_key(request.data, "password")
+    password = extract_key(request.data, "password", default=None)
 
     share = share_service.create_share(request.user, item_obj, unit, value, password)
     item = ShareSerializer.serialize_object(share)

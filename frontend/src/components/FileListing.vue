@@ -123,6 +123,7 @@
             >
                <div class="item header" draggable="false">
                   <div>
+                     <p class="iconSort"></p>
                      <p
                         :aria-label="$t('files.sortByName')"
                         :class="{ active: nameSorted }"
@@ -742,7 +743,7 @@ export default {
             this.tileWidth = tileWidth
             this.tileHeight = tileWidth * 1.5
          } else if (this.settings.viewMode === "list") {
-            this.tileHeight = 50
+            this.tileHeight = 60
 
          }
 
@@ -812,7 +813,7 @@ export default {
 
 .scroller {
   background-color: var(--background);
-  padding-bottom: 2em;
+  /*padding-bottom: 2em;*/
 }
 
 .pulse-animation {
@@ -839,6 +840,10 @@ export default {
   font-family: Arial, sans-serif;
 }
 
+.grid .item.header .iconSort {
+   display: none;
+}
+
 .grid .item.header > div {
   display: flex;
   gap: 10px;
@@ -851,7 +856,7 @@ export default {
   cursor: pointer;
   font-size: 14px;
   margin: 0;
-  padding: 10px 15px 10px;
+  padding: 0 15px 10px;
   border-radius: 3px;
   transition: color 0.3s;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
@@ -867,94 +872,70 @@ export default {
 }
 
 
-
-
-
-
 /* ============================= */
-/* 📝 LIST SORT HEADER STYLES    */
+/* LIST SORT HEADER STYLES       */
 /* ============================= */
 
 .list .item.header {
    display: flex;
    align-items: center;
 
-   padding: 8px 12px;
-
-   background: var(--background);
+   padding: 8px 8px 10px 1em;
+   background: var(--surfacePrimary);
    border-bottom: 1px solid var(--divider);
-
-   position: sticky;   /* optional but usually desired */
+   border-radius: 5px;
+   position: sticky;
    top: 0;
    z-index: 10;
 }
 
-/* inner container must behave like row */
 .list .item.header > div {
    display: flex;
    width: 100%;
    align-items: center;
 }
 
-/* simulate "icon column" spacing */
-.list .item.header > div::before {
-   content: "";
-   flex: 0 0 48px;
-}
-
-/* header cells */
 .list .item.header p {
    display: flex;
    align-items: center;
-   gap: 6px;
+   gap: 8px;
 
    margin: 0;
-   padding: 6px 0;
-
    cursor: pointer;
-   font-size: 13px;
+   font-size: 15px;
+   line-height: 20px;
 
-   color: #666;
+   color: var(--textPrimary);
    transition: color 0.2s;
 }
 
-/* COLUMN WIDTHS — must match row flex */
-
-/* name */
 .list .item.header .nameSort {
-   flex: 3;
+   flex: 2;
 }
 
-/* size */
 .list .item.header .sizeSort {
    flex: 1;
    justify-content: flex-end;
 }
 
-/* created */
 .list .item.header .createdSort {
-   flex: 1.5;
+   flex: 1;
    justify-content: flex-end;
 }
 
-/* active sorting */
-.list .item.header p.active {
-   font-weight: 600;
+.list .item.header p.active span {
+   font-weight: bold;
    color: var(--textPrimary);
 }
 
-/* sort icon */
 .list .item.header i.material-icons {
-   font-size: 14px;
+   font-size: 18px;
    opacity: 0.6;
 }
 
-/* show icon on hover or active */
 .list .item.header p:hover i,
 .list .item.header p.active i {
    opacity: 1;
 }
-
-
 
 </style>

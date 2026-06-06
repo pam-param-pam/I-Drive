@@ -381,42 +381,42 @@ export default {
 </script>
 <style scoped>
 .multi-select-toggle {
-   position: absolute;
-   top: -8px;
-   left: -8px;
+  position: absolute;
+  top: -8px;
+  left: -8px;
 
-   width: 14px;
-   height: 14px;
-   border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
 
-   background: #cfcfcf;
-   border: 2px solid #fff;
+  background: #cfcfcf;
+  border: 2px solid #fff;
 
-   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
 
-   cursor: pointer;
-   padding: 0;
+  cursor: pointer;
+  padding: 0;
 
-   touch-action: manipulation;
+  touch-action: manipulation;
 }
 
 .multi-select-hitbox {
-   position: absolute;
-   top: 15px;
-   left: 15px;
+  position: absolute;
+  top: 15px;
+  left: 15px;
 
-   width: 36px;
-   height: 36px;
+  width: 36px;
+  height: 36px;
 
-   display: flex;
-   align-items: center;
-   justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-   z-index: 5;
+  z-index: 5;
 }
 
 .multi-select-toggle[aria-pressed="true"] {
-   background: var(--dark-blue);
+  background: var(--dark-blue);
 }
 
 /* ========================= */
@@ -489,12 +489,19 @@ export default {
   flex-direction: column;
 }
 
+.list .item-wrapper .item > div:first-child {
+  flex: 0 0 40px;
+  text-align: center;
+  margin-left: 1em;
+}
+
 .list .item-wrapper .item {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--divider);
   cursor: pointer;
   transition: background-color 0.2s ease-in-out;
+  padding-top: 0.25em;
 }
 
 .list .item-wrapper .item:hover {
@@ -507,41 +514,53 @@ export default {
   white-space: nowrap;
 }
 
-.list .item-wrapper .item > div:first-child {
-  flex: 0 0 40px;
-  text-align: center;
-}
 
 .list .item-wrapper .name {
   flex: 2;
   font-weight: 500;
+  margin-left: 0.5em;
+
+  min-width: 0;
+  overflow: hidden;
+}
+
+.list .item-wrapper .name p {
+  margin: 0;
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .list .item-wrapper .size {
   flex: 1;
+  justify-content: flex-end;
   text-align: right;
-  color: #666;
+  color: var(--textSecondary);
   font-size: 0.9em;
+  padding-left: 1em;
+
 }
 
 .list .item-wrapper .created {
-  flex: 1.5;
+  flex: 1;
+  justify-content: flex-end;
   text-align: right;
-  color: #999;
+  color: var(--textSecondary);
   font-size: 0.9em;
+  padding-right: 2em;
+   padding-left: 1em;
+
 }
 
 .list .item-wrapper img {
   max-width: 48px;
   max-height: 48px;
   object-fit: cover;
-  border-radius: 4px;
 }
 
 .list .item-wrapper .material-icons {
-  font-size: 24px;
-  color: #666;
+  font-size: 36px;
 }
-
 
 </style>

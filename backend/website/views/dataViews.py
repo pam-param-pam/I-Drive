@@ -42,11 +42,8 @@ def get_folder_info(request, folder_obj: Folder):
     folder_content = cache.get(key)
 
     if not folder_content:
-        print("folder NOT cached")
         folder_content = build_folder_content(folder_obj)
         cache.set(key, folder_content, timeout=None)
-    else:
-        print("folder cached")
 
     breadcrumbs = build_breadcrumbs(folder_obj)
 
@@ -446,20 +443,11 @@ def check_message_id(request, message_id):
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_folder_hash(request, folder_obj: Folder):
-    # print(f"get_folder_hash called for folder: {folder_obj}")
     subfolders = folder_obj.get_all_subfolders(include_self=True).filter(inTrash=False)
     files = File.objects.filter(parent__in=subfolders, inTrash=False).distinct().only("name", "crc")
     folders = subfolders.only("name")
 
     hasher = hashlib.sha256()
-
-    # print("REMOTE FILES:")
-    # for f in files.order_by("name"):
-    #     print(f"{f.name} | {f.crc}")
-    #
-    # print("REMOTE DIRS:")
-    # for d in folders.order_by("name"):
-    #     print(d.name)
 
     for f in files.order_by("name"):
         hasher.update(f.name.encode("utf-8"))

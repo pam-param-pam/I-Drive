@@ -15,14 +15,16 @@ from django.utils import timezone
 class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
     max_connections_per_client = 5
     connection_limit = 5        # how many new connections allowed
-    connection_window = 30       # seconds
+    connection_window = 30      # seconds
 
     message_limit = 60          # messages allowed
-    message_window = 60          # seconds
+    message_window = 60         # seconds
 
     ping_heartbeat = True
-    ping_interval = 10  # seconds
-    ping_timeout = 5  # seconds
+    ping_interval = 10          # seconds
+    ping_timeout = 5            # seconds
+
+    re_authorize_every_n_seconds = 60  # seconds
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,6 +32,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         self._heartbeat_thread = None
         self._heartbeat_running = None
         self._connection_id = str(uuid.uuid4())
+        self._last_authorized_at = 0
 
     @abstractmethod
     def authorize(self) -> tuple[bool, bool, str]:
@@ -66,7 +69,6 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         key = f"ws-{key_prefix}-{ident}"
 
         entry = cache.get(key, {"count": 0, "timestamp": timezone.now()})
-
         now = timezone.now()
 
         # reset window if expired
@@ -78,8 +80,21 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
         return entry["count"] <= limit
 
+    def _reauthorize_if_needed(self) -> bool:
+        if not self.re_authorize_every_n_seconds:
+            return True
+
+        now = time.time()
+
+        if now - self._last_authorized_at < self.re_authorize_every_n_seconds:
+            return True
+
+        authorized, _, _ = self.authorize()
+        self._last_authorized_at = now
+
+        return authorized
+
     def reject(self, code, reason):
-        # self.send_json({"type": "error", "reason": reason})
         self.close(code)
         return
 
@@ -89,10 +104,11 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
             return
 
         if self._count_connections() > self.max_connections_per_client:
-            self.reject(4409, "Too many active connections")
+            self.reject(code=4409, reason="Too many active connections")
             return
 
         authorized, is_standard_protocol, token = self.authorize()
+        self._last_authorized_at = time.time()
 
         if not authorized:
             self.reject(code=4401, reason="Unauthorized")
@@ -108,10 +124,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         if self.ping_heartbeat:
             self.last_pong = time.time()
             self._heartbeat_running = True
-            self._heartbeat_thread = threading.Thread(
-                target=self._heartbeat_loop,
-                daemon=True
-            )
+            self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
             self._heartbeat_thread.start()
 
         async_to_sync(self.channel_layer.group_add)(self.get_group_name(), self.channel_name)
@@ -119,6 +132,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         self.on_accept()
 
     def disconnect(self, close_code):
+        self._heartbeat_running = False
         async_to_sync(self.channel_layer.group_discard)(self.get_group_name(), self.channel_name)
         self._unregister_connection()
         self.on_disconnect(close_code)
@@ -127,17 +141,17 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         """DO NOT OVERRIDE THIS FUNCTION TO HANDLE MESSAGES.
         USE on_message() INSTEAD!"""
 
-        # 0) Ensure client is still authorized
-        authorized, _, _ = self.authorize()
-        if not authorized:
-            self.close()
+        # 0) Re-authorize periodically
+        if not self._reauthorize_if_needed():
+            self.close(code=4401)
+            return
 
         # 1) Rate-limit per-message
         if not self._check_rate_limit("msg", self.message_limit, self.message_window):
             self.on_ratelimit()
             return
 
-        # 2) Handle heartbeat (application pong)
+        # 2) Handle heartbeat/application pong
         if self.ping_heartbeat and text_data == "PONG":
             self._refresh_connection()
             self.last_pong = time.time()
@@ -159,11 +173,11 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         is_standard_protocol = False
 
         # Try Authorization: Bearer <token>
-        auth_header = headers.get(b'authorization')
+        auth_header = headers.get(b"authorization")
         if auth_header:
             try:
-                auth_str = auth_header.decode('utf-8')
-                if auth_str.lower().startswith('bearer '):
+                auth_str = auth_header.decode("utf-8")
+                if auth_str.lower().startswith("bearer "):
                     token_key = auth_str[7:].strip()
                     is_standard_protocol = True
             except Exception:
@@ -172,7 +186,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         # Fallback to Sec-WebSocket-Protocol
         if token_key is None:
             try:
-                token_key = headers[b'sec-websocket-protocol'].decode('utf-8').strip()
+                token_key = headers[b"sec-websocket-protocol"].decode("utf-8").strip()
                 is_standard_protocol = False
             except Exception:
                 token_key = None
@@ -181,28 +195,19 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     def _heartbeat_loop(self):
         while self._heartbeat_running:
-            time.sleep(10)
+            time.sleep(self.ping_interval)
 
-            async_to_sync(self.channel_layer.send)(
-                self.channel_name,
-                {
-                    "type": "heartbeat_ping",
-                }
-            )
+            async_to_sync(self.channel_layer.send)(self.channel_name, {"type": "heartbeat_ping"})
 
             if time.time() - self.last_pong > self.ping_interval + self.ping_timeout:
-                async_to_sync(self.channel_layer.send)(
-                    self.channel_name,
-                    {
-                        "type": "heartbeat_close",
-                    }
-                )
+                async_to_sync(self.channel_layer.send)(self.channel_name, {"type": "heartbeat_close"})
                 break
 
     def heartbeat_ping(self, event):
         self.send("PING")
 
     def heartbeat_close(self, event):
+        self._heartbeat_running = False
         self.close()
 
     def _count_connections(self) -> int:
