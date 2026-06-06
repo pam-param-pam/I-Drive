@@ -64,7 +64,7 @@ DEVICE_CONTROL_ACTIVE_TTL = 7200
 # How long a device control reject state is
 DEVICE_CONTROL_REJECTED_TTL = 5
 
-# How long a share access last for, before a new one is created for that user/IP, in MINUTES
+# How long a share access lasts for, before a new one is created for that user/IP, in MINUTES
 SHARE_ACCESS_DURATION = 180
 
 cache = caches["default"]
@@ -83,6 +83,9 @@ MAX_FILE_DELETION_ATTEMPTS = 5
 
 # How many retries allowed for raw extraction before they are marked as fatally failed
 MAX_RAW_EXTRACTION_ATTEMPTS = 3
+
+# Controls whatever the backend should try to generate thumbnails from Raw Images. This can potentially lead to memory spikes.
+GENERATE_RAW_THUMBNAILS = True
 
 FILE_TYPES = {
     "Video": (

@@ -490,9 +490,9 @@ export default {
 }
 
 .list .item-wrapper .item > div:first-child {
-  flex: 0 0 40px;
+  flex: 0 0 50px;
   text-align: center;
-  margin-left: 1em;
+  margin-left: 0.5em;
 }
 
 .list .item-wrapper .item {
@@ -500,12 +500,13 @@ export default {
   align-items: center;
   border-bottom: 1px solid var(--divider);
   cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
   padding-top: 0.25em;
+   background-color: var(--surfacePrimary);
+
 }
 
 .list .item-wrapper .item:hover {
-  background-color: var(--surfaceSecondary);
+  background-color: var(--light-blue) !important;
 }
 
 .list .item-wrapper .item > div {
@@ -517,8 +518,7 @@ export default {
 
 .list .item-wrapper .name {
   flex: 2;
-  font-weight: 500;
-  margin-left: 0.5em;
+  margin-left: 1em;
 
   min-width: 0;
   overflow: hidden;
@@ -535,10 +535,10 @@ export default {
 .list .item-wrapper .size {
   flex: 1;
   justify-content: flex-end;
-  text-align: right;
+  text-align: center;
   color: var(--textSecondary);
   font-size: 0.9em;
-  padding-left: 1em;
+  padding-left: 3em;
 
 }
 
@@ -554,13 +554,15 @@ export default {
 }
 
 .list .item-wrapper img {
+   min-width: 48px;
+   min-height: 48px;
   max-width: 48px;
   max-height: 48px;
   object-fit: cover;
 }
 
 .list .item-wrapper .material-icons {
-  font-size: 36px;
+  font-size: 48px;
 }
 
 </style>

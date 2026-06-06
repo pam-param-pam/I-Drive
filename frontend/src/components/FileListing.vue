@@ -743,7 +743,7 @@ export default {
             this.tileWidth = tileWidth
             this.tileHeight = tileWidth * 1.5
          } else if (this.settings.viewMode === "list") {
-            this.tileHeight = 60
+            this.tileHeight = 58
 
          }
 
@@ -813,7 +813,7 @@ export default {
 
 .scroller {
   background-color: var(--background);
-  /*padding-bottom: 2em;*/
+  padding-bottom: 2em;
 }
 
 .pulse-animation {
@@ -887,6 +887,7 @@ export default {
    position: sticky;
    top: 0;
    z-index: 10;
+   margin-bottom: 1em;
 }
 
 .list .item.header > div {
@@ -915,7 +916,9 @@ export default {
 
 .list .item.header .sizeSort {
    flex: 1;
-   justify-content: flex-end;
+   text-align: center;
+   justify-content: center;
+   padding-left: 0.5em;
 }
 
 .list .item.header .createdSort {

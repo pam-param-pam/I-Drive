@@ -9,12 +9,6 @@
   --sb-thumb-color: var(--surfaceSecondary);
 }
 
-/*1e1f23*!*/
-/*2c2d31*/
-/*323338
-
- */
-
 .dark-mode .listing-notice {
   background-color: var(--surfaceSecondary);
   border: 1px solid var(--surfaceSecondary);
@@ -109,7 +103,6 @@
   border-color: var(--divider);
 }
 
-/* Breadcrumbs */
 .dark-mode .breadcrumbs {
   border-color: var(--divider);
   color: var(--textPrimary) !important;
@@ -123,45 +116,24 @@
   background-color: rgba(255, 255, 255, .1);
 }
 
-/* Listing items */
-.dark-mode #listingView .item {
-  background: var(--surfacePrimary) !important;
-  color: var(--textPrimary);
-  border-color: var(--divider) !important;
-}
-
-.dark-mode #listingView.gallery .item .text {
-  text-shadow: 0 0 2px black;
-}
-
-/* Listing item modified text */
-.dark-mode #listingView .item .modified {
-  color: var(--textSecondary);
-}
-
-/* Listing header and span */
 .dark-mode #listingView h2,
 .dark-mode #listingView.list .header span {
   color: var(--textPrimary) !important;
 }
 
-/* Message */
 .dark-mode .message {
   color: var(--textPrimary);
 }
 
-/* Card */
 .dark-mode .card {
   background: var(--surfacePrimary);
   color: var(--textPrimary);
 }
 
-/* Flat button hover */
 .dark-mode .button--flat:not(:disabled):hover {
   background: var(--surfaceSecondary);
 }
 
-/* Dashboard navigation */
 .dark-mode .dashboard #nav ul li {
   color: var(--textSecondary);
 }
@@ -174,13 +146,6 @@
   background-color: black;
 }
 
-/* Result list */
-.dark-mode #result-list {
-  background-color: var(--surfacePrimary);
-  color: white;
-}
-
-/* Card, Dashboard navigation, and label */
 .dark-mode .card h3,
 .dark-mode .dashboard #nav,
 .dark-mode .dashboard p label {
@@ -194,23 +159,19 @@
   color: var(--textPrimary);
 }
 
-/* Input hover and focus */
 .dark-mode .input:hover,
 .dark-mode .input:focus {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
-/* Red input */
 .dark-mode .input--red {
   background: #73302D;
 }
 
-/* Green input */
 .dark-mode .input--green {
   background: #147A41;
 }
 
-/* Collapsible and label */
 .dark-mode .dashboard #nav .wrapper,
 .dark-mode .collapsible {
   border-color: var(--divider);
@@ -220,12 +181,10 @@
   color: var(--textPrimary);
 }
 
-/* Table header */
 .dark-mode table th {
   color: var(--textSecondary);
 }
 
-/* File list item */
 .dark-mode .file-list li:hover {
   background: var(--surfaceSecondary);
 }
@@ -234,74 +193,20 @@
   color: var(--textSecondary);
 }
 
-/* Editor container */
-.dark-mode #editor-container {
-  background: var(--background);
-}
-
-.dark-mode #editor-container .bar {
-  background: var(--surfacePrimary);
-}
-
-
-/* Share box */
-.dark-mode .share__box {
-  background: var(--surfacePrimary) !important;
-  color: var(--textPrimary);
-}
-
-/* Share box element */
-.dark-mode .share__box__element {
-  border-top-color: var(--divider);
-}
-
-/* Help button */
-.dark-mode .helpButton {
-  background: var(--background);
-}
-
-/* Size input wrapper */
-.dark-mode .sizeInputWrapper {
-  background: var(--background);
-  color: white;
-}
-
-/* Button group button */
 .dark-mode .button-group button {
   color: white;
   background-color: var(--background);
 }
 
-/* Result desktop */
-.dark-mode #results #result-list {
-  max-height: unset;
-}
-
-/* Result desktop background */
-.dark-mode #results {
-  background-color: var(--background);
-}
-
-/* Use the class .dark-mode to apply styles conditionally */
 .dark-mode {
   background: #141D24 !important;
   color: var(--textPrimary);
 }
 
-/* Header */
-.dark-mode-header {
-  color: white;
-  background: #141D24;
+.dark-mode .list .item-wrapper .item {
+  background-color: var(--background) !important;
 }
 
-/* Header with backdrop-filter support */
-@supports (backdrop-filter: none) {
-  .dark-mode-header {
-    background-color: rgb(37 49 55 / 33%) !important;
-    backdrop-filter: blur(16px) invert(0.1);
-  }
-}
-
-#sidebar.dark-mode {
-  background-color: #141D24 !important;
+.dark-mode .list .item-wrapper .item:hover {
+  background-color: var(--surfaceSecondary) !important;
 }
