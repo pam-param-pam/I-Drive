@@ -67,8 +67,6 @@ export default {
       ...mapActions(useMainStore, ["addSelected"]),
       ...mapActions(useWebSocketStore, ["send"]),
       onPreviewEvent({ type, payload }) {
-         console.log(":onPreviewEvent")
-         console.log({ type, payload })
          if (type === PreviewEvent.MEDIA_SEEK) {
             this.sendShareEvent({ type: "movie_seek", args: { "to_second": payload.toSeconds, "file_id": this.file.id } })
          } else if (type === PreviewEvent.MEDIA_TIME_UPDATE) {

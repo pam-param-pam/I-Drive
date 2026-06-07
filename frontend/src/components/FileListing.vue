@@ -694,7 +694,6 @@ export default {
          this.setLocateItem(item)
          this.closeContextMenu()
 
-         this.$router.replace({ name: "Settings" })
          this.$router.replace({ name: "Files", params: { folderId: parent_id } })
       },
 
@@ -743,8 +742,7 @@ export default {
             this.tileWidth = tileWidth
             this.tileHeight = tileWidth * 1.5
          } else if (this.settings.viewMode === "list") {
-            this.tileHeight = 50.5
-
+            this.tileHeight = 54.5
          }
 
          this.imageHeight = this.tileHeight - 65
@@ -752,7 +750,6 @@ export default {
       },
 
       async scrollToLastItem() {
-         console.log("scrollToLastItem")
          function nextFrame() {
             return new Promise(resolve => requestAnimationFrame(resolve))
          }
@@ -768,6 +765,7 @@ export default {
             itemId = this.lastFile.id
             this.setLastFile(null)
          }
+
          if (!itemId) return
 
          await this.$nextTick()
@@ -775,17 +773,16 @@ export default {
 
          const filesScroller = this.$refs.filesScroller
          if (!filesScroller) return
-
          const index = this.sortedItems.findIndex(file => file.id === itemId) - this.numberOfTiles
 
          filesScroller.scrollToItem(index)
          await nextFrame()
+         await nextFrame() // 2 frames are needed when the item is in the folder which currently is displayed, don't ask me why
 
          const itemElement = this.$refs[itemId]
          if (!itemElement?.$el) return
 
          itemElement.$el.classList.add("pulse-animation")
-
          this.scrollToAnimationTimeout = setTimeout(() => {
             if (itemElement?.$el) {
                itemElement.$el.classList.remove("pulse-animation")

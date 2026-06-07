@@ -102,7 +102,6 @@ export default {
             popoverClass: "driverjs-theme",
             onDestroyStarted: () => this.onSkip(tour),
             onPopoverRender: (popover, { config, state }) => {
-               console.log(tour.getActiveStep())
                if (tour.getActiveIndex() === 0) {
                   const firstButton = document.createElement("button");
                   firstButton.innerText = this.$t('tour.buttons.skip');

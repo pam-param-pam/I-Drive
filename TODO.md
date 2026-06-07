@@ -15,5 +15,4 @@
 2) Prohibit use of .delete() .save() etc on Models directly (how?)
 3) Introduce a new exception ValidationError() into services to make nicer errors
 4) Use select for update everywhere
-5) add geo ip to nginx itself
-6) add auto db backups
+5) add auto db backups

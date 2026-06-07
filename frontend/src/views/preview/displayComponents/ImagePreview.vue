@@ -76,8 +76,6 @@ export default {
    },
    computed: {
       imageSrc() {
-         console.log("thumbSrc")
-         console.log(this.thumbSrc)
          if (!this.imageFullSize && this.thumbSrc) return this.thumbSrc
          return this.src
       }

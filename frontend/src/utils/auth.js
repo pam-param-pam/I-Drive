@@ -81,7 +81,6 @@ export async function logout() {
 
 
 export async function forceLogout() {
-   console.log("FORCE LOGOUT ACKNOWLEDGED")
    localStorage.removeItem("token")
    localStorage.removeItem("device_id")
    await router.push({ path: "/login" })

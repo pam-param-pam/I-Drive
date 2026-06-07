@@ -146,7 +146,7 @@ export default {
                this.setCurrentFolderData(res)
             } catch (error) {
                if (axios.isCancel(error)) return
-               console.log(error)
+               console.error(error)
                this.setItemsError(error)
             } finally {
                this.setItemsLoading(false)

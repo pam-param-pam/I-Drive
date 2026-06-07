@@ -162,7 +162,7 @@ export default {
             this.originalContent = fileContent
             this.initEditor(fileContent)
          } catch (error) {
-            console.log(error)
+            console.error(error)
             this.$emit("error", error)
          } finally {
             this.setLoading(false)
