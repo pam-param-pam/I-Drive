@@ -50,6 +50,7 @@ jobs:
 
             NGINX_PORT=8080
             PROTOCOL=https
+            POSTGRES_VOLUME=idrive_postgres_data
 
             BACKEND_PORT=8001
 

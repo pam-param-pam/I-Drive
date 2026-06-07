@@ -161,7 +161,7 @@ def _logout_websockets(user: User, device_id: str = None) -> None:
         }
     )
 
-def login_device(request, username: str, password: str) -> tuple[str, PerDeviceToken]:
+def login_device(request, username: str, password: str, send_notification: bool = True) -> tuple[str, PerDeviceToken]:
     username = validate_value(username, str, checks=[NotEmpty])
     password = validate_value(password, str, checks=[NotEmpty])
 
@@ -175,7 +175,8 @@ def login_device(request, username: str, password: str) -> tuple[str, PerDeviceT
     device_data = DeviceTokenSerializer.serialize_object(token_obj)
 
     send_event(RequestContext.from_user(user.id), None, EventCode.NEW_DEVICE_LOG_IN, device_data)
-    user_service.create_notification(user, NotificationType.IMPORTANT, NotificationKind.NEW_DEVICE_LOGIN, data=device_data)
+    if send_notification:
+        user_service.create_notification(user, NotificationType.IMPORTANT, NotificationKind.NEW_DEVICE_LOGIN, data=device_data)
     return raw_token, token_obj
 
 def logout_all_devices_for_user(request, user, ignore_device_id: str = None) -> None:
@@ -198,7 +199,7 @@ def register_user(request, username: str, password: str) -> tuple[str, PerDevice
         raise UsernameTakenError()
 
     create_new_user(username, password, is_superuser=False)
-    return login_device(request, username, password)
+    return login_device(request, username, password, send_notification=False)
 
 def change_password(request, context: RequestContext, current_password: str, new_password: str) -> None:
     current_password = validate_value(current_password, str, checks=[NotEmpty])

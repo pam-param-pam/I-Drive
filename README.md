@@ -157,9 +157,10 @@ I drive is fully dockerized! Yay. There are 4 containers managed by `docker comp
 6) Go to browser and type `localhost`
 
 
-# THIS SECTION IS NOT TESTED.
-
 # Building from source
+
+### ⚠️THIS IS NOT TESTED AND WILL PROBABLY NOT WORK ⚠️
+<br>
 
 **You need python version 3.11 installed. 
 Tested on Node v20.10.0**
