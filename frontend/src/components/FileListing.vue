@@ -743,7 +743,7 @@ export default {
             this.tileWidth = tileWidth
             this.tileHeight = tileWidth * 1.5
          } else if (this.settings.viewMode === "list") {
-            this.tileHeight = 58
+            this.tileHeight = 50.5
 
          }
 
@@ -887,7 +887,7 @@ export default {
    position: sticky;
    top: 0;
    z-index: 10;
-   margin-bottom: 1em;
+   margin-bottom: 0.5em;
 }
 
 .list .item.header > div {

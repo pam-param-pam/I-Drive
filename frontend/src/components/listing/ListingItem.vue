@@ -490,9 +490,9 @@ export default {
 }
 
 .list .item-wrapper .item > div:first-child {
-  flex: 0 0 50px;
+  flex: 0 0 40px;
   text-align: center;
-  margin-left: 0.5em;
+  margin-left: 0.25em;
 }
 
 .list .item-wrapper .item {
@@ -501,7 +501,7 @@ export default {
   border-bottom: 1px solid var(--divider);
   cursor: pointer;
   padding-top: 0.25em;
-   background-color: var(--surfacePrimary);
+  background-color: var(--surfacePrimary);
 
 }
 
@@ -518,7 +518,7 @@ export default {
 
 .list .item-wrapper .name {
   flex: 2;
-  margin-left: 0.5em;
+  margin-left: 0.25em;
 
   min-width: 0;
   overflow: hidden;
@@ -549,24 +549,24 @@ export default {
   color: var(--textSecondary);
   font-size: 0.9em;
   padding-right: 2em;
-   padding-left: 1em;
+  padding-left: 1em;
 
 }
 
 .list .item-wrapper img {
-   min-width: 48px;
-   min-height: 48px;
-  max-width: 48px;
-  max-height: 48px;
+  min-width: 4036;
+  min-height: 36px;
+  max-width: 36px;
+  max-height: 36px;
   object-fit: cover;
 }
 
 .list .item-wrapper .material-icons {
-  font-size: 48px;
+  font-size: 36px;
 }
 
 .list .item-wrapper [aria-selected='true'] {
-   background: #c4e6ff;
+  background: #c4e6ff;
 }
 
 </style>
