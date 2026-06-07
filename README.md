@@ -147,39 +147,17 @@ I drive is fully dockerized! Yay. There are 4 containers managed by `docker comp
 * Postgres
 
 
-# THIS SECTION IS NOT TESTED. SEE ROADMAP
+# Fast deployment
 
-# Deployment
+1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/bootstrap.sh -o bootstrap.sh && chmod +x bootstrap.sh`  to download the bootstrap bash script
+2) Run `bash bootstrap.sh`
+3) Run `docker compose up`
+4) Run `docker exec -it idrive-backend python manage.py migrate` to migrate the database
+5) Run `docker exec -it idrive-backend python manage.py createuser` to create admin user
+6) Go to browser and type `localhost`
 
-1) Create a fresh directory and in it
-2) create `docker-compose.yml` file. Copy content from [here ](https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/docker-compose.yml) to it.
 
-3) create `nginx.conf` file. Copy content from [here ](https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/nginx.conf) to it.
-4) create `.env` file and copy these values:
-```
-IS_DEV_ENV=True
-PROTOCOL=http
-DEPLOYMENT_HOST=localhost
-NGINX_PORT=80
-
-BACKEND_SECRET_KEY=very_secret_key
-BACKEND_BASE_URL=http://localhost
-
-REDIS_PASSWORD=1234
-
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=1234
-
-BACKEND_PORT=8001
-IP_API_KEY= grab from here https://freeipapi.app/ (it's free)
-```
-
-5) Run `docker-compose up`
-6) Run `docker exec -it idrive-backend bash`
-7) Run `python manage.py migrate` to setup a database
-8) Run `python manage.py createuser` to create admin user
-9) Go to browser and type `localhost`
-
+# THIS SECTION IS NOT TESTED.
 
 # Building from source
 
@@ -226,11 +204,9 @@ POSTGRES_NAME=dev_idrive_postgres
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=1234
 
-IP_API_KEY= grab from here https://freeipapi.app/ (it's free)
 ```
 7) Inside `backend` dir run these commands.
 
-If on windows:
 ```
 # 1. Create virtual environment
 py -3.11 -m venv .venv
@@ -245,17 +221,19 @@ pip install -r requirements.txt
 python manage.py migrate
 
 # 5. Create admin user
-python manage.py createsuperuser
+python manage.py createuser
 
 # 6. Start backend dev server
 python manage.py runserver 0.0.0.0:8000
 
-# 7. start both celeries #todo
+# 7. start all celeries
+celery -A website worker -l INFO -P eventlet
+celery -A website worker -l INFO --pool=solo -Q wsQ
+celery -A website worker -l INFO --pool=solo -Q deletion -c 1
+celery -A website beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
 ```
 
-If on MacOc/Linux
-
-8) Everything should work now, head over to `localhost:5173` to see the website
+#### Everything should work now, head over to `localhost:5173` to see the website
 
 
 # PS

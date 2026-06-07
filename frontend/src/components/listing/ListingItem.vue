@@ -500,9 +500,8 @@ export default {
   align-items: center;
   border-bottom: 1px solid var(--divider);
   cursor: pointer;
-  padding-top: 0.25em;
+  padding-top: 0.5em;
   background-color: var(--surfacePrimary);
-
 }
 
 .list .item-wrapper .item:hover {
@@ -518,7 +517,7 @@ export default {
 
 .list .item-wrapper .name {
   flex: 2;
-  margin-left: 0.25em;
+  margin-left: 0.5em;
 
   min-width: 0;
   overflow: hidden;
@@ -554,10 +553,10 @@ export default {
 }
 
 .list .item-wrapper img {
-  min-width: 4036;
-  min-height: 36px;
-  max-width: 36px;
-  max-height: 36px;
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 32px;
+  max-height: 32px;
   object-fit: cover;
 }
 

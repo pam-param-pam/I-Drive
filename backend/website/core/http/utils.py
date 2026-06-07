@@ -1,5 +1,4 @@
 import ipaddress
-import os
 import re
 from typing import Optional
 
@@ -9,8 +8,6 @@ import shortuuid
 from ..dataModels.general import ResponseDict, ErrorDict
 from ..errors import BadRequestError
 from ..helpers import get_ip
-
-IP_API_KEY = os.environ['IP_API_KEY']
 
 def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}
@@ -29,7 +26,7 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast:
         return None, None
 
-    response = requests.get(f'https://api.freeipapi.app/api/v1/lookup?ip={ip}', headers={'authorization': f"Bearer {IP_API_KEY}"})
+    response = requests.get(f'https://ipwhois.app/json/{ip}')
     if not response.ok:
         print(f"===FAILED TO GET GEO LOCATION DATA===({response.status_code})")
         return None, None
