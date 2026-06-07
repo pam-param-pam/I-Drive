@@ -13,7 +13,7 @@ import CorePreview from "@/views/preview/CorePreview.vue"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapState } from "pinia"
 import { getSubtitles, updateMediaPosition } from "@/api/files.js"
-import { PreviewEvent, WebsocketEvent } from "@/utils/constants.js"
+import { PreviewEvent } from "@/utils/constants.js"
 
 export default {
    name: "NormalPreview",
@@ -73,34 +73,6 @@ export default {
       },
       onClose() {
          this.$router.replace({ name: "Files", params: { ...this.$route.params } })
-      }
-   },
-   sockets: {
-      onmessage(message_event) {
-         //send commands downward
-         if (message_event.data === "PING") return
-         let jsonObject = JSON.parse(message_event.data)
-         let event = jsonObject.event
-         let op_code = event.op_code
-
-         if (op_code === WebsocketEvent.DEVICE_CONTROL_COMMAND) {
-            let type = event.data[0].type
-            let args = event.data[0].args
-
-            if (type === "movie_seek") {
-               this.videoRef.currentTime = args.seconds
-            } else if (type === "movie_toggle") {
-               let isPaused = args.isPaused
-               if (isPaused) this.videoRef.pause()
-               else this.videoRef.play()
-            } else if (type === "movie_volume_change") {
-               this.videoRef.volume = args.volume
-            } else if (type === "movie_fullscreen_toggle") {
-               this.toggleFullscreen(args.is_fullscreen)
-            } else if (type === "movie_subtitle_change") {
-               this.setSubtitleTrack(args.subtitle_id)
-            }
-         }
       }
    }
 }

@@ -26,8 +26,8 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     re_authorize_every_n_seconds = 60  # seconds
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
         self.last_pong = time.time()
         self._heartbeat_thread = None
         self._heartbeat_running = None

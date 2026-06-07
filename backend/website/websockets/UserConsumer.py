@@ -14,7 +14,7 @@ class UserConsumer(RateLimitedWebsocketConsumer):
     message_window = 30
 
     def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
+        super().__init__(*args, **kwargs)
         self.token_obj = None
         self.device_id = None
         self.user = None

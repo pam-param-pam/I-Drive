@@ -90,6 +90,8 @@ import { humanTime } from "@/utils/common.js"
 import throttle from "lodash.throttle"
 import { getActiveDevices, logoutAllDevices, revokeDevice } from "@/api/auth.js"
 import loadingSpinner from "@/components/loadingSpinner.vue"
+import { WebsocketEvent } from "@/utils/constants.js"
+import { useWebSocketStore } from "@/stores/websocketStore.js"
 
 export default {
    name: "Devices",
@@ -108,9 +110,11 @@ export default {
    },
    async created() {
       await this.fetchDevices()
+      this.addListener("user", this.onMessage)
    },
    methods: {
       humanTime,
+      ...mapActions(useWebSocketStore, ["addListener"]),
       ...mapActions(useMainStore, ["showHover"]),
       setLoading(value) {
          this.loading = value
@@ -134,10 +138,19 @@ export default {
          this.devices = this.devices.filter(d => d.device_id !== deviceId)
          this.$toast.success(this.$t("toasts.deviceRevoked"))
       }, 500),
+
       logoutAll: throttle(async function() {
          await logoutAllDevices()
          await forceLogout()
       }, 1000),
+
+      onMessage(message) {
+         message = JSON.parse(message)
+         let op_code = message.event.op_code
+         if (op_code === WebsocketEvent.NEW_DEVICE_LOG_IN) {
+            this.devices.push(message.event.data[0])
+         }
+      }
    }
 }
 </script>
