@@ -12,6 +12,9 @@ curl -fsSL "$BASE_URL/docker-compose.yml" -o docker-compose.yml
 echo "Downloading nginx/nginx.conf..."
 curl -fsSL "$BASE_URL/nginx/nginx.conf" -o nginx/nginx.conf
 
+echo "Downloading nginx/auth.js..."
+curl -fsSL "$BASE_URL/nginx/auth.js" -o nginx/auth.js
+
 if [ -f .env ]; then
   echo ".env already exists - leaving it unchanged"
 else
