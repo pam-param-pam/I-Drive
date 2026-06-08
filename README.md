@@ -15,7 +15,7 @@ Want to know how **iDrive** works under the hood? [Read here](https://github.com
 # Demo
 ~~It's available at `https://idrive.pamparampam.dev`~~
 
-~~Credentials: `demo`/`demo`~~
+~~Credentials:~~  ~~`demo`~~/~~`demo`~~
 
 Sorry, no demo currently.
 
@@ -47,6 +47,11 @@ Sorry, no demo currently.
 
 1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/bootstrap.sh -o bootstrap.sh && chmod +x bootstrap.sh && bash bootstrap.sh`
 2) Go to browser and type `localhost`
+
+To see all configurable options, run:
+`bash bootstrap.sh --help`
+<br>
+<br>
 
 **How to configure Discord Settings:**
 
