@@ -152,6 +152,53 @@ I drive is fully dockerized! Yay. There are 4 containers managed by `docker comp
 1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/bootstrap.sh -o bootstrap.sh && chmod +x bootstrap.sh && bash bootstrap.sh`
 2) Go to browser and type `localhost`
 
+**How to configure Discord Settings:**
+
+1. Enable Discord **Developer Mode**.  
+   See: [How to enable Developer Mode](https://www.youtube.com/watch?v=8FNYLcjBERM)
+
+2. Create a new Discord server and copy its **Guild ID**.  
+   See: [How to copy the Guild ID](https://www.youtube.com/watch?v=HjkRZy5d_qM&t=40s)
+
+3. Create a new Discord bot:  
+   [Create a new Discord application](https://discord.com/developers/applications?new_application=true)
+
+4. In the Discord Developer Portal, open your bot settings and enable the required intent:
+
+   **Bot → Privileged Gateway Intents → Message Content Intent**
+
+5. Generate an invite URL for the bot:
+
+   **OAuth2 → URL Generator → Scopes → bot**
+
+6. Select the required bot permissions.
+
+   You can either select **Administrator**, or grant the following permissions manually:
+
+   - Manage Channels
+   - Manage Webhooks
+   - View Channels
+   - Send Messages
+   - Read Message History
+   - Attach Files
+   - Manage Messages
+   - Manage Roles
+
+7. Open the bot settings, reset the bot token, and copy the new access token:
+
+   **Bot → Reset Token**
+
+8. Open the generated invite URL and invite the bot to your Discord server.
+
+After completing these steps, you should have:
+
+- the Discord server
+- its Guild ID
+- the primary bot configured
+- the bot token
+
+> [!IMPORTANT] 
+> If you want to add another bot in the future, you can skip step 6. The required permissions will be granted to the bot automatically after you invite the bot to the server.
 
 # Building from source
 
