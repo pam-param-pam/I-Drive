@@ -149,12 +149,8 @@ I drive is fully dockerized! Yay. There are 4 containers managed by `docker comp
 
 # Fast deployment
 
-1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/bootstrap.sh -o bootstrap.sh && chmod +x bootstrap.sh`  to download the bootstrap bash script
-2) Run `bash bootstrap.sh`
-3) Run `docker compose up`
-4) Run `docker exec -it idrive-backend python manage.py migrate` to migrate the database
-5) Run `docker exec -it idrive-backend python manage.py createuser` to create admin user
-6) Go to browser and type `localhost`
+1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/bootstrap.sh -o bootstrap.sh && chmod +x bootstrap.sh && bash bootstrap.sh`
+2) Go to browser and type `localhost`
 
 
 # Building from source
