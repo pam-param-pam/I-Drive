@@ -103,84 +103,17 @@ After completing these steps, you should have:
 
 # Building from source
 
-### ⚠️THIS IS NOT TESTED AND WILL PROBABLY NOT WORK ⚠️
-<br>
+1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/setup-dev.sh -o setup-dev.sh && chmod +x setup-dev.sh && bash setup-dev.sh`
+2) Go to browser and type `localhost:5173`
 
-**You need python version 3.11 installed. 
-Tested on Node v20.10.0**
+> [!NOTE] 
+> This creates a standard development environment with default configuration. **DO NOT USE IT IN PRODUCTION**.
 
+You can adjust the configuration after setup:
 
-1) Clone this repository
-* `git clone https://github.com/pam-param-pam/I-Drive`
-
-2) Start redis.
-* `docker run -d --name dev_idrive_redis -p 6379:6379 redis:latest redis-server --requirepass 1234`
-
-3) Start postgres
-* `docker run -d --name dev_idrive_postgres -e POSTGRES_DB=dev_idrive_postgres -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=1234 -p 5432:5432 -v dev_idrive_postgres_data:/var/lib/postgresql/data postgres:16`
-
-4) Navigate to the cloned repo. Find `frontend` dir. In it create `.env` file and put these variables:
-````
-VITE_BACKEND_BASE_URL=http://localhost:8000
-VITE_BACKEND_BASE_WS=ws://localhost:8000
-````
-
-5) Inside the `frontend` dir run these commands:
-* `npm install` to install all requirements
-* `npm run dev -- --host 0.0.0.0 --port 5173` to start the frontend dev server
-
-6) Navigate back to the cloned repo root. Find `backend` dir. In it create `.env` file and put these variables:
-```
-IS_DEV_ENV=True
-PROTOCOL=http
-DEPLOYMENT_HOST=localhost
-NGINX_PORT=80
-
-BACKEND_SECRET_KEY=very_secret_key
-BACKEND_BASE_URL=http://localhost:8000
-
-REDIS_PASSWORD=1234
-REDIS_ADDRESS=localhost
-REDIS_PORT=6379
-
-POSTGRES_ADDRESS=localhost
-POSTGRES_PORT=5432
-POSTGRES_NAME=dev_idrive_postgres
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=1234
-
-```
-7) Inside `backend` dir run these commands.
-
-```
-# 1. Create virtual environment
-py -3.11 -m venv .venv
-
-# 2. Activate the virtual environment
-.venv\Scripts\activate 
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Run migrations
-python manage.py migrate
-
-# 5. Create admin user
-python manage.py createuser
-
-# 6. Start backend dev server
-python manage.py runserver 0.0.0.0:8000
-
-# 7. start all celeries
-celery -A website worker -l INFO -P eventlet
-celery -A website worker -l INFO --pool=solo -Q wsQ
-celery -A website worker -l INFO --pool=solo -Q deletion -c 1
-celery -A website beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
-```
-
-#### Everything should work now, head over to `localhost:5173` to see the website
+backend: `backend/.env`
+frontend: `frontend/.env`
 
 
 # PS
 Dear Discord, please don't sue me 👉👈
-
