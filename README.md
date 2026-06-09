@@ -124,13 +124,13 @@ Typical speeds through the web interface:
 | Operation                          | Speed    |
 |------------------------------------|----------|
 | Upload through web interface       | ~20 MB/s |
-| Download through web interface     | ~20 MB/s |
+| Download through web interface     | ~25 MB/s |
 | Zip download through web interface | ~25 MB/s |
 
-Download speed in the web interface is mainly limited by the backend upload speed, because files are streamed through the backend before reaching the browser.
+Download speed in the web interface is mainly limited by the backend bandwidth, and it's CPU, because files are streamed and decrypted through the backend before reaching the browser.
 Upload speed in the web interface is limited by thumbnail processing and internal browser bottlenecks.
 
-For maximum speed, use the [iDrive-api-wrapper](https://github.com/pam-param-pam/I-Drive/tree/master/iDrive-api-wrapper).
+For maximum speed, use the [iDrive-api-wrapper](https://github.com/pam-param-pam/iDrive-api-wrapper).
 
 With the API wrapper, downloads can reach the maximum speed available from your ISP. In testing, downloads reached around **200 MB/s**. Uploads reached around **50 MB/s**, with thumbnail extraction being the main bottleneck.
 
