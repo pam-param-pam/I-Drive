@@ -115,5 +115,24 @@ backend: `backend/.env`
 frontend: `frontend/.env`
 
 
+# Performance
+
+I Drive is fast enough for normal web-based file browsing, uploading, downloading, and streaming.
+
+Typical speeds through the web interface:
+
+| Operation                          | Speed    |
+|------------------------------------|----------|
+| Upload through web interface       | ~20 MB/s |
+| Download through web interface     | ~20 MB/s |
+| Zip download through web interface | ~25 MB/s |
+
+Download speed in the web interface is mainly limited by the backend upload speed, because files are streamed through the backend before reaching the browser.
+Upload speed in the web interface is limited by thumbnail processing and internal browser bottlenecks.
+
+For maximum speed, use the [iDrive-api-wrapper](https://github.com/pam-param-pam/I-Drive/tree/master/iDrive-api-wrapper).
+
+With the API wrapper, downloads can reach the maximum speed available from your ISP. In testing, downloads reached around **200 MB/s**. Uploads reached around **50 MB/s**, with thumbnail extraction being the main bottleneck.
+
 # PS
 Dear Discord, please don't sue me 👉👈
