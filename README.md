@@ -30,7 +30,7 @@ Sorry, no demo currently.
 | Advanced search                                                      | ✅       |
 | Login & Permission system                                            | ✅       |
 | Dark theme                                                           | ✅       |
-| Code editor with highlighting                                        | ✅       |
+| Text/Code editor with highlighting                                   | ✅       |
 | Mobile support                                                       | ✅       |
 | Bulk zip download                                                    | ✅       |
 | Supports Polish & English languages                                  | ✅       |

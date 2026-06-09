@@ -8,7 +8,7 @@ export const author = "Pam"
 
 export const signup = true
 
-export const version = "0.6.9 BETA"
+export const version = "1.0.0 ALPHA"
 
 export const logoURL = `/img/logo.jpg`
 
