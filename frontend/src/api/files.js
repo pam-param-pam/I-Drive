@@ -146,6 +146,10 @@ export async function deleteSubtitle(fileId, subtitleId) {
 
 
 export async function getFileRawData(fileUrl, config = {}) {
-   let response = await backendInstance.get(fileUrl, config)
+   const response = await backendInstance.get(fileUrl, {
+      ...config,
+      baseURL: ""
+   })
+
    return response.data
 }

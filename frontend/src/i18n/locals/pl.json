@@ -73,6 +73,9 @@
     "upload": "Prześlij"
   },
   "errors": {
+    "swNotWorking": "Dekrypcja po stronie klienta sie nie powiodła",
+    "serviceWorkerError": "Service Worker błąd",
+    "swNoFileConfigDetails": "Nie udało sie znaleźć pliku. jeżeli ten błąd sie powtarza, wyłącz dekrypcje po stronie klienta",
     "badDeviceId": "To urządzenie nie istnieje. Spróbuj odswierzyć strone",
     "badGateway": "Serwer nie odpowiada",
     "badRequest": "Niepoprawne żądanie.",
@@ -389,6 +392,7 @@
     "video": "Filmy"
   },
   "settings": {
+    "clientSideDecryption": "Dekrypcja po stronie klienta",
     "AES_CTR": "AES CTR",
     "ChaCha20": "ChaCha20",
     "addedAt": "Dodane",
@@ -613,6 +617,7 @@
     "trashName": "Kosz"
   },
   "uploadFile": {
+    "preparingUpload": "Przygotowywuje do wysyłania...",
     "abortAll": "Przerwij wszystko",
     "failed": "Wystąpił nieznany bląd",
     "fatal": "Krytyczny błąd",

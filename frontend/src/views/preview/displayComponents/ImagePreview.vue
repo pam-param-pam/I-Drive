@@ -33,7 +33,6 @@ export default {
    props: {
       src: String,
       thumbSrc: {
-         type: String,
          required: false
       },
       imageFullSize: Boolean,

@@ -17,6 +17,7 @@ class UserSettings(models.Model):
     keep_creation_timestamp = models.BooleanField(default=False)
     popup_preview = models.BooleanField(default=False)
     item_info_shortcut = models.BooleanField(default=False)
+    client_side_decryption = models.BooleanField(default=True)
     theme = models.CharField(default="dark", max_length=20)
 
     def __str__(self):

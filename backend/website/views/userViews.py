@@ -63,7 +63,7 @@ def users_me(request):
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,
                              "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp, "popupPreview": settings.popup_preview,
-                             "itemInfoShortcut": settings.item_info_shortcut
+                             "itemInfoShortcut": settings.item_info_shortcut, "clientSideDecryption": settings.client_side_decryption
                              },
                 "config": {"extensions": EXTENSION_TO_FILE_TYPE}
                 }

@@ -73,6 +73,9 @@
     "upload": "Upload"
   },
   "errors": {
+    "swNotWorking": "Client side decryption is not working",
+    "serviceWorkerError": "Service Worker Error",
+    "swNoFileConfigDetails": "Failed to find file config. If this error occurs again, disable client side decryption",
     "badDeviceId": "Device doesn't exist. Refresh the page",
     "badGateway": "Bad gateway, server doesn't respond",
     "badRequest": "Bad Request",
@@ -389,6 +392,7 @@
     "video": "Video"
   },
   "settings": {
+    "clientSideDecryption": "Client side decryption",
     "AES_CTR": "AES CTR",
     "ChaCha20": "ChaCha20",
     "addedAt": "Added at",
@@ -613,6 +617,7 @@
     "trashName": "Trash"
   },
   "uploadFile": {
+    "preparingUpload": "Preparing upload...",
     "abortAll": "Abort all",
     "failed": "Failed, unknown error",
     "fatal": "Fatal error",

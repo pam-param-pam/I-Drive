@@ -1,34 +1,30 @@
 <template>
    <div style="height: 100%">
-      <img v-if="file?.thumbnail_url" :src="file.thumbnail_url" class="cover" />
+      <img v-if="thumbSrc" :src="thumbSrc" class="cover" />
 
       <audio
          ref="audio"
          :autoplay="true"
-         :src="audioSrcUrl"
+         :src="src"
          controls
          @timeupdate="audioTimeUpdate"
+         @error="onError"
       ></audio>
    </div>
 </template>
 
 <script>
 import { PreviewEvent } from "@/utils/constants.js"
+import { backendInstance } from "@/axios/networker.js"
 
 export default {
-   props: ["file"],
+   props: ["file", "src", "thumbSrc"],
    emits: ["previewEvent", "error"],
 
    data() {
       return {
          lastSentMediaPosition: 0,
          audioRef: null
-      }
-   },
-
-   computed: {
-      audioSrcUrl() {
-         return this.file?.download_url
       }
    },
 
@@ -54,6 +50,15 @@ export default {
             this.sendPreviewEvent(PreviewEvent.MEDIA_TIME_UPDATE, { timestamp: position })
             this.lastSentMediaPosition = position
          }
+      },
+      onError() {
+         backendInstance.get(this.src, {
+            headers: {
+               Range: `bytes=0-1`
+            },
+            __skipAuth: true,
+            baseURL: ""
+         })
       }
    }
 }

@@ -81,7 +81,7 @@ export default {
       HeaderBar
    },
 
-   props: ["file", "readonly"],
+   props: ["src", "file", "readonly"],
    emits: ["previewEvent", "error"],
 
    data() {
@@ -158,7 +158,7 @@ export default {
          this.setLoading(true)
          this.editor?.destroy()
          try {
-            let fileContent = await getFileRawData(this.file.download_url, { responseType: "text" })
+            let fileContent = await getFileRawData(this.src, { responseType: "text" })
             this.originalContent = fileContent
             this.initEditor(fileContent)
          } catch (error) {

@@ -37,7 +37,9 @@ jobs:
 
             mkdir -p ~/idrive
             cd ~/idrive
-
+            
+            touch config.overrides.json
+            
             echo "Removing existing .env file..."
             rm -f .env
 

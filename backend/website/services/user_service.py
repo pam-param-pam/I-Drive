@@ -31,6 +31,7 @@ def update_user_settings(user, data: dict) -> UserSettings:
     keep_creation_timestamp = validate_key(data, "keepCreationTimestamp", bool, default=None)
     encryption_method = validate_key(data, "encryptionMethod", int, default=None)
     theme = validate_key(data, "theme", str, default=None)
+    client_side_decryption = validate_key(data, "clientSideDecryption", bool, default=None)
 
     # ---- ENUM / VALUE VALIDATION ----
     if locale:
@@ -72,6 +73,8 @@ def update_user_settings(user, data: dict) -> UserSettings:
         settings.hide_locked_folders = hide_locked_folders
     if sort_by_asc is not None:
         settings.sort_by_asc = sort_by_asc
+    if client_side_decryption is not None:
+        settings.client_side_decryption = client_side_decryption
     if concurrent_upload_requests:
         settings.concurrent_upload_requests = concurrent_upload_requests
     if subfolders_in_shares:

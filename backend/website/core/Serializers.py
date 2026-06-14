@@ -91,15 +91,8 @@ class FileSerializer(AdvancedSerializer):
             parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
 
-        if not key:
-            key = None
-        else:
-            key = base64.b64encode(key).decode()
-
-        if not iv:
-            iv = None
-        else:
-            iv = base64.b64encode(iv).decode()
+        key = base64.b64encode(key).decode() if key else None
+        iv = base64.b64encode(iv).decode() if iv else None
 
         d = {
             "isDir": False,
@@ -119,7 +112,7 @@ class FileSerializer(AdvancedSerializer):
             "hasSubtitles": has_subtitle,
             "iv": iv,
             "key": key,
-            "crc": crc,
+            "crc": crc
         }
 
         if is_locked:
@@ -162,8 +155,11 @@ class ShareFileSerializer(FileSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata
+            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
+
+        key = base64.b64encode(key).decode() if key else None
+        iv = base64.b64encode(iv).decode() if iv else None
 
         d = {
             "isDir": False,
@@ -181,6 +177,8 @@ class ShareFileSerializer(FileSerializer):
             "isPhotoMetadata": has_photometadata,
             "hasSubtitles": has_subtitle,
             "crc": crc,
+            "iv": iv,
+            "key": key,
         }
 
         if not hide and not (is_locked and in_trash):
@@ -487,6 +485,4 @@ class ZipSerializer(SimpleSerializer):
     @staticmethod
     def serialize_object(user_zip: UserZIP) -> dict:
         url = f"{API_BASE_URL}/zip/{user_zip.token}/stream"
-        return {
-            "download_url": url
-        }
+        return {"download_url": url}

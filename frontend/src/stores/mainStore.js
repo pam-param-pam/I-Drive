@@ -2,6 +2,7 @@ import { defineStore } from "pinia"
 import i18n from "@/i18n/index.js"
 import dayjs from "@/utils/dayjsSetup.js"
 import { v4 as uuidv4 } from "uuid"
+import { registerFileConfigsInServiceWorker } from "@/utils/serviceWorkerUtils.js"
 
 const defaultSearchFilters = {
    files: true,
@@ -106,7 +107,7 @@ export const useMainStore = defineStore("main", {
             filteredItems = items.slice()
          }
 
-         return filteredItems
+         let finalItems = filteredItems
             .sort((a, b) => {
                // 1. Folders First
                if (a.isDir !== b.isDir) {
@@ -123,6 +124,10 @@ export const useMainStore = defineStore("main", {
                return 0
             })
             .map((item, index) => ({ ...item, index }))
+
+         registerFileConfigsInServiceWorker(finalItems)
+         return finalItems
+
       }
 
    },

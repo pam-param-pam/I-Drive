@@ -60,14 +60,20 @@
             </div>
          </div>
          <div class="card-content">
-            <UploadFile
-               v-for="fileState in filesInUpload"
-               :key="fileState.fileObj.frontendId"
-               :aria-label="fileState.fileObj.name"
-               :data-dir="false"
-               :data-type="fileState.fileObj.name"
-               :fileState="fileState"
-            />
+            <template v-if="filesInUpload?.length">
+               <UploadFile
+                 v-for="fileState in filesInUpload"
+                 :key="fileState.fileObj.frontendId"
+                 :aria-label="fileState.fileObj.name"
+                 :data-dir="false"
+                 :data-type="fileState.fileObj.name"
+                 :fileState="fileState"
+               />
+            </template>
+
+            <div v-else class="upload-placeholder">
+               {{ $t('uploadFile.preparingUpload') }}
+            </div>
          </div>
       </div>
    </div>
@@ -146,3 +152,9 @@ export default {
    }
 }
 </script>
+<style>
+.upload-placeholder {
+   color: var(--textSecondary);
+   font-size: 14px;
+}
+</style>

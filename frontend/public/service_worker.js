@@ -198,20 +198,32 @@ const FILE_CONFIGS = new Map()
 self.addEventListener("message", event => {
    const message = event.data
 
-   if (!message || message.type !== "REGISTER_FILE_CONFIG") {
-      return
+   if (message?.type === "SW_PING") {
+      event.source?.postMessage({
+         type: "SW_PONG",
+         requestId: message.requestId
+      })
    }
 
-   const { fileId, method, backendUrl, keyBase64, ivBase64 } = message
+   else if (message.type === "REGISTER_FILE_CONFIGS") {
+      let { requestId, files } = message
 
-   FILE_CONFIGS.set(fileId, {
-      method,
-      backendUrl,
-      keyBase64,
-      ivBase64
-   })
+      for (const file of files) {
+         FILE_CONFIGS.set(file.fileId, {
+            method: file.method,
+            backendUrl: file.backendUrl + "&raw=True",
+            keyBase64: file.keyBase64,
+            ivBase64: file.ivBase64
+         })
+      }
 
-   logToClients(`Registered file config for fileId=${fileId}, method=${method}`)
+      event.source?.postMessage({
+         type: "ACK",
+         requestId
+      })
+
+      logToClients(`Registered ${files.length} file configs`)
+   }
 })
 
 self.addEventListener("install", event => {
@@ -236,6 +248,8 @@ self.addEventListener("fetch", event => {
 
 
 function createDecryptingStream(fileConfig, initialOffset) {
+   logToClients("Key: " + fileConfig.keyBase64)
+   logToClients("Iv: " + fileConfig.ivBase64)
    let currentOffset = initialOffset;
 
    return new TransformStream({
@@ -265,12 +279,7 @@ async function handleVideoRequest(request, url) {
 
       if (!fileConfig) {
          logToClients(`No file config registered for fileId=${fileId}`)
-         return new Response("File config not registered", {
-            status: 404,
-            headers: {
-               "Content-Type": "text/plain"
-            }
-         })
+         return formatError(404, "errors.swNoFileConfigDetails")
       }
 
       const rangeHeader = request.headers.get("Range")
@@ -299,6 +308,10 @@ async function handleVideoRequest(request, url) {
       logToClients(`Backend Content-Length: ${backendResponse.headers.get("Content-Length")}`)
       logToClients(`Backend Content-Range: ${backendResponse.headers.get("Content-Range")}`)
 
+      if (!backendResponse.body) {
+         throw new Error("Backend response has no body")
+      }
+
       if (!backendResponse.ok && backendResponse.status !== 206) {
          return backendResponse
       }
@@ -321,16 +334,21 @@ async function handleVideoRequest(request, url) {
       })
    } catch (err) {
       logToClients(`SW failed: ${err.message}`)
-
-      return new Response(`Service Worker failed: ${err.message}`, {
-         status: 502,
-         headers: {
-            "Content-Type": "text/plain"
-         }
-      })
+      return formatError(502, `Service Worker failed: ${err.message}`)
    }
 }
 
+function formatError(status, details) {
+   return new Response(JSON.stringify({
+      error: "errors.serviceWorkerError",
+      details: details
+   }), {
+      status: status,
+      headers: {
+         "Content-Type": "application/json"
+      }
+   })
+}
 function parseRangeStart(rangeHeader) {
    if (!rangeHeader) {
       return 0

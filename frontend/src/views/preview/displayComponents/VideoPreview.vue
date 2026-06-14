@@ -3,8 +3,8 @@
       id="video"
       ref="video"
       :autoplay="true"
-      :poster="posterSrcUrl"
-      :src="videoSrcUrl"
+      :poster="thumbSrc"
+      :src="src"
       controls
       crossorigin="anonymous"
       loop
@@ -33,11 +33,11 @@
 <script>
 import throttle from "lodash.throttle"
 import { backendInstance } from "@/axios/networker.js"
-import { encryptionMethod, PreviewEvent } from "@/utils/constants.js"
+import { PreviewEvent } from "@/utils/constants.js"
 import { fetchAdditionalInfo } from "@/api/item.js"
 
 export default {
-   props: ["file", "subtitles"],
+   props: ["file", "subtitles", "src", "thumbSrc"],
    emits: ["previewEvent", "error"],
    data() {
       return {
@@ -51,14 +51,6 @@ export default {
       }
    },
 
-   computed: {
-      videoSrcUrl() {
-         return this.file?.download_url + "&inline=True"
-      },
-      posterSrcUrl() {
-         return this.file?.thumbnail_url
-      }
-   },
    watch: {
       file: {
          //fix poster reload
@@ -78,6 +70,7 @@ export default {
       this.videoRef = this.$refs.video
 
       if (!this.videoRef) return
+
       this.videoRef.currentTime = this.file.media_position || 0
       this.lastSentMediaPosition = this.file.media_position || 0
 
@@ -89,7 +82,6 @@ export default {
          }
       }
       window.addEventListener("fullscreenchange", this.fullscreenChange)
-      this.playFile(this.file)
    },
 
    beforeUnmount() {
@@ -101,74 +93,6 @@ export default {
    },
 
    methods: {
-      waitForServiceWorkerAck(requestId) {
-         return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-               navigator.serviceWorker.removeEventListener("message", onMessage)
-               reject(new Error("Timed out waiting for service worker ACK"))
-            }, 3000)
-
-
-            function onMessage(event) {
-               if (event.data?.type !== "FILE_CONFIG_REGISTERED") {
-                  return
-               }
-
-               if (event.data.requestId !== requestId) {
-                  return
-               }
-
-               clearTimeout(timeout)
-               navigator.serviceWorker.removeEventListener("message", onMessage)
-               resolve()
-            }
-
-
-            navigator.serviceWorker.addEventListener("message", onMessage)
-         })
-      },
-
-      async registerFileConfigInServiceWorker(file) {
-         const registration = await navigator.serviceWorker.ready
-         const sw = registration.active || navigator.serviceWorker.controller
-
-         if (!sw) {
-            throw new Error("No active service worker")
-         }
-
-         const requestId = crypto.randomUUID()
-         // const ack = this.waitForServiceWorkerAck(requestId)
-         let download_url = file.download_url
-         download_url += "&raw=True"
-         sw.postMessage({
-            type: "REGISTER_FILE_CONFIG",
-            requestId,
-            fileId: file.id,
-            method: file.encryption_method,
-            backendUrl: download_url,
-            keyBase64: file.key,
-            ivBase64: file.iv
-         })
-         console.log({
-            type: "REGISTER_FILE_CONFIG",
-            requestId,
-            fileId: file.id,
-            method: file.encryption_method,
-            backendUrl: download_url,
-            keyBase64: file.key,
-            ivBase64: file.iv
-         })
-         // await ack
-      },
-
-      async playFile(file) {
-         console.log(file)
-         await this.registerFileConfigInServiceWorker(file)
-
-         this.videoRef.src = `/video/${encodeURIComponent(file.id)}`
-         this.videoRef.load()
-      },
-
       onVideoLoadStart() {
          this.videoLoadStartedAt = performance.now()
          this.firstFrameReported = false
@@ -211,11 +135,12 @@ export default {
 
       async onVideoError() {
          this.clearVideoLoadTimeout()
-         await backendInstance.get(this.file.download_url, {
+         await backendInstance.get(this.src, {
             headers: {
                Range: `bytes=0-1`
             },
-            __skipAuth: true
+            __skipAuth: true,
+            baseURL: ""
          })
          this.$toast.error(this.$t("toasts.videoUnplayable"))
       },
@@ -279,20 +204,6 @@ export default {
          }
 
          this.sendPreviewEvent(PreviewEvent.SUBTITLE_CHANGE, { index: null })
-      },
-
-      setSubtitleTrack(index) {
-         if (!this.videoRef) return
-         if (index === null || index === undefined) return
-         let tracks = this.videoRef.textTracks
-
-         for (let i = 0; i < tracks.length; i++) {
-            tracks[i].mode = "disabled"
-         }
-
-         if (index >= 0 && index < tracks.length) {
-            tracks[index].mode = "showing"
-         }
       },
 
       loadSubtitleStyle() {

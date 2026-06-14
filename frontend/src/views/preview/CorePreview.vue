@@ -67,14 +67,17 @@
             <VideoPreview
               v-else-if="previewerType === 'video'"
               ref="videoPreview"
+              :src="fileSrcUrl"
               :file="file"
               :subtitles="subtitles"
+              :thumbSrc="thumbSrcUrl"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
             />
 
             <EditorPreview
               v-else-if="previewerType === 'editor'"
+              :src="fileSrcUrl"
               :file="file"
               :readonly="readonly"
               @previewEvent="onPreviewEvent"
@@ -83,15 +86,17 @@
 
             <ImagePreview
               v-else-if="previewerType === 'image'"
-              :imageFullSize="imageFullSize"
               :src="fileSrcUrl"
               :thumbSrc="thumbSrcUrl"
+              :imageFullSize="imageFullSize"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
             />
 
             <AudioPreview
               v-else-if="previewerType === 'audio'"
+              :src="fileSrcUrl"
+              :thumbSrc="thumbSrcUrl"
               :file="file"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
@@ -99,16 +104,16 @@
 
             <PdfPreview
               v-else-if="previewerType === 'pdf'"
+              :src="decryptedFileSrcUrl"
               :file="file"
-              :src="fileSrcUrl"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
             />
 
             <OfficePreview
               v-else-if="previewerType === 'office'"
+              :src="fileSrcUrl"
               :file="file"
-              :file-url="fileSrcUrl"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
             />
@@ -176,6 +181,7 @@ import AudioPreview from "@/views/preview/displayComponents/AudioPreview.vue"
 import PdfPreview from "@/views/preview/displayComponents/PdfPreview.vue"
 import ImagePreview from "@/views/preview/displayComponents/ImagePreview.vue"
 import loadingSpinner from "@/components/loadingSpinner.vue"
+import { registerFileConfigsInServiceWorker } from "@/utils/serviceWorkerUtils.js"
 
 export default {
    name: "CorePreview",
@@ -209,6 +215,10 @@ export default {
       headerButtons: {
          required: true,
       },
+      useSW: {
+         required: false,
+         default: false,
+      },
       subtitles: {
          required: false,
       },
@@ -236,17 +246,19 @@ export default {
 
          isFullscreen: false,
          isEditorClean: true,
+
+         swWorking: true,
       }
    },
    watch: {
       file: {
          async handler() {
-           this.handleFileChange(false)
+           await this.handleFileChange(false)
          }
       }
    },
-   created() {
-      this.handleFileChange(true)
+   async created() {
+      await this.handleFileChange(true)
    },
    computed: {
       ...mapState(useMainStore, ["itemsLoading", "sortedItems", "selected", "currentFolder", "currentPrompt"]),
@@ -279,10 +291,11 @@ export default {
       thumbSrcUrl() {
          return this.file?.thumbnail_url
       },
-      videoSrcUrl() {
+      fileSrcUrl() {
+         if (this.useSW && this.swWorking) return `/video/${this.file?.id}`
          return this.file?.download_url
       },
-      fileSrcUrl() {
+      decryptedFileSrcUrl() {
          return this.file?.download_url
       },
       currentIndex() {
@@ -324,13 +337,23 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["updateItem", "setLastFile", "addSelected", "showHover"]),
+      ...mapActions(useMainStore, ["updateItem", "setLastFile", "addSelected", "showHover", "resetSelected"]),
+
+      async loadSw() {
+         try {
+            await registerFileConfigsInServiceWorker([this.file])
+         } catch (e) {
+            console.error(e)
+            this.swWorking = false
+            this.$toast.warning(this.$t("errors.swNotWorking"))
+         }
+      },
       openEditor() {
          const itemCopy = { ...this.file }
          itemCopy.type = "Text"
          this.updateItem(itemCopy)
       },
-      handleFileChange() {
+      async handleFileChange() {
          this.setError(null)
          if (!this.loading && !this.file) {
             this.setError({code: 404, details: "File not found"})
@@ -339,9 +362,12 @@ export default {
             this.onPreviewEvent({type: PreviewEvent.OPEN, payload: {}})
          }
          this.setLastFile(this.file)
+         this.resetSelected()
          this.addSelected(this.file)
+         if (this.file) await this.loadSw()
       },
       onPreviewError(error) {
+         console.log(error)
         this.setError(error)
       },
       setError(value) {
@@ -466,12 +492,13 @@ export default {
                img2.src = thumb_url2
             }
 
-            if (file1?.type === "video") {
-               let video_url = file1?.download_url
-               if (video_url) {
-                  let videoPlayer = document.createElement("video")
-                  videoPlayer.src = video_url
-               }
+            if (this.previewerType === "video" && file1?.download_url) {
+               registerFileConfigsInServiceWorker([file1])
+               let video_url
+               if (this.useSW) video_url =`/video/${file1.id}`
+               else video_url = file1?.download_url + "&inline=True"
+               let videoPlayer = document.createElement("video")
+               videoPlayer.src = video_url
             }
          }, 250)
       },

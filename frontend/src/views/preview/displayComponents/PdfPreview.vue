@@ -7,7 +7,6 @@
 </template>
 
 <script>
-import { getFileRawData } from "@/api/files.js"
 import { backendInstance } from "@/axios/networker.js"
 
 export default {
@@ -27,11 +26,7 @@ export default {
    emits: ["previewEvent", "error"],
    computed: {
       inlineSrc() {
-         if (!this.src) return ""
-
-         return this.src.includes("?")
-            ? `${this.src}&inline=true`
-            : `${this.src}?inline=true`
+          return `${this.src}&inline=true`
       }
    },
    methods: {
@@ -42,6 +37,7 @@ export default {
                Range: `bytes=0-1`
             },
             __skipAuth: true,
+            baseURL: ""
          })
       }
    }

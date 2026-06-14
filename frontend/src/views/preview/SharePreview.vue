@@ -4,6 +4,7 @@
      :subtitles="subtitles"
      :readonly="true"
      :headerButtons="headerButtons"
+     :useSW="true"
      @close="onClose"
      @PreviewEvent="onPreviewEvent"
      file-id="" />

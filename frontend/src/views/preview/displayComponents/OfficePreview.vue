@@ -1,9 +1,15 @@
 <template>
    <div class="office-preview">
-      <div v-if="loading" class="loading">Loading...</div>
+      <div class="loading delayed" v-show="loading">
+         <div class="spinner">
+            <div class="bounce1"></div>
+            <div class="bounce2"></div>
+            <div class="bounce3"></div>
+         </div>
+      </div>
 
       <div
-         v-else-if="isDocx"
+         v-if="isDocx"
          class="docx-preview"
          v-html="docxHtml"
       ></div>
@@ -28,7 +34,7 @@ export default {
          type: Object,
          required: true
       },
-      fileUrl: {
+      src: {
          type: String,
          required: true
       }
@@ -55,7 +61,8 @@ export default {
       ...mapActions(useMainStore, ["setError"]),
       async renderDocx() {
          try {
-            let data = await getFileRawData(this.fileUrl, { responseType: "arraybuffer" })
+            console.log("office preview: " + this.src)
+            let data = await getFileRawData(this.src, { responseType: "arraybuffer" })
             let container = document.createElement("div")
 
             await renderAsync(data, container, null, {

@@ -3,6 +3,7 @@
       :file="file"
       :subtitles="subtitles"
       :headerButtons="headerButtons"
+      :useSW="settings.clientSideDecryption"
       @close="onClose"
       @PreviewEvent="onPreviewEvent"
    />
@@ -35,13 +36,12 @@ export default {
             if (!file) return
             if (file.hasSubtitles) {
                this.subtitles = await getSubtitles(file.id, file.lockFrom)
-
             }
          }
       }
    },
    computed: {
-      ...mapState(useMainStore, ["sortedItems", "perms"]),
+      ...mapState(useMainStore, ["sortedItems", "perms", "settings"]),
 
       file() {
          if (!this.sortedItems) return null

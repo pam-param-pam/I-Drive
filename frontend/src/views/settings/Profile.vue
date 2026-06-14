@@ -45,6 +45,13 @@
                   </label>
                </p>
 
+               <p>
+                  <label>
+                     <input v-model="clientSideDecryption" type="checkbox" />
+                     {{ $t("settings.clientSideDecryption") }}
+                  </label>
+               </p>
+
                <div>
                   <label>
                      <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
@@ -138,7 +145,8 @@ export default {
          encryptionMethod: null,
          keepCreationTimestamp: false,
          popupPreview: false,
-         itemInfoShortcut: false
+         itemInfoShortcut: false,
+         clientSideDecryption: false
       }
    },
 
@@ -170,6 +178,7 @@ export default {
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
       this.popupPreview = this.settings.popupPreview
       this.itemInfoShortcut = this.settings.itemInfoShortcut
+      this.clientSideDecryption = this.settings.clientSideDecryption
    },
 
    methods: {
@@ -210,7 +219,8 @@ export default {
             encryptionMethod: this.encryptionMethod,
             keepCreationTimestamp: this.keepCreationTimestamp,
             popupPreview: this.popupPreview,
-            itemInfoShortcut: this.itemInfoShortcut
+            itemInfoShortcut: this.itemInfoShortcut,
+            clientSideDecryption: this.clientSideDecryption
          }
 
          await updateSettings(data)
