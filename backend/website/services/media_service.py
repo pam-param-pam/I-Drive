@@ -2,14 +2,15 @@ import base64
 
 from website.auth.Permissions import CheckLockedFolderIP
 from website.auth.utils import check_resource_perms
-from website.constants import cache, MAX_THUMBNAIL_SIZE, USE_CACHE, MAX_MEDIA_CACHE_AGE
+from website.config import MAX_THUMBNAIL_SIZE
+from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
 from website.core.crypto.Decryptor import Decryptor
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key
 from website.core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
 from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
-from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
+from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource, EncryptedFragmentedDiscordByteSource
 from website.core.media.stream.sources.ZipByteSource import ZipByteSource
 from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
 from website.discord.Discord import discord
@@ -30,7 +31,7 @@ def get_thumbnail_response(request, file_obj: File):
     if thumbnail.size > MAX_THUMBNAIL_SIZE:
         raise BadRequestError("Thumbnail too big too stream!")
 
-    if not thumbnail_content or not USE_CACHE:
+    if not thumbnail_content:
         decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
         url = discord.get_attachment_url(file_obj.owner, thumbnail)
         thumbnail_content = decrypt_bytes(fetch_discord_file(url), decryptor)
@@ -85,6 +86,8 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
 
 def get_file_response(request, file_obj: File):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
+    raw = validate_key(request.GET, "raw", bool, default=False, converter=param_to_bool)
+
     referer = request.headers.get('Referer')
 
     fragments = file_obj.fragments.all().order_by("sequence")
@@ -95,7 +98,10 @@ def get_file_response(request, file_obj: File):
     if not fragments.exists():
         source = EmptyByteSource()
     else:
-        source = FragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
+        if raw:
+            source = EncryptedFragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
+        else:
+            source = FragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
 
     response = build_streaming_response(
         request=request,

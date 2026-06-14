@@ -160,7 +160,7 @@ urlpatterns = [
     path("cleanup/<message_id>", ['GET'], check_message_id, name="check if message id is used"),
 
     django_path('test/<user_id>', get_discord_state),
-    django_path('file-stream', stream_file_test),
+    django_path('file-stream/<str:encryption>', stream_file_test),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 

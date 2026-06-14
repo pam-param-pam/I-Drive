@@ -7,30 +7,6 @@ API_BASE_URL = os.environ["BACKEND_BASE_URL"]
 
 DISCORD_BASE_URL = "https://discord.com/api/v10"
 
-# Amount of channels to be created during auto setup
-NUMBER_OF_CHANNELS = 5
-
-# Max number of channels allowed for 1 user
-MAX_NUMBER_OF_CHANNELS = 10
-
-# Amount of webhooks in each channel to be created during auto setup
-NUMBER_OF_WEBHOOKS_PER_CHANNEL = 2
-
-# Name template for the webhooks during auto setup
-WEBHOOK_NAME_TEMPLATE = "Captain Hook v{n}"
-
-# A set of IPS that locked resources can be accessed from on top of the local ip
-ALLOWED_IPS_LOCKED = ()
-
-# Max folder depth allowed
-MAX_FOLDER_DEPTH = 10
-
-# Max files allowed in 1 folder
-MAX_FILES_IN_FOLDER = 10_000
-
-# Auth token expire time in days
-TOKEN_EXPIRY_DAYS = 30
-
 # Max attachments in 1 message in discord
 MAX_ATTACHMENTS_PER_MESSAGE = 10
 
@@ -43,40 +19,11 @@ MAX_MEDIA_CACHE_AGE = 2628000
 # Discord message cache expiry in seconds: 1 day
 DISCORD_MESSAGE_EXPIRY = 79200
 
-# Max name length allowed for folders and files
-MAX_RESOURCE_NAME_LENGTH = 75
-
 # How long the resource urls are valid for
 SIGNED_URL_EXPIRY_SECONDS = 7200
 
-# How long the QR code session is valid for in seconds: 5 mins
-QR_CODE_SESSION_EXPIRY = 300
-
-# Max allowed thumbnail size
-MAX_THUMBNAIL_SIZE = 0.5 * 1024 * 1024
-
-# How long a device control pending request is valid for
-DEVICE_CONTROL_PENDING_TTL = 60
-
-# How long a device control session is valid for
-DEVICE_CONTROL_ACTIVE_TTL = 7200
-
-# How long a device control reject state is
-DEVICE_CONTROL_REJECTED_TTL = 5
-
-# How long a share access lasts for, before a new one is created for that user/IP, in MINUTES
-SHARE_ACCESS_DURATION = 180
-
-cache = caches["default"]
-
-# Controls (partially) if cache is used in some places, should be True in PROD. Use only for debugging
-USE_CACHE = True
-
-# Controls the max size of a raw image that is allowed to be converted to webp in celery task
-MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION = 75 * 1024 * 1024
-
 # Controls after how long files from trash are deleted, in DAYS
-MAX_TIME_FILES_IN_TRASH = 30
+MAX_TIME_FILES_IN_TRASH = 7
 
 # How many retries allowed for files before they are marked as fatally failed
 MAX_FILE_DELETION_ATTEMPTS = 5
@@ -84,8 +31,13 @@ MAX_FILE_DELETION_ATTEMPTS = 5
 # How many retries allowed for raw extraction before they are marked as fatally failed
 MAX_RAW_EXTRACTION_ATTEMPTS = 3
 
-# Controls whatever the backend should try to generate thumbnails from Raw Images. This can potentially lead to memory spikes.
-GENERATE_RAW_THUMBNAILS = True
+# How long the QR code session is valid for in seconds: 5 mins
+QR_CODE_SESSION_EXPIRY = 300
+
+# How long a share access lasts for, before a new one is created for that user/IP, in MINUTES
+SHARE_ACCESS_DURATION = 180
+
+cache = caches["default"]
 
 FILE_TYPES = {
     "Video": (
@@ -178,14 +130,8 @@ class ShareEventType(str, Enum):
     FILE_DOWNLOAD = "file_download"
     FILE_STREAM = "file_stream"
 
-    # Others
-    THUMBNAIL_STREAM = "thumbnail_stream"
-    SUBTITLE_STREAM = "subtitle_stream"
-
     # Folder
     FOLDER_OPEN = "folder_open"
-    FOLDER_CLOSE = "folder_close"
-    FOLDER_DOWNLOAD = "folder_download"
 
     # Movie
     MOVIE_WATCH = "movie_watch"

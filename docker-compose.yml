@@ -64,8 +64,12 @@ services:
       timeout: 10s
       retries: 3
 
+    volumes:
+      - ./config.override.json:/config/config.override.json:ro
+
     environment:
-      # General
+      - IDRIVE_CONFIG_FILE=/config/config.override.json
+
       - IS_DEV_ENV=${IS_DEV_ENV:?IS_DEV_ENV IS REQUIRED}
       - DEPLOYMENT_HOST=${DEPLOYMENT_HOST:?DEPLOYMENT_HOST IS REQUIRED}
 

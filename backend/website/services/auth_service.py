@@ -8,7 +8,8 @@ from django.contrib.auth import user_logged_in, user_logged_out
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from website.constants import TOKEN_EXPIRY_DAYS, cache, QR_CODE_SESSION_EXPIRY, EventCode
+from website.config import TOKEN_EXPIRY_DAYS
+from website.constants import cache, QR_CODE_SESSION_EXPIRY, EventCode
 from website.core.Serializers import DeviceTokenSerializer
 from website.core.dataModels.http import RequestContext
 from website.core.errors import ResourceNotFoundError, BadRequestError, ResourcePermissionError, UsernameTakenError

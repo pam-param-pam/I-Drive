@@ -12,8 +12,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from website.celery import app
-from website.constants import EventCode, MAX_RAW_EXTRACTION_ATTEMPTS, MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE, \
-    GENERATE_RAW_THUMBNAILS
+from website.config import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, GENERATE_RAW_THUMBNAILS
+from website.constants import EventCode, MAX_RAW_EXTRACTION_ATTEMPTS, MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE
 from website.core.Serializers import FileSerializer
 from website.core.crypto.Decryptor import Decryptor
 from website.core.crypto.Encryptor import Encryptor

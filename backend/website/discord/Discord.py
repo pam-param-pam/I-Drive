@@ -9,7 +9,7 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
-from website.constants import DISCORD_BASE_URL, USE_CACHE, cache
+from website.constants import DISCORD_BASE_URL, cache
 from website.core.errors import DiscordError, CannotProcessDiscordRequestError, DiscordErrorMaxRetries, DiscordTextError, BadRequestError
 from website.discord.CredentialState import CredentialState
 from website.discord.UserState import UserState
@@ -265,7 +265,7 @@ class DiscordService:
     def get_message(self, user, channel_id: str, message_id: str, retries: bool = True) -> dict:
         key = cache_service.get_discord_message_key(message_id)
         cached = cache.get(key)
-        if cached and USE_CACHE:
+        if cached:
             return cached
 
         path = self._discord_path(f"/channels/{channel_id}/messages/{message_id}")

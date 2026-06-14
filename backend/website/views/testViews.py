@@ -28,11 +28,21 @@ def get_discord_state(request, user_id):
     return JsonResponse(state.to_dict(), safe=False)
 
 
+FILE_IDS_BY_ENCRYPTION = {
+    "aes": "h4medRyz5mBrvBJH8B4qfC",
+    "chacha": "fzLDRD4R6djoavmohNNZkh",
+    "null": "Z3hkFJEERNBfdt6Ygyepdd",
+}
+
 @api_view(['GET', 'HEAD'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny & AllowedIP])
-def stream_file_test(request):
-    file_obj = File.objects.get(id="RhQTue8edJtroVe4h2hhWw")
+def stream_file_test(request, encryption):
+    file_id = FILE_IDS_BY_ENCRYPTION.get(encryption)
+    if file_id is None:
+        return JsonResponse({"error": "Invalid encryption type"}, status=400)
+
+    file_obj = File.objects.get(id=file_id)
 
     if request.method == 'HEAD':
         response = HttpResponse()
@@ -43,16 +53,9 @@ def stream_file_test(request):
     fragments = file_obj.fragments.all().order_by("sequence")
 
     source = EncryptedFragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
-    # source = FragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
 
-    user = file_obj.owner
-    response = build_streaming_response(
-        request=request,
-        byte_source=source,
-        filename=file_obj.name,
-        inline=is_inline,
-        etag=str(hash(file_obj.last_modified_at))
-    )
+    user = file_obj.owner  # do not remove this line
+    response = build_streaming_response(request=request, byte_source=source, filename=file_obj.name, inline=is_inline, etag=str(hash(file_obj.last_modified_at)))
     return response
 
 

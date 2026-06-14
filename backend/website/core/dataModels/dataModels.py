@@ -8,9 +8,6 @@ class ViewShare(BaseModel):
 class FileOpenEvent(BaseModel):
     file_id: str
 
-class FileCloseEvent(BaseModel):
-    file_id: str
-
 class FileDownloadEvent(BaseModel):
     file_id: str
 
@@ -20,12 +17,6 @@ class FileStreamEvent(BaseModel):
     to_byte: Optional[int]
 
 class FolderOpenEvent(BaseModel):
-    folder_id: str
-
-class FolderDownloadEvent(BaseModel):
-    folder_id: str
-
-class FolderCloseEvent(BaseModel):
     folder_id: str
 
 class MovieWatchEvent(BaseModel):
@@ -39,14 +30,6 @@ class MovieSeekEvent(BaseModel):
 class MovieToggleEvent(BaseModel):
     file_id: str
     is_paused: bool
-
-class ThumbnailStreamedEvent(BaseModel):
-    file_id: str
-    thumbnail_id: str
-
-class SubtitleStreamedEvent(BaseModel):
-    file_id: str
-    subtitle_id: str
 
 class ZipDownloadEvent(BaseModel):
     files: list[str]

@@ -130,17 +130,11 @@ class ShareAccessEvent(models.Model):
 
         # Folder
         ShareEventType.FOLDER_OPEN: dataModels.FolderOpenEvent,
-        ShareEventType.FOLDER_CLOSE: dataModels.FolderCloseEvent,
-        ShareEventType.FOLDER_DOWNLOAD: dataModels.FolderDownloadEvent,
 
         # Movie
         ShareEventType.MOVIE_WATCH: dataModels.MovieWatchEvent,
         ShareEventType.MOVIE_SEEK: dataModels.MovieSeekEvent,
         ShareEventType.MOVIE_TOGGLE: dataModels.MovieToggleEvent,
-
-        # Other
-        ShareEventType.SUBTITLE_STREAM: dataModels.SubtitleStreamedEvent,
-        ShareEventType.THUMBNAIL_STREAM: dataModels.ThumbnailStreamedEvent,
 
         # Zip
         ShareEventType.ZIP_DOWNLOAD: dataModels.ZipDownloadEvent,

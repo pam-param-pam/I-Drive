@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
 from django.db import transaction
 
-from website.constants import EncryptionMethod, MAX_NUMBER_OF_CHANNELS, EventCode
+from website.config import MAX_NUMBER_OF_CHANNELS
+from website.constants import EncryptionMethod, EventCode
 from website.core.dataModels.http import RequestContext
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_value, validate_ids_as_list

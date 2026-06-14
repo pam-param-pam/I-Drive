@@ -6,7 +6,8 @@ from functools import wraps
 from typing import Optional, Callable, Any, List
 from typing import Union, Type, Tuple
 
-from website.constants import MAX_RESOURCE_NAME_LENGTH, EXTENSION_TO_FILE_TYPE, EncryptionMethod
+from website.config import MAX_RESOURCE_NAME_LENGTH
+from website.constants import EXTENSION_TO_FILE_TYPE, EncryptionMethod
 from website.core.errors import BadRequestError
 from website.core.validators.Check import Check
 

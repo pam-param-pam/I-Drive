@@ -20,6 +20,8 @@ export const encryptionMethods = { 0: "settings.notEncrypted", 1: "settings.AES_
 
 export const encryptionMethod = { NotEncrypted: 0, AesCtr: 1, ChaCha20: 2 }
 
+export const filesInTrash = 7
+
 export const uploadType = {
    browserInput: "browserInput",
    dragAndDropInput: "dragAndDropInput"
@@ -87,3 +89,4 @@ export const NotificationKind = {
    GENERAL: "general",
    NEW_DEVICE_LOGIN: "new_device_login"
 }
+

@@ -609,7 +609,7 @@
     }
   },
   "trash": {
-    "info": "Pliki i foldery ze śmietnika bedą usunięte po 30 dniach!",
+    "info": "Pliki i foldery ze śmietnika bedą usunięte po {days} dniach!",
     "trashName": "Kosz"
   },
   "uploadFile": {

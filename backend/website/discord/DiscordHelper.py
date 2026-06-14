@@ -4,7 +4,8 @@ from typing import List, Callable
 
 import httpx
 
-from website.constants import DISCORD_BASE_URL, NUMBER_OF_CHANNELS, NUMBER_OF_WEBHOOKS_PER_CHANNEL, WEBHOOK_NAME_TEMPLATE
+from website.config import NUMBER_OF_CHANNELS, NUMBER_OF_WEBHOOKS_PER_CHANNEL, WEBHOOK_NAME_TEMPLATE
+from website.constants import DISCORD_BASE_URL
 from website.core.errors import DiscordTextError, BadRequestError
 from website.discord import constants
 from website.discord.constants import ADMINISTRATOR, PERMISSION_NAMES, CATEGORY_TYPE

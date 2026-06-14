@@ -1,3 +1,4 @@
+import base64
 from abc import abstractmethod, ABC
 from typing import Iterable
 
@@ -87,8 +88,18 @@ class FileSerializer(AdvancedSerializer):
             id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
             lock_from__name, password, type_, is_dir,
             size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata
+            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
+
+        if not key:
+            key = None
+        else:
+            key = base64.b64encode(key).decode()
+
+        if not iv:
+            iv = None
+        else:
+            iv = base64.b64encode(iv).decode()
 
         d = {
             "isDir": False,
@@ -106,6 +117,8 @@ class FileSerializer(AdvancedSerializer):
             "isRawMetadata": has_rawmetadata,
             "isPhotoMetadata": has_photometadata,
             "hasSubtitles": has_subtitle,
+            "iv": iv,
+            "key": key,
             "crc": crc,
         }
 

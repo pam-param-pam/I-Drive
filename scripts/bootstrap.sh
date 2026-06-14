@@ -19,6 +19,9 @@ BACKEND_PORT="8000"
 ADMIN_LOGIN="admin"
 ADMIN_PASSWORD="admin"
 
+CONFIG_FILE_SOURCE=""
+CONFIG_FILE_NAME="config.override.json"
+
 fail() {
   echo "ERROR: $*" >&2
   exit 1
@@ -36,12 +39,13 @@ Options:
   --port PORT                  Public Nginx/application port. Default: ${PORT}
   --backend-port PORT          External backend port. Default: ${BACKEND_PORT}
   --app-dir PATH               Application directory. Default: ${APP_DIR}
+  --config-file PATH           Optional config override file. If omitted, an empty override file is created.
   --admin-login LOGIN          Admin user login. Default: ${ADMIN_LOGIN}
   --admin-password PASSWORD    Admin user password. Default: ${ADMIN_PASSWORD}
   -h, --help                   Show this help
 
 Example:
-  $0 --dev ${IS_DEV_ENV} --protocol ${PROTOCOL} --deployment-host ${DEPLOYMENT_HOST} --port ${PORT} --backend-port ${BACKEND_PORT} --admin-login ${ADMIN_LOGIN} --admin-password '<password>'
+  $0 --dev ${IS_DEV_ENV} --protocol ${PROTOCOL} --deployment-host ${DEPLOYMENT_HOST} --port ${PORT} --backend-port ${BACKEND_PORT} --config-file ./config.override.json --admin-login ${ADMIN_LOGIN} --admin-password '<password>'
 EOF
 }
 
@@ -104,6 +108,15 @@ validate_deployment_host() {
   [[ "$value" =~ ^[A-Za-z0-9._-]+$ ]] || fail "--deployment-host contains invalid characters."
 }
 
+validate_config_file_path() {
+  local path="$1"
+
+  validate_non_empty "--config-file" "$path"
+  [ -e "$path" ] || fail "Config file does not exist: $path"
+  [ -f "$path" ] || fail "Config path is not a regular file: $path"
+  [ -r "$path" ] || fail "Config file is not readable: $path"
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dev)
@@ -139,6 +152,12 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -ge 2 ] || fail "--app-dir requires a value."
       APP_DIR="$2"
       validate_non_empty "--app-dir" "$APP_DIR"
+      shift 2
+      ;;
+    --config-file)
+      [ "$#" -ge 2 ] || fail "--config-file requires a value."
+      CONFIG_FILE_SOURCE="$2"
+      validate_config_file_path "$CONFIG_FILE_SOURCE"
       shift 2
       ;;
     --admin-login)
@@ -207,6 +226,16 @@ download_file "$BASE_URL/docker-compose.yml" docker-compose.yml
 download_file "$BASE_URL/nginx/nginx.conf" nginx/nginx.conf
 download_file "$BASE_URL/nginx/auth.js" nginx/auth.js
 
+echo "Preparing config override file..."
+
+if [ -n "$CONFIG_FILE_SOURCE" ]; then
+  cp "$CONFIG_FILE_SOURCE" "$CONFIG_FILE_NAME"
+else
+  echo "{}" > "$CONFIG_FILE_NAME"
+fi
+
+chmod 600 "$CONFIG_FILE_NAME"
+
 echo "Generating .env..."
 
 cat > .env <<EOF
@@ -224,6 +253,9 @@ BACKEND_PORT=${BACKEND_PORT}
 
 # entrypoint port for the entire application
 NGINX_PORT=${PORT}
+
+# backend config override file inside container
+IDRIVE_CONFIG_FILE=/config/config.override.json
 
 POSTGRES_VOLUME=${POSTGRES_VOLUME}
 POSTGRES_USER=idrive
@@ -243,6 +275,7 @@ echo "  PROTOCOL:         $PROTOCOL"
 echo "  DEPLOYMENT_HOST:  $DEPLOYMENT_HOST"
 echo "  PORT:             $PORT"
 echo "  BACKEND_PORT:     $BACKEND_PORT"
+echo "  CONFIG_FILE:      $APP_DIR/$CONFIG_FILE_NAME"
 echo "  ADMIN_LOGIN:      $ADMIN_LOGIN"
 echo "  ADMIN_PASSWORD:   $ADMIN_PASSWORD"
 echo

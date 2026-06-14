@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from website.constants import ALLOWED_IPS_LOCKED
+from website.config import ALLOWED_IPS_LOCKED
 from website.core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
 from website.core.helpers import get_ip, get_attr
 from website.models import UserPerms, Folder, File, ShareableLink

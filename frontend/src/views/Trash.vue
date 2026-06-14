@@ -1,5 +1,5 @@
 <template>
-   <h4 class="listing-notice">{{ $t("trash.info") }}</h4>
+   <h4 class="listing-notice">{{ $t("trash.info", { days: filesInTrash }) }}</h4>
    <errors v-if="itemsError" :error="itemsError" />
 
    <FileListing
@@ -15,7 +15,7 @@
 import { getTrash } from "@/api/user.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { name } from "@/utils/constants"
+import { filesInTrash, name } from "@/utils/constants"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import axios from "axios"
@@ -56,6 +56,9 @@ export default {
    },
 
    methods: {
+      filesInTrash() {
+         return filesInTrash
+      },
       ...mapActions(useMainStore, ["addSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "showHover"]),
 
       async fetchFolder() {

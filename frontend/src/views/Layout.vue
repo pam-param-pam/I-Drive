@@ -43,6 +43,7 @@ export default {
       if (!this.user.autoSetupComplete && this.isLogged) {
          this.startTour()
       }
+      await this.initServiceWorker()
    },
 
    computed: {
@@ -52,7 +53,29 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setAnonState", "showHover"]),
+      handleServiceWorkerMessage(event) {
+         if (event.data?.type !== 'SW_LOG') return;
+         console.log("[SW LOGS] " + event.data.message)
+      },
+      async initServiceWorker() {
+         if (!("serviceWorker" in navigator)) {
+            throw new Error("Service workers are not supported")
+         }
 
+         const registration = await navigator.serviceWorker.register("/service_worker.js")
+
+         await navigator.serviceWorker.ready
+
+         if (!navigator.serviceWorker.controller) {
+            await new Promise(resolve => {
+               navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true })
+            })
+         }
+
+         navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage);
+
+         return registration
+      },
       nextOnClick(tour, element) {
          const previousHandler = this.tourClickHandlers.get(element)
 

@@ -33,7 +33,7 @@
 <script>
 import throttle from "lodash.throttle"
 import { backendInstance } from "@/axios/networker.js"
-import { PreviewEvent } from "@/utils/constants.js"
+import { encryptionMethod, PreviewEvent } from "@/utils/constants.js"
 import { fetchAdditionalInfo } from "@/api/item.js"
 
 export default {
@@ -89,6 +89,7 @@ export default {
          }
       }
       window.addEventListener("fullscreenchange", this.fullscreenChange)
+      this.playFile(this.file)
    },
 
    beforeUnmount() {
@@ -100,6 +101,74 @@ export default {
    },
 
    methods: {
+      waitForServiceWorkerAck(requestId) {
+         return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+               navigator.serviceWorker.removeEventListener("message", onMessage)
+               reject(new Error("Timed out waiting for service worker ACK"))
+            }, 3000)
+
+
+            function onMessage(event) {
+               if (event.data?.type !== "FILE_CONFIG_REGISTERED") {
+                  return
+               }
+
+               if (event.data.requestId !== requestId) {
+                  return
+               }
+
+               clearTimeout(timeout)
+               navigator.serviceWorker.removeEventListener("message", onMessage)
+               resolve()
+            }
+
+
+            navigator.serviceWorker.addEventListener("message", onMessage)
+         })
+      },
+
+      async registerFileConfigInServiceWorker(file) {
+         const registration = await navigator.serviceWorker.ready
+         const sw = registration.active || navigator.serviceWorker.controller
+
+         if (!sw) {
+            throw new Error("No active service worker")
+         }
+
+         const requestId = crypto.randomUUID()
+         // const ack = this.waitForServiceWorkerAck(requestId)
+         let download_url = file.download_url
+         download_url += "&raw=True"
+         sw.postMessage({
+            type: "REGISTER_FILE_CONFIG",
+            requestId,
+            fileId: file.id,
+            method: file.encryption_method,
+            backendUrl: download_url,
+            keyBase64: file.key,
+            ivBase64: file.iv
+         })
+         console.log({
+            type: "REGISTER_FILE_CONFIG",
+            requestId,
+            fileId: file.id,
+            method: file.encryption_method,
+            backendUrl: download_url,
+            keyBase64: file.key,
+            ivBase64: file.iv
+         })
+         // await ack
+      },
+
+      async playFile(file) {
+         console.log(file)
+         await this.registerFileConfigInServiceWorker(file)
+
+         this.videoRef.src = `/video/${encodeURIComponent(file.id)}`
+         this.videoRef.load()
+      },
+
       onVideoLoadStart() {
          this.videoLoadStartedAt = performance.now()
          this.firstFrameReported = false
@@ -143,10 +212,10 @@ export default {
       async onVideoError() {
          this.clearVideoLoadTimeout()
          await backendInstance.get(this.file.download_url, {
-               headers: {
-                  Range: `bytes=0-1`
-               },
-               __skipAuth: true,
+            headers: {
+               Range: `bytes=0-1`
+            },
+            __skipAuth: true
          })
          this.$toast.error(this.$t("toasts.videoUnplayable"))
       },

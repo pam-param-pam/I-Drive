@@ -609,7 +609,7 @@
     }
   },
   "trash": {
-    "info": "Items in trash will be deleted after 30 days!",
+    "info": "Items in trash will be deleted after {days} days!",
     "trashName": "Trash"
   },
   "uploadFile": {

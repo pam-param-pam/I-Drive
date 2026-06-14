@@ -1,6 +1,7 @@
 from typing import Tuple
 
-from website.constants import MAX_RESOURCE_NAME_LENGTH, EventCode
+from website.config import MAX_RESOURCE_NAME_LENGTH
+from website.constants import EventCode
 from website.core.Serializers import FileSerializer, FolderSerializer
 from website.core.dataModels.general import Item
 from website.core.dataModels.http import RequestContext

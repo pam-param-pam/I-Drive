@@ -10,10 +10,11 @@ from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
-from website.constants import FILE_TYPE_CHOICES, EncryptionMethod, MAX_FILES_IN_FOLDER
+from website.constants import FILE_TYPE_CHOICES, EncryptionMethod
 from website.core.helpers import check_name, chop_long_file_name
 from website.models.mixin_models import ItemState, DiscordAttachmentMixin
 from .folder_models import Folder
+from ..config import MAX_FILES_IN_FOLDER
 
 
 class File(models.Model):
@@ -103,7 +104,7 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
-        "parent_id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata"
+        "parent_id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata", "iv", "key"
     )
 
     @classmethod
