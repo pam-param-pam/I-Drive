@@ -30,7 +30,6 @@ import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { scanDataTransfer } from "@/transfers/upload/utils/uploadHelper.js"
-import { uploadType } from "@/utils/constants.js"
 import { name } from "@/utils/constants"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
@@ -40,6 +39,8 @@ import axios from "axios"
 import { resolveItemAction } from "@/utils/common.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Search from "@/components/Search.vue"
+import { uploadType } from "@/transfers/upload/constants.js"
+import { getDownloader } from "@/transfers/downloads/Downloader.js"
 
 export default {
    name: "files",
@@ -182,21 +183,22 @@ export default {
       },
 
       async download() {
-         let message
-         if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            let file = this.selected[0]
-            if (!this.isLogged) {
-               this.send("share", JSON.stringify({ "type": "file_download", "args": { "file_id": file.id } }))
-            }
-            window.open(this.selected[0].download_url + "&download=true", "_blank")
-            message = this.$t("toasts.downloadingSingle", { name: file.name })
-         } else {
-            const ids = this.selected.map((obj) => obj.id)
-            let res = await createZIP({ ids: ids })
-            window.open(res.download_url, "_blank")
-            message = this.$t("toasts.downloadingZIP")
-         }
-         this.$toast.success(message)
+         await getDownloader().downloadFile(this.selected[0])
+         // let message
+         // if (this.selectedCount === 1 && !this.selected[0].isDir) {
+         //    let file = this.selected[0]
+         //    if (!this.isLogged) {
+         //       this.send("share", JSON.stringify({ "type": "file_download", "args": { "file_id": file.id } }))
+         //    }
+         //    window.open(this.selected[0].download_url + "&download=true", "_blank")
+         //    message = this.$t("toasts.downloadingSingle", { name: file.name })
+         // } else {
+         //    const ids = this.selected.map((obj) => obj.id)
+         //    let res = await createZIP({ ids: ids })
+         //    window.open(res.download_url, "_blank")
+         //    message = this.$t("toasts.downloadingZIP")
+         // }
+         // this.$toast.success(message)
       },
 
       resetOpacity() {

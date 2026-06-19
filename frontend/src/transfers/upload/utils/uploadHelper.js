@@ -1,5 +1,3 @@
-import { useUploadStore } from "@/stores/uploadStore.js"
-import { uploadFileStatus } from "@/utils/constants.js"
 import { uploadInstance } from "@/axios/networker.js"
 import { detectExtension, showToast } from "@/utils/common.js"
 import {
@@ -10,6 +8,8 @@ import {
    slowVideoCover
 } from "@/transfers/upload/utils/thumbnailHelper.js"
 import { useMainStore } from "@/stores/mainStore.js"
+import { uploadFileStatus } from "@/transfers/upload/constants.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 
 export async function checkFileDepth(files, maxFolderDepth) {
@@ -126,35 +126,28 @@ function processFile(fileEntry) {
 
 export function isAudioFile(extension) {
    extension = extension.toLowerCase()
-   let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.Audio.includes(extension)
+   let uploadStore = useTransferStore()
+   return uploadStore.upload.fileExtensions.Audio.includes(extension)
 }
 
 
 export function isVideoFile(extension) {
    extension = extension.toLowerCase()
-   let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.Video.includes(extension)
+   let uploadStore = useTransferStore()
+   return uploadStore.upload.fileExtensions.Video.includes(extension)
 }
-
-
-export function isZipFile(extension) {
-   extension = extension.toLowerCase()
-   return extension === ".zip"
-}
-
 
 export function isImageFile(extension) {
    extension = extension.toLowerCase()
-   let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions.Image.includes(extension)
+   let uploadStore = useTransferStore()
+   return uploadStore.upload.fileExtensions.Image.includes(extension)
 }
 
 
 export function isRawImageFile(extension) {
    extension = extension.toLowerCase()
-   let uploadStore = useUploadStore()
-   return uploadStore.fileExtensions["Raw image"].includes(extension)
+   let uploadStore = useTransferStore()
+   return uploadStore.upload.fileExtensions["Raw image"].includes(extension)
 }
 
 
@@ -162,8 +155,8 @@ let webhookIndex = 0
 
 
 export function getWebhook() {
-   const uploadStore = useUploadStore()
-   const webhooks = uploadStore.webhooks
+   const uploadStore = useTransferStore()
+   const webhooks = uploadStore.upload.webhooks
 
    if (!webhooks || webhooks.length === 0) return null
 

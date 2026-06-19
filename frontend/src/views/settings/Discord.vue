@@ -278,7 +278,7 @@ import {
 import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { useUploadStore } from "@/stores/transferStore.js"
 import Errors from "@/components/Errors.vue"
 import { humanTime, onceAtATime } from "@/utils/common.js"
 import loadingSpinner from "@/components/loadingSpinner.vue"

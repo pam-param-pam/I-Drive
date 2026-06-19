@@ -1,4 +1,4 @@
-import { workerExitReason } from "@/transfers/upload/constants.js"
+import { workerExitReason } from "@/transfers/shared/constants.js"
 
 export class PipelineWorker {
    constructor() {
@@ -9,9 +9,10 @@ export class PipelineWorker {
 
       this._exitPromise = null
       this._resolveExit = null
+      console.info(`Creating ${this.name()}!`)
    }
    name() {
-      throw new Error("name() must be implemented by subclass")
+      return this.constructor.name
    }
 
    isRunning() {
@@ -50,9 +51,7 @@ export class PipelineWorker {
    _handleRunError(err) {
       let workerName = this.name()
       if (this.isAbortError(err) || this.isQueueClosedError(err)) {
-         const exitReason = this._killed ? workerExitReason.killed : workerExitReason.stopped
-         console.debug(`${workerName} stopped by abort`)
-         return exitReason
+         return this._killed ? workerExitReason.killed : workerExitReason.stopped
       }
 
       console.error(`${workerName} crashed:`, err)

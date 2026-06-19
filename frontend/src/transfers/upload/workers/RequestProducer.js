@@ -1,7 +1,6 @@
 import { create } from "@/api/folder.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { useMainStore } from "@/stores/mainStore.js"
-import { attachmentType, encryptionMethod, uploadFileStatus } from "@/utils/constants.js"
+import { encryptionMethod } from "@/utils/constants.js"
 import {
    appendMp4BoxBuffer,
    isVideoFile,
@@ -16,14 +15,14 @@ import { showToast } from "@/utils/common.js"
 import { buildVttFromSamples } from "@/utils/subtitleUtlis.js"
 import { getUploader } from "@/transfers/upload/Uploader.js"
 import { generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
-import { PipelineWorker } from "@/transfers/upload/workers/PipelineWorker.js"
-import { workerExitReason } from "@/transfers/upload/constants.js"
+import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
+import { workerExitReason } from "@/transfers/shared/constants.js"
+import { attachmentType, uploadFileStatus } from "@/transfers/upload/constants.js"
 
 export class RequestProducer extends PipelineWorker {
    constructor({ uploadRuntime, fileQueue, requestQueue, requestMoreFiles }) {
       super()
 
-      this.uploadStore = useUploadStore()
       this.mainStore = useMainStore()
       this.uploadRuntime = uploadRuntime
       this.fileQueue = fileQueue
@@ -41,9 +40,6 @@ export class RequestProducer extends PipelineWorker {
       this._resolveExit = null
    }
 
-   name() {
-      return "RequestProducer"
-   }
    async getMp4Box() {
       if (!this._MP4BoxPromise) {
          this._MP4BoxPromise = import("mp4box")
@@ -56,6 +52,7 @@ export class RequestProducer extends PipelineWorker {
          console.warn("RequestProducer is already running!")
          return workerExitReason.stopped
       }
+
       const signal = this._markStarted()
 
       const MP4Box = await this.getMp4Box()
@@ -303,7 +300,6 @@ export class RequestProducer extends PipelineWorker {
       const state = this.uploadRuntime.getFileState(frontendId)
       if (queueFile.fileObj.size === 0) {
          state.markFileUploaded(frontendId)
-         //todo this is quite ugly and feels like spaggetti cod
          // todo FIX
          let file = getUploader().discordResponseConsumer.getOrCreateState(queueFile.fileObj)
          getUploader().backendFileQueue.put(file)

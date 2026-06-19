@@ -1,7 +1,5 @@
 import { useMainStore } from "@/stores/mainStore.js"
 import { v4 as uuidv4 } from "uuid"
-import { useUploadStore } from "@/stores/uploadStore.js"
-import { uploadState, uploadType } from "@/utils/constants.js"
 import { canUpload } from "@/api/user.js"
 import { UploadRuntime } from "@/transfers/upload/UploadRuntime.js"
 import { showToast } from "@/utils/common.js"
@@ -14,6 +12,8 @@ import { BackendFileConsumer } from "@/transfers/upload/workers/BackendFileConsu
 import { RequestProducer } from "@/transfers/upload/workers/RequestProducer.js"
 import { InternetProbe } from "@/transfers/shared/InternetProbe.js"
 import { beforeUnloadEvent } from "@/transfers/shared/helper.js"
+import { uploadState, uploadType } from "@/transfers/upload/constants.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 /*
 FileProcessorWorker
@@ -30,7 +30,7 @@ FileProcessorWorker
 export class Uploader {
    constructor() {
       this.mainStore = useMainStore()
-      this.uploadStore = useUploadStore()
+      this.transferStore = useTransferStore()
 
       this.uploadRuntime = null
       this.queues = null
@@ -120,18 +120,18 @@ export class Uploader {
       this.uploadRuntime = new UploadRuntime({ uploadFinishCallback: this.onUploadSessionFinished })
 
       this.uploadRuntime.onGlobalStateChange(snapshot => {
-         this.uploadStore.onGlobalStateChange(snapshot)
+         this.transferStore.onUploadGlobalStateChange(snapshot)
       })
 
       this.uploadRuntime.onFileChange(["status", "progress", "error", "fileObj", "frontendId"], ({ frontendId, field, current }) => {
-         this.uploadStore.updateFileField(frontendId, field, current)
+         this.transferStore.updateUploadFileField(frontendId, field, current)
       })
 
-      this.uploadRuntime.onFileSaved(frontendId => {
-         this.uploadStore.onFileSaved(frontendId)
+      this.uploadRuntime.onFileFinished(frontendId => {
+         this.transferStore.onUploadFileSaved(frontendId)
       })
 
-      this.uploadRuntime.onUploadStateChange((newState, prevState) => {
+      this.uploadRuntime.onTransferStateChange((newState, prevState) => {
          if (newState === uploadState.noInternet) {
             this.internetProbe.start()
          } else if (prevState === uploadState.noInternet) {
@@ -161,7 +161,7 @@ export class Uploader {
       if (!this.requestProducer.isRunning()) {
          this.requestProducer.run().catch(err => {
             console.error("RequestProducer crashed", err)
-            this.uploadStore.state = uploadState.error
+            this.uploadRuntime.setUploadingState(uploadState.error)
          })
       }
    }
@@ -178,7 +178,6 @@ export class Uploader {
             requestQueue: this.queues.requestQueue,
             discordResponseQueue: this.queues.discordResponseQueue,
             uploadRuntime: this.uploadRuntime,
-            uploadStore: this.uploadStore
          })
       }
 
@@ -187,7 +186,6 @@ export class Uploader {
 
    startDiscordResponseConsumer() {
       if (!this.discordResponseConsumer) {
-         console.info("Creating discordResponseConsumer!")
          this.discordResponseConsumer = new DiscordResponseStage({
             discordResponseQueue: this.queues.discordResponseQueue,
             backendFileQueue: this.queues.backendFileQueue,
@@ -196,17 +194,15 @@ export class Uploader {
       }
 
       if (!this.discordResponseConsumer.isRunning()) {
-         console.info("Starting discordResponseConsumer!")
          this.discordResponseConsumer.run().catch(err => {
             console.error("DiscordResponseConsumer crashed", err)
-            this.uploadStore.state = uploadState.error
+            this.uploadRuntime.setUploadingState(uploadState.error)
          })
       }
    }
 
    startBackendFileConsumer() {
       if (!this.backendFileConsumer) {
-         console.info("Creating backendFileConsumer!")
          this.backendFileConsumer = new BackendFileConsumer({
             backendFileQueue: this.queues.backendFileQueue,
             uploadRuntime: this.uploadRuntime
@@ -214,10 +210,9 @@ export class Uploader {
       }
 
       if (!this.backendFileConsumer.isRunning()) {
-         console.info("Starting backendFileConsumer!")
          this.backendFileConsumer.run().catch(err => {
             console.error("BackendFileConsumer crashed", err)
-            this.uploadStore.state = uploadState.error
+            this.uploadRuntime.setUploadingState(uploadState.error)
          })
       }
    }
@@ -227,7 +222,7 @@ export class Uploader {
    }
 
    ensureQueuesOpen() {
-      this.queues?.openAll()
+      this.queues.openAll()
    }
 
    processNewFiles(typeOfUpload, folderContext, filesList, lockFrom) {
@@ -238,7 +233,7 @@ export class Uploader {
       this.ensureFileProcessorWorker()
 
       this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength + filesList.length)
-      this.uploadRuntime.setAllBytesToUpload(this.uploadRuntime.allBytesToUpload + this.calculateTotalBytes(typeOfUpload, filesList))
+      this.uploadRuntime.updateAllBytesToTransfer(this.calculateTotalBytes(typeOfUpload, filesList))
 
       this.fileProcessorWorker.postMessage({
          type: "init",
@@ -260,24 +255,36 @@ export class Uploader {
       this.fileProcessorWorker = new Worker(new URL("../../workers/fileProcessorWorker.js", import.meta.url), { type: "module" })
 
       this.fileProcessorWorker.onmessage = async event => {
-         const { files, done } = event.data
-
-         if (!done) {
-            this.initQueues()
-            this.startConsumers()
-            this.startProducer()
-         }
-
-         if (files?.length) {
-            for (const file of files) {
-               this.uploadRuntime.registerFile(file)
-               this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength - 1)
-               await this.queues.fileQueue.put(file)
+         const msg = event.data
+         try {
+            if (msg.type === "crash") {
+               console.error("fileProcessorWorker crashed", msg.error)
+               this.uploadRuntime.setUploadingState(uploadState.error)
+               return
             }
-         }
 
-         if (done) {
-            this.queues.fileQueue.close()
+            const { files, done } = msg.data
+
+            if (!done) {
+               this.initQueues()
+               this.startConsumers()
+               this.startProducer()
+            }
+
+            if (files?.length) {
+               for (const file of files) {
+                  this.uploadRuntime.registerFile(file)
+                  this.uploadRuntime.setPendingWorkerFilesLength(this.uploadRuntime.pendingWorkerFilesLength - 1)
+                  await this.queues.fileQueue.put(file)
+               }
+            }
+
+            if (done) {
+               this.queues.fileQueue.close()
+            }
+         } catch (err) {
+            console.error("fileProcessorWorker onmessage crashed", err)
+            this.uploadRuntime.setUploadingState(uploadState.error)
          }
       }
    }
@@ -299,7 +306,7 @@ export class Uploader {
    requestMoreFiles() {
       this.fileProcessorWorker.postMessage({ type: "produce" })
    }
-
+   // todo we need to fix this queue opening madness
    pauseAll() {
       if (this.uploadRuntime.uploadState !== uploadState.uploading) return
 
@@ -330,7 +337,7 @@ export class Uploader {
       if (this.uploadRuntime.uploadState !== uploadState.uploading) return
 
       this.ensureQueuesOpen()
-      this.uploadPool.retryFailedRequests().then(() => {
+      this.uploadPool.retryFailedUploads().then(() => {
          this.startConsumers()
          this.queues.fileQueue.close()
          this.queues.requestQueue.close()
@@ -341,16 +348,21 @@ export class Uploader {
       if (this.uploadRuntime.uploadState !== uploadState.uploading) return
 
       this.ensureQueuesOpen()
+
       let file = this.requestProducer.getGoneFile(frontendId)
-      this.queues.fileQueue.put(file).then(() => {
-         this.startConsumers()
-         this.startProducer()
-         this.queues.fileQueue.close()
-      })
+      if (file) {
+         this.queues.fileQueue.put(file).then(() => {
+            this.queues.fileQueue.close()
+            this.startProducer()
+         })
+      }
+      this.startConsumers()
+      this.uploadPool.retryGoneFile(frontendId)
    }
 
    dismissFile(frontendId) {
       this.uploadRuntime.deleteFileState(frontendId)
+      //remove from failed lists in workers
    }
 
    onUploadSessionFinished = () => {
@@ -360,7 +372,7 @@ export class Uploader {
    }
 
    async cleanup() {
-      window.removeEventListener("beforeunload", beforeUnloadEvent)
+      window.removeEventListener("beforeunload", beforeUnloadEvent) //todo
 
       if (this.uploadPool) {
          await this.uploadPool.stopAll()
@@ -396,7 +408,7 @@ export class Uploader {
       this.stopQueueStatsLogging()
 
       this.uploadRuntime = null
-      this.uploadStore.cleanup()
+      this.transferStore.cleanupUpload()
    }
 
    async abortAll() {
@@ -440,7 +452,7 @@ export class Uploader {
       this.stopQueueStatsLogging()
 
       this.uploadRuntime = null
-      this.uploadStore.cleanup()
+      this.transferStore.cleanupUpload()
       showToast("success", "toasts.uploadAborted")
    }
 

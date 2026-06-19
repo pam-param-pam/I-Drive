@@ -1,6 +1,6 @@
-import { attachmentType } from "@/utils/constants.js"
-import { workerExitReason } from "@/transfers/upload/constants.js"
-import { PipelineWorker } from "@/transfers/upload/workers/PipelineWorker.js"
+import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
+import { workerExitReason } from "@/transfers/shared/constants.js"
+import { attachmentType } from "@/transfers/upload/constants.js"
 
 export class DiscordResponseStage extends PipelineWorker {
    constructor({ discordResponseQueue, backendFileQueue, uploadRuntime }) {
@@ -17,10 +17,6 @@ export class DiscordResponseStage extends PipelineWorker {
       }
 
       this._unsubscribe = this.uploadRuntime.onFileChange(["videoMetadata"], this._metadataListener)
-   }
-
-   name() {
-      return "DiscordResponseStage"
    }
 
    async run() {

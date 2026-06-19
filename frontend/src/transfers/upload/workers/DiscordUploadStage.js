@@ -1,27 +1,23 @@
 import axios from "axios"
-import { uploadFileStatus, uploadState } from "@/utils/constants.js"
 import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 import { noWifi } from "@/axios/helper.js"
 import { encryptAttachment } from "@/transfers/upload/utils/encryption.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
-import { workerExitReason } from "@/transfers/upload/constants.js"
-import { PipelineWorker } from "@/transfers/upload/workers/PipelineWorker.js"
+import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
+import { workerExitReason } from "@/transfers/shared/constants.js"
+import { uploadFileStatus, uploadState } from "@/transfers/upload/constants.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 export class DiscordUploadStage extends PipelineWorker {
    constructor({ requestQueue, discordResponseQueue, uploadRuntime, onFailedRequest }) {
       super()
 
-      this.uploadStore = useUploadStore()
+      this.transferStore = useTransferStore()
       this.requestQueue = requestQueue
       this.discordResponseQueue = discordResponseQueue
       this.uploadRuntime = uploadRuntime
       this.onFailedRequest = onFailedRequest
 
       this.abortRequestMap = new Map()
-   }
-
-   name() {
-      return "DiscordUploadStage"
    }
 
    kill() {
@@ -79,7 +75,7 @@ export class DiscordUploadStage extends PipelineWorker {
    }
 
    async uploadSingleRequest(request, signal) {
-      const attachmentName = this.uploadStore.attachmentName
+      const attachmentName = this.transferStore.upload.attachmentName
 
       try {
          const formData = await this.buildFormData(request, attachmentName)

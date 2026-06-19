@@ -1,5 +1,6 @@
 import JSChaCha20 from "js-chacha20"
-import { attachmentType, encryptionMethod } from "@/utils/constants.js"
+import { encryptionMethod } from "@/utils/constants.js"
+import { attachmentType } from "@/transfers/upload/constants.js"
 
 export function ivToBase64(iv) {
    // First, convert the Uint8Array to a regular binary string

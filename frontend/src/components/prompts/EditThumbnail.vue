@@ -136,7 +136,6 @@ import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 import { createThumbnail, deleteThumbnail } from "@/api/files.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
 import axios from "axios"
 import { filesize } from "@/utils/index.js"
@@ -145,6 +144,7 @@ import SmartFileInput from "@/components/SmartFileInput.vue"
 import { getMomentFrame } from "@/transfers/upload/utils/thumbnailHelper.js"
 import { backendInstance } from "@/axios/networker.js"
 import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 export default {
    name: "edit-thumbnail",
@@ -173,7 +173,7 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["user", "selected"]),
-      ...mapState(useUploadStore, ["attachmentName"]),
+      ...mapState(useTransferStore, ["attachmentName"]),
 
       file() {
          return this.selected[0]

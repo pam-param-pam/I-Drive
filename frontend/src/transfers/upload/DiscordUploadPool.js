@@ -1,13 +1,12 @@
-import { uploadFileStatus, uploadState } from "@/utils/constants.js"
-import { workerExitReason } from "@/transfers/upload/constants.js"
 import { DiscordUploadStage } from "@/transfers/upload/workers/DiscordUploadStage.js"
+import { workerExitReason } from "@/transfers/shared/constants.js"
+import { uploadFileStatus, uploadState } from "@/transfers/upload/constants.js"
 
 export class DiscordUploadPool {
-   constructor({ requestQueue, discordResponseQueue, uploadRuntime, uploadStore }) {
+   constructor({ requestQueue, discordResponseQueue, uploadRuntime }) {
       this.requestQueue = requestQueue
       this.discordResponseQueue = discordResponseQueue
       this.uploadRuntime = uploadRuntime
-      this.uploadStore = uploadStore
 
       this.consumers = []
       this.activeCount = 0
@@ -54,7 +53,7 @@ export class DiscordUploadPool {
          })
          .catch(err => {
             console.error("DiscordUploadConsumer crashed", err)
-            this.uploadStore.state = uploadState.error
+            this.uploadRuntime.setUploadingState(uploadState.error)
          })
          .finally(() => {
             this.activeCount--
@@ -73,14 +72,10 @@ export class DiscordUploadPool {
    }
 
    async retryGoneFile(frontendId) {
-      await this.retryFailedRequests(frontendId)
+      await this.retryFailedUploads(frontendId)
    }
 
-   async retryFailedUploads() {
-      await this.retryFailedRequests()
-   }
-
-   async retryFailedRequests(frontendId = null) {
+   async retryFailedUploads(frontendId = null) {
       while (this._retryPromise) {
          await this._retryPromise
       }

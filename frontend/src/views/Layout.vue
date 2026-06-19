@@ -1,6 +1,6 @@
 <template>
-   <div v-if="progress" class="progress">
-      <div :style="{ width: progress + '%' }"></div>
+   <div v-if="totalProgress" class="progress">
+      <div :style="{ width: totalProgress + '%' }"></div>
    </div>
 
    <sidebar></sidebar>
@@ -19,12 +19,11 @@ import UploadFiles from "../components/prompts/UploadFiles.vue"
 import Sidebar from "@/components/sidebar/Sidebar.vue"
 
 import { useMainStore } from "@/stores/mainStore.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 import { mapActions, mapState } from "pinia"
 
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
-import { initServiceWorker } from "@/utils/serviceWorkerUtils.js"
 
 export default {
    name: "layout",
@@ -51,7 +50,7 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["isLogged", "user"]),
-      ...mapState(useUploadStore, ["progress"])
+      ...mapState(useTransferStore, ["totalProgress"])
    },
 
    methods: {

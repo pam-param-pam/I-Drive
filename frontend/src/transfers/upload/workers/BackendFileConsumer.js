@@ -1,8 +1,8 @@
-import { uploadFileStatus as fileUploadStatus, uploadFileStatus, uploadState } from "@/utils/constants.js"
 import { createFile } from "@/api/files.js"
 import { noWifi } from "@/axios/helper.js"
-import { workerExitReason } from "@/transfers/upload/constants.js"
-import { PipelineWorker } from "@/transfers/upload/workers/PipelineWorker.js"
+import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
+import { uploadFileStatus, uploadState } from "@/transfers/upload/constants.js"
+import { workerExitReason } from "@/transfers/shared/constants.js"
 
 const SMALL_FILE_LIMIT = 0.1 * 1024 * 1024
 const NORMAL_FILE_COUNT = 20
@@ -19,10 +19,6 @@ export class BackendFileConsumer extends PipelineWorker {
       this.failedFiles = []
       this._savePromise = null
       this._retryPromise = null
-   }
-
-   name() {
-      return "BackendFileConsumer"
    }
 
    async run() {
@@ -162,7 +158,7 @@ export class BackendFileConsumer extends PipelineWorker {
       } else {
          for (const file of files) {
             const state = this.uploadRuntime.getFileState(file.frontend_id)
-            state.setStatus(fileUploadStatus.saveFailed)
+            state.setStatus(uploadFileStatus.saveFailed)
             state.setError(error?.response?.data)
             this.failedFiles.push(file)
          }

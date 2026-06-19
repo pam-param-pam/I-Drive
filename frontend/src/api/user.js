@@ -1,6 +1,6 @@
 import { backendInstance } from "@/axios/networker.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { showToast } from "@/utils/common.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 export async function getUser(token) {
    if (!token) return
@@ -99,7 +99,7 @@ export async function canUpload(folderContext) {
    let url = `/user/can-upload/${folderContext}`
    let response = await backendInstance.get(url)
    if (response.data.can_upload) {
-      let uploadStore = useUploadStore()
+      let uploadStore = useTransferStore() //todo this should not be in here
       uploadStore.setWebhooks(response.data.webhooks)
       uploadStore.setAttachmentName(response.data.attachment_name)
       uploadStore.setFileExtensions(response.data.extensions)

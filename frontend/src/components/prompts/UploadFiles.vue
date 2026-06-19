@@ -1,11 +1,11 @@
 <template>
-   <div v-if="transfersCount > 0" class="upload-files" v-bind:class="{ closed: !open }">
+   <div v-if="transfersCount > 0" class="upload-files" :class="{ closed: !open }">
       <div class="card floating">
          <div class="card-title">
             <div class="transfer-title">
                <h2>{{ titleText }}</h2>
 
-               <div v-if="true" class="transfer-tabs">
+               <div class="transfer-tabs">
                   <button
                     class="transfer-tab"
                     :class="{ active: activeView === 'uploads' }"
@@ -31,7 +31,7 @@
 
             <div class="action-buttons">
                <button
-                 v-if="activeView === 'uploads' && state === uploadState.uploading"
+                 v-if="canPause"
                  :aria-label="$t('uploadFile.pause')"
                  :title="$t('uploadFile.pause')"
                  class="action"
@@ -41,9 +41,9 @@
                </button>
 
                <button
-                 v-if="activeView === 'uploads' && state === uploadState.paused"
-                 :aria-label="$t('uploadFile.pause')"
-                 :title="$t('uploadFile.pause')"
+                 v-if="canResume"
+                 :aria-label="$t('uploadFile.resume')"
+                 :title="$t('uploadFile.resume')"
                  class="action"
                  @click="resume"
                >
@@ -51,7 +51,7 @@
                </button>
 
                <button
-                 v-if="activeView === 'uploads' && state === uploadState.paused"
+                 v-if="canAbort"
                  :aria-label="$t('uploadFile.abortAll')"
                  :title="$t('uploadFile.abortAll')"
                  class="action"
@@ -71,26 +71,27 @@
             </div>
          </div>
 
-         <div v-if="activeTransfers?.length" class="card-content">
-            <UploadFile
-              v-if="activeView === 'uploads'"
-              v-for="fileState in filesInUpload"
-              :key="fileState.fileObj.frontendId"
-              :aria-label="fileState.fileObj.name"
-              :data-dir="false"
-              :data-type="fileState.fileObj.name"
-              :fileState="fileState"
-            />
-
-            <DownloadFile
-              v-if="activeView === 'downloads'"
-              v-for="fileState in filesInDownload"
-              :key="fileState.fileObj.frontendId"
-              :aria-label="fileState.fileObj.name"
-              :data-dir="false"
-              :data-type="fileState.fileObj.name"
-              :fileState="fileState"
-            />
+         <div v-if="activeTransfers.length" class="card-content">
+            <div v-if="activeView === 'uploads'">
+               <UploadFile
+                 v-for="fileState in filesInUpload"
+                 :key="fileState.fileObj.frontendId"
+                 :aria-label="fileState.fileObj.name"
+                 :data-dir="false"
+                 :data-type="fileState.fileObj.name"
+                 :fileState="fileState"
+               />
+            </div>
+            <div v-else>
+               <DownloadFile
+                 v-for="fileState in filesInDownload"
+                 :key="fileState.fileObj.id"
+                 :aria-label="fileState.fileObj.name"
+                 :data-dir="false"
+                 :data-type="fileState.fileObj.name"
+                 :fileState="fileState"
+               />
+            </div>
          </div>
       </div>
    </div>
@@ -98,20 +99,20 @@
 
 <script>
 import { mapActions, mapState } from "pinia"
-import { useUploadStore } from "@/stores/uploadStore.js"
-import { useDownloadStore } from "@/stores/downloadStore.js"
 import { filesize } from "@/utils/index.js"
-import upload from "@/components/prompts/Upload.vue"
-import { uploadState } from "@/utils/constants.js"
 import { useMainStore } from "@/stores/mainStore.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 import { getUploader } from "@/transfers/upload/Uploader.js"
-import DownloadFile from "@/components/transfer/DownloadFile.vue"
 import UploadFile from "@/components/transfer/UploadFile.vue"
+import { uploadState } from "@/transfers/upload/constants.js"
+import { downloadState } from "@/transfers/downloads/constants.js"
+import { getDownloader } from "@/transfers/downloads/Downloader.js"
+import DownloadFile from "@/components/transfer/DownloadFile.vue"
 
 export default {
-   name: "uploadFiles",
+   name: "TransferFiles",
 
-   components: { UploadFile, DownloadFile },
+   components: { DownloadFile, UploadFile },
 
    data() {
       return {
@@ -121,15 +122,22 @@ export default {
    },
 
    computed: {
-      ...mapState(useUploadStore, ["filesInUpload", "filesInUploadCount", "uploadSpeed", "eta", "state"]),
-      ...mapState(useDownloadStore, ["filesInDownload", "filesInDownloadCount", "downloadSpeed", "downloadEta", "downloadState"]),
+      ...mapState(useTransferStore, ["upload", "download", "filesInUpload", "filesInUploadCount", "filesInDownload", "filesInDownloadCount"]),
 
       uploadState() {
          return uploadState
       },
 
-      upload() {
-         return upload
+      downloadState() {
+         return downloadState
+      },
+
+      uploadStatus() {
+         return this.upload.state
+      },
+
+      downloadStatus() {
+         return this.download.state
       },
 
       transfersCount() {
@@ -140,49 +148,58 @@ export default {
          return this.activeView === "downloads" ? this.filesInDownload : this.filesInUpload
       },
 
-      activeCount() {
-         return this.activeView === "downloads" ? this.filesInDownloadCount : this.filesInUploadCount
-      },
-
       activeSpeed() {
-         return this.activeView === "downloads" ? this.downloadSpeed : this.uploadSpeed
+         return this.activeView === "downloads" ? this.download.downloadSpeed : this.upload.uploadSpeed
       },
 
       activeEta() {
-         return this.activeView === "downloads" ? this.downloadEta : this.eta
+         return this.activeView === "downloads" ? this.download.eta : this.upload.eta
       },
 
       showTransferInfo() {
          if (this.activeView === "downloads") {
-            return this.filesInDownloadCount > 0
+            return this.downloadStatus === downloadState.downloading
+         }
+         return this.uploadStatus === uploadState.uploading
+      },
+
+      canPause() {
+         if (this.activeView === "downloads") {
+            return this.downloadStatus === downloadState.downloading
+         }
+         return this.uploadStatus === uploadState.uploading
+      },
+
+      canResume() {
+         if (this.activeView === "downloads") {
+            return this.downloadStatus === downloadState.paused
+         }
+         return this.uploadStatus === uploadState.paused
+      },
+
+      canAbort() {
+         if (this.activeView === "downloads") {
+            return this.downloadStatus === downloadState.paused || this.downloadStatus === downloadState.downloading
          }
 
-         return this.state === uploadState.uploading
+         return this.uploadStatus === uploadState.paused || this.uploadStatus === uploadState.uploading
       },
 
       titleText() {
          if (this.activeView === "downloads") {
-            return `Downloading ${this.activeCount} ${this.activeCount === 1 ? "file" : "files"}`
-         }
-         if (this.state === uploadState.aborting) {
-            return this.$t("prompts.aborting")
+            if (this.downloadStatus === downloadState.aborting) return this.$t("prompts.aborting")
+            if (this.downloadStatus === downloadState.error) return "Downloads crashed"
+            if (this.downloadState === downloadState.paused) return this.$t("prompts.pausedFilesDownload", { amount: this.filesInUploadCount })
+            if (this.downloadStatus === downloadState.noInternet) return this.$t("prompts.noInternet")
+
+            return this.$t("prompts.downloadFiles", { amount: this.filesInDownloadCount })
          }
 
-         if (this.state === uploadState.error) {
-            return this.$t("prompts.uploadFilesCrashed")
-         }
-
-         if (this.state === uploadState.uploading) {
-            return this.$t("prompts.uploadFiles", { amount: this.filesInUploadCount })
-         }
-
-         if (this.state === uploadState.paused) {
-            return this.$t("prompts.pausedFilesUpload", { amount: this.filesInUploadCount })
-         }
-
-         if (this.state === uploadState.noInternet) {
-            return this.$t("prompts.noInternet")
-         }
+         if (this.uploadStatus === uploadState.aborting) return this.$t("prompts.aborting")
+         if (this.uploadStatus === uploadState.error) return this.$t("prompts.uploadFilesCrashed")
+         if (this.uploadStatus === uploadState.uploading) return this.$t("prompts.uploadFiles", { amount: this.filesInUploadCount })
+         if (this.uploadStatus === uploadState.paused) return this.$t("prompts.pausedFilesUpload", { amount: this.filesInUploadCount })
+         if (this.uploadStatus === uploadState.noInternet) return this.$t("prompts.noInternet")
 
          return this.$t("prompts.uploadFiles", { amount: this.filesInUploadCount })
       },
@@ -193,10 +210,10 @@ export default {
          }
 
          let totalSeconds = this.activeEta
-         let hours = Math.floor(totalSeconds / 3600)
+         const hours = Math.floor(totalSeconds / 3600)
          totalSeconds %= 3600
-         let minutes = Math.floor(totalSeconds / 60)
-         let seconds = Math.round(totalSeconds % 60)
+         const minutes = Math.floor(totalSeconds / 60)
+         const seconds = Math.round(totalSeconds % 60)
 
          return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
       }
@@ -235,7 +252,11 @@ export default {
          this.showHover({
             prompt: "AbortAllWarning",
             confirm: () => {
-               getUploader().abortAll()
+               if (this.activeView === "downloads") {
+                  getDownloader().abortAll()
+               } else {
+                  getUploader().abortAll()
+               }
             }
          })
       },
@@ -245,11 +266,19 @@ export default {
       },
 
       pause() {
-         getUploader().pauseAll()
+         if (this.activeView === "downloads") {
+            getDownloader().pauseAll()
+         } else {
+            getUploader().pauseAll()
+         }
       },
 
       resume() {
-         getUploader().resumeAll()
+         if (this.activeView === "downloads") {
+            getDownloader().resumeAll()
+         } else {
+            getUploader().resumeAll()
+         }
       }
    }
 }

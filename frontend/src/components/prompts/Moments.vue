@@ -80,7 +80,7 @@ import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
 import { canUpload } from "@/api/user.js"
-import { useUploadStore } from "@/stores/uploadStore.js"
+import { useTransferStore } from "@/stores/transferStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
 import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
@@ -111,7 +111,7 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["selected"]),
-      ...mapState(useUploadStore, ["attachmentName"]),
+      ...mapState(useTransferStore, ["attachmentName"]),
       isMobile() {
          return window.innerWidth <= 950
       },

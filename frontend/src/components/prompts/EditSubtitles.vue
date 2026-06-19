@@ -128,7 +128,6 @@ import { canUpload } from "@/api/user.js"
 import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 
 import axios from "axios"
-import { useUploadStore } from "@/stores/uploadStore.js"
 import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
 import { detectExtension } from "@/utils/common.js"
 import { capitalize } from "vue"
@@ -136,6 +135,7 @@ import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
 import throttle from "lodash.throttle"
 import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 export default {
    name: "EditSubtitles",
@@ -162,7 +162,7 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["user", "selected"]),
-      ...mapState(useUploadStore, ["attachmentName"]),
+      ...mapState(useTransferStore, ["attachmentName"]),
       canSubmit() {
          return this.newSubtitleFile && this.newLanguage.length > 0
       }

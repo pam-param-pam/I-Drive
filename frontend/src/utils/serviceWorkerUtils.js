@@ -97,7 +97,7 @@ export async function initServiceWorker() {
 
    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage)
 
-   const registration = await navigator.serviceWorker.register("/service_worker.js", {scope: "/video"})
+   const registration = await navigator.serviceWorker.register("/service_worker.js", {scope: "/"})
 
    await waitForServiceWorkerActivation(registration)
    await waitForServiceWorkerController()

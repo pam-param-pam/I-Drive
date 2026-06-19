@@ -45,6 +45,9 @@ export class SpeedEstimator {
    }
 
    estimateRemainingTime(remainingBytes) {
+      if (remainingBytes === undefined || isNaN(remainingBytes)) {
+         console.warn("[Estimator] remainingBytes is undefined or NaN")
+      }
       this._updateActualSpeed(remainingBytes)
 
       const speed = this.getSpeed()

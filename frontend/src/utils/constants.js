@@ -22,57 +22,6 @@ export const encryptionMethod = { NotEncrypted: 0, AesCtr: 1, ChaCha20: 2 }
 
 export const filesInTrash = 7
 
-export const uploadType = {
-   browserInput: "browserInput",
-   dragAndDropInput: "dragAndDropInput"
-}
-
-export const attachmentType = {
-   file: "file",
-   thumbnail: "thumbnail",
-   subtitle: "subtitle"
-}
-export const uploadFileStatus = {
-   preparing: "preparing",
-   uploading: "uploading",
-   uploaded: "uploaded",
-   waitingForSave: "waitingForSave",
-   uploadFailed: "uploadFailed",
-   saveFailed: "saveFailed",
-   errorOccurred: "errorOccurred",
-   waitingForInternet: "waitingForInternet",
-   retrying: "retrying",
-   fileGoneInUpload: "fileGoneInUpload",
-   fileGoneInRequestProducer: "fileGoneInRequestProducer"
-}
-
-export const uploadState = {
-   idle: "idle",
-   uploading: "uploading",
-   paused: "paused",
-   noInternet: "noInternet",
-   error: "error",
-   aborting: "aborting"
-}
-
-export const downloadFileStatus = {
-   queued: "queued",
-   downloading: "downloading",
-   paused: "paused",
-   completed: "completed",
-   canceled: "canceled",
-   error: "error",
-   noInternet: "noInternet"
-}
-
-export const downloadState = {
-   idle: "idle",
-   downloading: "downloading",
-   paused: "paused",
-   error: "error",
-   noInternet: "noInternet"
-}
-
 export const WebsocketEvent = {
    WEBSOCKET_ERROR: 0,
    ITEM_CREATE: 1,

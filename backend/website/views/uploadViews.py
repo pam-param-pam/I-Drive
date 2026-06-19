@@ -13,7 +13,6 @@ from website.services import create_file_service
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & CreatePerms])
 def create_file_view(request):
-    raise KeyError("aa")
     files_data = extract_key(request.data, "files")
 
     file_objs = create_file_service.create_files(request, request.user, files_data)
