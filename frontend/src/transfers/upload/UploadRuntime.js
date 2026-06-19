@@ -1,6 +1,6 @@
-import { UploadEstimator } from "@/upload/UploadEstimator.js"
-import { attachmentType, fileUploadStatus, uploadState } from "@/utils/constants.js"
-import { FileStateHolder } from "@/upload/FileStateHolder.js"
+import { SpeedEstimator } from "@/transfers/shared/SpeedEstimator.js"
+import { attachmentType, uploadFileStatus, uploadState } from "@/utils/constants.js"
+import { FileStateHolder } from "@/transfers/upload/FileStateHolder.js"
 
 
 /**
@@ -18,7 +18,7 @@ import { FileStateHolder } from "@/upload/FileStateHolder.js"
 export class UploadRuntime {
    constructor({ uploadFinishCallback }) {
       this.fileStates = new Map()
-      this.estimator = new UploadEstimator()
+      this.estimator = new SpeedEstimator()
 
       this.allBytesUploaded = 0
       this.allBytesToUpload = 0
@@ -142,7 +142,7 @@ export class UploadRuntime {
       const affectedFiles = this._collectAffectedFiles(request)
 
       for (const fileState of affectedFiles) {
-         this._setStatus(fileState.frontendId, fileUploadStatus.retrying)
+         this._setStatus(fileState.frontendId, uploadFileStatus.retrying)
          const newBytes = Math.max(0, fileState.uploadedBytes - bytesUploaded)
          fileState.setUploadedBytes(newBytes)
       }
@@ -253,16 +253,39 @@ export class UploadRuntime {
       this.fileStates.get(frontendId).setStatus(status)
    }
 
-   async waitUntilResumed() {
+   async waitUntilResumed(signal = null) {
+      if (this.uploadState === uploadState.uploading) return
+
+      if (signal?.aborted) return
+
       return new Promise(resolve => {
-         const unsubscribe = this.onUploadStateChange(
-            (newState) => {
-               if (newState === uploadState.uploading) {
-                  unsubscribe()
-                  resolve()
-               }
+         let unsubscribe = null
+
+         const cleanup = () => {
+            if (unsubscribe) {
+               unsubscribe()
+               unsubscribe = null
             }
-         )
+
+            signal?.removeEventListener("abort", onAbort)
+         }
+
+         const finish = () => {
+            cleanup()
+            resolve()
+         }
+
+         const onAbort = () => {
+            finish()
+         }
+
+         unsubscribe = this.onUploadStateChange(newState => {
+            if (newState === uploadState.uploading) {
+               finish()
+            }
+         })
+
+         signal?.addEventListener("abort", onAbort, { once: true })
       })
    }
 

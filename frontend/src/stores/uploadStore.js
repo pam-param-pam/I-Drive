@@ -1,5 +1,5 @@
 import { defineStore } from "pinia"
-import { fileUploadStatus, uploadState } from "@/utils/constants.js"
+import { uploadFileStatus, uploadState } from "@/utils/constants.js"
 
 export const useUploadStore = defineStore("upload", {
    state: () => ({
@@ -10,7 +10,7 @@ export const useUploadStore = defineStore("upload", {
       allBytesToUpload: 0,
       allBytesUploaded: 0,
       uploadSpeed: 0,
-      pendingWorkerFilesLength: 0,
+      pendingWorkerFilesLength: 0
    }),
 
    getters: {
@@ -22,7 +22,7 @@ export const useUploadStore = defineStore("upload", {
       filesInUpload() {
          const all = Object.values(this.files)
 
-         const uploading = all.filter(f => f.status === fileUploadStatus.uploading)
+         const uploading = all.filter(f => f.status === uploadFileStatus.uploading)
 
          const source = uploading.length > 0 ? uploading : all
 
@@ -69,9 +69,12 @@ export const useUploadStore = defineStore("upload", {
          this.eta = snapshot.eta
       },
 
-      onUploadFinishUI() {
+      cleanup() {
+         console.log("upload store cleanup")
          this.state = uploadState.idle
-         this.files = {}
+         for (const key of Object.keys(this.files)) {
+            delete this.files[key]
+         }
          this.eta = Infinity
          this.allBytesToUpload = 0
          this.allBytesUploaded = 0

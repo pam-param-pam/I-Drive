@@ -490,6 +490,9 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "uploadAborted": "Upload aborted!",
+    "fileDepthTooBig": "Items are nested too deeply: {current}. Max depth allowed: {max}",
+    "scanningFiles": "Scanning files...",
     "ALotOF429": "Too many discord requests!",
     "ALotOF429Explained": "Reducing number of concurrent requests.",
     "aborting": "Aborting...",

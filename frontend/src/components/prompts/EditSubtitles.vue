@@ -66,7 +66,7 @@
          </div>
 
          <div v-if="uploading" class="prompts-progress-bar-wrapper">
-            <ProgressBar :progress="uploadProgress" />
+            <TransferProgressBar :progress="uploadProgress" />
             <span><b>{{ uploadProgress }}%</b></span>
          </div>
 
@@ -125,21 +125,21 @@ import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { canUpload } from "@/api/user.js"
-import { upload } from "@/upload/utils/uploadHelper.js"
+import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 
 import axios from "axios"
-import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
 import { detectExtension } from "@/utils/common.js"
 import { capitalize } from "vue"
 import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
 import throttle from "lodash.throttle"
+import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 
 export default {
    name: "EditSubtitles",
-   components: { SmartFileInput, ProgressBar },
+   components: { TransferProgressBar, SmartFileInput },
    data() {
       return {
          subtitles: [],

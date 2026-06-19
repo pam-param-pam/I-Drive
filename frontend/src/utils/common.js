@@ -70,8 +70,8 @@ export function humanTime(date) {
 }
 
 
-export function showToast(type, content, options) {
-   toast(i18n.global.t(content), { type, ...options })
+export function showToast(type, content, options = {}, args = {}) {
+   toast(i18n.global.t(content, args), { type, ...options })
 }
 
 

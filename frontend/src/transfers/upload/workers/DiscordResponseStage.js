@@ -1,48 +1,84 @@
 import { attachmentType } from "@/utils/constants.js"
+import { workerExitReason } from "@/transfers/upload/constants.js"
+import { PipelineWorker } from "@/transfers/upload/workers/PipelineWorker.js"
 
-export class DiscordResponseConsumer {
+export class DiscordResponseStage extends PipelineWorker {
    constructor({ discordResponseQueue, backendFileQueue, uploadRuntime }) {
+      super()
+
       this.discordResponseQueue = discordResponseQueue
       this.backendFileQueue = backendFileQueue
       this.uploadRuntime = uploadRuntime
-      this.running = false
+
       this.backendState = new Map()
 
-      this.uploadRuntime.onFileChange(["videoMetadata"], ({ frontendId, field, current }) => {
+      this._metadataListener = ({ frontendId, field, current }) => {
          this.onFileMetadata(frontendId, field, current)
-      })
+      }
+
+      this._unsubscribe = this.uploadRuntime.onFileChange(["videoMetadata"], this._metadataListener)
    }
 
-   stop() {
-      this.running = false
-   }
-
-   isRunning() {
-      return this.running
+   name() {
+      return "DiscordResponseStage"
    }
 
    async run() {
-      if (this.running) {
+      if (this._running) {
          console.warn("DiscordResponseConsumer is already running!")
-         return
+         return workerExitReason.stopped
       }
-      this.running = true
-      while (this.running) {
-         const result = await this.discordResponseQueue.take()
-         if (!result) {
-            console.warn("DiscordResponseConsumer breaking!")
-            break
+
+      const signal = this._markStarted()
+      let exitReason = workerExitReason.stopped
+
+      try {
+         while (!signal.aborted) {
+            if (this._stopRequested) {
+               exitReason = workerExitReason.stopped
+               break
+            }
+
+            const result = await this.takeWithAbort(this.discordResponseQueue, signal)
+
+            if (!result) {
+               exitReason = workerExitReason.inputEnded
+               break
+            }
+
+            await this.handleDiscordResult(result, signal)
          }
-         await this.handleDiscordResult(result)
+
+         if (exitReason === workerExitReason.inputEnded) {
+            this.backendFileQueue.close()
+         }
+
+         if (this._killed) {
+            exitReason = workerExitReason.killed
+         }
+
+         return exitReason
+      } catch (err) {
+         exitReason = this._handleRunError(err)
+         return exitReason
+      } finally {
+         this._unsubscribeMetadataListener()
+         this._markFinished(exitReason)
       }
-      this.running = false
    }
 
-   async handleDiscordResult({ request, discordResponse }) {
+   _unsubscribeMetadataListener() {
+      if (this._unsubscribe) {
+         this._unsubscribe()
+         this._unsubscribe = null
+      }
+   }
+
+   async handleDiscordResult({ request, discordResponse }, signal) {
       for (let i = 0; i < request.attachments.length; i++) {
          const attachment = request.attachments[i]
          const discordAttachment = discordResponse.data.attachments[i]
-         this.fillAttachmentInfo(attachment, discordResponse, discordAttachment)
+         await this.fillAttachmentInfo(attachment, discordResponse, discordAttachment, signal)
       }
    }
 
@@ -62,7 +98,7 @@ export class DiscordResponseConsumer {
             crc: 0,
             fragments: [],
             photoMetadata: fileState.photoMetadata,
-            rawMetadata: fileState.rawMetadata,
+            rawMetadata: fileState.rawMetadata
          })
       }
       return this.backendState.get(fileObj.frontendId)
@@ -80,7 +116,7 @@ export class DiscordResponseConsumer {
       }
    }
 
-   fillAttachmentInfo(attachment, discordResponse, discordAttachment) {
+   async fillAttachmentInfo(attachment, discordResponse, discordAttachment, signal) {
       const fileObj = attachment.fileObj
       const backendState = this.getOrCreateState(fileObj)
       const fileState = this.uploadRuntime.getFileState(fileObj.frontendId)
@@ -134,7 +170,7 @@ export class DiscordResponseConsumer {
       if (fileState.isFullyUploaded()) {
          fileState.markFileUploaded(fileObj.frontendId)
          this.backendState.delete(fileObj.frontendId)
-         this.backendFileQueue.put(backendState)
+         await this.putWithAbort(this.backendFileQueue, backendState, signal)
       }
    }
 }

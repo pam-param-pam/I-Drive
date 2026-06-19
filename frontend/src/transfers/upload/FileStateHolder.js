@@ -1,5 +1,5 @@
-import { fileUploadStatus } from "@/utils/constants.js"
-import { isErrorStatus } from "@/upload/utils/uploadHelper.js"
+import { uploadFileStatus } from "@/utils/constants.js"
+import { isErrorStatus } from "@/transfers/upload/utils/uploadHelper.js"
 
 export class FileStateHolder {
    constructor(file, fieldChangeCallback) {
@@ -22,7 +22,7 @@ export class FileStateHolder {
       this.expectedSubtitleCount = 0
       this.extractedSubtitleCount = 0
 
-      this.status = fileUploadStatus.preparing
+      this.status = uploadFileStatus.preparing
       this.progress = 0
       this.uploadedBytes = 0
       this.offset = 0
@@ -156,7 +156,7 @@ export class FileStateHolder {
    }
 
    setStatus(status) {
-      if (this.status === fileUploadStatus.errorOccurred && status !== fileUploadStatus.retrying) {
+      if (this.status === uploadFileStatus.errorOccurred && status !== uploadFileStatus.retrying) {
          console.warn("Possible override of error status!")
          console.warn(this.error)
          return
@@ -171,10 +171,10 @@ export class FileStateHolder {
 
 
    markFileUploaded() {
-      this.setStatus(fileUploadStatus.uploaded)
+      this.setStatus(uploadFileStatus.uploaded)
       this._waitingTimer = setTimeout(() => {
-         if (this.status !== fileUploadStatus.uploaded) return
-         this.setStatus(fileUploadStatus.waitingForSave)
+         if (this.status !== uploadFileStatus.uploaded) return
+         this.setStatus(uploadFileStatus.waitingForSave)
       }, 1500)
    }
 

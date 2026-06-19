@@ -44,11 +44,9 @@ export default {
       if (!this.user.autoSetupComplete && this.isLogged) {
          this.startTour()
       }
-      try {
-         await initServiceWorker()
-      } catch (e) {
-         console.error("Failed to load service worker: " + e)
-      }
+      window.addEventListener('vite:preloadError', (event) => {
+         window.location.reload()
+      })
    },
 
    computed: {

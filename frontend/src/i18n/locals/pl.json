@@ -490,6 +490,9 @@
     "unit": "Jednostka czasu"
   },
   "toasts": {
+    "uploadAborted": "Przesyłanie anulowane!",
+    "fileDepthTooBig": "Itemy są zagnieżdzone zbyt głęboko: {current}. Maksymalna głębokość: {max}",
+    "scanningFiles": "Skanowanie plików...",
     "ALotOF429": "Za dużo zapytań do discorda!",
     "ALotOF429Explained": "Nastąpi redukukcja liczbe równoległych requestów.",
     "aborting": "Przerywanie...",

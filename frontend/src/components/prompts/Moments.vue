@@ -19,7 +19,7 @@
                <span>{{ $t("buttons.addMoment") }}</span>
             </button>
             <div v-if="uploading" class="prompts-progress-bar-wrapper">
-               <ProgressBar :progress="uploadProgress" />
+               <TransferProgressBar :progress="uploadProgress" />
                <span>
                <b> {{ uploadProgress }}% </b>
             </span>
@@ -75,7 +75,7 @@
 </template>
 
 <script>
-import { upload } from "@/upload/utils/uploadHelper.js"
+import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { addMoment, getMoments, removeMoment } from "@/api/files.js"
@@ -83,13 +83,13 @@ import { canUpload } from "@/api/user.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
-import ProgressBar from "@/components/upload/UploadProgressBar.vue"
-import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
-import { getMomentFrame } from "@/upload/utils/thumbnailHelper.js"
+import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
+import { getMomentFrame } from "@/transfers/upload/utils/thumbnailHelper.js"
+import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 
 export default {
    name: "moments",
-   components: { ProgressBar },
+   components: { TransferProgressBar },
    props: {
       video: {
          type: HTMLVideoElement,

@@ -32,7 +32,7 @@ export const attachmentType = {
    thumbnail: "thumbnail",
    subtitle: "subtitle"
 }
-export const fileUploadStatus = {
+export const uploadFileStatus = {
    preparing: "preparing",
    uploading: "uploading",
    uploaded: "uploaded",
@@ -51,7 +51,26 @@ export const uploadState = {
    uploading: "uploading",
    paused: "paused",
    noInternet: "noInternet",
-   error: "error"
+   error: "error",
+   aborting: "aborting"
+}
+
+export const downloadFileStatus = {
+   queued: "queued",
+   downloading: "downloading",
+   paused: "paused",
+   completed: "completed",
+   canceled: "canceled",
+   error: "error",
+   noInternet: "noInternet"
+}
+
+export const downloadState = {
+   idle: "idle",
+   downloading: "downloading",
+   paused: "paused",
+   error: "error",
+   noInternet: "noInternet"
 }
 
 export const WebsocketEvent = {

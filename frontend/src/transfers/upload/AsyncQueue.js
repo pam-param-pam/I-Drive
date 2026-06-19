@@ -17,7 +17,7 @@ export class AsyncQueue {
       return this.closed
    }
 
-   async put(item) {
+   async put(item, force) {
       if (this.closed) {
          throw new Error("AsyncQueue is closed")
       }
@@ -30,7 +30,7 @@ export class AsyncQueue {
       }
 
       // If queue has space, enqueue
-      if (this.queue.length < this.maxSize) {
+      if (this.queue.length < this.maxSize || force) {
          this.queue.push(item)
          return
       }

@@ -10,6 +10,12 @@ let currentCtxIndex = 0
 self.onmessage = async (event) => {
    const msg = event.data
 
+   if (msg.type === "reset") {
+      contexts = []
+      currentCtxIndex = 0
+      return
+   }
+
    // INIT — append instead of overwrite
    if (msg.type === "init") {
       contexts.push({
@@ -22,7 +28,6 @@ self.onmessage = async (event) => {
    if (msg.type !== "produce") return
 
    let files = []
-   let totalBytes = 0
 
    while (files.length < BATCH_SIZE && currentCtxIndex < contexts.length) {
 
@@ -67,8 +72,6 @@ self.onmessage = async (event) => {
          path = path.slice(0, -name.length - 1)
       }
 
-      totalBytes += size
-
       files.push({
          fileObj: {
             folderContext,
@@ -90,9 +93,5 @@ self.onmessage = async (event) => {
       ctx.index++
    }
 
-   self.postMessage({
-      files,
-      totalBytes,
-      done: currentCtxIndex >= contexts.length
-   })
+   self.postMessage({files, done: currentCtxIndex >= contexts.length})
 }

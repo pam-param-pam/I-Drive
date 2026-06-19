@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, SettingsModifyPerms, ReadPerms, DiscordModifyPerms
 from website.auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
+from website.config import MAX_FOLDER_DEPTH
 from website.constants import FILE_TYPES, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, EXTENSION_TO_FILE_TYPE
 from website.core.Serializers import WebhookSerializer, BotSerializer, NotificationSerializer
 from website.core.converters import param_to_bool
@@ -65,7 +66,7 @@ def users_me(request):
                              "encryptionMethod": encryptionMethod.value, "keepCreationTimestamp": settings.keep_creation_timestamp, "popupPreview": settings.popup_preview,
                              "itemInfoShortcut": settings.item_info_shortcut, "clientSideDecryption": settings.client_side_decryption
                              },
-                "config": {"extensions": EXTENSION_TO_FILE_TYPE}
+                "config": {"extensions": EXTENSION_TO_FILE_TYPE, "maxFolderDepth": MAX_FOLDER_DEPTH}
                 }
 
     return JsonResponse(response, safe=False, status=200)

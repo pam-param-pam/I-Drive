@@ -5,6 +5,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { onEvent } from "@/utils/WsEventhandler.js"
 import { loginUser, logoutUser, registerUser } from "@/api/auth.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
+import { initServiceWorker } from "@/utils/serviceWorkerUtils.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
@@ -32,7 +33,12 @@ export async function validateLogin() { //this isn't really validate login - mor
 
    ws.connect("user", baseWS + "/user", token)
    ws.addListener("user", (event) => onEvent(event))
-   // ws.connect("share", baseWS + "/share")
+
+   try {
+      await initServiceWorker()
+   } catch (e) {
+      console.error("Failed to load service worker: " + e)
+   }
 }
 
 

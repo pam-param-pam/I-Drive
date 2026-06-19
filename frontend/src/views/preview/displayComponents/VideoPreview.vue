@@ -103,6 +103,7 @@ export default {
 
             let res = await fetchAdditionalInfo(this.file.id)
             if (!res.is_progressive || res.is_fragmented) {
+               //todo fix toast not being visible here or i18n idk
                this.$toast.error(this.$t("toasts.videoNotOptimizedWarning"))
             }
          }, this.videoLoadTimeout)

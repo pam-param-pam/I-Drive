@@ -8,7 +8,7 @@
 
 <script>
 export default {
-   name: "UploadProgressBar",
+   name: "TransferProgressBar",
 
    props: ["progress"]
 }

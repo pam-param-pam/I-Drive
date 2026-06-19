@@ -1,5 +1,5 @@
 import { useUploadStore } from "@/stores/uploadStore.js"
-import { encryptionMethod, fileUploadStatus } from "@/utils/constants.js"
+import { uploadFileStatus } from "@/utils/constants.js"
 import { uploadInstance } from "@/axios/networker.js"
 import { detectExtension, showToast } from "@/utils/common.js"
 import {
@@ -8,8 +8,23 @@ import {
    generateImageThumbnail,
    generateRawImageThumbnail,
    slowVideoCover
-} from "@/upload/utils/thumbnailHelper.js"
+} from "@/transfers/upload/utils/thumbnailHelper.js"
 import { useMainStore } from "@/stores/mainStore.js"
+
+
+export async function checkFileDepth(files, maxFolderDepth) {
+
+   for (let file of files) {
+      let path = file.path || ""
+      let folderDepth = path ? path.split("/").filter(Boolean).length : 0
+
+      if (folderDepth > maxFolderDepth) {
+         return folderDepth
+      }
+   }
+
+   return false
+}
 
 
 export async function checkFilesSizes(files) {
@@ -34,7 +49,6 @@ export async function scanDataTransfer(dataTransfer) {
    let files = []
    let items = dataTransfer.items
 
-   // Queue to hold items for processing, allowing files and directories to be handled consistently
    let queue = []
 
    // Collect initial items into the queue
@@ -123,10 +137,12 @@ export function isVideoFile(extension) {
    return uploadStore.fileExtensions.Video.includes(extension)
 }
 
+
 export function isZipFile(extension) {
    extension = extension.toLowerCase()
    return extension === ".zip"
 }
+
 
 export function isImageFile(extension) {
    extension = extension.toLowerCase()
@@ -278,9 +294,11 @@ export function appendMp4BoxBuffer(mp4box, chunk, offset) {
       })
 }
 
+
 export function roundUpTo64(size) {
    return Math.ceil(size / 64) * 64
 }
+
 
 export async function upload(formData, config) {
    let headers = {}
@@ -296,11 +314,11 @@ export async function upload(formData, config) {
 
 
 export function isErrorStatus(status) {
-   return status === fileUploadStatus.errorOccurred ||
-      status === fileUploadStatus.uploadFailed ||
-      status === fileUploadStatus.saveFailed ||
-      status === fileUploadStatus.fileGoneInUpload ||
-      status === fileUploadStatus.fileGoneInRequestProducer
+   return status === uploadFileStatus.errorOccurred ||
+      status === uploadFileStatus.uploadFailed ||
+      status === uploadFileStatus.saveFailed ||
+      status === uploadFileStatus.fileGoneInUpload ||
+      status === uploadFileStatus.fileGoneInRequestProducer
 }
 
 
@@ -310,6 +328,7 @@ export function getFileType(fileName) {
    let ext = detectExtension(fileName)
    return mainStore.config.extensions?.[ext.toLowerCase()] ?? "Other"
 }
+
 
 function cleanCodecString(input) {
    const codecsMatch = input.match(/codecs="([^"]+)"/)
@@ -332,3 +351,17 @@ function cleanCodecString(input) {
       `codecs="${uniqueCodecs.join(", ")}"`
    ).replace(/\s*;+\s*$/, "")
 }
+
+
+export function makeUniqueSubtitleName(base, id) {
+   if (!base || base.trim() === "") {
+      return "" + id
+   }
+   const count = this.subtitleNames.get(base) || 0
+   this.subtitleNames.set(base, count + 1)
+
+   if (count === 0) return base
+
+   return `${base}-${id}`
+}
+

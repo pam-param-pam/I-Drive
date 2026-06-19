@@ -295,13 +295,13 @@ async function handleVideoRequest(request, url) {
          backendHeaders.set("Range", rangeHeader)
       }
 
-      const backendResponse = await fetch(fileConfig.backendUrl, {
+      const backendResponse = await fetchWithTimeout(fileConfig.backendUrl, {
          method: "GET",
          headers: backendHeaders,
          credentials: "omit",
          cache: "no-store",
          mode: "cors"
-      })
+      }, 10000)
 
       logToClients(`Backend response: ${backendResponse.status} ${backendResponse.statusText}`)
       logToClients(`Backend Content-Type: ${backendResponse.headers.get("Content-Type")}`)
@@ -323,7 +323,6 @@ async function handleVideoRequest(request, url) {
 
       const responseHeaders = copyUsefulHeaders(backendResponse.headers)
       responseHeaders.set("Accept-Ranges", "bytes")
-      responseHeaders.delete("Content-Length")
 
       const decryptedStream = createDecryptingStream(fileConfig, startByte)
 
@@ -338,6 +337,19 @@ async function handleVideoRequest(request, url) {
    }
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+   const controller = new AbortController()
+   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+   try {
+      return await fetch(url, {
+         ...options,
+         signal: controller.signal
+      })
+   } finally {
+      clearTimeout(timeoutId)
+   }
+}
 function formatError(status, details) {
    return new Response(JSON.stringify({
       error: "errors.serviceWorkerError",
@@ -367,7 +379,7 @@ function parseRangeStart(rangeHeader) {
 function copyUsefulHeaders(sourceHeaders) {
    const headers = new Headers()
 
-   for (const name of ["Content-Type", "Content-Range", "Accept-Ranges", "ETag", "Last-Modified"]) {
+   for (const name of ["Content-Type", "Content-Range", "Accept-Ranges", "ETag", "Last-Modified", "Content-Disposition", "Content-Length"]) {
       const value = sourceHeaders.get(name)
 
       if (value !== null) {

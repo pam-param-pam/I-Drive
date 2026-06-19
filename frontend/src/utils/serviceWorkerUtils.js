@@ -42,7 +42,6 @@ function waitForServiceWorkerController() {
       const timeoutId = setTimeout(() => {
          navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange)
          reject(new Error("Timed out waiting for service worker controller"))
-         window.location.reload()
       }, 500)
 
       function onControllerChange() {
@@ -98,7 +97,7 @@ export async function initServiceWorker() {
 
    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage)
 
-   const registration = await navigator.serviceWorker.register("/service_worker.js")
+   const registration = await navigator.serviceWorker.register("/service_worker.js", {scope: "/video"})
 
    await waitForServiceWorkerActivation(registration)
    await waitForServiceWorkerController()

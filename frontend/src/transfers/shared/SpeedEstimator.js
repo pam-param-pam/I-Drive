@@ -1,4 +1,4 @@
-export class UploadEstimator {
+export class SpeedEstimator {
    constructor(windowMs = 5000) {
       this.windowMs = windowMs
 

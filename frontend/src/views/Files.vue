@@ -19,7 +19,7 @@
          @upload="upload"
          @uploadInput="onUploadInput"
       ></FileListing>
-      <router-view/>
+      <router-view />
    </div>
 </template>
 
@@ -29,13 +29,13 @@ import { search } from "@/api/search.js"
 import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import { scanDataTransfer } from "@/upload/utils/uploadHelper.js"
+import { scanDataTransfer } from "@/transfers/upload/utils/uploadHelper.js"
 import { uploadType } from "@/utils/constants.js"
 import { name } from "@/utils/constants"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
-import { getUploader } from "@/upload/Uploader.js"
+import { getUploader } from "@/transfers/upload/Uploader.js"
 import axios from "axios"
 import { resolveItemAction } from "@/utils/common.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
@@ -182,17 +182,21 @@ export default {
       },
 
       async download() {
+         let message
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
+            let file = this.selected[0]
+            if (!this.isLogged) {
+               this.send("share", JSON.stringify({ "type": "file_download", "args": { "file_id": file.id } }))
+            }
             window.open(this.selected[0].download_url + "&download=true", "_blank")
-            let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
-            this.$toast.success(message)
+            message = this.$t("toasts.downloadingSingle", { name: file.name })
          } else {
             const ids = this.selected.map((obj) => obj.id)
             let res = await createZIP({ ids: ids })
             window.open(res.download_url, "_blank")
-            let message = this.$t("toasts.downloadingZIP")
-            this.$toast.success(message)
+            message = this.$t("toasts.downloadingZIP")
          }
+         this.$toast.success(message)
       },
 
       resetOpacity() {
@@ -227,17 +231,27 @@ export default {
          if (el !== null && el.classList.contains("item") && el.dataset.dir === "true") {
             folderContextId = el.dataset.id
          }
-         let files = await scanDataTransfer(dt)
+         let toastId
+         let scanToastTimeout = setTimeout(() => {
+            toastId = this.$toast.info(this.$t("toasts.scanningFiles"), { timeout: null })
+         }, 500)
 
+         let files
+
+         try {
+            files = await scanDataTransfer(dt)
+         } finally {
+            clearTimeout(scanToastTimeout)
+            this.$toast.dismiss(toastId)
+         }
+         console.log(files)
          await getUploader().startUploadWithChecks(uploadType.dragAndDropInput, folderContextId, files)
       },
 
       async onUploadInput(event) {
          this.closeHover()
-
-         let files = event.currentTarget.files
          let folderContextId = this.currentFolder.id
-         await getUploader().startUploadWithChecks(uploadType.browserInput, folderContextId, files)
+         await getUploader().startUploadWithChecks(uploadType.browserInput, folderContextId, event.currentTarget.files)
       },
 
       getNewRoute(item) {

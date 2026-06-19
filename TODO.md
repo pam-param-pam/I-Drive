@@ -16,3 +16,11 @@
 3) Introduce a new exception ValidationError() into services to make nicer errors
 4) Use select for update everywhere
 5) add auto db backups
+
+
+1) What to do with PDF files?
+2) Should i retire the decrypted endpoint? Or for small files only?
+3) Add download button which utilises the client side decryption: add downloads UI
+4) Make the service worker have a special endpoint for downloads 3 pararell MAX
+5) Should i save the decrypted chunks to INDEXDB aswell?
+6) 

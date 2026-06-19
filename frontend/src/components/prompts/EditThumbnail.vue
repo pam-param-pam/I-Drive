@@ -100,7 +100,7 @@
          </div>
 
          <div v-if="uploading" class="prompts-progress-bar-wrapper">
-            <ProgressBar :progress="uploadProgress" />
+            <TransferProgressBar :progress="uploadProgress" />
             <span>
                <b>{{ uploadProgress }}%</b>
             </span>
@@ -134,22 +134,22 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { upload } from "@/upload/utils/uploadHelper.js"
+import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 import { createThumbnail, deleteThumbnail } from "@/api/files.js"
 import { useUploadStore } from "@/stores/uploadStore.js"
 import { canUpload } from "@/api/user.js"
-import ProgressBar from "@/components/upload/UploadProgressBar.vue"
 import axios from "axios"
 import { filesize } from "@/utils/index.js"
-import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
-import { getMomentFrame } from "@/upload/utils/thumbnailHelper.js"
+import { getMomentFrame } from "@/transfers/upload/utils/thumbnailHelper.js"
 import { backendInstance } from "@/axios/networker.js"
+import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 
 export default {
    name: "edit-thumbnail",
 
-   components: { SmartFileInput, ProgressBar },
+   components: { SmartFileInput, TransferProgressBar },
 
    data() {
       return {
