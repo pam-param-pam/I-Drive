@@ -14,7 +14,7 @@ from django.utils import timezone
 
 class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
     max_connections_per_client = 5
-    connection_limit = 5        # how many new connections allowed
+    connection_limit = 15        # how many new connections allowed
     connection_window = 30      # seconds
 
     message_limit = 60          # messages allowed

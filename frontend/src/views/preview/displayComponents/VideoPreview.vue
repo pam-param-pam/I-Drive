@@ -15,9 +15,6 @@
       @seeked="onMovieSeek"
       @timeupdate="videoTimeUpdate"
       @volumechange="onMovieVolumeChange"
-      @loadstart="onVideoLoadStart"
-      @playing="onVideoFirstPlaying"
-
    >
       <track
          v-for="(sub) in subtitles"
@@ -34,7 +31,6 @@
 import throttle from "lodash.throttle"
 import { backendInstance } from "@/axios/networker.js"
 import { PreviewEvent } from "@/utils/constants.js"
-import { fetchAdditionalInfo } from "@/api/item.js"
 
 export default {
    props: ["file", "subtitles", "src", "thumbSrc"],
@@ -44,10 +40,6 @@ export default {
          videoRef: null,
          lastSentMediaPosition: 0,
          isFullscreen: false,
-         videoLoadStartedAt: null,
-         firstFrameReported: false,
-         videoLoadTimeoutId: null,
-         videoLoadTimeout: 5000
       }
    },
 
@@ -93,36 +85,6 @@ export default {
    },
 
    methods: {
-      onVideoLoadStart() {
-         this.videoLoadStartedAt = performance.now()
-         this.firstFrameReported = false
-         this.clearVideoLoadTimeout()
-
-         this.videoLoadTimeoutId = window.setTimeout(async () => {
-            if (this.firstFrameReported) return
-
-            let res = await fetchAdditionalInfo(this.file.id)
-            if (!res.is_progressive || res.is_fragmented) {
-               //todo fix toast not being visible here or i18n idk
-               this.$toast.error(this.$t("toasts.videoNotOptimizedWarning"))
-            }
-         }, this.videoLoadTimeout)
-      },
-
-      onVideoFirstPlaying() {
-         if (this.firstFrameReported) return
-         if (!this.videoLoadStartedAt) return
-
-         this.firstFrameReported = true
-         this.clearVideoLoadTimeout()
-      },
-
-      clearVideoLoadTimeout() {
-         if (!this.videoLoadTimeoutId) return
-
-         window.clearTimeout(this.videoLoadTimeoutId)
-         this.videoLoadTimeoutId = null
-      },
       sendPreviewEvent(type, payload = {}) {
          this.$emit("previewEvent", { type, payload })
       },
@@ -135,7 +97,6 @@ export default {
       },
 
       async onVideoError() {
-         this.clearVideoLoadTimeout()
          await backendInstance.get(this.src, {
             headers: {
                Range: `bytes=0-1`

@@ -22,7 +22,7 @@ function createState() {
 
 export const useWebSocketStore = defineStore("websocket", {
    state: () => ({
-      sockets: {} // key -> state
+      sockets: {}
    }),
 
    actions: {

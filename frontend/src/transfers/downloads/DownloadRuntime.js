@@ -40,10 +40,6 @@ export class DownloadRuntime extends BaseTransferRuntime {
       return fileState
    }
 
-   deleteFileState(downloadId) {
-      this.markFileDownloaded(downloadId)
-   }
-
    onDownloadProgress(fileId, progressEvent) {
       const fileState = this.getFileState(fileId)
 
@@ -56,12 +52,5 @@ export class DownloadRuntime extends BaseTransferRuntime {
       this.allBytesTransfered += delta
 
       this._emitGlobalState()
-   }
-
-   markFileDownloaded(downloadId) {
-      const fileState = this.getFileState(downloadId)
-      if (!fileState) return
-
-      this._finishExistingFile(downloadId)
    }
 }

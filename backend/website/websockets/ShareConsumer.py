@@ -8,9 +8,6 @@ from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
 
 class ShareConsumer(RateLimitedWebsocketConsumer):
-    connection_limit = 3
-    connection_window = 5
-
     message_limit = 60
     message_window = 60
     ping_heartbeat = True

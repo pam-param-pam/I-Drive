@@ -41,7 +41,7 @@ export async function getTags() {
 export async function getTrash() {
    let url = `/user/trash`
    let response = await backendInstance.get(url, {
-      __cancelSignature: "getItems"
+      __cancelSignature: ["getItems"]
 
    })
    return response.data

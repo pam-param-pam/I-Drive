@@ -146,14 +146,14 @@ export class DiscordUploadStage extends PipelineWorker {
    async handleUploadError(err, request, signal) {
       if (axios.isCancel(err)) {
          if (!this._killed && this.isRunning()) {
-            await this.putWithAbort(this.requestQueue, request, signal, true)
+            await this.putWithAbort(this.requestQueue, request, signal, {force: true})
          }
 
          err.handled = true
       }
 
       else if (noWifi(err)) {
-         await this.putWithAbort(this.requestQueue, request, signal, true)
+         await this.putWithAbort(this.requestQueue, request, signal, { force: true })
          this.uploadRuntime.setUploadingState(uploadState.noInternet)
          err.handled = true
       }

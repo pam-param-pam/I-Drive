@@ -39,6 +39,9 @@ export default {
             restore: this.selectedCount > 0 && this.perms.modify,
             delete: this.selectedCount > 0 && this.perms.delete
          }
+      },
+      filesInTrash() {
+         return filesInTrash
       }
    },
 
@@ -56,9 +59,6 @@ export default {
    },
 
    methods: {
-      filesInTrash() {
-         return filesInTrash
-      },
       ...mapActions(useMainStore, ["addSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "showHover"]),
 
       async fetchFolder() {

@@ -51,7 +51,7 @@ export class BaseTransferRuntime {
    }
 
    updateAllBytesToTransfer(bytes) {
-      this.allBytesToTransfer = bytes
+      this.allBytesToTransfer += bytes
       this._emitGlobalState()
    }
 
@@ -112,6 +112,14 @@ export class BaseTransferRuntime {
       })
    }
 
+   finishExistingFile(id) {
+      console.log("finishExistingFile: " + id)
+      this.fileStates.delete(id)
+      this._emitFileFinished(id)
+      this._emitGlobalState()
+      this._checkAllFilesFinished()
+   }
+
    isTransferFullyFinished() {
       return this.fileStates.size === 0
    }
@@ -161,15 +169,9 @@ export class BaseTransferRuntime {
       }
    }
 
-   _finishExistingFile(id) {
-      this.fileStates.delete(id)
-      this._emitFileFinished(id)
-      this._emitGlobalState()
-      this._checkAllFilesFinished()
-   }
-
    _checkAllFilesFinished() {
       if (this.isTransferFullyFinished() && this._finishCallback) {
+         console.log("calling callback")
          this._finishCallback()
       }
    }

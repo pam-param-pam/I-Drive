@@ -9,7 +9,7 @@ export async function search(argumentDict, lockFrom = null, password = null) {
 
    const url = `/user/search`
    const response = await backendInstance.post(url, body, {
-      __cancelSignature: "getItems",
+      __cancelSignature: ["getItems", "search"],
    })
    return response.data
 }

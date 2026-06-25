@@ -1,30 +1,54 @@
 <template>
-   <select :value="encryptionMethod" v-on:change="change">
-      <option v-for="(method, value) in encryptionMethods" :key="value" :value="value">
-         {{ $t(method) }}
+   <select :value="modelValue" v-on:change="change">
+      <option v-for="option in normalizedOptions" :key="option.value" :value="option.value">
+         {{ translate ? $t(option.label) : option.label }}
       </option>
    </select>
 </template>
 
 <script>
-import { encryptionMethods } from "@/utils/constants.js"
-
 export default {
-   name: "encryptionMethod",
+   name: "BaseSelect",
 
-   computed: {
-      encryptionMethods() {
-         return encryptionMethods
+   props: {
+      modelValue: {
+         required: true
+      },
+      options: {
+         type: [Array, Object],
+         required: true
+      },
+      translate: {
+         type: Boolean,
+         default: true
+      },
+      valueType: {
+         type: String,
+         default: "string"
       }
    },
 
-   props: ["encryptionMethod"],
+   emits: ["update:modelValue"],
 
-   emits: ["update:encryptionMethod"],
+   computed: {
+      normalizedOptions() {
+         if (Array.isArray(this.options)) {
+            return this.options
+         }
+
+         return Object.entries(this.options).map(([value, label]) => ({ value, label }))
+      }
+   },
 
    methods: {
       change(event) {
-         this.$emit("update:encryptionMethod", parseInt(event.target.value))
+         let value = event.target.value
+
+         if (this.valueType === "number") {
+            value = Number(value)
+         }
+
+         this.$emit("update:modelValue", value)
       }
    }
 }

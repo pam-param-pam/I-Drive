@@ -12,6 +12,10 @@ export function isMobile() {
 }
 
 
+export function isDesktop() {
+   return !navigator.userAgentData.mobile
+}
+
 export function formatSeconds(seconds) {
    let h = Math.floor(seconds / 3600)
    let m = Math.floor((seconds % 3600) / 60)
@@ -72,11 +76,6 @@ export function humanTime(date) {
 
 export function showToast(type, content, options = {}, args = {}) {
    toast(i18n.global.t(content, args), { type, ...options })
-}
-
-
-export function capitalize(str) {
-   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
 export function lazyWithLoading(importer, delay = 150) {

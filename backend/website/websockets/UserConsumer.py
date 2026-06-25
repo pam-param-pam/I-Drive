@@ -8,8 +8,6 @@ from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
 
 class UserConsumer(RateLimitedWebsocketConsumer):
-    connection_limit = 10        # how many new connections allowed
-
     message_limit = 10
     message_window = 30
 

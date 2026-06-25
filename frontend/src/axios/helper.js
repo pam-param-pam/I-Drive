@@ -4,19 +4,50 @@ import { useToast } from "vue-toastification"
 import i18n from "@/i18n/index.js"
 import router from "@/router/index.js"
 
-const cancelTokenMap = new Map()
 const toast = useToast()
+const cancelTokenMap = new Map()
 
+function normalizeCancelSignatures(value) {
+   if (!value) return []
+   if (Array.isArray(value)) return [...new Set(value)]
+   return [value]
+}
+
+function deleteSourceFromAllSignatures(source) {
+   for (const [signature, mappedSource] of cancelTokenMap.entries()) {
+      if (mappedSource === source) {
+         cancelTokenMap.delete(signature)
+      }
+   }
+}
 
 export function attachCancelSignature(config) {
-   if (!config.__cancelSignature) return
-   if (cancelTokenMap.has(config.__cancelSignature)) {
-      cancelTokenMap.get(config.__cancelSignature).cancel(`Cancelled due to new request`)
-      cancelTokenMap.delete(config.__cancelSignature)
+   const signatures = normalizeCancelSignatures(config.__cancelSignature)
+
+   if (signatures.length === 0) return
+
+   const sourcesToCancel = new Set()
+
+   for (const signature of signatures) {
+      const previousSource = cancelTokenMap.get(signature)
+
+      if (previousSource) {
+         sourcesToCancel.add(previousSource)
+      }
    }
+
+   for (const source of sourcesToCancel) {
+      source.cancel("Cancelled due to new request")
+      deleteSourceFromAllSignatures(source)
+   }
+
    const source = axios.CancelToken.source()
+
    config.cancelToken = source.token
-   cancelTokenMap.set(config.__cancelSignature, source)
+
+   for (const signature of signatures) {
+      cancelTokenMap.set(signature, source)
+   }
 }
 
 

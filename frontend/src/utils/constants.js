@@ -58,3 +58,16 @@ export const NotificationKind = {
    NEW_DEVICE_LOGIN: "new_device_login"
 }
 
+export const ClientsideDecryptionMethods = {
+   0: "settings.always",
+   1: "settings.desktopOnly",
+   2: "settings.downloadsOnly",
+   3: "settings.noDecryption"
+}
+
+export const ClientsideDecryptionMethod = {
+   ALWAYS: 0,
+   DESKTOP_ONLY: 1,
+   DOWNLOADS_ONLY: 2,
+   NO_DECRYPTION: 3
+}

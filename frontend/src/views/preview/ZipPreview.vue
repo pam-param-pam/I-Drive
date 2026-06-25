@@ -3,7 +3,7 @@
       :file="file"
       :readonly="true"
       :headerButtons="headerButtons"
-      :useSW="settings.clientSideDecryption"
+      :useSW="false"
       @close="onClose"
    />
 </template>
@@ -39,7 +39,7 @@ export default {
       }
    },
    computed: {
-      ...mapState(useMainStore, ["sortedItems", "settings"]),
+      ...mapState(useMainStore, ["sortedItems"]),
       file() {
          return this.sortedItems.find(f => f.id === decodePath(this.fileId))
       }

@@ -4,6 +4,17 @@ import { workerExitReason } from "@/transfers/shared/constants.js"
 import { downloadFileStatus, downloadState } from "@/transfers/downloads/constants.js"
 import throttle from "lodash.throttle"
 
+
+class HttpDownloadError extends Error {
+   constructor(status, statusText) {
+      super(`Download failed: HTTP ${status}`)
+      this.name = "HttpDownloadError"
+      this.status = status
+      this.statusText = statusText
+   }
+}
+
+
 export class DownloadConsumer extends PipelineWorker {
    constructor({ downloadQueue, downloadRuntime }) {
       super()
@@ -12,6 +23,8 @@ export class DownloadConsumer extends PipelineWorker {
       this.downloadRuntime = downloadRuntime
 
       this.activeController = null
+      this.activeAbortReason = null
+      this.failedRequests = new Map()
    }
 
    kill() {
@@ -31,7 +44,7 @@ export class DownloadConsumer extends PipelineWorker {
       try {
          while (!signal.aborted) {
             if (this._stopRequested) {
-               exitReason = this._killed ? workerExitReason.killed : workerExitReason.stopped
+               exitReason = workerExitReason.stopped
                break
             }
 
@@ -40,18 +53,18 @@ export class DownloadConsumer extends PipelineWorker {
                continue
             }
 
-            const file = await this.takeWithAbort(this.downloadQueue, signal)
+            const queueItem = await this.takeWithAbort(this.downloadQueue, signal)
 
-            if (!file) {
+            if (!queueItem) {
                exitReason = workerExitReason.inputEnded
                break
             }
 
-            await this.downloadFile(file, signal)
+            await this.downloadFile(queueItem, signal)
          }
 
          if (exitReason === workerExitReason.inputEnded) {
-            this.downloadQueue.close?.()
+            this.downloadQueue.close()
          }
 
          if (this._killed) {
@@ -63,79 +76,116 @@ export class DownloadConsumer extends PipelineWorker {
          exitReason = this._handleRunError(err)
          return exitReason
       } finally {
-         this.activeController = null
+         this.clearActiveDownload()
          this._markFinished(exitReason)
       }
    }
 
-   async downloadFile(file, workerSignal) {
+   async downloadFile(queueItem, workerSignal) {
       this.activeController = new AbortController()
+      this.activeAbortReason = null
 
-      const signal = this._mergeAbortSignals(workerSignal, this.activeController.signal)
+      const { file } = queueItem
+      const signal = this.mergeAbortSignals(workerSignal, this.activeController.signal)
 
       try {
-         this._setFileStatus(file.id, downloadFileStatus.downloading)
+         this.downloadRuntime.getFileState(file.id)?.setStatus(downloadFileStatus.downloading)
 
-         const response = await fetch(`/video/${encodeURIComponent(file.id)}`, { signal })
+         const response = await this.fetchFile(queueItem, signal)
+         await this.validateResponse(response, queueItem)
 
-         if (!response.ok) {
-            throw new Error(`Download failed: HTTP ${response.status}`)
+         if (!response.body) {
+            throw new Error("Download failed: response has no body")
          }
 
-         await this.saveResponseToDisk(response, file, signal)
+         await this.saveResponseToDisk(response, queueItem, signal)
 
-         this.downloadRuntime.markFileDownloaded(file.id)
+         if (signal.aborted) {
+            throw new DOMException("Aborted", "AbortError")
+         }
+
+         if (queueItem.offset !== file.size) {
+            throw new Error(`Download incomplete. Expected ${file.size} bytes, got ${queueItem.offset} bytes`)
+         }
+
+         console.log("downloadFile finishExistingFile")
+         this.failedRequests.delete(file.id)
+         this.downloadRuntime.finishExistingFile(file.id)
       } catch (err) {
-         await this.handleDownloadError(err, file, workerSignal)
+         await this.handleDownloadError(err, queueItem, workerSignal)
       } finally {
-         this.activeController = null
+         this.clearActiveDownload()
       }
    }
 
-   async saveResponseToDisk(response, file, signal) {
-      if (!response.body) {
-         throw new Error("Download failed: response has no body")
+   async fetchFile(queueItem, signal) {
+      const options = { signal }
+
+      if (queueItem.offset > 0) {
+         options.headers = {
+            Range: `bytes=${queueItem.offset}-`
+         }
       }
 
-      const totalBytes = this._getTotalBytes(response, file)
-      const reader = response.body.getReader()
-      const writable = await this.openWritableFile(file)
+      return await fetch(`/raw-file/${queueItem.file.id}`, options)
+   }
 
-      let downloadedBytes = 0
-      let completed = false
+   async validateResponse(response, queueItem) {
+      if (!response.ok) {
+         throw new HttpDownloadError(response.status, response.statusText)
+      }
+
+      const expectedSize = queueItem.file.size - queueItem.offset
+      const contentLength = response.headers.get("content-length")
+
+      if (contentLength !== null && Number(contentLength) !== expectedSize) {
+         throw new Error(`Download failed: size mismatch. Expected ${expectedSize} bytes, got ${contentLength} bytes`)
+      }
+   }
+
+   async saveResponseToDisk(response, queueItem, signal) {
+      const { file } = queueItem
+      const totalBytes = file.size
+      const reader = response.body.getReader()
+      const writable = await queueItem.fileHandle.createWritable({ keepExistingData: queueItem.offset > 0 })
 
       try {
+         if (queueItem.offset > 0) {
+            await writable.seek(queueItem.offset)
+         }
+
          while (true) {
-            if (signal?.aborted) {
-               throw this._makeAbortError()
+            if (signal.aborted) {
+               throw new DOMException("Aborted", "AbortError")
             }
 
             if (this.downloadRuntime.downloadState !== downloadState.downloading) {
                await this.downloadRuntime.waitUntilResumed(signal)
+               continue
             }
 
             const { value, done } = await reader.read()
-            if (done) break
+
+            if (signal.aborted) {
+               throw new DOMException("Aborted", "AbortError")
+            }
+
+            if (done) {
+               break
+            }
 
             await writable.write(value)
 
-            downloadedBytes += value.byteLength
-            this.emitProgress(file, downloadedBytes, totalBytes)
+            queueItem.offset += value.byteLength
+            this.emitProgress(file, queueItem.offset, totalBytes)
          }
 
          this.emitProgress.flush()
-         completed = true
       } finally {
          this.emitProgress.cancel()
          reader.releaseLock()
-
-         if (completed) {
-            await writable.close()
-         } else {
-            await this._abortWritable(writable)
-         }
+         await writable.close()
       }
-
    }
 
    emitProgress = throttle((file, downloadedBytes, totalBytes) => {
@@ -147,80 +197,91 @@ export class DownloadConsumer extends PipelineWorker {
       })
    }, 100, { leading: true, trailing: true })
 
-   async openWritableFile(file) {
-      if (file.fileHandle) {
-         return await file.fileHandle.createWritable()
+   async handleDownloadError(err, queueItem, workerSignal) {
+      const { file } = queueItem
+      const fileState = this.downloadRuntime.getFileState(file.id)
+
+      if (this.isPauseAbort(err)) {
+         await this.requeueFirst(queueItem, workerSignal)
+         return
       }
 
-      if (file.directoryHandle) {
-         file.fileHandle = await file.directoryHandle.getFileHandle(file.name, { create: true })
-         return await file.fileHandle.createWritable()
-      }
-
-      file.fileHandle = await window.showSaveFilePicker({
-         suggestedName: file.name
-      })
-
-      return await file.fileHandle.createWritable()
-   }
-
-   async handleDownloadError(err, file, signal) {
-      if (signal?.aborted || this._killed || err.name === "AbortError" || err.aborted) {
-         this._setFileStatus(file.id, downloadFileStatus.aborted ?? downloadFileStatus.error)
+      if (this.isAbort(err) || workerSignal?.aborted || this._killed) {
          return
       }
 
       if (noWifi(err)) {
-         this._setFileStatus(file.id, downloadFileStatus.waitingForInternet ?? downloadFileStatus.error)
-         await this.putWithAbort(this.downloadQueue, file, signal, true)
+         fileState.setStatus(downloadFileStatus.retrying)
+         await this.requeueFirst(queueItem, workerSignal)
          return
       }
 
-      this._setFileStatus(file.id, downloadFileStatus.error)
-      this._setFileError(file.id, err.message ?? err)
+      fileState.setError(err?.message ?? "Download failed")
+
+      if (err instanceof HttpDownloadError) {
+         this.failedRequests.set(file.id, queueItem)
+         fileState.setStatus(downloadFileStatus.errorOccurred)
+         return
+      }
+
+      fileState.setStatus(downloadFileStatus.failed)
+   }
+
+   async retryFile(fileId) {
+      const queueItem = this.failedRequests.get(fileId)
+
+      if (!queueItem) {
+         return false
+      }
+
+      this.failedRequests.delete(fileId)
+
+      const fileState = this.downloadRuntime.getFileState(fileId)
+      fileState.setStatus(downloadFileStatus.retrying)
+
+      await this.requeueFirst(queueItem)
+
+      return true
+   }
+
+   async requeueFirst(queueItem, signal) {
+      await this.putWithAbort(this.downloadQueue, queueItem, signal, { first: true })
+   }
+
+   pauseActiveDownload() {
+      if (!this.activeController) {
+         return
+      }
+
+      this.activeAbortReason = "pause"
+      this.activeController.abort()
    }
 
    abortActiveDownload() {
+      this.activeAbortReason = null
       this.activeController?.abort()
    }
 
-   _setFileStatus(fileId, status) {
-      this.downloadRuntime.getFileState(fileId)?.setStatus(status)
+   clearActiveDownload() {
+      this.activeController = null
+      this.activeAbortReason = null
    }
 
-   _setFileError(fileId, error) {
-      this.downloadRuntime.getFileState(fileId)?.setError?.(error)
+   isPauseAbort(err) {
+      return this.activeAbortReason === "pause" && this.isAbort(err)
    }
 
-   _getTotalBytes(response, file) {
-      const contentLength = Number(response.headers.get("content-length"))
-      return Number.isFinite(contentLength) && contentLength > 0 ? contentLength : file.size ?? 0
+   isAbort(err) {
+      return err?.name === "AbortError" || err?.aborted === true
    }
 
-   _makeAbortError() {
-      const err = new Error("Download aborted")
-      err.name = "AbortError"
-      err.aborted = true
-      return err
-   }
-
-   async _abortWritable(writable) {
-      try {
-         if (writable.abort) {
-            await writable.abort()
-         } else {
-            await writable.close()
-         }
-      } catch {
-         // ignored intentionally; original download error is more important
-      }
-   }
-
-   _mergeAbortSignals(...signals) {
+   mergeAbortSignals(...signals) {
       const controller = new AbortController()
 
       for (const signal of signals) {
-         if (!signal) continue
+         if (!signal) {
+            continue
+         }
 
          if (signal.aborted) {
             controller.abort()

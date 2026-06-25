@@ -31,6 +31,8 @@ import FileListing from "@/components/FileListing.vue"
 import { humanTime, resolveItemAction } from "../utils/common.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
 import { baseWS } from "@/utils/constants.js"
+import { getDownloader } from "@/transfers/downloads/Downloader.js"
+import { smartDownload } from "@/utils/downloadUtils.js"
 
 export default {
    name: "files",
@@ -100,21 +102,7 @@ export default {
       },
 
       async download() {
-         if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            window.open(this.selected[0].download_url + "&download=true", "_blank")
-            let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
-            this.$toast.success(message)
-            let data = { "type": "file_download", "args": { "file_id": this.selected[0].id } }
-            this.send("share", JSON.stringify(data))
-
-         } else {
-            const ids = this.selected.map((obj) => obj.id)
-            let res = await createShareZIP(this.token, { ids: ids })
-            window.open(res.download_url, "_blank")
-
-            let message = this.$t("toasts.downloadingZIP")
-            this.$toast.success(message)
-         }
+         await smartDownload()
       },
 
       getNewRoute(item) {

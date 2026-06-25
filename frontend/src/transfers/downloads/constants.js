@@ -1,12 +1,11 @@
 export const downloadFileStatus = {
    queued: "queued",
    downloading: "downloading",
-   paused: "paused",
    completed: "completed",
-   canceled: "canceled",
-   error: "error",
-   noInternet: "noInternet",
-   retrying: "retrying"
+   errorOccurred: "errorOccurred",
+   failed: "failed",
+   retrying: "retrying",
+   waitingForInternet: "waitingForInternet",
 }
 
 export const downloadState = {

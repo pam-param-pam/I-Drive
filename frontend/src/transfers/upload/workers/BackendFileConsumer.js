@@ -32,15 +32,15 @@ export class BackendFileConsumer extends PipelineWorker {
 
       try {
          while (!signal.aborted) {
-            if (this.uploadRuntime.uploadState === uploadState.noInternet) {
-               await this.uploadRuntime.waitUntilResumed(signal)
-               continue
-            }
-
             if (this._stopRequested) {
                await this.flushFiles(signal)
                exitReason = workerExitReason.stopped
                break
+            }
+
+            if (this.uploadRuntime.uploadState === uploadState.noInternet) {
+               await this.uploadRuntime.waitUntilResumed(signal)
+               continue
             }
 
             const file = await this.takeWithAbort(this.backendFileQueue, signal)
@@ -144,11 +144,12 @@ export class BackendFileConsumer extends PipelineWorker {
 
    onBackendSave(files) {
       for (const file of files) {
-         this.uploadRuntime.markFileSaved(file.frontend_id)
+         this.uploadRuntime.finishExistingFile(file.frontend_id)
       }
    }
 
    onBackendSaveError(files, error) {
+      console.log(error)
       if (noWifi(error)) {
          this.uploadRuntime.setUploadingState(uploadState.noInternet)
          for (const file of files) {

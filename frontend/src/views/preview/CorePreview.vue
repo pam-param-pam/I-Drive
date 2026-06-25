@@ -246,8 +246,6 @@ export default {
 
          isFullscreen: false,
          isEditorClean: true,
-
-         swWorking: true,
       }
    },
    watch: {
@@ -292,8 +290,7 @@ export default {
          return this.file?.thumbnail_url
       },
       fileSrcUrl() {
-         if (this.useSW && this.swWorking) return `/video/${this.file?.id}`
-         return this.file?.download_url
+         return this.getFileSrcURL(this.file)
       },
       decryptedFileSrcUrl() {
          return this.file?.download_url
@@ -339,14 +336,9 @@ export default {
    methods: {
       ...mapActions(useMainStore, ["updateItem", "setLastFile", "addSelected", "showHover", "resetSelected"]),
 
-      async loadSw() {
-         try {
-            await registerFileConfigsInServiceWorker([this.file])
-         } catch (e) {
-            console.error(e)
-            this.swWorking = false
-            this.$toast.warning(this.$t("errors.swNotWorking"))
-         }
+      getFileSrcURL(file) {
+         if (this.useSW) return `/raw-file/${file?.id}`
+         return file?.download_url
       },
       openEditor() {
          const itemCopy = { ...this.file }
@@ -364,7 +356,6 @@ export default {
          this.setLastFile(this.file)
          this.resetSelected()
          this.addSelected(this.file)
-         if (this.file) await this.loadSw()
       },
       onPreviewError(error) {
          console.log(error)
@@ -494,9 +485,7 @@ export default {
 
             if (this.previewerType === "video" && file1?.download_url) {
                registerFileConfigsInServiceWorker([file1])
-               let video_url
-               if (this.useSW) video_url =`/video/${file1.id}`
-               else video_url = file1?.download_url + "&inline=True"
+               let video_url = this.getFileSrcURL(file1)
                let videoPlayer = document.createElement("video")
                videoPlayer.src = video_url
             }

@@ -78,11 +78,11 @@ export class UploadRuntime extends BaseTransferRuntime {
     * ========================= */
 
    fixUploadTracking(request, bytesUploaded) {
-      this.allBytesUploaded = Math.max(0, this.allBytesUploaded - (bytesUploaded || 0))
+      this.allBytesTransfered = Math.max(0, this.allBytesTransfered - (bytesUploaded))
       const affectedFiles = this._collectAffectedFiles(request)
 
       for (const fileState of affectedFiles) {
-         this._setStatus(fileState.frontendId, uploadFileStatus.retrying)
+         fileState.setStatus(uploadFileStatus.retrying)
          const newBytes = Math.max(0, fileState.bytesTransferred - bytesUploaded)
          fileState.setTransferredBytes(newBytes)
       }
@@ -90,12 +90,11 @@ export class UploadRuntime extends BaseTransferRuntime {
       this._emitGlobalState()
    }
 
-   markFileSaved(frontendId) {
+   finishExistingFile(frontendId) {
       const fileState = this.getFileState(frontendId)
       if (!fileState) return
-
       fileState.onDelete()
-      this._finishExistingFile(frontendId)
+      return super.finishExistingFile(frontendId)
    }
 
    setUploadingState(state) {
@@ -117,10 +116,6 @@ export class UploadRuntime extends BaseTransferRuntime {
       this._emitGlobalState()
 
       return fileState
-   }
-
-   deleteFileState(frontendId) {
-      this.markFileSaved(frontendId)
    }
 
    cleanup() {
@@ -150,12 +145,5 @@ export class UploadRuntime extends BaseTransferRuntime {
       }
 
       return Array.from(map.values())
-   }
-
-   _setStatus(frontendId, status) {
-      const fileState = this.getFileState(frontendId)
-      if (!fileState) return
-
-      fileState.setStatus(status)
    }
 }

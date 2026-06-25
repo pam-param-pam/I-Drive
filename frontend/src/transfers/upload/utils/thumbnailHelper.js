@@ -158,7 +158,7 @@ export async function fastVideoThumbnail(
       document.addEventListener("visibilitychange", onVisibilityChange)
    })
 }
-
+//todo potentially move part of it to offscreen canvas inside a web worker
 export async function slowVideoCover(
    file,
    maxWidth = 1920,

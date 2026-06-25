@@ -6,7 +6,6 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { validateLogin } from "@/utils/auth.js"
 import { lazyWithLoading } from "@/utils/common.js"
 import Zip from "@/views/Zip.vue"
-import MockServiceWorkerTest from "@/views/MockServiceWorkerTest.vue"
 
 
 const router = createRouter({
@@ -142,11 +141,6 @@ const router = createRouter({
                ]
             }
          ]
-      },
-      {
-         path: "/test",
-         name: "MockServiceWorkerTest",
-         component: MockServiceWorkerTest
       },
       {
          path: "/:catchAll(.*)",

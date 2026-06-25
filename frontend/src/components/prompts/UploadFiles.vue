@@ -5,13 +5,13 @@
             <div class="transfer-title">
                <h2>{{ titleText }}</h2>
 
-               <div class="transfer-tabs">
+               <div v-if="filesInUploadCount > 0 && filesInDownloadCount > 0" class="transfer-tabs">
                   <button
                     class="transfer-tab"
                     :class="{ active: activeView === 'uploads' }"
                     @click="activeView = 'uploads'"
                   >
-                     Uploads
+                     {{ $t('transferFile.uploads') }}
                   </button>
 
                   <button
@@ -19,7 +19,7 @@
                     :class="{ active: activeView === 'downloads' }"
                     @click="activeView = 'downloads'"
                   >
-                     Downloads
+                     {{ $t('transferFile.downloads') }}
                   </button>
                </div>
             </div>
@@ -32,8 +32,8 @@
             <div class="action-buttons">
                <button
                  v-if="canPause"
-                 :aria-label="$t('uploadFile.pause')"
-                 :title="$t('uploadFile.pause')"
+                 :aria-label="$t('transferFile.pause')"
+                 :title="$t('transferFile.pause')"
                  class="action"
                  @click="pause"
                >
@@ -42,8 +42,8 @@
 
                <button
                  v-if="canResume"
-                 :aria-label="$t('uploadFile.resume')"
-                 :title="$t('uploadFile.resume')"
+                 :aria-label="$t('transferFile.resume')"
+                 :title="$t('transferFile.resume')"
                  class="action"
                  @click="resume"
                >
@@ -52,8 +52,8 @@
 
                <button
                  v-if="canAbort"
-                 :aria-label="$t('uploadFile.abortAll')"
-                 :title="$t('uploadFile.abortAll')"
+                 :aria-label="$t('transferFile.abortAll')"
+                 :title="$t('transferFile.abortAll')"
                  class="action"
                  @click="abortAll"
                >
@@ -61,8 +61,8 @@
                </button>
 
                <button
-                 :aria-label="$t('uploadFile.toggleUploadList')"
-                 :title="$t('uploadFile.toggleUploadList')"
+                 :aria-label="$t('transferFile.toggleUploadList')"
+                 :title="$t('transferFile.toggleUploadList')"
                  class="action"
                  @click="toggle"
                >

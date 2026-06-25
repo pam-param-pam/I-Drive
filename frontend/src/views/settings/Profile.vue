@@ -45,26 +45,18 @@
                   </label>
                </p>
 
-               <p>
-                  <label>
-                     <input v-model="clientSideDecryption" type="checkbox" />
-                     {{ $t("settings.clientSideDecryption") }}
-                  </label>
-               </p>
-
                <div>
                   <label>
                      <h3>{{ $t("settings.concurrentUploadRequests") }}</h3>
                      <input v-model="concurrentUploadRequests" class="input" type="number" />
                   </label>
-
                </div>
 
+               <h3>{{ $t("settings.clientSideDecryption") }}</h3>
+               <BaseSelect v-model="clientsideDecryptionMethod" :options="clientsideDecryptionMethods" value-type="number" class="input input--halfblock"/>
+
                <h3>{{ $t("settings.encryptionMethod") }}</h3>
-               <EncryptionMethod
-                  v-model:encryptionMethod="encryptionMethod"
-                  class="input input--block"
-               ></EncryptionMethod>
+               <BaseSelect v-model="encryptionMethod" :options="encryptionMethods" value-type="number" class="input input--halfblock"/>
 
                <h3>{{ $t("settings.language") }}</h3>
                <languages v-model:locale="locale" class="input input--block"></languages>
@@ -123,11 +115,14 @@ import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import EncryptionMethod from "@/components/settings/EncryptionMethod.vue"
 import { changePassword } from "@/api/auth.js"
+import BaseSelect from "@/components/settings/EncryptionMethod.vue"
+import { ClientsideDecryptionMethods, encryptionMethods } from "@/utils/constants.js"
 
 export default {
    name: "profile",
 
    components: {
+      BaseSelect,
       Languages,
       EncryptionMethod
    },
@@ -146,11 +141,17 @@ export default {
          keepCreationTimestamp: false,
          popupPreview: false,
          itemInfoShortcut: false,
-         clientSideDecryption: false
+         clientsideDecryptionMethod: null
       }
    },
 
    computed: {
+      encryptionMethods() {
+         return encryptionMethods
+      },
+      clientsideDecryptionMethods() {
+         return ClientsideDecryptionMethods
+      },
       ...mapState(useMainStore, ["user", "settings"]),
 
       passwordClass() {
@@ -178,7 +179,7 @@ export default {
       this.keepCreationTimestamp = this.settings.keepCreationTimestamp
       this.popupPreview = this.settings.popupPreview
       this.itemInfoShortcut = this.settings.itemInfoShortcut
-      this.clientSideDecryption = this.settings.clientSideDecryption
+      this.clientsideDecryptionMethod = this.settings.clientsideDecryptionMethod
    },
 
    methods: {
@@ -220,7 +221,7 @@ export default {
             keepCreationTimestamp: this.keepCreationTimestamp,
             popupPreview: this.popupPreview,
             itemInfoShortcut: this.itemInfoShortcut,
-            clientSideDecryption: this.clientSideDecryption
+            clientsideDecryptionMethod: this.clientsideDecryptionMethod
          }
 
          await updateSettings(data)

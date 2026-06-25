@@ -73,9 +73,6 @@
     "upload": "Upload"
   },
   "errors": {
-    "swNotWorking": "Client side decryption is not working",
-    "serviceWorkerError": "Service Worker Error",
-    "swNoFileConfigDetails": "Failed to find file config. If this error occurs again, disable client side decryption",
     "badDeviceId": "Device doesn't exist. Refresh the page",
     "badGateway": "Bad gateway, server doesn't respond",
     "badRequest": "Bad Request",
@@ -122,8 +119,11 @@
     "rootFolderNoAccess": "Access denied to 'root' folder",
     "serverNoResponse": "Server did not respond",
     "serviceUnavailable": "Service Unavailable",
+    "serviceWorkerError": "Service Worker Error",
     "slaveIsBusy": "Slave device is currently busy",
     "slaveRecentlyRejected": "Slave device was recently rejected",
+    "swNoFileConfigDetails": "Failed to find file config. If this error occurs again, disable client side decryption",
+    "swNotWorking": "Client side decryption is not working",
     "timeout": "Request timeout",
     "tryAgain": "Try again",
     "unauthenticated": "Unauthenticated",
@@ -201,7 +201,26 @@
     "usernameTaken": "Username already taken",
     "wrongCredentials": "Wrong credentials"
   },
+  "notifications": {
+    "accountPasswordChangedMessage": "Your account password was recently changed.",
+    "accountPasswordChangedTitle": "Account password changed",
+    "cleanupFailedTitle": "Cleanup failed",
+    "cleanupTitle": "Cleanup",
+    "deleteProcessFailedTitle": "Delete process failed",
+    "deleteProcessMessage": "Some files failed to delete. Please create a bug issue.",
+    "fields": {
+      "city": "City",
+      "country": "Country",
+      "device": "Device",
+      "device_id": "Device ID",
+      "device_type": "Device type",
+      "ipAddress": "IP address"
+    },
+    "newDeviceLoginMessage": "A new device has logged into your account.",
+    "newDeviceLoginTitle": "New device login"
+  },
   "prompts": {
+    "aborting": "Aborting...",
     "abortAll": "Cancel Upload",
     "abortAllWarning": "Are you sure? All files in the queue will be lost!",
     "accessAt": "Accessed at",
@@ -232,6 +251,8 @@
     "discordErrorCode": "Discord error code",
     "displayName": "Display Name",
     "download": "Download files",
+    "downloadFiles": "Downloading {amount} files...",
+    "downloadFilesCrashed": "Download crashed!",
     "duration": "Duration",
     "editFolderPassword": "Edit folder password",
     "editTags": "Edit Tags",
@@ -369,8 +390,6 @@
     "uploadDestination": "Upload destination",
     "uploadDestinationWarning": "Are you sure these values are correct? You will not be able to change this until ALL files are deleted.",
     "uploadFiles": "Uploading {amount} files...",
-    "downloadFiles": "Downloading {amount} files...",
-    "downloadFilesCrashed": "Download crashed!",
     "uploadFilesCrashed": "Upload crashed!",
     "uploadMessage": "Please pick upload method",
     "user": "user",
@@ -394,10 +413,10 @@
     "video": "Video"
   },
   "settings": {
-    "clientSideDecryption": "Client side decryption",
     "AES_CTR": "AES CTR",
     "ChaCha20": "ChaCha20",
     "addedAt": "Added at",
+    "always": "Always",
     "attachmentName": "Discord's attachment name",
     "autoSetup": "Auto setup",
     "botAdvice": "It is advised to use at least 5 bots.",
@@ -407,14 +426,17 @@
     "channel": "Channel",
     "channelId": "Channel ID",
     "city": "City",
+    "clientSideDecryption": "Client side decryption",
     "concurrentUploadRequests": "Concurrent upload requests",
     "concurrentUploadRequestsIsNegative": "Concurrent upload requests setting must be > 0",
     "country": "Country",
     "createdAt": "Created at",
     "currentPassword": "Your current password",
+    "desktopOnly": "Desktop only",
     "deviceName": "Name",
     "devices": "Active Devices",
     "discordSettings": "Discord Settings",
+    "downloadsOnly": "Downloads only",
     "encryptFiles": "Encrypt files",
     "encryptionMethod": "Encryption method",
     "enterAttachmentName": "Enter attachment name",
@@ -433,6 +455,7 @@
     "newPassword": "Your new password",
     "newPasswordConfirm": "Confirm your new password",
     "newWebhookPlaceholder": "Enter webhook URL",
+    "noDecryption": "Never",
     "noSharesDesc": "Share files and folders with links. Revoke access anytime and see who viewed your content.",
     "noSharesTitle": "No shares yet",
     "notEncrypted": "No encryption",
@@ -492,9 +515,6 @@
     "unit": "Time Unit"
   },
   "toasts": {
-    "uploadAborted": "Upload aborted!",
-    "fileDepthTooBig": "Items are nested too deeply: {current}. Max depth allowed: {max}",
-    "scanningFiles": "Scanning files...",
     "ALotOF429": "Too many discord requests!",
     "ALotOF429Explained": "Reducing number of concurrent requests.",
     "aborting": "Aborting...",
@@ -513,10 +533,13 @@
     "deviceRevoked": "Device revoked!",
     "discordSettingsDeleted": "Deleted all discord settings, and cleaned discord structures",
     "discordSettingsDeleting": "Deleting discord settings and cleaning discord structures...",
+    "downloadAborted": "Download aborted!",
+    "downloadFinished": "Download finished!",
     "downloadingSingle": "Downloading {name}",
     "downloadingZIP": "Downloading ZIP",
     "failedImage": "Failed to load image",
     "failedToConnectToWebsocket": "Failed to establish a websocket connection!",
+    "fileDepthTooBig": "Items are nested too deeply: {current}. Max depth allowed: {max}",
     "fileSaved": "File saved",
     "fileTooBig": "File must be smaller than {max}",
     "fillAllFields": "Fill all fields first!",
@@ -556,6 +579,7 @@
     "qrSessionApproved": "Device logged in!!",
     "saveFileFirst": "Save file changes first!",
     "savingMoment": "Saving Moment...",
+    "scanningFiles": "Scanning files...",
     "selectFilesFirst": "Select file(s) first!",
     "sessionExpired": "Session Expired",
     "shareDeleted": "Share deleted!",
@@ -573,10 +597,10 @@
     "unauthorized": "Unauthorized",
     "unknownWebhook": "Unknown webhook: {webhook}",
     "updatingPassword": "Updating password...",
+    "uploadAborted": "Upload aborted!",
     "uploadDestinationUpdated": "Saved!",
     "uploadFinished": "Upload finished!",
     "uploadNotAllowedHere": "Upload is not allowed here",
-    "videoNotOptimizedWarning": "This video is not web optimized for streaming!",
     "videoUnplayable": "Sorry, this video is unplayable",
     "webhookAdded": "Webhook added!",
     "webhookDeleted": "Webhook deleted!",
@@ -617,13 +641,9 @@
       "title": "Setup is required"
     }
   },
-  "trash": {
-    "info": "Items in trash will be deleted after {days} days!",
-    "trashName": "Trash"
-  },
-  "uploadFile": {
-    "preparingUpload": "Preparing upload...",
+  "transferFile": {
     "abortAll": "Abort all",
+    "downloads": "Downloads",
     "failed": "Failed, unknown error",
     "fatal": "Fatal error",
     "fileGone": "File is gone, moved or deleted",
@@ -631,30 +651,20 @@
     "pause": "Pause",
     "paused": "Paused",
     "preparing": "Preparing...",
+    "preparingUpload": "Preparing upload...",
+    "queued": "Queued...",
+    "resume": "Resume",
     "retrying": "Retrying...",
     "saveFailed": "Saving file to backend failed",
     "success": "Uploaded",
     "toggleUploadList": "Toggle file upload list",
     "uploadFailed": "Uploading to discord failed",
+    "uploads": "Uploads",
     "waitingForInternet": "Waiting for internet...",
     "waitingForSave": "Saving..."
   },
-  "notifications": {
-    "fields": {
-      "device_id": "Device ID",
-      "device": "Device",
-      "ipAddress": "IP address",
-      "device_type": "Device type",
-      "country": "Country",
-      "city": "City"
-    },
-    "newDeviceLoginTitle": "New device login",
-    "newDeviceLoginMessage": "A new device has logged into your account.",
-    "accountPasswordChangedTitle": "Account password changed",
-    "accountPasswordChangedMessage": "Your account password was recently changed.",
-    "deleteProcessFailedTitle": "Delete process failed",
-    "deleteProcessMessage": "Some files failed to delete. Please create a bug issue.",
-    "cleanupTitle": "Cleanup",
-    "cleanupFailedTitle": "Cleanup failed"
+  "trash": {
+    "info": "Items in trash will be deleted after {days} days!",
+    "trashName": "Trash"
   }
 }

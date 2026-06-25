@@ -243,6 +243,8 @@ export default {
          if (this.selectedCount === 1 && !this.selected[0].isDir) {
             const url = this.selected[0].download_url
             if (url) window.open(url, "_blank")
+         } else {
+            this.$toast.error("toasts.downloadNotSupported")
          }
       },
 

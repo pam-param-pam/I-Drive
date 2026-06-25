@@ -11,6 +11,7 @@ import Vue3TouchEvents from "vue3-touch-events"
 import VueVirtualScroller from "vue-virtual-scroller"
 import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
 import piniaPersist from "pinia-plugin-persistedstate"
+import { startFileConfigServiceWorkerSync } from "@/utils/serviceWorkerUtils.js"
 
 const app = createApp(App)
 
@@ -29,6 +30,7 @@ const pinia = createPinia()
 
 app.use((pinia))
 pinia.use(piniaPersist)
+// startFileConfigServiceWorkerSync(pinia)
 
 
 const filterBeforeCreate = (toast, toasts) => {

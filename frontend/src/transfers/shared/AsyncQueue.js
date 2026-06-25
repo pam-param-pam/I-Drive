@@ -17,27 +17,34 @@ export class AsyncQueue {
       return this.closed
    }
 
-   async put(item, force) {
+   async put(item, options = {}) {
+      const { force = false, first = false } = options
+
       if (this.closed) {
          throw new Error("AsyncQueue is closed")
       }
 
-      // If someone is waiting to take, resolve immediately
+      // If someone is waiting to take, resolve immediately.
       if (this.waitingTakers.length > 0) {
          const taker = this.waitingTakers.shift()
          taker.resolve(item)
          return
       }
 
-      // If queue has space, enqueue
+      // If queue has space, or force=true, enqueue.
       if (this.queue.length < this.maxSize || force) {
-         this.queue.push(item)
+         if (first) {
+            this.queue.unshift(item)
+         } else {
+            this.queue.push(item)
+         }
+
          return
       }
 
       // Otherwise wait (backpressure)
       return new Promise((resolve, reject) => {
-         this.waitingPutters.push({ item, resolve, reject })
+         this.waitingPutters.push({ item, options: { force, first }, resolve, reject })
       })
    }
 

@@ -24,6 +24,8 @@ import { mapActions, mapState } from "pinia"
 
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
+import { initServiceWorker } from "@/utils/serviceWorkerUtils.js"
+import { ClientsideDecryptionMethod } from "@/utils/constants.js"
 
 export default {
    name: "layout",
@@ -40,21 +42,28 @@ export default {
    },
    async mounted() {
       // ensure anon state first
-      if (!this.user.autoSetupComplete && this.isLogged) {
+      if (!this.user?.autoSetupComplete && this.isLogged) {
          this.startTour()
       }
+      try {
+         await initServiceWorker()
+         this.setSwActive()
+      } catch (e) {
+         console.error("Failed to load service worker: " + e)
+      }
+
       window.addEventListener('vite:preloadError', (event) => {
          window.location.reload()
       })
    },
 
    computed: {
-      ...mapState(useMainStore, ["isLogged", "user"]),
+      ...mapState(useMainStore, ["isLogged", "user", "settings"]),
       ...mapState(useTransferStore, ["totalProgress"])
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setAnonState", "showHover"]),
+      ...mapActions(useMainStore, ["setAnonState", "showHover", "setSwActive"]),
 
       nextOnClick(tour, element) {
          const previousHandler = this.tourClickHandlers.get(element)

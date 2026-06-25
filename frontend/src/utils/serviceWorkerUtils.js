@@ -1,8 +1,51 @@
-function handleServiceWorkerMessage(event) {
-   if (event.data?.type !== "SW_LOG") return
-   // console.log("[SW LOGS] " + event.data.message)
+import { useMainStore } from "@/stores/mainStore.js"
+import { watch } from "vue"
+import { getFile } from "@/api/files.js"
+
+async function handleServiceWorkerMessage(event) {
+   const message = event.data
+
+   if (message?.type === "SW_LOG") {
+      return
+      console.log("[SW LOGS] " + message.message)
+      return
+   }
+
+   if (message?.type === "FILE_CONFIG_MISSING") {
+      try {
+         const file = await getFile(message.fileId)
+
+         navigator.serviceWorker.controller?.postMessage({
+            type: "FILE_CONFIG_MISSING_RESPONSE",
+            requestId: message.requestId,
+            file
+         })
+      } catch (error) {
+         navigator.serviceWorker.controller?.postMessage({
+            type: "FILE_CONFIG_MISSING_RESPONSE",
+            requestId: message.requestId,
+            error: error.message || String(error)
+         })
+      }
+   }
 }
 
+
+let stopFileConfigSync = null
+
+export function startFileConfigServiceWorkerSync(pinia) {
+   if (stopFileConfigSync) return
+
+   const mainStore = useMainStore(pinia)
+
+   stopFileConfigSync = watch(
+      () => mainStore.sortedItems,
+      async items => {
+         await registerFileConfigsInServiceWorker(items)
+      },
+      { immediate: true, flush: "post" }
+   )
+}
 
 function waitForServiceWorkerActivation(registration) {
    const worker = registration.installing || registration.waiting || registration.active
@@ -97,7 +140,10 @@ export async function initServiceWorker() {
 
    navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage)
 
-   const registration = await navigator.serviceWorker.register("/service_worker.js", {scope: "/"})
+   const registration = await navigator.serviceWorker.register("/service_worker.js", {
+      scope: "/",
+      type: "module"
+   })
 
    await waitForServiceWorkerActivation(registration)
    await waitForServiceWorkerController()
@@ -148,13 +194,7 @@ export async function registerFileConfigsInServiceWorker(files) {
    sw.postMessage({
       requestId,
       type: "REGISTER_FILE_CONFIGS",
-      files: files.map(file => ({
-         fileId: file.id,
-         method: file.encryption_method,
-         backendUrl: file.download_url,
-         keyBase64: file.key,
-         ivBase64: file.iv
-      }))
+      files: files
    })
 
    await waitForServiceWorkerAck(requestId)

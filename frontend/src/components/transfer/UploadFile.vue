@@ -36,64 +36,64 @@
 
       <div v-if="state === uploadState.error">
          <span>
-            <b class="error">{{ $t("uploadFile.fatal") }}</b>
+            <b class="error">{{ $t("transferFile.fatal") }}</b>
          </span>
       </div>
 
       <div v-else-if="state === uploadState.noInternet">
          <span>
-            <b class="error">{{ $t("uploadFile.noInternet") }}</b>
+            <b class="error">{{ $t("transferFile.noInternet") }}</b>
          </span>
       </div>
 
       <div v-else-if="state === uploadState.paused && !isErrorStatus(fileState.status)">
          <span>
-            <b class="warning">{{ $t("uploadFile.paused") }}</b>
+            <b class="warning">{{ $t("transferFile.paused") }}</b>
          </span>
       </div>
 
       <div v-else-if="fileState.status">
          <span v-if="fileState.status === fileUploadStatus.preparing">
-            <b class="info">{{ $t("uploadFile.preparing") }}</b>
+            <b class="info">{{ $t("transferFile.preparing") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.waitingForInternet">
-            <b class="info">{{ $t("uploadFile.waitingForInternet") }}</b>
+            <b class="info">{{ $t("transferFile.waitingForInternet") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.retrying">
-            <b class="info">{{ $t("uploadFile.retrying") }}</b>
+            <b class="info">{{ $t("transferFile.retrying") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.uploaded">
-            <b class="success">{{ $t("uploadFile.success") }}</b>
+            <b class="success">{{ $t("transferFile.success") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.waitingForSave">
-            <b class="success">{{ $t("uploadFile.waitingForSave") }}</b>
+            <b class="success">{{ $t("transferFile.waitingForSave") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.paused">
-            <b class="warning">{{ $t("uploadFile.paused") }}</b>
+            <b class="warning">{{ $t("transferFile.paused") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.saveFailed">
             <b v-if="fileState.error" class="error">{{ fileState.error.details }}</b>
-            <b v-else class="error">{{ $t("uploadFile.saveFailed") }}</b>
+            <b v-else class="error">{{ $t("transferFile.saveFailed") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.uploadFailed">
             <b v-if="fileState.error" class="error">{{ fileState.error }}</b>
-            <b v-else class="error">{{ $t("uploadFile.uploadFailed") }}</b>
+            <b v-else class="error">{{ $t("transferFile.uploadFailed") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.errorOccurred">
             <b v-if="fileState.error" class="error">{{ fileState.error }}</b>
-            <b v-else class="error">{{ $t("uploadFile.failed") }}</b>
+            <b v-else class="error">{{ $t("transferFile.failed") }}</b>
          </span>
 
          <span v-if="fileState.status === fileUploadStatus.fileGoneInRequestProducer || fileState.status === fileUploadStatus.fileGoneInUpload">
-            <b class="error">{{ $t("uploadFile.fileGone") }}</b>
+            <b class="error">{{ $t("transferFile.fileGone") }}</b>
          </span>
 
          <div

@@ -1,16 +1,21 @@
 import { workerExitReason } from "@/transfers/shared/constants.js"
 
+
 export class PipelineWorker {
    constructor() {
       this._running = false
       this._stopRequested = false
       this._killed = false
+
       this._abortController = null
+      this._stopController = null
 
       this._exitPromise = null
       this._resolveExit = null
+
       console.info(`Creating ${this.name()}!`)
    }
+
    name() {
       return this.constructor.name
    }
@@ -27,7 +32,9 @@ export class PipelineWorker {
       this._running = true
       this._stopRequested = false
       this._killed = false
+
       this._abortController = new AbortController()
+      this._stopController = new AbortController()
 
       this._exitPromise = new Promise(resolve => {
          this._resolveExit = resolve
@@ -37,11 +44,12 @@ export class PipelineWorker {
    }
 
    _markFinished(exitReason) {
-      let workerName = this.name()
+      const workerName = this.name()
       console.debug(`${workerName} finished (${exitReason})`)
 
       this._running = false
       this._abortController = null
+      this._stopController = null
 
       this._resolveExit?.(exitReason)
       this._resolveExit = null
@@ -49,7 +57,8 @@ export class PipelineWorker {
    }
 
    _handleRunError(err) {
-      let workerName = this.name()
+      const workerName = this.name()
+
       if (this.isAbortError(err) || this.isQueueClosedError(err)) {
          return this._killed ? workerExitReason.killed : workerExitReason.stopped
       }
@@ -57,39 +66,51 @@ export class PipelineWorker {
       console.error(`${workerName} crashed:`, err)
       throw err
    }
+
    _throwIfAborted(signal) {
-      if (signal.aborted) {
+      if (signal?.aborted) {
          throw new DOMException("Aborted", "AbortError")
       }
    }
 
    takeWithAbort(queue, signal) {
       return new Promise((resolve, reject) => {
-         if (signal?.aborted) {
+         if (signal?.aborted || this._stopController?.signal.aborted) {
             reject(new DOMException("Aborted", "AbortError"))
             return
          }
 
          const abortHandler = () => {
+            cleanup()
             reject(new DOMException("Aborted", "AbortError"))
          }
 
-         signal?.addEventListener("abort", abortHandler, { once: true })
+         const stopHandler = () => {
+            cleanup()
+            reject(new DOMException("Stopped", "AbortError"))
+         }
 
-         queue
-            .take()
+         const cleanup = () => {
+            signal?.removeEventListener("abort", abortHandler)
+            this._stopController?.signal.removeEventListener("abort", stopHandler)
+         }
+
+         signal?.addEventListener("abort", abortHandler, { once: true })
+         this._stopController?.signal.addEventListener("abort", stopHandler, { once: true })
+
+         queue.take()
             .then(item => {
-               signal?.removeEventListener("abort", abortHandler)
+               cleanup()
                resolve(item)
             })
             .catch(err => {
-               signal?.removeEventListener("abort", abortHandler)
+               cleanup()
                reject(err)
             })
       })
    }
 
-   putWithAbort(queue, item, signal, force=false) {
+   putWithAbort(queue, item, signal, options = {}) {
       return new Promise((resolve, reject) => {
          if (signal?.aborted) {
             reject(new DOMException("Aborted", "AbortError"))
@@ -97,19 +118,23 @@ export class PipelineWorker {
          }
 
          const abortHandler = () => {
+            cleanup()
             reject(new DOMException("Aborted", "AbortError"))
+         }
+
+         const cleanup = () => {
+            signal?.removeEventListener("abort", abortHandler)
          }
 
          signal?.addEventListener("abort", abortHandler, { once: true })
 
-         queue
-            .put(item, force)
+         queue.put(item, options)
             .then(() => {
-               signal?.removeEventListener("abort", abortHandler)
+               cleanup()
                resolve()
             })
             .catch(err => {
-               signal?.removeEventListener("abort", abortHandler)
+               cleanup()
                reject(err)
             })
       })
@@ -125,6 +150,7 @@ export class PipelineWorker {
 
    async stop() {
       this._stopRequested = true
+      this._stopController?.abort()
 
       if (!this._running) {
          return workerExitReason.stopped
@@ -136,6 +162,8 @@ export class PipelineWorker {
    async kill() {
       this._stopRequested = true
       this._killed = true
+
+      this._stopController?.abort()
       this._abortController?.abort()
 
       if (!this._running) {

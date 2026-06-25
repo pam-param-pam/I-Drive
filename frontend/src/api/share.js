@@ -67,7 +67,7 @@ export async function isSharePasswordCorrect(token, password) {
    let url = `/shares/${token}/password`
    try {
       let response = await backendInstance.get(url, {
-         __cancelSignature: "getSubtitles",
+         __cancelSignature: ["getSubtitles"],
          headers: {
             "X-resource-Password": password
          }

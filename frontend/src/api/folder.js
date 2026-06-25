@@ -8,7 +8,7 @@ export async function getItems(folderId, lockFrom) {
    let password = store.getFolderPassword(lockFrom)
 
    let response = await backendInstance.get(url, {
-      __cancelSignature: "getItems",
+      __cancelSignature: ["getItems"],
       headers: {
          "x-resource-password": password
       }

@@ -5,7 +5,6 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { onEvent } from "@/utils/WsEventhandler.js"
 import { loginUser, logoutUser, registerUser } from "@/api/auth.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
-import { initServiceWorker } from "@/utils/serviceWorkerUtils.js"
 
 
 export async function validateLogin() { //this isn't really validate login - more like finish login xD
@@ -25,20 +24,12 @@ export async function validateLogin() { //this isn't really validate login - mor
    mainStore.setConfig(body.config)
    mainStore.setToken(token)
    mainStore.setDeviceId(deviceId)
-
    mainStore.setTheme(body.settings.theme)
-
 
    const ws = useWebSocketStore()
 
    ws.connect("user", baseWS + "/user", token)
    ws.addListener("user", (event) => onEvent(event))
-
-   try {
-      await initServiceWorker()
-   } catch (e) {
-      console.error("Failed to load service worker: " + e)
-   }
 }
 
 
@@ -50,7 +41,6 @@ function saveAuth(data) {
    }
    localStorage.setItem("token", token)
    localStorage.setItem("device_id", deviceId)
-
 }
 
 

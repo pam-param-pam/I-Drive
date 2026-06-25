@@ -37,7 +37,6 @@
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import throttle from "lodash.throttle"
-import { cancelRequestBySignature } from "@/axios/helper.js"
 
 export default {
    name: "search",
@@ -69,7 +68,6 @@ export default {
          //copying to not mutate vuex store state
          let searchDict = { ...this.searchFilters.external }
          searchDict["query"] = this.query
-         this.setSearchActive(true)
          this.$emit("onSearchQuery", searchDict)
       }, 500),
 
@@ -102,9 +100,6 @@ export default {
       async exit() {
          this.resetSelected()
          this.query = ""
-
-         cancelRequestBySignature("getItems")
-
          this.setSearchItems(null)
          this.setSearchActive(false)
          this.setItemsError(null)

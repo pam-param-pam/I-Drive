@@ -3,7 +3,7 @@
       :file="file"
       :subtitles="subtitles"
       :headerButtons="headerButtons"
-      :useSW="settings.clientSideDecryption"
+      :useSW="useSW"
       @close="onClose"
       @PreviewEvent="onPreviewEvent"
    />
@@ -14,7 +14,8 @@ import CorePreview from "@/views/preview/CorePreview.vue"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapState } from "pinia"
 import { getSubtitles, updateMediaPosition } from "@/api/files.js"
-import { PreviewEvent } from "@/utils/constants.js"
+import { ClientsideDecryptionMethod, PreviewEvent } from "@/utils/constants.js"
+import { isDesktop } from "@/utils/common.js"
 
 export default {
    name: "NormalPreview",
@@ -27,7 +28,6 @@ export default {
       return {
          subtitles: null
       }
-
    },
    watch: {
       file: {
@@ -42,7 +42,10 @@ export default {
    },
    computed: {
       ...mapState(useMainStore, ["sortedItems", "perms", "settings"]),
-
+      useSW() {
+        return this.settings.clientsideDecryptionMethod === ClientsideDecryptionMethod.ALWAYS ||
+          this.settings.clientsideDecryptionMethod === ClientsideDecryptionMethod.DESKTOP_ONLY && isDesktop()
+      },
       file() {
          if (!this.sortedItems) return null
          return this.sortedItems.find(f => f.id === this.fileId)

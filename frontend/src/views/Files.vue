@@ -26,7 +26,6 @@
 <script>
 import { getItems } from "@/api/folder.js"
 import { search } from "@/api/search.js"
-import { createZIP } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { scanDataTransfer } from "@/transfers/upload/utils/uploadHelper.js"
@@ -40,7 +39,8 @@ import { resolveItemAction } from "@/utils/common.js"
 import HeaderBar from "@/components/header/HeaderBar.vue"
 import Search from "@/components/Search.vue"
 import { uploadType } from "@/transfers/upload/constants.js"
-import { getDownloader } from "@/transfers/downloads/Downloader.js"
+import { smartDownload } from "@/utils/downloadUtils.js"
+import { cancelRequestBySignature } from "@/axios/helper.js"
 
 export default {
    name: "files",
@@ -101,6 +101,9 @@ export default {
    },
 
    watch: {
+      "$route"() {
+         cancelRequestBySignature("search")
+      },
       "$route.params.folderId"() {
          this.fetchFolder()
       }
@@ -109,11 +112,13 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setLastFolder", "setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation",
-         "setCurrentFolder", "closeHover", "showHover"]),
+         "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
 
       async onSearchQuery(searchParams) {
-         this.setItemsLoading(true)
+         if (this.$route.name !== "Files") return
          try {
+            this.setItemsLoading(true)
+            this.setSearchActive(true)
             let lockFrom = this.currentFolder?.lockFrom
             let password = this.getFolderPassword(lockFrom)
             let items = await search(searchParams, lockFrom, password)
@@ -183,22 +188,7 @@ export default {
       },
 
       async download() {
-         await getDownloader().downloadFile(this.selected[0])
-         // let message
-         // if (this.selectedCount === 1 && !this.selected[0].isDir) {
-         //    let file = this.selected[0]
-         //    if (!this.isLogged) {
-         //       this.send("share", JSON.stringify({ "type": "file_download", "args": { "file_id": file.id } }))
-         //    }
-         //    window.open(this.selected[0].download_url + "&download=true", "_blank")
-         //    message = this.$t("toasts.downloadingSingle", { name: file.name })
-         // } else {
-         //    const ids = this.selected.map((obj) => obj.id)
-         //    let res = await createZIP({ ids: ids })
-         //    window.open(res.download_url, "_blank")
-         //    message = this.$t("toasts.downloadingZIP")
-         // }
-         // this.$toast.success(message)
+         await smartDownload()
       },
 
       resetOpacity() {
@@ -265,7 +255,7 @@ export default {
             case "zip":
                return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id } }
             case "preview":
-               return { name: "Preview", params: { ...this.$route.params, fileId: item.id } }
+               return { name: "Preview", params: { folderId: item.parent_id, fileId: item.id } }
          }
       },
 
@@ -276,7 +266,7 @@ export default {
       },
 
       onOpen(item) {
-         //if we are in search mode and we click to open a folder that we currently are in
+         // if we are in search mode, and we click to open a folder that we currently are in
          // routing won't work(as its already in that route, so we need to just quit the search)
          if (this.searchActive && item.id === this.currentFolder.id) {
             this.$refs?.listing?.$refs?.search?.exit()

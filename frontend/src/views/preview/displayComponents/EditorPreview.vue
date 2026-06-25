@@ -71,9 +71,9 @@ import buttons from "@/utils/buttons.js"
 import throttle from "lodash.throttle"
 import { canUpload } from "@/api/user.js"
 import { encryptionMethod, PreviewEvent } from "@/utils/constants.js"
-import { upload } from "@/upload/utils/uploadHelper.js"
-import { encrypt, generateIv, generateKey } from "@/upload/utils/encryption.js"
 import { buf as crc32buf } from "crc-32"
+import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
+import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 
 export default {
    components: {

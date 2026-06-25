@@ -117,7 +117,7 @@ export class Uploader {
    initRuntimeUpload() {
       if (this.uploadRuntime) return
 
-      this.uploadRuntime = new UploadRuntime({ uploadFinishCallback: this.onUploadSessionFinished })
+      this.uploadRuntime = new UploadRuntime({ uploadFinishCallback: () => this.onUploadSessionFinished() })
 
       this.uploadRuntime.onGlobalStateChange(snapshot => {
          this.transferStore.onUploadGlobalStateChange(snapshot)
@@ -177,7 +177,7 @@ export class Uploader {
          this.uploadPool = new DiscordUploadPool({
             requestQueue: this.queues.requestQueue,
             discordResponseQueue: this.queues.discordResponseQueue,
-            uploadRuntime: this.uploadRuntime,
+            uploadRuntime: this.uploadRuntime
          })
       }
 
@@ -306,6 +306,7 @@ export class Uploader {
    requestMoreFiles() {
       this.fileProcessorWorker.postMessage({ type: "produce" })
    }
+
    // todo we need to fix this queue opening madness
    pauseAll() {
       if (this.uploadRuntime.uploadState !== uploadState.uploading) return
@@ -361,11 +362,11 @@ export class Uploader {
    }
 
    dismissFile(frontendId) {
-      this.uploadRuntime.deleteFileState(frontendId)
-      //remove from failed lists in workers
+      this.uploadRuntime.finishExistingFile(frontendId)
+      //todo remove from failed lists in workers
    }
 
-   onUploadSessionFinished = () => {
+   onUploadSessionFinished() {
       this.cleanup().then(() => {
          showToast("success", "toasts.uploadFinished")
       })
@@ -463,6 +464,7 @@ export class Uploader {
 }
 
 let _uploaderInstance = null
+
 
 export function getUploader() {
    if (!_uploaderInstance) {

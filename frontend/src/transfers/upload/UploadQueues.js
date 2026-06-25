@@ -1,4 +1,4 @@
-import { AsyncQueue } from "@/transfers/upload/AsyncQueue.js"
+import { AsyncQueue } from "@/transfers/shared/AsyncQueue.js"
 
 export class UploadQueues {
    constructor() {
