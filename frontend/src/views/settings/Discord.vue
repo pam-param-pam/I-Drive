@@ -278,10 +278,10 @@ import {
 import throttle from "lodash.throttle"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { useUploadStore } from "@/stores/transferStore.js"
 import Errors from "@/components/Errors.vue"
 import { humanTime, onceAtATime } from "@/utils/common.js"
 import loadingSpinner from "@/components/loadingSpinner.vue"
+import { useTransferStore } from "@/stores/transferStore.js"
 
 export default {
    components: { loadingSpinner, Errors },
@@ -306,7 +306,7 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["settings"]),
-      ...mapState(useUploadStore, ["webhooks"])
+      ...mapState(useTransferStore, ["webhooks"])
    },
 
    async created() {
@@ -317,7 +317,7 @@ export default {
       humanTime,
       ...mapActions(useMainStore, ["showHover"]),
 
-      ...mapActions(useUploadStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
+      ...mapActions(useTransferStore, ["setWebhooks", "removeWebhook", "addToWebhooks"]),
       setLoading(value) {
          this.loading = value
       },
