@@ -34,12 +34,13 @@ export class UploadRuntime extends BaseTransferRuntime {
    }
 
    toGlobalSnapshot() {
+      this.estimator.update(this.getRemainingBytes())
       return {
          allBytesUploaded: this.allBytesTransfered,
          allBytesToUpload: this.allBytesToTransfer,
          uploadState: this.transferState,
          pendingWorkerFilesLength: this.pendingWorkerFilesLength,
-         eta: this.estimator.estimateRemainingTime(this.getRemainingBytes()),
+         eta: this.estimator.getEta(),
          speed: this.estimator.getSpeed(),
          fileCount: this.fileStates.size
       }

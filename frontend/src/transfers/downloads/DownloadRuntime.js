@@ -13,11 +13,13 @@ export class DownloadRuntime extends BaseTransferRuntime {
    }
 
    toGlobalSnapshot() {
+      this.estimator.update(this.getRemainingBytes())
+
       return {
          allBytesDownloaded: this.allBytesTransfered,
          allBytesToDownload: this.allBytesToTransfer,
          downloadState: this.downloadState,
-         eta: this.estimator.estimateRemainingTime(this.getRemainingBytes()),
+         eta: this.estimator.getEta(),
          speed: this.estimator.getSpeed(),
          fileCount: this.fileStates.size
       }

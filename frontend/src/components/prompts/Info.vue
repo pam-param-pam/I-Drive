@@ -224,12 +224,11 @@
 </template>
 
 <script>
-import { filesize } from "@/utils"
 import { fetchAdditionalInfo } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { encryptionMethod, encryptionMethods } from "@/utils/constants.js"
-import { formatDuration, formatSeconds, humanTime } from "@/utils/common.js"
+import { filesize, formatDuration, formatSeconds, humanTime } from "@/utils/common.js"
 
 export default {
    name: "info",

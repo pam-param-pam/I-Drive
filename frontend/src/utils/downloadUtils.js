@@ -5,6 +5,7 @@ import { createShareZIP } from "@/api/share.js"
 import { showToast } from "@/utils/common.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
 import { ClientsideDecryptionMethod } from "@/utils/constants.js"
+import { FilePickerNotSupported, HttpDownloadError } from "@/transfers/downloads/utils/helper.js"
 
 export async function smartDownload(shareToken) {
    const mainStore = useMainStore()
@@ -45,7 +46,11 @@ async function downloadSingleFile({ file, mainStore, wsStore, requiresClientSide
          await getDownloader().downloadFile(file)
          return
       } catch (error) {
-         console.warn("Client-side file download failed, falling back to browser download", error)
+         console.warn("Client-side file download failed", error)
+         if (!(error instanceof FilePickerNotSupported)) {
+            showToast("error", error.message)
+            return
+         }
       }
    }
 
@@ -60,7 +65,11 @@ async function downloadZip({ ids, mainStore, requiresClientSideDownload, shareTo
          await getDownloader().downloadZip(ids, shareToken)
          return
       } catch (error) {
-         console.warn("Client-side ZIP download failed, falling back to server ZIP download", error)
+         console.warn("Client-side ZIP download failed", error)
+         if (!(error instanceof FilePickerNotSupported)) {
+            showToast("error", error.message)
+            return
+         }
       }
    }
 

@@ -9,6 +9,7 @@ import { ZipConsumer } from "@/transfers/downloads/workers/zipConsumer.js"
 import { createZIP } from "@/api/item.js"
 import { backendInstance } from "@/axios/networker.js"
 import { createShareZIP } from "@/api/share.js"
+import { FilePickerNotSupported } from "@/transfers/downloads/utils/helper.js"
 
 export class Downloader {
    constructor() {
@@ -37,7 +38,7 @@ export class Downloader {
          this.transferStore.onDownloadGlobalStateChange(snapshot)
       })
 
-      this.downloadRuntime.onFileChange(["status", "progress", "error", "fileObj"], ({ frontendId, field, current }) => {
+      this.downloadRuntime.onFileChange(["status", "progress", "error", "fileObj", "bytesTransferred", "size"], ({ frontendId, field, current }) => {
          this.transferStore.updateDownloadFileField(frontendId, field, current)
       })
 
@@ -62,16 +63,8 @@ export class Downloader {
          showToast("info", "toasts.fileAlreadyDownloading")
          return
       }
-      let fileHandle
-      try {
-         fileHandle = await this.getDownloadFileHandle(file)
-      } catch (err) {
-         if (err?.name === "AbortError") {
-            return
-         }
-         throw err
-      }
 
+      let fileHandle = await this.getDownloadFileHandle(file)
 
       this.ensureFileQueue()
       this.fileQueue.open()
@@ -95,16 +88,7 @@ export class Downloader {
       const zipDescriptor = shareToken ? await createShareZIP(shareToken, { ids }) : await createZIP({ ids })
       let zipFile = await this.prepareZipFile(zipDescriptor)
 
-      let fileHandle
-
-      try {
-         fileHandle = await this.getZipFileHandle(zipFile)
-      } catch (err) {
-         if (err?.name === "AbortError") {
-            return
-         }
-         throw err
-      }
+      let fileHandle = await this.getZipFileHandle(zipFile)
 
       this.ensureZipQueue()
       this.zipQueue.open()
@@ -156,7 +140,7 @@ export class Downloader {
 
    checkIfSupported() {
       if (typeof window.showSaveFilePicker !== "function") {
-         throw new Error("This browser does not support direct file writing")
+         throw new FilePickerNotSupported()
       }
    }
 

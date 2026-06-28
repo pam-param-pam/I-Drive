@@ -3,6 +3,7 @@ import i18n from "@/i18n/index.js"
 import throttle from "lodash.throttle"
 import dayjs from "@/utils/dayjsSetup.js"
 import { useMainStore } from "@/stores/mainStore.js"
+import { partial } from "filesize"
 
 const toast = useToast()
 
@@ -236,3 +237,9 @@ export function formatDuration(seconds) {
       ? `${pad(h)}:${pad(m)}:${pad(s)}`
       : `${pad(m)}:${pad(s)}`
 }
+
+
+/**
+ * Formats filesize as KiB/MiB/...
+ */
+export const filesize = partial()

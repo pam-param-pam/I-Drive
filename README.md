@@ -37,6 +37,7 @@ Sorry, no demo currently.
 | Docker support                                                       | ✅       |
 | Virtual lists to render tens of thousand of files in a single folder | ✅       |
 | ZIP file archive viewer                                              | ✅       |
+| Client side decryption                                               | ✅       |
 | And a LOT more features!                                             | ✅       |
 
 # Architecture diagram
@@ -127,7 +128,12 @@ Typical speeds through the web interface:
 | Download through web interface     | ~25 MB/s |
 | Zip download through web interface | ~25 MB/s |
 
-Download speed in the web interface is mainly limited by the backend bandwidth, and it's CPU, because files are streamed and decrypted through the backend before reaching the browser.
+Download speed in the web interface is mainly constrained by backend bandwidth.
+When client-side decryption is not enabled, download speed will also be limited by server CPU, because files must be decrypted on the server before being sent to the client.
+Performance is also affected by the number of requests that need to be made to Discord. Smaller files require more individual requests, which can reduce overall throughput.
+A lot of requests to discord will also require more bots.
+
+
 Upload speed in the web interface is limited by thumbnail processing and internal browser bottlenecks.
 
 For maximum speed, use the [iDrive-api-wrapper](https://github.com/pam-param-pam/iDrive-api-wrapper).

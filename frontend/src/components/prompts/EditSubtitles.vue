@@ -121,7 +121,6 @@
 
 <script>
 import { addSubtitle, getSubtitles, deleteSubtitle, renameSubtitle } from "@/api/files.js"
-import { filesize } from "@/utils/index.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 import { canUpload } from "@/api/user.js"
@@ -129,7 +128,7 @@ import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 
 import axios from "axios"
 import { encrypt, generateIv, generateKey } from "@/utils/crypto/encryption.js"
-import { detectExtension } from "@/utils/common.js"
+import { detectExtension, filesize } from "@/utils/common.js"
 import { capitalize } from "vue"
 import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"

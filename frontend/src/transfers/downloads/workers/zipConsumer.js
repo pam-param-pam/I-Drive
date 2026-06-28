@@ -1,9 +1,10 @@
-import { FileConsumer, HttpDownloadError } from "@/transfers/downloads/workers/fileConsumer.js"
+import { FileConsumer } from "@/transfers/downloads/workers/fileConsumer.js"
 import { downloadState } from "@/transfers/downloads/constants.js"
 import { encryptionMethod } from "@/utils/constants.js"
 import { ZipTransformParser } from "@/transfers/downloads/utils/ZipParser.js"
 import { decryptAesCtr, decryptChaCha20CryptographyCompatible } from "@/utils/crypto/decryption.js"
 import { bytesToBase64 } from "@/utils/crypto/encryption.js"
+import { HttpDownloadError } from "@/transfers/downloads/utils/helper.js"
 
 
 export class ZipConsumer extends FileConsumer {

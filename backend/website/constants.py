@@ -19,7 +19,7 @@ MAX_MEDIA_CACHE_AGE = 2628000
 # Discord message cache expiry in seconds: 1 day
 DISCORD_MESSAGE_EXPIRY = 79200
 
-# How long the resource urls are valid for
+# How long the resource urls are valid for, 2 hours
 SIGNED_URL_EXPIRY_SECONDS = 7200
 
 # Controls after how long files from trash are deleted, in DAYS
@@ -38,7 +38,10 @@ QR_CODE_SESSION_EXPIRY = 300
 SHARE_ACCESS_DURATION = 180
 
 # Max files count allowed to stream in a single zip archive
-MAX_FILES_IN_ZIP = 50_000
+MAX_FILES_IN_ZIP = 10_000
+
+# How long the zip download url is valid for, 6 hours
+ZIP_EXPIRY_SECONDS = 21600
 
 cache = caches["default"]
 

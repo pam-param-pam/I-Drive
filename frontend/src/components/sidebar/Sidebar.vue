@@ -148,12 +148,11 @@ import * as auth from "@/utils/auth"
 import { githubUrl, signup, version } from "@/utils/constants"
 import { getUsage } from "@/api/folder.js"
 import { author, name } from "@/utils/constants.js"
-import { filesize } from "@/utils/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import DarkModeButton from "@/components/sidebar/DarkModeButton.vue"
 import ProgressBar from "@/components/sidebar/SimpleProgressBar.vue"
-import { isMobile } from "@/utils/common.js"
+import { filesize, isMobile } from "@/utils/common.js"
 
 export default {
    name: "sidebar",

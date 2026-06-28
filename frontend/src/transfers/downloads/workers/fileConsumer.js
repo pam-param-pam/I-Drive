@@ -3,16 +3,7 @@ import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
 import { workerExitReason } from "@/transfers/shared/constants.js"
 import { downloadFileStatus, downloadState } from "@/transfers/downloads/constants.js"
 import throttle from "lodash.throttle"
-
-
-export class HttpDownloadError extends Error {
-   constructor(status, statusText) {
-      super(`Download failed: HTTP ${status}`)
-      this.name = "HttpDownloadError"
-      this.status = status
-      this.statusText = statusText
-   }
-}
+import { HttpDownloadError } from "@/transfers/downloads/utils/helper.js"
 
 
 export class FileConsumer extends PipelineWorker {

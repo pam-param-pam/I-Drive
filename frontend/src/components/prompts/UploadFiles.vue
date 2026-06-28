@@ -99,7 +99,6 @@
 
 <script>
 import { mapActions, mapState } from "pinia"
-import { filesize } from "@/utils/index.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { useTransferStore } from "@/stores/transferStore.js"
 import { getUploader } from "@/transfers/upload/Uploader.js"
@@ -108,6 +107,7 @@ import { uploadState } from "@/transfers/upload/constants.js"
 import { downloadState } from "@/transfers/downloads/constants.js"
 import { getDownloader } from "@/transfers/downloads/Downloader.js"
 import DownloadFile from "@/components/transfer/DownloadFile.vue"
+import { filesize } from "@/utils/common.js"
 
 export default {
    name: "TransferFiles",

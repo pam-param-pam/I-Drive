@@ -1,33 +1,47 @@
 <template>
    <div
-      :class="{
+     :class="{
          'error-border': isErrorStatus || state === downloadState.error,
          'success-border': fileState.status === fileDownloadStatus.completed && state !== downloadState.noInternet,
          'warning-border': state === downloadState.paused && !isErrorStatus,
          'shake-animation': isShaking
       }"
-      class="fileitem-wrapper"
+     class="fileitem-wrapper"
+     @mouseenter="startDebugHover"
+     @mouseleave="stopDebugHover"
+     @click="toggleDebugInfo"
    >
       <div class="fileitem-header file-icons">
          <div :aria-label="fileExtension" :data-type="fileState.fileObj.type">
             <i class="material-icons file-icon"></i>
          </div>
 
-         <span class="file-name">{{ fileName }}</span>
+         <div class="file-name-container">
+            <div class="file-name-row">
+               <span class="file-name">{{ fileName }}</span>
+
+               <span
+                 v-if="showDebugInfo"
+                 class="fileitem-debug"
+               >
+                  {{ transferredSize }} / {{ totalSize }}
+               </span>
+            </div>
+         </div>
 
          <div class="button-group">
             <button
-               v-if="showTryAgainButton"
-               class="action-button"
-               @click="retry"
+              v-if="showTryAgainButton"
+              class="action-button"
+              @click.stop="retry"
             >
                <i class="material-icons">refresh</i>
             </button>
 
             <button
-               v-if="showDismissButton"
-               class="action-button"
-               @click="dismiss"
+              v-if="showDismissButton"
+              class="action-button"
+              @click.stop="dismiss"
             >
                <i class="material-icons">remove</i>
             </button>
@@ -79,8 +93,8 @@
          </span>
 
          <div
-            v-if="fileState.status === fileDownloadStatus.downloading"
-            class="fileitem-progress"
+           v-if="fileState.status === fileDownloadStatus.downloading"
+           class="fileitem-progress"
          >
             <TransferProgressBar :progress="fileState.progress" />
 
@@ -94,6 +108,7 @@
 
 <script>
 import { mapState } from "pinia"
+import { filesize } from "filesize"
 import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 import { downloadFileStatus, downloadState } from "@/transfers/downloads/constants.js"
 import { useTransferStore } from "@/stores/transferStore.js"
@@ -106,7 +121,10 @@ export default {
 
    data() {
       return {
-         isShaking: false
+         isShaking: false,
+         showDebugInfo: false,
+         debugInfoPinned: false,
+         debugHoverTimer: null
       }
    },
 
@@ -133,6 +151,14 @@ export default {
          return this.fileState.fileObj.extension
       },
 
+      transferredSize() {
+         return this.formatSize(this.fileState.bytesTransferred)
+      },
+
+      totalSize() {
+         return this.formatSize(this.fileState.size)
+      },
+
       showTryAgainButton() {
          return this.fileState.status === downloadFileStatus.errorOccurred
       },
@@ -141,12 +167,50 @@ export default {
          return this.fileState.status === downloadFileStatus.failed ||
            this.fileState.status === downloadFileStatus.errorOccurred
       },
+
       isErrorStatus() {
-         return this.fileState.status === downloadFileStatus.failed || this.fileState.status === downloadFileStatus.errorOccurred
+         return this.fileState.status === downloadFileStatus.failed ||
+           this.fileState.status === downloadFileStatus.errorOccurred
       }
    },
 
+   beforeUnmount() {
+      this.clearDebugHoverTimer()
+   },
+
    methods: {
+      formatSize(value) {
+         return filesize(value)
+      },
+
+      startDebugHover() {
+         this.clearDebugHoverTimer()
+
+         this.debugHoverTimer = setTimeout(() => {
+            this.showDebugInfo = true
+         }, 700)
+      },
+
+      stopDebugHover() {
+         this.clearDebugHoverTimer()
+
+         if (!this.debugInfoPinned) {
+            this.showDebugInfo = false
+         }
+      },
+
+      clearDebugHoverTimer() {
+         if (this.debugHoverTimer) {
+            clearTimeout(this.debugHoverTimer)
+            this.debugHoverTimer = null
+         }
+      },
+
+      toggleDebugInfo() {
+         this.debugInfoPinned = !this.debugInfoPinned
+         this.showDebugInfo = this.debugInfoPinned
+      },
+
       dismiss() {
          getDownloader().dismissFile(this.fileState.fileObj.id)
       },
@@ -157,3 +221,34 @@ export default {
    }
 }
 </script>
+
+<style>
+.file-name-container {
+   flex: 1 1 auto;
+   min-width: 0;
+}
+
+.file-name-row {
+   display: grid;
+   grid-template-columns: minmax(0, 1fr) auto;
+   align-items: start;
+   column-gap: 8px;
+   width: 100%;
+   min-width: 0;
+}
+
+.file-name {
+   min-width: 0;
+   white-space: normal;
+   overflow-wrap: anywhere;
+   word-break: break-word;
+}
+
+.fileitem-debug {
+   justify-self: end;
+   white-space: nowrap;
+   font-size: 0.75rem;
+   opacity: 0.7;
+   margin-top: 5px;
+}
+</style>

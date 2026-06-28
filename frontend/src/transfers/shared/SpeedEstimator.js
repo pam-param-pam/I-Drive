@@ -4,17 +4,30 @@ export class SpeedEstimator {
 
       // Sliding window of byte deltas: [{ bytes, time }]
       this.samples = []
-      this.smoothedEta = null
+
       this.etaSmoothing = 0.01 // α ∈ (0,1), lower = flatter
-      this.firstSpikeTreshold = 500
+      this.firstSpikeThreshold = 500
+
       this.previousRemainingBytes = null
+
+      this.currentSpeed = null
+      this.currentEta = Infinity
+      this.smoothedEta = null
    }
 
-   _updateActualSpeed(remainingBytes) {
+   update(remainingBytes) {
+      if (remainingBytes === undefined || isNaN(remainingBytes)) {
+         console.warn("[Estimator] remainingBytes is undefined or NaN")
+         this.currentSpeed = null
+         this.currentEta = Infinity
+         return
+      }
+
       const now = Date.now()
 
       if (this.previousRemainingBytes !== null) {
          const bytesDelta = this.previousRemainingBytes - remainingBytes
+
          if (bytesDelta > 0) {
             this.samples.push({ bytes: bytesDelta, time: now })
          }
@@ -22,48 +35,57 @@ export class SpeedEstimator {
 
       this.previousRemainingBytes = remainingBytes
 
-      // Drop samples outside sliding window
+      this._dropOldSamples(now)
+
+      this.currentSpeed = this._calculateSpeed(now)
+      this.currentEta = this._calculateEta(remainingBytes)
+   }
+
+   getSpeed() {
+      return this.currentSpeed
+   }
+
+   getEta() {
+      return this.currentEta
+   }
+
+   _dropOldSamples(now) {
       const cutoff = now - this.windowMs
+
       while (this.samples.length && this.samples[0].time < cutoff) {
          this.samples.shift()
       }
    }
 
-   getSpeed() {
+   _calculateSpeed(now) {
       if (this.samples.length === 0) return null
 
-      const now = Date.now()
       const oldest = this.samples[0].time
       const elapsedMs = now - oldest
 
-      if (elapsedMs < this.firstSpikeTreshold) {
+      if (elapsedMs < this.firstSpikeThreshold) {
          return null
       }
 
-      const totalBytes = this.samples.reduce((s, e) => s + e.bytes, 0)
+      const totalBytes = this.samples.reduce((sum, sample) => sum + sample.bytes, 0)
+
       return totalBytes / (elapsedMs / 1000)
    }
 
-   estimateRemainingTime(remainingBytes) {
-      if (remainingBytes === undefined || isNaN(remainingBytes)) {
-         console.warn("[Estimator] remainingBytes is undefined or NaN")
-      }
-      this._updateActualSpeed(remainingBytes)
+   _calculateEta(remainingBytes) {
+      const speed = this.currentSpeed
 
-      const speed = this.getSpeed()
       if (!speed || speed <= 0) {
          return Infinity
       }
 
       const rawEta = Math.max(0, remainingBytes / speed)
 
-      // First value: no smoothing yet
       if (this.smoothedEta === null || !isFinite(this.smoothedEta)) {
          this.smoothedEta = rawEta
          return rawEta
       }
 
-      // Exponential moving average
       this.smoothedEta = this.smoothedEta + this.etaSmoothing * (rawEta - this.smoothedEta)
 
       return this.smoothedEta

@@ -35,8 +35,8 @@ import { useMainStore } from "@/stores/mainStore.js"
 
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from "chart.js"
 import { Pie } from "vue-chartjs"
-import { filesize } from "@/utils/index.js"
 import { getFileStats } from "@/api/folder.js"
+import { filesize } from "@/utils/common.js"
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 

@@ -138,13 +138,13 @@ import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 import { createThumbnail, deleteThumbnail } from "@/api/files.js"
 import { canUpload } from "@/api/user.js"
 import axios from "axios"
-import { filesize } from "@/utils/index.js"
 import { encrypt, generateIv, generateKey } from "@/utils/crypto/encryption.js"
 import SmartFileInput from "@/components/SmartFileInput.vue"
 import { getMomentFrame } from "@/transfers/upload/utils/thumbnailHelper.js"
 import { backendInstance } from "@/axios/networker.js"
 import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 import { useTransferStore } from "@/stores/transferStore.js"
+import { filesize } from "@/utils/common.js"
 
 export default {
    name: "edit-thumbnail",
