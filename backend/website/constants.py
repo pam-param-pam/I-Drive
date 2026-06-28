@@ -37,6 +37,9 @@ QR_CODE_SESSION_EXPIRY = 300
 # How long a share access lasts for, before a new one is created for that user/IP, in MINUTES
 SHARE_ACCESS_DURATION = 180
 
+# Max files count allowed to stream in a single zip archive
+MAX_FILES_IN_ZIP = 50_000
+
 cache = caches["default"]
 
 FILE_TYPES = {

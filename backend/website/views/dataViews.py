@@ -25,7 +25,7 @@ from website.discord.Discord import discord
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag
 from website.models.mixin_models import ItemState
-from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count
+from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
 from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists, query_attachments
 from website.services import cache_service, search_service
 
@@ -275,90 +275,39 @@ def get_all_tags(request):
 """====================================================HERE BE DRAGONS=========================================================="""
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
 @check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="item_obj")
-def ultra_download_metadata(request, item_obj):
+def ultra_download_files_metadata(request, item_obj):
     if isinstance(item_obj, File):
         files = [item_obj]
-        base_folder = item_obj.parent
     else:
-        files = list(item_obj.get_all_files().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).select_related("parent"))
         base_folder: Folder = item_obj
 
-        for folder in base_folder.get_all_subfolders().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False):
+        files = list(
+            base_folder
+            .get_all_files()
+            .filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)
+            .select_related("parent", "parent__lockFrom")
+        )
+
+        for folder in (base_folder.get_all_subfolders().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)):
             check_resource_perms(request, folder, default_checks)
 
-    file_ids = [f.id for f in files]
-
-    # ---- fetch all fragments once ----
-    fragments = (
-        Fragment.objects
-        .filter(file_id__in=file_ids)
-        .order_by("sequence")
-        .values(
-            "file_id",
-            "id",
-            "offset",
-            "sequence",
-            "size",
-            "crc"
-        )
-    )
-
-    fragments_by_file = {}
-    for fragment in fragments:
-        fragments_by_file.setdefault(fragment["file_id"], []).append({
-            "fragment_id": fragment["id"],
-            "offset": fragment["offset"],
-            "sequence": fragment["sequence"],
-            "size": fragment["size"],
-            "crc": fragment["crc"],
-        })
-
-    # ---- cache folder paths ----
-    path_cache = {}
-
-    def get_folder_path(folder):
-        if folder is None:
-            return ""
-
-        if folder.id in path_cache:
-            return path_cache[folder.id]
-
-        parts = []
-        cur = folder
-
-        while cur:
-            parts.append(cur.name)
-            if cur == base_folder:
-                break
-            cur = cur.parent
-
-        parts.reverse()
-        path = "/".join(parts)
-        path_cache[folder.id] = path
-
-        return path
-
-    # ---- build metadata ----
     response_data = []
 
     for file in files:
-
-        rel_path = get_folder_path(file.parent)
+        parent = file.parent
 
         file_dict = {
             "id": str(file.id),
             "name": file.name,
-            "path": rel_path,
-            "encryption_method": file.get_encryption_method().value,
-            "crc": file.crc,
             "size": file.size,
-            "fragments": fragments_by_file.get(file.id, []),
-            "lockFrom": file.parent.lockFrom.id if file.parent.lockFrom else None
+            "crc": file.crc,
+            "encryption_method": file.get_encryption_method().value,
+            "lockFrom": parent.lockFrom.id if parent and parent.lockFrom else None,
         }
 
         if file.is_encrypted():
@@ -368,6 +317,41 @@ def ultra_download_metadata(request, item_obj):
         response_data.append(file_dict)
 
     return JsonResponse(response_data, safe=False)
+
+
+@api_view(["POST"])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@extract_file()
+@check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="file_obj")
+def ultra_download_file_fragments_metadata(request, file_obj):
+    fragments = (
+        Fragment.objects
+        .filter(file_id=file_obj.id)
+        .order_by("sequence")
+        .values("id", "offset", "sequence", "size", "crc")
+    )
+
+    fragment_data = [
+        {
+            "fragment_id": fragment["id"],
+            "offset": fragment["offset"],
+            "sequence": fragment["sequence"],
+            "size": fragment["size"],
+            "crc": fragment["crc"],
+        }
+        for fragment in fragments
+    ]
+
+    file_path = build_file_path(file_obj)
+
+    response_data = {
+        "id": str(file_obj.id),
+        "file_path": file_path,
+        "fragments": fragment_data,
+    }
+
+    return JsonResponse(response_data)
 
 
 @api_view(['GET'])
@@ -425,16 +409,6 @@ def get_folder_file_stats(request, folder_obj):
     }
 
     return JsonResponse(result, safe=False)
-
-
-@api_view(['GET'])
-@throttle_classes([MediaThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-def check_message_id(request, message_id):
-    database_attachments = query_attachments(message_id=message_id)
-    if database_attachments:
-        return HttpResponse(status=204)
-    return HttpResponse(status=404)
 
 
 @api_view(['GET'])

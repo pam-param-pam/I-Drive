@@ -10,14 +10,15 @@ from website.core.errors import BadRequestError
 from website.core.helpers import validate_key
 from website.core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
 from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
-from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource, EncryptedFragmentedDiscordByteSource
+from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
 from website.core.media.stream.sources.ZipByteSource import ZipByteSource
 from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
 from website.discord.Discord import discord
 from website.models import File, Moment, Subtitle, UserZIP
 from website.models.mixin_models import ItemState
-from website.queries.builders import build_flattened_children, build_zip_file_dict
+from website.queries.builders import build_zip_file_dict, build_flattened_children_mptt_values, FILE_VALUE_FIELDS, FOLDER_VALUE_FIELDS
 from website.queries.selectors import check_if_bots_exists
+from itertools import chain
 
 
 def get_thumbnail_response(request, file_obj: File):
@@ -98,10 +99,7 @@ def get_file_response(request, file_obj: File):
     if not fragments.exists():
         source = EmptyByteSource()
     else:
-        if raw:
-            source = EncryptedFragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
-        else:
-            source = FragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
+        source = FragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments, decrypted=not raw)
 
     response = build_streaming_response(
         request=request,
@@ -114,34 +112,54 @@ def get_file_response(request, file_obj: File):
     return response
 
 
-def get_zip_response(request, user_zip: UserZIP):
-    user = user_zip.owner
+def iter_zip_file_dicts(file_rows):
+    for file_row in file_rows:
+        yield build_zip_file_dict(file_row, file_row["name"])
 
+
+def get_zip_response(request, user_zip: UserZIP):
+    raw = validate_key(request.GET, "raw", bool, default=False, converter=param_to_bool)
+    user = user_zip.owner
     num_bots = check_if_bots_exists(user)
 
-    if user_zip.files.exists():
-        check_resource_perms(request, user_zip.files.first(), [CheckLockedFolderIP])
-    if user_zip.folders.exists():
-        check_resource_perms(request, user_zip.folders.first(), [CheckLockedFolderIP])
+    files_qs = user_zip.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
+    folders_qs = user_zip.folders.filter(state=ItemState.ACTIVE, inTrash=False)
 
-    files = user_zip.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-    folders = user_zip.folders.filter(state=ItemState.ACTIVE, inTrash=False)
+    # this works only because all items must be in the same parent (ensured during zip model creation)
+    first_file = files_qs.first()
+    if first_file is not None:
+        check_resource_perms(request, first_file, [CheckLockedFolderIP])
 
-    dict_files = []
+    first_folder = folders_qs.first()
+    if first_folder is not None:
+        check_resource_perms(request, first_folder, [CheckLockedFolderIP])
 
-    single_root = False
-    if len(files) == 0 and len(folders) == 1:
-        single_root = True
-        dict_files = build_flattened_children(folders[0], root_folder=folders[0])
+    files_exists = first_file is not None
+    folders = list(folders_qs.values(*FOLDER_VALUE_FIELDS).order_by("id"))
+
+    single_root = not files_exists and len(folders) == 1
+
+    if single_root:
+        root_folder = folders[0]
+        dict_files = build_flattened_children_mptt_values(root_folder, include_root_name=False)
+        zip_name = f"{root_folder['name']}.zip"
     else:
-        for file in files:
-            dict_files.append(build_zip_file_dict(file, file.name))
-        for folder in folders:
-            dict_files += build_flattened_children(folder, root_folder=folder)
+        file_rows = files_qs.values(*FILE_VALUE_FIELDS).order_by("id").iterator(chunk_size=1000)
 
-    zip_name = (folders[0].name if single_root else user_zip.name) + ".zip"
+        folder_iterators = (
+            build_flattened_children_mptt_values(folder_row)
+            for folder_row in folders
+        )
 
-    source = ZipByteSource(dict_files=dict_files, num_bots=num_bots)
+        dict_files = chain(
+            iter_zip_file_dicts(file_rows),
+            chain.from_iterable(folder_iterators),
+        )
+
+        zip_name = f"{user_zip.name}.zip"
+
+    owner = first_file.owner if first_file else first_folder.owner
+    source = ZipByteSource(dict_files=dict_files, owner=owner, num_bots=num_bots, decrypted=not raw)
 
     return build_streaming_response(
         request=request,
@@ -149,7 +167,7 @@ def get_zip_response(request, user_zip: UserZIP):
         filename=zip_name,
         content_type="application/zip",
         etag=user_zip.id,
-        vary=["x-resource-password"]
+        vary=["x-resource-password"],
     )
 
 
@@ -182,5 +200,5 @@ def get_zip_entry_response(request, file_obj: File):
         filename=filename,
         cache_control=f"max-age={MAX_MEDIA_CACHE_AGE}",
         x_frame_from_referer=referer,
-        vary=["x-resource-password"],
+        vary=["x-resource-password"]
     )

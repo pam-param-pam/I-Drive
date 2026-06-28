@@ -1,4 +1,4 @@
-import { decryptAesCtr, decryptChaCha20CryptographyCompatible } from "./decryption.js"
+import { decryptAesCtr, decryptChaCha20CryptographyCompatible } from "../utils/crypto/decryption.js"
 
 
 const FILE_CONFIGS = new Map()

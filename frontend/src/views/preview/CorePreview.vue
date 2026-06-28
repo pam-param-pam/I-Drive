@@ -182,6 +182,7 @@ import PdfPreview from "@/views/preview/displayComponents/PdfPreview.vue"
 import ImagePreview from "@/views/preview/displayComponents/ImagePreview.vue"
 import loadingSpinner from "@/components/loadingSpinner.vue"
 import { registerFileConfigsInServiceWorker } from "@/utils/serviceWorkerUtils.js"
+import { smartDownload } from "@/utils/downloadUtils.js"
 
 export default {
    name: "CorePreview",
@@ -408,11 +409,8 @@ export default {
          })
       },
 
-      download() {
-         window.open(this.selected[0].download_url, "_blank")
-         let message = this.$t("toasts.downloadingSingle", { name: this.selected[0].name })
-         this.$toast.success(message)
-         this.onPreviewEvent({type: PreviewEvent.DOWNLOAD, payload: {}})
+      async download() {
+         await smartDownload()
       },
 
       prev() {

@@ -485,4 +485,4 @@ class ZipSerializer(SimpleSerializer):
     @staticmethod
     def serialize_object(user_zip: UserZIP) -> dict:
         url = f"{API_BASE_URL}/zip/{user_zip.token}/stream"
-        return {"download_url": url}
+        return {"download_url": url, "name": user_zip.name, "id": user_zip.id}

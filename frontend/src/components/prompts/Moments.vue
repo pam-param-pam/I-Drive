@@ -83,7 +83,7 @@ import { canUpload } from "@/api/user.js"
 import { useTransferStore } from "@/stores/transferStore.js"
 import throttle from "lodash.throttle"
 import { encryptionMethod } from "@/utils/constants.js"
-import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/utils/crypto/encryption.js"
 import { getMomentFrame } from "@/transfers/upload/utils/thumbnailHelper.js"
 import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 

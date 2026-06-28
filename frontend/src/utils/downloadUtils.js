@@ -6,37 +6,66 @@ import { showToast } from "@/utils/common.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
 import { ClientsideDecryptionMethod } from "@/utils/constants.js"
 
-export async function smartDownload() {
+export async function smartDownload(shareToken) {
    const mainStore = useMainStore()
    const wsStore = useWebSocketStore()
 
-   if (mainStore.selectedCount === 1 && !mainStore.selected[0].isDir) {
-      let file = mainStore.selected[0]
+   const selected = mainStore.selected
+   const isSingleFile = mainStore.selectedCount === 1 && !selected[0].isDir
+   const requiresClientSideDownload =
+      mainStore.settings.clientsideDecryptionMethod !== ClientsideDecryptionMethod.NO_DECRYPTION ||
+      !mainStore.isLogged
 
-      if (!mainStore.isLogged) {
-         wsStore.send("share", JSON.stringify({ "type": "file_download", "args": { "file_id": file.id } }))
-      }
-
-      if (mainStore.settings.clientsideDecryptionMethod !== ClientsideDecryptionMethod.NO_DECRYPTION || !mainStore.isLogged) { //todo
-         try {
-            await getDownloader().downloadFile(file)
-            return
-         } catch (e) {
-         }
-      }
-
-      window.open(mainStore.selected[0].download_url + "&download=true", "_blank")
-      showToast("success", "toasts.downloadingSingle", {}, {name: file.name})
-   } else {
-      const ids = mainStore.selected.map((obj) => obj.id)
-      let res
-      if (!mainStore.isLogged) {
-         res = await createShareZIP(mainStore.token, { ids: ids })
-      } else {
-         res = await createZIP({ ids: ids })
-      }
-
-      window.open(res.download_url, "_blank")
-      showToast("success", "toasts.downloadingZIP")
+   if (isSingleFile) {
+      await downloadSingleFile({
+         file: selected[0],
+         mainStore,
+         wsStore,
+         requiresClientSideDownload
+      })
+      return
    }
+
+   await downloadZip({
+      ids: selected.map(item => item.id),
+      mainStore,
+      requiresClientSideDownload,
+      shareToken
+   })
+}
+
+
+async function downloadSingleFile({ file, mainStore, wsStore, requiresClientSideDownload }) {
+   if (!mainStore.isLogged) {
+      wsStore.send("share", JSON.stringify({ type: "file_download", args: { file_id: file.id } }))
+   }
+
+   if (requiresClientSideDownload) {
+      try {
+         await getDownloader().downloadFile(file)
+         return
+      } catch (error) {
+         console.warn("Client-side file download failed, falling back to browser download", error)
+      }
+   }
+
+   window.open(`${file.download_url}&download=true`, "_blank")
+   showToast("success", "toasts.downloadingSingle", {}, { name: file.name })
+}
+
+
+async function downloadZip({ ids, mainStore, requiresClientSideDownload, shareToken }) {
+   if (requiresClientSideDownload) {
+      try {
+         await getDownloader().downloadZip(ids, shareToken)
+         return
+      } catch (error) {
+         console.warn("Client-side ZIP download failed, falling back to server ZIP download", error)
+      }
+   }
+
+   const response = mainStore.isLogged ? await createZIP({ ids }) : await createShareZIP(shareToken, { ids })
+
+   window.open(response.download_url, "_blank")
+   showToast("success", "toasts.downloadingZIP")
 }

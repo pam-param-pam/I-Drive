@@ -94,7 +94,6 @@
 
 <script>
 import { mapState } from "pinia"
-import { getFileType } from "@/transfers/upload/utils/uploadHelper.js"
 import TransferProgressBar from "@/components/transfer/TransferProgressBar.vue"
 import { downloadFileStatus, downloadState } from "@/transfers/downloads/constants.js"
 import { useTransferStore } from "@/stores/transferStore.js"

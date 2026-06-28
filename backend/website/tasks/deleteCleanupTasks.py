@@ -208,10 +208,58 @@ def _mark_jobs_failed():
 
     print(f"Marked {failed_jobs} jobs as failed")
 
+def _start_stale_pending_jobs(minutes: int = 10):
+    cutoff = timezone.now() - timedelta(minutes=minutes)
+
+    with transaction.atomic():
+        jobs = list(
+            DeletionJob.objects
+            .select_for_update(skip_locked=True)
+            .filter(
+                state=DeletionJob.State.PENDING,
+                created_at__lt=cutoff,
+            )
+            .only("id", "request_context")
+        )
+
+        now = timezone.now()
+
+        for job in jobs:
+            job.state = DeletionJob.State.RUNNING
+            job.heartbeat_at = now
+            job.save(update_fields=["state", "heartbeat_at"])
+
+    started_file = 0
+    started_folder = 0
+
+    for job in jobs:
+        has_files = DeletionFileWorkItem.objects.filter(
+            job_id=job.id,
+            state=DeletionFileWorkItem.State.PENDING,
+        ).exists()
+
+        if has_files:
+            process_file_batch.delay(job.request_context, job.id)
+            started_file += 1
+            continue
+
+        has_folders = DeletionFolderWorkItem.objects.filter(
+            job_id=job.id,
+            state=DeletionFolderWorkItem.State.PENDING,
+        ).exists()
+
+        if has_folders:
+            process_folder_batch.delay(job.request_context, job.id)
+            started_folder += 1
+
+    print(f"Started stale pending jobs: files={started_file}, folders={started_folder}")
+
 @app.task(expires=30)
 def supervise_deletion_system():
     _reclaim_stale_file_claims()
     _reclaim_stale_folder_claims()
+
+    _start_stale_pending_jobs()
 
     _retry_failed_file_items()
     _retry_failed_folder_items()

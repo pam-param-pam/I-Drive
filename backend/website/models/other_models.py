@@ -48,7 +48,7 @@ class UserZIP(models.Model):
         super(UserZIP, self).save(*args, **kwargs)
 
     def is_expired(self):
-        return timezone.now() > self.created_at + timezone.timedelta(seconds=10)
+        return timezone.now() > self.created_at + timezone.timedelta(hours=6)
 
 class NotificationType(models.TextChoices):
     INFO = "info", "Info"

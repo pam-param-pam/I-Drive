@@ -30,7 +30,7 @@ const pinia = createPinia()
 
 app.use((pinia))
 pinia.use(piniaPersist)
-// startFileConfigServiceWorkerSync(pinia)
+startFileConfigServiceWorkerSync(pinia)
 
 
 const filterBeforeCreate = (toast, toasts) => {

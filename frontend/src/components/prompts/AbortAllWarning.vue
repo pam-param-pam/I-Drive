@@ -34,7 +34,7 @@ import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
-   name: "UploadDestinationWarning",
+   name: "AbortTransferWarning",
 
    computed: {
       ...mapState(useMainStore, ["currentPrompt"])

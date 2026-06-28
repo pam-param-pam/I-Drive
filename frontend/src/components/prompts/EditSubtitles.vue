@@ -128,7 +128,7 @@ import { canUpload } from "@/api/user.js"
 import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 
 import axios from "axios"
-import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/utils/crypto/encryption.js"
 import { detectExtension } from "@/utils/common.js"
 import { capitalize } from "vue"
 import { buildVttFromSrt } from "@/utils/subtitleUtlis.js"

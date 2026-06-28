@@ -8,10 +8,7 @@ from rest_framework.permissions import AllowAny
 from website.auth.Permissions import AllowedIP
 from website.auth.throttle import defaultAuthUserThrottle
 from website.core.helpers import get_ip
-from website.core.media.stream.sources.FragmentByteSource import EncryptedFragmentedDiscordByteSource
-from website.core.media.utils import build_streaming_response
 from website.discord.Discord import discord
-from website.models import File
 
 
 @api_view(['GET'])
@@ -38,25 +35,7 @@ FILE_IDS_BY_ENCRYPTION = {
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny & AllowedIP])
 def stream_file_test(request, encryption):
-    file_id = FILE_IDS_BY_ENCRYPTION.get(encryption)
-    if file_id is None:
-        return JsonResponse({"error": "Invalid encryption type"}, status=400)
-
-    file_obj = File.objects.get(id=file_id)
-
-    if request.method == 'HEAD':
-        response = HttpResponse()
-        response["Content-Length"] = file_obj.size
-        return response
-
-    is_inline = request.GET.get("inline", False)
-    fragments = file_obj.fragments.all().order_by("sequence")
-
-    source = EncryptedFragmentedDiscordByteSource(file_obj=file_obj, fragments=fragments)
-
-    user = file_obj.owner  # do not remove this line
-    response = build_streaming_response(request=request, byte_source=source, filename=file_obj.name, inline=is_inline, etag=str(hash(file_obj.last_modified_at)))
-    return response
+    pass
 
 
 @api_view(['GET'])

@@ -1,16 +1,24 @@
 import { InternetProbe } from "@/transfers/shared/InternetProbe.js"
-import { DownloadConsumer } from "@/transfers/downloads/downloadConsumer.js"
 import { downloadState } from "@/transfers/downloads/constants.js"
 import { DownloadRuntime } from "@/transfers/downloads/DownloadRuntime.js"
 import { useTransferStore } from "@/stores/transferStore.js"
 import { AsyncQueue } from "@/transfers/shared/AsyncQueue.js"
 import { showToast } from "@/utils/common.js"
+import { FileConsumer } from "@/transfers/downloads/workers/fileConsumer.js"
+import { ZipConsumer } from "@/transfers/downloads/workers/zipConsumer.js"
+import { createZIP } from "@/api/item.js"
+import { backendInstance } from "@/axios/networker.js"
+import { createShareZIP } from "@/api/share.js"
 
 export class Downloader {
    constructor() {
       this.transferStore = useTransferStore()
-      this.downloadQueue = new AsyncQueue()
-      this.downloadConsumer = null
+
+      this.fileQueue = new AsyncQueue()
+      this.zipQueue = new AsyncQueue()
+
+      this.fileConsumer = null
+      this.zipConsumer = null
       this.downloadRuntime = null
 
       this.internetProbe = new InternetProbe({
@@ -18,10 +26,12 @@ export class Downloader {
       })
    }
 
-   initRuntimeUpload() {
+   initRuntimeDownload() {
       if (this.downloadRuntime) return
 
-      this.downloadRuntime = new DownloadRuntime({ downloadFinishCallback: () => this.onDownloadSessionFinished() })
+      this.downloadRuntime = new DownloadRuntime({
+         downloadFinishCallback: () => this.onDownloadSessionFinished()
+      })
 
       this.downloadRuntime.onGlobalStateChange(snapshot => {
          this.transferStore.onDownloadGlobalStateChange(snapshot)
@@ -46,30 +56,102 @@ export class Downloader {
 
    async downloadFile(file) {
       this.checkIfSupported()
-      this.initRuntimeUpload()
+      this.initRuntimeDownload()
 
       if (this.downloadRuntime.getFileState(file.id)) {
          showToast("info", "toasts.fileAlreadyDownloading")
          return
       }
+      let fileHandle
+      try {
+         fileHandle = await this.getDownloadFileHandle(file)
+      } catch (err) {
+         if (err?.name === "AbortError") {
+            return
+         }
+         throw err
+      }
 
-      const fileHandle = await this.getDownloadFileHandle(file)
 
-      this.ensureQueue()
-      this.downloadQueue.open()
+      this.ensureFileQueue()
+      this.fileQueue.open()
+
       this.downloadRuntime.registerFile(file)
 
-      await this.downloadQueue.put({
+      await this.fileQueue.put({
          file,
          offset: 0,
          fileHandle
       })
 
-      this.startConsumer()
+      this.startFileConsumer()
+      this.ensureDownloadingState()
+   }
 
-      if (this.downloadRuntime.downloadState === downloadState.idle) {
-         this.downloadRuntime.setTransferState(downloadState.downloading)
+   async downloadZip(ids, shareToken) {
+      this.checkIfSupported()
+      this.initRuntimeDownload()
+
+      const zipDescriptor = shareToken ? await createShareZIP(shareToken, { ids }) : await createZIP({ ids })
+      let zipFile = await this.prepareZipFile(zipDescriptor)
+
+      let fileHandle
+
+      try {
+         fileHandle = await this.getZipFileHandle(zipFile)
+      } catch (err) {
+         if (err?.name === "AbortError") {
+            return
+         }
+         throw err
       }
+
+      this.ensureZipQueue()
+      this.zipQueue.open()
+
+      this.downloadRuntime.registerFile(zipFile)
+
+      await this.zipQueue.put({
+         file: zipFile,
+         offset: 0,
+         fileHandle
+      })
+
+      this.startZipConsumer()
+      this.ensureDownloadingState()
+   }
+
+   async prepareZipFile(zipDescriptor) {
+      const id = zipDescriptor.id
+      const name = zipDescriptor.name + ".zip"
+      const downloadUrl = zipDescriptor.download_url + "?&raw=True"
+
+      const response = await backendInstance.get(downloadUrl, {
+         headers: {
+            Range: "bytes=0-0"
+         },
+         baseURL: ""
+      })
+
+      const contentRange = response.headers.get("content-range")
+      let size =  Number(contentRange.split("/")[1])
+      return {
+         id: `zip:${id}`,
+         zipId: id,
+         name,
+         size,
+         downloadUrl,
+         fileHandle: null,
+         isZip: true
+      }
+   }
+
+   async getZipFileHandle(zipFile) {
+      zipFile.fileHandle = await window.showSaveFilePicker({
+         suggestedName: zipFile.name
+      })
+
+      return zipFile.fileHandle
    }
 
    checkIfSupported() {
@@ -95,57 +177,91 @@ export class Downloader {
       return file.fileHandle
    }
 
-   startConsumer() {
-      if (!this.downloadConsumer) {
-         this.downloadConsumer = new DownloadConsumer({
-            downloadQueue: this.downloadQueue,
+   startFileConsumer() {
+      if (!this.fileConsumer) {
+         this.fileConsumer = new FileConsumer({
+            fileQueue: this.fileQueue,
             downloadRuntime: this.downloadRuntime
          })
       }
 
-      if (!this.downloadConsumer.isRunning()) {
-         this.downloadConsumer.run()
+      if (!this.fileConsumer.isRunning()) {
+         this.fileConsumer.run()
             .catch(err => {
-               console.error("DownloadConsumer crashed", err)
-               this.downloadRuntime.setTransferState(downloadState.error)
+               console.error("FileConsumer crashed", err)
+               this.downloadRuntime?.setTransferState(downloadState.error)
             })
       }
    }
 
+   startZipConsumer() {
+      if (!this.zipConsumer) {
+         this.zipConsumer = new ZipConsumer({
+            zipQueue: this.zipQueue,
+            downloadRuntime: this.downloadRuntime
+         })
+      }
+
+      if (!this.zipConsumer.isRunning()) {
+         this.zipConsumer.run()
+            .catch(err => {
+               console.error("ZipConsumer crashed", err)
+               this.downloadRuntime?.setTransferState(downloadState.error)
+            })
+      }
+   }
+
+   ensureDownloadingState() {
+      if (this.downloadRuntime.transferState === downloadState.idle) {
+         this.downloadRuntime.setTransferState(downloadState.downloading)
+      }
+   }
+
    pauseAll() {
-      if (this.downloadRuntime.downloadState !== downloadState.downloading) return
+      if (this.downloadRuntime.transferState !== downloadState.downloading) return
+
       this.downloadRuntime.setTransferState(downloadState.paused)
-      this.downloadConsumer.pauseActiveDownload()
+
+      this.fileConsumer?.pauseActiveDownload()
+      this.zipConsumer?.pauseActiveDownload()
    }
 
    resumeAll() {
-      if (this.downloadRuntime.downloadState !== downloadState.paused) return
+      if (this.downloadRuntime.transferState !== downloadState.paused) return
+
       this.downloadRuntime.setTransferState(downloadState.downloading)
    }
 
    dismissFile(frontendId) {
-      console.log("dismissing file: " + frontendId)
       this.downloadRuntime.finishExistingFile(frontendId)
    }
-   retryFile(frontendId) {
-      console.log("retrying file: " + frontendId)
-      this.downloadConsumer.retryFile(frontendId)
+
+   async retryFile(frontendId) {
+      if (await this.fileConsumer?.retryFile(frontendId)) {
+         this.startFileConsumer()
+         this.ensureDownloadingState()
+         return
+      }
+
+      if (await this.zipConsumer?.retryFile(frontendId)) {
+         this.startZipConsumer()
+         this.ensureDownloadingState()
+      }
    }
 
    onInternetRestored() {
-      if (this.downloadRuntime.downloadState !== downloadState.noInternet) return
+      if (this.downloadRuntime.transferState !== downloadState.noInternet) return
 
       this.internetProbe.stop()
       this.downloadRuntime.setTransferState(downloadState.downloading)
    }
 
    async cleanup() {
-      console.log("cleanup called in downloader")
       await this.shutdown({ abort: false })
    }
 
    async abortAll() {
-      if (this.downloadRuntime.downloadState === downloadState.aborting) return
+      if (this.downloadRuntime.transferState === downloadState.aborting) return
 
       this.downloadRuntime.setTransferState(downloadState.aborting)
       await this.shutdown({ abort: true })
@@ -154,24 +270,42 @@ export class Downloader {
    async shutdown({ abort }) {
       this.internetProbe.stop()
 
-      if (this.downloadConsumer) {
-         const downloadConsumer = this.downloadConsumer
-         this.downloadConsumer = null
+      if (this.fileConsumer) {
+         const fileConsumer = this.fileConsumer
+         this.fileConsumer = null
 
          if (abort) {
-            await downloadConsumer.kill()
+            await fileConsumer.kill()
          } else {
-            console.log(11111111)
-            await downloadConsumer.stop()
-            console.log(22222222)
+            await fileConsumer.stop()
          }
       }
 
-      if (this.downloadQueue) {
+      if (this.zipConsumer) {
+         const zipConsumer = this.zipConsumer
+         this.zipConsumer = null
+
          if (abort) {
-            this.downloadQueue.clear()
+            await zipConsumer.kill()
+         } else {
+            await zipConsumer.stop()
          }
-         this.downloadQueue.close()
+      }
+
+      if (this.fileQueue) {
+         if (abort) {
+            this.fileQueue.clear()
+         }
+
+         this.fileQueue.close()
+      }
+
+      if (this.zipQueue) {
+         if (abort) {
+            this.zipQueue.clear()
+         }
+
+         this.zipQueue.close()
       }
 
       this.downloadRuntime = null
@@ -182,14 +316,18 @@ export class Downloader {
       }
    }
 
-   ensureQueue() {
-      if (this.downloadQueue) return
-      this.downloadQueue = new AsyncQueue()
+   ensureFileQueue() {
+      if (this.fileQueue) return
+      this.fileQueue = new AsyncQueue()
+   }
+
+   ensureZipQueue() {
+      if (this.zipQueue) return
+      this.zipQueue = new AsyncQueue()
    }
 
    async onDownloadSessionFinished() {
       this.cleanup().then(() => {
-         console.log("onDownloadSessionFinished + cleanup then")
          showToast("success", "toasts.downloadFinished")
       })
    }
@@ -197,10 +335,10 @@ export class Downloader {
 
 let _downloaderInstance = null
 
-
 export function getDownloader() {
    if (!_downloaderInstance) {
       _downloaderInstance = new Downloader()
    }
+
    return _downloaderInstance
 }

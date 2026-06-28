@@ -306,7 +306,10 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["settings"]),
-      ...mapState(useTransferStore, ["webhooks"])
+      ...mapState(useTransferStore, ["upload"]),
+      webhooks() {
+         return this.upload.webhooks
+      }
    },
 
    async created() {

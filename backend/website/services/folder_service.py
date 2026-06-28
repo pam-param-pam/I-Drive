@@ -58,7 +58,8 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
 
 
 def change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str) -> bool:
-    validate_value(new_password, str)
+    #todo send notif
+    validate_value(new_password, str, default=None)
 
     if new_password:
         lock_folder_task.delay(context, folder_obj.id, new_password)
@@ -75,6 +76,7 @@ def change_folder_password(context: RequestContext, folder_obj: Folder, new_pass
 
 
 def reset_folder_password(context: RequestContext, user, folder_obj: Folder, account_password: str, new_folder_password: str) -> bool:
+    #todo send notif
     validate_value(new_folder_password, str)
 
     if not user.check_password(account_password):

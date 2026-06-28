@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 
 from website.core.errors import RangeNotSatisfiable
 from website.core.media.stream.ByteRange import ByteRange
@@ -7,7 +7,7 @@ from website.core.media.stream.ByteRange import ByteRange
 
 class ByteSource(ABC):
     @abstractmethod
-    def size(self) -> int:
+    def size(self) -> Optional[int]:
         raise NotImplementedError
 
     @abstractmethod

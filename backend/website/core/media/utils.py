@@ -70,7 +70,7 @@ def build_streaming_response(request: HttpRequest, byte_source, filename: str, c
         content_type=content_type,
         content_disposition=content_disposition,
         etag=etag,
-        cache_control=cache_control,
+        cache_control=cache_control
     )
 
     if vary:

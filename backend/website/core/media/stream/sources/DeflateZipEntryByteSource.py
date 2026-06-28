@@ -14,7 +14,7 @@ class DeflateZipEntryByteSource(ByteSource):
         self.compressed_size = compressed_size
         self.uncompressed_size = uncompressed_size
 
-        self._source = FragmentedDiscordByteSource(file_obj, fragments)
+        self._source = FragmentedDiscordByteSource(file_obj, fragments, decrypted=True)
 
     def size(self) -> int:
         # logical size = decompressed size
@@ -23,7 +23,7 @@ class DeflateZipEntryByteSource(ByteSource):
     async def read(self, byte_range: ByteRange, chunk_size: int = 128 * 1024):
         """
         Supports logical seeking by replaying the stream and skipping output.
-        Decompresses only for method 8 (deflate). Otherwise returns raw bytes.
+        Decompresses only for method 8 (deflate). Otherwise, returns raw bytes.
         """
 
         physical_range = ByteRange(

@@ -1,9 +1,11 @@
 from website.core.errors import BadRequestError
-from website.core.helpers import get_attr
-from website.models import UserZIP
+from website.core.helpers import get_attr, validate_ids_as_list
+from website.models import UserZIP, Folder
 
 
 def create_zip_model(user, items: list[dict]) -> UserZIP:
+    validate_ids_as_list(items, child_type=(dict, Folder), max_length=10000)
+
     parent_ids = set()
 
     for item in items:

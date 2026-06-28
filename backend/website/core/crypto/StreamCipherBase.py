@@ -37,7 +37,7 @@ class StreamCipherBase:
             self._ctx = None
 
         else:
-            raise ValueError(f"Unsupported encryption method: {self.method}")
+            raise ValueError(f"Unsupported encryption method: {self.method}, {type(self.method)}")
 
     def _create_ctx(self, cipher):
         raise NotImplementedError

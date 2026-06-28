@@ -6,7 +6,7 @@ from website.auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default
     CheckShareItemBelongings, CheckTrash, CheckState
 from website.auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
 from website.constants import ShareEventType, API_BASE_URL
-from website.core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer
+from website.core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer, ZipSerializer
 from website.core.decorators import check_resource_permissions, extract_item, extract_share, extract_folder, extract_file
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import extract_key
@@ -139,7 +139,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):
     folder_ids = list(user_zip.folders.values_list("id", flat=True))
     share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD, files=file_ids, folders=folder_ids)
 
-    return JsonResponse({"download_url": f"{API_BASE_URL}/shares/{share_obj.token}/zip/{user_zip.token}/stream"}, status=200)
+    return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
 
 
 @api_view(['GET'])

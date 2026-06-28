@@ -51,12 +51,6 @@ class PartialFragmentDict(TypedDict):
     size: int
 
 
-class ZipFileDict(TypedDict):
-    name: str
-    isDir: bool
-    fileObj: File
-
-
 class ShareDict(TypedDict):
     expire: str
     name: str

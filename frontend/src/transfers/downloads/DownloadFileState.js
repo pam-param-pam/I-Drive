@@ -1,6 +1,6 @@
 import { downloadFileStatus } from "@/transfers/downloads/constants.js"
 import { BaseTransferFileState } from "@/transfers/shared/base/BaseTransferFileState.js"
-import { isErrorStatus } from "@/transfers/downloads/helper.js"
+import { isErrorStatus } from "@/transfers/downloads/utils/helper.js"
 
 export class DownloadFileState extends BaseTransferFileState {
    constructor(file, fieldChangeCallback) {
@@ -17,11 +17,6 @@ export class DownloadFileState extends BaseTransferFileState {
    onDownloadProgress(progressEvent) {
       const bytes = progressEvent.bytes
       const loaded = progressEvent.loaded
-      const total = progressEvent.total
-
-      if (total !== undefined) {
-         this.setTransferredBytes(total)
-      }
 
       if (loaded !== undefined) {
          this.setTransferredBytes(loaded)

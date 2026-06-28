@@ -72,7 +72,7 @@ import throttle from "lodash.throttle"
 import { canUpload } from "@/api/user.js"
 import { encryptionMethod, PreviewEvent } from "@/utils/constants.js"
 import { buf as crc32buf } from "crc-32"
-import { encrypt, generateIv, generateKey } from "@/transfers/upload/utils/encryption.js"
+import { encrypt, generateIv, generateKey } from "@/utils/crypto/encryption.js"
 import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 
 export default {

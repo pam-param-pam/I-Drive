@@ -1,7 +1,7 @@
 import axios from "axios"
 import { upload } from "@/transfers/upload/utils/uploadHelper.js"
 import { noWifi } from "@/axios/helper.js"
-import { encryptAttachment } from "@/transfers/upload/utils/encryption.js"
+import { encryptAttachment } from "@/utils/crypto/encryption.js"
 import { PipelineWorker } from "@/transfers/shared/base/PipelineWorker.js"
 import { workerExitReason } from "@/transfers/shared/constants.js"
 import { uploadFileStatus, uploadState } from "@/transfers/upload/constants.js"

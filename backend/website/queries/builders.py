@@ -1,15 +1,15 @@
 import time
-from collections import defaultdict
-from typing import List, Dict, Iterable
+from typing import Dict
+from typing import List, Iterable, Iterator
 
 from django.db.models import Q
 from django.db.models.aggregates import Sum
 
 from website.core.Serializers import FileSerializer, FolderSerializer, ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
-from website.core.dataModels.general import FolderDict, Item, Breadcrumbs, ZipFileDict
+from website.core.dataModels.general import FolderDict, Item, Breadcrumbs
 from website.core.helpers import get_attr, normalize_blocked_until
 from website.discord.Discord import discord
-from website.models import Folder, File, ShareableLink, Channel, Webhook, Bot, ShareAccessEvent
+from website.models import Folder, File, Channel, Webhook, Bot, ShareAccessEvent
 from website.models.mixin_models import ItemState
 
 
@@ -96,69 +96,121 @@ def calculate_file_and_folder_count(folder: Folder, includeTrash: bool = False) 
     return folder_count, file_count
 
 
-def build_zip_file_dict(file_obj: File, file_name: str) -> ZipFileDict:
-    return {"name": file_name, "isDir": False, "fileObj": file_obj}
+FILE_VALUE_FIELDS = (
+    "id",
+    "name",
+    "crc",
+    "size",
+    "parent_id",
+    "encryption_method",
+    "iv",
+    "key",
+)
+
+FOLDER_VALUE_FIELDS = (
+    "id",
+    "name",
+    "parent_id",
+    "lockFrom_id",
+    "tree_id",
+    "lft",
+    "rght",
+    "level",
+)
 
 
-def build_flattened_children(folder: Folder, full_path="", root_folder=None) -> List[ZipFileDict]:
-    if root_folder is None:
-        root_folder = folder
+def build_zip_file_dict(file_row: dict, file_name: str) -> dict:
+    file_dict = {
+        "isDir": False,
+        "name": file_name,
+        "id": str(file_row["id"]),
+        "crc": file_row["crc"],
+        "size": file_row["size"],
+        "encryption_method": file_row["encryption_method"],
+    }
 
-    subtree_folders = list(folder.get_descendants(include_self=True).filter(
-        state=ItemState.ACTIVE,
-        inTrash=False,
-        parent__inTrash=False)
+    if file_row.get("encryption_method"):
+        file_dict["iv"] = file_row["iv"]
+        file_dict["key"] = file_row["key"]
+
+    return file_dict
+
+
+def build_flattened_children_mptt_values(root_folder: dict, include_root_name: bool = True, chunk_size: int = 1000) -> Iterator:
+    """
+    Lazy ZIP entry generator.
+
+    Keeps folder path cache in memory, but does not materialize all files.
+    Uses MPTT range filters instead of parent walking.
+    """
+
+    root_lock_from_id = root_folder["lockFrom_id"]
+    root_id = root_folder["id"]
+
+    folder_filter = Q(tree_id=root_folder["tree_id"], lft__gte=root_folder["lft"], rght__lte=root_folder["rght"], state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
+    file_filter = Q(parent__tree_id=root_folder["tree_id"], parent__lft__gte=root_folder["lft"], parent__rght__lte=root_folder["rght"], state=ItemState.ACTIVE, inTrash=False,
+                    parent__state=ItemState.ACTIVE, parent__inTrash=False)
+
+    if root_lock_from_id is not None:
+        folder_filter &= Q(lockFrom_id=root_lock_from_id)
+        file_filter &= Q(parent__lockFrom_id=root_lock_from_id)
+    else:
+        folder_filter &= Q(lockFrom_id__isnull=True)
+        file_filter &= Q(parent__lockFrom_id__isnull=True)
+
+    parent_ids_with_files = set(
+        File.objects.filter(file_filter).values_list("parent_id", flat=True).distinct()
     )
 
-    files = File.objects.filter(
-        parent__in=subtree_folders,
-        state=ItemState.ACTIVE,
-        inTrash=False,
-        parent__inTrash=False
+    path_by_folder_id: Dict[int, str] = {}
+
+    folders_qs = (
+        Folder.objects
+        .filter(folder_filter)
+        .values(*FOLDER_VALUE_FIELDS)
+        .order_by("tree_id", "lft")
     )
 
-    files_by_folder = defaultdict(list)
-    for f in files:
-        files_by_folder[f.parent_id].append(f)
+    for folder_row in folders_qs.iterator(chunk_size=chunk_size):
+        folder_id = folder_row["id"]
 
-    subfolders_by_parent = defaultdict(list)
-    for f in subtree_folders:
-        if f.parent_id:
-            subfolders_by_parent[f.parent_id].append(f)
-
-    children = []
-
-    def walk(current_folder, current_path):
-
-        base_relative_path = f"{current_path}{current_folder.name}/"
-
-        folder_files = files_by_folder.get(current_folder.id, [])
-
-        if not folder_files and root_folder != current_folder:
-            children.append({"name": base_relative_path, "isDir": True})
+        if folder_id == root_id:
+            path_by_folder_id[folder_id] = f"{folder_row['name']}/" if include_root_name else ""
         else:
-            for file in folder_files:
-                file_full_path = f"{base_relative_path}{file.name}"
-                children.append(build_zip_file_dict(file, file_full_path))
+            parent_path = path_by_folder_id.get(folder_row["parent_id"])
 
-        # ignore locked folders/files
-        filter_condition = (Q(lockFrom_id=root_folder.lockFrom_id) if root_folder.lockFrom_id is not None else Q(lockFrom_id__isnull=True))
-
-        for subfolder in subfolders_by_parent.get(current_folder.id, []):
-            if not filter_condition.children:
+            if parent_path is None:
                 continue
-            if root_folder.lockFrom_id is not None:
-                if subfolder.lockFrom_id != root_folder.lockFrom_id:
-                    continue
-            else:
-                if subfolder.lockFrom_id is not None:
-                    continue
 
-            walk(subfolder, base_relative_path)
+            path_by_folder_id[folder_id] = f"{parent_path}{folder_row['name']}/"
 
-    walk(folder, full_path)
+        folder_path = path_by_folder_id[folder_id]
 
-    return children
+        if folder_id != root_id and folder_id not in parent_ids_with_files:
+            yield {"name": folder_path, "isDir": True}
+
+    files_qs = (
+        File.objects
+        .filter(file_filter)
+        .values(*FILE_VALUE_FIELDS)
+        .order_by("parent_id", "name")
+    )
+
+    last_parent_id = None
+    last_parent_path = None
+
+    for file_row in files_qs.iterator(chunk_size=chunk_size):
+        parent_id = file_row["parent_id"]
+
+        if parent_id != last_parent_id:
+            last_parent_id = parent_id
+            last_parent_path = path_by_folder_id.get(parent_id)
+
+        if last_parent_path is None:
+            continue
+
+        file_full_path = f"{last_parent_path}{file_row['name']}"
+        yield build_zip_file_dict(file_row, file_full_path)
 
 
 def build_share_resource_dict(resource_in_share: Item) -> Dict:
@@ -280,3 +332,18 @@ def create_share_events(events: Iterable[ShareAccessEvent]):
             metadata["folder_name"] = folders[folder_id]
 
     return serialized
+
+
+def build_file_path(file: File) -> str:
+    folder = file.parent
+
+    if folder is None:
+        return file.name
+
+    folder_parts = list(
+        folder
+        .get_ancestors(include_self=True)
+        .values_list("name", flat=True)
+    )
+
+    return "/".join([*folder_parts, file.name])

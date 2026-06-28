@@ -102,7 +102,7 @@ export default {
       },
 
       async download() {
-         await smartDownload()
+         await smartDownload(this.token)
       },
 
       getNewRoute(item) {

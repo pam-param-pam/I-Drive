@@ -2,7 +2,7 @@ import JSChaCha20 from "js-chacha20"
 import { encryptionMethod } from "@/utils/constants.js"
 import { attachmentType } from "@/transfers/upload/constants.js"
 
-export function ivToBase64(iv) {
+export function bytesToBase64(iv) {
    // First, convert the Uint8Array to a regular binary string
    let binary = ""
    iv.forEach((byte) => binary += String.fromCharCode(byte))
@@ -16,7 +16,7 @@ export function generateKey(method) {
       return null
    }
    let key = crypto.getRandomValues(new Uint8Array(32))
-   return ivToBase64(key)
+   return bytesToBase64(key)
 }
 
 export function generateIv(method) {
@@ -30,7 +30,7 @@ export function generateIv(method) {
    } else {
       throw Error(`unable to match encryptionMethod: ${method}`)
    }
-   return ivToBase64(iv)
+   return bytesToBase64(iv)
 }
 
 function base64ToUint8Array(base64) {

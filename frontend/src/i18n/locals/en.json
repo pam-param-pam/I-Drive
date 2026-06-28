@@ -221,7 +221,7 @@
   },
   "prompts": {
     "aborting": "Aborting...",
-    "abortAll": "Cancel Upload",
+    "abortAll": "Cancel transfer",
     "abortAllWarning": "Are you sure? All files in the queue will be lost!",
     "accessAt": "Accessed at",
     "accountPassword": "Account password",
@@ -515,6 +515,7 @@
     "unit": "Time Unit"
   },
   "toasts": {
+    "fileAlreadyDownloading": "This file is already downloading...",
     "ALotOF429": "Too many discord requests!",
     "ALotOF429Explained": "Reducing number of concurrent requests.",
     "aborting": "Aborting...",

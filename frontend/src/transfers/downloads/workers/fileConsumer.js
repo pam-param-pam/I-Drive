@@ -5,7 +5,7 @@ import { downloadFileStatus, downloadState } from "@/transfers/downloads/constan
 import throttle from "lodash.throttle"
 
 
-class HttpDownloadError extends Error {
+export class HttpDownloadError extends Error {
    constructor(status, statusText) {
       super(`Download failed: HTTP ${status}`)
       this.name = "HttpDownloadError"
@@ -15,11 +15,11 @@ class HttpDownloadError extends Error {
 }
 
 
-export class DownloadConsumer extends PipelineWorker {
-   constructor({ downloadQueue, downloadRuntime }) {
+export class FileConsumer extends PipelineWorker {
+   constructor({ fileQueue, downloadRuntime }) {
       super()
 
-      this.downloadQueue = downloadQueue
+      this.fileQueue = fileQueue
       this.downloadRuntime = downloadRuntime
 
       this.activeController = null
@@ -53,7 +53,7 @@ export class DownloadConsumer extends PipelineWorker {
                continue
             }
 
-            const queueItem = await this.takeWithAbort(this.downloadQueue, signal)
+            const queueItem = await this.takeWithAbort(this.fileQueue, signal)
 
             if (!queueItem) {
                exitReason = workerExitReason.inputEnded
@@ -64,7 +64,7 @@ export class DownloadConsumer extends PipelineWorker {
          }
 
          if (exitReason === workerExitReason.inputEnded) {
-            this.downloadQueue.close()
+            this.fileQueue.close()
          }
 
          if (this._killed) {
@@ -198,6 +198,8 @@ export class DownloadConsumer extends PipelineWorker {
    }, 100, { leading: true, trailing: true })
 
    async handleDownloadError(err, queueItem, workerSignal) {
+      console.log("handleDownloadError")
+      console.error(err)
       const { file } = queueItem
       const fileState = this.downloadRuntime.getFileState(file.id)
 
@@ -216,15 +218,16 @@ export class DownloadConsumer extends PipelineWorker {
          return
       }
 
-      fileState.setError(err?.message ?? "Download failed")
-
       if (err instanceof HttpDownloadError) {
          this.failedRequests.set(file.id, queueItem)
          fileState.setStatus(downloadFileStatus.errorOccurred)
+         fileState.setError(err?.message ?? "Download failed")
          return
       }
 
       fileState.setStatus(downloadFileStatus.failed)
+      fileState.setError(err?.message ?? "Download failed")
+
    }
 
    async retryFile(fileId) {
@@ -245,7 +248,7 @@ export class DownloadConsumer extends PipelineWorker {
    }
 
    async requeueFirst(queueItem, signal) {
-      await this.putWithAbort(this.downloadQueue, queueItem, signal, { first: true })
+      await this.putWithAbort(this.fileQueue, queueItem, signal, { first: true })
    }
 
    pauseActiveDownload() {

@@ -60,6 +60,6 @@ def stream_zip_files(request, token):
     if user_zip.is_expired():
         user_zip.delete()
         raise ResourceNotFoundError()
+
     response = media_service.get_zip_response(request, user_zip)
-    user_zip.delete()
     return response

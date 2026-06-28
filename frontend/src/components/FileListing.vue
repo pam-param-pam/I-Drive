@@ -67,6 +67,7 @@
             />
             <action
                v-if="headerButtons.download"
+               buttonId="download"
                :counter="selectedCount"
                :label="$t('buttons.download')"
                icon="file_download"
@@ -173,7 +174,6 @@
                   :item-secondary-size="tileWidth"
                   :item-size="tileHeight"
                   :items="sortedItems"
-                  :prerender="500"
                   :style="scrollerClass"
                   class="scroller"
                >
@@ -273,6 +273,7 @@
             <action
                v-if="headerButtons.download"
                :label="$t('buttons.download')"
+               buttonId="download"
                icon="file_download"
                @action="$emit('download')"
             />
@@ -362,11 +363,11 @@ export default {
    data() {
       return {
          //experimental
-         tileWidth: 0,
-         tileHeight: 1,
-         imageHeight: 0,
-         imageWidth: 0,
-         numberOfTiles: 0,
+         tileWidth: 10,
+         tileHeight: 10,
+         imageHeight: 10,
+         imageWidth: 10,
+         numberOfTiles: 10,
 
          scrollInterval: null
 
@@ -414,7 +415,7 @@ export default {
 
       // Remove event listeners before destroying this page.
       window.removeEventListener("keydown", this.keyEvent)
-      window.addEventListener("resize", this.calculateGridLayoutWrapper)
+      window.removeEventListener("resize", this.calculateGridLayoutWrapper)
 
       if (!this.user || !this.perms?.create) return
       document.removeEventListener("dragover", this.preventDefault)

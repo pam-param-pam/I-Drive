@@ -153,7 +153,6 @@ export function isRawImageFile(extension) {
 
 let webhookIndex = 0
 
-
 export function getWebhook() {
    const uploadStore = useTransferStore()
    const webhooks = uploadStore.upload.webhooks

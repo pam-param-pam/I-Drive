@@ -41,6 +41,7 @@ import Search from "@/components/Search.vue"
 import { uploadType } from "@/transfers/upload/constants.js"
 import { smartDownload } from "@/utils/downloadUtils.js"
 import { cancelRequestBySignature } from "@/axios/helper.js"
+import buttons from "@/utils/buttons.js"
 
 export default {
    name: "files",
@@ -188,7 +189,13 @@ export default {
       },
 
       async download() {
-         await smartDownload()
+         try {
+            buttons.loading("download")
+            await smartDownload()
+         } finally {
+            buttons.done("download")
+
+         }
       },
 
       resetOpacity() {
