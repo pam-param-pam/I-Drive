@@ -60,7 +60,7 @@ export const useTransferStore = defineStore("transfer", {
       },
 
       filesInDownloadCount() {
-         return Object.keys(this.download.files).length + this.pendingQueueFiles
+         return Object.keys(this.download.files).length + this.download.pendingQueueFiles
       },
 
       downloadProgress() {
