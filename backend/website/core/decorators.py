@@ -43,7 +43,7 @@ def extract_file_from_signed_url(view_func):
         except (KeyError, ValueError):
             raise URLInvalidOrExpired("Malformed signed URL.")
 
-        path = request.path
+        path = request.path_info
 
         unsign_resource(
             path=path,

@@ -43,7 +43,7 @@ def move_items_view(request, new_parent_obj, items):
 
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
+@permission_classes([IsAuthenticated & DeletePerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def move_items_to_trash_view(request, items):
@@ -54,7 +54,7 @@ def move_items_to_trash_view(request, items):
 
 @api_view(['PATCH'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
+@permission_classes([IsAuthenticated & DeletePerms])
 @extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def restore_from_trash_view(request, items):

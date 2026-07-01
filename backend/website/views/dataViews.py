@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckLockedFolderIP
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from website.auth.utils import check_resource_perms
-from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS
+from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL
 from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, FolderSerializer, \
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
 from website.core.crypto.signer import sign_resource
@@ -26,7 +26,7 @@ from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag
 from website.models.mixin_models import ItemState
 from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
-from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists, query_attachments
+from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists
 from website.services import cache_service, search_service
 
 
@@ -69,16 +69,17 @@ def get_folder_info(request, folder_obj: Folder):
         return response
 
     for file in folder_content["children"]:
-        download_url = file.get("download_url")
-        thumbnail_url = file.get("thumbnail_url")
+        download_path = file.get("_download_path")
+        thumbnail_path = file.get("_thumbnail_path")
 
-        if thumbnail_url:
-            thumbnail_path = urlparse(thumbnail_url).path
-            file["thumbnail_url"] += sign_resource(thumbnail_path)
+        if thumbnail_path:
+            file["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{sign_resource(thumbnail_path)}"
 
-        if download_url:
-            download_path = urlparse(download_url).path
-            file["download_url"] += sign_resource(download_path)
+        if download_path:
+            file["download_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
+
+        file.pop("_download_path", None)
+        file.pop("_thumbnail_path", None)
 
     response_payload = {
         "folder": folder_content,

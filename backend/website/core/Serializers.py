@@ -122,22 +122,26 @@ class FileSerializer(AdvancedSerializer):
             d["in_trash_since"] = in_trash_since.isoformat()
 
         if not hide and not (is_locked and in_trash):
-            signed = ""
-
             download_path = f"/files/{id}/stream"
+
+            d["_download_path"] = download_path
 
             if sign_urls:
                 signed = sign_resource(download_path)
+            else:
+                signed = ""
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{id}/thumbnail/{thumbnail_id}/stream"
 
-                thumbnail_signed = ""
+                d["_thumbnail_path"] = thumbnail_path
 
                 if sign_urls:
                     thumbnail_signed = sign_resource(thumbnail_path)
+                else:
+                    thumbnail_signed = ""
 
                 d["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{thumbnail_signed}"
 

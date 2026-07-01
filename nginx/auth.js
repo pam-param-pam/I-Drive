@@ -13,7 +13,7 @@ function base64url(buffer) {
 function validate(r) {
     const sig = r.variables.original_sig;
     const expires = r.variables.original_expires;
-    const requestUri = r.variables.original_uri;
+    const requestUri = r.variables.original_uri.replace(/^\/api(?=\/)/, '');
 
     r.error(`auth: request_uri=${requestUri}`);
     r.error(`auth: sig=${sig}`);
