@@ -17,6 +17,9 @@ It's available at [https://idrive.pamparampam.dev](https://idrive.pamparampam.de
 
 Credentials: `demo`/`demo`
 
+**Please keep in mind that this project is maintained by a single student developer and is currently in an early alpha stage. 
+If you encounter any bugs or issues, please report them.**
+
 
 # Features
 

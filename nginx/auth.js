@@ -1,7 +1,6 @@
 var crypto = require('crypto');
 
 const SECRET = Buffer.from( process.env.SIGNING_SECRET, "utf8" );
-//const SECRET = Buffer.from('super-secret');
 
 function base64url(buffer) {
     return buffer
@@ -14,7 +13,7 @@ function base64url(buffer) {
 function validate(r) {
     const sig = r.variables.original_sig;
     const expires = r.variables.original_expires;
-    const requestUri = r.variables.original_uri.replace(/^\/api/, '');
+    const requestUri = r.variables.original_uri;
 
     r.error(`auth: request_uri=${requestUri}`);
     r.error(`auth: sig=${sig}`);

@@ -182,7 +182,6 @@ def delete_bot(user: User, bot_id: str) -> None:
     bot_token = primary_bot.token
     guild_id = settings.guild_id
     role_id = settings.role_id
-    category_id = settings.category_id
 
     try:
         bot = Bot.objects.get(discord_id=bot_id, owner=user)

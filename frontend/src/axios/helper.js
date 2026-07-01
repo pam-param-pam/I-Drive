@@ -139,10 +139,19 @@ export async function displayErrorToastIfNeeded(error) {
 
 
 export async function handleResourceURLExpiredIfNeeded(error) {
-   if (error.response && error.response.status === 403) {
-      let errorMessage = error.response?.data?.error
-      let errorDetails = error.response?.data?.details
-      if (errorMessage === "errors.urlInvalidOrExpired" || errorDetails === "Invalid signature params") {
+   if (error.response?.status !== 403) {
+      return
+   }
+
+   const errorMessage = error.response?.data?.error
+
+   if (errorMessage === "errors.urlInvalidOrExpired") {
+      const key = "lastResourceUrlReload"
+      const now = Date.now()
+      const lastReload = Number(localStorage.getItem(key) || 0)
+
+      if (now - lastReload >= 10_000) {
+         localStorage.setItem(key, now.toString())
          router.go(0)
       }
    }

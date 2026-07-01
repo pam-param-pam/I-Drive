@@ -73,11 +73,11 @@ def get_folder_info(request, folder_obj: Folder):
         thumbnail_url = file.get("thumbnail_url")
 
         if thumbnail_url:
-            thumbnail_path = urlparse(thumbnail_url).path.replace("/api", "")
+            thumbnail_path = urlparse(thumbnail_url).path
             file["thumbnail_url"] += sign_resource(thumbnail_path)
 
         if download_url:
-            download_path = urlparse(download_url).path.replace("/api", "")
+            download_path = urlparse(download_url).path
             file["download_url"] += sign_resource(download_path)
 
     response_payload = {
