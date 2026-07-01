@@ -25,22 +25,9 @@ def get_discord_state(request, user_id):
     return JsonResponse(state.to_dict(), safe=False)
 
 
-FILE_IDS_BY_ENCRYPTION = {
-    "aes": "h4medRyz5mBrvBJH8B4qfC",
-    "chacha": "fzLDRD4R6djoavmohNNZkh",
-    "null": "Z3hkFJEERNBfdt6Ygyepdd",
-}
-
-@api_view(['GET', 'HEAD'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([AllowAny & AllowedIP])
-def stream_file_test(request, encryption):
-    pass
-
-
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny & AllowedIP])
 def your_ip(request):
     ip, from_nginx = get_ip(request)
     return JsonResponse({"ip": ip, "nginx": from_nginx})

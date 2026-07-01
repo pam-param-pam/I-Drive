@@ -519,7 +519,6 @@
     "illegalMove": "You cannot move those items hewe",
     "invalidFileFormat": "Invaliw fiwe fowmat!",
     "itemLocated": "Item wocated",
-    "itemMoved": "Mowed {amount} items",
     "itemMovedToTrash": "Mowed {amount} items to twash",
     "itemRenamed": "Nyame changed",
     "itemsAreBeingDeleted": "Deweting...",

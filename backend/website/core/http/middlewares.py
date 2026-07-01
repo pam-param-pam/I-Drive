@@ -1,5 +1,7 @@
 import time
 
+from django.conf import settings
+
 from website.constants import cache
 
 
@@ -47,3 +49,17 @@ class FailedRequestLoggerMiddleware:
 
     def _get_ip(self, request):
         return request.META.get('REMOTE_ADDR')
+
+
+class ScriptNamePathMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        prefix = settings.FORCE_SCRIPT_NAME
+
+        if prefix and not request.path.startswith(prefix + "/"):
+            request.path = prefix.rstrip("/") + request.path
+            request.META["SCRIPT_NAME"] = prefix.rstrip("/")
+
+        return self.get_response(request)

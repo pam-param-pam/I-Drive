@@ -32,7 +32,6 @@ export class RequestProducer extends PipelineWorker {
       this.createdFolders = new Map()
       this.mp4Boxes = new Map()
       this.subtitleAttachments = new Map()
-      this.subtitleNames = new Map()
       this.goneFiles = []
 
       this._MP4BoxPromise = null

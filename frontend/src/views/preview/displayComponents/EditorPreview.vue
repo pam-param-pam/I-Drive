@@ -174,7 +174,6 @@ export default {
                const value = this.editor?.getValue() || ""
                this.previewContent = DOMPurify.sanitize(await marked(value))
             } catch (e) {
-               console.error(e)
                this.previewContent = ""
             }
          }
@@ -252,7 +251,7 @@ export default {
                let blob = new Blob([String(raw)])
                let encryptedBlob = await encrypt(blob, method, key, iv, 0)
 
-               formData.append("file", encryptedBlob, this.attachmentName)
+               formData.append("file", encryptedBlob, this.settings.attachmentName)
 
                let crc = crc32buf(new Uint8Array(await blob.arrayBuffer()), 0) || 0
                crc = crc >>> 0
@@ -280,7 +279,7 @@ export default {
             this.onSuccessfulSave()
 
          } catch (e) {
-            console.error(e)
+            console.log(e)
             buttons.done("save")
             this.$toast.error(e.toString())
          } finally {

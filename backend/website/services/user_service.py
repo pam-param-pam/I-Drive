@@ -54,14 +54,14 @@ def update_user_settings(user, data: dict) -> UserSettings:
             raise BadRequestError("Invalid theme")
         settings.theme = theme
 
-    if encryption_method:
+    if encryption_method is not None:
         try:
             EncryptionMethod(encryption_method)
         except Exception:
             raise BadRequestError("Invalid encryption method")
         settings.encryption_method = encryption_method
 
-    if clientside_decryption_method:
+    if clientside_decryption_method is not None:
         try:
             ClientsideDecryptionMethod(clientside_decryption_method)
         except Exception:
@@ -174,6 +174,16 @@ def add_bot(user: User, token: str) -> Bot:
     return bot
 
 def delete_bot(user: User, bot_id: str) -> None:
+    primary_bot = Bot.objects.filter(owner=user, primary=True).first()
+    if not primary_bot:
+        raise BadRequestError("No primary bot found.")
+
+    settings = DiscordSettings.objects.get(user=user)
+    bot_token = primary_bot.token
+    guild_id = settings.guild_id
+    role_id = settings.role_id
+    category_id = settings.category_id
+
     try:
         bot = Bot.objects.get(discord_id=bot_id, owner=user)
     except Bot.DoesNotExist:
@@ -184,6 +194,8 @@ def delete_bot(user: User, bot_id: str) -> None:
 
     if query_attachments(author_id=bot.discord_id):
         raise BadRequestError("Cannot remove bot. There are files associated with this bot")
+
+    DiscordHelperService(bot_token).delete_bot(bot_id=bot_id, guild_id=guild_id, role_id=role_id)
 
     bot.delete()
     discord.remove_user_state(user)

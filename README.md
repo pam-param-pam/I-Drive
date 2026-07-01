@@ -13,11 +13,10 @@ Want to know how **iDrive** works under the hood? [Read here](https://github.com
 ![Architecture diagram](./public/images/MainScreen.jpg)
 
 # Demo
-~~It's available at `https://idrive.pamparampam.dev`~~
+It's available at [https://idrive.pamparampam.dev](https://idrive.pamparampam.dev)
 
-~~Credentials:~~  ~~`demo`~~/~~`demo`~~
+Credentials: `demo`/`demo`
 
-Sorry, no demo currently.
 
 # Features
 

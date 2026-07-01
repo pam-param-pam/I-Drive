@@ -4,7 +4,7 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.Permissions import AllowedIP, ChangePassword, ReadPerms
+from website.auth.Permissions import AllowedIP, ChangePasswordPerms, ReadPerms
 from website.auth.throttle import defaultAnonUserThrottle, LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAuthUserThrottle
 from website.core.Serializers import DeviceTokenSerializer
 from website.core.helpers import extract_key
@@ -52,7 +52,7 @@ def register_user_view(request):
 
 @api_view(['PATCH'])
 @throttle_classes([PasswordChangeThrottle])
-@permission_classes([IsAuthenticated & ChangePassword])
+@permission_classes([IsAuthenticated & ChangePasswordPerms])
 def change_password_view(request):
     current_password = extract_key(request.data, "current_password")
     new_password = extract_key(request.data, "new_password")

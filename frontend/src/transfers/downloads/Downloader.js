@@ -10,7 +10,7 @@ import { createZIP } from "@/api/item.js"
 import { backendInstance } from "@/axios/networker.js"
 import { createShareZIP } from "@/api/share.js"
 import { FilePickerNotSupported } from "@/transfers/downloads/utils/helper.js"
-
+//todo transferStore needs to know abou the size of queues
 export class Downloader {
    constructor() {
       this.transferStore = useTransferStore()
@@ -35,6 +35,7 @@ export class Downloader {
       })
 
       this.downloadRuntime.onGlobalStateChange(snapshot => {
+         snapshot.pendingQueueFiles = this.fileQueue.size() + this.zipQueue.size()
          this.transferStore.onDownloadGlobalStateChange(snapshot)
       })
 

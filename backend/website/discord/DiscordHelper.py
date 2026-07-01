@@ -213,6 +213,12 @@ class DiscordApiClient:
         )
         return bool(data)
 
+    def remove_role(self, guild_id, bot_id, role_id):
+        self._request(
+            "DELETE",
+            f"{DISCORD_BASE_URL}/guilds/{guild_id}/members/{bot_id}/roles/{role_id}",
+            "Failed to remove role"
+        )
 
 class DiscordHelperService:
     def __init__(self, primary_token: str):
@@ -386,6 +392,14 @@ class DiscordHelperService:
             raise BadRequestError(f"Failed to assign role to bot: {e}")
 
         return BotInfo(id=bot_id, name=bot_name)
+
+    def delete_bot(self, bot_id, guild_id: str, role_id: str) -> None:
+        self.verify_guild_id(guild_id)
+
+        try:
+            self.api.remove_role(guild_id, bot_id, role_id)
+        except Exception as e:
+            raise BadRequestError(f"Failed to remove role from bot: {e}")
 
     def remove_all(self, user):
         # todo this breaks encapsulation

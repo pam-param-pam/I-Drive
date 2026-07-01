@@ -35,107 +35,82 @@ class BasePermissionWithMessage(BasePermission):
         return NotImplementedError()
 
 
-class AdminPerms(BasePermissionWithMessage):
+class FlagPerms(BasePermissionWithMessage):
+    perm_name = None
+    message = "Permission denied."
+
+    def check_permission(self, request, view):
+        perms = self.user_perms
+
+        if perms.globalLock:
+            return False
+
+        return bool(getattr(perms, self.perm_name) or perms.admin)
+
+class AdminPerms(FlagPerms):
+    perm_name = "admin"
     message = "You don't have admin perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.admin or perms.admin) and not perms.globalLock
 
-
-class ReadPerms(BasePermissionWithMessage):
+class ReadPerms(FlagPerms):
+    perm_name = "read"
     message = "You don't have read perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.read or perms.admin) and not perms.globalLock
 
-class CreatePerms(BasePermissionWithMessage):
+class CreatePerms(FlagPerms):
+    perm_name = "create"
     message = "You don't have create perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.create or perms.admin) and not perms.globalLock
 
-
-class ModifyPerms(BasePermissionWithMessage):
+class ModifyPerms(FlagPerms):
+    perm_name = "modify"
     message = "You don't have modify perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.modify or perms.admin) and not perms.globalLock
 
-
-class CmdExecutePerms(BasePermissionWithMessage):
+class CmdExecutePerms(FlagPerms):
+    perm_name = "execute"
     message = "You don't have command execute perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.execute or perms.admin) and not perms.globalLock
 
-
-class DeletePerms(BasePermissionWithMessage):
+class DeletePerms(FlagPerms):
+    perm_name = "delete"
     message = "You don't have delete perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.delete or perms.admin) and not perms.globalLock
 
-
-class SharePerms(BasePermissionWithMessage):
+class SharePerms(FlagPerms):
+    perm_name = "share"
     message = "You don't have share perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.share or perms.admin) and not perms.globalLock
 
-
-class DownloadPerms(BasePermissionWithMessage):
+class DownloadPerms(FlagPerms):
+    perm_name = "download"
     message = "You don't have download perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.download or perms.admin) and not perms.globalLock
 
-
-class LockPerms(BasePermissionWithMessage):
+class LockPerms(FlagPerms):
+    perm_name = "lock"
     message = "You don't have lock perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.lock or perms.admin) and not perms.globalLock
 
-
-class SettingsModifyPerms(BasePermissionWithMessage):
+class SettingsModifyPerms(FlagPerms):
+    perm_name = "settings_modify"
     message = "You don't have settings modify perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.settings_modify or perms.admin) and not perms.globalLock
 
-
-class DiscordModifyPerms(BasePermissionWithMessage):
+class DiscordModifyPerms(FlagPerms):
+    perm_name = "discord_modify"
     message = "You don't have discord modify perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.discord_modify or perms.admin) and not perms.globalLock
 
-
-class ChangePassword(BasePermissionWithMessage):
+class ChangePasswordPerms(FlagPerms):
+    perm_name = "change_password"
     message = "You don't have change password perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.change_password or perms.admin) and not perms.globalLock
 
-
-class ResetLockPerms(BasePermissionWithMessage):
+class ResetLockPerms(FlagPerms):
+    perm_name = "reset_lock"
     message = "You don't have lock reset perms."
 
-    def check_permission(self, request, view):
-        perms = self.user_perms
-        return (perms.reset_lock or perms.admin) and not perms.globalLock
 
 class AllowedIP(BasePermissionWithMessage):
     message = "IP validation failed."

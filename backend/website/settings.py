@@ -4,25 +4,35 @@ from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
+is_dev_env = os.getenv("IS_DEV_ENV", "false").strip().lower() == "true"
+is_behind_nginx = os.getenv("BEHIND_NGINX", "false").strip().lower() == "true"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-# socksio==1.0.0 add to req
+
 # jebanie sie z static plikami
 TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATIC_URL = 'static/'
+
+if is_behind_nginx:
+    STATIC_URL = "/api/static/"
+    STATIC_ROOT = "/var/www/idrive/backend-static"
+    SESSION_COOKIE_PATH = "/api/"
+    CSRF_COOKIE_PATH = "/api/"
+    FORCE_SCRIPT_NAME = "/api"
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+else:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATIC_URL = 'static/'
+
 
 SECRET_KEY = os.environ['BACKEND_SECRET_KEY']
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTOCOL', 'https')
-
-is_dev_env = os.getenv('IS_DEV_ENV', 'False') == 'True'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_dev_env
 
 ALLOWED_HOSTS = ['*']  # todo
 
-# USE_X_FORWARDED_HOST = True  # todo fix admin
+USE_X_FORWARDED_HOST = True
 
 # CSRF_COOKIE_SECURE = True # todo fix
 # SESSION_COOKIE_SECURE = True
@@ -53,6 +63,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
+    'website.core.http.middlewares.ScriptNamePathMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

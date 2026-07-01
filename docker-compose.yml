@@ -2,6 +2,7 @@ volumes:
   postgres_data:
     name: ${POSTGRES_VOLUME:-postgres_data}
   nginx_cache:
+  backend_static:
 
 services:
   ### redis
@@ -33,10 +34,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d idrive-postgres || exit 1" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d idrive-postgres || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 5
+
     environment:
       POSTGRES_DB: idrive-postgres
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
@@ -66,11 +68,13 @@ services:
 
     volumes:
       - ./config.override.json:/config/config.override.json:ro
+      - backend_static:/var/www/idrive/backend-static
 
     environment:
       - IDRIVE_CONFIG_FILE=/config/config.override.json
 
       - IS_DEV_ENV=${IS_DEV_ENV:?IS_DEV_ENV IS REQUIRED}
+      - BEHIND_NGINX=True
       - DEPLOYMENT_HOST=${DEPLOYMENT_HOST:?DEPLOYMENT_HOST IS REQUIRED}
 
       # Backend Configuration
@@ -95,7 +99,7 @@ services:
         limits:
           memory: 2G
 
- ### nginx
+  ### nginx
   nginx:
     image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG:-latest}
     container_name: idrive-nginx
@@ -107,18 +111,23 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
     healthcheck:
-      test: [ "CMD-SHELL", "curl http://localhost:80/healthcheck || exit 1" ]
+      test: ["CMD-SHELL", "curl http://localhost:80/healthcheck || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+
     environment:
       - VITE_BACKEND_BASE_URL=${PROTOCOL:?PROTOCOL IS REQUIRED}://${DEPLOYMENT_HOST:?DEPLOYMENT_HOST IS REQUIRED}/api
       - SIGNING_SECRET=${SIGNING_SECRET:?SIGNING_SECRET IS REQUIRED}
+
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/auth.js:/etc/nginx/auth.js
       - nginx_cache:/var/cache/nginx
+      - backend_static:/var/www/idrive/backend-static:ro
+
     deploy:
       resources:
         limits:

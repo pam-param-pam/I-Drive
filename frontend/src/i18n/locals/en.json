@@ -551,7 +551,6 @@
     "illegalMove": "You cannot move those items here",
     "invalidFileFormat": "Invalid file format!",
     "itemLocated": "Item located",
-    "itemMoved": "Moved {amount} items",
     "itemMovedToTrash": "Moved {amount} items to trash",
     "itemRenamed": "Name changed",
     "itemsAreBeingDeleted": "Deleting...",

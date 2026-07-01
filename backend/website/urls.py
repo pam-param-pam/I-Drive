@@ -17,7 +17,7 @@ from .views.itemManagmentViews import rename_view, move_items_to_trash_view, mov
     add_moment_view, add_subtitle_view, remove_subtitle_view, rename_subtitle_view, create_zip_model_view, delete_thumbnail_view
 from .views.shareViews import get_shares, delete_share, create_share, view_share, create_share_zip_model, share_get_subtitles, check_share_password, get_share_visits, get_visit_events
 from .views.streamViews import serve_thumbnail, stream_file, stream_zip_files, serve_moment, serve_subtitle
-from .views.testViews import get_discord_state, stream_file_test
+from .views.testViews import get_discord_state
 from .views.uploadViews import create_file_view, create_or_edit_thumbnail_view, edit_file_view
 from .views.userViews import users_me, update_settings, get_discord_settings_view, create_channel_and_webhook_view, delete_webhook_view, add_bot_view, \
     delete_bot_view, update_attachment_name_view, can_upload, discord_settings_start_view, reset_discord_settings_view, \
@@ -159,10 +159,8 @@ urlpatterns = [
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 
     django_path('test/<user_id>', get_discord_state),
-    django_path('file-stream/<str:encryption>', stream_file_test),
 
     re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
 
     # 80 endpoints
 ]
-# urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]

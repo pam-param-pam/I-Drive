@@ -23,6 +23,7 @@ export const useTransferStore = defineStore("transfer", {
          eta: Infinity,
          allBytesToDownload: 0,
          allBytesDownloaded: 0,
+         pendingQueueFiles: 0,
          downloadSpeed: 0,
       }
    }),
@@ -59,8 +60,7 @@ export const useTransferStore = defineStore("transfer", {
       },
 
       filesInDownloadCount() {
-         //todo
-         return Object.keys(this.download.files).length
+         return Object.keys(this.download.files).length + this.pendingQueueFiles
       },
 
       downloadProgress() {
@@ -162,6 +162,7 @@ export const useTransferStore = defineStore("transfer", {
          this.download.allBytesToDownload = snapshot.allBytesToDownload
          this.download.state = snapshot.downloadState
          this.download.downloadSpeed = snapshot.speed
+         this.download.pendingQueueFiles = snapshot.pendingQueueFiles
          this.download.eta = snapshot.eta
       },
 
