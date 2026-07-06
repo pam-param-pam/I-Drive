@@ -1,7 +1,6 @@
 import hashlib
 import json
 import time
-from urllib.parse import urlparse
 
 from django.db.models import Count, Sum, Case, When, Value, CharField
 from django.db.models import F, BooleanField
@@ -12,15 +11,18 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckLockedFolderIP
+from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIPForLockedResources
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from website.auth.utils import check_resource_perms
 from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL
-from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, FolderSerializer, \
+from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, \
+    FolderSerializer, \
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
+from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
 from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
+from website.core.helpers import validate_value
 from website.discord.Discord import discord
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag
@@ -143,7 +145,7 @@ def get_usage(request, folder_obj: Folder):
 @extract_item()
 @check_resource_permissions(default_checks - CheckTrash, resource_key="item_obj")
 def fetch_additional_info(request, item_obj):
-    isTrash = request.GET.get('isTrash', False)
+    isTrash = validate_value(request.GET.get('isTrash'), bool, default=False, converter=param_to_bool)
 
     if isinstance(item_obj, Folder):
         folder_used_size = calculate_size(item_obj, includeTrash=isTrash)
@@ -186,7 +188,7 @@ def fetch_additional_info(request, item_obj):
                 photo_metadata = PhotoMetadata.objects.get(file=item_obj)
                 photo_metadata = PhotoMetadataSerializer.serialize_object(photo_metadata)
                 return JsonResponse(photo_metadata, status=200)
-            except RawMetadata.DoesNotExist:
+            except PhotoMetadata.DoesNotExist:
                 raise ResourceNotFoundError("No photo metadata for this file :(")
 
         else:
@@ -217,7 +219,7 @@ def get_trash(request):
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
-@check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="item_obj")
+@check_resource_permissions([CheckOwnership, CheckIPForLockedResources], resource_key="item_obj")
 def check_password(request, item_obj):
     password = request.headers.get("X-Resource-Password")
 
@@ -280,7 +282,7 @@ def get_all_tags(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
-@check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="item_obj")
+@check_resource_permissions(default_checks, resource_key="item_obj")
 def ultra_download_files_metadata(request, item_obj):
     if isinstance(item_obj, File):
         files = [item_obj]
@@ -323,9 +325,11 @@ def ultra_download_files_metadata(request, item_obj):
 @api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
+@extract_folder()
+@check_resource_permissions(default_checks, resource_key="folder_obj")
 @extract_file()
-@check_resource_permissions([CheckOwnership, CheckLockedFolderIP], resource_key="file_obj")
-def ultra_download_file_fragments_metadata(request, file_obj):
+@check_resource_permissions(default_checks, resource_key="file_obj")
+def ultra_download_file_fragments_metadata(request, folder_obj, file_obj):
     fragments = (
         Fragment.objects
         .filter(file_id=file_obj.id)
@@ -344,7 +348,7 @@ def ultra_download_file_fragments_metadata(request, file_obj):
         for fragment in fragments
     ]
 
-    file_path = build_file_path(file_obj)
+    file_path = build_file_path(file_obj, max_folder_id=folder_obj.id)
 
     response_data = {
         "id": str(file_obj.id),

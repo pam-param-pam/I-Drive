@@ -231,7 +231,17 @@ class File(models.Model):
         return self.name
 
     def _check_folder_file_limit(self):
-        if (self.parent.files.count() + self.parent.subfolders.count() + 1) > MAX_FILES_IN_FOLDER:
+        if not self._state.adding:
+            old_parent_id = (
+                File.objects
+                .filter(id=self.id)
+                .values_list("parent_id", flat=True)
+                .first()
+            )
+            if old_parent_id == self.parent_id:
+                return
+
+        if (self.parent.files.count() + self.parent.subfolders.count()) >= MAX_FILES_IN_FOLDER:
             raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
 
     def _check_unique_name(self):

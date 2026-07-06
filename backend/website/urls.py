@@ -103,7 +103,7 @@ urlpatterns = [
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 
     path("ultraDownload/items/<item_id>", ['POST'], ultra_download_files_metadata, name="returns metadata about files"),
-    path("ultraDownload/file/<file_id>", ['POST'], ultra_download_file_fragments_metadata, name="returns metadata about a single file"),
+    path("ultraDownload/file/<folder_id>/<file_id>", ['POST'], ultra_download_file_fragments_metadata, name="returns metadata about a single file"),
     path("ultraDownload/fragments/<fragment_id>", ['GET'], get_fragment_url_view, name="download metadata for ultra download"),
 
     path("zip", ["POST"], create_zip_model_view, name="create zip model"),

@@ -4,6 +4,7 @@ from typing import List, Iterable, Iterator
 
 from django.db.models import Q
 from django.db.models.aggregates import Sum
+from rest_framework.exceptions import ValidationError
 
 from website.core.Serializers import FileSerializer, FolderSerializer, ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
 from website.core.dataModels.general import FolderDict, Item, Breadcrumbs
@@ -334,16 +335,36 @@ def create_share_events(events: Iterable[ShareAccessEvent]):
     return serialized
 
 
-def build_file_path(file: File) -> str:
+def build_file_path(file: File, max_folder_id=None) -> str:
     folder = file.parent
 
     if folder is None:
+        if max_folder_id is not None:
+            raise ValidationError("folder_id is not an ancestor of this file.")
+
         return file.name
 
     folder_parts = list(
         folder
         .get_ancestors(include_self=True)
-        .values_list("name", flat=True)
+        .values("id", "name")
     )
 
-    return "/".join([*folder_parts, file.name])
+    if max_folder_id is not None:
+        max_folder_id = str(max_folder_id)
+
+        try:
+            max_folder_index = next(
+                index
+                for index, folder_part in enumerate(folder_parts)
+                if str(folder_part["id"]) == max_folder_id
+            )
+        except StopIteration:
+            raise ValidationError("folder_id is not an ancestor of this file.")
+
+        # include max_folder_id itself
+        folder_parts = folder_parts[max_folder_index:]
+
+    folder_names = [folder_part["name"] for folder_part in folder_parts]
+
+    return "/".join([*folder_names, file.name])

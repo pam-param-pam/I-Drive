@@ -1,12 +1,13 @@
 import base64
+import hashlib
 
-from website.auth.Permissions import CheckLockedFolderIP
+from website.auth.Permissions import CheckIPForLockedResources
 from website.auth.utils import check_resource_perms
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
 from website.core.crypto.Decryptor import Decryptor
-from website.core.errors import BadRequestError
+from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_key
 from website.core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
 from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
@@ -19,6 +20,11 @@ from website.models.mixin_models import ItemState
 from website.queries.builders import build_zip_file_dict, build_flattened_children_mptt_values, FILE_VALUE_FIELDS, FOLDER_VALUE_FIELDS
 from website.queries.selectors import check_if_bots_exists
 from itertools import chain
+
+
+def _stable_file_etag(file_obj: File) -> str:
+    payload = f"{file_obj.id}:{file_obj.last_modified_at.isoformat()}:{file_obj.size}:{file_obj.crc}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def get_thumbnail_response(request, file_obj: File):
@@ -107,7 +113,7 @@ def get_file_response(request, file_obj: File):
         filename=file_obj.name,
         inline=isInline,
         x_frame_from_referer=referer,
-        etag=str(hash(file_obj.last_modified_at))
+        etag=_stable_file_etag(file_obj)
     )
     return response
 
@@ -128,11 +134,14 @@ def get_zip_response(request, user_zip: UserZIP):
     # this works only because all items must be in the same parent (ensured during zip model creation)
     first_file = files_qs.first()
     if first_file is not None:
-        check_resource_perms(request, first_file, [CheckLockedFolderIP])
+        check_resource_perms(request, first_file, [CheckIPForLockedResources])
 
     first_folder = folders_qs.first()
     if first_folder is not None:
-        check_resource_perms(request, first_folder, [CheckLockedFolderIP])
+        check_resource_perms(request, first_folder, [CheckIPForLockedResources])
+
+    if first_file is None and first_folder is None:
+        raise ResourceNotFoundError("ZIP is empty")
 
     files_exists = first_file is not None
     folders = list(folders_qs.values(*FOLDER_VALUE_FIELDS).order_by("id"))

@@ -1,41 +1,94 @@
+import ipaddress
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
-is_dev_env = os.getenv("IS_DEV_ENV", "false").strip().lower() == "true"
-is_behind_nginx = os.getenv("BEHIND_NGINX", "false").strip().lower() == "true"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+TEMPLATE_DIR = BASE_DIR / "templates"
 
-# jebanie sie z static plikami
-TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
-if is_behind_nginx:
+def env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_required(name: str) -> str:
+    value = os.getenv(name)
+
+    if not value:
+        raise RuntimeError(f"{name} is required")
+
+    return value.strip()
+
+
+IS_DEV_ENV = env_bool("IS_DEV_ENV")
+BEHIND_NGINX = env_bool("BEHIND_NGINX")
+
+PROTOCOL = env_required("PROTOCOL")
+DEPLOYMENT_HOST = env_required("DEPLOYMENT_HOST")
+PUBLIC_ORIGIN = f"{PROTOCOL}://{DEPLOYMENT_HOST}"
+
+SECRET_KEY = env_required("BACKEND_SECRET_KEY")
+DEBUG = IS_DEV_ENV
+
+# Static / reverse proxy
+if BEHIND_NGINX:
     STATIC_URL = "/api/static/"
     STATIC_ROOT = "/var/www/idrive/backend-static"
+
     SESSION_COOKIE_PATH = "/api/"
     CSRF_COOKIE_PATH = "/api/"
+
     FORCE_SCRIPT_NAME = "/api"
+    USE_X_FORWARDED_HOST = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-
 else:
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
-    STATIC_URL = 'static/'
+    STATIC_URL = "/static/"
+    STATIC_ROOT = BASE_DIR / "staticfiles"
+    USE_X_FORWARDED_HOST = False
 
 
-SECRET_KEY = os.environ['BACKEND_SECRET_KEY']
+# Hosts
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = is_dev_env
+LAN_CIDR = os.getenv("LAN_CIDR", "192.168.1.0/24")
+LAN_HOSTS = [str(ip) for ip in ipaddress.ip_network(LAN_CIDR, strict=False).hosts()]
 
-ALLOWED_HOSTS = ['*']  # todo
+if IS_DEV_ENV:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        DEPLOYMENT_HOST,
+        *LAN_HOSTS,
+    ]
 
-USE_X_FORWARDED_HOST = True
+# CORS
 
-# CSRF_COOKIE_SECURE = True # todo fix
-# SESSION_COOKIE_SECURE = True
+CORS_ALLOW_PRIVATE_NETWORK = True
+CORS_ALLOWED_ORIGINS = [
+    PUBLIC_ORIGIN
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+    r"^http://192\.168\.1\.\d{1,3}:\d+$",
+]
+
+CORS_EXPOSE_HEADERS = (
+    "retry-after",
+    "X-RateLimit-Remaining",
+    "X-RateLimit-Reset-After",
+    "X-RateLimit-Bucket",
+    "Content-Range",
+    "Accept-Ranges",
+    "Content-Length"
+)
+
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 102400000  # higher than the count of fields
 
 # Application definition
@@ -79,27 +132,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_HEADERS = "*"
-CORS_ALLOW_PRIVATE_NETWORK = True
-
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r'http:\\localhost',
-    r'^http:\/\/localhost:\d+$',
-    r'^http:\/\/127.0.0.1:\d+$',
-    r'^http:\/\/192.168.1.14:\d+$',
-    r'^http:\/\/192.168.1.15:\d+$',
-    r'^http:\/\/192.168.1.17:\d+$',
-]
-
-CORS_EXPOSE_HEADERS = (
-    "retry-after",
-    "X-RateLimit-Remaining",
-    "X-RateLimit-Reset-After",
-    "X-RateLimit-Bucket",
-    "Content-Range",
-    "Accept-Ranges",
-    "Content-Length"
-)
 
 ROOT_URLCONF = 'website.urls'
 

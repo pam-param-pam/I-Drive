@@ -60,7 +60,7 @@ def _create_single_file(request, user: User, file: dict) -> Optional[File]:
     file_name = validate_key(file, "name", str, checks=[NotEmpty])
     parent_id = validate_key(file, "parent_id", str, checks=[NotEmpty])
     file_size = validate_key(file, "size", int, checks=[NotNegative])
-    frontend_id = validate_key(file, "frontend_id", str, checks=[MaxLength(50), NotEmpty])
+    frontend_id = validate_key(file, "frontend_id", str, checks=[MaxLength(40), NotEmpty])
     encryption_method = validate_key(file, "encryption_method", int, checks=[MaxLength(1)])
     crc = validate_key(file, "crc", int, checks=[MaxLength(10), NotNegative])
     fragments = validate_key(file, "fragments", list)

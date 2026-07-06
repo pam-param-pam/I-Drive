@@ -40,10 +40,10 @@ def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
     """:return: True if the item is a subfile/subfolder of parent_folder, otherwise False."""
 
     if isinstance(item, File):
-        return item in parent_folder.get_all_files()
+        return parent_folder.get_all_files().filter(id=item.id).exists()
 
     elif isinstance(item, Folder):
-        return item in parent_folder.get_all_subfolders()
+        return parent_folder.get_all_subfolders().filter(id=item.id).exists()
 
     return False
 
@@ -97,10 +97,10 @@ def get_discord_channel(user, channel_id: str) -> Channel:
 
 
 def check_if_bots_exists(user) -> int:
-    bots = Bot.objects.filter(owner=user)
-    if not bots.exists():
+    bots_count = Bot.objects.filter(owner=user).count()
+    if bots_count == 0:
         raise NoBotsError()
-    return len(bots)
+    return bots_count
 
 
 DiscordAttachmentClasses = get_classes_extending_discordAttachmentMixin()

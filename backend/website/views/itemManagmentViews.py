@@ -2,7 +2,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, api_view, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, CheckRoot, CheckTrash, DeletePerms, ReadPerms, DownloadPerms, LockPerms, ResetLockPerms, CheckFolderLock
+from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, CheckRoot, CheckTrash, DeletePerms, ReadPerms, DownloadPerms, LockPerms, ResetLockPerms, CheckFolderLockForLockedResources
 from website.auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
 from website.core.Serializers import FolderSerializer, ZipSerializer, TagSerializer, MomentSerializer, SubtitleSerializer
 from website.core.decorators import check_resource_permissions, extract_folder, extract_items_from_ids_annotated, accumulate_password_errors, check_bulk_permissions, extract_item, \
@@ -113,7 +113,7 @@ def change_folder_password_view(request, folder_obj):
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & ResetLockPerms])
 @extract_folder()
-@check_resource_permissions((default_checks & CheckRoot) - CheckFolderLock, resource_key="folder_obj")
+@check_resource_permissions((default_checks & CheckRoot) - CheckFolderLockForLockedResources, resource_key="folder_obj")
 def reset_folder_password_view(request, folder_obj: Folder):
     account_password = extract_key(request.data, "accountPassword")
     new_folder_password = extract_key(request.data, "folderPassword")

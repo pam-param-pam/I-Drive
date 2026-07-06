@@ -186,7 +186,7 @@ def add_tag(file_obj: File, tag_name: str) -> Tag:
 
     tag, created = Tag.objects.get_or_create(name=tag_name, owner=file_obj.owner)
 
-    if tag in file_obj.tags.all():
+    if file_obj.tags.filter(id=tag.id).exists():
         raise BadRequestError("File already has this tag")
 
     file_obj.tags.add(tag)
@@ -196,12 +196,12 @@ def add_tag(file_obj: File, tag_name: str) -> Tag:
 
 
 def remove_tag(file_obj: File, tag_id: str) -> None:
-    tag = Tag.objects.get(id=tag_id)
+    tag = file_obj.tags.get(id=tag_id, owner=file_obj.owner)
     file_obj.tags.remove(tag)
 
     file_obj.remove_cache()
 
-    if len(tag.files.all()) == 0:
+    if not tag.files.exists():
         tag.delete()
 
 
