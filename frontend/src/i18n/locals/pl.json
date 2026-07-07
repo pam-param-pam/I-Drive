@@ -202,22 +202,38 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "notifications": {
-    "accountPasswordChangedMessage": "Hasło do Twojego konta zostało niedawno zmienione.",
-    "accountPasswordChangedTitle": "Hasło konta zostało zmienione",
-    "cleanupFailedTitle": "Czyszczenie nie powiodło się",
-    "cleanupTitle": "Czyszczenie",
-    "deleteProcessFailedTitle": "Proces usuwania plików nie powiódł się",
-    "deleteProcessMessage": "Nie udało się usunąć części plików. Zgloś ten problem na githubie.",
+    "account_password_changed": {
+      "title": "Hasło konta zostało zmienione",
+      "message": "Hasło do Twojego konta zostało niedawno zmienione"
+    },
+    "cleanup": {
+      "title": "Czyszczenie"
+    },
+    "cleanup_failed": {
+      "title": "Czyszczenie nie powiodło się"
+    },
+    "delete_process_failed": {
+      "title": "Proces usuwania plików nie powiódł się",
+      "message": "Nie udało się usunąć części plików. Zgłoś ten problem na GitHubie"
+    },
+    "new_device_login": {
+      "title": "Logowanie z nowego urządzenia",
+      "message": "Na Twoje konto zalogowano się z nowego urządzenia"
+    },
+    "folder_lock_change": {
+      "title": "Zmieniono blokadę folderu",
+      "message": "Status blokady folderu został zmieniony"
+    },
     "fields": {
       "city": "Miasto",
       "country": "Kraj",
-      "device": "Urządzenie",
       "device_id": "ID urządzenia",
+      "device_name": "Urządzenie",
       "device_type": "Typ urządzenia",
-      "ipAddress": "Adres IP"
-    },
-    "newDeviceLoginMessage": "Na Twoje konto zalogowano się z nowego urządzenia.",
-    "newDeviceLoginTitle": "Logowanie z nowego urządzenia"
+      "folder_id": "ID folderu",
+      "ip_address": "Adres IP",
+      "status": "Status"
+    }
   },
   "prompts": {
     "aborting": "Przerywanie...",
@@ -342,7 +358,6 @@
     "pausedFilesUpload": "Zatrzymany przesył {amount} plików",
     "pausingFilesUpload": "Zatrzymywaie...",
     "permanent": "Na zawsze",
-    "pinkyPromiseResetFolderPassword": "Obiecuje że nie jestem botem",
     "property": "Właściwość plików",
     "propertyValue": "Wartość",
     "qrDecoded": "Kod QR zeskanowany",

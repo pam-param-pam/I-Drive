@@ -202,22 +202,38 @@
     "wrongCredentials": "Wrong credentials"
   },
   "notifications": {
-    "accountPasswordChangedMessage": "Your account password was recently changed.",
-    "accountPasswordChangedTitle": "Account password changed",
-    "cleanupFailedTitle": "Cleanup failed",
-    "cleanupTitle": "Cleanup",
-    "deleteProcessFailedTitle": "Delete process failed",
-    "deleteProcessMessage": "Some files failed to delete. Please create a bug issue.",
+    "account_password_changed": {
+      "title": "Account password changed",
+      "message": "Your account password was recently changed"
+    },
+    "cleanup": {
+      "title": "Cleanup"
+    },
+    "cleanup_failed": {
+      "title": "Cleanup failed"
+    },
+    "delete_process_failed": {
+      "title": "Delete process failed",
+      "message": "Some files failed to delete. Please create a bug issue"
+    },
+    "new_device_login": {
+      "title": "New device login",
+      "message": "A new device has logged into your account"
+    },
+    "folder_lock_change": {
+      "title": "Folder lock changed",
+      "message": "A folder lock status has changed"
+    },
     "fields": {
       "city": "City",
       "country": "Country",
-      "device": "Device",
       "device_id": "Device ID",
+      "device_name": "Device",
       "device_type": "Device type",
-      "ipAddress": "IP address"
-    },
-    "newDeviceLoginMessage": "A new device has logged into your account.",
-    "newDeviceLoginTitle": "New device login"
+      "folder_id": "Folder ID",
+      "ip_address": "IP address",
+      "status": "Status"
+    }
   },
   "prompts": {
     "aborting": "Aborting...",
@@ -342,7 +358,6 @@
     "pausedFilesUpload": "Paused upload of {amount} files",
     "pausingFilesUpload": "Pausing...",
     "permanent": "Permanent",
-    "pinkyPromiseResetFolderPassword": "I pinky promise i am not a robot!",
     "property": "File Property",
     "propertyValue": "Value",
     "qrDecoded": "QR Code detected",

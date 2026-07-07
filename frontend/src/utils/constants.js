@@ -55,7 +55,8 @@ export const PreviewEvent = {
 
 export const NotificationKind = {
    GENERAL: "general",
-   NEW_DEVICE_LOGIN: "new_device_login"
+   NEW_DEVICE_LOGIN: "new_device_login",
+   FOLDER_LOCK_CHANGE: "folder_lock_change"
 }
 
 export const ClientsideDecryptionMethods = {

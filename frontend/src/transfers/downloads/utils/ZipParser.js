@@ -3,6 +3,10 @@ import { encryptionMethod } from "@/utils/constants.js"
 const LOCAL_FILE_HEADER_SIG = 0x04034b50
 const CENTRAL_DIR_SIG = 0x02014b50
 const EOCD_SIG = 0x06054b50
+const ZIP64_EOCD_SIG = 0x06064b50
+const ZIP64_EOCD_LOCATOR_SIG = 0x07064b50
+const CENTRAL_DIR_DIGITAL_SIGNATURE_SIG = 0x05054b50
+const ARCHIVE_EXTRA_DATA_SIG = 0x08064b50
 const DATA_DESCRIPTOR_SIG = 0x08074b50
 
 const DATA_DESCRIPTOR_FLAG = 0x0008
@@ -40,6 +44,21 @@ function u64(data, offset) {
    const lo = BigInt(u32(data, offset))
    const hi = BigInt(u32(data, offset + 4))
    return (hi << 32n) | lo
+}
+
+
+function isZipMetadataSig(sig) {
+   return sig === CENTRAL_DIR_SIG ||
+      sig === EOCD_SIG ||
+      sig === ZIP64_EOCD_SIG ||
+      sig === ZIP64_EOCD_LOCATOR_SIG ||
+      sig === CENTRAL_DIR_DIGITAL_SIGNATURE_SIG ||
+      sig === ARCHIVE_EXTRA_DATA_SIG
+}
+
+
+function isZipHeaderSig(sig) {
+   return sig === LOCAL_FILE_HEADER_SIG || isZipMetadataSig(sig)
 }
 
 
@@ -236,7 +255,7 @@ export class ZipTransformParser {
       const bytes = this.buffer
       this.buffer = new Uint8Array(0)
 
-      return [{type: "passthrough", bytes}]
+      return [{ type: "passthrough", bytes }]
    }
 
    parseLocalHeader(parts) {
@@ -244,7 +263,7 @@ export class ZipTransformParser {
 
       const sig = u32(this.buffer, 0)
 
-      if (sig === CENTRAL_DIR_SIG || sig === EOCD_SIG) {
+      if (isZipMetadataSig(sig)) {
          this.done = true
 
          parts.push({
@@ -281,12 +300,7 @@ export class ZipTransformParser {
       const extraEnd = extraStart + extraLength
       const extra = this.buffer.slice(extraStart, extraEnd)
 
-      const compressedSize = parseZip64CompressedSize(
-         extra,
-         compressedSize32,
-         uncompressedSize32
-      )
-
+      const compressedSize = parseZip64CompressedSize(extra, compressedSize32, uncompressedSize32)
       const { encryption, range } = parseEncryptionExtra(extra)
 
       const localHeader = this.buffer.slice(0, localHeaderLength)
@@ -297,6 +311,7 @@ export class ZipTransformParser {
          filename,
          compressedSize,
          encryption,
+         isDirectory: filename.endsWith("/"),
          hasDataDescriptor: (flags & DATA_DESCRIPTOR_FLAG) !== 0,
          zip64: compressedSize32 === 0xffffffff || uncompressedSize32 === 0xffffffff
       }
@@ -319,11 +334,12 @@ export class ZipTransformParser {
 
    emitFileData(parts) {
       if (this.remainingFileData === 0n) {
-         this.state = this.currentEntry.hasDataDescriptor ? "dataDescriptor" : "localHeader"
-
-         if (!this.currentEntry.hasDataDescriptor) {
+         if (this.currentEntry.hasDataDescriptor && !this.currentEntry.isDirectory) {
+            this.state = "dataDescriptor"
+         } else {
             this.currentEntry = null
             this.currentFileOffset = 0n
+            this.state = "localHeader"
          }
 
          return true
@@ -361,8 +377,16 @@ export class ZipTransformParser {
          return false
       }
 
-      const hasSignature = u32(this.buffer, 0) === DATA_DESCRIPTOR_SIG
+      const sig = u32(this.buffer, 0)
 
+      if (isZipHeaderSig(sig)) {
+         this.currentEntry = null
+         this.currentFileOffset = 0n
+         this.state = "localHeader"
+         return true
+      }
+
+      const hasSignature = sig === DATA_DESCRIPTOR_SIG
       const descriptorLength = this.currentEntry.zip64 ? (hasSignature ? 24 : 20) : (hasSignature ? 16 : 12)
 
       if (this.buffer.byteLength < descriptorLength) {
@@ -371,7 +395,10 @@ export class ZipTransformParser {
 
       const bytes = this.buffer.slice(0, descriptorLength)
 
-      parts.push({type: "passthrough", bytes})
+      parts.push({
+         type: "passthrough",
+         bytes
+      })
 
       this.buffer = this.buffer.slice(descriptorLength)
 

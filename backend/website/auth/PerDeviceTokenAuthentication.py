@@ -1,4 +1,5 @@
 import random
+import uuid
 
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
@@ -31,7 +32,7 @@ class PerDeviceTokenAuthentication(BaseAuthentication):
         if token_obj.user_agent != str(request.user_agent):
             raise exceptions.AuthenticationFailed('Invalid user agent')
 
-        request_id = random.randint(0, 100000)
+        request_id = uuid.uuid4().hex
         request.context = RequestContext(user_id=token_obj.user_id, device_id=token_obj.device_id, request_id=request_id)
 
         return token_obj.user, token_obj

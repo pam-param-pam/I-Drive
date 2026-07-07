@@ -5,15 +5,18 @@ from django.contrib.auth.models import User
 
 
 class RequestContext:
-    def __init__(self, user_id: int, device_id: Optional[str], request_id: int):
+    def __init__(self, user_id: int, device_id: Optional[str], request_id: str):
         self.user_id = user_id
         self.device_id = device_id
         self.request_id = request_id
         self._user = None
 
-    def get_user(self) -> Optional[User]:
+    def get_user(self) -> User:
         if not self._user and self.user_id:
             self._user = User.objects.get(id=self.user_id)
+        if not self._user:
+            raise Exception("RequestContext: User does not exist")
+
         return self._user
 
     def without_device_id(self) -> 'RequestContext':

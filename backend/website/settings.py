@@ -69,9 +69,7 @@ else:
 # CORS
 
 CORS_ALLOW_PRIVATE_NETWORK = True
-CORS_ALLOWED_ORIGINS = [
-    PUBLIC_ORIGIN
-]
+CORS_ALLOW_HEADERS = "*"
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost:\d+$",

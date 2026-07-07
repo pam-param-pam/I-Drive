@@ -21,8 +21,8 @@ from website.core.dataModels.http import RequestContext
 from website.core.errors import FailedToParseRawImage
 from website.discord.Discord import discord
 from website.models import Folder, Fragment, File, DiscordSettings
-from website.models.other_models import RawExtractionClaim
-from website.services import folder_service, create_file_service, file_service
+from website.models.other_models import RawExtractionClaim, NotificationKind, NotificationType
+from website.services import folder_service, create_file_service, file_service, user_service, touch_service
 from website.websockets.utils import send_event, send_message
 
 logger = get_task_logger(__name__)
@@ -30,25 +30,30 @@ logger = get_task_logger(__name__)
 RAW_EXTRACTION_BATCH_SIZE = 25
 RAW_EXTRACTION_STALE_TIMEOUT = 30
 
+
 @app.task
-def lock_folder_task(context: dict, folder_id: str, password: str):
-    if not password:
-        raise ValueError("Password cannot be None")
+def lock_folder_task(context: dict, folder_id: str, password: str, change_type: str):
+    context = RequestContext.deserialize(context)
     try:
-        context = RequestContext.deserialize(context)
         folder = Folder.objects.get(id=folder_id)
-        folder_service.internal_apply_lock(folder=folder, lock_from=folder, password=password)
+        with transaction.atomic():
+            folder_service.internal_apply_lock(folder=folder, lock_from=folder, password=password)
+            user_service.create_notification(context.get_user(), NotificationType.IMPORTANT, NotificationKind.FOLDER_LOCK_CHANGE,
+                                             data={"folder_id": folder.id, "status": change_type})
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
         traceback.print_exc()
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task
-def unlock_folder_task(context: dict, folder_id: str):
+def unlock_folder_task(context: dict, folder_id: str, change_type: str):
+    context = RequestContext.deserialize(context)
     try:
-        context = RequestContext.deserialize(context)
         folder = Folder.objects.get(id=folder_id)
-        folder_service.internal_remove_lock(folder=folder, lock_from=folder.lockFrom)
+        with transaction.atomic():
+            folder_service.internal_remove_lock(folder=folder, lock_from=folder.lockFrom)
+            user_service.create_notification(context.get_user(), NotificationType.IMPORTANT, NotificationKind.FOLDER_LOCK_CHANGE,
+                                             data={"folder_id": folder.id, "status": change_type})
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
         traceback.print_exc()
@@ -133,27 +138,29 @@ def _encrypt_thumbnail(data, file_obj: File):
 
 
 def _save_thumbnail_and_metadata(user, file_obj: File, thumbnail_info: dict, metadata: dict):
-    create_file_service.create_or_edit_thumbnail(user, file_obj, thumbnail_info)
-    file_service.create_raw_metadata(file_obj, metadata)
-    file_obj.remove_cache()
+    with transaction.atomic():
+        create_file_service.create_or_edit_thumbnail(user, file_obj, thumbnail_info)
+        file_service.create_raw_metadata_internal(file_obj, metadata)
+        touch_service.touch_file_object(file_obj)
     send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
 
 
 def _handle_parse_failure(file_obj: File):
-    meta = file_service.create_raw_metadata(
-        file_obj,
-        {
-            "camera": "FAILED TO PARSE",
-            "camera_owner": "FAILED TO PARSE",
-            "iso": "FAILED TO PARSE",
-            "shutter": "FAILED TO PARSE",
-            "aperture": "FAILED TO PARSE",
-            "focal_length": "FAILED TO PARSE"
-        }
-    )
-    meta.failed_to_process = True
-    meta.save(update_fields=["failed_to_process"])
-    file_obj.remove_cache()
+    with transaction.atomic():
+        meta = file_service.create_raw_metadata_internal(
+            file_obj,
+            {
+                "camera": "FAILED TO PARSE",
+                "camera_owner": "FAILED TO PARSE",
+                "iso": "FAILED TO PARSE",
+                "shutter": "FAILED TO PARSE",
+                "aperture": "FAILED TO PARSE",
+                "focal_length": "FAILED TO PARSE"
+            }
+        )
+        meta.failed_to_process = True
+        meta.save(update_fields=["failed_to_process"])
+        touch_service.touch_file_object(file_obj)
 
 
 def _flush_uploads(user, state):

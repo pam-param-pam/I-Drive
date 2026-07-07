@@ -144,6 +144,11 @@ export async function deleteSubtitle(fileId, subtitleId) {
    return response.data
 }
 
+export async function getMediaPositions(data) {
+   let url = `/files/media-positions`
+   let response = await backendInstance.post(url, data)
+   return response.data
+}
 
 export async function getFileRawData(fileUrl, config = {}) {
    const response = await backendInstance.get(fileUrl, {

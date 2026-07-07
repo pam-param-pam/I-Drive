@@ -7,7 +7,7 @@ from django.db.models.aggregates import Sum
 from rest_framework.exceptions import ValidationError
 
 from website.core.Serializers import FileSerializer, FolderSerializer, ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
-from website.core.dataModels.general import FolderDict, Item, Breadcrumbs
+from website.core.dataModels.general import Item
 from website.core.helpers import get_attr, normalize_blocked_until
 from website.discord.Discord import discord
 from website.models import Folder, File, Channel, Webhook, Bot, ShareAccessEvent
@@ -21,14 +21,14 @@ def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
     for ancestor in ancestors:
         if not ancestor.parent:
             continue
-        lockFrom = get_attr(ancestor, "lockFrom_id", None)
-        data = {"name": ancestor.name, "id": ancestor.id, "lockFrom": lockFrom}
+        lock_from = get_attr(ancestor, "lockFrom_id", None)
+        data = {"name": ancestor.name, "id": ancestor.id, "lockFrom": lock_from}
         breadcrumbs.append(data)
 
     return breadcrumbs
 
 
-def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> FolderDict:
+def build_folder_content(folder_obj: Folder, include_folders: bool = True, include_files: bool = True) -> Dict:
     file_children = []
 
     if include_files:
@@ -52,7 +52,7 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     return folder_dict
 
 
-def build_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id: bool = False) -> List[Breadcrumbs]:
+def build_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id: bool = False) -> List[Dict]:
     subfolders = folder_obj.get_ancestors(include_self=True, ascending=True)
 
     breadcrumbs = []
@@ -223,7 +223,7 @@ def build_share_resource_dict(resource_in_share: Item) -> Dict:
     return resource_dict
 
 
-def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> FolderDict:
+def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> Dict:
     files = list(
         folder_obj.files
         .filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
@@ -242,6 +242,19 @@ def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> Fol
     return folder_dict
 
 
+def _add_credential_status(data, cred):
+    if cred:
+        data["is_blocked"] = bool(
+            cred.blocked_until and cred.blocked_until > time.time()
+        )
+        data["blocked_until"] = normalize_blocked_until(cred.blocked_until)
+        data["block_reason"] = cred.block_reason
+        data["discord_error_code"] = cred.discord_error_code
+    else:
+        data["is_blocked"] = False
+
+    return data
+
 def build_discord_settings(user) -> dict:
     settings = user.discordsettings
     webhooks = Webhook.objects.filter(owner=user).order_by('created_at')
@@ -259,30 +272,14 @@ def build_discord_settings(user) -> dict:
         data = WebhookSerializer.serialize_object(webhook)
         cred = credential_map.get(webhook.url)
 
-        if cred:
-            data["is_blocked"] = bool(cred.blocked_until and cred.blocked_until > time.time())
-            data["blocked_until"] = normalize_blocked_until(cred.blocked_until)
-            data["block_reason"] = cred.block_reason
-            data["discord_error_code"] = cred.discord_error_code
-        else:
-            data["is_blocked"] = False
-
-        webhook_dicts.append(data)
+        webhook_dicts.append(_add_credential_status(data, cred))
 
     bots_dicts = []
     for bot in bots:
         data = BotSerializer.serialize_object(bot)
         cred = credential_map.get(bot.token)
 
-        if cred:
-            data["is_blocked"] = bool(cred.blocked_until and cred.blocked_until > time.time())
-            data["blocked_until"] = normalize_blocked_until(cred.blocked_until)
-            data["block_reason"] = cred.block_reason
-            data["discord_error_code"] = cred.discord_error_code
-        else:
-            data["is_blocked"] = False
-
-        bots_dicts.append(data)
+        bots_dicts.append(_add_credential_status(data, cred))
 
     can_add_bots_or_webhooks = bool(settings.guild_id and channels_count > 0)
 

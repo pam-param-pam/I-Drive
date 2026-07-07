@@ -23,13 +23,6 @@
                class="input input--block styled-input"
             />
          </div>
-
-         <div class="checkbox-group">
-            <label>
-               <input v-model="pinkyPromise" type="checkbox" />
-               {{ $t("prompts.pinkyPromiseResetFolderPassword") }}
-            </label>
-         </div>
       </div>
 
       <div class="card-action">
@@ -43,7 +36,7 @@
          </button>
          <button
             :aria-label="$t('buttons.reset')"
-            :disabled="!pinkyPromise || accountPassword === ''"
+            :disabled="accountPassword === ''"
             :title="$t('buttons.reset')"
             class="button button--flat"
             type="submit"
@@ -78,8 +71,7 @@ export default {
    data() {
       return {
          accountPassword: "",
-         folderPassword: "",
-         pinkyPromise: false
+         folderPassword: ""
       }
    },
 
@@ -112,9 +104,3 @@ export default {
    }
 }
 </script>
-
-<style scoped>
-.checkbox-group {
-  margin-bottom: 15px;
-}
-</style>

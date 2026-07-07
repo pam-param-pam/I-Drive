@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils import timezone
 
+from website.config import MAX_FILES_IN_FOLDER
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_encryption_fields, validate_value
 from website.core.validators.GeneralChecks import IsSnowflake, IsPositive, NotEmpty, MaxLength, NotNegative, NoSpaces
@@ -12,10 +13,10 @@ from website.models import Thumbnail, File, Subtitle, VideoMetadataTrackMixin, V
 from website.models.file_related_models import RawMetadata, PhotoMetadata, MediaPosition, Tag, Moment
 from website.models.mixin_models import ItemState
 from website.queries.selectors import get_discord_author, get_discord_channel
-from website.services import attachment_service, folder_service
+from website.services import attachment_service, touch_service
 
 
-def create_thumbnail(file_obj: File, data: dict) -> Thumbnail:
+def create_thumbnail_internal(file_obj: File, data: dict) -> Thumbnail:
     if file_obj.state != ItemState.ACTIVE:
         raise BadRequestError("Item not active")
 
@@ -72,24 +73,26 @@ def create_subtitle(file_obj: File, data: dict) -> Subtitle:
     if Subtitle.objects.filter(file=file_obj, language=language).exists():
         raise BadRequestError("Subtitle with this language already exists")
 
-    sub = Subtitle.objects.create(
-        language=language,
-        file=file_obj,
-        forced=is_forced,
-        channel=channel,
-        message_id=message_id,
-        attachment_id=attachment_id,
-        content_type=ContentType.objects.get_for_model(author),
-        object_id=author.discord_id,
-        size=size,
-        key=key,
-        iv=iv
-    )
-    file_obj.remove_cache()
-    return sub
+    with transaction.atomic():
+        sub = Subtitle.objects.create(
+            language=language,
+            file=file_obj,
+            forced=is_forced,
+            channel=channel,
+            message_id=message_id,
+            attachment_id=attachment_id,
+            content_type=ContentType.objects.get_for_model(author),
+            object_id=author.discord_id,
+            size=size,
+            key=key,
+            iv=iv
+        )
+
+        touch_service.touch_file_object(file_obj)
+        return sub
 
 
-def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetadataTrackMixin], video_metadata: VideoMetadata):
+def _create_tracks_internal(metadata: dict, track_type: str, model_class: Type[VideoMetadataTrackMixin], video_metadata: VideoMetadata):
     for index, track in enumerate(metadata[track_type]):
         kwargs = {
             "video_metadata": video_metadata,
@@ -121,7 +124,7 @@ def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetad
         model_class.objects.create(**kwargs)
 
 
-def create_video_metadata(file_obj: File, metadata: dict) -> VideoMetadata:
+def create_video_metadata_internal(file_obj: File, metadata: dict) -> VideoMetadata:
     if file_obj.type != "Video":
         raise BadRequestError(f"Video metadata is not allowed for file type: {file_obj.type}")
 
@@ -134,13 +137,13 @@ def create_video_metadata(file_obj: File, metadata: dict) -> VideoMetadata:
         brands=validate_key(metadata, "brands", str, checks=[NotEmpty, MaxLength(100)]),
         mime=validate_key(metadata, "mime", str, checks=[NotEmpty, MaxLength(100)]),
     )
-    _create_tracks(metadata, "video_tracks", VideoTrack, video_metadata)
-    _create_tracks(metadata, "audio_tracks", AudioTrack, video_metadata)
-    _create_tracks(metadata, "subtitle_tracks", SubtitleTrack, video_metadata)
+    _create_tracks_internal(metadata, "video_tracks", VideoTrack, video_metadata)
+    _create_tracks_internal(metadata, "audio_tracks", AudioTrack, video_metadata)
+    _create_tracks_internal(metadata, "subtitle_tracks", SubtitleTrack, video_metadata)
 
     return video_metadata
 
-def create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
+def create_raw_metadata_internal(file_obj: File, metadata: dict) -> RawMetadata:
     if file_obj.type != "Raw image":
         raise BadRequestError(f"Raw metadata is not allowed for file type: {file_obj.type}")
 
@@ -158,7 +161,7 @@ def create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
 
     return raw_metadata
 
-def create_photo_metadata(file_obj: File, metadata: dict) -> PhotoMetadata:
+def create_photo_metadata_internal(file_obj: File, metadata: dict) -> PhotoMetadata:
     if file_obj.type != "Image":
         raise BadRequestError(f"Photo metadata is not allowed for file type: {file_obj.type}")
 
@@ -178,7 +181,6 @@ def update_media_position(file_obj: File, new_position) -> None:
 
     media_position.timestamp = new_position
     media_position.save()
-    file_obj.remove_cache()
 
 
 def add_tag(file_obj: File, tag_name: str) -> Tag:
@@ -190,16 +192,12 @@ def add_tag(file_obj: File, tag_name: str) -> Tag:
         raise BadRequestError("File already has this tag")
 
     file_obj.tags.add(tag)
-
-    file_obj.remove_cache()
     return tag
 
 
 def remove_tag(file_obj: File, tag_id: str) -> None:
     tag = file_obj.tags.get(id=tag_id, owner=file_obj.owner)
     file_obj.tags.remove(tag)
-
-    file_obj.remove_cache()
 
     if not tag.files.exists():
         tag.delete()
@@ -214,13 +212,16 @@ def rename_subtitle(file_obj: File, subtitle_id: str, new_language: str) -> None
 def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     with transaction.atomic():
         subtitle = Subtitle.objects.select_for_update().get(file=file_obj, id=subtitle_id)
-        attachment_service.delete_single_discord_attachment(user, subtitle)
+        attachment_service.delete_remote_single_discord_attachment(user, subtitle)
+        subtitle.delete()
+        touch_service.touch_file_object(file_obj)
+
 
 def remove_moment(user, file_obj, moment_id) -> None:
     with transaction.atomic():
         moment = Moment.objects.select_for_update().get(file=file_obj, id=moment_id)
-        attachment_service.delete_single_discord_attachment(user, moment)
-
+        attachment_service.delete_remote_single_discord_attachment(user, moment)
+        moment.delete()
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:
     if file_obj.state != ItemState.ACTIVE:
@@ -264,9 +265,12 @@ def internal_move_to_trash(files: Iterable[File]) -> None:
     now = timezone.now()
 
     ids = [f.id for f in files if not f.parent.inTrash]
+    parent_ids = [f.parent_id for f in files if not f.parent.inTrash]
 
-    File.objects.filter(id__in=ids).update(inTrash=True, inTrashSince=now)
-    _clear_cache(ids)
+    with transaction.atomic():
+        File.objects.filter(id__in=ids).update(inTrash=True, inTrashSince=now)
+        touch_service.touch_files(ids, parent_ids=parent_ids)
+
 
 def internal_restore_from_trash(files: Iterable[File]) -> None:
     invalid = [f.id for f in files if f.parent.inTrash]
@@ -274,36 +278,50 @@ def internal_restore_from_trash(files: Iterable[File]) -> None:
         raise BadRequestError("Cannot restore from trash! Folder parent is in trash, restore it first.")
 
     ids = [f.id for f in files]
-    File.objects.filter(id__in=ids).update(inTrash=False, inTrashSince=None)
-    _clear_cache(ids)
+    parent_ids = [f.parent_id for f in files]
 
-def _clear_cache(file_ids: list[str]) -> None:
-    parent_ids = (
-        File.objects
-        .filter(id__in=file_ids)
-        .values_list("parent_id", flat=True)
-        .distinct()
-    )
-
-    folder_service._clear_cache(list(parent_ids))
+    with transaction.atomic():
+        File.objects.filter(id__in=ids).update(inTrash=False, inTrashSince=None)
+        touch_service.touch_files(ids, parent_ids=parent_ids)
 
 
 def internal_move_to_new_parent(file_ids: list[str], new_parent: Folder):
-    now = timezone.now()
+    from website.services import folder_service
 
-    File.objects.filter(id__in=file_ids).update(
-        parent=new_parent,
-        last_modified_at=now,
-    )
-    _clear_cache(file_ids)
+    with transaction.atomic():
+        files_qs = File.objects.filter(id__in=file_ids)
 
-    folder_service._clear_cache([new_parent.id])
+        files_length = (
+            files_qs
+            .exclude(parent_id=new_parent.id)
+            .count()
+        )
+
+        if not folder_service.has_folder_enough_space_for_files(folder=new_parent, files_length=files_length):
+            raise BadRequestError(f"Too many files in folder. Max = {MAX_FILES_IN_FOLDER}. Files in trash count too.")
+
+        old_parent_ids = list(
+            files_qs
+            .values_list("parent_id", flat=True)
+            .distinct()
+        )
+
+        files_qs.update(parent=new_parent)
+
+        touch_service.touch_file_move(
+            file_ids,
+            old_parent_ids=old_parent_ids,
+            new_parent_ids=[new_parent.id],
+        )
+
 
 def internal_force_ready(file_ids: list[str]):
     now = timezone.now()
 
-    File.objects.filter(id__in=file_ids).update(
-        state=ItemState.ACTIVE,
-        state_changed_at=now
-    )
-    _clear_cache(file_ids)
+    with transaction.atomic():
+        File.objects.filter(id__in=file_ids).update(
+            state=ItemState.ACTIVE,
+            state_changed_at=now,
+        )
+
+        touch_service.touch_files(file_ids)

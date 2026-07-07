@@ -9,8 +9,9 @@ from django.views.static import serve
 from .views.authViews import login_per_device_view, logout_per_device_view, register_user_view, get_qr_session_view, authenticate_qr_session_view, get_qr_session_device_info_view, \
     cancel_pending_qr_session_view, change_password_view, healthcheck_view, list_active_devices_view, logout_all_devices_view, revoke_device_view
 from .views.dataViews import get_folder_info, get_file_info, get_usage, search, \
-    get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, get_fragment_url_view, get_folder_file_stats, get_folder_hash, get_all_tags, get_media_position, \
-    ultra_download_files_metadata, ultra_download_file_fragments_metadata
+    get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, get_fragment_url_view, get_folder_file_stats, get_folder_hash, get_all_tags, \
+    get_media_position, \
+    ultra_download_files_metadata, ultra_download_file_fragments_metadata, get_files_media_position
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, \
     remove_moment_view, \
@@ -68,6 +69,7 @@ urlpatterns = [
     path("files/<file_id>/stream", ["GET"], stream_file, name="stream file"),
 
     path("files", ["POST"], create_file_view, name="create file"),
+    path("files/media-positions", ["POST"], get_files_media_position, name="returns a media position for many files"),
     path("files/<file_id>", ["PATCH"], edit_file_view, name="edit file"),
     path("files/<file_id>", ["GET"], get_file_info, name="get file info"),
     path("files/<file_id>/thumbnail", ["POST"], create_or_edit_thumbnail_view, name="create or edit thumbnail"),
@@ -102,8 +104,8 @@ urlpatterns = [
     path("items/<item_id>/rename", ["PATCH"], rename_view, name="rename an item"),
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 
-    path("ultraDownload/items/<item_id>", ['POST'], ultra_download_files_metadata, name="returns metadata about files"),
-    path("ultraDownload/file/<folder_id>/<file_id>", ['POST'], ultra_download_file_fragments_metadata, name="returns metadata about a single file"),
+    path("ultraDownload/items/<item_id>", ['GET'], ultra_download_files_metadata, name="returns metadata about files"),
+    path("ultraDownload/file/<folder_id>/<file_id>", ['GET'], ultra_download_file_fragments_metadata, name="returns metadata about a single file"),
     path("ultraDownload/fragments/<fragment_id>", ['GET'], get_fragment_url_view, name="download metadata for ultra download"),
 
     path("zip", ["POST"], create_zip_model_view, name="create zip model"),

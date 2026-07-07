@@ -10,7 +10,6 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 
 from website.constants import cache
-from website.core.helpers import check_name
 from .mixin_models import ItemState
 from website.services import cache_service
 from ..config import MAX_RESOURCE_NAME_LENGTH, MAX_FOLDER_DEPTH
@@ -21,7 +20,7 @@ class Folder(MPTTModel):
     name = models.CharField(max_length=100)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_modified_at = models.DateTimeField(auto_now_add=True)
+    last_modified_at = models.DateTimeField(auto_now=True)
     inTrash = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     inTrashSince = models.DateTimeField(null=True, blank=True)
@@ -99,31 +98,6 @@ class Folder(MPTTModel):
     def _create_user_root(user):
         Folder.objects.get_or_create(owner=user, name="root")
 
-    def save(self, *args, **kwargs):
-        check_name(self.name)
-        self.check_depth()
-        self.name = self.name[:MAX_RESOURCE_NAME_LENGTH]
-
-        self.last_modified_at = timezone.now()
-
-        # invalidate any cache
-        self.remove_cache()
-
-        # invalidate also cache of 'old' parent if the parent was changed
-        # we make a db lookup to get the old parent
-        # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
-        try:
-            old_object = Folder.objects.get(id=self.id)
-            old_object.remove_cache()
-        except Folder.DoesNotExist:
-            pass
-
-        super(Folder, self).save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        self.remove_cache()
-        super(Folder, self).delete()
-
     def get_all_subfolders(self, include_self=False) -> TreeQuerySet:
         return self.get_descendants(include_self=include_self)
 
@@ -132,18 +106,3 @@ class Folder(MPTTModel):
         # todo move to queries
         queryset = self.get_all_subfolders(include_self=True)
         return File.objects.filter(parent__in=queryset)
-
-    def remove_cache(self):
-        key = cache_service.get_folder_content_key(self.id)
-        cache.delete(key)
-
-        if self.parent:
-            parent_key = cache_service.get_folder_content_key(self.parent.id)
-            cache.delete(parent_key)
-
-    def check_depth(self, new_parent=None):
-        parent = new_parent or self.parent
-        if not parent:
-            return
-        if (len(parent.get_ancestors()) + 1) > MAX_FOLDER_DEPTH:
-            raise ValidationError(f"Folder nested too deep! Max depth = {MAX_FOLDER_DEPTH}")

@@ -33,7 +33,7 @@ import { backendInstance } from "@/axios/networker.js"
 import { PreviewEvent } from "@/utils/constants.js"
 
 export default {
-   props: ["file", "subtitles", "src", "thumbSrc"],
+   props: ["file", "subtitles", "src", "thumbSrc", "mediaPosition"],
    emits: ["previewEvent", "error"],
    data() {
       return {
@@ -55,6 +55,9 @@ export default {
             this.videoRef.removeAttribute("src")
             this.videoRef.removeAttribute("poster")
             this.videoRef.load()
+
+            this.videoRef.currentTime = this.mediaPosition || 0
+            this.lastSentMediaPosition = this.mediaPosition || 0
          }
       }
    },
@@ -62,9 +65,6 @@ export default {
       this.videoRef = this.$refs.video
 
       if (!this.videoRef) return
-
-      this.videoRef.currentTime = this.file.media_position || 0
-      this.lastSentMediaPosition = this.file.media_position || 0
 
       if (this.subtitles) {
          this.loadSubtitleStyle()

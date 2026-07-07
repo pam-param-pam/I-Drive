@@ -18,7 +18,7 @@ import { PreviewEvent } from "@/utils/constants.js"
 import { backendInstance } from "@/axios/networker.js"
 
 export default {
-   props: ["file", "src", "thumbSrc"],
+   props: ["file", "src", "thumbSrc", "mediaPosition"],
    emits: ["previewEvent", "error"],
 
    data() {
@@ -32,8 +32,8 @@ export default {
       this.audioRef = this.$refs.audio
 
       if (!this.audioRef) return
-      this.audioRef.currentTime = this.file.media_position || 0
-      this.lastSentMediaPosition = this.file.media_position || 0
+      this.audioRef.currentTime = this.mediaPosition || 0
+      this.lastSentMediaPosition = this.mediaPosition || 0
 
    },
 

@@ -1,7 +1,10 @@
+import copy
 import hashlib
 import json
 import time
+from pathlib import Path
 
+from django.conf import settings
 from django.db.models import Count, Sum, Case, When, Value, CharField
 from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
@@ -20,12 +23,12 @@ from website.core.Serializers import FileSerializer, VideoTrackSerializer, Subti
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
 from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
-from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
+from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item, extract_items_from_ids_annotated, check_bulk_permissions
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_value
+from website.core.helpers import validate_value, get_attr, validate_ids_as_list, extract_key
 from website.discord.Discord import discord
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
-from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag
+from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
 from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
 from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists
@@ -39,14 +42,13 @@ from website.services import cache_service, search_service
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_folder_info(request, folder_obj: Folder):
     # todo optimize this
-    key = cache_service.get_folder_content_key(folder_obj.id)
+    folder_content = cache_service.get_folder_content(folder_obj)
 
-    folder_content = cache.get(key)
-
-    if not folder_content:
+    if folder_content is None:
         folder_content = build_folder_content(folder_obj)
-        cache.set(key, folder_content, timeout=None)
+        cache_service.set_folder_content(folder_obj, folder_content)
 
+    folder_content = folder_content
     breadcrumbs = build_breadcrumbs(folder_obj)
 
     unsigned_payload = {
@@ -275,10 +277,26 @@ def get_all_tags(request):
     return JsonResponse(TagSerializer.serialize_objects(tags), safe=False)
 
 
+@api_view(["POST"])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+def get_files_media_position(request):
+    ids = extract_key(request.data, "ids")
+    validate_ids_as_list(ids, max_length=10_000)
+
+    files = File.objects.filter(id__in=ids)
+    item_ids = []
+    for file in files:
+        check_resource_perms(request=request, resource=file, checks=default_checks)
+        item_ids.append(file.id)
+
+    media_positions = MediaPosition.objects.filter(file_id__in=item_ids)
+    return JsonResponse(MediaPositionSerializer.serialize_objects(media_positions), safe=False)
+
 """====================================================HERE BE DRAGONS=========================================================="""
 
 
-@api_view(["POST"])
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
@@ -322,7 +340,7 @@ def ultra_download_files_metadata(request, item_obj):
     return JsonResponse(response_data, safe=False)
 
 
-@api_view(["POST"])
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
@@ -415,24 +433,125 @@ def get_folder_file_stats(request, folder_obj):
 
     return JsonResponse(result, safe=False)
 
+#
+# HASH_TRACE_DIR = Path(settings.BASE_DIR) / "hash-traces" / "server"
+#
+#
+# def write_folder_hash_trace(folder_obj: Folder, digest: str, file_entries, folder_entries) -> Path:
+#     HASH_TRACE_DIR.mkdir(parents=True, exist_ok=True)
+#
+#     updates = []
+#     update_index = 0
+#
+#     files_json = []
+#     for order, entry in enumerate(file_entries):
+#         name = entry["name"]
+#         crc = str(entry["crc"])
+#
+#         files_json.append({
+#             "order": order,
+#             "id": str(entry["id"]),
+#             "name": name,
+#             "crc": crc,
+#             "parent_id": str(entry["parent_id"]),
+#         })
+#
+#         updates.append({"order": update_index, "kind": "file_name", "value": name})
+#         update_index += 1
+#         updates.append({"order": update_index, "kind": "file_crc", "value": crc})
+#         update_index += 1
+#
+#     folders_json = []
+#     for order, entry in enumerate(folder_entries):
+#         name = entry["name"]
+#
+#         folders_json.append({
+#             "order": order,
+#             "id": str(entry["id"]),
+#             "name": name,
+#             "parent_id": str(entry["parent_id"]) if entry["parent_id"] else None,
+#         })
+#
+#         updates.append({"order": update_index, "kind": "folder_name", "value": name})
+#         update_index += 1
+#
+#     trace = {
+#         "schema": "idrive-folder-hash-trace-v1",
+#         "source": "server",
+#         "folder": {
+#             "id": str(folder_obj.id),
+#             "name": folder_obj.name,
+#         },
+#         "hash": digest,
+#         "counts": {
+#             "files": len(files_json),
+#             "folders": len(folders_json),
+#             "updates": len(updates),
+#         },
+#         "files": files_json,
+#         "folders": folders_json,
+#         "updates": updates,
+#     }
+#
+#     trace_path = HASH_TRACE_DIR / f"{folder_obj.id}.json"
+#     trace_path.write_text(
+#         json.dumps(trace, indent=2, ensure_ascii=False) + "\n",
+#         encoding="utf-8",
+#     )
+#     return trace_path
 
-@api_view(['GET'])
+
+def _get_folder_hash_cache_version(folder_entries: list[dict]) -> str:
+    hasher = hashlib.sha256()
+
+    for entry in sorted(folder_entries, key=lambda item: str(item["id"])):
+        modified_at = entry["last_modified_at"]
+        hasher.update(str(entry["id"]).encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(modified_at.isoformat().encode("utf-8") if modified_at else b"")
+        hasher.update(b"\0")
+
+    return hasher.hexdigest()
+
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")
 def get_folder_hash(request, folder_obj: Folder):
     subfolders = folder_obj.get_all_subfolders(include_self=True).filter(inTrash=False)
-    files = File.objects.filter(parent__in=subfolders, inTrash=False).distinct().only("name", "crc")
-    folders = subfolders.only("name")
+
+    folder_entries = list(subfolders.values("id", "name", "parent_id", "last_modified_at"))
+
+    hash_version = _get_folder_hash_cache_version(folder_entries)
+    cached_hash = cache_service.get_folder_hash(folder_obj.id, hash_version)
+
+    if cached_hash is not None:
+        return JsonResponse({"hash": cached_hash})
+
+    file_entries = list(
+        File.objects
+        .filter(parent__in=subfolders, inTrash=False)
+        .distinct()
+        .values("id", "name", "crc", "parent_id")
+    )
+
+    file_entries.sort(key=lambda entry: (entry["name"], entry["crc"]))
+    folder_entries.sort(key=lambda entry: entry["name"])
 
     hasher = hashlib.sha256()
 
-    for f in files.order_by("name"):
-        hasher.update(f.name.encode("utf-8"))
-        hasher.update(str(f.crc).encode())
+    for entry in file_entries:
+        hasher.update(entry["name"].encode("utf-8"))
+        hasher.update(str(entry["crc"]).encode("utf-8"))
 
-    for d in folders.order_by("name"):
-        hasher.update(d.name.encode("utf-8"))
+    for entry in folder_entries:
+        hasher.update(entry["name"].encode("utf-8"))
 
-    return JsonResponse({"hash": hasher.hexdigest()})
+    digest = hasher.hexdigest()
+
+    # write_folder_hash_trace(folder_obj, digest, file_entries, folder_entries)
+    cache_service.set_folder_hash(folder_obj.id, hash_version, digest)
+
+    return JsonResponse({"hash": digest})
+

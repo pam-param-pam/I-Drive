@@ -8,38 +8,43 @@
         ref="notificationsContainer"
         class="card-content notifications-content"
       >
-         <!-- Empty state: show only when no notifications and not loading -->
          <div v-if="!notifications.length && !isLoading" class="notif-empty">
             <i class="material-icons notif-empty-icon">notifications_none</i>
+
             <div class="notif-empty-title">
                {{ $t("prompts.noNotifications") }}
             </div>
+
             <div class="notif-empty-subtitle">
                {{ $t("prompts.notificationsWillAppearHere") }}
             </div>
          </div>
 
          <div
-           v-for="n in notifications"
-           :key="n.id"
-           :class="[`type-${n.type}`, { unread: !n.is_read }]"
+           v-for="notification in notifications"
+           :key="notification.id"
+           :class="[`type-${notification.type}`, { unread: !notification.is_read }]"
            class="notif-item"
-           @click="openNotification(n)"
+           @click="openNotification(notification)"
          >
             <div class="notif-header-row">
-               <div class="notif-title">{{ displayTitle(n) }}</div>
-               <span v-if="!n.is_read" class="notif-dot"></span>
+               <div class="notif-title">
+                  {{ getNotificationTitle(notification) }}
+               </div>
+
+               <span v-if="!notification.is_read" class="notif-dot"></span>
             </div>
 
-            <div class="notif-message">{{ displayMessage(n) }}</div>
-            <div class="notif-time">{{ humanTime(n.created_at) }}</div>
+            <div class="notif-message">
+               {{ getNotificationMessage(notification) }}
+            </div>
+
+            <div class="notif-time">
+               {{ humanTime(notification.created_at) }}
+            </div>
          </div>
 
-         <!-- Loading skeletons -->
-         <div
-           v-if="isLoading"
-           class="notif-skeleton-wrapper"
-         >
+         <div v-if="isLoading" class="notif-skeleton-wrapper">
             <div v-for="i in 5" :key="'skeleton-' + i" class="notif-skeleton">
                <div class="skeleton-line skeleton-title"></div>
                <div class="skeleton-line skeleton-text"></div>
@@ -61,14 +66,14 @@
          <button
            :disabled="isLoading || !unread.length"
            class="button button--flat button--red"
-           @click="markAllRead()"
+           @click="markAllRead"
          >
             {{ $t("buttons.markAllRead") }}
          </button>
 
          <button
            class="button button--flat button--grey"
-           @click="closeHover()"
+           @click="closeHover"
          >
             {{ $t("buttons.close") }}
          </button>
@@ -77,14 +82,14 @@
 </template>
 
 <script>
-import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
+
 import { getNotifications, setNotificationsStatus } from "@/api/user.js"
-import { NotificationKind } from "@/utils/constants.js"
-import { humanTime } from "../../utils/common.js"
+import { useMainStore } from "@/stores/mainStore.js"
+import { humanTime } from "@/utils/common.js"
 
 export default {
-   name: "notifications",
+   name: "Notifications",
 
    data() {
       return {
@@ -101,7 +106,7 @@ export default {
       ...mapState(useMainStore, ["user"]),
 
       unread() {
-         return this.notifications.filter(n => !n.is_read)
+         return this.notifications.filter(notification => !notification.is_read)
       },
 
       canLoadMore() {
@@ -114,37 +119,42 @@ export default {
    },
 
    created() {
-      this.fetchNotifications({ page: 1, replace: true, initial: true })
+      this.fetchNotifications({
+         page: 1,
+         replace: true,
+         initial: true
+      })
    },
 
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["closeHover", "showHover", "setUnreadNotifications"]),
 
-      displayTitle(notification) {
-         if (notification.kind === NotificationKind.NEW_DEVICE_LOGIN) {
-            return this.$t("notifications.newDeviceLoginTitle")
-         }
+      ...mapActions(useMainStore, [
+         "closeHover",
+         "showHover",
+         "setUnreadNotifications"
+      ]),
 
-         return this.$t(notification.title)
+      getNotificationTitle(notification) {
+         return this.$t(
+           notification.title || `notifications.${notification.kind}.title`,
+           notification.data || {}
+         )
       },
 
-      displayMessage(notification) {
-         if (notification.kind === NotificationKind.NEW_DEVICE_LOGIN) {
-            return this.$t("notifications.newDeviceLoginMessage")
-         }
-
-         return this.$t(notification.message)
+      getNotificationMessage(notification) {
+         return this.$t( notification.message || `notifications.${notification.kind}.message`, notification.data || {})
       },
 
       scrollToBottom() {
          const container = this.$refs.notificationsContainer
+
          if (container) {
             container.scrollTop = container.scrollHeight
          }
       },
 
-      async fetchNotifications({ page, replace = false, initial = false, scrollToBottomOnLoad = false }) {
+      async fetchNotifications({page, replace = false, initial = false, scrollToBottomOnLoad = false}) {
          if (this.isLoading) return
 
          try {
@@ -154,18 +164,19 @@ export default {
                this.loadingMore = true
             }
 
-            // If requested, scroll to bottom after loading skeletons appear
             if (scrollToBottomOnLoad) {
                await this.$nextTick()
                this.scrollToBottom()
             }
 
-            const res = await getNotifications({ unreadOnly: this.unreadOnly, page })
-            const items = res.items || []
+            const response = await getNotifications({unreadOnly: this.unreadOnly, page})
+
+            const items = response.items || []
 
             this.notifications = replace ? items : this.mergeNotifications(this.notifications, items)
-            this.page = res.page
-            this.hasNext = res.has_next
+
+            this.page = response.page
+            this.hasNext = response.has_next
          } finally {
             this.initialLoading = false
             this.loadingMore = false
@@ -173,14 +184,17 @@ export default {
       },
 
       mergeNotifications(current, incoming) {
-         const existingIds = new Set(current.map(n => n.id))
-         return [...current, ...incoming.filter(n => !existingIds.has(n.id))]
+         const existingIds = new Set(current.map(notification => notification.id))
+
+         return [
+            ...current,
+            ...incoming.filter(notification => !existingIds.has(notification.id))
+         ]
       },
 
       async loadMore() {
          if (this.isLoading) return
 
-         // Switch from "unread only" to "all" if needed
          if (this.unreadOnly && !this.hasNext) {
             this.unreadOnly = false
             this.page = 0
@@ -189,17 +203,28 @@ export default {
 
          if (!this.hasNext) return
 
-         // Fetch next page and scroll to show the loading skeleton
-         await this.fetchNotifications({ page: this.page + 1, scrollToBottomOnLoad: true })
+         await this.fetchNotifications({
+            page: this.page + 1,
+            scrollToBottomOnLoad: true
+         })
       },
 
       openNotification(notification) {
          this.showHover({
             prompt: "SingleNotification",
-            props: { notification },
-            confirm: (value) => {
-               if (value && !notification.is_read) this.markAsRead([notification])
-               if (!value && notification.is_read) this.markAsUnread([notification])
+            props: {
+               notification,
+               title: this.getNotificationTitle(notification),
+               message: this.getNotificationMessage(notification)
+            },
+            confirm: (markRead) => {
+               if (markRead && !notification.is_read) {
+                  this.markAsRead([notification])
+               }
+
+               if (!markRead && notification.is_read) {
+                  this.markAsUnread([notification])
+               }
             }
          })
       },
@@ -208,23 +233,28 @@ export default {
          await this.setReadState(this.unread, true)
       },
 
-      async markAsRead(list) {
-         await this.setReadState(list, true)
+      async markAsRead(notifications) {
+         await this.setReadState(notifications, true)
       },
 
-      async markAsUnread(list) {
-         await this.setReadState(list, false)
+      async markAsUnread(notifications) {
+         await this.setReadState(notifications, false)
       },
 
-      async setReadState(list, isRead) {
-         const changed = list.filter(n => n.is_read !== isRead)
-         const ids = changed.map(n => n.id)
+      async setReadState(notifications, isRead) {
+         const changed = notifications.filter(notification => notification.is_read !== isRead)
+         const ids = changed.map(notification => notification.id)
 
          if (!ids.length) return
 
-         await setNotificationsStatus({ ids, is_read: isRead })
+         await setNotificationsStatus({
+            ids,
+            is_read: isRead
+         })
 
-         changed.forEach(n => n.is_read = isRead)
+         changed.forEach(notification => {
+            notification.is_read = isRead
+         })
       }
    }
 }
@@ -256,6 +286,10 @@ export default {
    background: rgba(100, 181, 246, 0.08);
 }
 
+.notif-item.unread {
+   background: rgba(100, 181, 246, 0.06);
+}
+
 .notif-item.unread:hover {
    background: rgba(100, 181, 246, 0.12);
 }
@@ -282,10 +316,6 @@ export default {
    font-size: 12px;
    opacity: 0.5;
    margin-top: 6px;
-}
-
-.notif-item.unread {
-   background: rgba(100, 181, 246, 0.06);
 }
 
 .notif-dot {

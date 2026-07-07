@@ -80,12 +80,12 @@ def update_user_settings(user, data: dict) -> UserSettings:
         settings.hide_locked_folders = hide_locked_folders
     if sort_by_asc is not None:
         settings.sort_by_asc = sort_by_asc
+    if subfolders_in_shares is not None:
+        settings.subfolders_in_shares = subfolders_in_shares
+    if keep_creation_timestamp is not None:
+        settings.keep_creation_timestamp = keep_creation_timestamp
     if concurrent_upload_requests:
         settings.concurrent_upload_requests = concurrent_upload_requests
-    if subfolders_in_shares:
-        settings.subfolders_in_shares = subfolders_in_shares
-    if keep_creation_timestamp:
-        settings.keep_creation_timestamp = keep_creation_timestamp
 
     settings.save()
     return settings

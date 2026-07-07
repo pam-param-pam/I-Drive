@@ -14,7 +14,6 @@ class Webhook(models.Model):
     guild_id = models.CharField(max_length=19)
     channel = models.ForeignKey("Channel", on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
-    history = HistoricalRecords()
 
     class Meta:
         constraints = [
@@ -57,7 +56,6 @@ class Bot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
-    history = HistoricalRecords()
 
     class Meta:
         constraints = [

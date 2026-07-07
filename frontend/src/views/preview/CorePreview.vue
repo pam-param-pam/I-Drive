@@ -70,6 +70,7 @@
               :src="fileSrcUrl"
               :file="file"
               :subtitles="subtitles"
+              :mediaPosition="mediaPosition"
               :thumbSrc="thumbSrcUrl"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
@@ -98,6 +99,7 @@
               :src="fileSrcUrl"
               :thumbSrc="thumbSrcUrl"
               :file="file"
+              :mediaPosition="mediaPosition"
               @previewEvent="onPreviewEvent"
               @error="onPreviewError"
             />
@@ -221,6 +223,9 @@ export default {
          default: false,
       },
       subtitles: {
+         required: false,
+      },
+      mediaPosition: {
          required: false,
       },
       readonly: {

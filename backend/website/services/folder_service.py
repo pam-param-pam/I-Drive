@@ -1,49 +1,44 @@
+from enum import StrEnum
+
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
-from website.constants import cache, EventCode
+from website.config import MAX_FILES_IN_FOLDER, MAX_FOLDERS_IN_FOLDER, MAX_FOLDER_DEPTH
+from website.constants import EventCode
 from website.core.Serializers import FolderSerializer
 from website.core.dataModels.http import RequestContext
 from website.core.errors import BadRequestError, ResourcePermissionError
 from website.core.helpers import validate_value
-from website.core.validators.GeneralChecks import NotEmpty
+from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
 from website.models import Folder, File
 from website.models.mixin_models import ItemState
-from website.services import cache_service
+from website.services import touch_service
 from website.tasks.otherTasks import lock_folder_task, unlock_folder_task
 from website.websockets.utils import send_event
 
 
-def _clear_cache(folder_ids: list[str]) -> None:
-    cache_keys = [
-        cache_service.get_folder_content_key(fid)
-        for fid in folder_ids
-    ]
+class FolderLockChangeType(StrEnum):
+    LOCKED = "locked"
+    UNLOCKED = "unlocked"
+    RESET_CHANGED = "reset_changed"
+    RESET_UNLOCKED = "reset_unlocked"
+    PASSWORD_CHANGED = "password_changed"
 
-    cache.delete_many(cache_keys)
-
-    parent_ids = (
-        Folder.objects
-        .filter(id__in=folder_ids)
-        .values_list("parent_id", flat=True)
-        .distinct()
-    )
-
-    cache_keys = [
-        cache_service.get_folder_content_key(fid)
-        for fid in parent_ids
-    ]
-
-    cache.delete_many(cache_keys)
 
 def create_folder(context: RequestContext, user: User, parent: Folder, name: str) -> Folder:
-    name = validate_value(name, str, checks=[NotEmpty])
+    name = validate_value(name, str, checks=[IsValidItemName])
 
     if parent.state != ItemState.ACTIVE:
         raise BadRequestError("Parent not ready")
 
     with transaction.atomic():
+        if not has_folder_depth_for_subfolder(parent):
+            raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
+
+        if not has_folder_enough_space_for_folders(folder=parent, folders_length=1):
+            raise BadRequestError(f"Too many folders in folder. Max = {MAX_FOLDERS_IN_FOLDER}. Folders in trash count too.")
+
         folder_obj = Folder(name=name, parent=parent, owner=user)
 
         # apply lock if needed
@@ -51,56 +46,64 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
             internal_apply_lock(folder=folder_obj, lock_from=parent.lockFrom, password=parent.password)
 
         folder_obj.save()
+        touch_service.touch_folder_object(folder_obj)
 
     folder_dict = FolderSerializer.serialize_object(folder_obj)
     send_event(context.without_device_id(), parent, EventCode.ITEM_CREATE, folder_dict)
     return folder_obj
 
 
-def change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str) -> bool:
-    #todo send notif
+def _change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str, change_type: FolderLockChangeType) -> bool:
     validate_value(new_password, str, default=None)
 
     if new_password:
-        lock_folder_task.delay(context, folder_obj.id, new_password)
+        lock_folder_task.delay(context, folder_obj.id, new_password, change_type.value)
     else:
-        unlock_folder_task.delay(context, folder_obj.id)
+        unlock_folder_task.delay(context, folder_obj.id, change_type.value)
 
-    is_locked = True if new_password else False
-    lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
+    is_locked = bool(new_password)
+    lock_from = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
     send_event(context.without_device_id(), folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
-               [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': is_locked, 'lockFrom': lockFrom}])
+        [{"parent_id": folder_obj.parent.id, "id": folder_obj.id, "isLocked": is_locked, "lockFrom": lock_from}]
+    )
 
     return is_locked
 
+def change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str) -> bool:
+    change_type = (
+        FolderLockChangeType.PASSWORD_CHANGED
+        if new_password and folder_obj.is_locked
+        else FolderLockChangeType.LOCKED
+        if new_password
+        else FolderLockChangeType.UNLOCKED
+    )
+
+    return _change_folder_password(context, folder_obj, new_password, change_type)
 
 def reset_folder_password(context: RequestContext, user, folder_obj: Folder, account_password: str, new_folder_password: str) -> bool:
-    #todo send notif
     validate_value(new_folder_password, str)
 
     if not user.check_password(account_password):
         raise ResourcePermissionError("Account password is incorrect")
 
-    if new_folder_password:
-        lock_folder_task.delay(context, folder_obj.id, new_folder_password)
-    else:
-        unlock_folder_task.delay(context, folder_obj.id)
+    change_type = FolderLockChangeType.RESET_CHANGED  if new_folder_password else FolderLockChangeType.RESET_UNLOCKED
 
-    is_locked = True if new_folder_password else False
-
-    lockFrom = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
-
-    send_event(context.without_device_id(), folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
-               [{'parent_id': folder_obj.parent.id, 'id': folder_obj.id, 'isLocked': is_locked, 'lockFrom': lockFrom}])
-
-    return is_locked
+    return _change_folder_password(context, folder_obj, new_folder_password, change_type)
 
 
-def internal_move_to_new_parent(folder: Folder, new_parent: 'Folder'):
-    folder.check_depth(new_parent=new_parent)
+def internal_move_to_new_parent(folder: Folder, new_parent: "Folder") -> None:
+    # todo verify if this is secure due to override_nested_locks
 
     with transaction.atomic():
+        if not has_folder_depth_for_move(folder, new_parent):
+            raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
+
+        if not has_folder_enough_space_for_folders(folder=new_parent, folders_length=1):
+            raise BadRequestError(f"Too many folders in folder. Max = {MAX_FILES_IN_FOLDER}. Folders in trash count too.")
+
+        old_parent = folder.parent
+
         is_folder_locked = folder.is_locked
         is_parent_locked = new_parent.is_locked
 
@@ -115,80 +118,98 @@ def internal_move_to_new_parent(folder: Folder, new_parent: 'Folder'):
             )
 
         elif is_folder_locked:
-            # Preserve original lock (re-root it to itself)
+            # Preserve original lock, reroot it to itself
+            # respect subfolders with diff lock_from
             internal_apply_lock(
                 folder=folder,
                 lock_from=folder,
                 password=old_password,
-                force_reroot=True,
+                reroot=True,
             )
 
         folder.refresh_from_db()
-
-        # invalidate cache of the current parent
-        folder.parent.remove_cache()
 
         folder.parent = new_parent
         folder.move_to(new_parent, "last-child")
         folder.save()
 
-        folder.parent.remove_cache()
+        touch_service.touch_folder_move(
+            [folder.id],
+            old_parent_ids=[old_parent.id] if old_parent else [],
+            new_parent_ids=[new_parent.id],
+        )
 
 def internal_move_to_trash(folder: Folder) -> None:
     now = timezone.now()
-    subfolders = folder.get_all_subfolders()
+    subfolders = list(folder.get_all_subfolders())
 
-    folder_ids = [f.id for f in subfolders]
-    folder_ids.append(folder.id)
+    folder_ids = [folder.id, *[f.id for f in subfolders]]
 
-    Folder.objects.filter(id__in=folder_ids).update(
-        inTrash=True,
-        inTrashSince=now
-    )
+    with transaction.atomic():
+        Folder.objects.filter(id__in=folder_ids).update(
+            inTrash=True,
+            inTrashSince=now,
+        )
 
-    _clear_cache(folder_ids)
+        touch_service.touch_folders(folder_ids)
 
 
 def internal_restore_from_trash(folder: Folder) -> None:
     if folder.parent and folder.parent.inTrash:
         raise BadRequestError("Cannot restore folder because its parent is in trash.")
 
-    subfolders = folder.get_all_subfolders()
+    subfolders = list(folder.get_all_subfolders())
 
-    folder_ids = [f.id for f in subfolders]
-    folder_ids.append(folder.id)
+    folders = [folder, *subfolders]
+    folder_ids = [f.id for f in folders]
 
     with transaction.atomic():
         Folder.objects.filter(id__in=folder_ids).update(
             inTrash=False,
-            inTrashSince=None
+            inTrashSince=None,
         )
 
-        File.objects.filter(parent__in=[folder] + list(subfolders), inTrash=True).update(
+        restored_file_ids = list(File.objects.filter(parent__in=folders, inTrash=True).values_list("id", flat=True))
+
+        File.objects.filter(id__in=restored_file_ids).update(
             inTrash=False,
-            inTrashSince=None
+            inTrashSince=None,
         )
 
-    _clear_cache(folder_ids)
+        touch_service.touch_folders(folder_ids)
+
+        if restored_file_ids:
+            touch_service.touch_files(restored_file_ids)
 
 
-def internal_apply_lock(folder: Folder, lock_from: Folder, password: str, force_reroot: bool = False) -> None:
+def internal_apply_lock(folder: Folder, lock_from: Folder, password: str, reroot: bool = False) -> None:
+    validate_value(password, str, checks=[NotEmpty])
+
     with transaction.atomic():
-        folder.autoLock = folder != lock_from
+        folder = Folder.objects.select_for_update().get(id=folder.id)
+
+        old_lock_from_id = folder.lockFrom_id
+
+        folder.autoLock = folder.id != lock_from.id
         folder.password = password
         folder.lockFrom = lock_from
         folder.save(update_fields=["autoLock", "password", "lockFrom"])
 
         subfolders = folder.get_all_subfolders()
 
-        for sub in subfolders:
-            if not force_reroot and sub.is_locked and not sub.autoLock:
-                continue
+        if reroot:
+            subfolders = subfolders.filter(lockFrom_id=old_lock_from_id)
 
-            sub.password = password
-            sub.lockFrom = lock_from
-            sub.autoLock = True
-            sub.save(update_fields=["password", "lockFrom", "autoLock"])
+        touched_subfolder_ids = list(subfolders.values_list("id", flat=True))
+
+        if touched_subfolder_ids:
+            Folder.objects.filter(id__in=touched_subfolder_ids).update(
+                password=password,
+                lockFrom=lock_from,
+                autoLock=True,
+            )
+
+        touch_service.touch_folders([folder.id, *touched_subfolder_ids])
 
 
 def internal_remove_lock(folder: Folder, lock_from: Folder) -> None:
@@ -198,20 +219,58 @@ def internal_remove_lock(folder: Folder, lock_from: Folder) -> None:
         folder.password = None
         folder.save(update_fields=["autoLock", "lockFrom", "password"])
 
-        subfolders = folder.get_all_subfolders()
+        touched_subfolder_ids = list(
+            folder.get_all_subfolders()
+            .filter(lockFrom=lock_from)
+            .values_list("id", flat=True)
+        )
 
-        for sub in subfolders:
-            if sub.lockFrom == lock_from:
-                sub.password = None
-                sub.lockFrom = None
-                sub.autoLock = False
-                sub.save(update_fields=["password", "lockFrom", "autoLock"])
+        Folder.objects.filter(id__in=touched_subfolder_ids).update(
+            password=None,
+            lockFrom=None,
+            autoLock=False,
+        )
 
-def internal_force_ready(folder_ids: list[str]):
+        touch_service.touch_folders([folder.id, *touched_subfolder_ids])
+
+def internal_force_ready(folder_ids: list[str]) -> None:
     now = timezone.now()
 
-    Folder.objects.filter(id__in=folder_ids).update(
-        state=ItemState.ACTIVE,
-        state_changed_at=now
+    with transaction.atomic():
+        Folder.objects.filter(id__in=folder_ids).update(
+            state=ItemState.ACTIVE,
+            state_changed_at=now,
+        )
+
+        touch_service.touch_folders(folder_ids)
+
+
+def has_folder_enough_space_for_files(folder: Folder, files_length: int) -> bool:
+    with transaction.atomic():
+        folder = Folder.objects.select_for_update().get(id=folder.id)
+        current_file_count = folder.files.filter(state=ItemState.ACTIVE).count()
+
+        return current_file_count + files_length <= MAX_FILES_IN_FOLDER
+
+
+def has_folder_enough_space_for_folders(folder: Folder, folders_length: int) -> bool:
+    with transaction.atomic():
+        folder = Folder.objects.select_for_update().get(id=folder.id)
+        current_folder_count = folder.subfolders.filter(state=ItemState.ACTIVE).count()
+
+        return current_folder_count + folders_length <= MAX_FOLDERS_IN_FOLDER
+
+def has_folder_depth_for_subfolder(parent: Folder) -> bool:
+    return parent.get_level() + 1 <= MAX_FOLDER_DEPTH
+
+def has_folder_depth_for_move(folder: Folder, new_parent: Folder) -> bool:
+    deepest_level = (
+        folder
+        .get_descendants(include_self=True)
+        .order_by("-level")
+        .values_list("level", flat=True)
+        .first()
     )
-    _clear_cache(folder_ids)
+
+    folder_subtree_depth = deepest_level - folder.get_level()
+    return new_parent.get_level() + 1 + folder_subtree_depth <= MAX_FOLDER_DEPTH

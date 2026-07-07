@@ -1,3 +1,6 @@
+import re
+
+from website.config import MAX_RESOURCE_NAME_LENGTH
 from website.core.validators.Check import Check
 
 
@@ -90,3 +93,53 @@ class RequireLength(Check):
             return False
 
         return len(value) == self.length
+
+class IsValidItemName(Check):
+    def check(self, value):
+        WINDOWS_RESERVED_NAMES = {
+            "CON", "PRN", "AUX", "NUL",
+            *(f"COM{i}" for i in range(1, 10)),
+            *(f"LPT{i}" for i in range(1, 10)),
+        }
+
+        INVALID_CHARS_PATTERN = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
+        DRIVE_PATTERN = re.compile(r'^[a-zA-Z]:[/\\]')  # e.g. C:\ or Z:/
+
+        if not value:
+            return False
+
+        stripped = value.strip()
+
+        # 1. Block full paths / drive references (e.g. Z://, C:\foo)
+        if DRIVE_PATTERN.match(stripped):
+            return False
+
+        # block any path separators at all
+        if "/" in value or "\\" in value:
+            return False
+
+        # 2. Reserved device names (case-insensitive)
+        base = stripped.split(".")[0].upper()
+        if base in WINDOWS_RESERVED_NAMES:
+            return False
+
+        # 3. Invalid characters
+        if INVALID_CHARS_PATTERN.search(value):
+            return False
+
+        # 4. Cannot end with space or dot (Windows rule)
+        if stripped.rstrip(" .") != stripped:
+            return False
+
+        # 5. Avoid '.' and '..'
+        if stripped in {".", ".."}:
+            return False
+
+        if len(value) > MAX_RESOURCE_NAME_LENGTH:
+            return False
+
+        # bare drive
+        if re.match(r'^[a-zA-Z]:$', stripped):
+            return False
+
+        return True

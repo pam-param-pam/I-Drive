@@ -15,7 +15,7 @@
          </p>
          <input v-focus v-model.trim="password" class="input input--block" type="text" />
          <button
-            v-if="!isInShareContext"
+            v-if="!isInShareContext && perms?.resetLock"
             :aria-label="$t('buttons.forgotFolderPassword')"
             :title="$t('buttons.forgotFolderPassword')"
             class="button button--small button--text-blue"
@@ -80,7 +80,7 @@ export default {
       this.reCheckFolderIds()
    },
    computed: {
-      ...mapState(useMainStore, ["currentPrompt"]),
+      ...mapState(useMainStore, ["currentPrompt", "perms"]),
       folder() {
          return this.remainingFolderLockFromIds[0]
       },

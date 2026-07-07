@@ -4,7 +4,7 @@ from website.models import DiscordAttachmentMixin, Webhook
 from website.queries.selectors import query_attachments
 
 
-def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> None:
+def delete_remote_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> None:
     database_attachments = query_attachments(message_id=resource.message_id)
 
     all_attachments_ids = set()
@@ -29,5 +29,3 @@ def delete_single_discord_attachment(user, resource: DiscordAttachmentMixin) -> 
         except DiscordError as e:
             if e.code != 10008:  # Unknown message
                 raise e
-
-    resource.delete()

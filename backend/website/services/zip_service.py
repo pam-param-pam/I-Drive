@@ -15,7 +15,7 @@ def create_zip_model(user, items: list[dict]) -> UserZIP:
     if len(parent_ids) > 1:
         raise BadRequestError("All files and folders must come from the same parent")
 
-    user_zip = UserZIP.objects.create(owner=user)
+    user_zip = UserZIP.objects.create(owner=user, name="I-Drive")
 
     file_relations = []
     folder_relations = []
@@ -36,5 +36,12 @@ def create_zip_model(user, items: list[dict]) -> UserZIP:
         file_through.objects.bulk_create(file_relations, ignore_conflicts=True)
     if folder_relations:
         folder_through.objects.bulk_create(folder_relations, ignore_conflicts=True)
+
+    if not file_relations and len(folder_relations) == 1:
+        user_zip.name = get_attr(items[0], "name")
+    else:
+        user_zip.name = f"I-Drive-{user_zip.id}"
+
+    user_zip.save(update_fields=["name"])
 
     return user_zip

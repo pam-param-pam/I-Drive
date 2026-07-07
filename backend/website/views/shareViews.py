@@ -72,7 +72,7 @@ def get_share_visits(request, share_obj):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
 @extract_share()
-@check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
+@check_resource_permissions([CheckShareOwnership, CheckShareExpired, CheckShareTrash, CheckShareReady], resource_key="share_obj")
 def get_visit_events(request, share_obj, visit_id):
     access = ShareAccess.objects.get(share=share_obj, id=visit_id)
     events = ShareAccessEvent.objects.filter(access=access).all()
@@ -83,6 +83,7 @@ def get_visit_events(request, share_obj, visit_id):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
 @extract_share()
+@check_resource_permissions([CheckShareExpired, CheckShareTrash, CheckShareReady], resource_key="share_obj")
 def check_share_password(request, share_obj):
     password = request.headers.get("X-Resource-Password")
 
@@ -146,7 +147,7 @@ def create_share_zip_model(request, share_obj: ShareableLink):
 @throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
 @extract_share()
-@check_resource_permissions([CheckShareTrash, CheckShareExpired, CheckShareReady], resource_key="share_obj")
+@check_resource_permissions([CheckShareTrash, CheckSharePassword, CheckShareExpired, CheckShareReady], resource_key="share_obj")
 @extract_file()
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")

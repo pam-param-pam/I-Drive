@@ -2,23 +2,28 @@
    <div class="card floating notification-prompt">
 
       <div class="card-title">
-         <h2>{{ displayTitle }}</h2>
+         <h2>{{ title }}</h2>
       </div>
 
       <div class="card-content">
 
          <p class="notification-message">
-            {{ displayMessage }}
+            {{ message }}
          </p>
 
          <div v-if="details.length" class="notification-details">
             <div
               v-for="detail in details"
-              :key="detail.label"
+              :key="detail.key"
               class="notification-detail-row"
             >
-               <span class="notification-detail-label">{{ detail.label }}</span>
-               <span class="notification-detail-value">{{ detail.value }}</span>
+               <span class="notification-detail-label">
+                  {{ $t(`notifications.fields.${detail.key}`) }}
+               </span>
+
+               <span class="notification-detail-value">
+                  {{ detail.value }}
+               </span>
             </div>
          </div>
 
@@ -29,21 +34,11 @@
       </div>
 
       <div class="card-action">
-
-         <button
-           v-for="action in notificationActions"
-           :key="action.label"
-           class="button button--flat button--blue"
-           @click="handleAction(action)"
-         >
-            {{ getActionLabel(action) }}
-         </button>
-
          <button
            :aria-label="$t('buttons.markUnread')"
            :title="$t('buttons.markUnread')"
            class="button button--flat button--red"
-           @click="markUnread()"
+           @click="markUnread"
          >
             {{ $t("buttons.markUnread") }}
          </button>
@@ -65,65 +60,37 @@
 <script>
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { NotificationKind } from "@/utils/constants.js"
 
 export default {
    name: "SingleNotification",
 
    props: {
-      notification: { type: Object, required: true }
+      notification: { type: Object, required: true },
+      title: { type: String, required: true },
+      message: { type: String, required: true }
    },
 
    data() {
       return {
-         markRead: true
+         markRead: true,
+         hiddenDetailKeys: ["created_at", "expires_at", "user_agent"]
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["currentPrompt"]),
 
-      notificationKind() {
-         return this.notification.kind || NotificationKind.GENERAL
-      },
-
-      notificationData() {
-         return this.notification.data || {}
-      },
-
-      notificationActions() {
-         return this.notification.actions || []
-      },
-
-      displayTitle() {
-         if (this.notificationKind === NotificationKind.NEW_DEVICE_LOGIN) {
-            return this.$t("notifications.newDeviceLoginTitle")
-         }
-
-         return this.$t(this.notification.title)
-      },
-
-      displayMessage() {
-         if (this.notificationKind === NotificationKind.NEW_DEVICE_LOGIN) {
-            return this.$t("notifications.newDeviceLoginMessage")
-         }
-
-         return this.$t(this.notification.message)
-      },
-
       details() {
-         if (this.notificationKind === NotificationKind.NEW_DEVICE_LOGIN) {
-            return [
-               { label: this.$t("notifications.fields.device_id"), value: this.notificationData.device_id },
-               { label: this.$t("notifications.fields.device"), value: this.notificationData.device_name },
-               { label: this.$t("notifications.fields.ipAddress"), value: this.notificationData.ip_address },
-               { label: this.$t("notifications.fields.device_type"), value: this.notificationData.device_type },
-               { label: this.$t("notifications.fields.country"), value: this.notificationData.country },
-               { label: this.$t("notifications.fields.city"), value: this.notificationData.city },
+         const hiddenKeys = new Set(this.hiddenDetailKeys)
 
-            ].filter(item => item.value)
-         }
-         return []
+         return Object.entries(this.notification.data || {})
+           .filter(([key, value]) =>
+             !hiddenKeys.has(key) &&
+             value !== null &&
+             value !== undefined &&
+             value !== ""
+           )
+           .map(([key, value]) => ({ key, value }))
       }
    },
 
@@ -133,26 +100,6 @@ export default {
       markUnread() {
          this.markRead = false
          this.cancel()
-      },
-
-      getActionLabel(action) {
-         return action.label_key ? this.$t(action.label_key) : action.label
-      },
-
-      handleAction(action) {
-         if (action.type === "route" && action.to) {
-            this.$router.push(action.to)
-            this.cancel()
-            return
-         }
-
-         if (action.type === "external_url" && action.url) {
-            window.open(action.url, "_blank", "noopener,noreferrer")
-            this.cancel()
-            return
-         }
-
-         console.warn("Unknown notification action", action)
       },
 
       cancel() {

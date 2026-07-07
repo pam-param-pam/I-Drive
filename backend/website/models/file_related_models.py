@@ -33,11 +33,6 @@ class Thumbnail(DiscordAttachmentMixin):
             )
         ]
 
-    def delete(self, *args, **kwargs):
-        key = cache_service.get_thumbnail_key(self.file.id)
-        cache.delete(key)
-        super(Thumbnail, self).delete(*args, **kwargs)
-
     def __str__(self):
         return f"Thumbnail=[{self.file.name}]"
 

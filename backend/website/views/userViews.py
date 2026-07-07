@@ -59,7 +59,7 @@ def users_me(request):
                          "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE, "unreadNotifications": unread_notifications,
                          "autoSetupComplete": discord.auto_setup_complete},
                 "perms": {"admin": perms.admin, "create": perms.create, "lock": perms.lock, "modify": perms.modify,
-                          "delete": perms.delete, "share": perms.share, "download": perms.download},
+                          "delete": perms.delete, "share": perms.share, "download": perms.download, "resetLock": perms.reset_lock},
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,
                              "theme": settings.theme, "viewMode": settings.view_mode, "sortingBy": settings.sorting_by, "sortByAsc": settings.sort_by_asc,
                              "subfoldersInShares": settings.subfolders_in_shares, "concurrentUploadRequests": settings.concurrent_upload_requests,

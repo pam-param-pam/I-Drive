@@ -85,10 +85,9 @@ class FileSerializer(AdvancedSerializer):
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
-            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
-            lock_from__name, password, type_, is_dir,
-            size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
+            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
+            type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
+            parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
 
         key = base64.b64encode(key).decode() if key else None
@@ -145,9 +144,6 @@ class FileSerializer(AdvancedSerializer):
 
                 d["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{thumbnail_signed}"
 
-            if media_position:
-                d["media_position"] = media_position
-
         return d
 
 
@@ -156,10 +152,9 @@ class ShareFileSerializer(FileSerializer):
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
-            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id,
-            lock_from__name, password, type_, is_dir,
-            size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, media_position, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
+            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
+            type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
+            parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
 
         key = base64.b64encode(key).decode() if key else None
@@ -352,12 +347,12 @@ class TagSerializer(SimpleSerializer):
 
 
 class MediaPositionSerializer(SimpleSerializer):
-
     @staticmethod
     def serialize_object(position: MediaPosition) -> dict:
         return {
             "timestamp": position.timestamp,
-            "modified_at": position.modified_at
+            "modified_at": position.modified_at,
+            "file_id": position.file_id
         }
 
 

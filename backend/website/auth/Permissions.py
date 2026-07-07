@@ -250,12 +250,10 @@ class CheckFolderLockForLockedResources(CheckIPForLockedResources):
 
     def _build_password_info(self, resource):
         lockFrom_id = self._require_attr(resource, "lockFrom_id")
-        if lockFrom_id:
-            return {
-                "id": lockFrom_id,
-                "name": get_attr(resource, "lockFrom__name"),
-            }
-        return None
+        return {
+            "id": lockFrom_id,
+            "name": get_attr(resource, "lockFrom__name"),
+        }
 
 
 class CheckShareItemBelongings(BaseResourceCheck):

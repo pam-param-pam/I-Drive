@@ -48,7 +48,7 @@ async function downloadSingleFile({ file, mainStore, wsStore, requiresClientSide
          return
       } catch (error) {
          console.warn("Client-side file download failed", error)
-         if (!(error instanceof FilePickerNotSupported || isAxiosError(error))) {
+         if (!(error instanceof FilePickerNotSupported || isAxiosError(error) || "aborted" in error.message)) {
             showToast("error", error.message)
             return
          }
@@ -67,7 +67,7 @@ async function downloadZip({ ids, mainStore, requiresClientSideDownload, shareTo
          return
       } catch (error) {
          console.warn("Client-side ZIP download failed", error)
-         if (!(error instanceof FilePickerNotSupported || isAxiosError(error))) {
+         if (!(error instanceof FilePickerNotSupported || isAxiosError(error) || "aborted" in error.message)) {
             showToast("error", error.message)
             return
          }

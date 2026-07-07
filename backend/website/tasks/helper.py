@@ -1,9 +1,4 @@
 from datetime import datetime, timezone, timedelta
-from typing import Optional
-
-from ..constants import EventCode
-from ..core.dataModels.http import RequestContext
-from ..websockets.utils import send_event
 
 DISCORD_EPOCH = 1420070400000  # ms
 

@@ -21,19 +21,20 @@ class UserZIP(models.Model):
     token = models.CharField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
 
-    constraints = [
-        # token must not be empty
-        CheckConstraint(
-            condition=~Q(token__exact=""),
-            name="%(class)s_token_not_empty",
-        ),
+    class Meta:
+        constraints = [
+            # token must not be empty
+            CheckConstraint(
+                condition=~Q(token__exact=""),
+                name="%(class)s_token_not_empty",
+            ),
 
-        # name must not be empty
-        CheckConstraint(
-            condition=~Q(name__exact=""),
-            name="%(class)s_name_not_empty",
-        ),
-    ]
+            # name must not be empty
+            CheckConstraint(
+                condition=~Q(name__exact=""),
+                name="%(class)s_name_not_empty",
+            ),
+        ]
 
     def __str__(self):
         return f'UserZIP[{self.id} by {self.owner}]'
@@ -42,10 +43,6 @@ class UserZIP(models.Model):
         if self.token is None or self.token == '':
             self.token = secrets.token_urlsafe(32)
 
-        if len(self.files.all()) == 0 and len(self.folders.all()) == 1:
-            self.name = self.folders.all()[0].name
-        else:
-            self.name = f"I-Drive-{self.id}"
         super(UserZIP, self).save(*args, **kwargs)
 
     def is_expired(self):
@@ -61,6 +58,7 @@ class NotificationType(models.TextChoices):
 class NotificationKind(models.TextChoices):
     GENERAL = "general", "General"
     NEW_DEVICE_LOGIN = "new_device_login", "New device login"
+    FOLDER_LOCK_CHANGE = "folder_lock_change", "Folder lock change"
 
 class Notification(models.Model):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
@@ -68,7 +66,7 @@ class Notification(models.Model):
     type = models.CharField(max_length=20, choices=NotificationType.choices)
     kind = models.CharField(max_length=50, choices=NotificationKind.choices)
     title = models.CharField(max_length=50, null=True)
-    message = models.CharField(max_length=255, null=True)
+    message = models.TextField(max_length=255, null=True)
     data = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)

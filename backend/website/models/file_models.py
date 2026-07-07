@@ -11,10 +11,8 @@ from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
 
 from website.constants import FILE_TYPE_CHOICES, EncryptionMethod
-from website.core.helpers import check_name, chop_long_file_name
 from website.models.mixin_models import ItemState, DiscordAttachmentMixin
 from .folder_models import Folder
-from ..config import MAX_FILES_IN_FOLDER
 
 
 class File(models.Model):
@@ -99,12 +97,12 @@ class File(models.Model):
             )
         ]
 
-    MINIMAL_VALUES = ("id", "name", "inTrash", "state", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password")
+    MINIMAL_VALUES = ("id", "name", "inTrash", "state", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
 
-    STANDARD_VALUES = MINIMAL_VALUES + ("type", "is_dir")
+    STANDARD_VALUES = MINIMAL_VALUES + ("type", )
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
-        "parent_id", "crc", "mediaposition__timestamp", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata", "iv", "key"
+        "parent_id", "crc", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata", "iv", "key"
     )
 
     @classmethod
@@ -179,30 +177,6 @@ class File(models.Model):
     lockFrom_id = property(_lockFrom_id)
     lockFrom__name = property(_lockFrom__name)
 
-    def save(self, *args, **kwargs):
-        check_name(self.name)
-        self._check_folder_file_limit()
-        self.name = chop_long_file_name(self.name)
-
-        # invalidate any cache
-        self.remove_cache()
-
-        # invalidate also cache of 'old' parent if the parent was changed
-        # we make a db lookup to get the old parent
-        # src: https://stackoverflow.com/questions/49217612/in-modeladmin-how-do-i-get-the-objects-previous-values-when-overriding-save-m
-        try:
-            old_object = File.objects.get(id=self.id)
-            old_object.remove_cache()
-        except File.DoesNotExist:
-            pass
-
-        self.last_modified_at = timezone.now()
-
-        super(File, self).save(*args, **kwargs)
-
-    def remove_cache(self):
-        self.parent.remove_cache()
-
     def get_encryption_method(self) -> EncryptionMethod:
         return EncryptionMethod(self.encryption_method)
 
@@ -219,34 +193,11 @@ class File(models.Model):
     def is_encrypted(self):
         return self.get_encryption_method() != EncryptionMethod.Not_Encrypted
 
-    def delete(self, *args, **kwargs):
-        # invalidate any cache
-        self.remove_cache()
-        super(File, self).delete()
-
     def is_in_trash(self):
         return self.inTrash or self.parent.inTrash
 
     def __str__(self):
         return self.name
-
-    def _check_folder_file_limit(self):
-        if not self._state.adding:
-            old_parent_id = (
-                File.objects
-                .filter(id=self.id)
-                .values_list("parent_id", flat=True)
-                .first()
-            )
-            if old_parent_id == self.parent_id:
-                return
-
-        if (self.parent.files.count() + self.parent.subfolders.count()) >= MAX_FILES_IN_FOLDER:
-            raise ValidationError(f"Too many items in folder. Max = {MAX_FILES_IN_FOLDER}")
-
-    def _check_unique_name(self):
-        # todo make a constraint
-        pass
 
 class Fragment(DiscordAttachmentMixin):
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)

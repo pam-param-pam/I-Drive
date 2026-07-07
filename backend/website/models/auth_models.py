@@ -15,8 +15,8 @@ class PerDeviceTokenManager(models.Manager):
     def _hash(self, raw_token: str) -> str:
         return hashlib.sha256(raw_token.encode()).hexdigest()
 
-    def create_token(self, user, device_name: str, device_id: str, expires: datetime.timedelta, ip_address: str, user_agent: str, country: str = None, city: str = None,
-                     device_type: str = None):
+    def create_token(self, user, device_name: str, device_id: str, expires: datetime.timedelta, ip_address: str, user_agent: str,
+                     device_type: str, country: str | None = None, city: str | None = None):
         raw = secrets.token_urlsafe(32)
         hashed = self._hash(raw)
         expires_at = timezone.now() + expires if expires else None

@@ -11,9 +11,9 @@ from website.websockets.utils import group_and_send_event, send_event, send_mess
 
 @app.task
 def move_to_trash_task(context: dict, ids: list[str]):
-    try:
-        context = RequestContext.deserialize(context)
+    context = RequestContext.deserialize(context)
 
+    try:
         files = File.objects.filter(id__in=ids).select_related("parent")
         folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
@@ -24,8 +24,8 @@ def move_to_trash_task(context: dict, ids: list[str]):
         last_percentage = 0
         for index, folder in enumerate(folders):
             folder_dict = FolderSerializer.serialize_object(folder)
-            send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
             folder_service.internal_move_to_trash(folder=folder)
+            send_event(context, folder.parent, EventCode.ITEM_MOVE_TO_TRASH, folder_dict)
             percentage = round((index + 1) / total_length * 100)
             if percentage != last_percentage:
                 send_message(message="toasts.itemsAreBeingMovedToTrash", args={"percentage": percentage}, finished=False, context=context)
@@ -38,9 +38,9 @@ def move_to_trash_task(context: dict, ids: list[str]):
 
 @app.task
 def restore_from_trash_task(context: dict, ids: list[str]):
-    try:
-        context = RequestContext.deserialize(context)
+    context = RequestContext.deserialize(context)
 
+    try:
         files = File.objects.filter(id__in=ids).select_related("parent")
         folders = Folder.objects.filter(id__in=ids).select_related("parent")
 
@@ -52,8 +52,8 @@ def restore_from_trash_task(context: dict, ids: list[str]):
         last_percentage = 0
         for index, folder in enumerate(folders):
             folder_dict = FolderSerializer.serialize_object(folder)
-            send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
             folder_service.internal_restore_from_trash(folder=folder)
+            send_event(context, folder.parent, EventCode.ITEM_RESTORE_FROM_TRASH, folder_dict)
             percentage = round((index + 1) / total_length * 100)
             if percentage != last_percentage:
                 send_message(message="toasts.itemsAreBeingRestoredFromTrash", args={"percentage": percentage}, finished=False, context=context)
