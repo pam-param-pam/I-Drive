@@ -14,7 +14,6 @@
 1) Move everything into a dedicated service layer
 2) Prohibit use of .delete() .save() etc on Models directly (how?)
 3) Introduce a new exception ValidationError() into services to make nicer errors
-4) Use select for update everywhere
 5) add auto db backups
 
 
@@ -22,4 +21,4 @@
 1) What to do with PDF files?
 2) Should i retire the decrypted endpoint? Or for small files only?
 5) Should i save the decrypted chunks to INDEXDB aswell?
-6) 
+6) When to use selected for update????

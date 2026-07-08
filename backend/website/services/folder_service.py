@@ -40,12 +40,12 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
             raise BadRequestError(f"Too many folders in folder. Max = {MAX_FOLDERS_IN_FOLDER}. Folders in trash count too.")
 
         folder_obj = Folder(name=name, parent=parent, owner=user)
+        folder_obj.save()
 
         # apply lock if needed
         if parent.is_locked:
             internal_apply_lock(folder=folder_obj, lock_from=parent.lockFrom, password=parent.password)
 
-        folder_obj.save()
         touch_service.touch_folder_object(folder_obj)
 
     folder_dict = FolderSerializer.serialize_object(folder_obj)
