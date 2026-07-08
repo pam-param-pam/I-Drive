@@ -216,8 +216,11 @@ def extract_resources(*rules):
                 if source == "kwargs" and key in kwargs:
                     del kwargs[key]
                 elif source in ("data", "GET") and hasattr(container, "pop"):
-                    container.pop(key, None)
-
+                    try:
+                        container.pop(key, None)
+                    except AttributeError: # ignore if the instance is immutable
+                        pass
+                    
             return view_func(request, *args, **kwargs)
 
         return _wrapped_view
@@ -225,7 +228,7 @@ def extract_resources(*rules):
     return decorator
 
 
-def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_model=Folder, file_model=File, inject_as="items", source="data", key="ids", max_length=10000):
+def extract_items_from_ids_annotated(file_values, file_annotate=None, inject_as="items", source="data", key="ids", max_length=10000):
     file_annotate = file_annotate or {}
 
     def decorator(view_func):
@@ -239,7 +242,7 @@ def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_mod
             if len(ids) != len(set(ids)):
                 raise BadRequestError(f"Duplicate IDs provided for '{key}'")
             files_qs = (
-                file_model.objects
+                File.objects
                 .filter(id__in=ids)
                 .annotate(**file_annotate)
                 .values(*file_values)
@@ -249,7 +252,7 @@ def extract_items_from_ids_annotated(file_values, file_annotate=None, folder_mod
 
             # Get remaining IDs to query from Folder
             remaining_ids = set(ids) - matched_file_ids
-            folders = list(folder_model.objects.filter(id__in=remaining_ids))
+            folders = list(Folder.objects.filter(id__in=remaining_ids))
             matched_folder_ids = {f.id for f in folders}
 
             # Optional: Check if total matched == input length

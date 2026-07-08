@@ -3,6 +3,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
+from typing import Optional
 
 from django.conf import settings
 from django.db.models import Count, Sum, Case, When, Value, CharField
@@ -25,7 +26,7 @@ from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
 from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item, extract_items_from_ids_annotated, check_bulk_permissions
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_value, get_attr, validate_ids_as_list, extract_key
+from website.core.helpers import validate_value, get_attr, validate_ids_as_list, extract_key, validate_key
 from website.discord.Discord import discord
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
@@ -147,7 +148,7 @@ def get_usage(request, folder_obj: Folder):
 @extract_item()
 @check_resource_permissions(default_checks - CheckTrash, resource_key="item_obj")
 def fetch_additional_info(request, item_obj):
-    isTrash = validate_value(request.GET.get('isTrash'), bool, default=False, converter=param_to_bool)
+    isTrash = validate_key(request.GET, "isTrash", bool, default=False, converter=param_to_bool)
 
     if isinstance(item_obj, Folder):
         folder_used_size = calculate_size(item_obj, includeTrash=isTrash)
@@ -343,11 +344,11 @@ def ultra_download_files_metadata(request, item_obj):
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
+@extract_folder(source="GET", optional=True)
+@check_resource_permissions(default_checks, resource_key="folder_obj", optional=True)
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def ultra_download_file_fragments_metadata(request, folder_obj, file_obj):
+def ultra_download_file_fragments_metadata(request, file_obj, folder_obj: Optional[Folder]):
     fragments = (
         Fragment.objects
         .filter(file_id=file_obj.id)
@@ -365,8 +366,11 @@ def ultra_download_file_fragments_metadata(request, folder_obj, file_obj):
         }
         for fragment in fragments
     ]
-
-    file_path = build_file_path(file_obj, max_folder_id=folder_obj.id)
+    
+    if folder_obj:
+        file_path = build_file_path(file_obj, max_folder_id=folder_obj.id)
+    else:
+        file_path = file_obj.name
 
     response_data = {
         "id": str(file_obj.id),

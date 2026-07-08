@@ -63,7 +63,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setAnonState", "showHover", "setSwActive"]),
+      ...mapActions(useMainStore, ["showHover", "setSwActive"]),
 
       nextOnClick(tour, element) {
          const previousHandler = this.tourClickHandlers.get(element)

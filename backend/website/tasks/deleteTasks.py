@@ -1,4 +1,3 @@
-import traceback
 import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -19,7 +18,6 @@ from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, 
 from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
 from website.models.mixin_models import ItemState
 from website.queries.selectors import query_attachments
-from website.services import file_service, folder_service
 from website.tasks.helper import is_bulk_deletable
 from website.websockets.utils import send_event, send_message
 
@@ -148,9 +146,9 @@ def plan_deletion_job(job_id: UUID) -> None:
 
 
 def delete_cache(expanded_folder_ids: set[str], expanded_file_ids: set[str]):
-    file_service._clear_cache(list(expanded_file_ids))
-    folder_service._clear_cache(list(expanded_folder_ids))
-
+    # file_service._clear_cache(list(expanded_file_ids))
+    # folder_service._clear_cache(list(expanded_folder_ids))
+    pass # perhaps we should do something in here in the future
 
 @app.task(queue="deletion")
 def process_file_batch(context_dict: dict, job_id: UUID) -> None:
@@ -407,7 +405,7 @@ def delete_fragments(file_ids: list[str]) -> None:
 
 
 def mark_file_batch_failed(job_id: UUID, file_ids: list[str], claim_token: UUID, error: Exception) -> None:
-    logger.error(f"mark_file_batch_failed: {str(error)}\n{traceback.print_exc()}")
+    logger.exception(f"mark_file_batch_failed: {str(error)}")
 
     with transaction.atomic():
         DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
@@ -479,7 +477,7 @@ def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: 
 
 
 def mark_folder_batch_failed(job_id: UUID, folder_ids: list[str], claim_token: UUID, error: Exception) -> None:
-    logger.error(f"mark_folder_batch_failed: {str(error)}\n{traceback.print_exc()}")
+    logger.exception(f"mark_folder_batch_failed: {str(error)}")
     with transaction.atomic():
         DeletionFolderWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFolderWorkItem.State.FAILED,

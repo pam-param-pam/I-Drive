@@ -121,7 +121,7 @@ export default {
          if (!this.videoRef) return
 
          let toSecond = Math.round(this.videoRef.currentTime)
-         this.sendPreviewEvent(PreviewEvent.MEDIA_SEEK, { to_second: toSecond })
+         this.sendPreviewEvent(PreviewEvent.MEDIA_SEEK, { toSecond: toSecond })
       },
 
       onMovieVolumeChange: throttle(function() {

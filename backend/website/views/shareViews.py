@@ -1,19 +1,22 @@
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from website.auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady, \
+from website.auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareTrash, \
+    CheckShareReady, \
     CheckShareItemBelongings, CheckTrash, CheckState
 from website.auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
-from website.constants import ShareEventType, API_BASE_URL
+from website.auth.utils import check_resource_perms
+from website.constants import ShareEventType
 from website.core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer, ZipSerializer
-from website.core.decorators import check_resource_permissions, extract_item, extract_share, extract_folder, extract_file
+from website.core.decorators import check_resource_permissions, extract_item, extract_share, extract_folder, extract_file, extract_items_from_ids_annotated
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import extract_key
 from website.models import ShareableLink, ShareAccess, ShareAccessEvent, UserSettings, Subtitle, File
 from website.queries.builders import create_share_events, build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content
-from website.queries.selectors import get_item_inside_share
-from website.services import share_service
+from website.queries.selectors import get_item_inside_share, check_if_item_belongs_to_share
+from website.services import share_service, zip_service
 
 
 @api_view(['GET'])
@@ -132,13 +135,19 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-def create_share_zip_model(request, share_obj: ShareableLink):
-    ids = extract_key(request.data, "ids")
-    user_zip = share_service.create_share_zip(request, share_obj, ids)
+@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate(), max_length=1)
+def create_share_zip_model(request, share_obj: ShareableLink, items):
+    for item in items:
+        check_if_item_belongs_to_share(share_obj, item)
+        check_resource_perms(request, item, [CheckTrash, CheckState])
 
-    file_ids = list(user_zip.files.values_list("id", flat=True))
-    folder_ids = list(user_zip.folders.values_list("id", flat=True))
-    share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD, files=file_ids, folders=folder_ids)
+    with transaction.atomic():
+        user_zip = zip_service.create_zip_model(request.user, items)
+
+        file_ids = list(user_zip.files.values_list("id", flat=True))
+        folder_ids = list(user_zip.folders.values_list("id", flat=True))
+        share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD, files=file_ids, folders=folder_ids)
+
 
     return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
 

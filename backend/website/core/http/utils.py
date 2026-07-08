@@ -26,7 +26,7 @@ def get_location_from_ip(ip: str) -> tuple[Optional[str], Optional[str]]:
     if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_reserved or ip_obj.is_multicast:
         return None, None
 
-    response = requests.get(f'https://ipwhois.app/json/{ip}')
+    response = requests.get(f'https://ipwhois.app/json/{ip}', timeout=5)
     if not response.ok:
         print(f"===FAILED TO GET GEO LOCATION DATA===({response.status_code})")
         return None, None

@@ -5,8 +5,8 @@
       </div>
 
       <div
-        ref="notificationsContainer"
-        class="card-content notifications-content"
+         ref="notificationsContainer"
+         class="card-content notifications-content"
       >
          <div v-if="!notifications.length && !isLoading" class="notif-empty">
             <i class="material-icons notif-empty-icon">notifications_none</i>
@@ -21,11 +21,11 @@
          </div>
 
          <div
-           v-for="notification in notifications"
-           :key="notification.id"
-           :class="[`type-${notification.type}`, { unread: !notification.is_read }]"
-           class="notif-item"
-           @click="openNotification(notification)"
+            v-for="notification in notifications"
+            :key="notification.id"
+            :class="[`type-${notification.type}`, { unread: !notification.is_read }]"
+            class="notif-item"
+            @click="openNotification(notification)"
          >
             <div class="notif-header-row">
                <div class="notif-title">
@@ -55,25 +55,25 @@
 
       <div class="card-action notifications-actions">
          <button
-           v-if="canLoadMore"
-           :disabled="isLoading"
-           class="button button--flat"
-           @click="loadMore"
+            v-if="canLoadMore"
+            :disabled="isLoading"
+            class="button button--flat"
+            @click="loadMore"
          >
             {{ isLoading ? $t("prompts.loading") : $t("prompts.showPrevious") }}
          </button>
 
          <button
-           :disabled="isLoading || !unread.length"
-           class="button button--flat button--red"
-           @click="markAllRead"
+            :disabled="isLoading || !unread.length"
+            class="button button--flat button--red"
+            @click="markAllRead"
          >
             {{ $t("buttons.markAllRead") }}
          </button>
 
          <button
-           class="button button--flat button--grey"
-           @click="closeHover"
+            class="button button--flat button--grey"
+            @click="closeHover"
          >
             {{ $t("buttons.close") }}
          </button>
@@ -119,31 +119,22 @@ export default {
    },
 
    created() {
-      this.fetchNotifications({
-         page: 1,
-         replace: true,
-         initial: true
-      })
+      this.fetchNotifications({ page: 1, replace: true, initial: true })
    },
 
    methods: {
       humanTime,
-
-      ...mapActions(useMainStore, [
-         "closeHover",
-         "showHover",
-         "setUnreadNotifications"
-      ]),
+      ...mapActions(useMainStore, ["closeHover", "showHover", "setUnreadNotifications"]),
 
       getNotificationTitle(notification) {
          return this.$t(
-           notification.title || `notifications.${notification.kind}.title`,
-           notification.data || {}
+            notification.title || `notifications.${notification.kind}.title`,
+            notification.data || {}
          )
       },
 
       getNotificationMessage(notification) {
-         return this.$t( notification.message || `notifications.${notification.kind}.message`, notification.data || {})
+         return this.$t(notification.message || `notifications.${notification.kind}.message`, notification.data || {})
       },
 
       scrollToBottom() {
@@ -154,7 +145,7 @@ export default {
          }
       },
 
-      async fetchNotifications({page, replace = false, initial = false, scrollToBottomOnLoad = false}) {
+      async fetchNotifications({ page, replace = false, initial = false, scrollToBottomOnLoad = false }) {
          if (this.isLoading) return
 
          try {
@@ -169,7 +160,7 @@ export default {
                this.scrollToBottom()
             }
 
-            const response = await getNotifications({unreadOnly: this.unreadOnly, page})
+            const response = await getNotifications({ unreadOnly: this.unreadOnly, page })
 
             const items = response.items || []
 
@@ -203,10 +194,7 @@ export default {
 
          if (!this.hasNext) return
 
-         await this.fetchNotifications({
-            page: this.page + 1,
-            scrollToBottomOnLoad: true
-         })
+         await this.fetchNotifications({ page: this.page + 1, scrollToBottomOnLoad: true })
       },
 
       openNotification(notification) {
@@ -247,10 +235,7 @@ export default {
 
          if (!ids.length) return
 
-         await setNotificationsStatus({
-            ids,
-            is_read: isRead
-         })
+         await setNotificationsStatus({ ids, is_read: isRead })
 
          changed.forEach(notification => {
             notification.is_read = isRead
@@ -262,163 +247,163 @@ export default {
 
 <style>
 .notifications-card {
-   width: 480px;
-   max-height: 80vh;
-   display: flex;
-   flex-direction: column;
+  width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .notifications-content {
-   overflow-y: auto;
-   flex: 1;
-   padding-right: 4px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
 }
 
 .notif-item {
-   padding: 12px 0 12px 10px;
-   border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
-   position: relative;
-   transition: background 0.15s ease;
-   cursor: pointer;
+  padding: 12px 0 12px 10px;
+  border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+  position: relative;
+  transition: background 0.15s ease;
+  cursor: pointer;
 }
 
 .notif-item:hover {
-   background: rgba(100, 181, 246, 0.08);
+  background: rgba(100, 181, 246, 0.08);
 }
 
 .notif-item.unread {
-   background: rgba(100, 181, 246, 0.06);
+  background: rgba(100, 181, 246, 0.06);
 }
 
 .notif-item.unread:hover {
-   background: rgba(100, 181, 246, 0.12);
+  background: rgba(100, 181, 246, 0.12);
 }
 
 .notif-header-row {
-   display: flex;
-   align-items: center;
-   justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .notif-title {
-   font-weight: 600;
-   color: var(--textPrimary);
+  font-weight: 600;
+  color: var(--textPrimary);
 }
 
 .notif-message {
-   font-size: 13px;
-   opacity: 0.8;
-   margin-top: 3px;
-   padding-right: 3em;
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 3px;
+  padding-right: 3em;
 }
 
 .notif-time {
-   font-size: 12px;
-   opacity: 0.5;
-   margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.5;
+  margin-top: 6px;
 }
 
 .notif-dot {
-   width: 8px;
-   height: 8px;
-   background: #64b5f6;
-   border-radius: 50%;
-   margin-right: 10px;
-   flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  background: #64b5f6;
+  border-radius: 50%;
+  margin-right: 10px;
+  flex: 0 0 auto;
 }
 
 .type-info {
-   border-left: 3px solid #64b5f6;
+  border-left: 3px solid #64b5f6;
 }
 
 .type-success {
-   border-left: 3px solid #66bb6a;
+  border-left: 3px solid #66bb6a;
 }
 
 .type-warning {
-   border-left: 3px solid #ff8800;
+  border-left: 3px solid #ff8800;
 }
 
 .type-error {
-   border-left: 3px solid rgba(155, 5, 5, 0.8);
+  border-left: 3px solid rgba(155, 5, 5, 0.8);
 }
 
 .type-important {
-   border-left: 3px solid #d31010;
+  border-left: 3px solid #d31010;
 }
 
 .notifications-actions {
-   justify-content: space-between;
+  justify-content: space-between;
 }
 
 .notif-empty {
-   display: flex;
-   flex-direction: column;
-   align-items: center;
-   justify-content: center;
-   text-align: center;
-   padding: 40px 20px;
-   opacity: 0.8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  opacity: 0.8;
 }
 
 .notif-empty-icon {
-   font-size: 48px;
-   margin-bottom: 12px;
-   opacity: 0.5;
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
 }
 
 .notif-empty-title {
-   font-weight: 600;
-   font-size: 15px;
-   margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 6px;
 }
 
 .notif-empty-subtitle {
-   font-size: 13px;
-   opacity: 0.6;
+  font-size: 13px;
+  opacity: 0.6;
 }
 
 .notif-skeleton-wrapper {
-   padding: 8px 0;
+  padding: 8px 0;
 }
 
 .notif-skeleton {
-   padding: 12px 0 12px 10px;
-   border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+  padding: 12px 0 12px 10px;
+  border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
 }
 
 .skeleton-line {
-   height: 10px;
-   border-radius: 4px;
-   background: rgba(255, 255, 255, 0.12);
-   animation: notif-skeleton-pulse 1.2s ease-in-out infinite;
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  animation: notif-skeleton-pulse 1.2s ease-in-out infinite;
 }
 
 .skeleton-title {
-   width: 55%;
-   margin-bottom: 8px;
+  width: 55%;
+  margin-bottom: 8px;
 }
 
 .skeleton-text {
-   width: 85%;
-   margin-bottom: 8px;
+  width: 85%;
+  margin-bottom: 8px;
 }
 
 .skeleton-time {
-   width: 30%;
+  width: 30%;
 }
 
 @keyframes notif-skeleton-pulse {
-   0% {
-      opacity: 0.45;
-   }
+  0% {
+    opacity: 0.45;
+  }
 
-   50% {
-      opacity: 1;
-   }
+  50% {
+    opacity: 1;
+  }
 
-   100% {
-      opacity: 0.45;
-   }
+  100% {
+    opacity: 0.45;
+  }
 }
 </style>

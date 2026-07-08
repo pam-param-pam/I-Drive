@@ -15,30 +15,28 @@ export async function smartDownload(shareToken) {
    const selected = mainStore.selected
    const isSingleFile = mainStore.selectedCount === 1 && !selected[0].isDir
    const requiresClientSideDownload =
-      mainStore.settings.clientsideDecryptionMethod !== ClientsideDecryptionMethod.NO_DECRYPTION ||
-      !mainStore.isLogged
+      mainStore.settings.clientsideDecryptionMethod !== ClientsideDecryptionMethod.NO_DECRYPTION || shareToken
 
    if (isSingleFile) {
       await downloadSingleFile({
          file: selected[0],
-         mainStore,
          wsStore,
-         requiresClientSideDownload
+         requiresClientSideDownload,
+         shareToken
       })
       return
    }
 
    await downloadZip({
       ids: selected.map(item => item.id),
-      mainStore,
       requiresClientSideDownload,
       shareToken
    })
 }
 
 
-async function downloadSingleFile({ file, mainStore, wsStore, requiresClientSideDownload }) {
-   if (!mainStore.isLogged) {
+async function downloadSingleFile({ file, wsStore, requiresClientSideDownload, shareToken }) {
+   if (shareToken) {
       wsStore.send("share", JSON.stringify({ type: "file_download", args: { file_id: file.id } }))
    }
 
@@ -60,8 +58,10 @@ async function downloadSingleFile({ file, mainStore, wsStore, requiresClientSide
 }
 
 
-async function downloadZip({ ids, mainStore, requiresClientSideDownload, shareToken }) {
+async function downloadZip({ ids, requiresClientSideDownload, shareToken }) {
+   console.log("downloadZip")
    if (requiresClientSideDownload) {
+      console.log("requiresClientSideDownload")
       try {
          await getDownloader().downloadZip(ids, shareToken)
          return
@@ -74,8 +74,8 @@ async function downloadZip({ ids, mainStore, requiresClientSideDownload, shareTo
       }
    }
 
-   const response = mainStore.isLogged ? await createZIP({ ids }) : await createShareZIP(shareToken, { ids })
-
+   const response = !shareToken ? await createZIP({ ids }) : await createShareZIP(shareToken, { ids })
+   console.log(response)
    window.open(response.download_url, "_blank")
    showToast("success", "toasts.downloadingZIP")
 }

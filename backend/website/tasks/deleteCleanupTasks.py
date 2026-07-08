@@ -204,7 +204,8 @@ def _mark_jobs_failed():
             job.save(update_fields=["state", "finished_at"])
 
             context = RequestContext.from_user(job.request_context["user_id"])
-            user_service.create_notification(context.get_user(), NotificationType.INFO, NotificationKind.GENERAL, "notifications.deleteProcessFailedTitle", "notifications.deleteProcessMessage")
+            user_service.create_notification(context.get_user(), NotificationType.INFO, NotificationKind.GENERAL,
+                                             "notifications.deleteProcessFailed.title", "notifications.deleteProcess.message")
 
     print(f"Marked {failed_jobs} jobs as failed")
 

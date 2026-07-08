@@ -14,6 +14,7 @@ from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
 from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Folder
+from ..models.mixin_models import ItemState
 from ..models.other_models import NotificationType, RawExtractionClaim, Notification, NotificationKind
 from ..queries.selectors import check_if_bots_exists, query_attachments
 from ..services import delete_service, user_service
@@ -59,8 +60,8 @@ def cleanup_trash(user) -> int:
     now = django_timezone.now()
     cutoff = now - timedelta(days=MAX_TIME_FILES_IN_TRASH)
 
-    files = File.objects.filter(owner=user, inTrash=True, inTrashSince__lte=cutoff)
-    folders = Folder.objects.filter(owner=user, inTrash=True, inTrashSince__lte=cutoff)
+    files = File.objects.filter(owner=user, inTrash=True, state=ItemState.ACTIVE, inTrashSince__lte=cutoff)
+    folders = Folder.objects.filter(owner=user, inTrash=True, state=ItemState.ACTIVE, inTrashSince__lte=cutoff)
 
     items = list(files) + list(folders)
 
@@ -262,9 +263,9 @@ def run_cleanup():
             results[user.id] = user_result
             summary = format_cleanup_summary(user_result)
             if summary:
-                user_service.create_notification(user, NotificationType.INFO, NotificationKind.GENERAL, "notifications.cleanupTitle", summary)
+                user_service.create_notification(user, NotificationType.INFO, NotificationKind.GENERAL, "notifications.cleanup.title", summary)
 
         except Exception as e:
-            user_service.create_notification(user, NotificationType.ERROR, NotificationKind.GENERAL, "notifications.cleanupFailedTitle", str(e))
+            user_service.create_notification(user, NotificationType.ERROR, NotificationKind.GENERAL, "notifications.cleanupFailed.title", str(e))
 
     return results

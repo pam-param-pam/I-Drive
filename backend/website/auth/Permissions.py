@@ -211,7 +211,7 @@ class CheckIPForLockedResources(BaseResourceCheck):
         raise ResourceNotFoundError()
 
 
-class CheckFolderLockForLockedResources(CheckIPForLockedResources):
+class CheckFolderLockLockedResources(CheckIPForLockedResources):
     def check(self, request, *resources):
         resource = resources[0]
         self._require_type(resource, (File, Folder, dict, tuple))
@@ -345,4 +345,4 @@ class CheckGroup:
         return self.__str__()
 
 
-default_checks = CheckGroup(CheckOwnership, CheckFolderLockForLockedResources, CheckTrash, CheckState)
+default_checks = CheckGroup(CheckOwnership, CheckFolderLockLockedResources, CheckTrash, CheckState)
