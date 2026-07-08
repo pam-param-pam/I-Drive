@@ -1,5 +1,7 @@
 from typing import Tuple
 
+from django.db import transaction
+
 from website.config import MAX_FILES_IN_FOLDER, MAX_FOLDERS_IN_FOLDER
 from website.constants import EventCode
 from website.core.Serializers import FileSerializer, FolderSerializer
@@ -9,6 +11,7 @@ from website.core.errors import BadRequestError
 from website.core.helpers import validate_value, get_file_extension, get_file_type, get_attr
 from website.core.validators.GeneralChecks import IsValidItemName
 from website.models import File, Folder
+from website.services import touch_service
 from website.tasks.moveTasks import move_task
 from website.tasks.trashTasks import move_to_trash_task, restore_from_trash_task
 from website.websockets.utils import send_event
@@ -17,16 +20,19 @@ from website.websockets.utils import send_event
 def rename_item(context: RequestContext, item_obj: Item, new_name: str) -> None:
     validate_value(new_name, str, checks=[IsValidItemName])
 
-    item_obj.name = new_name
+    with transaction.atomic():
+        item_obj.name = new_name
 
-    if isinstance(item_obj, File):
-        extension = get_file_extension(new_name)
-        item_obj.type = get_file_type(extension)
-        item_obj.save()
-        data = FileSerializer.serialize_object(item_obj)
-    else:
-        item_obj.save()
-        data = FolderSerializer.serialize_object(item_obj)
+        if isinstance(item_obj, File):
+            extension = get_file_extension(new_name)
+            item_obj.type = get_file_type(extension)
+            item_obj.save()
+            touch_service.touch_file_object(item_obj)
+            data = FileSerializer.serialize_object(item_obj)
+        else:
+            item_obj.save()
+            touch_service.touch_folder_object(item_obj)
+            data = FolderSerializer.serialize_object(item_obj)
 
     send_event(context.without_device_id(), item_obj.parent, EventCode.ITEM_UPDATE, data)
 
