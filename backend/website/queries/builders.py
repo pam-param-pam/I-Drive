@@ -224,15 +224,17 @@ def build_share_resource_dict(resource_in_share: Item) -> Dict:
 
 
 def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> Dict:
+    lock_from_id = folder_obj.lockFrom_id
+
     files = list(
         folder_obj.files
-        .filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
+        .filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False, parent__lockFrom_id=lock_from_id)
         .annotate(**File.get_display_annotate()).values(*File.DISPLAY_VALUES)
     )
 
     folders = []
     if include_folders:
-        folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False).select_related("parent")
+        folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False, lockFrom_id=lock_from_id).select_related("parent")
 
     file_dicts = [ShareFileSerializer.serialize_dict(file) for file in files]
     folder_dicts = [ShareFolderSerializer.serialize_object(folder) for folder in folders]

@@ -54,9 +54,18 @@
                <action
                   v-if="headerButtons.delete"
                   id="delete-button"
+                  :counter="selectedCount"
                   :label="$t('buttons.delete')"
                   icon="delete_forever"
                   show="delete"
+               />
+               <action
+                 v-if="headerButtons.deleteAll"
+                 id="delete-button"
+                 :counter="sortedItems.length"
+                 :label="$t('buttons.deleteAll')"
+                 icon="delete_forever"
+                 @action="$emit('deleteAll')"
                />
             </template>
             <action
@@ -358,7 +367,8 @@ export default {
       headerButtons: {}
    },
 
-   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery", "download", "openInNewWindow", "copyFileShareUrl"],
+   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery",
+      "download", "openInNewWindow", "copyFileShareUrl", "deleteAll"],
 
    data() {
       return {

@@ -10,8 +10,8 @@
          v-bind="prompt.props"
       />
 
-      <div v-show="showOverlay" class="overlay" @click="resetPrompts"></div>
-      <div v-show="!showOverlay" @click="resetPrompts"></div>
+      <div v-show="showOverlay" class="overlay" @click="closeSinglePrompt"></div>
+      <div v-show="!showOverlay" @click="closeSinglePrompt"></div>
    </div>
 </template>
 
@@ -114,7 +114,7 @@ export default {
          // Esc!
          if (event.code === "Escape") {
             event.stopImmediatePropagation()
-            this.resetPrompts()
+            this.closeSinglePrompt()
          }
          // Enter!
          if (event.code === "Enter") {
@@ -138,7 +138,7 @@ export default {
          return Object.keys(components)
             .some(key => key.toLowerCase() === lowerName)
       },
-      resetPrompts() {
+      closeSinglePrompt() {
          let promptComponent = this.$refs[this.currentPromptName]
          if (!promptComponent) {
             console.error("PROMPT RESET ERROR: Something gone wrong")

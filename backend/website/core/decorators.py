@@ -110,22 +110,24 @@ def check_resource_permissions(checks: list, resource_key: Union[str, list[str]]
     return decorator
 
 
-def extract_folder(source: str = "kwargs", key: str = "folder_id", inject_as: str = "folder_obj", optional: bool = False):
+def extract_folder(source: str = "kwargs", key: str = "folder_id", inject_as: str = "folder_obj", optional: bool = False, hide_error_details: bool = False):
     return extract_resources({
         "source": source,
         "key": key,
         "model": [Folder],
         "inject_as": inject_as,
-        "optional": optional
+        "optional": optional,
+        "hide_error_details": hide_error_details
     })
 
 
-def extract_file(source: str = "kwargs", key: str = "file_id", inject_as: str = "file_obj"):
+def extract_file(source: str = "kwargs", key: str = "file_id", inject_as: str = "file_obj", hide_error_details: bool = False):
     return extract_resources({
         "source": source,
         "key": key,
         "model": [File],
         "inject_as": inject_as,
+        "hide_error_details": hide_error_details
     })
 
 
@@ -159,20 +161,22 @@ def extract_share(source: str = "kwargs", key: str = "token", inject_as: str = "
 
 
 def extract_resources(*rules):
-    def _get_resource_from_models(models, obj_id, model_field: str):
+    def _get_resource_from_models(models, obj_id, model_field: str, hide_error_details):
         for model in models:
             try:
                 return model.objects.get(**{model_field: obj_id})
             except ObjectDoesNotExist:
                 continue
         model_names = ", ".join(m.__name__ for m in models)
-
+        if hide_error_details:
+            raise ResourceNotFoundError()
         raise ResourceNotFoundError(f"Couldn't find [{model_names}] with id={obj_id!r}")
 
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             for rule in rules:
+                hide_error_details = rule.get("hide_error_details", False)
                 source = rule.get("source", "data")
                 key = rule["key"]
                 models = rule["model"]
@@ -198,18 +202,18 @@ def extract_resources(*rules):
                     if not isinstance(ids, (list, tuple)):
                         raise BadRequestError(f"Expected list of IDs for key '{key}', got {type(ids).__name__}")
 
-                    # if len(ids) != len(set(ids)):
-                    #     raise BadRequestError(f"Duplicate IDs provided for '{key}'")
+                    if len(ids) != len(set(ids)):
+                        raise BadRequestError(f"Duplicate IDs provided for '{key}'")
 
                     found_resources = []
                     for obj_id in ids:
-                        resource = _get_resource_from_models(models, obj_id, model_field)
+                        resource = _get_resource_from_models(models, obj_id, model_field, hide_error_details)
                         found_resources.append(resource)
                     kwargs[inject_as] = found_resources
                 else:
                     if isinstance(ids, (list, tuple)):
                         raise BadRequestError(f"Expected single ID for key '{key}', got multiple")
-                    resource = _get_resource_from_models(models, ids, model_field)
+                    resource = _get_resource_from_models(models, ids, model_field, hide_error_details)
                     kwargs[inject_as] = resource
 
                 # Remove original key

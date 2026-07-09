@@ -23,3 +23,5 @@
 5) Should i save the decrypted chunks to INDEXDB aswell?
 6) When to use selected for update????
 7) Extract items should extract to files and folders not to 1 array items?
+8) Zip download, delete files inside = error prob
+9) cancel/confirm etc prompts should be called independently

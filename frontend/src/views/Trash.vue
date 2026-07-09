@@ -8,6 +8,7 @@
       :readonly="true"
       @dropUpload="onDropUpload"
       @onOpen="onOpen"
+      @deleteAll="onDeleteAll"
    ></FileListing>
 </template>
 
@@ -30,14 +31,15 @@ export default {
 
 
    computed: {
-      ...mapState(useMainStore, ["itemsLoading", "itemsError", "items", "selected", "perms", "currentFolder", "disabledCreation", "selectedCount",
+      ...mapState(useMainStore, ["itemsLoading", "itemsError", "sortedItems", "selected", "perms", "currentFolder", "disabledCreation", "selectedCount",
          "setSearchActive", "setSearchItems"]),
 
       headerButtons() {
          return {
             info: this.selectedCount > 0,
             restore: this.selectedCount > 0 && this.perms.modify,
-            delete: this.selectedCount > 0 && this.perms.delete
+            delete: this.selectedCount > 0 && this.perms.delete,
+            deleteAll: this.selectedCount === 0 && this.perms.delete
          }
       },
       filesInTrash() {
@@ -59,7 +61,7 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["addSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "showHover"]),
+      ...mapActions(useMainStore, ["addSelected", "setSelected", "resetSelected", "setItemsLoading", "setItemsError", "setDisabledCreation", "setItems", "showHover"]),
 
       async fetchFolder() {
          document.title = this.$t("trash.trashName") + " - " + name
@@ -86,6 +88,16 @@ export default {
       },
       onDropUpload() {
          this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
+      },
+      onDeleteAll() {
+         this.setSelected(this.sortedItems)
+         this.showHover({
+            prompt: "delete",
+            cancel: () => {
+               console.log("cancel!!")
+               this.resetSelected()
+            }
+         })
       }
    }
 }

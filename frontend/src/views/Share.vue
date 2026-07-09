@@ -33,6 +33,7 @@ import { useWebSocketStore } from "@/stores/websocketStore.js"
 import { baseWS } from "@/utils/constants.js"
 import { getDownloader } from "@/transfers/downloads/Downloader.js"
 import { smartDownload } from "@/utils/downloadUtils.js"
+import buttons from "@/utils/buttons.js"
 
 export default {
    name: "files",
@@ -102,7 +103,12 @@ export default {
       },
 
       async download() {
-         await smartDownload(this.token)
+         try {
+            buttons.loading("download")
+            await smartDownload()
+         } finally {
+            buttons.done("download")
+         }
       },
 
       getNewRoute(item) {

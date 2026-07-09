@@ -67,7 +67,11 @@ export default {
          } finally {
             this.closeHover()
          }
-      })
+      }),
+      cancel() {
+         if (this.currentPrompt.cancel) this.currentPrompt.cancel()
+         this.closeHover()
+      }
    }
 }
 </script>

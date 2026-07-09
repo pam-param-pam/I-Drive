@@ -1,5 +1,6 @@
 {
   "buttons": {
+    "deleteAll": "Delete all",
     "accept": "Accept",
     "add": "Add",
     "addMoment": "Add Moment",

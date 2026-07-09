@@ -12,10 +12,10 @@ from website.constants import ShareEventType
 from website.core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer, ZipSerializer
 from website.core.decorators import check_resource_permissions, extract_item, extract_share, extract_folder, extract_file, extract_items_from_ids_annotated
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import extract_key
+from website.core.helpers import extract_key, validate_ids_as_list
 from website.models import ShareableLink, ShareAccess, ShareAccessEvent, UserSettings, Subtitle, File
 from website.queries.builders import create_share_events, build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content
-from website.queries.selectors import get_item_inside_share, check_if_item_belongs_to_share
+from website.queries.selectors import get_item_inside_share, check_if_item_belongs_to_share, get_item
 from website.services import share_service, zip_service
 
 
@@ -101,7 +101,7 @@ def check_share_password(request, share_obj):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-@extract_folder(optional=True)
+@extract_folder(optional=True, hide_error_details=True)
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "folder_obj"], optional=True)
 @check_resource_permissions([CheckTrash, CheckState], resource_key="folder_obj", optional=True)
 def view_share(request, share_obj: ShareableLink, folder_obj=None):
@@ -135,14 +135,19 @@ def view_share(request, share_obj: ShareableLink, folder_obj=None):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate(), max_length=1)
-def create_share_zip_model(request, share_obj: ShareableLink, items):
-    for item in items:
+def create_share_zip_model(request, share_obj: ShareableLink):
+    user = get_item_inside_share(share_obj).owner #  hack ngl
+    ids = extract_key(request.data, "ids")
+    validate_ids_as_list(ids, max_length=1_000)
+    items = []
+    for item_id in ids:
+        item = get_item(item_id)
         check_if_item_belongs_to_share(share_obj, item)
         check_resource_perms(request, item, [CheckTrash, CheckState])
+        items.append(item)
 
     with transaction.atomic():
-        user_zip = zip_service.create_zip_model(request.user, items)
+        user_zip = zip_service.create_zip_model(user, items)
 
         file_ids = list(user_zip.files.values_list("id", flat=True))
         folder_ids = list(user_zip.folders.values_list("id", flat=True))
@@ -157,7 +162,7 @@ def create_share_zip_model(request, share_obj: ShareableLink, items):
 @permission_classes([AllowAny])
 @extract_share()
 @check_resource_permissions([CheckShareTrash, CheckSharePassword, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file()
+@extract_file(hide_error_details=True)
 @check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
 @check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
 def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):

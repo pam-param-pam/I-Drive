@@ -1,11 +1,11 @@
 from website.constants import MAX_FILES_IN_ZIP
 from website.core.errors import BadRequestError
 from website.core.helpers import get_attr, validate_ids_as_list
-from website.models import UserZIP, Folder
+from website.models import UserZIP, Folder, File
 
 
 def create_zip_model(user, items: list[dict]) -> UserZIP:
-    validate_ids_as_list(items, child_type=(dict, Folder), max_length=MAX_FILES_IN_ZIP)
+    validate_ids_as_list(items, child_type=(dict, Folder, File), max_length=MAX_FILES_IN_ZIP)
 
     parent_ids = set()
 
@@ -27,7 +27,7 @@ def create_zip_model(user, items: list[dict]) -> UserZIP:
     for item in items:
         item_id = get_attr(item, 'id')
 
-        if get_attr(item, 'is_dir', True):
+        if isinstance(item, Folder):
             folder_relations.append(folder_through(userzip_id=user_zip.pk, folder_id=item_id))
         else:
             file_relations.append(file_through(userzip_id=user_zip.pk, file_id=item_id))
