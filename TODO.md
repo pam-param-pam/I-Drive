@@ -14,7 +14,7 @@
 1) Move everything into a dedicated service layer
 2) Prohibit use of .delete() .save() etc on Models directly (how?)
 3) Introduce a new exception ValidationError() into services to make nicer errors
-5) add auto db backups
+5) add auto db backups and migrate to k8s
 
 
 0) Locked folders in 1 folder tree with diff locks?
@@ -22,3 +22,4 @@
 2) Should i retire the decrypted endpoint? Or for small files only?
 5) Should i save the decrypted chunks to INDEXDB aswell?
 6) When to use selected for update????
+7) Extract items should extract to files and folders not to 1 array items?

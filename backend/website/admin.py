@@ -18,7 +18,7 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata, PhotoMetadata
 from .models.other_models import Notification, RawExtractionClaim
-from .services import folder_service, file_service, delete_service, create_file_service
+from .services import folder_service, file_service, create_file_service, item_service
 
 admin.site.register(PerDeviceToken)
 
@@ -122,14 +122,14 @@ class FolderAdmin(SimpleHistoryAdmin):
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
         context = RequestContext.from_user(request.user.id)
-        delete_service.delete_items(context, request.user, list(queryset))
+        item_service.delete_items(context, request.user, list(queryset))
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
         context = RequestContext.from_user(request.user.id)
         if isinstance(obj, Folder):
-            delete_service.delete_items(context, request.user, [obj])
+            item_service.delete_items(context, request.user, [obj])
         else:
-            delete_service.delete_items(context, request.user, obj)
+            item_service.delete_items(context, request.user, obj)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
         for real_obj in queryset:
@@ -247,15 +247,15 @@ class FileAdmin(SimpleHistoryAdmin):
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
         context = RequestContext.from_user(request.user.id)
-        delete_service.delete_items(context, request.user, list(queryset))
+        item_service.delete_items(context, request.user, list(queryset))
 
     def delete_model(self, request, obj: Union[File, List[File]]):
         context = RequestContext.from_user(request.user.id)
 
         if isinstance(obj, File):
-            delete_service.delete_items(context, request.user, [obj.id])
+            item_service.delete_items(context, request.user, [obj.id])
         else:
-            delete_service.delete_items(context, request.user, obj)
+            item_service.delete_items(context, request.user, obj)
 
     def force_delete_model(self, request, queryset: QuerySet[File]):
         for real_obj in queryset:

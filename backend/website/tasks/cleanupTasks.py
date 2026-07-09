@@ -17,7 +17,7 @@ from ..models import ShareableLink, UserZIP, PerDeviceToken, Channel, File, Fold
 from ..models.mixin_models import ItemState
 from ..models.other_models import NotificationType, RawExtractionClaim, Notification, NotificationKind
 from ..queries.selectors import check_if_bots_exists, query_attachments
-from ..services import delete_service, user_service
+from ..services import user_service, item_service
 
 
 def cleanup_old_notifications(user) -> int:
@@ -67,7 +67,7 @@ def cleanup_trash(user) -> int:
 
     if items:
         ctx = RequestContext.from_user(user.id)
-        delete_service.delete_items(ctx, user, items)
+        item_service.delete_items(ctx, user, items)
 
     return len(items)
 

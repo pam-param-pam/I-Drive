@@ -11,7 +11,7 @@ from website.core.errors import BadRequestError
 from website.core.helpers import extract_key
 from website.core.http.utils import build_response
 from website.models import File, Folder
-from website.services import folder_service, item_service, delete_service, zip_service, file_service, create_file_service
+from website.services import folder_service, item_service, zip_service, file_service, create_file_service
 
 
 @api_view(['POST'])
@@ -70,7 +70,7 @@ def restore_from_trash_view(request, items):
 @check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
 def delete_view(request, items):
     """This view uses values instead of ORM objects for files"""
-    delete_service.delete_items(request.context, request.user, items)
+    item_service.delete_items(request.context, request.user, items)
     return JsonResponse(build_response(request.context.request_id, f"{len(items)} items are being deleted..."))
 
 

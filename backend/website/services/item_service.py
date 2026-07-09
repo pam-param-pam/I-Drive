@@ -1,6 +1,7 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 from django.db import transaction
+from django.utils import timezone
 
 from website.config import MAX_FILES_IN_FOLDER, MAX_FOLDERS_IN_FOLDER
 from website.constants import EventCode
@@ -11,7 +12,11 @@ from website.core.errors import BadRequestError
 from website.core.helpers import validate_value, get_file_extension, get_file_type, get_attr
 from website.core.validators.GeneralChecks import IsValidItemName
 from website.models import File, Folder
+from website.models.delete_models import DeletionJob
+from website.models.mixin_models import ItemState
+from website.queries.selectors import check_if_bots_exists
 from website.services import touch_service
+from website.tasks.deleteTasks import plan_deletion_job
 from website.tasks.moveTasks import move_task
 from website.tasks.trashTasks import move_to_trash_task, restore_from_trash_task
 from website.websockets.utils import send_event
@@ -75,3 +80,38 @@ def move_items_to_trash(context: RequestContext, items: list[Tuple[Item, dict]])
 def restore_items_from_trash(context:  RequestContext, items: list[Tuple[Item, dict]]) -> None:
     ids = [get_attr(item, 'id') for item in items]
     restore_from_trash_task.delay(context.without_device_id(), ids)
+
+
+def delete_items(context: RequestContext, user, items: list[Union[Item, dict]]) -> None:
+    check_if_bots_exists(context.get_user())
+
+    ids = []
+    file_ids = []
+    folder_ids = []
+
+    for item in items:
+        item_id = get_attr(item, 'id')
+        state = get_attr(item, 'state')
+        if state != ItemState.ACTIVE:
+            raise BadRequestError("Cannot delete. At least one item is not active.")
+
+        ids.append(item_id)
+
+        if isinstance(item, File) or not get_attr(item, "is_dir", default=True):
+            file_ids.append(item_id)
+        else:
+            folder_ids.append(item_id)
+
+    if file_ids:
+        touch_service.touch_files(file_ids)
+    if folder_ids:
+        touch_service.touch_folders(folder_ids)
+
+    job = DeletionJob.objects.create(
+        requested_by=user,
+        request_context=context.__json__(),
+        requested_ids=ids,
+        state=DeletionJob.State.PENDING,
+        started_at=timezone.now(),
+    )
+    plan_deletion_job.delay(job.id)
