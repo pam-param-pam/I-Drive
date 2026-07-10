@@ -117,19 +117,28 @@ export function shouldRetry469(error) {
 export async function displayErrorToastIfNeeded(error) {
    let errorMessage = error.response?.data?.error
    let errorDetails = error.response?.data?.details
+
    if (!errorMessage && errorMessage !== "") errorMessage = "Unexpected error"
    if (!errorDetails && errorDetails !== "") errorDetails = "Report this"
+
    if (error.response?.status === 401) {
       await logout()
 
       errorMessage = i18n.global.t("toasts.unauthorized")
       errorDetails = i18n.global.t("toasts.sessionExpired")
    }
+
    if (error.code === "ERR_NETWORK") {
       errorMessage = i18n.global.t("errors.noConnection")
       errorDetails = i18n.global.t("errors.noConnectionDetails")
    }
-   if (error.config.__displayErrorToast !== false) {
+
+   if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+      errorMessage = i18n.global.t("errors.timeout")
+      errorDetails = i18n.global.t("errors.timeoutDetails")
+   }
+
+   if (error.config?.__displayErrorToast !== false) {
       toast.error(`${i18n.global.t(errorMessage)}\n${i18n.global.t(errorDetails)}`, {
          timeout: 5000,
          position: "bottom-right"
