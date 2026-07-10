@@ -65,6 +65,7 @@ export async function retry469Error(instance, error, maxTries = 2) {
                "X-resource-password": passwordExists[0]?.password || ""
             }
          } else {
+            if (!config.data) config.data = {}
             config.data.resourcePasswords = {}
             passwordExists.forEach(folder => {
                let folder_id = folder.id
