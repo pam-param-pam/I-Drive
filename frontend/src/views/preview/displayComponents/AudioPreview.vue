@@ -37,6 +37,14 @@ export default {
 
    },
 
+   watch: {
+      mediaPosition() {
+         if (this.mediaPosition)
+            this.videoRef.currentTime = this.mediaPosition
+         this.lastSentMediaPosition = this.mediaPosition
+      }
+   },
+
    methods: {
       sendPreviewEvent(type, payload = {}) {
          this.$emit("previewEvent", {type, payload})

@@ -340,10 +340,10 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["updateItem", "setLastFile", "addSelected", "showHover", "resetSelected"]),
+      ...mapActions(useMainStore, ["updateItem", "setLastFile", "addSelected", "showHover", "resetSelected", "swActive"]),
 
       getFileSrcURL(file) {
-         if (this.useSW) return `/raw-file/${file?.id}`
+         if (this.useSW && this.swActive) return `/raw-file/${file?.id}`
          return file?.download_url
       },
       openEditor() {

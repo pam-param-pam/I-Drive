@@ -32,6 +32,7 @@ import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
 import { decodePath, encodePath, humanTime, resolveItemAction } from "../utils/common.js"
 import { getItems } from "@/api/folder.js"
+import { smartDownload } from "@/utils/downloadUtils.js"
 
 export default {
    name: "zip",
@@ -240,12 +241,7 @@ export default {
       // DOWNLOAD
       // -------------------------
       async download() {
-         if (this.selectedCount === 1 && !this.selected[0].isDir) {
-            const url = this.selected[0].download_url
-            if (url) window.open(url, "_blank")
-         } else {
-            this.$toast.error("toasts.downloadNotSupported")
-         }
+         await smartDownload({ zipEntryDownload: true })
       },
 
       // -------------------------

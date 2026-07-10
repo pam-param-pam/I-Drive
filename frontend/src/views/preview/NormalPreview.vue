@@ -74,7 +74,6 @@ export default {
          if (!this.file) return null
          let pos = this.mediaPositions.find(mediaPosition => mediaPosition.file_id === this.file.id)
          if (pos) {
-            console.log(pos.timestamp)
             return pos.timestamp
          }
       },

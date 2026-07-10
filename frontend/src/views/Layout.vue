@@ -41,13 +41,12 @@ export default {
       }
    },
    async mounted() {
-      // ensure anon state first
       if (!this.user?.autoSetupComplete && this.isLogged) {
          this.startTour()
       }
       try {
          await initServiceWorker()
-         this.setSwActive()
+         this.setSwActive(true)
       } catch (e) {
          console.error("Failed to load service worker: " + e)
       }

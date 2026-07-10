@@ -189,13 +189,7 @@ export default {
       },
 
       async download() {
-         try {
-            buttons.loading("download")
-            await smartDownload()
-         } finally {
-            buttons.done("download")
-
-         }
+         await smartDownload()
       },
 
       resetOpacity() {

@@ -7,40 +7,48 @@ import { useWebSocketStore } from "@/stores/websocketStore.js"
 import { ClientsideDecryptionMethod } from "@/utils/constants.js"
 import { FilePickerNotSupported } from "@/transfers/downloads/utils/helper.js"
 import { isAxiosError } from "axios"
+import buttons from "@/utils/buttons.js"
 
-export async function smartDownload(shareToken) {
-   const mainStore = useMainStore()
-   const wsStore = useWebSocketStore()
+export async function smartDownload({ shareToken = null, zipEntryDownload = false } = {}) {
+   try {
+      buttons.loading("download")
 
-   const selected = mainStore.selected
-   const isSingleFile = mainStore.selectedCount === 1 && !selected[0].isDir
-   const requiresClientSideDownload =
-      mainStore.settings.clientsideDecryptionMethod !== ClientsideDecryptionMethod.NO_DECRYPTION || shareToken
+      const mainStore = useMainStore()
+      const wsStore = useWebSocketStore()
 
-   if (isSingleFile) {
-      await downloadSingleFile({
-         file: selected[0],
-         wsStore,
-         requiresClientSideDownload,
+      const selected = mainStore.selected
+      const isSingleFile = mainStore.selectedCount === 1 && !selected[0].isDir
+      const requiresClientSideDownload = mainStore.settings.clientsideDecryptionMethod !== ClientsideDecryptionMethod.NO_DECRYPTION || shareToken
+      const swActive = mainStore.swActive
+
+      const useClientSideDecryption = requiresClientSideDownload && swActive && !zipEntryDownload
+      if (isSingleFile) {
+         await downloadSingleFile({
+            file: selected[0],
+            wsStore,
+            useClientSideDecryption,
+            shareToken
+         })
+         return
+      }
+
+      await downloadZip({
+         ids: selected.map(item => item.id),
+         useClientSideDecryption,
          shareToken
       })
-      return
+   } finally {
+      buttons.done("download")
    }
-
-   await downloadZip({
-      ids: selected.map(item => item.id),
-      requiresClientSideDownload,
-      shareToken
-   })
 }
 
 
-async function downloadSingleFile({ file, wsStore, requiresClientSideDownload, shareToken }) {
+async function downloadSingleFile({ file, wsStore, useClientSideDecryption, shareToken }) {
    if (shareToken) {
       wsStore.send("share", JSON.stringify({ type: "file_download", args: { file_id: file.id } }))
    }
 
-   if (requiresClientSideDownload) {
+   if (useClientSideDecryption) {
       try {
          await getDownloader().downloadFile(file)
          return
@@ -58,9 +66,9 @@ async function downloadSingleFile({ file, wsStore, requiresClientSideDownload, s
 }
 
 
-async function downloadZip({ ids, requiresClientSideDownload, shareToken }) {
-   console.log("downloadZip")
-   if (requiresClientSideDownload) {
+async function downloadZip({ ids, useClientSideDecryption, shareToken }) {
+
+   if (useClientSideDecryption) {
       console.log("requiresClientSideDownload")
       try {
          await getDownloader().downloadZip(ids, shareToken)

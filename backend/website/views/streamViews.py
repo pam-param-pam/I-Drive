@@ -1,3 +1,4 @@
+from django.views.decorators.cache import cache_page
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 
@@ -7,7 +8,6 @@ from website.core.decorators import check_resource_permissions, extract_file_fro
 from website.core.errors import ResourceNotFoundError
 from website.models import File, Subtitle, Moment, UserZIP
 from website.services import media_service
-
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])

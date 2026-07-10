@@ -6,7 +6,6 @@
       :poster="thumbSrc"
       :src="src"
       controls
-      crossorigin="anonymous"
       loop
       @error="onVideoError"
       @loadedmetadata="onVideoLoaded"
@@ -45,8 +44,8 @@ export default {
 
    watch: {
       file: {
-         //fix poster reload
          handler() {
+            //fix poster reload
             if (!this.videoRef) return
 
             this.videoRef.pause()
@@ -55,10 +54,12 @@ export default {
             this.videoRef.removeAttribute("src")
             this.videoRef.removeAttribute("poster")
             this.videoRef.load()
-
-            this.videoRef.currentTime = this.mediaPosition || 0
-            this.lastSentMediaPosition = this.mediaPosition || 0
          }
+      },
+      mediaPosition() {
+         if (this.mediaPosition)
+         this.videoRef.currentTime = this.mediaPosition
+         this.lastSentMediaPosition = this.mediaPosition
       }
    },
    async mounted() {
