@@ -37,17 +37,11 @@
 
       <!-- hidden measurement row -->
       <div ref="measureContainer" class="breadcrumbs-measure">
-
-         <component
-            :is="element"
-            ref="homeMeasure"
-            :to="base || ''"
-         >
+         <component :is="element" ref="homeMeasure" :to="base || ''">
             <i class="material-icons">home</i>
          </component>
 
-         <span v-for="folder in folderList" :key="'measure-' + folder.id">
-
+         <span v-for="folder in breadcrumbFolderList" :key="'measure-' + folder.id">
             <span class="chevron">
                <i class="material-icons">keyboard_arrow_right</i>
             </span>
@@ -59,11 +53,8 @@
             >
                {{ folder.name }}
             </component>
-
          </span>
-
       </div>
-
    </div>
 </template>
 
@@ -75,7 +66,6 @@ import throttle from "lodash.throttle"
 import { isMobile } from "@/utils/common.js"
 
 export default {
-
    name: "breadcrumbs",
 
    props: ["base", "folderList"],
@@ -89,16 +79,18 @@ export default {
    },
 
    computed: {
-
       ...mapState(useMainStore, ["selected", "user"]),
 
       element() {
          return "router-link"
       },
 
-      breadcrumbs() {
+      breadcrumbFolderList() {
+         return this.folderList.slice(1)
+      },
 
-         const folders = [...this.folderList]
+      breadcrumbs() {
+         const folders = [...this.breadcrumbFolderList]
 
          if (folders.length <= this.visibleCount || this.visibleCount === 0) {
             return folders
@@ -127,7 +119,6 @@ export default {
    },
 
    mounted() {
-
       this.resizeObserver = new ResizeObserver(() => {
          requestAnimationFrame(() => {
             this.calculateBreadcrumbs()
@@ -146,11 +137,11 @@ export default {
    },
 
    methods: {
-
       lockFrom(folder) {
          if (this.base === "/files") {
             if (folder.lockFrom) return "/" + folder.lockFrom
          }
+
          return ""
       },
 
@@ -170,7 +161,6 @@ export default {
       },
 
       async drop(folder_id) {
-
          if (!this.canDrop(folder_id) || this.selectedCount === 0) return
 
          const ids = this.selected.map(obj => obj.id)
@@ -206,7 +196,6 @@ export default {
          this.calculatingBreadcrumbs = true
 
          try {
-
             const container = this.$refs.container
             if (!container) return
 
@@ -218,12 +207,10 @@ export default {
             let usedWidth = homeWidth
             let visibleCount = 0
 
-            const folders = [...this.folderList]
+            const folders = [...this.breadcrumbFolderList]
 
             for (let i = folders.length - 1; i >= 0; i--) {
-
                const folder = folders[i]
-
                const ref = this.$refs["measureCrumb" + folder.id]?.[0]
                const el = ref?.$el
 
@@ -239,19 +226,18 @@ export default {
                visibleCount++
             }
             if (visibleCount === 0) visibleCount = 1
-            this.visibleCount = visibleCount
-
+            {
+               this.visibleCount = visibleCount
+            }
          } finally {
             this.calculatingBreadcrumbs = false
          }
       }, 200)
-
    }
 }
 </script>
 
 <style scoped>
-
 .breadcrumb-hovered {
   font-weight: bold;
   opacity: 1;
@@ -276,5 +262,4 @@ export default {
   height: 0;
   overflow: hidden;
 }
-
 </style>

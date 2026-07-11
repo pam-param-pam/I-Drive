@@ -85,7 +85,7 @@ class FileSerializer(AdvancedSerializer):
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
-            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
+            _id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
             type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
             parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
@@ -95,7 +95,7 @@ class FileSerializer(AdvancedSerializer):
 
         d = {
             "isDir": False,
-            "id": id,
+            "id": _id,
             "name": name,
             "parent_id": parent_id,
             "size": size,
@@ -121,25 +121,23 @@ class FileSerializer(AdvancedSerializer):
             d["in_trash_since"] = in_trash_since.isoformat()
 
         if not hide and not (is_locked and in_trash):
-            download_path = f"/files/{id}/stream"
-
-            d["_download_path"] = download_path
+            download_path = f"/files/{_id}/stream"
 
             if sign_urls:
                 signed = sign_resource(download_path)
             else:
+                d["_download_path"] = download_path
                 signed = ""
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
             if thumbnail_id:
-                thumbnail_path = f"/files/{id}/thumbnail/{thumbnail_id}/stream"
-
-                d["_thumbnail_path"] = thumbnail_path
+                thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
 
                 if sign_urls:
                     thumbnail_signed = sign_resource(thumbnail_path)
                 else:
+                    d["_thumbnail_path"] = thumbnail_path
                     thumbnail_signed = ""
 
                 d["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{thumbnail_signed}"
@@ -152,7 +150,7 @@ class ShareFileSerializer(FileSerializer):
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
-            id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
+            _id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
             type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
             parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
@@ -162,7 +160,7 @@ class ShareFileSerializer(FileSerializer):
 
         d = {
             "isDir": False,
-            "id": id,
+            "id": _id,
             "parent_id": parent_id,
             "name": name,
             "size": size,
@@ -183,7 +181,7 @@ class ShareFileSerializer(FileSerializer):
         if not hide and not (is_locked and in_trash):
             signed = ""
 
-            download_path = f"/files/{id}/stream"
+            download_path = f"/files/{_id}/stream"
 
             if sign_urls:
                 signed = sign_resource(download_path)
@@ -191,7 +189,7 @@ class ShareFileSerializer(FileSerializer):
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
             if thumbnail_id:
-                thumbnail_path = f"/files/{id}/thumbnail/{thumbnail_id}/stream"
+                thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
 
                 thumbnail_signed = ""
 
@@ -248,12 +246,12 @@ class ShareSerializer(SimpleSerializer):
     def serialize_object(share: ShareableLink) -> dict:
         obj = get_item_inside_share(share)
 
-        isDir = isinstance(obj, Folder)
+        is_dir = isinstance(obj, Folder)
 
         item = {
             "expire": share.expiration_time.isoformat(),
             "name": obj.name,
-            "isDir": isDir,
+            "isDir": is_dir,
             "token": share.token,
             "resource_id": share.object_id,
             "id": share.id,

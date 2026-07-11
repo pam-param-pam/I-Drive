@@ -19,8 +19,6 @@ def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
     folder_obj.refresh_from_db()
     ancestors = folder_obj.get_ancestors(include_self=True)
     for ancestor in ancestors:
-        if not ancestor.parent:
-            continue
         lock_from = get_attr(ancestor, "lockFrom_id", None)
         data = {"name": ancestor.name, "id": ancestor.id, "lockFrom": lock_from}
         breadcrumbs.append(data)
