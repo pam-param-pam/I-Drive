@@ -46,6 +46,8 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
         if parent.is_locked:
             internal_apply_lock(folder=folder_obj, lock_from=parent.lockFrom, password=parent.password)
 
+        folder_obj.refresh_from_db()
+
         touch_service.touch_folder_object(folder_obj)
 
     folder_dict = FolderSerializer.serialize_object(folder_obj)
