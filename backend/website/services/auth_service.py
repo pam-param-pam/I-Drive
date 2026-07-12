@@ -152,7 +152,10 @@ def _revoke_device(user: User, device_id: str) -> None:
 def _logout_websockets(user: User, device_id: str = None) -> None:
     """Sends a closing event on websocket and then closes it. If device_id is None, it closes every websocket for user"""
     context = RequestContext.from_user(user.id)
-    send_event(context, None, EventCode.FORCE_LOGOUT, {"device_id": device_id})
+    if device_id:
+        context.device_id = device_id
+
+    send_event(context, None, EventCode.FORCE_LOGOUT)
     queue_ws_event.delay(
         'user',
         {

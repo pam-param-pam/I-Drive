@@ -15,7 +15,7 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIPForLockedResources
+from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from website.auth.utils import check_resource_perms
 from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL
@@ -222,7 +222,7 @@ def get_trash(request):
 @throttle_classes([FolderPasswordThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
-@check_resource_permissions([CheckOwnership, CheckIPForLockedResources], resource_key="item_obj")
+@check_resource_permissions([CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked], resource_key="item_obj")
 def check_password(request, item_obj):
     password = request.headers.get("X-Resource-Password")
 

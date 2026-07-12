@@ -204,10 +204,7 @@ export async function onEvent(data) {
    }
 
    if (op_code === WebsocketEvent.FORCE_LOGOUT) {
-      let localDeviceId = localStorage.getItem("device_id")
-      let deviceId = event.data[0].device_id
-
-      if (store.isLogged && (deviceId === localDeviceId || deviceId === null || localDeviceId === null)) {
+      if (store.isLogged) {
          await forceLogout()
       }
    }

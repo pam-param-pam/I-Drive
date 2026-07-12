@@ -18,9 +18,7 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata, PhotoMetadata
 from .models.other_models import Notification, RawExtractionClaim
-from .services import folder_service, file_service, create_file_service, item_service
-
-admin.site.register(PerDeviceToken)
+from .services import folder_service, file_service, create_file_service, item_service, auth_service
 
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
@@ -638,3 +636,15 @@ class DeletionJobAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(PerDeviceToken)
+class PerDeviceTokenAdmin(admin.ModelAdmin):
+    actions = ['revoke']
+
+    def has_add_permission(self, request):
+        return False
+
+    def revoke(self, request, queryset):
+        for token in queryset:
+            auth_service.logout_device(request, user=token.user, device_id=token.device_id)

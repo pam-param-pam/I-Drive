@@ -1,7 +1,7 @@
 import base64
 import hashlib
 
-from website.auth.Permissions import CheckIPForLockedResources
+from website.auth.Permissions import CheckIpPrivateOrAllowedIfResourceLocked
 from website.auth.utils import check_resource_perms
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
@@ -15,7 +15,7 @@ from website.core.media.stream.sources.FragmentByteSource import FragmentedDisco
 from website.core.media.stream.sources.ZipByteSource import ZipByteSource
 from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
 from website.discord.Discord import discord
-from website.models import File, Moment, Subtitle, UserZIP
+from website.models import File, Moment, Subtitle, UserZIP, Thumbnail
 from website.models.mixin_models import ItemState
 from website.queries.builders import build_zip_file_dict, build_flattened_children_mptt_values, FILE_VALUE_FIELDS, FOLDER_VALUE_FIELDS
 from website.queries.selectors import check_if_bots_exists
@@ -27,9 +27,8 @@ def _stable_file_etag(file_obj: File) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def get_thumbnail_response(request, file_obj: File):
+def get_thumbnail_response(request, file_obj: File, thumbnail: Thumbnail):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
-    thumbnail = file_obj.thumbnail
 
     cache_key = f"thumbnail:{thumbnail.id}"
     thumbnail_content = cache.get(cache_key)
@@ -134,11 +133,11 @@ def get_zip_response(request, user_zip: UserZIP):
     # this works only because all items must be in the same parent (ensured during zip model creation)
     first_file = files_qs.first()
     if first_file is not None:
-        check_resource_perms(request, first_file, [CheckIPForLockedResources])
+        check_resource_perms(request, first_file, [CheckIpPrivateOrAllowedIfResourceLocked])
 
     first_folder = folders_qs.first()
     if first_folder is not None:
-        check_resource_perms(request, first_folder, [CheckIPForLockedResources])
+        check_resource_perms(request, first_folder, [CheckIpPrivateOrAllowedIfResourceLocked])
 
     if first_file is None and first_folder is None:
         raise ResourceNotFoundError("ZIP is empty")

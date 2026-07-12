@@ -1,18 +1,13 @@
 import shortuuid
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, CheckConstraint, Q
-from django.utils import timezone
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
 from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 
-from website.constants import cache
 from .mixin_models import ItemState
-from website.services import cache_service
-from ..config import MAX_RESOURCE_NAME_LENGTH, MAX_FOLDER_DEPTH
 
 
 class Folder(MPTTModel):

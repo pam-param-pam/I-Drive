@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from django.db.models import CheckConstraint, Q
 from shortuuidfield import ShortUUIDField
-from simple_history.models import HistoricalRecords
 
 
 class Webhook(models.Model):

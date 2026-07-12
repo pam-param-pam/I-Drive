@@ -3,7 +3,6 @@ import os
 
 import shortuuid
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists
 from django.utils import timezone

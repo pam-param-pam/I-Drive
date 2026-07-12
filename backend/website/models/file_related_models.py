@@ -10,8 +10,6 @@ from simple_history.models import HistoricalRecords
 
 from .file_models import File
 from .mixin_models import DiscordAttachmentMixin
-from website.services import cache_service
-from ..constants import cache
 
 
 class Thumbnail(DiscordAttachmentMixin):

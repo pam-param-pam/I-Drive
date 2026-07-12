@@ -32,7 +32,7 @@ class BasePermissionWithMessage(BasePermission):
         return True
 
     def check_permission(self, request, view):
-        return NotImplementedError()
+        raise NotImplementedError()
 
 
 class FlagPerms(BasePermissionWithMessage):
@@ -113,7 +113,7 @@ class ResetLockPerms(FlagPerms):
 
 
 class AllowedIP(BasePermissionWithMessage):
-    message = "IP validation failed."
+    message = "IP validation failed. Must be private or in ALLOWED_IP."
 
     def check_permission(self, request, view):
         ip, _ = get_ip(request)
@@ -187,7 +187,7 @@ class CheckState(BaseResourceCheck):
             raise ResourcePermissionError("Resource is not active")
 
 
-class CheckIPForLockedResources(BaseResourceCheck):
+class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
     def check(self, request, *resources):
         resource = resources[0]
         self._require_type(resource, (File, Folder, dict, tuple))
@@ -211,7 +211,7 @@ class CheckIPForLockedResources(BaseResourceCheck):
         raise ResourceNotFoundError()
 
 
-class CheckFolderLockLockedResources(CheckIPForLockedResources):
+class CheckItemLock(CheckIpPrivateOrAllowedIfResourceLocked):
     def check(self, request, *resources):
         resource = resources[0]
         self._require_type(resource, (File, Folder, dict, tuple))
@@ -345,4 +345,4 @@ class CheckGroup:
         return self.__str__()
 
 
-default_checks = CheckGroup(CheckOwnership, CheckFolderLockLockedResources, CheckTrash, CheckState)
+default_checks = CheckGroup(CheckOwnership, CheckItemLock, CheckTrash, CheckState)
