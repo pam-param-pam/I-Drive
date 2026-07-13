@@ -641,6 +641,8 @@ class DeletionJobAdmin(admin.ModelAdmin):
 @admin.register(PerDeviceToken)
 class PerDeviceTokenAdmin(admin.ModelAdmin):
     actions = ['revoke']
+    list_display = ['user', 'device_type', 'last_used_at', 'country', 'city']
+    readonly_fields = ('user', 'token_hash', 'last_used_at', 'ip_address', 'user_agent', 'country', 'city', 'device_type')
 
     def has_add_permission(self, request):
         return False

@@ -49,7 +49,9 @@ else:
     STATIC_ROOT = BASE_DIR / "staticfiles"
     USE_X_FORWARDED_HOST = False
 
-
+CSRF_TRUSTED_ORIGINS = [
+    PUBLIC_ORIGIN,
+]
 # Hosts
 
 LAN_CIDR = os.getenv("LAN_CIDR", "192.168.1.0/24")
