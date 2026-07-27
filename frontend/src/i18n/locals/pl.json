@@ -515,7 +515,8 @@
     "register": "Rejestracja",
     "settings": "Ustawienia",
     "toggleDarkMode": "Przełącz tryb nocny",
-    "trash": "Kosz"
+    "trash": "Kosz",
+    "folderUsage": "{used} z {total} wszystkich przechowywanych danych"
   },
   "time": {
     "days": "Dni",

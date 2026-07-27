@@ -58,15 +58,15 @@
                   icon="delete_forever"
                   show="delete"
                />
-               <action
-                 v-if="headerButtons.deleteAll"
-                 id="delete-button"
-                 :counter="sortedItems.length"
-                 :label="$t('buttons.deleteAll')"
-                 icon="delete_forever"
-                 @action="$emit('deleteAll')"
-               />
             </template>
+            <action
+              v-if="headerButtons.deleteAll"
+              id="delete-button"
+              :counter="sortedItems.length"
+              :label="$t('buttons.deleteAll')"
+              icon="delete_forever"
+              @action="$emit('deleteAll')"
+            />
             <action
                v-if="headerButtons.lock"
                :label="$t('buttons.lockFolder')"

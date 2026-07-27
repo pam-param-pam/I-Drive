@@ -1,11 +1,9 @@
-import copy
+import hashlib
 import hashlib
 import json
 import time
-from pathlib import Path
 from typing import Optional
 
-from django.conf import settings
 from django.db.models import Count, Sum, Case, When, Value, CharField
 from django.db.models import F, BooleanField
 from django.db.models.query_utils import Q
@@ -24,9 +22,9 @@ from website.core.Serializers import FileSerializer, VideoTrackSerializer, Subti
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
 from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
-from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item, extract_items_from_ids_annotated, check_bulk_permissions
+from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_value, get_attr, validate_ids_as_list, extract_key, validate_key
+from website.core.helpers import validate_ids_as_list, extract_key, validate_key
 from website.discord.Discord import discord
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition

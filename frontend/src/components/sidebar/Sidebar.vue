@@ -100,7 +100,9 @@
       >
          <progress-bar :val="Math.round((usage.used / usage.total) * 100)" size="small"></progress-bar>
          <br />
-         {{ filesize(usage.used) }} of {{ filesize(usage.total) }} used
+         <div class="folder-usage">
+            {{ $t("sidebar.folderUsage", { used: filesize(usage.used), total: filesize(usage.total) }) }}
+         </div>
       </div>
 
       <p class="credits">
@@ -113,7 +115,6 @@
 
       <div class="sidebar-actions-row">
          <dark-mode-button />
-
          <div class="notif-wrapper" v-if="isLogged">
             <button
                :aria-label="$t('sidebar.notifications')"
@@ -127,7 +128,15 @@
                <span class="notif-ripple" v-if="highlightNotification"></span>
             </button>
          </div>
-
+         <button
+           v-if="user.isStaff"
+           :aria-label="$t('sidebar.adminPanel')"
+           :title="$t('sidebar.adminPanel')"
+           class="action action-compact"
+           @click="toAdminPanel"
+         >
+            <i class="material-icons">admin_panel_settings</i>
+         </button>
       </div>
       <div v-if="selectedFile && !isMobile() && settings.itemInfoShortcut" class="selected-file-info">
          <p><strong>{{ $t("prompts.name") }}: </strong> {{ selectedFile.name }}</p>
@@ -145,7 +154,7 @@
 
 <script>
 import * as auth from "@/utils/auth"
-import { githubUrl, signup, version } from "@/utils/constants"
+import { baseURL, githubUrl, signup, version } from "@/utils/constants"
 import { getUsage } from "@/api/folder.js"
 import { author, name } from "@/utils/constants.js"
 import { useMainStore } from "@/stores/mainStore.js"
@@ -264,6 +273,10 @@ export default {
          this.$router.replace({ name: `Settings` })
          this.closeHover()
       },
+      toAdminPanel() {
+         window.location.assign(baseURL + "/admin")
+
+      },
 
 
       logout: auth.logout
@@ -326,14 +339,16 @@ export default {
 
 }
 
-/* subtle glow */
+.folder-usage {
+   line-height: 1.5;
+}
+
 .notif-alert {
   position: relative;
   box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.5);
   border-radius: 8px;
 }
 
-/* ripple effect */
 .notif-ripple {
   position: absolute;
   top: 50%;
@@ -358,5 +373,8 @@ export default {
     height: 80px;
     opacity: 0;
   }
+}
+.action-compact {
+   width: auto !important;
 }
 </style>

@@ -207,7 +207,6 @@
     padding-bottom: 0.5em !important;
   }
 
-
   .list .item.header .createdSort {
     display: none !important;
   }
@@ -217,6 +216,9 @@
   }
   .list .item-wrapper .size {
     padding-right: 1em;
+  }
+  .upload-files .card.floating {
+    max-height: 25% !important;
   }
 
 }

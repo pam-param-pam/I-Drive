@@ -57,7 +57,7 @@ def users_me(request):
 
     response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE,
                          "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE, "unreadNotifications": unread_notifications,
-                         "autoSetupComplete": discord.auto_setup_complete},
+                         "autoSetupComplete": discord.auto_setup_complete, "isStaff": user.is_superuser},
                 "perms": {"admin": perms.admin, "create": perms.create, "lock": perms.lock, "modify": perms.modify,
                           "delete": perms.delete, "share": perms.share, "download": perms.download, "resetLock": perms.reset_lock},
                 "settings": {"locale": settings.locale, "hideLockedFolders": settings.hide_locked_folders, "dateFormat": settings.date_format,

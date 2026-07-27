@@ -515,7 +515,8 @@
     "register": "Register",
     "settings": "Settings",
     "toggleDarkMode": "Toggle dark mode",
-    "trash": "Trash"
+    "trash": "Trash",
+    "folderUsage": "{used} of {total} total stored data"
   },
   "time": {
     "days": "Days",
