@@ -18,6 +18,7 @@
          @openInNewWindow="openInNewWindow"
          @upload="upload"
          @uploadInput="onUploadInput"
+         @onLocateItem="onLocateItem"
       ></FileListing>
       <router-view />
    </div>
@@ -113,7 +114,7 @@ export default {
 
    methods: {
       ...mapActions(useMainStore, ["setLastFolder", "setItemsLoading", "setItemsError", "setSearchItems", "setCurrentFolderData", "setDisabledCreation",
-         "setCurrentFolder", "closeHover", "showHover", "setSearchActive"]),
+         "setCurrentFolder", "closeHover", "showHover", "setSearchActive", "setLocateItem", "closeContextMenu"]),
 
       async onSearchQuery(searchParams) {
          if (this.$route.name !== "Files") return
@@ -237,7 +238,6 @@ export default {
             clearTimeout(scanToastTimeout)
             this.$toast.dismiss(toastId)
          }
-         console.log(files)
          await getUploader().startUploadWithChecks(uploadType.dragAndDropInput, folderContextId, files)
       },
 
@@ -256,7 +256,7 @@ export default {
             case "zip":
                return { name: "Zip", params: { folderId: item.parent_id, zipFileId: item.id } }
             case "preview":
-               return { name: "Preview", params: { folderId: item.parent_id, fileId: item.id } }
+               return {name: "Preview", params: { ...this.$route.params, fileId: item.id }}
          }
       },
 
@@ -274,7 +274,7 @@ export default {
             return
          }
          let route = this.getNewRoute(item)
-         //todo
+         //todo i dont remember what i was supposed to fix here lol
          if (item.isLocked === true) {
             let password = this.getFolderPassword(item.lockFrom)
             if (!password) {
@@ -291,6 +291,17 @@ export default {
          }
 
          this.$router.replace(route)
+      },
+      async onLocateItem(item) {
+         let message = this.$t("toasts.locating")
+         this.$toast.info(message)
+
+         let parent_id = item.parent_id
+
+         this.setLocateItem(item)
+         this.closeContextMenu()
+
+         this.$router.replace({ name: "Files", params: { folderId: parent_id } })
       }
    }
 }

@@ -1,7 +1,7 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t("prompts.abortAll") }}</h2>
+         <h2>{{ $t(transferType === "download" ? "prompts.abortDownloads" : "prompts.abortUploads") }}</h2>
       </div>
       <div class="card-content">
          <p>
@@ -35,6 +35,13 @@ import { useMainStore } from "@/stores/mainStore.js"
 
 export default {
    name: "AbortTransferWarning",
+
+   props: {
+      transferType: {
+         type: String,
+         required: true
+      }
+   },
 
    computed: {
       ...mapState(useMainStore, ["currentPrompt"])

@@ -199,8 +199,6 @@
     "wrongCredentials": "Wwong cwedentials"
   },
   "prompts": {
-    "abortAll": "Cancew Upwoad",
-    "abortAllWarning": "Awe you suwe? Aww fiwes in the queue wiww be wost!",
     "accessAt": "Accessed at",
     "accountPassword": "Account passwowd",
     "addSubtitle": "Add subtitwe",
@@ -611,7 +609,6 @@
     "trashName": "Twash"
   },
   "uploadFile": {
-    "abortAll": "Abowt aww",
     "failed": "Failed, unknown ewwow",
     "fatal": "Fataw ewwow",
     "fileGone": "Fiwe is gone, moved ow deweted",

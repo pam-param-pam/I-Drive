@@ -198,29 +198,6 @@ export function resolveItemAction(item) {
 }
 
 
-export function encodePath(path) {
-   return btoa(
-      encodeURIComponent(path).replace(/%([0-9A-F]{2})/g, (_, p1) =>
-         String.fromCharCode("0x" + p1)
-      )
-   )
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "")
-}
-
-export function decodePath(value) {
-   const padding = "=".repeat((4 - (value.length % 4)) % 4)
-   const base64 = value.replace(/-/g, "+").replace(/_/g, "/") + padding
-
-   return decodeURIComponent(
-      atob(base64)
-         .split("")
-         .map(c => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
-         .join("")
-   )
-}
-
 export function formatDuration(seconds) {
    if (seconds == null || !Number.isFinite(seconds)) {
       return null

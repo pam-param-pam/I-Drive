@@ -39,9 +39,10 @@ export default {
 
    watch: {
       mediaPosition() {
-         if (this.mediaPosition)
-            this.videoRef.currentTime = this.mediaPosition
-         this.lastSentMediaPosition = this.mediaPosition
+         if (this.mediaPosition) {
+            this.audioRef.currentTime = this.mediaPosition
+            this.lastSentMediaPosition = this.mediaPosition
+         }
       }
    },
 

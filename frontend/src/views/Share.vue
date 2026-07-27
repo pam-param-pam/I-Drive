@@ -115,7 +115,6 @@ export default {
                return { name: "Share", params: { ...this.$route.params, folderId: item.id }}
             case "zip":
                return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}
-               // return { name: "Zip", params: { folderId: item.parent_id || "aa", zipFileId: item.id }}
             case "preview":
                return {name: "SharePreview", params: { ...this.$route.params, fileId: item.id }}
          }

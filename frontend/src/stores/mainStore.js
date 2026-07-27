@@ -18,7 +18,6 @@ export const useMainStore = defineStore("main", {
       perms: null,
       settings: null,
       config: null,
-      progress: 0,
       token: "",
       deviceId: "",
       selected: [],
@@ -35,9 +34,8 @@ export const useMainStore = defineStore("main", {
       items: [],
       usage: { used: 0, total: 0 },
       popupPreview: {},
-
       itemsLoading: false,
-      itemsError: false,
+      itemsError: null,
       swActive: false,
       multiSelection: false,
       contextMenuState: {

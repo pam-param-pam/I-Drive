@@ -101,7 +101,7 @@
            class="fileitem-progress"
          >
             <TransferProgressBar :progress="fileState.progress" />
-            <span>
+            <span class="progress-percentage">
                <b>{{ fileState.progress }}%</b>
             </span>
          </div>

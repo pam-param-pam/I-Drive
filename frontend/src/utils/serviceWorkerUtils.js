@@ -190,7 +190,6 @@ export async function registerFileConfigsInServiceWorker(files) {
    }
 
    const requestId = crypto.randomUUID()
-
    sw.postMessage({
       requestId,
       type: "REGISTER_FILE_CONFIGS",

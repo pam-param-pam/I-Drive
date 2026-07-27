@@ -55,7 +55,7 @@ export default {
             dirs.unshift(folderBack)
          }
 
-         const folder_path = "root/" + res.breadcrumbs.map(b => b.name).join("/")
+         const folder_path = res.breadcrumbs.map(b => b.name).join("/")
 
          this.dirs = dirs.filter((folder) => this.selected[0].id !== folder.id)
          this.nav = { name: res.folder.name, id: res.folder.id, folder_path: folder_path }

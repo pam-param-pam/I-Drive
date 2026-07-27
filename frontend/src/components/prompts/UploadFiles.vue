@@ -52,8 +52,8 @@
 
                <button
                  v-if="canAbort"
-                 :aria-label="$t('transferFile.abortAll')"
-                 :title="$t('transferFile.abortAll')"
+                 :aria-label="$t(activeView === 'uploads' ? 'prompts.abortUploads' : 'prompts.abortDownloads')"
+                 :title="$t(activeView === 'uploads' ? 'prompts.abortUploads' : 'prompts.abortDownloads')"
                  class="action"
                  @click="abortAll"
                >

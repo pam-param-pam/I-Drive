@@ -7,7 +7,6 @@
             :disabled="itemsError !== null"
             :advanced="headerButtons.advancedSearch"
             ref="search"
-            @exit="$emit('onSearchClosed')"
             @onSearchQuery="(query) => $emit('onSearchQuery', query)"
          />
          <title></title>
@@ -367,8 +366,8 @@ export default {
       headerButtons: {}
    },
 
-   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchClosed", "onSearchQuery",
-      "download", "openInNewWindow", "copyFileShareUrl", "deleteAll"],
+   emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchQuery",
+      "download", "openInNewWindow", "copyFileShareUrl", "deleteAll", "onLocateItem"],
 
    data() {
       return {
@@ -693,19 +692,10 @@ export default {
       },
 
       async onLocateItem() {
-         this.$emit("onSearchClosed")
-         let message = this.$t("toasts.locating")
-         this.$toast.info(message)
-
          let item = this.selected[0]
-         let parent_id = item.parent_id
+         await this.$refs.search.exit() // this needs to be after cuz it resets selected
+         this.$emit("onLocateItem", item)
 
-         await this.$refs.search.exit()
-
-         this.setLocateItem(item)
-         this.closeContextMenu()
-
-         this.$router.replace({ name: "Files", params: { folderId: parent_id } })
       },
 
       async switchView() {

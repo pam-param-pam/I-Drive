@@ -4,21 +4,24 @@
    <h4 class="listing-notice">{{ $t("files.zipArchiveMode") }} </h4>
 
    <breadcrumbs
-     :base="'/zip/' + folderId + '/' + zipFileId"
-     :folderList="zipFolderList"
+      v-if="!searchActive"
+      :base="'/zip/' + folderId + '/' + zipFileId"
+      :folderList="zipFolderList"
    />
-
+   <h4 v-if="!itemsError && searchActive && !itemsLoading">
+      {{ $t("files.searchItemsFound", { amount: searchItems.length }) }}
+   </h4>
    <errors v-if="itemsError" :error="itemsError" />
 
    <FileListing
-     ref="listing"
-     :headerButtons="headerButtons"
-     :readonly="true"
-     @download="download"
-     @onOpen="onOpen"
-     @openInNewWindow="openInNewWindow"
-     @dropUpload="onDropUpload"
-     @onSearchQuery="onSearchQuery"
+      ref="listing"
+      :headerButtons="headerButtons"
+      :readonly="true"
+      @download="download"
+      @onOpen="onOpen"
+      @openInNewWindow="openInNewWindow"
+      @dropUpload="onDropUpload"
+      @onSearchQuery="onSearchQuery"
    />
 
    <router-view />
@@ -30,23 +33,19 @@ import { mapActions, mapState } from "pinia"
 import Breadcrumbs from "@/components/listing/Breadcrumbs.vue"
 import Errors from "@/components/Errors.vue"
 import FileListing from "@/components/FileListing.vue"
-import { decodePath, encodePath, humanTime, resolveItemAction } from "../utils/common.js"
+import { humanTime, resolveItemAction } from "../utils/common.js"
 import { getItems } from "@/api/folder.js"
 import { smartDownload } from "@/utils/downloadUtils.js"
 
 export default {
    name: "zip",
 
-   components: {
-      Errors,
-      FileListing,
-      Breadcrumbs
-   },
+   components: { Errors, FileListing, Breadcrumbs },
 
    props: {
       folderId: { type: String, required: true },
       zipFileId: { type: String, required: true },
-      path: { type: String, required: false }
+      zipPathId: { type: String, required: false, default: null }
    },
 
    data() {
@@ -59,7 +58,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["selected", "itemsLoading", "itemsError", "items", "selectedCount", "config", "breadcrumbs"]),
+      ...mapState(useMainStore, ["selected", "itemsLoading", "itemsError", "items", "selectedCount", "config", "breadcrumbs", "searchActive", "searchItems"]),
 
       headerButtons() {
          return {
@@ -68,39 +67,30 @@ export default {
             search: true,
             advancedSearch: false
          }
-      },
-
-      encodedPath() {
-         return this.path || ""
-      },
-
-      decodedPath() {
-         return this.encodedPath ? decodePath(this.encodedPath) : ""
-      },
+      }
    },
 
-   async created() {
+   created() {
       document.title = "Archive viewer"
       this.setDisabledCreation(true)
-
       this.worker = new Worker(new URL("@/workers/zipWorker.js", import.meta.url), { type: "module" })
-
-      this.worker.onmessage = this.handleWorkerMessage
-
    },
+
    async mounted() {
       await this.init()
    },
+
    beforeUnmount() {
       if (this.worker) {
          this.worker.terminate()
          this.worker = null
       }
+
       this.setLastFile(this.file)
    },
 
    watch: {
-      "$route.params.path"() {
+      zipPathId() {
          this.loadList()
       }
    },
@@ -108,29 +98,14 @@ export default {
    methods: {
       humanTime,
 
-      ...mapActions(useMainStore, ["setDisabledCreation", "setItems", "setSearchItems", "setCurrentFolderData", "setItemsLoading", "setItemsError", "setLastFile"]),
+      ...mapActions(useMainStore, ["setDisabledCreation", "setItems", "setSearchItems", "setCurrentFolderData",
+         "setItemsLoading", "setItemsError", "setLastFile", "setSearchActive"]),
 
-      // -------------------------
-      // INIT
-      // -------------------------
-      async onSearchQuery(searchParams) {
-         this.setItemsLoading(true)
-         try {
-            const query = searchParams.query
-
-            const res = await this.sendWorker("search", { query })
-            this.setSearchItems(res.items)
-         } catch (error) {
-            this.setItemsError(error)
-         } finally {
-            this.setItemsLoading(false)
-         }
-      },
       async init() {
          try {
             this.setItemsLoading(true)
 
-            if (this.items.length === 0) {
+            if (!this.items?.length) {
                const res = await getItems(this.folderId)
                this.setCurrentFolderData(res)
             }
@@ -139,25 +114,22 @@ export default {
 
             this.file = this.items.find(f => f.id === this.zipFileId)
 
-            this.realFolderList.push({name: this.file?.name, id: this.file.parent_id})
+            this.realFolderList.push({ name: this.file.name, id: this.file.parent_id })
             this.setLastFile(this.file)
 
-            await this.sendWorker("init", {url: this.file.download_url, extensions: {...this.config.extensions}})
+            await this.sendWorker("init", { url: this.file.download_url, extensions: { ...this.config.extensions } })
 
             this.setItems(null)
             await this.loadList()
-         } catch (e) {
-            console.error(e)
-            this.setItemsError(e)
+         } catch (error) {
+            console.error(error)
+            this.setItemsError(error)
          } finally {
             this.setItemsLoading(false)
          }
       },
 
-      // -------------------------
-      // WORKER COMMUNICATION
-      // -------------------------
-      sendWorker(type, payload) {
+      sendWorker(type, payload = {}) {
          return new Promise((resolve, reject) => {
             const handler = (e) => {
                if (e.data.type === "error") {
@@ -177,55 +149,50 @@ export default {
       },
 
       async loadList() {
-         await this.sendWorker("list", {
-            path: this.decodedPath
-         })
+         try {
+            this.setItemsLoading(true)
+
+            const res = await this.sendWorker("list", { fileId: this.zipPathId })
+
+            this.setItems(res.items)
+
+            this.zipFolderList = [
+               { name: this.file.name, id: null, raw_path: null },
+               ...res.breadcrumbs.map(item => ({ name: item.name, id: item.fileId, raw_path: item.raw_path }))
+            ]
+         } catch (error) {
+            this.setItemsError(error)
+         } finally {
+            this.setItemsLoading(false)
+         }
       },
 
-      async handleWorkerMessage(e) {
-         if (e.data.type === "list") {
-            let items = e.data.items
-            requestAnimationFrame(() => { // vevy important
-               this.setItems(items)
-            })
+      async onSearchQuery(searchParams) {
+         try {
+            this.setSearchActive(true)
+            this.setItemsLoading(true)
 
-            this.zipFolderList = this.buildBreadcrumbs(this.decodedPath)
-         }
-
-         if (e.data.type === "search") {
-            const items = e.data.items
-
+            const res = await this.sendWorker("search", { query: searchParams.query })
             requestAnimationFrame(() => {
-               this.setSearchItems(items)
+               this.setSearchItems(res.items) // this is vevy important
             })
-
-            return
-         }
-
-         if (e.data.type === "error") {
-            this.setItemsError(e.data.error)
+         } catch (error) {
+            this.setItemsError(error)
+         } finally {
+            this.setItemsLoading(false)
          }
       },
 
-      // -------------------------
-      // NAVIGATION
-      // -------------------------
       getNewRoute(item) {
          const action = resolveItemAction(item)
+
          switch (action) {
             case "dir":
-               return {
-                  name: "Zip",
-                  params: { ...this.$route.params, path: encodePath(item.id)}
-               }
+               return { name: "Zip", params: { folderId: this.folderId, zipFileId: this.zipFileId, zipPathId: item.fileId } }
             case "zip":
             case "preview":
-               return {
-                  name: "ZipPreview",
-                  params: { ...this.$route.params, fileId: encodePath(item.id) }
-               }
+               return { name: "ZipPreview", params: { folderId: this.folderId, zipFileId: this.zipFileId, zipPathId: this.zipPathId, fileId: item.fileId } }
          }
-
       },
 
       onOpen(item) {
@@ -237,30 +204,10 @@ export default {
          window.open(url, "_blank")
       },
 
-      // -------------------------
-      // DOWNLOAD
-      // -------------------------
       async download() {
          await smartDownload({ zipEntryDownload: true })
       },
 
-      // -------------------------
-      // BREADCRUMBS
-      // -------------------------
-      buildBreadcrumbs(folderId) {
-         if (!folderId) return []
-
-         const parts = folderId.split("/").filter(Boolean)
-
-         return parts.map((part, i) => {
-            const rawPath = parts.slice(0, i + 1).join("/")
-
-            return {
-               name: part,
-               id: encodePath(rawPath)
-            }
-         })
-      },
       onDropUpload() {
          this.$toast.error(this.$t("toasts.uploadNotAllowedHere"))
       }

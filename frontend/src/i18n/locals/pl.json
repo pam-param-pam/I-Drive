@@ -230,8 +230,9 @@
     }
   },
   "prompts": {
+    "abortDownload": "Anuluj pobieranie",
+    "abortUploads": "Anuluj przesyłanie",
     "aborting": "Przerywanie...",
-    "abortAll": "Anuluj transfer",
     "abortAllWarning": "Czy jesteś pewien? Cały progress zostanie utracony!",
     "accessAt": "Dostep",
     "accountPassword": "Hasło do konta",
@@ -651,7 +652,6 @@
     }
   },
   "transferFile": {
-    "abortAll": "Przerwij wszystko",
     "downloads": "Pobieranie",
     "failed": "Wystąpił nieznany bląd",
     "fatal": "Krytyczny błąd",

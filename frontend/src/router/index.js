@@ -87,7 +87,7 @@ const router = createRouter({
                ]
             },
             {
-               path: "/zip/:folderId/:zipFileId/:path?",
+               path: "/zip/:folderId/:zipFileId/:zipPathId?",
                name: "Zip",
                component: Zip,
                props: true,

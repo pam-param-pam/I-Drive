@@ -230,8 +230,9 @@
     }
   },
   "prompts": {
+    "abortDownload": "Abort all downloads",
+    "abortUploads": "Abort all uploads",
     "aborting": "Aborting...",
-    "abortAll": "Cancel transfer",
     "abortAllWarning": "Are you sure? All files in the queue will be lost!",
     "accessAt": "Accessed at",
     "accountPassword": "Account password",
@@ -651,7 +652,6 @@
     }
   },
   "transferFile": {
-    "abortAll": "Abort all",
     "downloads": "Downloads",
     "failed": "Failed, unknown error",
     "fatal": "Fatal error",
