@@ -12,6 +12,7 @@
       ref="listing"
       :headerButtons="headerButtons"
       :readonly="true"
+      :minusSize="150"
       @copyFileShareUrl="copyFileShareUrl"
       @download="download"
       @onOpen="onOpen"

@@ -6,6 +6,7 @@
       ref="listing"
       :headerButtons="headerButtons"
       :readonly="true"
+      :minusSize="105"
       @dropUpload="onDropUpload"
       @onOpen="onOpen"
       @deleteAll="onDeleteAll"

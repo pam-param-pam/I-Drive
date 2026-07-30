@@ -132,7 +132,7 @@
            v-if="user.isStaff"
            :aria-label="$t('sidebar.adminPanel')"
            :title="$t('sidebar.adminPanel')"
-           class="action action-compact"
+           class="action action-compact action-admin"
            @click="toAdminPanel"
          >
             <i class="material-icons">admin_panel_settings</i>
@@ -310,10 +310,23 @@ export default {
 }
 
 .sidebar-actions-row {
-  display: flex;
-  align-items: center;
-  position: relative;
+   display: flex;
+   align-items: center;
+   justify-content: flex-start;
+   flex-wrap: wrap;
+   gap: 0.25rem;
+   position: relative;
+   width: 100%;
 }
+
+.sidebar-actions-row > * {
+   flex: 0 0 auto;
+}
+
+.action-admin {
+   margin: 10px 15px;
+}
+
 
 .notif-badge {
   position: absolute;

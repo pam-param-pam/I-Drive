@@ -9,6 +9,7 @@
       <FileListing
          ref="listing"
          :headerButtons="headerButtons"
+         :minusSize="80"
          @download="download"
          @dragEnter="onDragEnter"
          @dragLeave="onDragLeave"

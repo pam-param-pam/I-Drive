@@ -17,6 +17,7 @@
       ref="listing"
       :headerButtons="headerButtons"
       :readonly="true"
+      :minusSize="170"
       @download="download"
       @onOpen="onOpen"
       @openInNewWindow="openInNewWindow"
@@ -214,3 +215,8 @@ export default {
    }
 }
 </script>
+<style scoped>
+h4 {
+   padding-left: 1em;
+}
+</style>

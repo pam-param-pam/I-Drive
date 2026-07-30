@@ -360,7 +360,8 @@ export default {
 
    props: {
       readonly: Boolean,
-      headerButtons: {}
+      headerButtons: {},
+      minusSize: Number,
    },
 
    emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchQuery",
@@ -488,13 +489,6 @@ export default {
          }
 
          return "arrow_upward"
-      },
-      minusSize() {
-         let component = this.$route.name
-         if (component === "Files") return 80
-         if (component === "Trash") return 105
-         if (component === "Share") return 150
-         return 0
       },
       scrollerClass() {
          return `height: calc(100% - ${this.minusSize}px);`
