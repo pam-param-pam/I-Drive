@@ -36,11 +36,11 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     @abstractmethod
     def authorize(self) -> tuple[bool, bool, str]:
-        raise NotImplementedError("authorize() must be implemented in subclass.")
+        raise NotImplementedError()
 
     @abstractmethod
     def get_group_name(self) -> str:
-        raise NotImplementedError("get_group_name() must be implemented in subclass.")
+        raise NotImplementedError()
 
     def on_ratelimit(self):
         pass

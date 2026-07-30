@@ -2,6 +2,7 @@ import datetime
 from typing import Union, List
 
 import easy
+from django import forms
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.template.defaultfilters import filesizeformat
@@ -316,10 +317,19 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
         return EncryptionMethod(obj.file.encryption_method).name
 
 
+class ShareableLinkAdminForm(forms.ModelForm):
+    class Meta:
+        model = ShareableLink
+        fields = "__all__"
+
+    def clean_password(self):
+        return self.cleaned_data.get("password") or None
+
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
-    list_display = ('token', 'resource_link', 'content_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
+    list_display = ('id', 'resource_link', 'content_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
     readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner', 'is_expired')
+    form = ShareableLinkAdminForm
 
     def has_add_permission(self, request):
         return False
@@ -396,7 +406,7 @@ class TagAdmin(SimpleHistoryAdmin):
 @admin.register(Channel)
 class ChannelAdmin(admin.ModelAdmin):
     search_fields = ('discord_id', 'name')
-    list_display = ['name', 'discord_id', 'guild_id', 'created_at']
+    list_display = ['name', 'owner', 'discord_id', 'guild_id', 'created_at']
 
     def has_add_permission(self, request):
         return False

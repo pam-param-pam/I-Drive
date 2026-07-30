@@ -194,8 +194,6 @@
                      :readOnly="readonly"
                      :tileHeight="tileHeight"
                      :tileWidth="tileWidth"
-                     @onContextMenuOpen="showContextMenu($event, item)"
-                     @onHideContextMenu="closeContextMenu"
                      @onOpen="$emit('onOpen', item)"
                   >
                   </item>
@@ -223,7 +221,6 @@
             v-if="this.selectedCount > 0"
             :pos="contextMenuState.pos"
             :show="contextMenuState.visible"
-            @hide="closeContextMenu"
          >
             <action
                v-if="headerButtons.locate"
@@ -512,50 +509,13 @@ export default {
    },
 
    methods: {
-      ...mapActions(useMainStore, ["setMultiSelection", "openContextMenu", "closeContextMenu", "setSelected", "setLastFile", "resetSelected", "showHover",
+      ...mapActions(useMainStore, ["setMultiSelection", "closeContextMenu", "setSelected", "setLastFile", "resetSelected", "showHover",
          "setSortByAsc", "setSortingBy", "updateSettings", "setLastFolder", "setLocateItem"]),
 
       isMobile,
 
       async uploadInput(event) {
          this.$emit("uploadInput", event)
-      },
-
-      showContextMenu(event) {
-         let advanced = event.ctrlKey || event.shiftKey
-
-         let menuWidth = 200
-         let menuHeight = advanced ? 450 : 400
-
-         let offsetX = 40
-         let offsetY = -40
-
-         let viewportWidth = window.innerWidth
-         let viewportHeight = window.innerHeight
-
-         let posX = event.clientX + offsetX
-
-         if (posX + menuWidth > viewportWidth) {
-            posX = event.clientX - menuWidth - offsetX
-         }
-
-         posX = Math.max(0, Math.min(posX, viewportWidth - menuWidth))
-
-         let posY = event.clientY + offsetY
-
-         if (posY + menuHeight > viewportHeight) {
-            posY = viewportHeight - menuHeight
-         }
-
-         posY = Math.max(0, posY)
-
-         this.openContextMenu({
-               pos: {
-                  x: posX,
-                  y: posY
-               }, advanced: advanced
-            }
-         )
       },
 
       keyEvent(event) {

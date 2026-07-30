@@ -274,8 +274,7 @@ export default {
          this.closeHover()
       },
       toAdminPanel() {
-         window.location.assign(baseURL + "/admin")
-
+         window.open(baseURL + "/admin", "_blank")
       },
 
 

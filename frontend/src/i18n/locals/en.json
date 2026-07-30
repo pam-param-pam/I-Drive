@@ -516,7 +516,8 @@
     "settings": "Settings",
     "toggleDarkMode": "Toggle dark mode",
     "trash": "Trash",
-    "folderUsage": "{used} of {total} total stored data"
+    "folderUsage": "{used} of {total} total stored data",
+    "adminPanel": "Admin Panel"
   },
   "time": {
     "days": "Days",

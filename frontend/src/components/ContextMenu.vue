@@ -13,6 +13,9 @@
 </template>
 
 <script>
+import { mapActions } from "pinia"
+import { useMainStore } from "@/stores/mainStore.js"
+
 export default {
    props: {
       show: {
@@ -25,8 +28,6 @@ export default {
          default: () => ({ x: 0, y: 0 })
       }
    },
-
-   emits: ["hide"],
 
    data() {
       return {
@@ -43,17 +44,15 @@ export default {
       }
    },
    mounted() {
-      document.addEventListener("mouseup", this.hideContextMenu)
+      document.addEventListener("mouseup", this.closeContextMenu)
    },
 
    beforeUnmount() {
-      document.removeEventListener("mouseup", this.hideContextMenu)
+      document.removeEventListener("mouseup", this.closeContextMenu)
    },
 
    methods: {
-      hideContextMenu() {
-         this.$emit("hide")
-      }
+      ...mapActions(useMainStore, ["closeContextMenu"])
    }
 }
 </script>

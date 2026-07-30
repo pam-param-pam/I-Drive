@@ -37,6 +37,7 @@ export class RequestProducer extends PipelineWorker {
       this._MP4BoxPromise = null
       this._exitPromise = null
       this._resolveExit = null
+      this.pendingSubtitleTasks = new Set()
    }
 
    async getMp4Box() {
@@ -140,7 +141,7 @@ export class RequestProducer extends PipelineWorker {
                      mp4boxFile.start()
                   }
 
-                  mp4boxFile.onSamples = async (id, subTrack, samples) => {
+                  mp4boxFile.onSamples = (id, subTrack, samples) => {
                      if (!samples?.length) return
 
                      if (!mp4boxFile.collectedSamples) {
@@ -162,7 +163,9 @@ export class RequestProducer extends PipelineWorker {
                            }
                            name = makeUniqueSubtitleName(name, id)
                            let isForced = subTrack.kind?.value === "forced-subtitle"
-                           this.createAndPushSubtitleAttachment(frontendId, vtt, name, isForced)
+                           const task = this.createAndPushSubtitleAttachment(frontendId, vtt, name, isForced, signal)
+                           this.pendingSubtitleTasks.add(task)
+                           task.finally(() => this.pendingSubtitleTasks.delete(task))
                         }
                      }
                      mp4boxFile.collectedSamples = []
@@ -237,6 +240,7 @@ export class RequestProducer extends PipelineWorker {
                }
             }
          }
+         await this.waitForPendingSubtitleTasks()
 
          if (!this._killed && attachments.length > 0) {
             await this.putWithAbort(this.requestQueue, { id: uuidv4(), totalSize, attachments }, signal)
@@ -307,47 +311,35 @@ export class RequestProducer extends PipelineWorker {
       return false
    }
 
-   createAndPushSubtitleAttachment(frontendId, blob, subName, isForced) {
+   async createAndPushSubtitleAttachment(frontendId, blob, subName, isForced, signal) {
       const state = this.uploadRuntime.getFileState(frontendId)
       const fileObj = state.fileObj
-
       const attachment = { type: attachmentType.subtitle, fileObj, rawBlob: blob, subName, isForced }
 
-      if (!this.subtitleAttachments.has(frontendId)) {
-         this.subtitleAttachments.set(frontendId, [])
-      }
+      if (!this.subtitleAttachments.has(frontendId)) this.subtitleAttachments.set(frontendId, [])
+
       state.incrementExtractedSubtitleCount()
       this.subtitleAttachments.get(frontendId).push(attachment)
-      this.tryEmitSubtitlesRequest(frontendId)
+      await this.tryEmitSubtitlesRequest(frontendId, signal)
    }
 
-   tryEmitSubtitlesRequest(frontendId) {
+   async tryEmitSubtitlesRequest(frontendId, signal) {
       const state = this.uploadRuntime.getFileState(frontendId)
-
       const expectedCount = state.expectedSubtitleCount
       const extractedCount = state.extractedSubtitleCount
-
       const attachments = this.subtitleAttachments.get(frontendId)
-      if (!expectedCount || extractedCount !== expectedCount) {
-         return
-      }
+
+      if (!expectedCount || extractedCount !== expectedCount || !attachments) return
+
       const maxAttachments = this.mainStore.user.maxAttachmentsPerMessage
 
-      const batches = []
       for (let i = 0; i < attachments.length; i += maxAttachments) {
-         batches.push(attachments.slice(i, i + maxAttachments))
+         const batch = attachments.slice(i, i + maxAttachments)
+         const totalSize = batch.reduce((sum, att) => sum + att.rawBlob.size, 0)
+         await this.putWithAbort(this.requestQueue, { id: uuidv4(), totalSize, attachments: batch }, signal)
       }
 
-      for (const batch of batches) {
-         let totalSize = 0
-         for (const att of batch) {
-            totalSize += att.rawBlob.size
-         }
-
-         this.requestQueue.put({ id: uuidv4(), totalSize, attachments: batch })
-      }
       state.markSubtitlesExtracted(frontendId)
-
       this.subtitleAttachments.delete(frontendId)
    }
 
@@ -365,5 +357,10 @@ export class RequestProducer extends PipelineWorker {
       const file = this.goneFiles[index]
       this.goneFiles.splice(index, 1)
       return file
+   }
+   async waitForPendingSubtitleTasks() {
+      while (this.pendingSubtitleTasks.size > 0) {
+         await Promise.all([...this.pendingSubtitleTasks])
+      }
    }
 }

@@ -516,7 +516,9 @@
     "settings": "Ustawienia",
     "toggleDarkMode": "Przełącz tryb nocny",
     "trash": "Kosz",
-    "folderUsage": "{used} z {total} wszystkich przechowywanych danych"
+    "folderUsage": "{used} z {total} wszystkich przechowywanych danych",
+    "adminPanel": "Portal Admina"
+
   },
   "time": {
     "days": "Dni",

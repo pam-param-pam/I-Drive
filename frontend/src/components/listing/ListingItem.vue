@@ -73,7 +73,7 @@ import { getFileRawData } from "@/api/files.js"
 export default {
    name: "item",
 
-   emits: ["onOpen", "onContextMenuOpen", "onHideContextMenu"],
+   emits: ["onOpen", "onContextMenuOpen"],
 
    props: ["readOnly", "item", "imageWidth", "imageHeight"],
 
@@ -154,7 +154,8 @@ export default {
    },
    methods: {
       humanTime,
-      ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview", "setMultiSelection", "blockImagesFor"]),
+      ...mapActions(useMainStore, ["addSelected", "removeSelected", "resetSelected", "setPopupPreview", "clearPopupPreview", "setMultiSelection",
+         "blockImagesFor", "closeContextMenu", "openContextMenu"]),
 
       onEsc(event) {
          if (event.key === "Escape" && this.multiSelection) {
@@ -179,7 +180,7 @@ export default {
 
 
       dragStart(event) {
-         this.hideContextMenu()
+         this.closeContextMenu()
          if (!this.canDrag) {
             event.preventDefault()
             return
@@ -215,7 +216,7 @@ export default {
          if (!isMobile()) return
 
          this.setMultiSelection(true)
-         this.hideContextMenu()
+         this.closeContextMenu()
       },
       onDoubleClick(event) {
          this.$emit("onOpen", event)
@@ -262,7 +263,7 @@ export default {
          this.manageContextMenu(event)
       },
       onLeftClick(event) {
-         this.hideContextMenu()
+         this.closeContextMenu()
          //always add to selected (desktop only)
 
          // Deselect items if no shift or ctrl key is pressed and there are selected items
@@ -306,7 +307,7 @@ export default {
       },
       async manageContextMenu(event) {
          if (this.contextMenuState.visible && isMobile()) {
-            this.hideContextMenu()
+            this.closeContextMenu()
             if (this.selectedCount === 1) {
                this.resetSelected()
             }
@@ -319,12 +320,47 @@ export default {
             this.resetSelected()
             this.addSelected(this.item)
          }
-         this.$emit("onContextMenuOpen", event)
 
+         this.showContextMenu(event)
       },
-      hideContextMenu() {
-         this.$emit("onHideContextMenu")
+
+      showContextMenu(event) {
+         let advanced = event.ctrlKey || event.shiftKey
+
+         let menuWidth = 200
+         let menuHeight = advanced ? 450 : 400
+
+         let offsetX = 40
+         let offsetY = -40
+
+         let viewportWidth = window.innerWidth
+         let viewportHeight = window.innerHeight
+
+         let posX = event.clientX + offsetX
+
+         if (posX + menuWidth > viewportWidth) {
+            posX = event.clientX - menuWidth - offsetX
+         }
+
+         posX = Math.max(0, Math.min(posX, viewportWidth - menuWidth))
+
+         let posY = event.clientY + offsetY
+
+         if (posY + menuHeight > viewportHeight) {
+            posY = viewportHeight - menuHeight
+         }
+
+         posY = Math.max(0, posY)
+
+         this.openContextMenu({
+              pos: {
+                 x: posX,
+                 y: posY
+              }, advanced: advanced
+           }
+         )
       },
+
       async drop(event) {
          if (event.dataTransfer.files.length > 0) return
          if (!this.canDrop) {

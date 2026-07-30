@@ -1,4 +1,4 @@
-import hashlib
+import base64
 import hashlib
 import json
 import time
@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from website.auth.utils import check_resource_perms
-from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL
+from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EncryptionMethod
 from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, \
     FolderSerializer, \
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
@@ -338,6 +338,97 @@ def ultra_download_files_metadata(request, item_obj):
 
     return JsonResponse(response_data, safe=False)
 
+
+@api_view(["GET"])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@extract_item()
+@check_resource_permissions(default_checks, resource_key="item_obj")
+def ultra_download_files_metadata_v2(request, item_obj):
+    if isinstance(item_obj, File):
+        files = [item_obj]
+    else:
+        base_folder: Folder = item_obj
+
+        files = list(
+            base_folder
+            .get_all_files()
+            .filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)
+            .select_related("parent", "parent__lockFrom")
+        )
+
+        for folder in (base_folder.get_all_subfolders().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)):
+            check_resource_perms(request, folder, default_checks)
+
+    # for file in files:
+    #     parent = file.parent
+    #
+    #     file_dict = {
+    #         "id": str(file.id),
+    #         "name": file.name,
+    #         "size": file.size,
+    #         "crc": file.crc,
+    #         "encryption_method": file.get_encryption_method().value,
+    #         "lockFrom": parent.lockFrom.id if parent and parent.lockFrom else None,
+    #     }
+    #
+    #     if file.is_encrypted():
+    #         file_dict["key"] = file.get_base64_key()
+    #         file_dict["iv"] = file.get_base64_iv()
+    #
+    #     response_data.append(file_dict)
+
+    return HttpResponse(content=len(files), status=204)
+
+@api_view(["GET"])
+@throttle_classes([defaultAuthUserThrottle])
+@permission_classes([IsAuthenticated & ReadPerms])
+@extract_item()
+@check_resource_permissions(default_checks, resource_key="item_obj")
+def ultra_download_files_metadata_v3(request, item_obj):
+    if isinstance(item_obj, File):
+        files = File.objects.filter(pk=item_obj.pk)
+    else:
+        base_folder: Folder = item_obj
+
+        files = base_folder.get_all_files().filter(
+            inTrash=False,
+            state=ItemState.ACTIVE,
+            parent__inTrash=False,
+        )
+
+        folders = base_folder.get_all_subfolders().filter(
+            inTrash=False,
+            state=ItemState.ACTIVE,
+            parent__inTrash=False,
+        )
+
+        for folder in folders.iterator():
+            check_resource_perms(request, folder, default_checks)
+
+    files = files.values_list("id", "name", "size", "crc", "encryption_method", "parent__lockFrom_id", "key", "iv")
+
+    response_data = [
+        {
+            "id": str(file_id),
+            "name": name,
+            "size": size,
+            "crc": crc,
+            "encryption_method": encryption_method,
+            "lockFrom": lock_from_id,
+            **(
+                {
+                    "key": base64.b64encode(key).decode("ascii"),
+                    "iv": base64.b64encode(iv).decode("ascii"),
+                }
+                if encryption_method != EncryptionMethod.Not_Encrypted.value
+                else {}
+            ),
+        }
+        for file_id, name, size, crc, encryption_method, lock_from_id, key, iv in files
+    ]
+
+    return JsonResponse(response_data, safe=False)
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])

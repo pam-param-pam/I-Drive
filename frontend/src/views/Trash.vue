@@ -39,7 +39,7 @@ export default {
             info: this.selectedCount > 0,
             restore: this.selectedCount > 0 && this.perms.modify,
             delete: this.selectedCount > 0 && this.perms.delete,
-            deleteAll: this.selectedCount === 0 && this.perms.delete
+            deleteAll: this.selectedCount === 0 && this.sortedItems.length > 0 && this.perms.delete
          }
       },
       filesInTrash() {
