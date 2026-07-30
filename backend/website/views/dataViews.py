@@ -294,98 +294,12 @@ def get_files_media_position(request):
 
 """====================================================HERE BE DRAGONS=========================================================="""
 
-
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_item()
 @check_resource_permissions(default_checks, resource_key="item_obj")
 def ultra_download_files_metadata(request, item_obj):
-    if isinstance(item_obj, File):
-        files = [item_obj]
-    else:
-        base_folder: Folder = item_obj
-
-        files = list(
-            base_folder
-            .get_all_files()
-            .filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)
-            .select_related("parent", "parent__lockFrom")
-        )
-
-        for folder in (base_folder.get_all_subfolders().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)):
-            check_resource_perms(request, folder, default_checks)
-
-    response_data = []
-
-    for file in files:
-        parent = file.parent
-
-        file_dict = {
-            "id": str(file.id),
-            "name": file.name,
-            "size": file.size,
-            "crc": file.crc,
-            "encryption_method": file.get_encryption_method().value,
-            "lockFrom": parent.lockFrom.id if parent and parent.lockFrom else None,
-        }
-
-        if file.is_encrypted():
-            file_dict["key"] = file.get_base64_key()
-            file_dict["iv"] = file.get_base64_iv()
-
-        response_data.append(file_dict)
-
-    return JsonResponse(response_data, safe=False)
-
-
-@api_view(["GET"])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_item()
-@check_resource_permissions(default_checks, resource_key="item_obj")
-def ultra_download_files_metadata_v2(request, item_obj):
-    if isinstance(item_obj, File):
-        files = [item_obj]
-    else:
-        base_folder: Folder = item_obj
-
-        files = list(
-            base_folder
-            .get_all_files()
-            .filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)
-            .select_related("parent", "parent__lockFrom")
-        )
-
-        for folder in (base_folder.get_all_subfolders().filter(inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False)):
-            check_resource_perms(request, folder, default_checks)
-
-    # for file in files:
-    #     parent = file.parent
-    #
-    #     file_dict = {
-    #         "id": str(file.id),
-    #         "name": file.name,
-    #         "size": file.size,
-    #         "crc": file.crc,
-    #         "encryption_method": file.get_encryption_method().value,
-    #         "lockFrom": parent.lockFrom.id if parent and parent.lockFrom else None,
-    #     }
-    #
-    #     if file.is_encrypted():
-    #         file_dict["key"] = file.get_base64_key()
-    #         file_dict["iv"] = file.get_base64_iv()
-    #
-    #     response_data.append(file_dict)
-
-    return HttpResponse(content=len(files), status=204)
-
-@api_view(["GET"])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_item()
-@check_resource_permissions(default_checks, resource_key="item_obj")
-def ultra_download_files_metadata_v3(request, item_obj):
     if isinstance(item_obj, File):
         files = File.objects.filter(pk=item_obj.pk)
     else:
@@ -410,7 +324,7 @@ def ultra_download_files_metadata_v3(request, item_obj):
 
     response_data = [
         {
-            "id": str(file_id),
+            "id": file_id,
             "name": name,
             "size": size,
             "crc": crc,
@@ -462,7 +376,7 @@ def ultra_download_file_fragments_metadata(request, file_obj, folder_obj: Option
         file_path = file_obj.name
 
     response_data = {
-        "id": str(file_obj.id),
+        "id": file_obj.id,
         "file_path": file_path,
         "fragments": fragment_data,
     }

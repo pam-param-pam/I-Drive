@@ -11,7 +11,7 @@ from .views.authViews import login_per_device_view, logout_per_device_view, regi
 from .views.dataViews import get_folder_info, get_file_info, get_usage, search, \
     get_trash, check_password, fetch_additional_info, get_moments, get_tags, get_subtitles, get_fragment_url_view, get_folder_file_stats, get_folder_hash, get_all_tags, \
     get_media_position, \
-    ultra_download_files_metadata, ultra_download_file_fragments_metadata, get_files_media_position, ultra_download_files_metadata_v3, ultra_download_files_metadata_v2
+    ultra_download_files_metadata, ultra_download_file_fragments_metadata, get_files_media_position
 from .views.itemManagmentViews import rename_view, move_items_to_trash_view, move_items_view, \
     delete_view, change_folder_password_view, restore_from_trash_view, create_folder_view, reset_folder_password_view, update_media_position_view, add_tag_view, remove_tag_view, \
     remove_moment_view, \
@@ -104,8 +104,6 @@ urlpatterns = [
     path("items/<item_id>/rename", ["PATCH"], rename_view, name="rename an item"),
     path("items/<item_id>/password", ['GET'], check_password, name="check password"),
 
-    path("ultraDownload/items-v3/<item_id>", ['GET'], ultra_download_files_metadata_v3, name="returns metadata about files"),
-    path("ultraDownload/items-v2/<item_id>", ['GET'], ultra_download_files_metadata_v2, name="returns metadata about files"),
     path("ultraDownload/items/<item_id>", ['GET'], ultra_download_files_metadata, name="returns metadata about files"),
     path("ultraDownload/files/<file_id>", ['GET'], ultra_download_file_fragments_metadata, name="returns metadata about a single file"),
     path("ultraDownload/fragments/<fragment_id>", ['GET'], get_fragment_url_view, name="returns fragment metadata and discord fetch url"),
