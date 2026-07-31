@@ -440,73 +440,6 @@ def get_folder_file_stats(request, folder_obj):
 
     return JsonResponse(result, safe=False)
 
-#
-# HASH_TRACE_DIR = Path(settings.BASE_DIR) / "hash-traces" / "server"
-#
-#
-# def write_folder_hash_trace(folder_obj: Folder, digest: str, file_entries, folder_entries) -> Path:
-#     HASH_TRACE_DIR.mkdir(parents=True, exist_ok=True)
-#
-#     updates = []
-#     update_index = 0
-#
-#     files_json = []
-#     for order, entry in enumerate(file_entries):
-#         name = entry["name"]
-#         crc = str(entry["crc"])
-#
-#         files_json.append({
-#             "order": order,
-#             "id": str(entry["id"]),
-#             "name": name,
-#             "crc": crc,
-#             "parent_id": str(entry["parent_id"]),
-#         })
-#
-#         updates.append({"order": update_index, "kind": "file_name", "value": name})
-#         update_index += 1
-#         updates.append({"order": update_index, "kind": "file_crc", "value": crc})
-#         update_index += 1
-#
-#     folders_json = []
-#     for order, entry in enumerate(folder_entries):
-#         name = entry["name"]
-#
-#         folders_json.append({
-#             "order": order,
-#             "id": str(entry["id"]),
-#             "name": name,
-#             "parent_id": str(entry["parent_id"]) if entry["parent_id"] else None,
-#         })
-#
-#         updates.append({"order": update_index, "kind": "folder_name", "value": name})
-#         update_index += 1
-#
-#     trace = {
-#         "schema": "idrive-folder-hash-trace-v1",
-#         "source": "server",
-#         "folder": {
-#             "id": str(folder_obj.id),
-#             "name": folder_obj.name,
-#         },
-#         "hash": digest,
-#         "counts": {
-#             "files": len(files_json),
-#             "folders": len(folders_json),
-#             "updates": len(updates),
-#         },
-#         "files": files_json,
-#         "folders": folders_json,
-#         "updates": updates,
-#     }
-#
-#     trace_path = HASH_TRACE_DIR / f"{folder_obj.id}.json"
-#     trace_path.write_text(
-#         json.dumps(trace, indent=2, ensure_ascii=False) + "\n",
-#         encoding="utf-8",
-#     )
-#     return trace_path
-
 
 def _get_folder_hash_cache_version(folder_entries: list[dict]) -> str:
     hasher = hashlib.sha256()
@@ -519,6 +452,43 @@ def _get_folder_hash_cache_version(folder_entries: list[dict]) -> str:
         hasher.update(b"\0")
 
     return hasher.hexdigest()
+
+
+def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], file_entries: list[dict]) -> str:
+    folders_by_parent = {}
+    files_by_parent = {}
+
+    for entry in folder_entries:
+        folders_by_parent.setdefault(entry["parent_id"], []).append(entry)
+
+    for entry in file_entries:
+        files_by_parent.setdefault(entry["parent_id"], []).append(entry)
+
+    def hash_folder(folder_id: str) -> str:
+        hasher = hashlib.sha256()
+
+        for entry in sorted(files_by_parent.get(folder_id, []), key=lambda item: (item["name"], item["crc"])):
+            hasher.update(b"file\0")
+            hasher.update(entry["name"].encode("utf-8"))
+            hasher.update(b"\0")
+            hasher.update(str(entry["crc"]).encode("utf-8"))
+            hasher.update(b"\0")
+
+        child_hashes = []
+        for entry in folders_by_parent.get(folder_id, []):
+            child_hashes.append((entry["name"], hash_folder(entry["id"])))
+
+        for name, digest in sorted(child_hashes):
+            hasher.update(b"folder\0")
+            hasher.update(name.encode("utf-8"))
+            hasher.update(b"\0")
+            hasher.update(digest.encode("utf-8"))
+            hasher.update(b"\0")
+
+        return hasher.hexdigest()
+
+    return hash_folder(root_folder_id)
+
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
@@ -543,21 +513,8 @@ def get_folder_hash(request, folder_obj: Folder):
         .values("id", "name", "crc", "parent_id")
     )
 
-    file_entries.sort(key=lambda entry: (entry["name"], entry["crc"]))
-    folder_entries.sort(key=lambda entry: entry["name"])
+    digest = _get_folder_content_hash(folder_obj.id, folder_entries, file_entries)
 
-    hasher = hashlib.sha256()
-
-    for entry in file_entries:
-        hasher.update(entry["name"].encode("utf-8"))
-        hasher.update(str(entry["crc"]).encode("utf-8"))
-
-    for entry in folder_entries:
-        hasher.update(entry["name"].encode("utf-8"))
-
-    digest = hasher.hexdigest()
-
-    # write_folder_hash_trace(folder_obj, digest, file_entries, folder_entries)
     cache_service.set_folder_hash(folder_obj.id, hash_version, digest)
 
     return JsonResponse({"hash": digest})
