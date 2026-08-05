@@ -12,12 +12,11 @@ jobs:
     steps:
       - name: Install cloudflared 2026.5.1
         run: |
-          curl -L --fail -o /usr/local/bin/cloudflared \
-            https://github.com/cloudflare/cloudflared/releases/download/2026.5.1/cloudflared-linux-amd64
+          sudo curl -L --fail -o /usr/local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/download/2026.5.1/cloudflared-linux-amd64
           sudo chmod +x /usr/local/bin/cloudflared
           cloudflared --version
 
-      - name: Configure SSH key
+      - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.CI_RPI_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.CI_RPI_SSH_KNOWN_HOSTS }}
@@ -35,11 +34,4 @@ jobs:
           SSH_HOST: ${{ secrets.CI_DEPLOYMENT_HOST }}
           SSH_USER: ${{ secrets.CI_RPI_USERNAME }}
         run: |
-          set -e
-          ssh \
-            -o 'ProxyCommand=cloudflared access ssh --hostname %h --id "$CF_ACCESS_CLIENT_ID" --secret "$CF_ACCESS_CLIENT_SECRET"' \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -i ~/.ssh/private-jedrz \
-            "${SSH_USER}@${SSH_HOST}" \
-            'echo "SSH connection successful"; hostname; whoami; pwd; date'
+          ssh -vvv -o 'ProxyCommand=cloudflared access ssh --hostname %h --id "$CF_ACCESS_CLIENT_ID" --secret "$CF_ACCESS_CLIENT_SECRET" --log-level debug --logfile /dev/stderr' -o IdentitiesOnly=yes -o BatchMode=yes -i ~/.ssh/private-jedrz "${SSH_USER}@${SSH_HOST}" 'echo "SSH connection successful"; hostname; whoami; pwd; date'
