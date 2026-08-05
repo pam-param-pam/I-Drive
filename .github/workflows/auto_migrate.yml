@@ -25,7 +25,7 @@ jobs:
             -o /dev/null
 
       - name: Run Django migrations on remote VM
-        uses: pam-param-pam/cloudflare-ssh-action@v1.0.2
+        uses: pam-param-pam/cloudflare-ssh-action@v4
         with:
           host: ${{ secrets.CI_DEPLOYMENT_HOST }}
           username: ${{ secrets.CI_RPI_USERNAME }}
