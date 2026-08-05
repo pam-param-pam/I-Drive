@@ -1,0 +1,28 @@
+name: Test SSH
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Test SSH through Cloudflare
+        uses: and-fm/cloudflared-ssh-action@v3
+        with:
+          host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+          username: ${{ secrets.CI_RPI_USERNAME }}
+          private_key_filename: private-jedrz
+          private_key_value: ${{ secrets.CI_RPI_SSH_KEY }}
+          service_token_id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          service_token_secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          commands: |
+            echo "SSH connection successful"
+            hostname
+            whoami
+            pwd
+            date
