@@ -204,11 +204,15 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
         fragment_size = validate_key(attachment_data, "fragment_size", int)
         validate_crc(fragment_size, crc)
 
-    fragment_for_delete = None
-    if fragments.exists():
-        fragment_for_delete = fragments[0]
-
     with transaction.atomic():
+        fragment_for_delete = None
+        if fragments.exists():
+            fragment_for_delete = fragments[0]
+
+        if fragment_for_delete:
+            attachment_service.delete_remote_single_discord_attachment(user, fragment_for_delete)
+            fragment_for_delete.delete()
+
         if file_data:
             fragment = _create_fragment_internal(file_obj, attachment_data)
 
@@ -222,13 +226,6 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
 
         file_obj.save()
         touch_service.touch_file_object(file_obj)
-
-    if fragment_for_delete:
-        attachment_service.delete_remote_single_discord_attachment(user, fragment_for_delete)
-
-        with transaction.atomic():
-            fragment_for_delete.delete()
-            touch_service.touch_file_object(file_obj)
 
     send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
 
