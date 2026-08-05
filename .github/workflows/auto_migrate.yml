@@ -11,8 +11,21 @@ jobs:
       contents: read
 
     steps:
+      - name: Test Cloudflare service token
+        env:
+          HOST: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          CF_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          curl -sv \
+            -H "CF-Access-Client-Id: $CF_ID" \
+            -H "CF-Access-Client-Secret: $CF_SECRET" \
+            "https://$HOST/" \
+            -o /dev/null
+
       - name: Run Django migrations on remote VM
-        uses: pam-param-pam/cloudflare-ssh-action@v4
+        uses: pam-param-pam/cloudflare-ssh-action@v1.0.2
         with:
           host: ${{ secrets.CI_DEPLOYMENT_HOST }}
           username: ${{ secrets.CI_RPI_USERNAME }}
