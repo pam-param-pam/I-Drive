@@ -129,7 +129,7 @@
             </button>
          </div>
          <button
-           v-if="user.isStaff"
+           v-if="user?.isStaff"
            :aria-label="$t('sidebar.adminPanel')"
            :title="$t('sidebar.adminPanel')"
            class="action action-compact action-admin"

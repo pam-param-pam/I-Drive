@@ -254,15 +254,6 @@ def get_tags(request, file_obj: File):
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
-def get_media_position(request, file_obj: File):
-    return JsonResponse(MediaPositionSerializer.serialize_object(file_obj.mediaposition), safe=False)
-
-
-@api_view(['GET'])
-@throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
 def get_subtitles(request, file_obj: File):
     subtitles = Subtitle.objects.filter(file=file_obj)
     return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
@@ -281,7 +272,7 @@ def get_all_tags(request):
 @permission_classes([IsAuthenticated & ReadPerms])
 def get_files_media_position(request):
     ids = extract_key(request.data, "ids")
-    validate_ids_as_list(ids, max_length=10_000)
+    validate_ids_as_list(ids, max_length=100)
 
     files = File.objects.filter(id__in=ids)
     item_ids = []
@@ -292,7 +283,6 @@ def get_files_media_position(request):
     media_positions = MediaPosition.objects.filter(file_id__in=item_ids)
     return JsonResponse(MediaPositionSerializer.serialize_objects(media_positions), safe=False)
 
-"""====================================================HERE BE DRAGONS=========================================================="""
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
