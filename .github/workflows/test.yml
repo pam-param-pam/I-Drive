@@ -10,14 +10,22 @@ jobs:
       contents: read
 
     steps:
-      - name: Test SSH through Cloudflare
-        uses: and-fm/cloudflared-ssh-action@v3
+      - name: Configure SSH through Cloudflare Tunnel
+        uses: NX1X/cloudflare-tunnel-ssh-action@v1
         with:
-          host: ${{ secrets.CI_DEPLOYMENT_HOST }}
-          port: 22
-          username: ${{ secrets.CI_RPI_USERNAME }}
-          private_key_filename: private-jedrz
-          private_key_value: ${{ secrets.CI_RPI_SSH_KEY }}
-          service_token_id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          service_token_secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          commands: 'echo "SSH connection successful"; hostname; whoami; pwd; date'
+          cf-access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          cf-access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          ssh-private-key: ${{ secrets.CI_RPI_SSH_KEY }}
+          ssh-host: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          ssh-user: ${{ secrets.CI_RPI_USERNAME }}
+          cloudflared-version: "2026.5.1"
+          test-connection: "true"
+
+      - name: Test remote command
+        env:
+          SSH_HOST: ${{ secrets.CI_DEPLOYMENT_HOST }}
+          SSH_USER: ${{ secrets.CI_RPI_USERNAME }}
+        run: |
+          set -e
+          echo "Starting remote SSH test..."
+          ssh "${SSH_USER}@${SSH_HOST}" 'echo "SSH connection successful"; hostname; whoami; pwd; date'
