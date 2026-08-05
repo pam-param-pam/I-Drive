@@ -7,18 +7,21 @@ jobs:
   restart:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Restart docker compose
-        uses: appleboy/ssh-action@v1.2.0
+    permissions:
+      contents: read
 
+    steps:
+      - name: Restart Docker Compose via Cloudflare SSH
+        uses: pam-param-pam/cloudflare-ssh-action@v1.0.0
         with:
           host: ${{ secrets.CI_DEPLOYMENT_HOST }}
-          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
           username: ${{ secrets.CI_RPI_USERNAME }}
-          key: ${{ secrets.CI_RPI_SSH_KEY }}
-
-          script: |
+          private-key: ${{ secrets.CI_RPI_SSH_KEY }}
+          known-hosts: ${{ secrets.CI_RPI_SSH_KNOWN_HOSTS }}
+          service-token-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          service-token-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          command: |
             set -e
-            cd idrive
+            cd ~/idrive
             docker compose restart
             docker compose ps
