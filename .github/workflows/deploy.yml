@@ -13,39 +13,38 @@ jobs:
       packages: read
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-
+      - name: Deploy via Cloudflare SSH
+        uses: pam-param-pam/cloudflare-ssh-action@v1.0.0
         with:
           host: ${{ secrets.CI_DEPLOYMENT_HOST }}
-          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
           username: ${{ secrets.CI_RPI_USERNAME }}
-          key: ${{ secrets.CI_RPI_SSH_KEY }}
-          timeout: 900s
-
-          script: |
+          private-key: ${{ secrets.CI_RPI_SSH_KEY }}
+          known-hosts: ${{ secrets.CI_RPI_SSH_KNOWN_HOSTS }}
+          service-token-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          service-token-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          command: |
             set -e
 
             echo "Logging in to GitHub Container Registry..."
 
             echo "${{ secrets.MY_GITHUB_TOKEN }}" \
               | docker login ghcr.io \
-                  -u ${{ github.repository_owner }} \
+                  -u "${{ github.repository_owner }}" \
                   --password-stdin
 
             echo "Navigating to idrive..."
 
             mkdir -p ~/idrive
             cd ~/idrive
-            
+
             touch config.overrides.json
-            
+
             echo "Removing existing .env file..."
             rm -f .env
 
             echo "Writing environment file..."
 
-            cat <<EOF > .env
+            cat <<'EOF' > .env
             IS_DEV_ENV=False
 
             DEPLOYMENT_HOST=${{ secrets.DEPLOYMENT_HOST }}
@@ -69,16 +68,17 @@ jobs:
             echo "Downloading docker-compose.yml..."
 
             curl -fsSL \
-              -H "Authorization: token ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
               -o docker-compose.yml \
               https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/docker-compose.yml
 
             echo "Pulling latest images..."
             docker compose pull
-            
+
+            echo "Stopping existing containers..."
             docker compose down
-            
-            echo "Restarting containers..."
+
+            echo "Starting containers..."
             docker compose up -d
 
             echo "Deployment finished."
