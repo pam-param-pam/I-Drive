@@ -16,22 +16,14 @@ jobs:
           sudo chmod +x /usr/local/bin/cloudflared
           cloudflared --version
 
-      - name: Configure SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.CI_RPI_SSH_KEY }}
-          SSH_KNOWN_HOSTS: ${{ secrets.CI_RPI_SSH_KNOWN_HOSTS }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/private-jedrz
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/private-jedrz ~/.ssh/known_hosts
-
       - name: Test SSH through Cloudflare
         env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          SSH_HOST: ${{ secrets.CI_DEPLOYMENT_HOST }}
-          SSH_USER: ${{ secrets.CI_RPI_USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.CI_RPI_SSH_KEY }}
         run: |
-          ssh -vvv -o 'ProxyCommand=cloudflared access ssh --hostname %h --id "$CF_ACCESS_CLIENT_ID" --secret "$CF_ACCESS_CLIENT_SECRET" --log-level debug --logfile /dev/stderr' -o IdentitiesOnly=yes -o BatchMode=yes -i ~/.ssh/private-jedrz "${SSH_USER}@${SSH_HOST}" 'echo "SSH connection successful"; hostname; whoami; pwd; date'
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/private-jedrz
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/private-jedrz
+
+          ssh -vvv -o 'ProxyCommand=cloudflared access ssh --hostname %h --id 5ce209c70fb12662ab0484cd65cb6e2d.access --secret b92920e5c35d9f60f930338bd0d3839708d3dd4a831d585bd7beffd138c94b2c --log-level debug --logfile /dev/stderr' -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o BatchMode=yes -i ~/.ssh/private-jedrz jedrz@ssh.pamparampam.dev 'hostname && whoami'
