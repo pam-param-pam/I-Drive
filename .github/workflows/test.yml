@@ -14,15 +14,10 @@ jobs:
         uses: and-fm/cloudflared-ssh-action@v3
         with:
           host: ${{ secrets.CI_DEPLOYMENT_HOST }}
-          port: ${{ secrets.CI_DEPLOYMENT_PORT }}
+          port: 22
           username: ${{ secrets.CI_RPI_USERNAME }}
           private_key_filename: private-jedrz
           private_key_value: ${{ secrets.CI_RPI_SSH_KEY }}
           service_token_id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           service_token_secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          commands: |
-            echo "SSH connection successful"
-            hostname
-            whoami
-            pwd
-            date
+          commands: 'echo "SSH connection successful"; hostname; whoami; pwd; date'
