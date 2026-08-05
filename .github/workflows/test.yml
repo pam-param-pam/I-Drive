@@ -19,13 +19,29 @@ jobs:
           ssh-host: ${{ secrets.CI_DEPLOYMENT_HOST }}
           ssh-user: ${{ secrets.CI_RPI_USERNAME }}
           cloudflared-version: "2026.5.1"
-          test-connection: "true"
+          test-connection: "false"
 
-      - name: Test remote command
+      - name: Fix Cloudflare service-token wrapper
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          cat > ~/.cloudflared-ssh <<'EOF'
+          #!/bin/bash
+          exec cloudflared access ssh --hostname "$2" --id "$CF_ACCESS_CLIENT_ID" --secret "$CF_ACCESS_CLIENT_SECRET"
+          EOF
+          chmod 700 ~/.cloudflared-ssh
+
+          {
+            echo "CF_ACCESS_CLIENT_ID=$CF_ACCESS_CLIENT_ID"
+            echo "CF_ACCESS_CLIENT_SECRET=$CF_ACCESS_CLIENT_SECRET"
+          } >> "$GITHUB_ENV"
+
+      - name: Test SSH connection
         env:
           SSH_HOST: ${{ secrets.CI_DEPLOYMENT_HOST }}
           SSH_USER: ${{ secrets.CI_RPI_USERNAME }}
         run: |
           set -e
-          echo "Starting remote SSH test..."
-          ssh "${SSH_USER}@${SSH_HOST}" 'echo "SSH connection successful"; hostname; whoami; pwd; date'
+          ssh -o BatchMode=yes "${SSH_USER}@${SSH_HOST}" \
+            'echo "SSH connection successful"; hostname; whoami; pwd; date'
