@@ -10,38 +10,36 @@ jobs:
       contents: read
 
     steps:
-      - name: Configure SSH through Cloudflare Tunnel
-        uses: NX1X/cloudflare-tunnel-ssh-action@v1
-        with:
-          cf-access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          cf-access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          ssh-private-key: ${{ secrets.CI_RPI_SSH_KEY }}
-          ssh-host: ${{ secrets.CI_DEPLOYMENT_HOST }}
-          ssh-user: ${{ secrets.CI_RPI_USERNAME }}
-          cloudflared-version: "2026.5.1"
-          test-connection: "false"
+      - name: Install cloudflared 2026.5.1
+        run: |
+          curl -L --fail -o /usr/local/bin/cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/download/2026.5.1/cloudflared-linux-amd64
+          sudo chmod +x /usr/local/bin/cloudflared
+          cloudflared --version
 
-      - name: Fix Cloudflare service-token wrapper
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.CI_RPI_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.CI_RPI_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/private-jedrz
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          chmod 600 ~/.ssh/private-jedrz ~/.ssh/known_hosts
+
+      - name: Test SSH through Cloudflare
         env:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: |
-          cat > ~/.cloudflared-ssh <<'EOF'
-          #!/bin/bash
-          exec cloudflared access ssh --hostname "$2" --id "$CF_ACCESS_CLIENT_ID" --secret "$CF_ACCESS_CLIENT_SECRET"
-          EOF
-          chmod 700 ~/.cloudflared-ssh
-
-          {
-            echo "CF_ACCESS_CLIENT_ID=$CF_ACCESS_CLIENT_ID"
-            echo "CF_ACCESS_CLIENT_SECRET=$CF_ACCESS_CLIENT_SECRET"
-          } >> "$GITHUB_ENV"
-
-      - name: Test SSH connection
-        env:
           SSH_HOST: ${{ secrets.CI_DEPLOYMENT_HOST }}
           SSH_USER: ${{ secrets.CI_RPI_USERNAME }}
         run: |
           set -e
-          ssh -o BatchMode=yes "${SSH_USER}@${SSH_HOST}" \
+          ssh \
+            -o 'ProxyCommand=cloudflared access ssh --hostname %h --id "$CF_ACCESS_CLIENT_ID" --secret "$CF_ACCESS_CLIENT_SECRET"' \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -i ~/.ssh/private-jedrz \
+            "${SSH_USER}@${SSH_HOST}" \
             'echo "SSH connection successful"; hostname; whoami; pwd; date'
