@@ -1,5 +1,12 @@
 """Minimal settings used only while collecting static files during image builds."""
 
+import os
+
+
+# Imported application modules expect this value during Django app loading.
+os.environ.setdefault("BACKEND_BASE_URL", "http://localhost/api")
+os.environ.setdefault("SIGNING_SECRET", "collectstatic-build-only")
+
 SECRET_KEY = "collectstatic-build-only"
 DEBUG = False
 
