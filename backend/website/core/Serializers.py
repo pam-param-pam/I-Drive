@@ -344,13 +344,24 @@ class TagSerializer(SimpleSerializer):
         }
 
 
-class MediaPositionSerializer(SimpleSerializer):
+class MediaPositionSerializer(AdvancedSerializer):
+
     @staticmethod
-    def serialize_object(position: MediaPosition) -> dict:
+    def _dict_to_tuple(data: dict) -> tuple:
+        raise NotImplementedError()
+
+    @staticmethod
+    def _object_to_tuple(obj) -> tuple:
+        raise NotImplementedError()
+
+    @staticmethod
+    def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
+        timestamp, modified_at, file_id = tuple_data
+
         return {
-            "timestamp": position.timestamp,
-            "modified_at": position.modified_at,
-            "file_id": position.file_id
+            "timestamp": timestamp,
+            "modified_at": modified_at,
+            "file_id": file_id
         }
 
 

@@ -30,7 +30,9 @@ export default {
    data() {
       return {
          subtitles: null,
-         mediaPositions: []
+         mediaPositions: [],
+         checkedMediaPositionIds: new Set(),
+         loadingMediaPositionIds: new Set()
       }
    },
 
@@ -43,16 +45,8 @@ export default {
             if (file.hasSubtitles) {
                this.subtitles = await getSubtitles(file.id, file.lockFrom)
             }
-         }
-      },
 
-      sortedItems: {
-         immediate: true,
-         async handler(sortedItems) {
-            if (!sortedItems?.length) return
-
-            const fileIds = sortedItems.map(item => item.id)
-            this.mediaPositions = await getMediaPositions({ ids: fileIds })
+            await this.fetchMediaPositionIfNeeded(file)
          }
       }
    },
@@ -91,6 +85,41 @@ export default {
    },
 
    methods: {
+      async fetchMediaPositionIfNeeded(file) {
+         if (
+           this.checkedMediaPositionIds.has(file.id) ||
+           this.loadingMediaPositionIds.has(file.id)
+         ) return
+
+         const currentIndex = this.sortedItems.findIndex(item => item.id === file.id)
+         if (currentIndex === -1) return
+
+         const fileIds = this.sortedItems
+           .slice(Math.max(0, currentIndex - 45), currentIndex + 45)
+           .map(item => item.id)
+
+         fileIds.forEach(id => this.loadingMediaPositionIds.add(id))
+
+         try {
+            const positions = await getMediaPositions({ ids: fileIds })
+
+            for (const position of positions) {
+               const existing = this.mediaPositions.find(
+                 pos => pos.file_id === position.file_id
+               )
+
+               if (existing) {
+                  Object.assign(existing, position)
+               } else {
+                  this.mediaPositions.push(position)
+               }
+            }
+
+            fileIds.forEach(id => this.checkedMediaPositionIds.add(id))
+         } finally {
+            fileIds.forEach(id => this.loadingMediaPositionIds.delete(id))
+         }
+      },
       upsertMediaPosition(fileId, position) {
          const mediaPosition = this.mediaPositions.find(mediaPosition => mediaPosition.file_id === fileId)
 

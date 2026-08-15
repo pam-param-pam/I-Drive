@@ -70,7 +70,7 @@ class Moment(DiscordAttachmentMixin):
 
 
 class MediaPosition(models.Model):
-    file = models.OneToOneField(File, on_delete=models.CASCADE, unique=True)
+    file = models.OneToOneField(File, on_delete=models.CASCADE)
     modified_at = models.DateTimeField(auto_now=True)
     timestamp = models.IntegerField(default=0)
 

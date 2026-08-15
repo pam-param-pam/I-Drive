@@ -280,8 +280,9 @@ def get_files_media_position(request):
         check_resource_perms(request=request, resource=file, checks=default_checks)
         item_ids.append(file.id)
 
-    media_positions = MediaPosition.objects.filter(file_id__in=item_ids)
-    return JsonResponse(MediaPositionSerializer.serialize_objects(media_positions), safe=False)
+    media_positions = MediaPosition.objects.filter(file_id__in=item_ids).values_list("timestamp", "modified_at", "file_id")
+    data = [MediaPositionSerializer.serialize_tuple(pos) for pos in media_positions]
+    return JsonResponse(data, safe=False)
 
 
 @api_view(["GET"])

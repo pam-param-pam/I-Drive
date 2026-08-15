@@ -17,9 +17,6 @@ COPY requirements.txt .
 # Install dependencies into /install
 RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the app
-COPY . .
-
 # ----------------------------
 # 2️⃣ Final stage (runtime)
 # ----------------------------
@@ -35,8 +32,8 @@ RUN apt-get update && \
 # Copy installed Python packages from builder
 COPY --from=builder /install /usr/local
 
-# Copy app code from builder
-COPY --from=builder /app /app/backend
+# Copy app code
+COPY . .
 
 # Ensure entrypoint is executable
 RUN chmod +x entrypoint.sh
