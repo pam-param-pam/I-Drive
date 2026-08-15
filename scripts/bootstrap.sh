@@ -219,12 +219,8 @@ echo "Creating application directory..."
 mkdir "$APP_DIR"
 cd "$APP_DIR"
 
-mkdir -p nginx
-
-echo "Downloading configuration files..."
+echo "Downloading Docker Compose configuration..."
 download_file "$BASE_URL/docker-compose.yml" docker-compose.yml
-download_file "$BASE_URL/nginx/nginx.conf" nginx/nginx.conf
-download_file "$BASE_URL/nginx/auth.js" nginx/auth.js
 
 echo "Preparing config override file..."
 

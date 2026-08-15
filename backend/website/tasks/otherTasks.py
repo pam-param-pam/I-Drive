@@ -1,3 +1,4 @@
+import ipaddress
 import traceback
 from datetime import timedelta
 from io import BytesIO
@@ -6,14 +7,14 @@ from itertools import groupby
 import rawpy
 import requests
 from PIL import Image
-from celery.utils.log import get_task_logger
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from website.services import cache_service
 from website.celery import app
 from website.config import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, GENERATE_RAW_THUMBNAILS
-from website.constants import EventCode, MAX_RAW_EXTRACTION_ATTEMPTS, MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE
+from website.constants import EventCode, MAX_RAW_EXTRACTION_ATTEMPTS, MAX_ATTACHMENTS_PER_MESSAGE, MAX_DISCORD_MESSAGE_SIZE, cache
 from website.core.Serializers import FileSerializer
 from website.core.crypto.Decryptor import Decryptor
 from website.core.crypto.Encryptor import Encryptor
@@ -25,11 +26,20 @@ from website.models.other_models import RawExtractionClaim, NotificationKind, No
 from website.services import folder_service, create_file_service, file_service, user_service, touch_service
 from website.websockets.utils import send_event, send_message
 
-logger = get_task_logger(__name__)
-
 RAW_EXTRACTION_BATCH_SIZE = 25
 RAW_EXTRACTION_STALE_TIMEOUT = 30
 
+@app.task
+def update_router_public_ip():
+    response = requests.get("https://api.ipify.org", timeout=3)
+    response.raise_for_status()
+
+    value = response.text.strip()
+    ipaddress.ip_address(value)  # Validate IPv4 or IPv6
+    key = cache_service.get_router_ip_key()
+    cache.set(key, value, timeout=120)
+
+    return value
 
 @app.task
 def lock_folder_task(context: dict, folder_id: str, password: str, change_type: str):
@@ -98,7 +108,6 @@ def _extract_raw_metadata(other, lens) -> dict:
             "camera_owner": other.artist if other.artist else "",
         }
     except Exception as e:
-        logger.warning("FailedToParseRawImage")
         raise FailedToParseRawImage(e)
 
 def _download_and_decrypt_fragments(file_obj):
@@ -193,7 +202,6 @@ def _flush_uploads_and_clear_claims(owner, state):
     try:
         _flush_uploads(owner, state)
     except Exception as e:
-        logger.exception(f"Failed to flush raw thumbnail uploads for owner {owner.id}: {e}")
         _mark_raw_extraction_failed(file_ids, str(e))
 
         state["upload_queue"].clear()
@@ -359,11 +367,9 @@ def generate_raw_image_thumbnails():
                 state["current_size"] += enc_size
 
             except FailedToParseRawImage as e:
-                logger.warning(f"Failed to parse raw file {file_obj.id}: {e}")
                 _handle_parse_failure_and_clear_claim(file_obj)
 
             except Exception as e:
-                logger.exception(f"Unexpected error processing raw file {file_obj.id}: {e}")
                 _mark_raw_extraction_failed([file_obj.id], str(e))
 
         if state["upload_queue"]:

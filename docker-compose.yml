@@ -2,7 +2,6 @@ volumes:
   postgres_data:
     name: ${POSTGRES_VOLUME:-postgres_data}
   nginx_cache:
-  backend_static:
 
 services:
   ### redis
@@ -68,7 +67,6 @@ services:
 
     volumes:
       - ./config.override.json:/config/config.override.json:ro
-      - backend_static:/var/www/idrive/backend-static
 
     environment:
       - IDRIVE_CONFIG_FILE=/config/config.override.json
@@ -105,7 +103,8 @@ services:
     image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG:-latest}
     container_name: idrive-nginx
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
     restart: unless-stopped
     ports:
       - ${NGINX_PORT}:80
@@ -124,10 +123,7 @@ services:
       - SIGNING_SECRET=${SIGNING_SECRET:?SIGNING_SECRET IS REQUIRED}
 
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/auth.js:/etc/nginx/auth.js
       - nginx_cache:/var/cache/nginx
-      - backend_static:/var/www/idrive/backend-static:ro
 
     deploy:
       resources:

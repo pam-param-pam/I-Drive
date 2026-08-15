@@ -7,7 +7,7 @@ from rest_framework.permissions import BasePermission
 
 from website.config import ALLOWED_IPS_LOCKED
 from website.core.errors import ResourceNotFoundError, RootPermissionError, ResourcePermissionError, MissingOrIncorrectResourcePasswordError
-from website.core.helpers import get_ip, get_attr
+from website.core.helpers import get_ip, get_attr, get_public_ip
 from website.models import UserPerms, Folder, File, ShareableLink
 from website.models.mixin_models import ItemState
 from website.queries.selectors import check_if_item_belongs_to_share, get_item_inside_share
@@ -200,7 +200,8 @@ class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
     def _is_ip_allowed(self, ip):
         try:
             ip_obj = ipaddress.ip_address(ip)
-            return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED
+            public_ip_obj = ipaddress.ip_address(get_public_ip())
+            return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj
         except ValueError:
             return False
 

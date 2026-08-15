@@ -35,6 +35,9 @@ COPY --from=builder /install /usr/local
 # Copy app code
 COPY . .
 
+# Collect Django static files into the image at build time.
+RUN python manage.py collectstatic --noinput --settings=website.collectstatic_settings
+
 # Ensure entrypoint is executable
 RUN chmod +x entrypoint.sh
 

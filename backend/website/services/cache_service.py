@@ -14,6 +14,8 @@ def get_folder_content_key(folder_id: str) -> str:
 def get_folder_hash_key(folder_id: str) -> str:
     return f"folder-hash:{folder_id}"
 
+def get_router_ip_key():
+    return "router_public_ip"
 
 def get_folder_content_version(folder) -> str:
     return folder.last_modified_at.isoformat() if folder.last_modified_at else ""

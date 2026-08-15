@@ -38,14 +38,15 @@ jobs:
         cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-backend:cache
         cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-backend:cache,mode=max
 
-
     - name: Build & Push Nginx Image
       uses: docker/build-push-action@v4
       with:
-        context: ./frontend
+        context: .
+        file: frontend/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ghcr.io/${{ github.repository_owner }}/idrive-nginx:latest
+        build-args: |
+          BACKEND_IMAGE=ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
         cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-nginx:cache
         cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-nginx:cache,mode=max
-

@@ -1,13 +1,12 @@
 import base64
 import math
-import re
 import time
 from functools import wraps
 from typing import Optional, Callable, Any, List
 from typing import Union, Type, Tuple
 
-from website.config import MAX_RESOURCE_NAME_LENGTH
-from website.constants import EXTENSION_TO_FILE_TYPE, EncryptionMethod
+from website.services import cache_service
+from website.constants import EXTENSION_TO_FILE_TYPE, EncryptionMethod, cache
 from website.core.errors import BadRequestError
 from website.core.validators.Check import Check
 
@@ -233,3 +232,7 @@ def timed(func):
         return result
     return wrapper
 
+
+def get_public_ip():
+    key = cache_service.get_router_ip_key()
+    return cache.get(key)

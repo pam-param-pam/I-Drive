@@ -13,13 +13,18 @@ app.autodiscover_tasks()
 @app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
     from .tasks.cleanupTasks import run_cleanup  # fix for circular import error
-    from .tasks.otherTasks import generate_raw_image_thumbnails
+    from .tasks.otherTasks import generate_raw_image_thumbnails, update_router_public_ip
     from .tasks.deleteCleanupTasks import supervise_deletion_system
 
     # Executes every 1 minute.
     sender.add_periodic_task(
         timedelta(minutes=1),
         supervise_deletion_system.s(),
+    )
+
+    sender.add_periodic_task(
+        timedelta(minutes=1),
+        update_router_public_ip.s(),
     )
 
     # Executes every 5 minutes.
