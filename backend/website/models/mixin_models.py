@@ -12,6 +12,7 @@ class ItemState(models.TextChoices):
     ACTIVE = "active"          # normal, visible, usable
     DELETING = "deleting"      # deletion in progress
     DELETED = "deleted"        # deleted, should not be used
+    REMOTE_MISSING = "remote_missing"        # deleted, should not be used
 
 class DiscordAttachmentMixin(models.Model):
     message_id = models.CharField(max_length=19, db_index=True)

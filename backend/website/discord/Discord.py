@@ -287,7 +287,7 @@ class DiscordService:
         payload = {"messages": message_ids}
         return self.manager.execute_bot_with_retries(user, "POST", path, json=payload)
 
-    def _get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str, retries: bool = True) -> str:
+    def get_file_url(self, user, message_id: str, attachment_id: str, channel_id: str, retries: bool = True) -> str:
         message = self.get_message(user, channel_id, message_id, retries)
         for attachment in message.get("attachments", []):
             if attachment.get("id") == attachment_id:
@@ -295,7 +295,7 @@ class DiscordService:
         raise BadRequestError(f"File with attachment_id={attachment_id} not found in message_id={message_id}")
 
     def get_attachment_url(self, user, resource: DiscordAttachmentMixin, retries: bool = False) -> str:
-        return self._get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id, retries=retries)
+        return self.get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id, retries=retries)
 
     # -------------------------
     # Attachment editing

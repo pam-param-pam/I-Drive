@@ -206,6 +206,14 @@
     "cleanup_failed": {
       "title": "Cleanup failed"
     },
+    "discord_attachment_missing": {
+      "title": "Missing discord attachment",
+      "message": "The Discord attachment for the {resourceType} was not found and the {resourceType} was deleted."
+    },
+    "discord_fragment_missing": {
+      "title": "File fragment missing",
+      "message": "Part of a file couldn't be fetched from discord. The file was marked as 'remote_missing'. It will be deleted permanently in few days"
+    },
     "delete_process_failed": {
       "title": "Delete process failed",
       "message": "Some files failed to delete. Please create a bug issue"
@@ -226,7 +234,12 @@
       "device_type": "Device type",
       "folder_id": "Folder ID",
       "ip_address": "IP address",
-      "status": "Status"
+      "status": "Status",
+      "resourceType": "Resource type",
+      "file": "File",
+      "status_code": "Status code",
+      "discord_code": "Discord code",
+      "days_till_delete": "Days left till deletion"
     }
   },
   "prompts": {

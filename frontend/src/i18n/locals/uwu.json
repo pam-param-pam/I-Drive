@@ -198,6 +198,12 @@
     "usernameTaken": "Uswename awweady taken",
     "wrongCredentials": "Wwong cwedentials"
   },
+  "notifications": {
+    "discord_attachment_missing": {
+      "title": "Media attachment deweted",
+      "message": "The Discord attachment fow the {resourceType} was nyot found and the {resourceType} was deweted. Discord wetuwned {status}."
+    }
+  },
   "prompts": {
     "accessAt": "Accessed at",
     "accountPassword": "Account passwowd",

@@ -5,6 +5,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils import timezone
 
+from website.constants import REMOTE_MISSING_FILES_WAIT_DAYS
+from website.models.other_models import NotificationType, NotificationKind
+from website.services import user_service
 from website.config import MAX_FILES_IN_FOLDER
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_encryption_fields, validate_value
@@ -325,3 +328,23 @@ def internal_force_ready(file_ids: list[str]):
         )
 
         touch_service.touch_files(file_ids)
+
+
+def mark_remote_missing(owner, file_obj: File):
+    with transaction.atomic():
+        file_obj = File.objects.select_for_update().get(owner=owner, id=file_obj.id)
+        file_obj.state = ItemState.REMOTE_MISSING
+        file_obj.state_changed_at = timezone.now()
+
+        file_obj.save()
+
+        touch_service.touch_file_object(file_obj)
+
+        user_service.create_notification(
+            owner,
+            NotificationType.ERROR,
+            NotificationKind.GENERAL,
+            title="notifications.discord_fragment_missing.title",
+            message="notifications.discord_fragment_missing.message",
+            data={"file": file_obj.name, "days_till_delete": REMOTE_MISSING_FILES_WAIT_DAYS},
+        )

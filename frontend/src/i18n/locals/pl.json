@@ -206,6 +206,14 @@
     "cleanup_failed": {
       "title": "Czyszczenie nie powiodło się"
     },
+    "discord_attachment_missing": {
+      "title": "Brak pliku na discordzie",
+      "message": "Nie znaleziono pliku Discord dla elementu {resourceType}, więc element został usunięty."
+    },
+    "discord_fragment_missing": {
+      "title": "Nie znalazielono fragmentu pliku",
+      "message": "Nie udało sie znależć na discordzie fragmentu pliku, plik został oznaczony jako 'remote_missing'. Zostanie trwale za pare dni."
+    },
     "delete_process_failed": {
       "title": "Proces usuwania plików nie powiódł się",
       "message": "Nie udało się usunąć części plików. Zgłoś ten problem na GitHubie"
@@ -226,7 +234,12 @@
       "device_type": "Typ urządzenia",
       "folder_id": "ID folderu",
       "ip_address": "Adres IP",
-      "status": "Status"
+      "status": "Status",
+      "resourceType": "Typ",
+      "file": "Plik",
+      "status_code": "Kod odpowiedzie",
+      "discord_code": "Kod discorda",
+      "days_till_delete": "Dni do usunięcia"
     }
   },
   "prompts": {

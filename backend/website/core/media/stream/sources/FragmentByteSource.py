@@ -3,10 +3,10 @@ from dataclasses import dataclass
 import aiohttp
 from asgiref.sync import sync_to_async
 
+from website.services import attachment_service
 from website.core.crypto.Decryptor import Decryptor
 from website.core.media.stream.ByteRange import ByteRange
 from website.core.media.stream.sources.ByteSource import ByteSource
-from website.discord.Discord import discord
 from website.models import Fragment
 from website.tasks.helper import auto_prefetch
 
@@ -89,7 +89,7 @@ class FragmentedDiscordByteSource(ByteSource):
 
                 auto_prefetch(fragment.id)
 
-                url = await sync_to_async(discord.get_attachment_url)(self.file_obj.owner, fragment)
+                url = await sync_to_async(attachment_service.get_attachment_url)(self.file_obj.owner, fragment, self.file_obj)
 
                 headers = {"Range": f"bytes={mapping.local_start}-{mapping.local_end}"}
 

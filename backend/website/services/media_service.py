@@ -1,6 +1,7 @@
 import base64
 import hashlib
 
+from website.services import attachment_service
 from website.auth.Permissions import CheckIpPrivateOrAllowedIfResourceLocked
 from website.auth.utils import check_resource_perms
 from website.config import MAX_THUMBNAIL_SIZE
@@ -14,7 +15,6 @@ from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
 from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
 from website.core.media.stream.sources.ZipByteSource import ZipByteSource
 from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
-from website.discord.Discord import discord
 from website.models import File, Moment, Subtitle, UserZIP, Thumbnail
 from website.models.mixin_models import ItemState
 from website.queries.builders import build_zip_file_dict, build_flattened_children_mptt_values, FILE_VALUE_FIELDS, FOLDER_VALUE_FIELDS
@@ -39,7 +39,8 @@ def get_thumbnail_response(request, file_obj: File, thumbnail: Thumbnail):
 
     if not thumbnail_content:
         decryptor = Decryptor(method=file_obj.get_encryption_method(), key=thumbnail.key, iv=thumbnail.iv)
-        url = discord.get_attachment_url(file_obj.owner, thumbnail)
+        url = attachment_service.get_attachment_url(file_obj.owner, thumbnail, file_obj)
+
         thumbnail_content = decrypt_bytes(fetch_discord_file(url), decryptor)
         cache.set(cache_key, thumbnail_content, timeout=MAX_MEDIA_CACHE_AGE)
 
@@ -58,8 +59,8 @@ def get_moment_response(request, file_obj: File, moment: Moment):
     check_if_bots_exists(file_obj.owner)
 
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=moment.key, iv=moment.iv)
+    url = attachment_service.get_attachment_url(file_obj.owner, moment, file_obj)
 
-    url = discord.get_attachment_url(file_obj.owner, moment)
     moment_content = decrypt_bytes(fetch_discord_file(url), decryptor)
 
     return build_binary_response(
@@ -77,8 +78,8 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
     check_if_bots_exists(file_obj.owner)
 
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=subtitle.key, iv=subtitle.iv)
+    url = attachment_service.get_attachment_url(file_obj.owner, subtitle, file_obj)
 
-    url = discord.get_attachment_url(file_obj.owner, subtitle)
     subtitle_content = decrypt_bytes(fetch_discord_file(url), decryptor)
 
     return build_binary_response(

@@ -9,11 +9,11 @@ from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
 
+from website.services import attachment_service
 from .constants import API_BASE_URL, EncryptionMethod
 from .core.crypto.signer import sign_resource
 from .core.dataModels.http import RequestContext
 from .core.errors import DiscordError
-from .discord.Discord import discord
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
@@ -90,7 +90,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
     @easy.smart(short_description="URL", allow_tags=True)
     def fragment_url(self, obj: Fragment):
         try:
-            url = discord.get_attachment_url(obj.file.owner, obj)
+            url = attachment_service.get_attachment_url(obj.file.owner, obj, obj.file.name)
             return f'<a href="{url}" target="_blank">{url}</a><br>'
         except DiscordError as e:
             return f"FAILED TO FETCH URL: {str(e)}"

@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from website.services import attachment_service
 from website.services import cache_service
 from website.celery import app
 from website.config import MAX_RAW_IMAGE_SIZE_ALLOWED_FOR_CONVERSION, GENERATE_RAW_THUMBNAILS
@@ -77,7 +78,7 @@ def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
     filtered_fragments = fragments.filter(sequence__gt=fragment.sequence).order_by('sequence')[:number_to_prefetch]
 
     for fragment in filtered_fragments:
-        discord.get_attachment_url(user=fragment.file.owner, resource=fragment)
+        attachment_service.get_attachment_url(user=fragment.file.owner, resource=fragment, file=fragment.file)
 
 
 def format_shutter(speed: float | None) -> str:
@@ -115,7 +116,7 @@ def _download_and_decrypt_fragments(file_obj):
     fragments = file_obj.fragments.all().order_by("sequence")
     decryptor = Decryptor(method=file_obj.get_encryption_method(), key=file_obj.key, iv=file_obj.iv)
     for frag in fragments:
-        url = discord.get_attachment_url(file_obj.owner, frag)
+        url = attachment_service.get_attachment_url(file_obj.owner, frag, file_obj)
         r = requests.get(url, timeout=30)
         r.raise_for_status()
         raw_buffer.write(decryptor.decrypt(r.content))

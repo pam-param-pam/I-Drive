@@ -15,7 +15,7 @@
 2) Prohibit use of .delete() .save() etc on Models directly (how?)
 3) Introduce a new exception ValidationError() into services to make nicer errors
 5) add auto db backups and migrate to k8s
-
+6) mark files as failed if 404 no file from discord during stream
 
 0) Locked folders in 1 folder tree with diff locks?
 1) What to do with PDF files?
@@ -25,3 +25,5 @@
 7) Extract items should extract to files and folders not to 1 array items?
 8) Zip download, delete files inside = error prob
 9) cancel/confirm etc prompts should be called independently
+10) Add hashing and salting to share.token (no salt here), share.password, folder.password
+11) 

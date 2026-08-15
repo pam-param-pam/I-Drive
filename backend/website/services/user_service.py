@@ -251,7 +251,7 @@ def change_attachment_name(user: User, new_attachment_name: str):
     discord_settings.save()
 
 def reset_discord_settings(user: User) -> str:
-    if File.objects.filter(owner=user, state__in=[ItemState.ACTIVE, ItemState.DELETING]).exists():
+    if File.objects.filter(owner=user, state__in=[ItemState.ACTIVE]).exists():
         raise BadRequestError("Cannot reset discord settings. Remove all files first")
 
     discord_settings = DiscordSettings.objects.get(user=user)

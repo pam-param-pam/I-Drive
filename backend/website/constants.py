@@ -43,6 +43,10 @@ MAX_FILES_IN_ZIP = 10_000
 # How long the zip download url is valid for, 6 hours
 ZIP_EXPIRY_SECONDS = 21600
 
+# How long files which are marked as remote missing will wait for admin fix, before being automatically deleted
+REMOTE_MISSING_FILES_WAIT_DAYS = 7
+
+
 cache = caches["default"]
 
 FILE_TYPES = {

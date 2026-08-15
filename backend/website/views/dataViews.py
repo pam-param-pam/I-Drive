@@ -13,6 +13,7 @@ from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
+from website.services import attachment_service
 from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
 from website.auth.utils import check_resource_perms
@@ -25,7 +26,6 @@ from website.core.crypto.signer import sign_resource
 from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import validate_ids_as_list, extract_key, validate_key
-from website.discord.Discord import discord
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
@@ -385,7 +385,7 @@ def get_fragment_url_view(request, fragment_id):
     file = fragment.file
     check_resource_perms(request, file, default_checks)
 
-    url = discord.get_attachment_url(request.user, fragment)
+    url = attachment_service.get_attachment_url(request.user, fragment, file.name)
     return JsonResponse({"url": url})
 
 

@@ -9,7 +9,7 @@ from django.utils import timezone as django_timezone
 from .helper import is_bulk_deletable
 from .otherTasks import _handle_parse_failure
 from ..celery import app
-from ..constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS
+from ..constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS, REMOTE_MISSING_FILES_WAIT_DAYS
 from ..core.dataModels.http import RequestContext
 from ..core.errors import NoBotsError, DiscordError
 from ..discord.Discord import discord
@@ -32,6 +32,20 @@ def cleanup_old_notifications(user) -> int:
 
     return deleted_count
 
+
+def cleanup_remote_missing_files(user) -> int:
+    cutoff = django_timezone.now() - timedelta(days=REMOTE_MISSING_FILES_WAIT_DAYS)
+    files = list(File.objects.filter(
+        owner=user,
+        state=ItemState.REMOTE_MISSING,
+        state_changed_at__lte=cutoff,
+    ).only("id", "state"))
+
+    if not files:
+        return 0
+
+    item_service.delete_items(RequestContext.from_user(user.id), user, files)
+    return len(files)
 
 def cleanup_expired_shares(user) -> int:
     removed = 0
@@ -226,6 +240,11 @@ def run_cleanup_for_user(user):
     except Exception as e:
         result["trash_error"] = str(e)
 
+    try:
+        result["cleanup_remote_missing_files"] = cleanup_remote_missing_files(user)
+    except Exception as e:
+        result["cleanup_remote_missing_files"] = str(e)
+
     return result
 
 
@@ -239,6 +258,7 @@ def format_cleanup_summary(res: dict) -> LiteralString | None:
         "trash_removed": "Trash",
         "discord_removed": "Discord",
         "notifications_removed": "Notifications",
+        "cleanup_remote_missing_files": "Remote missing files",
     }
 
     for key, label in labels.items():

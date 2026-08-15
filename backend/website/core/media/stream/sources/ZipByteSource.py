@@ -5,12 +5,12 @@ from asgiref.sync import sync_to_async
 from zipFly import GenFile, ZipFly
 from zipFly.EmptyFolder import EmptyFolder
 
+from website.services import attachment_service
 from website.constants import EncryptionMethod, MAX_FILES_IN_ZIP
 from website.core.crypto.Decryptor import Decryptor
 from website.core.errors import BadRequestError
 from website.core.media.stream.ByteRange import ByteRange
 from website.core.media.stream.sources.ByteSource import ByteSource
-from website.discord.Discord import discord
 from website.models import Fragment
 from website.tasks.helper import auto_prefetch
 
@@ -55,7 +55,7 @@ class ZipByteSource(ByteSource):
             fragments = await sync_to_async(self._fetch_fragments_sync)(entry["id"])
 
             for fragment in fragments:
-                url = await sync_to_async(discord.get_attachment_url)(self.owner, fragment, True)
+                url = await sync_to_async(attachment_service.get_attachment_url)(self.owner, fragment, entry["id"])
                 auto_prefetch(fragment.id)
 
                 async with session.get(url) as response:

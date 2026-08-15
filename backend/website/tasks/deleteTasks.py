@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional, Literal
 from uuid import UUID
 
-from celery.utils.log import get_task_logger
 from django.db import transaction, models
 from django.utils import timezone
 
@@ -20,14 +19,16 @@ from website.models.mixin_models import ItemState
 from website.queries.selectors import query_attachments
 from website.tasks.helper import is_bulk_deletable
 from website.websockets.utils import send_event, send_message
+from celery.utils.log import get_task_logger
 
-logger = get_task_logger(__name__)
 
 AuthorType = Literal["bot", "webhook"]
 ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
 
 FILE_BATCH = 100
 FOLDER_BATCH = 50
+
+logger = get_task_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -43,7 +44,7 @@ class MessageItem:
 
 def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], int]:
     input_file_ids = set(
-        File.objects.filter(id__in=ids, state=ItemState.ACTIVE)
+        File.objects.filter(id__in=ids, state__in=[ItemState.ACTIVE, ItemState.REMOTE_MISSING])
         .values_list("id", flat=True)
     )
 
@@ -63,7 +64,7 @@ def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], 
             set(
                 File.objects.filter(
                     parent_id__in=expanded_folder_ids,
-                    state=ItemState.ACTIVE
+                    state__in=[ItemState.ACTIVE, ItemState.REMOTE_MISSING]
                 ).values_list("id", flat=True)
             )
             | input_file_ids
@@ -80,69 +81,87 @@ def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], 
 @app.task
 def plan_deletion_job(job_id: UUID) -> None:
     job = DeletionJob.objects.get(id=job_id)
-    job.state = DeletionJob.State.PLANNING
-    job.save(update_fields=["state"])
-
-    ids = job.requested_ids
     context = RequestContext.deserialize(job.request_context)
 
-    input_file_ids, input_folder_ids, expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
+    try:
+        job.state = DeletionJob.State.PLANNING
+        job.heartbeat_at = timezone.now()
+        job.save(update_fields=["state", "heartbeat_at"])
 
-    with transaction.atomic():
-        file_items = [
-            DeletionFileWorkItem(job=job, file_id=file_id)
-            for file_id in expanded_file_ids
-        ]
+        ids = job.requested_ids
+        _, _, expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
 
-        DeletionFileWorkItem.objects.bulk_create(
-            file_items,
-            ignore_conflicts=True,
-            batch_size=1000,
-        )
+        if not expanded_file_ids and not expanded_folder_ids:
+            DeletionJob.objects.filter(id=job.id).update(
+                state=DeletionJob.State.COMPLETED,
+                finished_at=timezone.now(),
+                heartbeat_at=timezone.now(),
+            )
+            job.delete()
+            return
 
-        # ---- folder work items ----
-        folders = Folder.objects.filter(id__in=expanded_folder_ids)
-
-        folder_items = [
-            DeletionFolderWorkItem(job=job, folder_id=f.id, level=f.level)
-            for f in folders
-        ]
-
-        DeletionFolderWorkItem.objects.bulk_create(
-            folder_items,
-            ignore_conflicts=True,
-            batch_size=1000,
-        )
-
-        # ---- mark domain rows ----
-        File.objects.filter(id__in=expanded_file_ids).update(
-            state=ItemState.DELETING,
-            state_changed_at=timezone.now(),
-        )
-
-        Folder.objects.filter(id__in=expanded_folder_ids).update(
-            state=ItemState.DELETING,
-            state_changed_at=timezone.now(),
-        )
-
-        # ---- totals ----
-        job.total_file_items = len(expanded_file_ids)
-        job.total_folder_items = len(expanded_folder_ids)
-        job.total_fragments = total_fragments
-        job.state = DeletionJob.State.RUNNING
-        job.save(
-            update_fields=[
-                "total_fragments",
-                "total_file_items",
-                "total_folder_items",
-                "state",
+        with transaction.atomic():
+            file_items = [
+                DeletionFileWorkItem(job=job, file_id=file_id)
+                for file_id in expanded_file_ids
             ]
+
+            DeletionFileWorkItem.objects.bulk_create(
+                file_items,
+                ignore_conflicts=True,
+                batch_size=1000,
+            )
+
+            folders = Folder.objects.filter(id__in=expanded_folder_ids)
+            folder_items = [
+                DeletionFolderWorkItem(job=job, folder_id=f.id, level=f.level)
+                for f in folders
+            ]
+
+            DeletionFolderWorkItem.objects.bulk_create(
+                folder_items,
+                ignore_conflicts=True,
+                batch_size=1000,
+            )
+
+            File.objects.filter(id__in=expanded_file_ids).update(
+                state=ItemState.DELETING,
+                state_changed_at=timezone.now(),
+            )
+
+            Folder.objects.filter(id__in=expanded_folder_ids).update(
+                state=ItemState.DELETING,
+                state_changed_at=timezone.now(),
+            )
+
+            job.total_file_items = len(expanded_file_ids)
+            job.total_folder_items = len(expanded_folder_ids)
+            job.total_fragments = total_fragments
+            job.state = DeletionJob.State.RUNNING
+            job.heartbeat_at = timezone.now()
+            job.save(
+                update_fields=[
+                    "total_fragments",
+                    "total_file_items",
+                    "total_folder_items",
+                    "state",
+                    "heartbeat_at",
+                ]
+            )
+
+        delete_cache(expanded_folder_ids, expanded_file_ids)
+        send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
+        process_file_batch.delay(job.request_context, job.id)
+
+    except Exception as error:
+        logger.exception("Failed to plan deletion job %s", job_id)
+        DeletionJob.objects.filter(id=job_id).update(
+            state=DeletionJob.State.PARTIAL,
+            error=str(error),
+            finished_at=timezone.now(),
+            heartbeat_at=timezone.now(),
         )
-
-    delete_cache(expanded_folder_ids, expanded_file_ids)
-    send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
-
-    process_file_batch.delay(job.request_context, job.id)
+        raise
 
 
 def delete_cache(expanded_folder_ids: set[str], expanded_file_ids: set[str]):
@@ -405,8 +424,6 @@ def delete_fragments(file_ids: list[str]) -> None:
 
 
 def mark_file_batch_failed(job_id: UUID, file_ids: list[str], claim_token: UUID, error: Exception) -> None:
-    logger.exception(f"mark_file_batch_failed: {str(error)}")
-
     with transaction.atomic():
         DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFileWorkItem.State.FAILED,
@@ -477,7 +494,6 @@ def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: 
 
 
 def mark_folder_batch_failed(job_id: UUID, folder_ids: list[str], claim_token: UUID, error: Exception) -> None:
-    logger.exception(f"mark_folder_batch_failed: {str(error)}")
     with transaction.atomic():
         DeletionFolderWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFolderWorkItem.State.FAILED,
