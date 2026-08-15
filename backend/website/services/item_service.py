@@ -92,7 +92,7 @@ def delete_items(context: RequestContext, user, items: list[Union[Item, dict]]) 
     for item in items:
         item_id = get_attr(item, 'id')
         state = get_attr(item, 'state')
-        if state != ItemState.ACTIVE:
+        if state != ItemState.ACTIVE and state != ItemState.REMOTE_MISSING:
             raise BadRequestError("Cannot delete. At least one item is not active.")
 
         ids.append(item_id)
