@@ -103,8 +103,10 @@ services:
     image: ghcr.io/pam-param-pam/idrive-nginx:${NGINXTAG:-latest}
     container_name: idrive-nginx
     build:
-      context: .
-      dockerfile: frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
+      additional_contexts:
+        nginx-config: ./nginx
     restart: unless-stopped
     ports:
       - ${NGINX_PORT}:80

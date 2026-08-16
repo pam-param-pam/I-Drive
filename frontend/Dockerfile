@@ -6,8 +6,8 @@ FROM node:latest AS builder
 WORKDIR /app
 
 # Copy package.json and package-lock.json
-COPY frontend/package.json .
-COPY frontend/package-lock.json .
+COPY package.json .
+COPY package-lock.json .
 
 # Install dependencies
 RUN npm install
@@ -17,7 +17,7 @@ ARG TARGETARCH
 RUN if [ "$TARGETARCH" = "arm64" ]; then npm install sass-embedded-linux-arm64; fi
 
 # Copy the rest of the application code
-COPY frontend/ .
+COPY . .
 
 # Build the application
 RUN npm run build
@@ -35,14 +35,14 @@ RUN mkdir -p /var/www/idrive/frontend
 COPY --from=builder /app/dist /var/www/idrive/frontend
 
 # Copy the entrypoint script
-COPY frontend/entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 
 # Copy Django static files from the backend image.
 COPY --from=backend_static /var/www/idrive/backend-static/ /var/www/idrive/backend-static/
 
 # Bake the NGINX configuration and auth handler into the image.
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
-COPY nginx/auth.js /etc/nginx/auth.js
+COPY --from=nginx-config nginx.conf /etc/nginx/nginx.conf
+COPY --from=nginx-config auth.js /etc/nginx/auth.js
 
 RUN chmod +x /entrypoint.sh
 
