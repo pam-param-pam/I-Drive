@@ -14,8 +14,9 @@ RUN apt-get update && \
 # Copy only requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install dependencies into /install
-RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
+# Install dependencies into /install and reuse pip's download cache.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --prefix=/install -r requirements.txt
 
 # ----------------------------
 # 2️⃣ Final stage (runtime)

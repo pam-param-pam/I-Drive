@@ -5,16 +5,17 @@ FROM node:latest AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package.json .
-COPY package-lock.json .
+# Copy dependency manifests before application source so source changes do not
+# invalidate the dependency-install layer.
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm install
+# Install the exact locked dependency tree and reuse npm's download cache.
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 # Install platform-specific dependency for ARM
 ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "arm64" ]; then npm install sass-embedded-linux-arm64; fi
+RUN --mount=type=cache,target=/root/.npm \
+    if [ "$TARGETARCH" = "arm64" ]; then npm install sass-embedded-linux-arm64; fi
 
 # Copy the rest of the application code
 COPY . .
@@ -27,9 +28,6 @@ FROM ${BACKEND_IMAGE} AS backend_static
 
 # Stage 2: Setup NGINX to serve the built app
 FROM nginx:latest
-
-# Create necessary directory for NGINX
-RUN mkdir -p /var/www/idrive/frontend
 
 # Copy built app from the 'builder' stage
 COPY --from=builder /app/dist /var/www/idrive/frontend
