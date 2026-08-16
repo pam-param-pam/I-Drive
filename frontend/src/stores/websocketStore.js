@@ -4,6 +4,7 @@ function createState() {
    return {
       socket: null,
       url: null,
+      token: null,
       status: "idle", // idle | connecting | open | closed | error
 
       // heartbeat
@@ -40,6 +41,7 @@ export const useWebSocketStore = defineStore("websocket", {
          this._cleanup(key)
 
          state.url = url
+         state.token = token
          state.status = "connecting"
 
          const ws = new WebSocket(url, token)
@@ -156,7 +158,6 @@ export const useWebSocketStore = defineStore("websocket", {
          if (!state) return
 
          state.status = "closed"
-
          this._scheduleReconnect(key)
       },
 
@@ -177,7 +178,7 @@ export const useWebSocketStore = defineStore("websocket", {
          console.warn(`[WS:${key}] reconnect in ${delay}ms`)
 
          state.reconnectTimer = setTimeout(() => {
-            this.connect(key, state.url)
+            this.connect(key, state.url, state.token)
          }, delay)
       }
    }
