@@ -1,5 +1,4 @@
 import json
-import logging
 import threading
 import time
 import traceback
@@ -11,8 +10,6 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 from django.core.cache import cache
 from django.utils import timezone
-
-logger = logging.getLogger(__name__)
 
 
 class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
@@ -39,11 +36,11 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
     @abstractmethod
     def authorize(self) -> tuple[bool, bool, str]:
-        raise NotImplementedError()
+        raise NotImplementedError("authorize() must be implemented in subclass.")
 
     @abstractmethod
     def get_group_name(self) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError("get_group_name() must be implemented in subclass.")
 
     def on_ratelimit(self):
         pass
@@ -98,14 +95,6 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         return authorized
 
     def reject(self, code, reason):
-        logger.warning(
-            "WebSocket connection rejected: consumer=%s code=%s reason=%s client=%s path=%s",
-            self.__class__.__name__,
-            code,
-            reason,
-            self.scope.get("client"),
-            self.scope.get("path"),
-        )
         self.close(code)
         return
 
@@ -118,16 +107,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
             self.reject(code=4409, reason="Too many active connections")
             return
 
-        try:
-            authorized, is_standard_protocol, token = self.authorize()
-        except Exception:
-            logger.exception(
-                "WebSocket authorization raised an exception: consumer=%s client=%s path=%s",
-                self.__class__.__name__,
-                self.scope.get("client"),
-                self.scope.get("path"),
-            )
-            raise
+        authorized, is_standard_protocol, token = self.authorize()
         self._last_authorized_at = time.time()
 
         if not authorized:
@@ -163,12 +143,6 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
         # 0) Re-authorize periodically
         if not self._reauthorize_if_needed():
-            logger.warning(
-                "WebSocket reauthorization failed: consumer=%s client=%s path=%s",
-                self.__class__.__name__,
-                self.scope.get("client"),
-                self.scope.get("path"),
-            )
             self.close(code=4401)
             return
 

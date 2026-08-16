@@ -1,13 +1,10 @@
 import json
-import logging
 from typing import Optional
 
 from website.constants import EventCode
 from website.core.dataModels.websocket import WebsocketEvent, WebsocketLogoutEvent
 from website.models import PerDeviceToken
 from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
-
-logger = logging.getLogger(__name__)
 
 
 class UserConsumer(RateLimitedWebsocketConsumer):
@@ -36,29 +33,13 @@ class UserConsumer(RateLimitedWebsocketConsumer):
 
         token = self.get_token(token_key)
         if not token:
-            logger.warning(
-                "User WebSocket authorization rejected: reason=%s protocol=%s client=%s path=%s",
-                "missing token" if not token_key else "invalid token",
-                "authorization" if is_standard_protocol else "websocket protocol",
-                self.scope.get("client"),
-                self.scope.get("path"),
-            )
             return False, is_standard_protocol, token_key
 
         self.user = token.user
         self.token_obj = token
         self.token = token_key
         self.device_id = self.token_obj.device_id
-        if not token.user.is_authenticated:
-            logger.warning(
-                "User WebSocket authorization rejected: reason=unauthenticated user protocol=%s client=%s path=%s",
-                "authorization" if is_standard_protocol else "websocket protocol",
-                self.scope.get("client"),
-                self.scope.get("path"),
-            )
-            return False, is_standard_protocol, token_key
-
-        return True, is_standard_protocol, token_key
+        return token.user.is_authenticated, is_standard_protocol, token_key
 
     def send_error(self, error_code):
         self.send_json({'is_encrypted': False, 'event': {'op_code': EventCode.WEBSOCKET_ERROR.value, 'data': [{'error_code': f"errors.{error_code}"}]}})
