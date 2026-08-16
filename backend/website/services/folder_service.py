@@ -266,6 +266,11 @@ def has_folder_depth_for_subfolder(parent: Folder) -> bool:
     return parent.get_level() + 1 <= MAX_FOLDER_DEPTH
 
 def has_folder_depth_for_move(folder: Folder, new_parent: Folder) -> bool:
+    # Moving another folder can update MPTT coordinates for this object while
+    # it is still held in the move task's original queryset. Refresh the tree
+    # fields before using get_descendants().
+    folder.refresh_from_db()
+
     deepest_level = (
         folder
         .get_descendants(include_self=True)
