@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from django.core.exceptions import ValidationError
+from celery.utils.log import get_task_logger
 
 from website.celery import app
 from website.constants import EventCode
@@ -10,6 +11,8 @@ from website.models import Folder, File
 from website.queries.selectors import get_folder
 from website.services import folder_service, file_service
 from website.websockets.utils import send_event, send_message
+
+logger = get_task_logger(__name__)
 
 
 def move_group(context: RequestContext, grouped_items, new_parent, processed_count, last_percentage, total_length, is_folder):
@@ -114,4 +117,5 @@ def move_task(context: dict, ids: list[str], new_parent_id: str):
         send_message(message=e.message, args=None, finished=True, context=context, isError=True)
 
     except Exception as e:
+        logger.exception("Exception in move_task")
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)

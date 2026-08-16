@@ -1,5 +1,7 @@
 import traceback
 
+from celery.utils.log import logger
+
 from website.celery import app
 from website.constants import EventCode
 from website.core.Serializers import FolderSerializer
@@ -33,7 +35,7 @@ def move_to_trash_task(context: dict, ids: list[str]):
 
         send_message(message="toasts.itemsMovedToTrash", args=None, finished=True, context=context)
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Exception in move_to_trash_task")
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task
@@ -61,5 +63,5 @@ def restore_from_trash_task(context: dict, ids: list[str]):
 
         send_message(message="toasts.itemsRestoredFromTrash", args=None, finished=True, context=context)
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Exception in restore_from_trash_task")
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)

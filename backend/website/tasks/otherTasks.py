@@ -1,5 +1,4 @@
 import ipaddress
-import traceback
 from datetime import timedelta
 from io import BytesIO
 from itertools import groupby
@@ -7,6 +6,7 @@ from itertools import groupby
 import rawpy
 import requests
 from PIL import Image
+from celery.utils.log import logger
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -53,7 +53,7 @@ def lock_folder_task(context: dict, folder_id: str, password: str, change_type: 
                                              data={"folder_id": folder.id, "status": change_type})
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Exception in lock_folder_task")
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task
@@ -67,7 +67,7 @@ def unlock_folder_task(context: dict, folder_id: str, change_type: str):
                                              data={"folder_id": folder.id, "status": change_type})
         send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Exception in unlock_folder_task")
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
 @app.task(expires=2)

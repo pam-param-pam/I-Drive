@@ -243,7 +243,7 @@
     }
   },
   "prompts": {
-    "abortDownload": "Anuluj pobieranie",
+    "abortDownloads": "Anuluj pobieranie",
     "abortUploads": "Anuluj przesyłanie",
     "aborting": "Przerywanie...",
     "abortAllWarning": "Czy jesteś pewien? Cały progress zostanie utracony!",

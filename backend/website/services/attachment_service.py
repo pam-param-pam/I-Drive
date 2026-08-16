@@ -11,6 +11,11 @@ def _handle_missing_media_attachment(resource: DiscordAttachmentMixin, owner, fi
     if error.status != 404:
         return
 
+    # only missing message or missing attachment. Other errors like missing webhook/bot/channel etc are too fuck up of a scenario to handle tbf
+    if error.code not in {10008, 10096}:
+        return
+
+
     model_name = resource._meta.model_name
 
     if isinstance(resource, Fragment):

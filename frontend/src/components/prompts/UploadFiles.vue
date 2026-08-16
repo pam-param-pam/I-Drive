@@ -251,6 +251,7 @@ export default {
       async abortAll() {
          this.showHover({
             prompt: "AbortAllWarning",
+            props: {transferType: this.activeView},
             confirm: () => {
                if (this.activeView === "downloads") {
                   getDownloader().abortAll()
