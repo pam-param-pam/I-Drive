@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Stage 1: Build Node.js application
 ARG BACKEND_IMAGE=ghcr.io/pam-param-pam/idrive-backend:latest
 FROM node:latest AS builder
