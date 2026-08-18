@@ -161,7 +161,7 @@ class CheckOwnership(BaseResourceCheck):
 
         owner_id = self._require_attr(resource, 'owner_id')
         if owner_id != request.user.id:
-            raise ResourceNotFoundError()
+            raise ResourceNotFoundError("1")
 
 
 class CheckRoot(BaseResourceCheck):
@@ -209,14 +209,8 @@ class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
 
             public_ip_obj = ipaddress.ip_address(get_public_ip())
             allowed = ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj
-            if not allowed:
-                print("_is_ip_allowed")
-                print(f"ip_obj: {ip_obj}")
-                print(f"get_public_ip(): {get_public_ip()}")
-                print(f"public_ip_obj: {public_ip_obj}")
             return allowed
         except ValueError:
-            print("VALUE ERROR IN _is_ip_allowed")
             return False
 
     def _check_ip(self, request):

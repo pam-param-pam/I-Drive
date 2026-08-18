@@ -13,7 +13,7 @@ def get_file(file_id: str) -> File:
     try:
         file = File.objects.select_related("owner", "parent").get(id=file_id)
     except File.DoesNotExist:
-        raise ResourceNotFoundError()
+        raise ResourceNotFoundError("3")
     return file
 
 
@@ -21,7 +21,7 @@ def get_folder(folder_id: str) -> Folder:
     try:
         folder = Folder.objects.select_related("owner", "parent").get(id=folder_id)
     except Folder.DoesNotExist:
-        raise ResourceNotFoundError()
+        raise ResourceNotFoundError("4")
     return folder
 
 
@@ -32,7 +32,7 @@ def get_item(obj_id: str) -> Item:
         try:
             item = get_file(obj_id)
         except ResourceNotFoundError:
-            raise ResourceNotFoundError()
+            raise ResourceNotFoundError("5")
     return item
 
 
