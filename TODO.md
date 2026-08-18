@@ -25,5 +25,4 @@
 7) Extract items decorator should extract to files and folders not to 1 array items?
 8) Zip download, delete files inside = error prob
 9) cancel/confirm etc prompts should be called independently
-10) Add hashing and salting to share.token (no salt here), share.password, folder.password
 11) 

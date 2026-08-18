@@ -32,13 +32,13 @@ RAW_EXTRACTION_STALE_TIMEOUT = 30
 
 @app.task
 def update_router_public_ip():
-    response = requests.get("https://api.ipify.org", timeout=3)
+    response = requests.get("https://api.ipify.org", timeout=5)
     response.raise_for_status()
 
     value = response.text.strip()
     ipaddress.ip_address(value)  # Validate IPv4 or IPv6
     key = cache_service.get_router_ip_key()
-    cache.set(key, value, timeout=120)
+    cache.set(key, value, timeout=36000)
 
     return value
 

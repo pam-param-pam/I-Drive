@@ -305,7 +305,7 @@ export class RequestProducer extends PipelineWorker {
          state.markFileUploaded(frontendId)
          // todo FIX
          let file = getUploader().discordResponseConsumer.getOrCreateState(queueFile.fileObj)
-         getUploader().backendFileQueue.put(file)
+         getUploader().queues.backendFileQueue.put(file)
          return true
       }
       return false

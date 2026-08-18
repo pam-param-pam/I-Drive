@@ -23,7 +23,7 @@ def setup_periodic_tasks(sender, **kwargs):
     )
 
     sender.add_periodic_task(
-        timedelta(minutes=1),
+        timedelta(minutes=5),
         update_router_public_ip.s(),
     )
 
