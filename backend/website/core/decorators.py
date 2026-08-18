@@ -169,7 +169,7 @@ def extract_resources(*rules):
                 continue
         model_names = ", ".join(m.__name__ for m in models)
         if hide_error_details:
-            raise ResourceNotFoundError("2")
+            raise ResourceNotFoundError()
         raise ResourceNotFoundError(f"Couldn't find [{model_names}] with id={obj_id!r}")
 
     def decorator(view_func):

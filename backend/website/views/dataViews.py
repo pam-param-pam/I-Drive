@@ -385,7 +385,7 @@ def get_fragment_url_view(request, fragment_id):
     file = fragment.file
     check_resource_perms(request, file, default_checks)
 
-    url = attachment_service.get_attachment_url(request.user, fragment, file.name)
+    url = attachment_service.get_attachment_url(request.user, fragment, file)
     return JsonResponse({"url": url})
 
 

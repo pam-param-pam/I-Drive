@@ -44,11 +44,10 @@ def get_attachment_url(user, resource: DiscordAttachmentMixin, file: File | str,
     try:
         return discord.get_file_url(user, resource.message_id, resource.attachment_id, resource.channel.discord_id, retries=retries)
     except DiscordError as error:
-        if isinstance(file, str):
-            print("get_attachment_url")
-            print(file)
-            file = get_file(file)
-        _handle_missing_media_attachment(resource, user, file, error)
+        if error.status == 404:
+            if isinstance(file, str):
+                file = get_file(file)
+            _handle_missing_media_attachment(resource, user, file, error)
         raise
 
 

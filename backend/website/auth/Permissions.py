@@ -161,7 +161,7 @@ class CheckOwnership(BaseResourceCheck):
 
         owner_id = self._require_attr(resource, 'owner_id')
         if owner_id != request.user.id:
-            raise ResourceNotFoundError("1")
+            raise ResourceNotFoundError()
 
 
 class CheckRoot(BaseResourceCheck):
@@ -217,7 +217,7 @@ class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
         ip, _ = get_ip(request)
         if self._is_ip_allowed(ip):
             return True
-        raise ResourceNotFoundError("IP")
+        raise ResourceNotFoundError()
 
 
 class CheckItemLock(CheckIpPrivateOrAllowedIfResourceLocked):
