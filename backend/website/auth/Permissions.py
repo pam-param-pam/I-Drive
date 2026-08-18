@@ -117,9 +117,15 @@ class AllowedIP(BasePermissionWithMessage):
 
     def check_permission(self, request, view):
         ip, _ = get_ip(request)
-        ip_obj = ipaddress.ip_address(ip)
-        return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED
+        return self._is_ip_allowed(ip)
 
+    def _is_ip_allowed(self, ip):
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            public_ip_obj = ipaddress.ip_address(get_public_ip())
+            return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj
+        except ValueError:
+            return False
 
 """============RESOURCE PERMS============"""
 
@@ -199,8 +205,13 @@ class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
 
     def _is_ip_allowed(self, ip):
         try:
+            print("_is_ip_allowed")
             ip_obj = ipaddress.ip_address(ip)
+            print(f"ip_obj: {ip_obj}")
             public_ip_obj = ipaddress.ip_address(get_public_ip())
+            print(f"get_public_ip(): {get_public_ip()}")
+            print(f"public_ip_obj: {public_ip_obj}")
+            print(f"ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj: {ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj}")
             return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj
         except ValueError:
             return False
@@ -209,7 +220,7 @@ class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
         ip, _ = get_ip(request)
         if self._is_ip_allowed(ip):
             return True
-        raise ResourceNotFoundError()
+        raise ResourceNotFoundError("IP")
 
 
 class CheckItemLock(CheckIpPrivateOrAllowedIfResourceLocked):
