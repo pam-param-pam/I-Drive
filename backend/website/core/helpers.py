@@ -235,4 +235,9 @@ def timed(func):
 
 def get_public_ip():
     key = cache_service.get_router_ip_key()
-    return cache.get(key)
+    cached_ip = cache.get(key)
+    if not cached_ip:
+        from ..tasks.otherTasks import update_router_public_ip
+        update_router_public_ip.delay()
+
+    return cached_ip

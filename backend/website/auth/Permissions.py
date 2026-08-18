@@ -205,15 +205,18 @@ class CheckIpPrivateOrAllowedIfResourceLocked(BaseResourceCheck):
 
     def _is_ip_allowed(self, ip):
         try:
-            print("_is_ip_allowed")
             ip_obj = ipaddress.ip_address(ip)
-            print(f"ip_obj: {ip_obj}")
+
             public_ip_obj = ipaddress.ip_address(get_public_ip())
-            print(f"get_public_ip(): {get_public_ip()}")
-            print(f"public_ip_obj: {public_ip_obj}")
-            print(f"ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj: {ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj}")
-            return ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj
+            allowed = ip_obj.is_private or ip in ALLOWED_IPS_LOCKED or ip_obj == public_ip_obj
+            if not allowed:
+                print("_is_ip_allowed")
+                print(f"ip_obj: {ip_obj}")
+                print(f"get_public_ip(): {get_public_ip()}")
+                print(f"public_ip_obj: {public_ip_obj}")
+            return allowed
         except ValueError:
+            print("VALUE ERROR IN _is_ip_allowed")
             return False
 
     def _check_ip(self, request):
