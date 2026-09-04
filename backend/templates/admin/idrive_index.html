@@ -1,0 +1,14 @@
+{% extends "admin/index.html" %}
+{% load monitoring_tags %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <a href="{% grafana_url %}"
+       class="button"
+       target="_blank"
+       rel="noopener noreferrer">
+        Open Grafana
+    </a>
+</div>
+{{ block.super }}
+{% endblock %}

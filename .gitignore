@@ -2,7 +2,6 @@
 .env
 backend/db.sqlite3
 backend/db.json
-backend/templates/
 backend/website/__pycache__/
 backend/website/views/__pycache__/
 frontend/dist/
