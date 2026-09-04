@@ -37,7 +37,9 @@ jobs:
             mkdir -p ~/idrive
             cd ~/idrive
 
-            touch config.overrides.json
+            if [ ! -s config.overrides.json ]; then
+              printf '{}\n' > config.overrides.json
+            fi
 
             echo "Removing existing .env file..."
             rm -f .env

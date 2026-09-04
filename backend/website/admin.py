@@ -21,6 +21,8 @@ from .models.file_related_models import RawMetadata, PhotoMetadata
 from .models.other_models import Notification, RawExtractionClaim
 from .services import folder_service, file_service, create_file_service, item_service, auth_service
 
+admin.site.index_template = "admin/idrive_index.html"
+
 admin.site.register(UserSettings, SimpleHistoryAdmin)
 admin.site.register(UserPerms, SimpleHistoryAdmin)
 admin.site.register(DiscordSettings, SimpleHistoryAdmin)
