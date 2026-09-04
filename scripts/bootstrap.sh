@@ -20,7 +20,7 @@ ADMIN_LOGIN="admin"
 ADMIN_PASSWORD="admin"
 
 CONFIG_FILE_SOURCE=""
-CONFIG_FILE_NAME="config.override.json"
+CONFIG_FILE_NAME="config.overrides.json"
 
 fail() {
   echo "ERROR: $*" >&2
@@ -45,7 +45,7 @@ Options:
   -h, --help                   Show this help
 
 Example:
-  $0 --dev ${IS_DEV_ENV} --protocol ${PROTOCOL} --deployment-host ${DEPLOYMENT_HOST} --port ${PORT} --backend-port ${BACKEND_PORT} --config-file ./config.override.json --admin-login ${ADMIN_LOGIN} --admin-password '<password>'
+  $0 --dev ${IS_DEV_ENV} --protocol ${PROTOCOL} --deployment-host ${DEPLOYMENT_HOST} --port ${PORT} --backend-port ${BACKEND_PORT} --config-file ./config.overrides.json --admin-login ${ADMIN_LOGIN} --admin-password '<password>'
 EOF
 }
 
@@ -251,7 +251,7 @@ BACKEND_PORT=${BACKEND_PORT}
 NGINX_PORT=${PORT}
 
 # backend config override file inside container
-IDRIVE_CONFIG_FILE=/config/config.override.json
+IDRIVE_CONFIG_FILE=/config/config.overrides.json
 
 POSTGRES_VOLUME=${POSTGRES_VOLUME}
 POSTGRES_USER=idrive
