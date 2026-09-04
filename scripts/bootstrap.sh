@@ -259,6 +259,8 @@ POSTGRES_PASSWORD=$(openssl rand -hex 32)
 REDIS_PASSWORD=$(openssl rand -hex 32)
 BACKEND_SECRET_KEY=$(openssl rand -hex 64)
 SIGNING_SECRET=$(openssl rand -hex 64)
+GRAFANA_ADMIN_USER=${ADMIN_LOGIN}
+GRAFANA_ADMIN_PASSWORD=${ADMIN_PASSWORD}
 EOF
 
 chmod 600 .env

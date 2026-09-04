@@ -104,18 +104,72 @@ After completing these steps, you should have:
 > [!IMPORTANT] 
 > If you want to add another bot in the future, you can skip step 6. The required permissions will be granted to the bot automatically after you invite the bot to the server.
 
-# Building from source
+# Local development
 
-1) Run `curl -fsSL https://raw.githubusercontent.com/pam-param-pam/I-Drive/refs/heads/master/scripts/setup-dev.sh -o setup-dev.sh && chmod +x setup-dev.sh && bash setup-dev.sh`
-2) Go to browser and type `localhost:5173`
+The local environment runs PostgreSQL, Redis, Prometheus, and Grafana in Docker. Django, Vite, and the optional Celery processes run natively with hot reload.
 
-> [!NOTE] 
-> This creates a standard development environment with default configuration. **DO NOT USE IT IN PRODUCTION**.
+> [!NOTE]
+> The local configuration uses development credentials and settings. **Do not use it in production.**
 
-You can adjust the configuration after setup:
+## Prerequisites
 
-backend: `backend/.env`
-frontend: `frontend/.env`
+- Python 3.12
+- Node.js and npm
+- Docker with Docker Compose
+- A JetBrains IDE with Python support, such as PyCharm
+
+## First-time setup
+
+Clone the repository and install the backend and frontend dependencies.
+
+On Windows:
+
+```powershell
+py -3.12 -m venv backend/.venv
+backend\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+npm --prefix frontend install
+```
+
+On Linux or macOS:
+
+```bash
+python3.12 -m venv backend/.venv
+backend/.venv/bin/python -m pip install -r backend/requirements.txt
+npm --prefix frontend install
+```
+
+In the IDE, set the project Python interpreter to `backend/.venv`. Then select **File → Reload All from Disk** so the shared configurations from `.run` are loaded.
+
+## Running the application
+
+Select **Local development** from the run-configuration list and click **Run**. This configuration:
+
+1. Starts PostgreSQL, Redis, Prometheus, and Grafana using `local-testing.docker-compose.yml`.
+2. Waits until the infrastructure is ready.
+3. Applies pending Django migrations.
+4. Creates the Django administrator if it does not exist.
+5. Starts Django and Vite with hot reload.
+
+Celery is optional. After **Local development** is running, start the separate **Local Celery** configuration to run the general worker, websocket worker, deletion worker, and Celery Beat.
+
+Stopping a run configuration stops the processes managed by that configuration. Docker volumes are not deleted, so PostgreSQL, Redis, Prometheus, and Grafana data persists between runs.
+
+## Local addresses
+
+| Service    | Address                 |
+|------------|-------------------------|
+| Frontend   | http://localhost:5173   |
+| Backend    | http://localhost:8000   |
+| Grafana    | http://localhost:3000   |
+| Prometheus | http://localhost:9090   |
+
+The default Django and Grafana login is `admin` / `admin`.
+
+## Configuration
+
+Local defaults are defined by the launcher and `local-testing.docker-compose.yml`. To override them, create or edit `.env` in the repository root. The same file is loaded by the native processes and Docker Compose.
+
+Grafana provisioning and dashboards are mounted from `grafana/`. Prometheus loads its configuration from `prometheus/prometheus.yml`, so local monitoring changes do not require custom development images.
 
 
 # Performance
@@ -138,7 +192,7 @@ A lot of requests to discord will also require more bots.
 
 Upload speed in the web interface is limited by thumbnail processing and internal browser bottlenecks.
 
-For maximum speed, use the [iDrive-api-wrapper](https://github.com/pam-param-pam/iDrive-api-wrapper).
+For maximum speed, use the [iDrive-Toolkit](https://github.com/pam-param-pam/iDrive-api-wrapper).
 
 With the API wrapper, downloads can reach the maximum speed available from your ISP. In testing, downloads reached around **200 MB/s**. Uploads reached around **50 MB/s**, with thumbnail extraction being the main bottleneck.
 

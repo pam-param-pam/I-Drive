@@ -7,6 +7,7 @@ from website.core.decorators import check_resource_permissions, extract_file_fro
 from website.core.errors import ResourceNotFoundError
 from website.models import File, Subtitle, Moment, UserZIP, Thumbnail
 from website.services import media_service
+from website.services.metric_service import record_stream_response
 
 
 @api_view(['GET'])
@@ -16,7 +17,9 @@ from website.services import media_service
 @check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckState], resource_key="file_obj")
 def serve_thumbnail(request, file_obj: File, thumbnail_id):
     thumbnail = Thumbnail.objects.get(file=file_obj, id=thumbnail_id)
-    return media_service.get_thumbnail_response(request, file_obj, thumbnail)
+    response = media_service.get_thumbnail_response(request, file_obj, thumbnail)
+    record_stream_response(response)
+    return response
 
 
 @api_view(['GET'])
@@ -26,7 +29,9 @@ def serve_thumbnail(request, file_obj: File, thumbnail_id):
 @check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckTrash, CheckState], resource_key="file_obj")
 def serve_subtitle(request, file_obj: File, subtitle_id):
     subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
-    return media_service.get_subtitle_response(request, file_obj, subtitle)
+    response = media_service.get_subtitle_response(request, file_obj, subtitle)
+    record_stream_response(response)
+    return response
 
 
 @api_view(['GET'])
@@ -36,7 +41,9 @@ def serve_subtitle(request, file_obj: File, subtitle_id):
 @check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckTrash, CheckState], resource_key="file_obj")
 def serve_moment(request, file_obj: File, moment_id):
     moment = Moment.objects.get(file=file_obj, id=moment_id)
-    return media_service.get_moment_response(request, file_obj, moment)
+    response = media_service.get_moment_response(request, file_obj, moment)
+    record_stream_response(response)
+    return response
 
 
 @api_view(['GET'])
@@ -48,8 +55,11 @@ def serve_moment(request, file_obj: File, moment_id):
 def stream_file(request, file_obj: File):
     zip_mode = request.GET.get("zip_mode", False)
     if zip_mode:
-        return media_service.get_zip_entry_response(request, file_obj)
-    return media_service.get_file_response(request, file_obj)
+        response = media_service.get_zip_entry_response(request, file_obj)
+    else:
+        response = media_service.get_file_response(request, file_obj)
+    record_stream_response(response)
+    return response
 
 
 @api_view(['GET'])
@@ -63,4 +73,5 @@ def stream_zip_files(request, token):
         raise ResourceNotFoundError()
 
     response = media_service.get_zip_response(request, user_zip)
+    record_stream_response(response)
     return response

@@ -52,3 +52,21 @@ jobs:
           BACKEND_IMAGE=ghcr.io/${{ github.repository_owner }}/idrive-backend:latest
         cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-nginx:cache
         cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-nginx:cache,mode=max
+
+    - name: Build & Push Prometheus Image
+      uses: docker/build-push-action@v7
+      with:
+        context: ./prometheus
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/idrive-prometheus:latest
+        cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-prometheus:cache
+        cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-prometheus:cache,mode=max
+
+    - name: Build & Push Grafana Image
+      uses: docker/build-push-action@v7
+      with:
+        context: ./grafana
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/idrive-grafana:latest
+        cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-grafana:cache
+        cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/idrive-grafana:cache,mode=max

@@ -14,6 +14,11 @@ class Command(BaseCommand):
         parser.add_argument("--no-staff", action="store_true", help="Create the user without staff/superuser permissions.")
         parser.add_argument("--login", "--username", dest="username", help="Username/login for the new user.")
         parser.add_argument("--password", help="Password for the new user. If omitted, it will be requested interactively.")
+        parser.add_argument(
+            "--if-not-exists",
+            action="store_true",
+            help="Exit successfully without changing anything when the username already exists.",
+        )
 
     def ask_staff(self) -> bool:
         while True:
@@ -48,6 +53,10 @@ class Command(BaseCommand):
             return
 
         if User.objects.filter(username=username).exists():
+            if options["if_not_exists"]:
+                self.stdout.write(f"User '{username}' already exists; skipping creation.")
+                return
+
             self.stderr.write("Error: A user with that username already exists.")
             return
 

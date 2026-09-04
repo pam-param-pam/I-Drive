@@ -5,7 +5,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.utils import timezone
 
-from website.constants import REMOTE_MISSING_FILES_WAIT_DAYS
+from website.core.dataModels.http import RequestContext
+from website.constants import REMOTE_MISSING_FILES_WAIT_DAYS, EventCode
 from website.models.other_models import NotificationType, NotificationKind
 from website.services import user_service
 from website.config import MAX_FILES_IN_FOLDER
@@ -17,6 +18,7 @@ from website.models.file_related_models import RawMetadata, PhotoMetadata, Media
 from website.models.mixin_models import ItemState
 from website.queries.selectors import get_discord_author, get_discord_channel
 from website.services import attachment_service, touch_service
+from website.websockets.utils import send_event
 
 
 def create_thumbnail_internal(file_obj: File, data: dict) -> Thumbnail:
@@ -348,3 +350,7 @@ def mark_remote_missing(owner, file_obj: File):
             message="notifications.discord_fragment_missing.message",
             data={"file": file_obj.name, "days_till_delete": REMOTE_MISSING_FILES_WAIT_DAYS},
         )
+
+    send_event(RequestContext.from_user(owner.id), file_obj.parent, EventCode.ITEM_MOVE_OUT, [file_obj.id])
+
+"json schema"

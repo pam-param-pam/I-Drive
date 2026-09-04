@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.http import HttpResponseNotAllowed, HttpResponseNotFound
 from django.urls import path as django_path
 from django.urls import re_path
+from django.urls import include
 from django.views.decorators.csrf import csrf_exempt
 from django.views.static import serve
 
@@ -155,6 +156,7 @@ urlpatterns = [
     path("shares/<token>/zip", ['POST'], create_share_zip_model, name="create zip for share"),
 
     django_path('admin', admin.site.urls),
+    django_path("", include("django_prometheus.urls")),
 
     path('healthcheck/', ['GET'], healthcheck_view, name='check health of the backend server'),
 

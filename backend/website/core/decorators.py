@@ -60,18 +60,6 @@ def extract_file_from_signed_url(view_func):
     return wrapper
 
 
-# def extract_file_from_signed_url(view_func):
-#     @wraps(view_func)
-#     def wrapper(request, signed_file_id, *args, **kwargs):
-#         file_id = unsign_resource("thumbnail", signed_file_id)
-#         file_obj = get_file(file_id)
-#         kwargs["file_obj"] = file_obj
-#         request.META['signed_file_id'] = signed_file_id
-#         return view_func(request, *args, **kwargs)
-#
-#     return wrapper
-
-
 def check_resource_permissions(checks: list, resource_key: Union[str, list[str]], optional: bool = False):
     if not isinstance(checks, CheckGroup):
         if isinstance(checks, list):

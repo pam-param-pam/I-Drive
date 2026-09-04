@@ -15,7 +15,7 @@ from .folder_models import Folder
 
 
 class File(models.Model):
-    internal_created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    internal_created_at = models.DateTimeField(default=timezone.now)
     id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
     name = models.CharField(max_length=100)
     extension = models.CharField(max_length=20)
@@ -41,6 +41,21 @@ class File(models.Model):
     history = HistoricalRecords()
 
     class Meta:
+        # indexes = [
+        #     models.Index(
+        #         fields=["parent", "state", "inTrash"],
+        #         name="file_parent_state_trash_idx",
+        #     ),
+        #     models.Index(
+        #         fields=["owner", "state", "inTrash"],
+        #         name="file_owner_state_trash_idx",
+        #     ),
+        #     models.Index(
+        #         fields=["owner", "state", "inTrash", "inTrashSince"],
+        #         name="file_cleanup_idx",
+        #     ),
+        # ]
+
         constraints = [
             CheckConstraint(
                 condition=Q(state__in=[state.value for state in ItemState]),

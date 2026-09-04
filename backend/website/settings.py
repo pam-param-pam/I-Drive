@@ -25,6 +25,7 @@ def env_required(name: str) -> str:
 
 IS_DEV_ENV = env_bool("IS_DEV_ENV")
 BEHIND_NGINX = env_bool("BEHIND_NGINX")
+GRAFANA_URL = "/grafana/" if BEHIND_NGINX else "http://localhost:3000/"
 
 PROTOCOL = env_required("PROTOCOL")
 DEPLOYMENT_HOST = env_required("DEPLOYMENT_HOST")
@@ -93,6 +94,7 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 102400000  # higher than the count of fields
 
 # Application definition
 INSTALLED_APPS = [
+    'django_prometheus',
     'simple_history',
     'django.contrib.admin',
     'website',
@@ -116,6 +118,7 @@ DJOSER = {
 }
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'website.core.http.middlewares.ScriptNamePathMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -130,6 +133,7 @@ MIDDLEWARE = [
     'website.core.http.middlewares.FailedRequestLoggerMiddleware',
     'website.core.http.middlewares.ApplyRateLimitHeadersMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 

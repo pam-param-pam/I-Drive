@@ -37,7 +37,7 @@ jobs:
             mkdir -p ~/idrive
             cd ~/idrive
 
-            touch config.overrides.json
+            touch config.override.json
 
             echo "Removing existing .env file..."
             rm -f .env
@@ -63,6 +63,9 @@ jobs:
 
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+
+            GRAFANA_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }}
+            GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
             EOF
 
             echo "Downloading docker-compose.yml..."

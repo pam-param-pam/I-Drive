@@ -91,7 +91,7 @@ FILE_TYPES = {
         ".go", ".rs", ".swift", ".zig", ".dart", ".kts", ".kt",
         ".lua", ".conf", ".md", ".gitignore", ".vue", ".scss",
         ".editorconfig", ".tsconfig", ".babelrc", ".eslintrc", ".prettierrc",
-        ".srs", ".vtt", ".svg",
+        ".srs", ".vtt", ".svg", ".scala",
     )
 }
 
