@@ -66,10 +66,10 @@ services:
       retries: 3
 
     volumes:
-      - ./config.override.json:/config/config.override.json:ro
+      - ./config.overrides.json:/config/config.overrides.json:ro
 
     environment:
-      - IDRIVE_CONFIG_FILE=/config/config.override.json
+      - IDRIVE_CONFIG_FILE=/config/config.overrides.json
 
       - IS_DEV_ENV=${IS_DEV_ENV:?IS_DEV_ENV IS REQUIRED}
       - BEHIND_NGINX=True
