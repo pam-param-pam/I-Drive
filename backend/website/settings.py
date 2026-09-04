@@ -65,6 +65,7 @@ else:
         "localhost",
         "127.0.0.1",
         "::1",
+        "backend",
         DEPLOYMENT_HOST,
         *LAN_HOSTS,
     ]
