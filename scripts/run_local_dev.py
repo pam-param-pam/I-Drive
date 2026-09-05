@@ -16,6 +16,8 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_DIR / "backend"
 FRONTEND_DIR = PROJECT_DIR / "frontend"
 COMPOSE_FILE = PROJECT_DIR / "local-testing.docker-compose.yml"
+FULL_STACK_PROJECT_NAME = "idrive-full-local"
+FULL_STACK_COMPOSE_FILE = PROJECT_DIR / "docker-compose.yml"
 INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49173)
 INFRASTRUCTURE_SERVICES = ("redis", "postgres", "prometheus", "grafana")
 
@@ -55,6 +57,9 @@ def load_project_environment() -> None:
         "POSTGRES_NAME": "idrive-postgres",
         "POSTGRES_USER": "admin",
         "POSTGRES_PASSWORD": "admin",
+        "GRAFANA_ADMIN_USER": "admin",
+        "GRAFANA_ADMIN_PASSWORD": "admin",
+        "NGINX_PORT": "80",
     }
     for name, value in defaults.items():
         os.environ.setdefault(name, value)
@@ -87,6 +92,13 @@ def backend_environment() -> dict[str, str]:
 def run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> None:
     print(f"\n> {' '.join(command)}", flush=True)
     subprocess.run(command, cwd=cwd, env=env, check=True)
+
+
+def display_urls(title: str, urls: tuple[tuple[str, str], ...]) -> None:
+    print(f"\n{title} URLs:", flush=True)
+    for label, url in urls:
+        print(f"  {label}: {url}", flush=True)
+    print(flush=True)
 
 
 def start(
@@ -174,6 +186,16 @@ def main() -> int:
         manage_py = str(BACKEND_DIR / "manage.py")
         backend_env = backend_environment()
 
+        full_stack_command = [
+            docker,
+            "compose",
+            "--project-name",
+            FULL_STACK_PROJECT_NAME,
+            "-f",
+            str(FULL_STACK_COMPOSE_FILE),
+        ]
+        run([*full_stack_command, "stop"], cwd=PROJECT_DIR)
+
         run(
             [docker, "compose", "-f", str(COMPOSE_FILE), "up", "-d", "--wait"],
             cwd=PROJECT_DIR,
@@ -193,6 +215,16 @@ def main() -> int:
         ]
         for command, cwd, env in commands:
             processes.append(start(command, cwd=cwd, env=env))
+
+        display_urls(
+            "Local development",
+            (
+                ("Application", "http://localhost:5173"),
+                ("Backend", os.environ["BACKEND_BASE_URL"]),
+                ("Grafana", f"http://localhost:{os.getenv('GRAFANA_PORT', '3000')}"),
+                ("Prometheus", f"http://localhost:{os.getenv('PROMETHEUS_PORT', '9090')}"),
+            ),
+        )
 
         while all(process.poll() is None for process in processes):
             time.sleep(0.25)

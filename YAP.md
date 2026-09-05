@@ -63,6 +63,10 @@ Asynchronous task queue for delegating long tasks outside of HTTP call lifecycle
 3) Periodically cleaning up the database
 4) Moving files between folders or to Trash
 
+### Monitoring
+Prometheus collects application and infrastructure metrics for local monitoring.
+Grafana visualizes those metrics through provisioned dashboards, making the system's health and performance easier to inspect.
+
 ## Solving Discord's rate limit problems
     
 On average Discord allows a single bot to make 1 request a second, that's way too little! 

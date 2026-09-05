@@ -41,20 +41,20 @@ class File(models.Model):
     history = HistoricalRecords()
 
     class Meta:
-        # indexes = [
-        #     models.Index(
-        #         fields=["parent", "state", "inTrash"],
-        #         name="file_parent_state_trash_idx",
-        #     ),
-        #     models.Index(
-        #         fields=["owner", "state", "inTrash"],
-        #         name="file_owner_state_trash_idx",
-        #     ),
-        #     models.Index(
-        #         fields=["owner", "state", "inTrash", "inTrashSince"],
-        #         name="file_cleanup_idx",
-        #     ),
-        # ]
+        indexes = [
+            models.Index(
+                fields=["parent", "state", "inTrash"],
+                name="file_parent_state_trash_idx",
+            ),
+            models.Index(
+                fields=["owner", "state", "inTrash"],
+                name="file_owner_state_trash_idx",
+            ),
+            models.Index(
+                fields=["owner", "state", "inTrash", "inTrashSince"],
+                name="file_cleanup_idx",
+            ),
+        ]
 
         constraints = [
             CheckConstraint(

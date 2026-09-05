@@ -9,25 +9,16 @@
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
       "targets": [
         {
-          "expr": "sum by (method) (rate(django_http_requests_total_by_method_total[5m]))",
+          "expr": "sum by (method) (rate(django_http_requests_total_by_view_transport_method_total{view!=\"prometheus-django-metrics\"}[5m]))",
           "legendFormat": "{{method}}",
           "refId": "A"
-        },
-        {
-          "expr": "sum by (method) (increase(django_http_requests_total_by_method_total[$__range]))",
-          "instant": true,
-          "legendFormat": "{{method}}",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {"unit": "reqps"},
-        "overrides": [
-          {"matcher": {"id": "byFrameRefID", "options": "A"}, "properties": [{"id": "custom.hideFrom", "value": {"legend": true, "tooltip": false, "viz": false}}]},
-          {"matcher": {"id": "byFrameRefID", "options": "B"}, "properties": [{"id": "unit", "value": "short"}, {"id": "decimals", "value": 0}, {"id": "custom.axisPlacement", "value": "hidden"}, {"id": "custom.hideFrom", "value": {"legend": false, "tooltip": true, "viz": true}}]}
-        ]
+        "overrides": []
       },
-      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom"}}
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
     },
     {
       "title": "HTTP responses by status",
@@ -35,25 +26,16 @@
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
       "targets": [
         {
-          "expr": "sum by (status) (rate(django_http_responses_total_by_status_total[5m]))",
+          "expr": "sum by (status) (rate(django_http_responses_total_by_status_view_method_total{view!=\"prometheus-django-metrics\"}[5m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
-        },
-        {
-          "expr": "sum by (status) (increase(django_http_responses_total_by_status_total[$__range]))",
-          "instant": true,
-          "legendFormat": "{{status}}",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {"unit": "reqps"},
-        "overrides": [
-          {"matcher": {"id": "byFrameRefID", "options": "A"}, "properties": [{"id": "custom.hideFrom", "value": {"legend": true, "tooltip": false, "viz": false}}]},
-          {"matcher": {"id": "byFrameRefID", "options": "B"}, "properties": [{"id": "unit", "value": "short"}, {"id": "decimals", "value": 0}, {"id": "custom.axisPlacement", "value": "hidden"}, {"id": "custom.hideFrom", "value": {"legend": false, "tooltip": true, "viz": true}}]}
-        ]
+        "overrides": []
       },
-      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom"}}
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
     },
     {
       "title": "HTTP latency (p95)",
@@ -61,7 +43,7 @@
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(django_http_requests_latency_seconds_by_view_method_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(django_http_requests_latency_seconds_by_view_method_bucket{view!=\"prometheus-django-metrics\"}[5m])))",
           "legendFormat": "p95",
           "refId": "A"
         }
@@ -75,33 +57,359 @@
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
       "targets": [
         {
-          "expr": "rate(idrive_streamed_bytes_total[5m])",
+          "expr": "sum(rate(idrive_streamed_bytes_total[5m]))",
           "legendFormat": "bytes/s",
           "refId": "A"
-        },
-        {
-          "expr": "sum(increase(idrive_streamed_bytes_total[$__range]))",
-          "instant": true,
-          "legendFormat": "Streamed data",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {"unit": "Bps"},
-        "overrides": [
-          {"matcher": {"id": "byFrameRefID", "options": "A"}, "properties": [{"id": "custom.hideFrom", "value": {"legend": true, "tooltip": false, "viz": false}}]},
-          {"matcher": {"id": "byFrameRefID", "options": "B"}, "properties": [{"id": "unit", "value": "bytes"}, {"id": "decimals", "value": 0}, {"id": "custom.axisPlacement", "value": "hidden"}, {"id": "custom.hideFrom", "value": {"legend": false, "tooltip": true, "viz": true}}]}
-        ]
+        "overrides": []
       },
-      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom"}}
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
+    },
+    {
+      "id": 100,
+      "title": "Backend availability",
+      "type": "timeseries",
+      "gridPos": {"h": 4, "w": 12, "x": 0, "y": 16},
+      "targets": [
+        {
+          "expr": "up{job=\"idrive-backend\"}",
+          "legendFormat": "Backend",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "max": 1,
+          "min": 0,
+          "mappings": [
+            {"type": "value", "options": {"0": {"color": "red", "index": 0, "text": "DOWN"}, "1": {"color": "green", "index": 1, "text": "UP"}}}
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"displayMode": "hidden", "placement": "bottom", "showLegend": false},
+        "tooltip": {"mode": "single", "sort": "none"}
+      }
+    },
+    {
+      "title": "Total bytes transferred",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 12, "x": 12, "y": 16},
+      "targets": [
+        {
+          "expr": "sum(increase(idrive_streamed_bytes_total[$__range])) or vector(0)",
+          "instant": true,
+          "legendFormat": "Transferred",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"decimals": 0, "unit": "bytes"},
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "title": "Database",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 20},
+      "panels": []
+    },
+    {
+      "title": "Total queries",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 21},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_db_execute_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "short"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Query errors",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 21},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_db_errors_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"decimals": 0, "unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}},
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "New connections",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 21},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_db_new_connections_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "short"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Connection failures",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 21},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_db_new_connection_errors_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"decimals": 0, "unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}},
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Bulk executions",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 21},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_db_execute_many_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "short"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Average query time",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 21},
+      "targets": [
+        {
+          "expr": "sum(increase(django_db_query_duration_seconds_sum[$__range])) / clamp_min(sum(increase(django_db_query_duration_seconds_count[$__range])), 1) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "s"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Database queries per second",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 25},
+      "targets": [
+        {
+          "expr": "sum by (alias) (rate(django_db_execute_total[5m]))",
+          "legendFormat": "{{alias}} queries",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (alias) (rate(django_db_execute_many_total[5m]))",
+          "legendFormat": "{{alias}} bulk",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
+    },
+    {
+      "title": "Database query latency",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 25},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(django_db_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(django_db_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(django_db_query_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
+    },
+    {
+      "title": "Database errors by type",
+      "type": "bargauge",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 33},
+      "targets": [
+        {
+          "expr": "round(sum by (type) (increase(django_db_errors_total[$__range])))",
+          "instant": true,
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"decimals": 0, "unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}},
+        "overrides": []
+      },
+      "options": {"displayMode": "gradient", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true}
+    },
+    {
+      "title": "Database connections per second",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 33},
+      "targets": [
+        {
+          "expr": "sum by (alias) (rate(django_db_new_connections_total[5m]))",
+          "legendFormat": "{{alias}} opened",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (alias) (rate(django_db_new_connection_errors_total[5m]))",
+          "legendFormat": "{{alias}} failed",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
+    },
+    {
+      "title": "Cache",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 39},
+      "panels": []
+    },
+    {
+      "title": "Cache reads",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 5, "x": 0, "y": 40},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_cache_get_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "short"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Cache hits",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 5, "x": 5, "y": 40},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_cache_get_hits_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "short"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Cache misses",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 5, "x": 10, "y": 40},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_cache_get_misses_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "short"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Cache failures",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 15, "y": 40},
+      "targets": [
+        {
+          "expr": "round(sum(increase(django_cache_get_fail_total[$__range]))) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"decimals": 0, "unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}},
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Cache hit rate",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 5, "x": 19, "y": 40},
+      "targets": [
+        {
+          "expr": "100 * sum(increase(django_cache_get_hits_total[$__range])) / clamp_min(sum(increase(django_cache_get_total[$__range])), 1) or vector(0)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {"defaults": {"decimals": 1, "max": 100, "min": 0, "unit": "percent"}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}}
+    },
+    {
+      "title": "Cache reads per second",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 44},
+      "targets": [
+        {
+          "expr": "sum(rate(django_cache_get_hits_total[5m]))",
+          "legendFormat": "hits",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(django_cache_get_misses_total[5m]))",
+          "legendFormat": "misses",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(django_cache_get_fail_total[5m]))",
+          "legendFormat": "failures",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}}
     }
   ],
-  "refresh": "15s",
+  "refresh": "5s",
   "schemaVersion": 39,
   "style": "dark",
   "tags": ["idrive"],
   "templating": {"list": []},
-  "time": {"from": "now-6h", "to": "now"},
+  "time": {"from": "now-24h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
   "title": "IDrive Overview",

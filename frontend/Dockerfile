@@ -44,7 +44,7 @@ COPY --from=backend_static /var/www/idrive/backend-static/ /var/www/idrive/backe
 COPY --from=nginx-config nginx.conf /etc/nginx/nginx.conf
 COPY --from=nginx-config auth.js /etc/nginx/auth.js
 
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 RUN apt-get update && \
     apt-get install -y nginx-module-njs && \
@@ -54,4 +54,4 @@ RUN apt-get update && \
 EXPOSE 80
 
 # Default command to run when container starts
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]

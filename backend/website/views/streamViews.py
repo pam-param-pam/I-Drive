@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
+from django.views.decorators.cache import cache_page
 
 from website.auth.Permissions import CheckIpPrivateOrAllowedIfResourceLocked, CheckTrash, CheckState
 from website.auth.throttle import MediaThrottle, NonCacheMediaThrottle
+from website.constants import MAX_MEDIA_CACHE_AGE
 from website.core.decorators import check_resource_permissions, extract_file_from_signed_url, no_gzip
 from website.core.errors import ResourceNotFoundError
 from website.models import File, Subtitle, Moment, UserZIP, Thumbnail
