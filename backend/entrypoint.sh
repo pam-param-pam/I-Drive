@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 celery -A website worker -l INFO -P eventlet &
 celery -A website worker -l INFO --pool=solo -Q wsQ &
 celery -A website worker -l INFO --pool=solo -Q deletion -c 1 &

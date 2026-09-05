@@ -74,6 +74,11 @@ services:
     volumes:
       - ./config.overrides.json:/config/config.overrides.json:ro
 
+    # Per-process Prometheus counter shards. Docker recreates this temporary
+    # filesystem empty whenever the backend container starts.
+    tmpfs:
+      - /tmp/prometheus_multiproc
+
     environment:
       - IDRIVE_CONFIG_FILE=/config/config.overrides.json
 

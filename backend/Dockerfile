@@ -27,6 +27,12 @@ FROM python:3.12-slim
 
 WORKDIR /app/backend
 
+# prometheus_client uses this directory to aggregate metrics from all
+# Gunicorn workers into one consistent set of counters.
+ENV PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+
+RUN mkdir -p /tmp/prometheus_multiproc
+
 # Install runtime dependencies (nano if needed)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends nano && \

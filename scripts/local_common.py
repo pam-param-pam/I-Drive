@@ -177,6 +177,13 @@ def backend_environment(env: dict[str, str]) -> dict[str, str]:
     return backend_env
 
 
+def display_urls(title: str, urls: tuple[tuple[str, str], ...]) -> None:
+    print(f"\n{title} URLs:", flush=True)
+    for label, url in urls:
+        print(f"  {label}: {url}", flush=True)
+    print(flush=True)
+
+
 def compose_command(docker: str, compose_file: Path, *, project_name: str | None = None) -> list[str]:
     command = [docker, "compose"]
     if project_name:
@@ -188,7 +195,7 @@ def compose_command(docker: str, compose_file: Path, *, project_name: str | None
 def start_local_infrastructure() -> list[str]:
     docker = require_executable("docker")
     local_compose = compose_command(docker, LOCAL_COMPOSE_FILE)
-    run([*local_compose, "down", "--wait"])
+    run([*local_compose, "down"])
     run([*local_compose, "up", "--wait"])
     return local_compose
 
