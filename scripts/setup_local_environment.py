@@ -5,13 +5,11 @@ import os
 import shutil
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from local_common import (
     BACKEND_DIR,
     FRONTEND_DIR,
-    PROJECT_DIR,
     display_environment,
     load_project_environment,
     run,
@@ -19,76 +17,6 @@ from local_common import (
 
 
 VENV_DIR = BACKEND_DIR / ".venv"
-
-
-def write_xml(tree: ET.ElementTree, path: Path) -> None:
-    ET.indent(tree, space="  ")
-    tree.write(path, encoding="UTF-8", xml_declaration=True)
-
-
-def configure_pycharm_project_structure() -> None:
-    idea_dir = PROJECT_DIR / ".idea"
-    module_files = sorted(idea_dir.glob("*.iml"))
-    if not module_files:
-        print("\nPyCharm module configuration was not found; skipping project structure setup.", flush=True)
-        return
-
-    source_url = "file://$MODULE_DIR$/backend"
-    excluded_urls = {
-        "file://$MODULE_DIR$/backend/.venv",
-        "file://$MODULE_DIR$/backend/staticfiles",
-    }
-    for module_file in module_files:
-        try:
-            tree = ET.parse(module_file)
-        except ET.ParseError as error:
-            raise RuntimeError(f"Invalid PyCharm module configuration: {module_file}") from error
-
-        root_manager = tree.find("./component[@name='NewModuleRootManager']")
-        if root_manager is None:
-            continue
-        content_roots = root_manager.findall("content")
-        content_root = next(
-            (root for root in content_roots if root.get("url") == "file://$MODULE_DIR$"),
-            content_roots[0] if content_roots else None,
-        )
-        if content_root is None:
-            continue
-
-        changed = False
-        configured_sources = {
-            folder.get("url") for folder in content_root.findall("sourceFolder")
-        }
-        if source_url not in configured_sources:
-            source_folder = ET.Element(
-                "sourceFolder",
-                {"url": source_url, "isTestSource": "false"},
-            )
-            first_excluded_folder = next(
-                (
-                    index
-                    for index, child in enumerate(content_root)
-                    if child.tag == "excludeFolder"
-                ),
-                len(content_root),
-            )
-            content_root.insert(first_excluded_folder, source_folder)
-            changed = True
-
-        configured_exclusions = {
-            folder.get("url") for folder in content_root.findall("excludeFolder")
-        }
-        for excluded_url in sorted(excluded_urls - configured_exclusions):
-            ET.SubElement(content_root, "excludeFolder", {"url": excluded_url})
-            changed = True
-
-        if changed:
-            write_xml(tree, module_file)
-        print(f"\nPyCharm Sources Root: {BACKEND_DIR}", flush=True)
-        print(f"PyCharm excluded directory: {BACKEND_DIR / 'staticfiles'}", flush=True)
-        return
-
-    print("\nNo compatible PyCharm module was found; skipping project structure setup.", flush=True)
 
 
 def is_python_312(command: list[str]) -> bool:
@@ -124,9 +52,13 @@ def venv_python() -> Path:
 
 
 def main() -> int:
-    configure_pycharm_project_structure()
-    run([*find_python_312(), "-m", "venv", str(VENV_DIR)])
     python = venv_python()
+    if python.is_file():
+        if not is_python_312([str(python)]):
+            raise RuntimeError(f"The existing virtual environment must use Python 3.12: {python}")
+        print(f"\nReusing virtual environment: {VENV_DIR}", flush=True)
+    else:
+        run([*find_python_312(), "-m", "venv", str(VENV_DIR)])
     if not python.is_file():
         raise RuntimeError(f"Virtual-environment Python was not created: {python}")
 
@@ -134,7 +66,7 @@ def main() -> int:
     npm = shutil.which("npm.cmd" if os.name == "nt" else "npm") or shutil.which("npm")
     if npm is None:
         raise RuntimeError("npm is required but was not found in PATH.")
-    run([npm, "--prefix", str(FRONTEND_DIR), "install"])
+    run([npm, "install"], cwd=FRONTEND_DIR)
 
     env = load_project_environment(dotenv_python=python)
     display_environment("Local setup", env)
@@ -154,6 +86,13 @@ def main() -> int:
         ],
         cwd=BACKEND_DIR,
         env=env,
+    )
+    print(
+        "\nPyCharm setup required:\n"
+        "  1. Select backend/.venv as the project interpreter.\n"
+        "  2. Mark backend as Sources Root.\n"
+        "  3. Mark backend/staticfiles as Excluded.",
+        flush=True,
     )
     print("\nLocal environment setup completed successfully.", flush=True)
     return 0

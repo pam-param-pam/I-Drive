@@ -120,9 +120,12 @@ The local environment runs PostgreSQL, Redis, Prometheus, and Grafana in Docker.
 
 ## First-time setup
 
-Select `backend/.venv` as the interpreter for the shared run configurations, then run **Setup local environment**. The setup installs the backend and frontend dependencies, applies migrations, creates the local administrator, and configures the PyCharm project structure.
+Select `backend/.venv` as the interpreter for the shared run configurations, then run **Setup local environment**. The setup installs the backend and frontend dependencies, applies migrations, and creates the local administrator.
 
-When setup finishes, select **File → Reload All from Disk** so PyCharm reloads the updated project settings.
+When setup finishes, configure the project structure in PyCharm:
+
+1. Mark `backend` as **Sources Root**.
+2. Mark `backend/staticfiles` as **Excluded**.
 
 ## Running the application
 
