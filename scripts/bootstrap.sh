@@ -14,7 +14,6 @@ IS_DEV_ENV="true"
 PROTOCOL="http"
 DEPLOYMENT_HOST="localhost"
 PORT="80"
-BACKEND_PORT="8000"
 
 ADMIN_LOGIN="admin"
 ADMIN_PASSWORD="admin"
@@ -37,7 +36,6 @@ Options:
   --protocol http|https        External protocol. Default: ${PROTOCOL}
   --deployment-host HOST       Deployment host without protocol. Default: ${DEPLOYMENT_HOST}
   --port PORT                  Public Nginx/application port. Default: ${PORT}
-  --backend-port PORT          External backend port. Default: ${BACKEND_PORT}
   --app-dir PATH               Application directory. Default: ${APP_DIR}
   --config-file PATH           Optional config override file. If omitted, an empty override file is created.
   --admin-login LOGIN          Admin user login. Default: ${ADMIN_LOGIN}
@@ -45,7 +43,7 @@ Options:
   -h, --help                   Show this help
 
 Example:
-  $0 --dev ${IS_DEV_ENV} --protocol ${PROTOCOL} --deployment-host ${DEPLOYMENT_HOST} --port ${PORT} --backend-port ${BACKEND_PORT} --config-file ./config.overrides.json --admin-login ${ADMIN_LOGIN} --admin-password '<password>'
+  $0 --dev ${IS_DEV_ENV} --protocol ${PROTOCOL} --deployment-host ${DEPLOYMENT_HOST} --port ${PORT} --config-file ./config.overrides.json --admin-login ${ADMIN_LOGIN} --admin-password '<password>'
 EOF
 }
 
@@ -142,12 +140,6 @@ while [ "$#" -gt 0 ]; do
       validate_port "--port" "$PORT"
       shift 2
       ;;
-    --backend-port)
-      [ "$#" -ge 2 ] || fail "--backend-port requires a value."
-      BACKEND_PORT="$2"
-      validate_port "--backend-port" "$BACKEND_PORT"
-      shift 2
-      ;;
     --app-dir)
       [ "$#" -ge 2 ] || fail "--app-dir requires a value."
       APP_DIR="$2"
@@ -193,7 +185,6 @@ require_cmd curl
 require_cmd docker
 require_cmd openssl
 require_cmd mktemp
-require_cmd date
 
 docker info >/dev/null 2>&1 || fail "Docker daemon is not running or is not accessible."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose plugin is not available."
@@ -244,14 +235,8 @@ PROTOCOL=${PROTOCOL}
 # deploy host, without http:// or https://
 DEPLOYMENT_HOST=${DEPLOYMENT_HOST}
 
-# external backend port
-BACKEND_PORT=${BACKEND_PORT}
-
 # entrypoint port for the entire application
 NGINX_PORT=${PORT}
-
-# backend config override file inside container
-IDRIVE_CONFIG_FILE=/config/config.overrides.json
 
 POSTGRES_VOLUME=${POSTGRES_VOLUME}
 POSTGRES_USER=idrive
@@ -266,67 +251,25 @@ EOF
 chmod 600 .env
 
 echo
-echo "Configuration:"
-echo "  APP_DIR:          $APP_DIR"
-echo "  IS_DEV_ENV:       $IS_DEV_ENV"
-echo "  PROTOCOL:         $PROTOCOL"
-echo "  DEPLOYMENT_HOST:  $DEPLOYMENT_HOST"
-echo "  PORT:             $PORT"
-echo "  BACKEND_PORT:     $BACKEND_PORT"
-echo "  CONFIG_FILE:      $APP_DIR/$CONFIG_FILE_NAME"
-echo "  ADMIN_LOGIN:      $ADMIN_LOGIN"
-echo "  ADMIN_PASSWORD:   $ADMIN_PASSWORD"
+echo "Effective environment:"
+echo "  APP_DIR=$APP_DIR"
+echo "  IS_DEV_ENV=$IS_DEV_ENV"
+echo "  PROTOCOL=$PROTOCOL"
+echo "  DEPLOYMENT_HOST=$DEPLOYMENT_HOST"
+echo "  NGINX_PORT=$PORT"
+echo "  POSTGRES_VOLUME=$POSTGRES_VOLUME"
+echo "  POSTGRES_USER=idrive"
+echo "  POSTGRES_PASSWORD=******** (generated)"
+echo "  REDIS_PASSWORD=******** (generated)"
+echo "  BACKEND_SECRET_KEY=******** (generated)"
+echo "  SIGNING_SECRET=******** (generated)"
+echo "  GRAFANA_ADMIN_USER=$ADMIN_LOGIN"
+echo "  GRAFANA_ADMIN_PASSWORD=******** (set)"
+echo "  CONFIG_FILE=$APP_DIR/$CONFIG_FILE_NAME"
 echo
 
-echo "Starting containers..."
-docker compose up -d
-
-echo
-echo "Waiting for backend container to appear..."
-
-until docker inspect "$BACKEND_CONTAINER" >/dev/null 2>&1; do
-  sleep 1
-done
-
-echo "Backend container exists. Waiting until it is ready..."
-
-START_TIME=$(date +%s)
-
-while true; do
-  STATUS=$(docker inspect -f '{{.State.Status}}' "$BACKEND_CONTAINER" 2>/dev/null || echo "missing")
-  HEALTH=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$BACKEND_CONTAINER" 2>/dev/null || echo "missing")
-
-  if [ "$STATUS" = "exited" ] || [ "$STATUS" = "dead" ]; then
-    echo "ERROR: Backend container failed. Status: $STATUS"
-    docker logs "$BACKEND_CONTAINER" --tail=100 || true
-    exit 1
-  fi
-
-  if [ "$HEALTH" = "unhealthy" ]; then
-    echo "ERROR: Backend container is unhealthy."
-    docker logs "$BACKEND_CONTAINER" --tail=100 || true
-    exit 1
-  fi
-
-  if docker exec "$BACKEND_CONTAINER" python manage.py check >/dev/null 2>&1; then
-    echo "Backend is ready."
-    break
-  fi
-
-  NOW=$(date +%s)
-  ELAPSED=$((NOW - START_TIME))
-
-  if [ "$ELAPSED" -ge "$TIMEOUT_SECONDS" ]; then
-    echo "ERROR: Backend did not become ready within ${TIMEOUT_SECONDS} seconds."
-    echo "Container status: $STATUS"
-    echo "Health status: $HEALTH"
-    docker logs "$BACKEND_CONTAINER" --tail=100 || true
-    exit 1
-  fi
-
-  echo "Backend not ready yet... ${ELAPSED}s/${TIMEOUT_SECONDS}s"
-  sleep 2
-done
+echo "Starting the backend and its dependencies..."
+docker compose up -d --wait --wait-timeout "$TIMEOUT_SECONDS" backend
 
 echo
 echo "Running database migrations..."
@@ -334,7 +277,11 @@ docker exec "$BACKEND_CONTAINER" python manage.py migrate
 
 echo
 echo "Creating admin user..."
-docker exec "$BACKEND_CONTAINER" python manage.py createuser --staff --login "$ADMIN_LOGIN" --password "$ADMIN_PASSWORD"
+docker exec "$BACKEND_CONTAINER" python manage.py createuser --staff --if-not-exists --login "$ADMIN_LOGIN" --password "$ADMIN_PASSWORD"
+
+echo
+echo "Starting the remaining services..."
+docker compose up -d --wait --wait-timeout "$TIMEOUT_SECONDS"
 
 echo
 
@@ -348,4 +295,8 @@ fi
 
 echo "Setup complete."
 echo "Open in browser:"
-echo "${PROTOCOL}://${DEPLOYMENT_HOST}:${PORT}"
+APP_URL="${PROTOCOL}://${DEPLOYMENT_HOST}"
+if { [ "$PROTOCOL" = "http" ] && [ "$PORT" != "80" ]; } || { [ "$PROTOCOL" = "https" ] && [ "$PORT" != "443" ]; }; then
+  APP_URL="${APP_URL}:${PORT}"
+fi
+echo "$APP_URL"
