@@ -13,6 +13,7 @@ from local_common import (
     display_environment,
     load_project_environment,
     run,
+    start_local_infrastructure,
 )
 
 
@@ -70,6 +71,7 @@ def main() -> int:
 
     env = load_project_environment(dotenv_python=python)
     display_environment("Local setup", env)
+    start_local_infrastructure()
     manage_py = str(BACKEND_DIR / "manage.py")
     run([str(python), manage_py, "migrate"], cwd=BACKEND_DIR, env=env)
     run(

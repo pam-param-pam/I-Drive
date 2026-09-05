@@ -13,6 +13,9 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_DIR / "backend"
 FRONTEND_DIR = PROJECT_DIR / "frontend"
+LOCAL_COMPOSE_FILE = PROJECT_DIR / "local-testing.docker-compose.yml"
+FULL_COMPOSE_FILE = PROJECT_DIR / "docker-compose.yml"
+FULL_STACK_PROJECT_NAME = "idrive-full-local"
 
 DEFAULT_ENVIRONMENT = {
     "IS_DEV_ENV": "True",
@@ -208,6 +211,19 @@ def compose_command(docker: str, compose_file: Path, *, project_name: str | None
         command.extend(["--project-name", project_name])
     command.extend(["-f", str(compose_file)])
     return command
+
+
+def start_local_infrastructure() -> list[str]:
+    docker = require_executable("docker")
+    local_compose = compose_command(docker, LOCAL_COMPOSE_FILE)
+    full_compose = compose_command(
+        docker,
+        FULL_COMPOSE_FILE,
+        project_name=FULL_STACK_PROJECT_NAME,
+    )
+    run([*full_compose, "stop"])
+    run([*local_compose, "up", "-d", "--wait"])
+    return local_compose
 
 
 def wait_for_compose_services(

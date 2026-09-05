@@ -9,21 +9,17 @@ from local_common import (
     PROJECT_DIR,
     acquire_instance_lock,
     backend_environment,
-    compose_command,
     display_environment,
     display_urls,
     load_project_environment,
     require_executable,
-    run,
     start,
+    start_local_infrastructure,
     stop_process_tree,
     wait_for_processes,
 )
 
 
-LOCAL_COMPOSE_FILE = PROJECT_DIR / "local-testing.docker-compose.yml"
-FULL_COMPOSE_FILE = PROJECT_DIR / "docker-compose.yml"
-FULL_STACK_PROJECT_NAME = "idrive-full-local"
 INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49173)
 def main() -> int:
     instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
@@ -33,19 +29,10 @@ def main() -> int:
         env = load_project_environment()
         display_environment("Local development", env)
 
-        docker = require_executable("docker")
         npm = require_executable("npm")
         backend_env = backend_environment(env)
         manage_py = str(BACKEND_DIR / "manage.py")
-        local_compose = compose_command(docker, LOCAL_COMPOSE_FILE)
-        full_compose = compose_command(
-            docker,
-            FULL_COMPOSE_FILE,
-            project_name=FULL_STACK_PROJECT_NAME,
-        )
-
-        run([*full_compose, "stop"])
-        run([*local_compose, "up", "-d", "--wait"])
+        local_compose = start_local_infrastructure()
 
         processes = [
             start(
