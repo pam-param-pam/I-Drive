@@ -5,11 +5,10 @@ import sys
 
 from local_common import (
     BACKEND_DIR,
-    PROJECT_DIR,
+    LOCAL_COMPOSE_FILE,
     acquire_instance_lock,
     backend_environment,
     compose_command,
-    display_environment,
     load_project_environment,
     require_executable,
     start,
@@ -20,14 +19,12 @@ from local_common import (
 
 
 INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49174)
-LOCAL_COMPOSE_FILE = PROJECT_DIR / "local-testing.docker-compose.yml"
 INFRASTRUCTURE_SERVICES = ("redis", "postgres", "prometheus", "grafana")
 def main() -> int:
     instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
     processes: list[subprocess.Popen] = []
     try:
         env = load_project_environment()
-        display_environment("Local Celery", env)
         docker = require_executable("docker")
         wait_for_compose_services(
             compose_command(docker, LOCAL_COMPOSE_FILE),

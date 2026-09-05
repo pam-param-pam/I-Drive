@@ -9,8 +9,6 @@ from local_common import (
     PROJECT_DIR,
     acquire_instance_lock,
     backend_environment,
-    display_environment,
-    display_urls,
     load_project_environment,
     require_executable,
     start,
@@ -27,7 +25,6 @@ def main() -> int:
     local_compose: list[str] | None = None
     try:
         env = load_project_environment()
-        display_environment("Local development", env)
 
         npm = require_executable("npm")
         backend_env = backend_environment(env)
@@ -45,15 +42,6 @@ def main() -> int:
                 cwd=FRONTEND_DIR,
             ),
         ]
-        display_urls(
-            "Local development",
-            (
-                ("Application", f"http://localhost:{env['FRONTEND_PORT']}"),
-                ("Backend", env["BACKEND_BASE_URL"]),
-                ("Grafana", f"http://localhost:{env['GRAFANA_PORT']}"),
-                ("Prometheus", f"http://localhost:{env['PROMETHEUS_PORT']}"),
-            ),
-        )
         return wait_for_processes(processes)
     except KeyboardInterrupt:
         return 0

@@ -10,7 +10,6 @@ from pathlib import Path
 from local_common import (
     BACKEND_DIR,
     FRONTEND_DIR,
-    display_environment,
     load_project_environment,
     run,
     start_local_infrastructure,
@@ -70,7 +69,6 @@ def main() -> int:
     run([npm, "install"], cwd=FRONTEND_DIR)
 
     env = load_project_environment(dotenv_python=python)
-    display_environment("Local setup", env)
     start_local_infrastructure()
     manage_py = str(BACKEND_DIR / "manage.py")
     run([str(python), manage_py, "migrate"], cwd=BACKEND_DIR, env=env)
@@ -88,6 +86,7 @@ def main() -> int:
         ],
         cwd=BACKEND_DIR,
         env=env,
+        quiet=True,
     )
     print(
         "\nPyCharm setup required:\n"
@@ -96,7 +95,13 @@ def main() -> int:
         "  3. Mark backend/staticfiles as Excluded.",
         flush=True,
     )
-    print("\nLocal environment setup completed successfully.", flush=True)
+    print(
+        "\n============================================================\n"
+        "  Local environment setup completed successfully.\n"
+        "  You can now run Local development.\n"
+        "============================================================\n",
+        flush=True,
+    )
     return 0
 
 

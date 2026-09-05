@@ -14,8 +14,6 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_DIR / "backend"
 FRONTEND_DIR = PROJECT_DIR / "frontend"
 LOCAL_COMPOSE_FILE = PROJECT_DIR / "local-testing.docker-compose.yml"
-FULL_COMPOSE_FILE = PROJECT_DIR / "docker-compose.yml"
-FULL_STACK_PROJECT_NAME = "idrive-full-local"
 
 DEFAULT_ENVIRONMENT = {
     "IS_DEV_ENV": "True",
@@ -54,31 +52,28 @@ def require_executable(name: str) -> str:
     return executable
 
 
-def _displayed_command(command: list[str]) -> str:
-    displayed = command.copy()
-    for index, argument in enumerate(displayed[:-1]):
-        if argument == "--password":
-            displayed[index + 1] = "********"
-    return " ".join(displayed)
+def run(command: list[str], cwd: Path = PROJECT_DIR, env: dict[str, str] | None = None, quiet: bool = False) -> None:
+    print(f"\n> Running {Path(command[0]).name}", flush=True)
+    if not quiet:
+        subprocess.run(command, cwd=cwd, env=env, check=True)
+        return
+
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(
+            f"{Path(command[0]).name} exited with code {result.returncode}."
+        )
 
 
-def run(
-    command: list[str],
-    *,
-    cwd: Path = PROJECT_DIR,
-    env: dict[str, str] | None = None,
-) -> None:
-    print(f"\n> {_displayed_command(command)}", flush=True)
-    subprocess.run(command, cwd=cwd, env=env, check=True)
-
-
-def start(
-    command: list[str],
-    *,
-    cwd: Path = PROJECT_DIR,
-    env: dict[str, str] | None = None,
-) -> subprocess.Popen:
-    print(f"\n> {_displayed_command(command)}", flush=True)
+def start(command: list[str], cwd: Path = PROJECT_DIR, env: dict[str, str] | None = None) -> subprocess.Popen:
+    print(f"\n> Starting {Path(command[0]).name}", flush=True)
     if os.name == "nt":
         return subprocess.Popen(
             command,
@@ -182,29 +177,6 @@ def backend_environment(env: dict[str, str]) -> dict[str, str]:
     return backend_env
 
 
-def display_environment(title: str, env: dict[str, str]) -> None:
-    print(f"\n{title} effective environment (.env overrides defaults; secrets masked):", flush=True)
-    names = list(DEFAULT_ENVIRONMENT)
-    names.extend(
-        sorted(
-            name
-            for name in env
-            if name.startswith(("DJANGO_ADMIN_", "VITE_BACKEND_")) and name not in DEFAULT_ENVIRONMENT
-        )
-    )
-    for name in names:
-        is_secret = "PASSWORD" in name or "SECRET" in name
-        value = "******** (set)" if is_secret and env.get(name) else env.get(name, "<unset>")
-        print(f"  {name}={value}", flush=True)
-
-
-def display_urls(title: str, urls: tuple[tuple[str, str], ...]) -> None:
-    print(f"\n{title} URLs:", flush=True)
-    for label, url in urls:
-        print(f"  {label}: {url}", flush=True)
-    print(flush=True)
-
-
 def compose_command(docker: str, compose_file: Path, *, project_name: str | None = None) -> list[str]:
     command = [docker, "compose"]
     if project_name:
@@ -216,22 +188,12 @@ def compose_command(docker: str, compose_file: Path, *, project_name: str | None
 def start_local_infrastructure() -> list[str]:
     docker = require_executable("docker")
     local_compose = compose_command(docker, LOCAL_COMPOSE_FILE)
-    full_compose = compose_command(
-        docker,
-        FULL_COMPOSE_FILE,
-        project_name=FULL_STACK_PROJECT_NAME,
-    )
-    run([*full_compose, "stop"])
-    run([*local_compose, "up", "-d", "--wait"])
+    run([*local_compose, "down", "--wait"])
+    run([*local_compose, "up", "--wait"])
     return local_compose
 
 
-def wait_for_compose_services(
-    compose: list[str],
-    services: tuple[str, ...],
-    *,
-    timeout: float = 120,
-) -> None:
+def wait_for_compose_services(compose: list[str], services: tuple[str, ...],  timeout: float = 120) -> None:
     deadline = time.monotonic() + timeout
     last_statuses: dict[str, str] = {}
     print("\nWaiting for local infrastructure...", flush=True)
