@@ -17,7 +17,7 @@ from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, 
 from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
 from website.models.mixin_models import ItemState
 from website.queries.selectors import query_attachments
-from website.tasks.helper import is_bulk_deletable
+from website.tasks.helper import is_bulk_deletable, run_with_db_cleanup
 from website.websockets.utils import send_event, send_message
 from celery.utils.log import get_task_logger
 
@@ -378,6 +378,7 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
         for channel_id, messages in channel_map.items():
             futures.append(
                 executor.submit(
+                    run_with_db_cleanup,
                     process_channel_deletions,
                     context,
                     job_id,
