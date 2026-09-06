@@ -106,7 +106,9 @@ After completing these steps, you should have:
 
 # Local development
 
-The local environment runs PostgreSQL, Redis, Prometheus, and Grafana in Docker. Django, Vite, and the optional Celery processes run natively with hot reload.
+The local environment runs PostgreSQL, Redis, Prometheus, and Grafana in Docker. 
+Django, Vite are run with hot reload.
+You may optionally start celery processes. They don't have hot reload.
 
 > [!NOTE]
 > The local configuration uses development credentials and settings. **Do not use it in production.**
@@ -133,13 +135,11 @@ Select **Local development** from the run-configuration list and click **Run**. 
 
 1. Starts PostgreSQL, Redis, Prometheus, and Grafana using `local-testing.docker-compose.yml`.
 2. Waits until the infrastructure is ready.
-3. Applies pending Django migrations.
-4. Creates the Django administrator if it does not exist.
-5. Starts Django and Vite with hot reload.
+3. Starts Django and Vite with hot reload.
 
 Celery is optional. After **Local development** is running, start the separate **Local Celery** configuration to run the general worker, websocket worker, deletion worker, and Celery Beat.
 
-Stopping a run configuration stops the processes managed by that configuration. Docker volumes are not deleted, so PostgreSQL, Redis, Prometheus, and Grafana data persists between runs.
+Stopping a run configuration does not stop containers!
 
 ## Local addresses
 
