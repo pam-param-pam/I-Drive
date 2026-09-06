@@ -1,6 +1,17 @@
 from datetime import datetime, timezone, timedelta
 
+from django.db import connections, close_old_connections
+
 DISCORD_EPOCH = 1420070400000  # ms
+
+
+def run_with_db_cleanup(callback, *args, **kwargs):
+    """Run work in a non-Django thread without retaining a pooled connection."""
+    close_old_connections()
+    try:
+        return callback(*args, **kwargs)
+    finally:
+        connections.close_all()
 
 def auto_prefetch(fragment_id: str) -> None:
     from .otherTasks import prefetch_next_fragments
