@@ -181,13 +181,13 @@ DATABASES = {
         "HOST": os.environ["POSTGRES_ADDRESS"],
         "PORT": os.environ["POSTGRES_PORT"],
         "CONN_MAX_AGE": 0,
-        "OPTIONS": {
-            "pool": {
-                "min_size": 0,
-                "max_size": 12,
-                "timeout": 10,
-            },
-        },
+        # "OPTIONS": {
+        #     "pool": {
+        #         "min_size": 0,
+        #         "max_size": 12,
+        #         "timeout": 10,
+        #     },
+        # },
     }
 }
 # Password validation
