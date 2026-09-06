@@ -42,6 +42,8 @@ DEFAULT_ENVIRONMENT = {
     "GRAFANA_PORT": "3000",
     "PROMETHEUS_PORT": "9090",
     "NGINX_PORT": "80",
+    "DJANGO_ADMIN_USERNAME": "admin",
+    "DJANGO_ADMIN_PASSWORD": "admin",
 }
 
 
@@ -153,8 +155,6 @@ def load_project_environment(*, dotenv_python: Path | None = None) -> dict[str, 
         if value is not None:
             env[name] = value
 
-    env.setdefault("DJANGO_ADMIN_USERNAME", env["GRAFANA_ADMIN_USER"])
-    env.setdefault("DJANGO_ADMIN_PASSWORD", env["GRAFANA_ADMIN_PASSWORD"])
     env.setdefault("VITE_BACKEND_BASE_URL", env["BACKEND_BASE_URL"])
     env.setdefault(
         "VITE_BACKEND_BASE_WS",

@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from typing import Optional, Dict, Any
 
@@ -9,6 +10,9 @@ from website.core.helpers import normalize_blocked_until
 from website.discord.CredentialState import CredentialState, CredentialType
 from website.discord.utils import decode_redis_hash
 from website.models import DiscordSettings, Webhook, Bot, Channel
+
+
+logger = logging.getLogger("Discord")
 
 
 class UserState:
@@ -34,6 +38,7 @@ class UserState:
     """
 
     REDIS_PREFIX = "discord_user_state"
+    INITIALIZED_FIELD = "initialized"
 
     def __init__(self, user, max_concurrent_per_token: int = 3):
         self.user = user
@@ -46,6 +51,9 @@ class UserState:
 
     def _meta_key(self) -> str:
         return f"{self._user_key()}:meta"
+
+    def _initialization_lock_key(self) -> str:
+        return f"{self._user_key()}:initialization_lock"
 
     def _channels_key(self) -> str:
         return f"{self._user_key()}:channels"
@@ -243,7 +251,20 @@ class UserState:
     # Public serialization
     # ------------------------------------------------------------------
 
+    def _ensure_initialized(self):
+        if self._redis.hexists(self._meta_key(), self.INITIALIZED_FIELD):
+            return
+
+        with self._redis.lock(self._initialization_lock_key(), timeout=30, blocking_timeout=30):
+            if not self._redis.hexists(self._meta_key(), self.INITIALIZED_FIELD):
+                logger.warning(
+                    "Redis state missing for user %s; rebuilding with defaults",
+                    self.user.id,
+                )
+                self._initialize()
+
     def to_dict(self) -> Dict[str, Any]:
+        self._ensure_initialized()
         meta = decode_redis_hash(self._redis.hgetall(self._meta_key()))
         credential_keys = [
             k.decode() if isinstance(k, bytes) else k
@@ -309,6 +330,7 @@ class UserState:
         pipe.delete(self._credentials_set_key())
 
         pipe.hset(self._meta_key(), mapping={
+            self.INITIALIZED_FIELD: 1,
             "guild_id": settings.guild_id,
             "max_concurrent_per_token": self.max_concurrent_per_token,
             "blocked_until": "",
@@ -334,6 +356,7 @@ class UserState:
     # ------------------------------------------------------------------
 
     def ensure_not_blocked(self):
+        self._ensure_initialized()
         blocked_until_raw = self._redis.hget(self._meta_key(), "blocked_until")
         if blocked_until_raw in (None, "", "None"):
             return
@@ -356,6 +379,7 @@ class UserState:
     # ------------------------------------------------------------------
 
     def _acquire(self, credential_type: Optional[CredentialType] = None, secret: Optional[str] = None) -> CredentialState:
+        self._ensure_initialized()
         result_raw = self._acquire_script(
             keys=[self._meta_key(), self._credentials_by_secret_key(), self._credentials_set_key()],
             args=[time.time(), self.max_concurrent_per_token, credential_type or "", secret or ""],
@@ -395,6 +419,7 @@ class UserState:
     # Release
     # ------------------------------------------------------------------
     def release(self, credential: CredentialState):
+        self._ensure_initialized()
         self._release_script(keys=[self._credential_key(credential.secret)], args=[])
 
     # ------------------------------------------------------------------
@@ -402,6 +427,7 @@ class UserState:
     # ------------------------------------------------------------------
 
     def block_credential(self, credential: CredentialState, retry_after_seconds: Optional[float], reason: str, discord_error_code: int):
+        self._ensure_initialized()
         self._block_credential_script(
             keys=[self._credential_key(credential.secret)],
             args=[
@@ -413,6 +439,7 @@ class UserState:
         )
 
     def unblock_credential(self, credential: CredentialState):
+        self._ensure_initialized()
         self._unblock_credential_script(keys=[self._credential_key(credential.secret)], args=[])
 
     # ------------------------------------------------------------------
@@ -420,6 +447,7 @@ class UserState:
     # ------------------------------------------------------------------
 
     def get_credential_from_id(self, credential_id: str) -> Optional[CredentialState]:
+        self._ensure_initialized()
         credential_keys = [
             k.decode() if isinstance(k, bytes) else k
             for k in self._redis.smembers(self._credentials_set_key())
@@ -438,6 +466,7 @@ class UserState:
     # ------------------------------------------------------------------
 
     def update_from_headers(self, credential: CredentialState, headers: dict):
+        self._ensure_initialized()
         remaining = headers.get("X-RateLimit-Remaining")
         reset = headers.get("X-RateLimit-Reset")
 
@@ -450,6 +479,7 @@ class UserState:
         )
 
     def get_all_credentials(self) -> Dict[str, CredentialState]:
+        self._ensure_initialized()
         result = {}
 
         for k in self._redis.smembers(self._credentials_set_key()):

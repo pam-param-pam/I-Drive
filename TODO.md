@@ -25,4 +25,5 @@
 7) Extract items decorator should extract to files and folders not to 1 array items?
 8) Zip download, delete files inside = error prob
 9) cancel/confirm etc prompts should be called independently
-11) 
+11) fix docker compose project name and prefix volumes properly
+12) fix indexes!!!

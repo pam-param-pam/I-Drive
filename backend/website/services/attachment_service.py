@@ -1,3 +1,4 @@
+from website.discord.constants import ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSAGE_ATTACHMENT
 from website.models import Fragment, File, Thumbnail, Subtitle, Moment
 from website.models.other_models import NotificationType, NotificationKind
 from website.services import user_service, file_service, create_file_service
@@ -12,7 +13,7 @@ def _handle_missing_media_attachment(resource: DiscordAttachmentMixin, owner, fi
         return
 
     # only missing message or missing attachment. Other errors like missing webhook/bot/channel etc are too fuck up of a scenario to handle tbf
-    if error.code not in {10008, 10096}:
+    if error.code not in {ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSAGE_ATTACHMENT}:
         return
 
 
@@ -73,5 +74,5 @@ def delete_remote_single_discord_attachment(user, resource: DiscordAttachmentMix
         else:
             discord.delete_message(user, resource.channel.discord_id, resource.message_id)
     except DiscordError as e:
-        if e.code not in {10008, 10096}: # unknown message, unknown attachment
+        if e.status != 404: # unknown message, unknown attachment
             raise

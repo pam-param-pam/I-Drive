@@ -9,6 +9,7 @@ from urllib.parse import urlparse, parse_qs
 import httpx
 from httpx import Response
 
+from website.discord.constants import ERROR_UNKNOWN_WEBHOOK, ERROR_UNKNOWN_CHANNEL
 from website.constants import DISCORD_BASE_URL, cache
 from website.core.errors import DiscordError, CannotProcessDiscordRequestError, DiscordErrorMaxRetries, DiscordTextError, BadRequestError
 from website.discord.CredentialState import CredentialState
@@ -94,10 +95,7 @@ class DiscordManager:
             return
 
         if status == 404:
-            # 10015: Unknown Webhook
-            # 10008: Unknown Message
-            # 10003: Unknown Channel
-            if discord_code in (10015, 10003):
+            if discord_code in (ERROR_UNKNOWN_WEBHOOK, ERROR_UNKNOWN_CHANNEL):
                 state.block_credential(credential, None, "notFound", discord_code)
             return
 
