@@ -126,6 +126,7 @@
          </div>
          <div v-else class="wrapper">
             <div
+               ref="fileIcons"
                :class="viewMode + ' file-icons'"
                @dragenter.prevent
                @dragover.prevent
@@ -175,6 +176,7 @@
                </div>
 
                <RecycleScroller
+                  v-if="layoutReady"
                   id="filesScroller"
                   ref="filesScroller"
                   v-slot="{ item }"
@@ -361,7 +363,10 @@ export default {
    props: {
       readonly: Boolean,
       headerButtons: {},
-      minusSize: Number,
+      minusSize: {
+         type: Number,
+         default: 0
+      },
    },
 
    emits: ["uploadInput", "dropUpload", "upload", "onOpen", "dragEnter", "dragLeave", "onSearchQuery",
@@ -375,6 +380,7 @@ export default {
          imageHeight: 10,
          imageWidth: 10,
          numberOfTiles: 10,
+         layoutReady: false,
 
          scrollInterval: null
 
@@ -384,9 +390,10 @@ export default {
    watch: {
       sortedItems() {
          // Ensures that the listing is displayed
-         this.$nextTick(() => {
+         this.$nextTick(async () => {
             this.calculateGridLayoutWrapper()
-            this.scrollToLastItem()
+            await this.$nextTick()
+            await this.scrollToLastItem()
          })
       },
       "$route.name"(newName, oldName) {
@@ -671,11 +678,16 @@ export default {
       },
 
       calculateGridLayoutWrapper() {
-         let element = document.getElementById("filesScroller")
+         let element = this.$refs.fileIcons
          if (!element) return
          let width = element.clientWidth
+         if (width <= 0) {
+            requestAnimationFrame(this.calculateGridLayoutWrapper)
+            return
+         }
          if (!isMobile()) width -= 5
          this.calculateGridLayout(width)
+         this.layoutReady = true
       },
 
       calculateGridLayout(containerWidth) {

@@ -15,7 +15,7 @@ from local_common import (
     start,
     start_local_infrastructure,
     stop_process_tree,
-    wait_for_processes,
+    wait_for_processes, compose_command, LOCAL_COMPOSE_FILE,
 )
 
 
@@ -23,14 +23,16 @@ INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49173)
 def main() -> int:
     instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
     processes: list[subprocess.Popen] = []
-    local_compose: list[str] | None = None
+    docker = require_executable("docker")
+    local_compose = compose_command(docker, LOCAL_COMPOSE_FILE)
+
     try:
         env = load_project_environment()
 
         npm = require_executable("npm")
         backend_env = backend_environment(env)
         manage_py = str(BACKEND_DIR / "manage.py")
-        local_compose = start_local_infrastructure()
+        start_local_infrastructure()
 
         processes = [
             start(
@@ -58,8 +60,13 @@ def main() -> int:
     finally:
         for process in processes:
             stop_process_tree(process)
-        if local_compose is not None:
-            subprocess.run([*local_compose, "stop"], cwd=PROJECT_DIR, check=False)
+        print("Stopping Compose... If you don't see 'Compose stopped` then it failed to stop.", flush=True)
+        subprocess.run(
+            [*local_compose, "stop", "--timeout", "1"],
+            cwd=PROJECT_DIR,
+            check=False,
+        )
+        print("Compose stopped.", flush=True)
         instance_lock.close()
 
 

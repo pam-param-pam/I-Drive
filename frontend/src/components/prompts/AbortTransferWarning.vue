@@ -1,7 +1,7 @@
 <template>
    <div class="card floating">
       <div class="card-title">
-         <h2>{{ $t(transferType === "download" ? "prompts.abortDownloads" : "prompts.abortUploads") }}</h2>
+         <h2>{{ $t(transferType === "downloads" ? "prompts.abortDownloads" : "prompts.abortUploads") }}</h2>
       </div>
       <div class="card-content">
          <p>
