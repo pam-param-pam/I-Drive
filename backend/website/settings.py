@@ -184,7 +184,7 @@ DATABASES = {
         "OPTIONS": {
             "pool": {
                 "min_size": 0,
-                "max_size": 8,
+                "max_size": 12,
                 "timeout": 10,
             },
         },

@@ -369,7 +369,7 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
         channel_map[channel_id][message_id] = items
 
     futures = []
-    max_workers = min(bots.count(), len(channel_map))
+    max_workers = min(bots.count(), len(channel_map), 4)
 
     if max_workers == 0:
         return
@@ -427,7 +427,7 @@ def mark_file_batch_failed(job_id: UUID, file_ids: list[str], claim_token: UUID,
     with transaction.atomic():
         DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFileWorkItem.State.FAILED,
-            last_error=str(error),
+            last_error=f"{type(error).__name__}: {error}",
         )
         DeletionJob.objects.filter(id=job_id).update(
             failed_file_items=models.F("failed_file_items") + len(file_ids),
@@ -497,7 +497,7 @@ def mark_folder_batch_failed(job_id: UUID, folder_ids: list[str], claim_token: U
     with transaction.atomic():
         DeletionFolderWorkItem.objects.filter(claim_token=claim_token).update(
             state=DeletionFolderWorkItem.State.FAILED,
-            last_error=str(error),
+            last_error=f"{type(error).__name__}: {error}",
             finished_at=timezone.now(),
         )
 

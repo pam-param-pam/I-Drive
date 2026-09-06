@@ -203,9 +203,31 @@ def _mark_jobs_failed():
             job.finished_at = now
             job.save(update_fields=["state", "finished_at"])
 
+            errors = set(
+                DeletionFileWorkItem.objects.filter(
+                    job=job,
+                    state=DeletionFileWorkItem.State.FAILED,
+                    attempts__gte=MAX_FILE_DELETION_ATTEMPTS,
+                )
+                .exclude(last_error="")
+                .values_list("last_error", flat=True)
+                .distinct()
+            )
+            errors.update(
+                DeletionFolderWorkItem.objects.filter(
+                    job=job,
+                    state=DeletionFolderWorkItem.State.FAILED,
+                    attempts__gte=MAX_FILE_DELETION_ATTEMPTS,
+                )
+                .exclude(last_error="")
+                .values_list("last_error", flat=True)
+                .distinct()
+            )
+
             context = RequestContext.from_user(job.request_context["user_id"])
-            user_service.create_notification(context.get_user(), NotificationType.INFO, NotificationKind.GENERAL,
-                                             "notifications.deleteProcessFailed.title", "notifications.deleteProcess.message")
+            user_service.create_notification(context.get_user(), NotificationType.ERROR, NotificationKind.GENERAL,
+                                             "notifications.deleteProcessFailed.title", "notifications.deleteProcessFailed.message",
+                                             data={"errors": sorted(errors)})
 
     print(f"Marked {failed_jobs} jobs as failed")
 

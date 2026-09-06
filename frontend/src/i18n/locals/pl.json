@@ -196,6 +196,10 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "notifications": {
+    "deleteProcessFailed": {
+      "title": "Nie udało sie usunąć niektórych plików",
+      "message": "Proces usuwania plików sie nie powiódł. Zgłoś to jako bug"
+    },
     "account_password_changed": {
       "title": "Hasło konta zostało zmienione",
       "message": "Hasło do Twojego konta zostało niedawno zmienione"
@@ -237,6 +241,7 @@
       "status": "Status",
       "resourceType": "Typ",
       "file": "Plik",
+      "errors": "Błędy",
       "status_code": "Kod odpowiedzie",
       "discord_code": "Kod discorda",
       "days_till_delete": "Dni do usunięcia"

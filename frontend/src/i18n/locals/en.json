@@ -196,6 +196,10 @@
     "wrongCredentials": "Wrong credentials"
   },
   "notifications": {
+    "deleteProcessFailed": {
+      "title": "Failed to delete files",
+      "message": "Failed to delete some files. This shouldn't have happened. Report this bug"
+    },
     "account_password_changed": {
       "title": "Account password changed",
       "message": "Your account password was recently changed"
@@ -237,6 +241,7 @@
       "status": "Status",
       "resourceType": "Resource type",
       "file": "File",
+      "errors": "Errors",
       "status_code": "Status code",
       "discord_code": "Discord code",
       "days_till_delete": "Days left till deletion"

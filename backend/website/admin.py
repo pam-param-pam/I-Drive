@@ -4,9 +4,11 @@ from typing import Union, List
 import easy
 from django import forms
 from django.contrib import admin
+from django.db import transaction
 from django.db.models import QuerySet
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
+from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
 from website.services import attachment_service
@@ -645,9 +647,75 @@ class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
 class DeletionJobAdmin(admin.ModelAdmin):
     ordering = ["-started_at"]
     list_display = ['state', 'started_at', 'heartbeat_at', 'last_progress_percentage']
+    actions = ['retry_failed_jobs']
 
     def has_add_permission(self, request):
         return False
+
+    @admin.action(description="Reset failed items and retry selected deletion jobs")
+    def retry_failed_jobs(self, request, queryset):
+        from website.tasks.deleteTasks import process_file_batch, process_folder_batch
+
+        jobs_to_retry = []
+        reset_file_items = 0
+        reset_folder_items = 0
+
+        with transaction.atomic():
+            jobs = queryset.select_for_update().filter(state=DeletionJob.State.PARTIAL)
+
+            for job in jobs:
+                file_items = job.file_items.filter(state=DeletionFileWorkItem.State.FAILED)
+                folder_items = job.folder_items.filter(state=DeletionFolderWorkItem.State.FAILED)
+                file_count = file_items.count()
+                folder_count = folder_items.count()
+
+                if not file_count and not folder_count:
+                    continue
+
+                reset_file_items += file_items.update(
+                    state=DeletionFileWorkItem.State.PENDING,
+                    attempts=0,
+                    last_error="",
+                    claim_token=None,
+                    claimed_at=None,
+                    remote_done_at=None,
+                    finished_at=None,
+                )
+                reset_folder_items += folder_items.update(
+                    state=DeletionFolderWorkItem.State.PENDING,
+                    attempts=0,
+                    last_error="",
+                    claim_token=None,
+                    claimed_at=None,
+                    finished_at=None,
+                )
+
+                job.state = DeletionJob.State.RUNNING
+                job.failed_file_items = 0
+                job.failed_folder_items = 0
+                job.error = ""
+                job.finished_at = None
+                job.heartbeat_at = timezone.now()
+                job.save(update_fields=[
+                    "state",
+                    "failed_file_items",
+                    "failed_folder_items",
+                    "error",
+                    "finished_at",
+                    "heartbeat_at",
+                ])
+
+                jobs_to_retry.append((job.request_context, job.id, file_count > 0))
+
+        for context, job_id, has_file_items in jobs_to_retry:
+            task = process_file_batch if has_file_items else process_folder_batch
+            task.delay(context, job_id)
+
+        self.message_user(
+            request,
+            f"Retried {len(jobs_to_retry)} jobs; reset {reset_file_items} file items and "
+            f"{reset_folder_items} folder items",
+        )
 
 
 @admin.register(PerDeviceToken)
