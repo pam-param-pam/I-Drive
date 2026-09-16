@@ -210,8 +210,21 @@ echo "Creating application directory..."
 mkdir "$APP_DIR"
 cd "$APP_DIR"
 
-echo "Downloading Docker Compose configuration..."
+echo "Downloading deployment configuration..."
+
+mkdir -p \
+  prometheus \
+  grafana/dashboards \
+  grafana/provisioning/alerting \
+  grafana/provisioning/dashboards \
+  grafana/provisioning/datasources
+
 download_file "$BASE_URL/docker-compose.yml" docker-compose.yml
+download_file "$BASE_URL/prometheus/prometheus.yml" prometheus/prometheus.yml
+download_file "$BASE_URL/grafana/dashboards/idrive-overview.json" grafana/dashboards/idrive-overview.json
+download_file "$BASE_URL/grafana/provisioning/alerting/backend.yml" grafana/provisioning/alerting/backend.yml
+download_file "$BASE_URL/grafana/provisioning/dashboards/dashboards.yml" grafana/provisioning/dashboards/dashboards.yml
+download_file "$BASE_URL/grafana/provisioning/datasources/prometheus.yml" grafana/provisioning/datasources/prometheus.yml
 
 echo "Preparing config override file..."
 

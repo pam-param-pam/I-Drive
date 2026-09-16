@@ -58,7 +58,7 @@ const errors = {
       title: "errors.notFound"
    },
    429: {
-      icon: "block",
+      icon: "speed",
       title: "errors.rateLimit"
    },
    469: {

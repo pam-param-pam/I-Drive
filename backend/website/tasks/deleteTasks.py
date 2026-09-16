@@ -16,8 +16,8 @@ from website.discord.Discord import discord
 from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, Bot
 from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
 from website.models.mixin_models import ItemState
-from website.queries.selectors import query_attachments
-from website.tasks.helper import is_bulk_deletable, run_with_db_cleanup
+from website.queries.selectors import query_attachments, check_if_bots_exists
+from website.tasks.helper import is_bulk_deletable
 from website.websockets.utils import send_event, send_message
 from celery.utils.log import get_task_logger
 
@@ -362,14 +362,15 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
     if not message_structure:
         return
 
-    bots = Bot.objects.filter(owner=context.get_user())
+    bots = check_if_bots_exists(context.get_user())
+
     channel_map: dict[str, dict[str, list[MessageItem]]] = defaultdict(dict)
     for message_id, items in message_structure.items():
         channel_id = items[0].channel_id
         channel_map[channel_id][message_id] = items
 
     futures = []
-    max_workers = min(bots.count(), len(channel_map), 4)
+    max_workers = min(bots, len(channel_map), 4)
 
     if max_workers == 0:
         return
@@ -378,7 +379,6 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
         for channel_id, messages in channel_map.items():
             futures.append(
                 executor.submit(
-                    run_with_db_cleanup,
                     process_channel_deletions,
                     context,
                     job_id,

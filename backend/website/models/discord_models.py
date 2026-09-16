@@ -1,8 +1,6 @@
-import shortuuid
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
 from django.db.models import CheckConstraint, Q
-from shortuuidfield import ShortUUIDField
 
 
 class Webhook(models.Model):
@@ -48,8 +46,7 @@ class Webhook(models.Model):
 
 
 class Bot(models.Model):
-    id = ShortUUIDField(primary_key=True, default=shortuuid.uuid, editable=False)
-    discord_id = models.CharField(max_length=19)
+    discord_id = models.CharField(primary_key=True, max_length=19)
     primary = models.BooleanField(default=False)
     token = models.CharField(max_length=150)
     created_at = models.DateTimeField(auto_now_add=True)

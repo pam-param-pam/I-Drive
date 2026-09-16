@@ -3,6 +3,8 @@ import i18n from "@/i18n/index.js"
 import dayjs from "@/utils/dayjsSetup.js"
 import { v4 as uuidv4 } from "uuid"
 
+let imagesBlockTimeout = null
+
 const defaultSearchFilters = {
    files: true,
    folders: true,
@@ -56,7 +58,7 @@ export const useMainStore = defineStore("main", {
 
    getters: {
       areImagesBlocked() {
-         return (this.imagesBlock.blockedUntil && Date.now() < this.imagesBlock.blockedUntil)
+         return this.imagesBlock.blockedUntil !== null
       },
       isLogged() {
          return this.user !== null
@@ -393,17 +395,19 @@ export const useMainStore = defineStore("main", {
       closeContextMenu() {
          this.contextMenuState.visible = false
       },
-      blockImagesFor(seconds) {
-         const ms = Number(seconds) * 1000
-         if (!Number.isFinite(ms) || ms <= 0) return
-
-         const candidate = Date.now() + ms
-
-         if (!this.imagesBlock.blockedUntil || candidate > this.imagesBlock.blockedUntil) {
-            this.imagesBlock.blockedUntil = candidate
-         }
-
+      blockImagesFor(duration) {
+         const blockedUntil = Date.now()
+         this.imagesBlock.blockedUntil = blockedUntil
          this.imagesBlock.lastError = 429
+
+         clearTimeout(imagesBlockTimeout)
+         imagesBlockTimeout = setTimeout(() => {
+            if (this.imagesBlock.blockedUntil === blockedUntil) {
+               this.imagesBlock.blockedUntil = null
+               this.imagesBlock.lastError = null
+            }
+            imagesBlockTimeout = null
+         }, duration)
       }
    }
 })

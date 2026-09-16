@@ -70,12 +70,44 @@ jobs:
             GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
             EOF
 
-            echo "Downloading docker-compose.yml..."
+            echo "Downloading deployment configuration..."
+
+            mkdir -p \
+              prometheus \
+              grafana/dashboards \
+              grafana/provisioning/alerting \
+              grafana/provisioning/dashboards \
+              grafana/provisioning/datasources
 
             curl -fsSL \
               -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
               -o docker-compose.yml \
               https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/docker-compose.yml
+
+            curl -fsSL \
+              -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -o prometheus/prometheus.yml \
+              https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/prometheus/prometheus.yml
+
+            curl -fsSL \
+              -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -o grafana/dashboards/idrive-overview.json \
+              https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/grafana/dashboards/idrive-overview.json
+
+            curl -fsSL \
+              -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -o grafana/provisioning/alerting/backend.yml \
+              https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/grafana/provisioning/alerting/backend.yml
+
+            curl -fsSL \
+              -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -o grafana/provisioning/dashboards/dashboards.yml \
+              https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/grafana/provisioning/dashboards/dashboards.yml
+
+            curl -fsSL \
+              -H "Authorization: Bearer ${{ secrets.MY_GITHUB_TOKEN }}" \
+              -o grafana/provisioning/datasources/prometheus.yml \
+              https://raw.githubusercontent.com/pam-param-pam/I-Drive/master/grafana/provisioning/datasources/prometheus.yml
 
             echo "Pulling latest images..."
             docker compose pull

@@ -92,14 +92,6 @@ export default {
       }
    },
 
-   watch: {
-      tagName(newVal) {
-         if (newVal.includes(" ")) {
-            this.submit()
-         }
-      }
-   },
-
    async created() {
       this.tags = await getTags(this.file.id)
    },

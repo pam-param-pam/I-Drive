@@ -4,7 +4,6 @@ from typing import Optional
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
-from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from website.auth.Permissions import default_checks
@@ -18,7 +17,7 @@ from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_encryption_fields, validate_crc, get_file_extension, get_file_type, validate_ids_as_list
 from website.core.validators.GeneralChecks import IsPositive, IsSnowflake, Max, NotNegative, MaxLength, NotEmpty, IsValidItemName
 from website.models import Fragment, File, Moment
-from website.models.file_related_models import PhotoMetadata, Subtitle, RawMetadata, Thumbnail, VideoMetadata
+from website.models.file_related_models import PhotoMetadata, Subtitle, RawMetadata, Thumbnail, VideoMetadata, MediaPosition
 from website.models.mixin_models import ItemState
 from website.queries.selectors import get_discord_author, get_discord_channel, get_folder, check_if_bots_exists
 from website.services import file_service, attachment_service, touch_service, folder_service, cache_service
@@ -163,35 +162,6 @@ def create_files(request, user: User, files_data: list[dict]) -> list[File]:
 def edit_file(user, file_obj: File, file_data: Optional[dict]):
     check_if_bots_exists(user)
 
-    if file_obj.state != ItemState.ACTIVE:
-        raise BadRequestError("File is not active")
-
-    if file_obj.type not in ("Text", "Code", "Database", "Other"):
-        raise BadRequestError("You can only edit text files!")
-
-    has_any_metadata = File.objects.filter(id=file_obj.id).annotate(
-        has_thumbnail=Exists(Thumbnail.objects.filter(file_id=OuterRef("id"))),
-        has_video_metadata=Exists(VideoMetadata.objects.filter(file_id=OuterRef("id"))),
-        has_raw_metadata=Exists(RawMetadata.objects.filter(file_id=OuterRef("id"))),
-        has_moment=Exists(Moment.objects.filter(file_id=OuterRef("id"))),
-        has_subtitles=Exists(Subtitle.objects.filter(file_id=OuterRef("id"))),
-        has_photo_metadata=Exists(PhotoMetadata.objects.filter(file_id=OuterRef("id"))),
-    ).filter(
-        Q(has_thumbnail=True) |
-        Q(has_video_metadata=True) |
-        Q(has_raw_metadata=True) |
-        Q(has_moment=True) |
-        Q(has_subtitles=True) |
-        Q(has_photo_metadata=True)
-    ).exists()
-
-    if has_any_metadata:
-        raise BadRequestError("You can't edit this file. It has thumbnail/metadata/moments/subtitles")
-
-    fragments = Fragment.objects.filter(file=file_obj)
-    if fragments.count() > 1:
-        raise BadRequestError("You cannot edit a file that has more than one fragment!")
-
     attachment_data = validate_key(file_data, "attachment", dict, default=None)
 
     if file_data:
@@ -199,21 +169,39 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
 
         key_b64 = validate_key(file_data, "key", str)
         iv_b64 = validate_key(file_data, "iv", str)
-        key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
 
         fragment_size = validate_key(attachment_data, "fragment_size", int)
         validate_crc(fragment_size, crc)
 
     with transaction.atomic():
-        fragment_for_delete = None
-        if fragments.exists():
-            fragment_for_delete = fragments[0]
+        file_obj = File.objects.select_for_update().select_related("parent").get(id=file_obj.id, owner=user)
 
-        if fragment_for_delete:
-            attachment_service.delete_remote_single_discord_attachment(user, fragment_for_delete)
-            fragment_for_delete.delete()
+        if file_obj.state != ItemState.ACTIVE:
+            raise BadRequestError("File is not active")
+
+        if file_obj.type not in ("Text", "Code", "Database", "Other"):
+            raise BadRequestError("You can only edit text files!")
+
+        fragments = list(Fragment.objects.select_for_update().filter(file=file_obj))
+        if len(fragments) > 1:
+            raise BadRequestError("You cannot edit a file that has more than one fragment!")
+
+        thumbnails = list(Thumbnail.objects.select_for_update().filter(file=file_obj))
+        moments = list(Moment.objects.select_for_update().filter(file=file_obj))
+        subtitles = list(Subtitle.objects.select_for_update().filter(file=file_obj))
+        remote_attachments = [*fragments, *thumbnails, *moments, *subtitles]
+
+        Fragment.objects.filter(file=file_obj).delete()
+        Thumbnail.objects.filter(file=file_obj).delete()
+        Moment.objects.filter(file=file_obj).delete()
+        Subtitle.objects.filter(file=file_obj).delete()
+        VideoMetadata.objects.filter(file=file_obj).delete()
+        RawMetadata.objects.filter(file=file_obj).delete()
+        PhotoMetadata.objects.filter(file=file_obj).delete()
+        MediaPosition.objects.filter(file=file_obj).delete()
 
         if file_data:
+            key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
             fragment = _create_fragment_internal(file_obj, attachment_data)
 
             file_obj.size = fragment.size
@@ -227,7 +215,13 @@ def edit_file(user, file_obj: File, file_data: Optional[dict]):
         file_obj.save()
         touch_service.touch_file_object(file_obj)
 
-    send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))
+    cache.delete(cache_service.get_thumbnail_key(file_obj.id))
+
+    for resource in remote_attachments:
+        attachment_service.delete_remote_single_discord_attachment(user, resource)
+
+    file_dict = FileSerializer.serialize_object(file_obj)
+    send_event(RequestContext.from_user(user.id), file_obj.parent, EventCode.ITEM_UPDATE, file_dict)
 
 
 def delete_thumbnail(file_obj, must_exist=False):

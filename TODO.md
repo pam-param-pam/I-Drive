@@ -3,7 +3,6 @@
 | Optimize shares                                    | Soon                 |
 | multiple files in 1 Discord attachment support     | ⛔  Coming prob never |
 | switch to a different framework for file streaming | ⛔  Coming prob never |
-| load balancing with round robin for nginx          | ⛔  Coming prob never |
 
 
 | BUGS |
@@ -26,4 +25,11 @@
 8) Zip download, delete files inside = error prob
 9) cancel/confirm etc prompts should be called independently
 11) fix docker compose project name and prefix volumes properly
-12) fix indexes!!!
+12) fix db indexes!!!
+
+Make grafana and prometheus configurations no longer baked into images  + remove custom images 
+fix the bootstrap, deploy scripts and dokcer compsoe
+RE CHECK IF CODEX FUCKED UP USER STATE LOL
+!!!! Create new cleanup queue and celery procces
+!!!! Check if celery is properly configured
+!!!! Celery threadpoolexecetur is BAD it makes the db conn pool fuck up. Remove threadpoolexecutor entirely. If pararell stuff is needed then use celery tasks instead with chord

@@ -19,8 +19,7 @@ from website.core.validators.GeneralChecks import NotEmpty
 from website.models import PerDeviceToken, UserPerms, Folder, UserSettings, DiscordSettings
 from website.models.other_models import NotificationType, NotificationKind
 from website.services import cache_service, user_service
-from website.tasks.queueTasks import queue_ws_event
-from website.websockets.utils import send_event
+from website.websockets.utils import send_event, send_channels_message
 
 
 def _create_token_internal(user: User, device_info: dict) -> tuple[str, PerDeviceToken]:
@@ -61,7 +60,7 @@ def authenticate_qr_session(user: User, session_id) -> None:
 
     auth_data = {"auth_token": raw_token, "device_id": token_obj.device_id}
 
-    queue_ws_event.delay(
+    send_channels_message(
         'qrcode',
         {
             'type': 'approve_session',
@@ -77,7 +76,7 @@ def cancel_pending_qr_session(session_id: str) -> None:
     if not session_json:
         raise ResourceNotFoundError("Invalid or expired session")
 
-    queue_ws_event.delay(
+    send_channels_message(
         'qrcode',
         {
             'type': 'cancel_pending_session',
@@ -95,7 +94,7 @@ def get_qr_session_device_info(user: User, session_id: str) -> dict:
     session_data = json.loads(session_json)
 
     # send info that the session is now in pending state
-    queue_ws_event.delay(
+    send_channels_message(
         'qrcode',
         {
             'type': 'pending_session',
@@ -156,11 +155,11 @@ def _logout_websockets(user: User, device_id: str = None) -> None:
         context.device_id = device_id
 
     send_event(context, None, EventCode.FORCE_LOGOUT)
-    queue_ws_event.delay(
+    send_channels_message(
         'user',
         {
             "type": "logout",
-            "context": context,
+            "context": context.__json__(),
             "device_id": device_id,
         }
     )

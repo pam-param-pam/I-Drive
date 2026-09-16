@@ -36,6 +36,7 @@
          <div :style="divStyle">
             <img
                v-if="imageSrcSmall"
+               ref="thumbnail"
                v-lazy="{ src: imageSrcSmall }"
                :draggable="false"
                @error="handleImageError"
@@ -145,6 +146,15 @@ export default {
          return null
       }
    },
+
+   watch: {
+      areImagesBlocked(blocked, wasBlocked) {
+         if (wasBlocked && !blocked) {
+            this.$refs.thumbnail?.removeAttribute("data-failed")
+         }
+      }
+   },
+
    mounted() {
       window.addEventListener("keydown", this.onEsc)
    },
@@ -392,7 +402,6 @@ export default {
          img.dataset.failed = "true"
 
          if (this.areImagesBlocked) {
-            this.fallback = true
             return
          }
 
@@ -404,7 +413,7 @@ export default {
             const response = err?.response
 
             if (response?.status === 429) {
-               const retryAfter = Number(response.headers?.["retry-after"]) || 30
+               const retryAfter = Number(response.headers?.["retry-after"]) || 5
                this.blockImagesFor(retryAfter)
             }
 

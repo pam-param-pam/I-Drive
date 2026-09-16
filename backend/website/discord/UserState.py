@@ -124,7 +124,8 @@ class UserState:
                 if reset_ts_raw and reset_ts_raw ~= '' then
                     local reset_ts = tonumber(reset_ts_raw)
                     if reset_ts and now >= reset_ts then
-                        redis.call('HSET', credential_key, 'requests_remaining', 5)
+                        local rate_limit = tonumber(redis.call('HGET', credential_key, 'rate_limit') or '5')
+                        redis.call('HSET', credential_key, 'requests_remaining', rate_limit)
                         redis.call('HSET', credential_key, 'reset_timestamp', '')
                     end
                 end
@@ -132,7 +133,11 @@ class UserState:
                 local requests_remaining = tonumber(redis.call('HGET', credential_key, 'requests_remaining') or '0')
                 local in_flight = tonumber(redis.call('HGET', credential_key, 'in_flight') or '0')
             
-                if requests_remaining > 0 and in_flight < max_concurrent then
+                -- requests_remaining excludes requests already reserved by this
+                -- allocator. Add in_flight back to obtain the current window's
+                -- total usable budget, then cap concurrency by that budget.
+                local effective_max_concurrent = math.min(max_concurrent, requests_remaining + in_flight)
+                if requests_remaining > 0 and in_flight < effective_max_concurrent then
                     redis.call('HINCRBY', credential_key, 'requests_remaining', -1)
                     redis.call('HINCRBY', credential_key, 'in_flight', 1)
                     return cjson.encode({ ok = true, credential_key = credential_key })
@@ -167,7 +172,8 @@ class UserState:
                         if reset_ts_raw and reset_ts_raw ~= '' then
                             local reset_ts = tonumber(reset_ts_raw)
                             if reset_ts and now >= reset_ts then
-                                redis.call('HSET', credential_key, 'requests_remaining', 5)
+                                local rate_limit = tonumber(redis.call('HGET', credential_key, 'rate_limit') or '5')
+                                redis.call('HSET', credential_key, 'requests_remaining', rate_limit)
                                 redis.call('HSET', credential_key, 'reset_timestamp', '')
                             end
                         end
@@ -175,7 +181,8 @@ class UserState:
                         local requests_remaining = tonumber(redis.call('HGET', credential_key, 'requests_remaining') or '0')
                         local in_flight = tonumber(redis.call('HGET', credential_key, 'in_flight') or '0')
             
-                        if requests_remaining > 0 and in_flight < max_concurrent then
+                        local effective_max_concurrent = math.min(max_concurrent, requests_remaining + in_flight)
+                        if requests_remaining > 0 and in_flight < effective_max_concurrent then
                             redis.call('HINCRBY', credential_key, 'requests_remaining', -1)
                             redis.call('HINCRBY', credential_key, 'in_flight', 1)
                             return cjson.encode({ ok = true, credential_key = credential_key })
@@ -235,13 +242,34 @@ class UserState:
         return self._redis.register_script("""
             local remaining = ARGV[1]
             local reset = ARGV[2]
+            local rate_limit = ARGV[3]
+            local now = tonumber(ARGV[4])
+
+            -- Ignore a late response from a window which has already expired.
+            if reset ~= '' and tonumber(reset) <= now then
+                return 1
+            end
+
+            if rate_limit ~= '' then
+                local current_limit = tonumber(redis.call('HGET', KEYS[1], 'rate_limit'))
+                local reported_limit = tonumber(rate_limit)
+                if not current_limit or reported_limit < current_limit then
+                    redis.call('HSET', KEYS[1], 'rate_limit', reported_limit)
+                end
+            end
 
             if remaining ~= '' then
-                redis.call('HSET', KEYS[1], 'requests_remaining', remaining)
+                local current_remaining = tonumber(redis.call('HGET', KEYS[1], 'requests_remaining') or remaining)
+                -- Concurrent responses can arrive out of order. Never let an
+                -- older, larger header restore locally reserved request slots.
+                redis.call('HSET', KEYS[1], 'requests_remaining', math.min(current_remaining, tonumber(remaining)))
             end
 
             if reset ~= '' then
-                redis.call('HSET', KEYS[1], 'reset_timestamp', reset)
+                local current_reset = tonumber(redis.call('HGET', KEYS[1], 'reset_timestamp'))
+                if not current_reset or tonumber(reset) > current_reset then
+                    redis.call('HSET', KEYS[1], 'reset_timestamp', reset)
+                end
             end
 
             return 1
@@ -468,13 +496,22 @@ class UserState:
     def update_from_headers(self, credential: CredentialState, headers: dict):
         self._ensure_initialized()
         remaining = headers.get("X-RateLimit-Remaining")
-        reset = headers.get("X-RateLimit-Reset")
+        rate_limit = headers.get("X-RateLimit-Limit")
+        reset_after = headers.get("X-RateLimit-Reset-After")
+        now = time.time()
+
+        if reset_after is not None:
+            reset = now + float(reset_after)
+        else:
+            reset = headers.get("X-RateLimit-Reset")
 
         self._update_from_headers_script(
             keys=[self._credential_key(credential.secret)],
             args=[
                 "" if remaining is None else int(remaining),
                 "" if reset is None else float(reset),
+                "" if rate_limit is None else int(rate_limit),
+                now,
             ],
         )
 

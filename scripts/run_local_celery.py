@@ -34,7 +34,6 @@ def main() -> int:
         celery = [sys.executable, "-m", "celery", "-A", "website"]
         commands = (
             [*celery, "worker", "-l", "INFO", "-P", "eventlet"],
-            [*celery, "worker", "-l", "INFO", "--pool=solo", "-Q", "wsQ"],
             [*celery, "worker", "-l", "INFO", "--pool=solo", "-Q", "deletion", "-c", "1"],
             [*celery, "beat", "-l", "INFO", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"],
         )

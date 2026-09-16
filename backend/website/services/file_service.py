@@ -217,16 +217,19 @@ def rename_subtitle(file_obj: File, subtitle_id: str, new_language: str) -> None
 def remove_subtitle(user, file_obj: File, subtitle_id: str) -> None:
     with transaction.atomic():
         subtitle = Subtitle.objects.select_for_update().get(file=file_obj, id=subtitle_id)
-        attachment_service.delete_remote_single_discord_attachment(user, subtitle)
         subtitle.delete()
         touch_service.touch_file_object(file_obj)
+        
+    attachment_service.delete_remote_single_discord_attachment(user, subtitle)
 
 
 def remove_moment(user, file_obj, moment_id) -> None:
     with transaction.atomic():
         moment = Moment.objects.select_for_update().get(file=file_obj, id=moment_id)
-        attachment_service.delete_remote_single_discord_attachment(user, moment)
         moment.delete()
+
+    attachment_service.delete_remote_single_discord_attachment(user, moment)
+
 
 def add_moment(user: User, file_obj: File, data: dict) -> Moment:
     if file_obj.state != ItemState.ACTIVE:

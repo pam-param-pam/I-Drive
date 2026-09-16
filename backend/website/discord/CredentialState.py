@@ -17,6 +17,7 @@ class CredentialState:
     credential_type: CredentialType
     requests_remaining: int
     reset_timestamp: Optional[float]
+    rate_limit: int = 5
     in_flight: int = 0
     blocked_until: Optional[float] = None
     block_reason: str = ""
@@ -44,6 +45,7 @@ class CredentialState:
             "credential_type": self.credential_type,
             "requests_remaining": self.requests_remaining,
             "reset_timestamp": "" if self.reset_timestamp is None else self.reset_timestamp,
+            "rate_limit": self.rate_limit,
             "in_flight": self.in_flight,
             "blocked_until": blocked_until_raw,
             "block_reason": self.block_reason,
@@ -97,6 +99,7 @@ class CredentialState:
             credential_type=data["credential_type"],
             requests_remaining=int(data["requests_remaining"]),
             reset_timestamp=reset_timestamp,
+            rate_limit=int(data.get("rate_limit", 5)),
             in_flight=int(data.get("in_flight", 0)),
             blocked_until=blocked_until,
             block_reason=data.get("block_reason", ""),

@@ -243,8 +243,8 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'website.core.http.CustomExceptionHandler.custom_exception_handler',
 
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '30/m',
-        'user': '60/5s',
+        'anon': '60/m',
+        'user': '120/5s',
         'media': '1000/m',
         'uncached_media': '120/m',
         'media_anon': '500/m',

@@ -1,12 +1,14 @@
 from collections import defaultdict
 from typing import List, Union, Optional
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
 from ..core.crypto.utils import encrypt_message
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
-from ..tasks.queueTasks import queue_ws_event
 
 
 def send_message(message: str, args: Optional[dict], finished: bool, context: RequestContext, isError=False):
@@ -66,14 +68,16 @@ def send_event(context: RequestContext, folder_context: Optional[Folder], op_cod
     # Attach final event object
     ws_payload['event'] = event_body
 
-    queue_ws_event.delay(
+    send_channels_message(
         'user',
         {
             'type': 'send_event',
-            'context': context,
+            'context': context.__json__(),
             'ws_payload': ws_payload
         }
     )
 
 
-
+def send_channels_message(ws_channel, ws_event: dict):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(ws_channel, ws_event)

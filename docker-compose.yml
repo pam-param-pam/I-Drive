@@ -144,26 +144,25 @@ services:
           memory: 1G
 
   prometheus:
-    image: ghcr.io/pam-param-pam/idrive-prometheus:latest
+    image: prom/prometheus:v3.5.0
     container_name: idrive-prometheus
-    build:
-      context: ./prometheus
     restart: unless-stopped
     volumes:
       - prometheus_data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
     depends_on:
       backend:
         condition: service_healthy
 
   grafana:
-    image: ghcr.io/pam-param-pam/idrive-grafana:latest
+    image: grafana/grafana:12.1.1
     container_name: idrive-grafana
-    build:
-      context: ./grafana
     restart: unless-stopped
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GF_SECURITY_ADMIN_USER IS REQUIRED}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GF_SECURITY_ADMIN_PASSWORD IS REQUIRED}

@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone as django_timezone
 
-from .helper import is_bulk_deletable, run_with_db_cleanup
+from .helper import is_bulk_deletable
 from .otherTasks import _handle_parse_failure
 from ..celery import app
 from ..constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS, REMOTE_MISSING_FILES_WAIT_DAYS
@@ -191,7 +191,7 @@ def cleanup_dangling_discord_files(user, days: int = 1):
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
-            executor.submit(run_with_db_cleanup, process_channel, user, channel, days)
+            executor.submit(process_channel, user, channel, days)
             for channel in channels
         ]
 
