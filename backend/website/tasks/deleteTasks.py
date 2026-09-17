@@ -1,6 +1,5 @@
 import uuid
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Literal
 from uuid import UUID
@@ -9,14 +8,15 @@ from django.db import transaction, models
 from django.utils import timezone
 
 from website.celery import app
-from website.constants import EventCode
+from website.constants import EventCode, MAX_FILE_DELETION_ATTEMPTS
 from website.core.dataModels.http import RequestContext
 from website.core.errors import DiscordError
 from website.discord.Discord import discord
-from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle, Bot
+from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle
 from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
 from website.models.mixin_models import ItemState
-from website.queries.selectors import query_attachments, check_if_bots_exists
+from website.queries.selectors import check_if_bots_exists, query_attachments
+from website.services import touch_service
 from website.tasks.helper import is_bulk_deletable
 from website.websockets.utils import send_event, send_message
 from celery.utils.log import get_task_logger
@@ -26,7 +26,7 @@ AuthorType = Literal["bot", "webhook"]
 ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
 
 FILE_BATCH = 100
-FOLDER_BATCH = 50
+FOLDER_BATCH = 25
 
 logger = get_task_logger(__name__)
 
@@ -78,96 +78,103 @@ def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], 
     return input_file_ids, input_folder_ids, expanded_file_ids, expanded_folder_ids, total_fragments
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def plan_deletion_job(job_id: UUID) -> None:
-    job = DeletionJob.objects.get(id=job_id)
-    context = RequestContext.deserialize(job.request_context)
-
     try:
-        job.state = DeletionJob.State.PLANNING
-        job.heartbeat_at = timezone.now()
-        job.save(update_fields=["state", "heartbeat_at"])
-
-        ids = job.requested_ids
-        _, _, expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
-
-        if not expanded_file_ids and not expanded_folder_ids:
-            DeletionJob.objects.filter(id=job.id).update(
-                state=DeletionJob.State.COMPLETED,
-                finished_at=timezone.now(),
-                heartbeat_at=timezone.now(),
-            )
-            job.delete()
-            return
-
         with transaction.atomic():
-            file_items = [
-                DeletionFileWorkItem(job=job, file_id=file_id)
-                for file_id in expanded_file_ids
-            ]
+            # Hold the job lock through expansion and plan creation. A duplicate
+            # delivery waits, then observes the committed state of the first plan.
+            job = DeletionJob.objects.select_for_update().filter(id=job_id).first()
+            if job is None:
+                return
 
-            DeletionFileWorkItem.objects.bulk_create(
-                file_items,
-                ignore_conflicts=True,
-                batch_size=1000,
-            )
+            if job.state not in [
+                DeletionJob.State.PENDING,
+                DeletionJob.State.PLANNING,
+                DeletionJob.State.RUNNING,
+            ]:
+                return
 
-            folders = Folder.objects.filter(id__in=expanded_folder_ids)
-            folder_items = [
-                DeletionFolderWorkItem(job=job, folder_id=f.id, level=f.level)
-                for f in folders
-            ]
+            newly_planned = job.state != DeletionJob.State.RUNNING
+            if newly_planned:
+                job.state = DeletionJob.State.PLANNING
+                job.heartbeat_at = timezone.now()
+                job.save(update_fields=["state", "heartbeat_at"])
 
-            DeletionFolderWorkItem.objects.bulk_create(
-                folder_items,
-                ignore_conflicts=True,
-                batch_size=1000,
-            )
+                ids = job.requested_ids
+                _, _, expanded_file_ids, expanded_folder_ids, total_fragments = expand_ids(ids)
 
-            File.objects.filter(id__in=expanded_file_ids).update(
-                state=ItemState.DELETING,
-                state_changed_at=timezone.now(),
-            )
+                if not expanded_file_ids and not expanded_folder_ids:
+                    job.delete()
+                    return
 
-            Folder.objects.filter(id__in=expanded_folder_ids).update(
-                state=ItemState.DELETING,
-                state_changed_at=timezone.now(),
-            )
-
-            job.total_file_items = len(expanded_file_ids)
-            job.total_folder_items = len(expanded_folder_ids)
-            job.total_fragments = total_fragments
-            job.state = DeletionJob.State.RUNNING
-            job.heartbeat_at = timezone.now()
-            job.save(
-                update_fields=[
-                    "total_fragments",
-                    "total_file_items",
-                    "total_folder_items",
-                    "state",
-                    "heartbeat_at",
+                file_items = [
+                    DeletionFileWorkItem(job=job, file_id=file_id)
+                    for file_id in expanded_file_ids
                 ]
-            )
 
-        delete_cache(expanded_folder_ids, expanded_file_ids)
-        send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
+                DeletionFileWorkItem.objects.bulk_create(
+                    file_items,
+                    ignore_conflicts=True,
+                    batch_size=1000,
+                )
+
+                folders = Folder.objects.filter(id__in=expanded_folder_ids)
+                folder_items = [
+                    DeletionFolderWorkItem(job=job, folder_id=f.id, level=f.level)
+                    for f in folders
+                ]
+
+                DeletionFolderWorkItem.objects.bulk_create(
+                    folder_items,
+                    ignore_conflicts=True,
+                    batch_size=1000,
+                )
+
+                File.objects.filter(id__in=expanded_file_ids).update(
+                    state=ItemState.DELETING,
+                    state_changed_at=timezone.now(),
+                )
+
+                Folder.objects.filter(id__in=expanded_folder_ids).update(
+                    state=ItemState.DELETING,
+                    state_changed_at=timezone.now(),
+                )
+
+                # Commit listing versions with the state changes. Readers that
+                # cached the ACTIVE contents must not keep using that version.
+                touch_service.touch_files(list(expanded_file_ids))
+                touch_service.touch_folders(list(expanded_folder_ids))
+
+                job.total_file_items = len(expanded_file_ids)
+                job.total_folder_items = len(expanded_folder_ids)
+                job.total_fragments = total_fragments
+                job.state = DeletionJob.State.RUNNING
+                job.heartbeat_at = timezone.now()
+                job.save(
+                    update_fields=[
+                        "total_fragments",
+                        "total_file_items",
+                        "total_folder_items",
+                        "state",
+                        "heartbeat_at",
+                    ]
+                )
+
+
+        # A redelivery after commit resumes dispatch without rebuilding the plan.
+        # Publish first so a websocket error cannot prevent processing from starting.
         process_file_batch.delay(job.request_context, job.id)
+        if newly_planned:
+            context = RequestContext.deserialize(job.request_context)
+            send_event(context, None, EventCode.ITEM_DELETE, {'ids': ids})
 
-    except Exception as error:
-        logger.exception("Failed to plan deletion job %s", job_id)
-        DeletionJob.objects.filter(id=job_id).update(
-            state=DeletionJob.State.PARTIAL,
-            error=str(error),
-            finished_at=timezone.now(),
-            heartbeat_at=timezone.now(),
-        )
+    except Exception:
+        logger.exception("Failed to plan or dispatch deletion job %s", job_id)
+        # Keep the rolled-back planning state or committed RUNNING state eligible
+        # for supervisor recovery. Do not overwrite another planner's progress.
         raise
 
-
-def delete_cache(expanded_folder_ids: set[str], expanded_file_ids: set[str]):
-    # file_service._clear_cache(list(expanded_file_ids))
-    # folder_service._clear_cache(list(expanded_folder_ids))
-    pass # perhaps we should do something in here in the future
 
 @app.task(queue="deletion")
 def process_file_batch(context_dict: dict, job_id: UUID) -> None:
@@ -181,13 +188,16 @@ def process_file_batch(context_dict: dict, job_id: UUID) -> None:
         try:
             dispatch_channel_deletions(context, job_id, file_ids)
             mark_remote_done(claim_token)
-            finalize_file_deletions(job_id, file_ids, claim_token)
+            finalized = finalize_file_deletions(job_id, file_ids, claim_token)
+
+            if finalized != len(file_ids):
+                return
 
         except Exception as error:
             mark_file_batch_failed(job_id, file_ids, claim_token, error)
             raise
 
-    schedule_next_batch(context, job_id)
+    schedule_next_batch(context_dict, job_id)
 
 
 def mark_items_deleted(context: RequestContext, job_id: UUID, items: List[MessageItem]) -> None:
@@ -319,7 +329,7 @@ def delete_message_items(user, channel_id: str, message_id: str, attachments_ids
             discord.edit_attachments_webhook(user, author, message_id, attachments_ids_to_keep)
 
     except DiscordError as error:
-        if error.status == 404 or error.status == 400:
+        if error.status == 404:
             return
         raise
 
@@ -362,62 +372,78 @@ def dispatch_channel_deletions(context, job_id: UUID, file_ids: list[str]) -> No
     if not message_structure:
         return
 
-    bots = check_if_bots_exists(context.get_user())
+    check_if_bots_exists(context.get_user())
 
     channel_map: dict[str, dict[str, list[MessageItem]]] = defaultdict(dict)
     for message_id, items in message_structure.items():
         channel_id = items[0].channel_id
         channel_map[channel_id][message_id] = items
 
-    futures = []
-    max_workers = min(bots, len(channel_map), 4)
-
-    if max_workers == 0:
-        return
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        for channel_id, messages in channel_map.items():
-            futures.append(
-                executor.submit(
-                    process_channel_deletions,
-                    context,
-                    job_id,
-                    channel_id,
-                    messages
-                )
-            )
-
-        # wait for completion and propagate exceptions
-        for future in as_completed(futures):
-            future.result()
+    for channel_id, messages in channel_map.items():
+        process_channel_deletions(context, job_id, channel_id, messages)
 
 
 def mark_remote_done(claim_token: UUID) -> None:
-    DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
+    now = timezone.now()
+    DeletionFileWorkItem.objects.filter(
+        claim_token=claim_token,
+        state=DeletionFileWorkItem.State.CLAIMED,
+    ).update(
         state=DeletionFileWorkItem.State.REMOTE_DONE,
-        remote_done_at=timezone.now(),
+        remote_done_at=now,
+        claimed_at=now,
     )
 
 
-def finalize_file_deletions(job_id: UUID, file_ids: list[str], claim_token: UUID) -> None:
+def finalize_file_deletions(job_id: UUID, file_ids: list[str], claim_token: UUID) -> int:
     with transaction.atomic():
-        delete_fragments(file_ids)
-
-        Thumbnail.objects.filter(file_id__in=file_ids).delete()
-        Moment.objects.filter(file_id__in=file_ids).delete()
-        Subtitle.objects.filter(file_id__in=file_ids).delete()
-
-        File.objects.filter(id__in=file_ids).delete()
-
-        DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
-            state=DeletionFileWorkItem.State.DONE,
-            finished_at=timezone.now(),
+        owned_items = list(
+            DeletionFileWorkItem.objects
+            .select_for_update()
+            .filter(
+                job_id=job_id,
+                file_id__in=file_ids,
+                claim_token=claim_token,
+                state=DeletionFileWorkItem.State.REMOTE_DONE,
+            )
+            .values_list("id", "file_id")
         )
+
+        if not owned_items:
+            return 0
+
+        work_item_ids = [item_id for item_id, _ in owned_items]
+        owned_file_ids = [file_id for _, file_id in owned_items]
+        now = timezone.now()
+
+        transitioned = DeletionFileWorkItem.objects.filter(
+            id__in=work_item_ids,
+            claim_token=claim_token,
+            state=DeletionFileWorkItem.State.REMOTE_DONE,
+        ).update(
+            state=DeletionFileWorkItem.State.DONE,
+            finished_at=now,
+        )
+
+        if transitioned != len(owned_items):
+            raise RuntimeError("File deletion claim changed during finalization")
+
+        # Capture/touch parents while the files still exist, in this transaction.
+        touch_service.touch_files(owned_file_ids)
+        delete_fragments(owned_file_ids)
+
+        Thumbnail.objects.filter(file_id__in=owned_file_ids).delete()
+        Moment.objects.filter(file_id__in=owned_file_ids).delete()
+        Subtitle.objects.filter(file_id__in=owned_file_ids).delete()
+
+        File.objects.filter(id__in=owned_file_ids).delete()
 
         DeletionJob.objects.filter(id=job_id).update(
-            done_file_items=models.F("done_file_items") + len(file_ids),
-            heartbeat_at=timezone.now()
+            done_file_items=models.F("done_file_items") + transitioned,
+            heartbeat_at=now,
         )
+
+        return transitioned
 
 
 def delete_fragments(file_ids: list[str]) -> None:
@@ -426,25 +452,54 @@ def delete_fragments(file_ids: list[str]) -> None:
 
 def mark_file_batch_failed(job_id: UUID, file_ids: list[str], claim_token: UUID, error: Exception) -> None:
     with transaction.atomic():
-        DeletionFileWorkItem.objects.filter(claim_token=claim_token).update(
+        transitioned = DeletionFileWorkItem.objects.filter(
+            job_id=job_id,
+            file_id__in=file_ids,
+            claim_token=claim_token,
+            state__in=[
+                DeletionFileWorkItem.State.CLAIMED,
+                DeletionFileWorkItem.State.REMOTE_DONE,
+            ],
+        ).update(
             state=DeletionFileWorkItem.State.FAILED,
             last_error=f"{type(error).__name__}: {error}",
         )
+
+        if not transitioned:
+            return
+
         DeletionJob.objects.filter(id=job_id).update(
-            failed_file_items=models.F("failed_file_items") + len(file_ids),
+            failed_file_items=models.F("failed_file_items") + transitioned,
             heartbeat_at=timezone.now()
         )
 
 
-def schedule_next_batch(context: RequestContext, job_id: UUID) -> None:
+def has_unfinished_file_items(job_id: UUID) -> bool:
+    return DeletionFileWorkItem.objects.filter(job_id=job_id).filter(
+        models.Q(state__in=[
+            DeletionFileWorkItem.State.PENDING,
+            DeletionFileWorkItem.State.CLAIMED,
+            DeletionFileWorkItem.State.REMOTE_DONE,
+        ])
+        | models.Q(
+            state=DeletionFileWorkItem.State.FAILED,
+            attempts__lt=MAX_FILE_DELETION_ATTEMPTS,
+        )
+    ).exists()
+
+
+def schedule_next_batch(context_dict: dict, job_id: UUID) -> None:
     remaining_files = DeletionFileWorkItem.objects.filter(job_id=job_id, state=DeletionFileWorkItem.State.PENDING).exists()
 
     if remaining_files:
-        process_file_batch.delay(context, job_id)
+        process_file_batch.delay(context_dict, job_id)
+        return
+
+    if has_unfinished_file_items(job_id):
         return
 
     # file stage finished → start folder stage
-    process_folder_batch.delay(context, job_id)
+    process_folder_batch.delay(context_dict, job_id)
 
 
 def claim_folder_items(job_id: UUID) -> tuple[UUID, list[DeletionFolderWorkItem]]:
@@ -476,58 +531,136 @@ def claim_folder_items(job_id: UUID) -> tuple[UUID, list[DeletionFolderWorkItem]
 
     return claim_token, items
 
+def folder_deletion_blocker(job_id: UUID, folder_id: str) -> tuple[bool, str | None]:
+    """Return (must_wait, terminal_error) for a folder whose tree/row is locked."""
+    must_wait = False
+    for model, work_model, field, active_states in [
+        (File, DeletionFileWorkItem, "file_id", [
+            DeletionFileWorkItem.State.PENDING,
+            DeletionFileWorkItem.State.CLAIMED,
+            DeletionFileWorkItem.State.REMOTE_DONE,
+        ]),
+        (Folder, DeletionFolderWorkItem, "folder_id", [
+            DeletionFolderWorkItem.State.PENDING,
+            DeletionFolderWorkItem.State.CLAIMED,
+        ]),
+    ]:
+        children = model.objects.filter(parent_id=folder_id)
+        if not children.exists():
+            continue
 
-def execute_folder_deletions(folder_ids: list[str]) -> None:
+        recoverable_ids = work_model.objects.filter(job_id=job_id).filter(
+            models.Q(state__in=active_states)
+            | models.Q(state=work_model.State.FAILED, attempts__lt=MAX_FILE_DELETION_ATTEMPTS)
+        ).values_list(field, flat=True)
+        if children.exclude(id__in=recoverable_ids).exists():
+            return False, "Folder retained: contains an item with exhausted retries or no pending deletion work"
+        must_wait = True
+
+    return must_wait, None
+
+
+def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: UUID) -> int:
     from website.services import mptt_lock_service
 
     with transaction.atomic():
-        folders = list(Folder.objects.filter(id__in=folder_ids))
-        if not folders:
-            return
+        # Acquire tree locks before work-item locks, so batches from the same
+        # tree cannot hold each other's work items while waiting for the root.
+        candidates = Folder.objects.filter(
+            id__in=DeletionFolderWorkItem.objects.filter(
+                job_id=job_id, folder_id__in=folder_ids,
+                claim_token=claim_token, state=DeletionFolderWorkItem.State.CLAIMED,
+            ).values_list("folder_id", flat=True)
+        )
+        mptt_lock_service.lock_mptt_trees(list(candidates))
 
-        mptt_lock_service.lock_mptt_trees(folders)
+        owned_items = list(
+            DeletionFolderWorkItem.objects.select_for_update().filter(
+                job_id=job_id, folder_id__in=folder_ids,
+                claim_token=claim_token, state=DeletionFolderWorkItem.State.CLAIMED,
+            )
+        )
+        if not owned_items:
+            return 0
 
-        # Query again after acquiring the roots and delete deepest nodes first.
-        # MPTTModel.delete() closes coordinate gaps; QuerySet.delete() bypasses
-        # that implementation.
+        items_by_folder = {item.folder_id: item for item in owned_items}
         folders = list(
-            Folder.objects
-            .filter(id__in=folder_ids)
-            .order_by("-level", "-lft")
+            Folder.objects.select_for_update()
+            .filter(id__in=items_by_folder).order_by("-level", "-lft")
         )
+        now = timezone.now()
+        completed = 0
+        failed = 0
         for folder in folders:
-            folder.delete()
+            # Earlier deletions in this batch may have changed MPTT coordinates.
+            folder.refresh_from_db()
+            item = items_by_folder[folder.id]
+            must_wait, error = folder_deletion_blocker(job_id, folder.id)
+            owned = DeletionFolderWorkItem.objects.filter(
+                id=item.id, claim_token=claim_token,
+                state=DeletionFolderWorkItem.State.CLAIMED,
+            )
+            if error:
+                failed += owned.update(
+                    state=DeletionFolderWorkItem.State.FAILED,
+                    attempts=max(item.attempts, MAX_FILE_DELETION_ATTEMPTS),
+                    last_error=error, finished_at=now,
+                )
+            elif must_wait:
+                # Waiting for another batch is not a failed deletion attempt.
+                owned.update(
+                    state=DeletionFolderWorkItem.State.PENDING,
+                    claim_token=None, claimed_at=None,
+                    attempts=max(0, item.attempts - 1),
+                )
+            else:
+                transitioned = owned.update(
+                    state=DeletionFolderWorkItem.State.DONE, finished_at=now,
+                )
+                if transitioned != 1:
+                    raise RuntimeError("Folder deletion claim changed during finalization")
 
-
-def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: UUID) -> None:
-    with transaction.atomic():
-        DeletionFolderWorkItem.objects.filter(claim_token=claim_token).update(
-            state=DeletionFolderWorkItem.State.DONE,
-            finished_at=timezone.now()
-        )
+                # The tree and folder row stay locked through the emptiness
+                # check and delete. Never cascade through remaining contents.
+                touch_service.touch_folder_object(folder)
+                folder.delete()
+                completed += transitioned
 
         DeletionJob.objects.filter(id=job_id).update(
-            done_folder_items=models.F("done_folder_items") + len(folder_ids),
-            heartbeat_at=timezone.now()
+            done_folder_items=models.F("done_folder_items") + completed,
+            failed_folder_items=models.F("failed_folder_items") + failed,
+            heartbeat_at=now,
         )
+        return completed + failed
 
 
 def mark_folder_batch_failed(job_id: UUID, folder_ids: list[str], claim_token: UUID, error: Exception) -> None:
     with transaction.atomic():
-        DeletionFolderWorkItem.objects.filter(claim_token=claim_token).update(
+        transitioned = DeletionFolderWorkItem.objects.filter(
+            job_id=job_id,
+            folder_id__in=folder_ids,
+            claim_token=claim_token,
+            state=DeletionFolderWorkItem.State.CLAIMED,
+        ).update(
             state=DeletionFolderWorkItem.State.FAILED,
             last_error=f"{type(error).__name__}: {error}",
             finished_at=timezone.now(),
         )
 
+        if not transitioned:
+            return
+
         DeletionJob.objects.filter(id=job_id).update(
-            failed_folder_items=models.F("failed_folder_items") + len(folder_ids),
+            failed_folder_items=models.F("failed_folder_items") + transitioned,
             heartbeat_at=timezone.now()
         )
 
 
-@app.task
+@app.task(queue="deletion")
 def process_folder_batch(context_dict: dict, job_id: UUID) -> None:
+    if has_unfinished_file_items(job_id):
+        return
+
     context = RequestContext.deserialize(context_dict)
     claim_token, items = claim_folder_items(job_id)
 
@@ -538,8 +671,10 @@ def process_folder_batch(context_dict: dict, job_id: UUID) -> None:
     folder_ids = [i.folder_id for i in items]
 
     try:
-        execute_folder_deletions(folder_ids)
-        finalize_folder_deletions(job_id, folder_ids, claim_token)
+        finalized = finalize_folder_deletions(job_id, folder_ids, claim_token)
+
+        if finalized != len(folder_ids):
+            return
 
     except Exception as e:
         mark_folder_batch_failed(job_id, folder_ids, claim_token, e)
@@ -548,45 +683,69 @@ def process_folder_batch(context_dict: dict, job_id: UUID) -> None:
     process_folder_batch.delay(context_dict, job_id)
 
 
-def finalize_job_if_complete(context: RequestContext, job_id: UUID) -> None:
-    pending_files = DeletionFileWorkItem.objects.filter(
-        job_id=job_id,
-        state__in=[
-            DeletionFileWorkItem.State.PENDING,
-            DeletionFileWorkItem.State.CLAIMED,
-            DeletionFileWorkItem.State.REMOTE_DONE,
-        ]
-    ).exists()
+@app.task(queue="deletion")
+def finalize_deletion_job(context_dict: dict, job_id: UUID) -> None:
+    finalize_job_if_complete(RequestContext.deserialize(context_dict), job_id)
 
-    pending_folders = DeletionFolderWorkItem.objects.filter(
+
+def has_remaining_deletion_work(job_id: UUID) -> bool:
+    """Include active work and failures that can still be retried."""
+    if has_unfinished_file_items(job_id):
+        return True
+
+    if DeletionFolderWorkItem.objects.filter(
         job_id=job_id,
         state__in=[
             DeletionFolderWorkItem.State.PENDING,
             DeletionFolderWorkItem.State.CLAIMED,
-        ]
-    ).exists()
+        ],
+    ).exists():
+        return True
 
-    if pending_files or pending_folders:
-        return
-
-    job = DeletionJob.objects.only(
-        "failed_file_items",
-        "failed_folder_items"
-    ).get(id=job_id)
-
-    state = (
-        DeletionJob.State.PARTIAL
-        if job.failed_file_items or job.failed_folder_items
-        else DeletionJob.State.COMPLETED
+    return (
+        DeletionFileWorkItem.objects.filter(
+            job_id=job_id,
+            state=DeletionFileWorkItem.State.FAILED,
+            attempts__lt=MAX_FILE_DELETION_ATTEMPTS,
+        ).exists()
+        or DeletionFolderWorkItem.objects.filter(
+            job_id=job_id,
+            state=DeletionFolderWorkItem.State.FAILED,
+            attempts__lt=MAX_FILE_DELETION_ATTEMPTS,
+        ).exists()
     )
 
-    DeletionJob.objects.filter(id=job_id).update(
-        state=state,
-        finished_at=timezone.now(),
-        heartbeat_at=timezone.now(),
-    )
-    if state == DeletionJob.State.COMPLETED:
-        send_message(message="toasts.itemsDeleted", args={}, finished=True, context=context)
-        job.delete()
-    else:
-        send_message(message="toasts.itemsDeletedPartially", args={}, finished=True, isError=True, context=context)
+
+def finalize_job_if_complete(context: RequestContext, job_id: UUID) -> None:
+    with transaction.atomic():
+        job = DeletionJob.objects.select_for_update().filter(id=job_id).first()
+        if job is None or job.state != DeletionJob.State.RUNNING:
+            return
+
+        if has_remaining_deletion_work(job_id):
+            return
+
+        failed_files = DeletionFileWorkItem.objects.filter(
+            job_id=job_id, state=DeletionFileWorkItem.State.FAILED,
+        )
+        failed_folders = DeletionFolderWorkItem.objects.filter(
+            job_id=job_id, state=DeletionFolderWorkItem.State.FAILED,
+        )
+        partial = bool(
+            job.failed_file_items or job.failed_folder_items
+            or failed_files.exists() or failed_folders.exists()
+        )
+        job.state = DeletionJob.State.PARTIAL if partial else DeletionJob.State.COMPLETED
+        job.finished_at = timezone.now()
+        job.heartbeat_at = job.finished_at
+        job.save(update_fields=["state", "finished_at", "heartbeat_at"])
+
+        if not partial:
+            # Preserve completed-job cleanup in the same transaction. Duplicate
+            # finalizers then see a missing job and return without notifying again.
+            job.delete()
+
+        transaction.on_commit(lambda: send_message(
+            message="toasts.itemsDeletedPartially" if partial else "toasts.itemsDeleted",
+            args={}, finished=True, isError=partial, context=context,
+        ))

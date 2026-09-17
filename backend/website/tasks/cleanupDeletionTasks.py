@@ -1,5 +1,7 @@
+import uuid
 from collections import Counter
 from datetime import timedelta
+from uuid import UUID
 
 from django.db import transaction
 from django.db.models import F, Q, Exists, OuterRef
@@ -11,7 +13,80 @@ from website.core.dataModels.http import RequestContext
 from website.models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from website.models.other_models import NotificationType, NotificationKind
 from website.services import user_service
-from website.tasks.deleteTasks import process_file_batch, process_folder_batch
+from website.tasks.deleteTasks import (
+    plan_deletion_job,
+    process_file_batch,
+    process_folder_batch,
+    FILE_BATCH,
+    finalize_file_deletions,
+    finalize_deletion_job,
+    has_remaining_deletion_work,
+    mark_file_batch_failed,
+)
+
+
+def claim_stale_remote_done_file_items(job_id: UUID, minutes: int = 10) -> tuple[None, list[DeletionFileWorkItem]] | tuple[UUID, list[DeletionFileWorkItem]]:
+    claim_token = uuid.uuid4()
+    cutoff = timezone.now() - timedelta(minutes=minutes)
+
+    with transaction.atomic():
+        items = list(
+            DeletionFileWorkItem.objects
+            .select_for_update(skip_locked=True)
+            .filter(
+                job_id=job_id,
+                state=DeletionFileWorkItem.State.REMOTE_DONE,
+            )
+            .filter(
+                Q(claimed_at__lt=cutoff)
+                | Q(claimed_at__isnull=True)
+            )
+            .order_by("remote_done_at")[:FILE_BATCH]
+        )
+
+        if not items:
+            return None, []
+
+        now = timezone.now()
+        for item in items:
+            item.claim_token = claim_token
+            item.claimed_at = now
+
+        DeletionFileWorkItem.objects.bulk_update(
+            items,
+            ["claim_token", "claimed_at"],
+        )
+
+    return claim_token, items
+
+
+@app.task(queue="cleanup")
+def recover_remote_done_file_batch(context_dict: dict, job_id: UUID) -> None:
+    claim_token, items = claim_stale_remote_done_file_items(job_id)
+
+    if not items:
+        return
+
+    file_ids = [item.file_id for item in items]
+
+    try:
+        finalized = finalize_file_deletions(job_id, file_ids, claim_token)
+
+        if finalized != len(file_ids):
+            return
+
+    except Exception as error:
+        mark_file_batch_failed(job_id, file_ids, claim_token, error)
+        raise
+
+    if DeletionFileWorkItem.objects.filter(
+        job_id=job_id,
+        state=DeletionFileWorkItem.State.REMOTE_DONE,
+    ).exists():
+        recover_remote_done_file_batch.delay(context_dict, job_id)
+        return
+
+    process_file_batch.delay(context_dict, job_id)
 
 
 def _reclaim_stale_file_claims(minutes: int = 10):
@@ -131,16 +206,26 @@ def _restart_stuck_jobs(minutes: int = 10):
             )
             .only("id", "request_context")
         )
+        recover_remote_done = []
         restart_file = []
         restart_folder = []
+        finish_jobs = []
 
         for job in stuck_jobs:
+            has_remote_done_files = DeletionFileWorkItem.objects.filter(
+                job_id=job.id,
+                state=DeletionFileWorkItem.State.REMOTE_DONE,
+            ).exists()
+
+            if has_remote_done_files:
+                recover_remote_done.append(job)
+                continue
+
             pending_files = DeletionFileWorkItem.objects.filter(
                 job_id=job.id,
                 state__in=[
                     DeletionFileWorkItem.State.PENDING,
                     DeletionFileWorkItem.State.CLAIMED,
-                    DeletionFileWorkItem.State.REMOTE_DONE,
                 ]
             ).exists()
 
@@ -158,6 +243,11 @@ def _restart_stuck_jobs(minutes: int = 10):
 
             if pending_folders:
                 restart_folder.append(job)
+            else:
+                finish_jobs.append(job)
+
+    for job in recover_remote_done:
+        recover_remote_done_file_batch.delay(job.request_context, job.id)
 
     for job in restart_file:
         process_file_batch.delay(job.request_context, job.id)
@@ -165,7 +255,15 @@ def _restart_stuck_jobs(minutes: int = 10):
     for job in restart_folder:
         process_folder_batch.delay(job.request_context, job.id)
 
-    print(f"Retried {len(stuck_jobs)} stuck jobs")
+    for job in finish_jobs:
+        finalize_deletion_job.delay(job.request_context, job.id)
+
+    print(
+        f"Retried {len(stuck_jobs)} stuck jobs: "
+        f"remote_done={len(recover_remote_done)}, "
+        f"files={len(restart_file)}, folders={len(restart_folder)}, "
+        f"finalizing={len(finish_jobs)}"
+    )
 
 
 def _mark_jobs_failed():
@@ -198,6 +296,11 @@ def _mark_jobs_failed():
         now = timezone.now()
 
         for job in jobs:
+            # PARTIAL is terminal: keep recovery enabled until every other item
+            # has completed or exhausted its retries. The job row is locked here.
+            if has_remaining_deletion_work(job.id):
+                continue
+
             failed_jobs += 1
             job.state = DeletionJob.State.PARTIAL
             job.finished_at = now
@@ -226,7 +329,7 @@ def _mark_jobs_failed():
 
             context = RequestContext.from_user(job.request_context["user_id"])
             user_service.create_notification(context.get_user(), NotificationType.ERROR, NotificationKind.GENERAL,
-                                             "notifications.deleteProcessFailed.title", "notifications.deleteProcessFailed.message",
+                                             "notifications.delete_process_failed.title", "notifications.deleteProcessFailed.message",
                                              data={"errors": sorted(errors)})
 
     print(f"Marked {failed_jobs} jobs as failed")
@@ -238,44 +341,49 @@ def _start_stale_pending_jobs(minutes: int = 10):
         jobs = list(
             DeletionJob.objects
             .select_for_update(skip_locked=True)
+            .filter(state=DeletionJob.State.PENDING)
             .filter(
-                state=DeletionJob.State.PENDING,
-                created_at__lt=cutoff,
+                Q(heartbeat_at__lt=cutoff)
+                | Q(heartbeat_at__isnull=True, created_at__lt=cutoff)
             )
-            .only("id", "request_context")
+            .only("id")
         )
 
-        now = timezone.now()
-
-        for job in jobs:
-            job.state = DeletionJob.State.RUNNING
-            job.heartbeat_at = now
-            job.save(update_fields=["state", "heartbeat_at"])
-
-    started_file = 0
-    started_folder = 0
+        # Keep PENDING until the planner creates the work items. If publication
+        # fails or this process dies, the heartbeat makes the job eligible again.
+        DeletionJob.objects.filter(id__in=[job.id for job in jobs]).update(
+            heartbeat_at=timezone.now()
+        )
 
     for job in jobs:
-        has_files = DeletionFileWorkItem.objects.filter(
-            job_id=job.id,
-            state=DeletionFileWorkItem.State.PENDING,
-        ).exists()
+        plan_deletion_job.delay(job.id)
 
-        if has_files:
-            process_file_batch.delay(job.request_context, job.id)
-            started_file += 1
-            continue
+    print(f"Requeued planning for {len(jobs)} stale pending jobs")
 
-        has_folders = DeletionFolderWorkItem.objects.filter(
-            job_id=job.id,
-            state=DeletionFolderWorkItem.State.PENDING,
-        ).exists()
 
-        if has_folders:
-            process_folder_batch.delay(job.request_context, job.id)
-            started_folder += 1
+def _restart_stale_planning_jobs(minutes: int = 10):
+    cutoff = timezone.now() - timedelta(minutes=minutes)
 
-    print(f"Started stale pending jobs: files={started_file}, folders={started_folder}")
+    with transaction.atomic():
+        jobs = list(
+            DeletionJob.objects
+            .select_for_update(skip_locked=True)
+            .filter(state=DeletionJob.State.PLANNING)
+            .filter(
+                Q(heartbeat_at__lt=cutoff)
+                | Q(heartbeat_at__isnull=True, created_at__lt=cutoff)
+            )
+            .only("id")
+        )
+
+        DeletionJob.objects.filter(id__in=[job.id for job in jobs]).update(
+            heartbeat_at=timezone.now()
+        )
+
+    for job in jobs:
+        plan_deletion_job.delay(job.id)
+
+    print(f"Restarted {len(jobs)} stale planning jobs")
 
 @app.task(queue="cleanup", expires=30)
 def supervise_deletion_system():
@@ -283,6 +391,7 @@ def supervise_deletion_system():
     _reclaim_stale_folder_claims()
 
     _start_stale_pending_jobs()
+    _restart_stale_planning_jobs()
 
     _retry_failed_file_items()
     _retry_failed_folder_items()

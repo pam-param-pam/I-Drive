@@ -13,8 +13,8 @@ from local_common import (
     load_project_environment,
     run,
     start_local_infrastructure,
+    write_project_environment
 )
-
 
 VENV_DIR = BACKEND_DIR / ".venv"
 
@@ -69,6 +69,8 @@ def main() -> int:
     run([npm, "install"], cwd=FRONTEND_DIR)
 
     env = load_project_environment(dotenv_python=python)
+    write_project_environment(env)
+
     start_local_infrastructure()
     manage_py = str(BACKEND_DIR / "manage.py")
     run([str(python), manage_py, "migrate"], cwd=BACKEND_DIR, env=env)

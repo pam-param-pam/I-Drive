@@ -196,19 +196,21 @@
     "wrongCredentials": "Błędne dane logowania"
   },
   "notifications": {
-    "deleteProcessFailed": {
-      "title": "Nie udało sie usunąć niektórych plików",
-      "message": "Proces usuwania plików sie nie powiódł. Zgłoś to jako bug"
-    },
     "account_password_changed": {
       "title": "Hasło konta zostało zmienione",
       "message": "Hasło do Twojego konta zostało niedawno zmienione"
     },
-    "cleanup": {
-      "title": "Czyszczenie"
+    "database_cleanup": {
+      "title": "Czyszczenie bazy danych"
     },
-    "cleanup_failed": {
-      "title": "Czyszczenie nie powiodło się"
+    "database_cleanup_failed": {
+      "title": "Czyszczenie bazy danych nie powiodło się"
+    },
+    "discord_cleanup": {
+      "title": "Czyszczenie discorda"
+    },
+    "discord_cleanup_failed": {
+      "title": "Czyszczenie discorda nie powiodło się"
     },
     "discord_attachment_missing": {
       "title": "Brak pliku na discordzie",

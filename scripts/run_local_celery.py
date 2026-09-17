@@ -20,6 +20,7 @@ from local_common import (
 
 INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49174)
 INFRASTRUCTURE_SERVICES = ("redis", "postgres", "prometheus", "grafana")
+
 def main() -> int:
     instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
     processes: list[subprocess.Popen] = []
@@ -30,14 +31,21 @@ def main() -> int:
             compose_command(docker, LOCAL_COMPOSE_FILE),
             INFRASTRUCTURE_SERVICES,
         )
+
         backend_env = backend_environment(env)
         celery = [sys.executable, "-m", "celery", "-A", "website"]
+        worker_pool = "threads" if sys.platform == "win32" else "prefork"
         commands = (
-            [*celery, "worker", "-l", "INFO", "-P", "eventlet"],
-            [*celery, "worker", "-l", "INFO", "--pool=solo", "-Q", "deletion", "-c", "1"],
+            [*celery, "worker", "-l", "INFO", "-P", worker_pool, "-c", "2"],
+            [*celery, "worker", "-l", "INFO", "-P", worker_pool, "-Q", "cleanup", "-c", "2"],
+            [*celery, "worker", "-l", "INFO", "-P", "solo", "-Q", "deletion", "-c", "1"],
             [*celery, "beat", "-l", "INFO", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"],
         )
-        processes = [start(command, cwd=BACKEND_DIR, env=backend_env) for command in commands]
+
+        processes = [
+            start(command, cwd=BACKEND_DIR, env=backend_env)
+            for command in commands
+        ]
         return wait_for_processes(processes)
     except KeyboardInterrupt:
         return 0

@@ -10,9 +10,10 @@ from website.core.errors import NoBotsError, DiscordError
 from website.discord.Discord import discord
 from website.models import Channel, File
 from website.models.mixin_models import ItemState
+from website.models.other_models import NotificationType, NotificationKind
 from website.queries.selectors import check_if_bots_exists, query_attachments
-from website.services import item_service
-from website.tasks.helper import is_bulk_deletable
+from website.services import item_service, user_service
+from website.tasks.helper import is_bulk_deletable, format_cleanup_summary
 
 
 def bulk_delete_messages(user, channel_id, message_ids):
@@ -83,7 +84,6 @@ def process_channel(user, channel, days):
     return deleted
 
 
-@app.task(queue="deletion", acks_late=True, reject_on_worker_lost=True)
 def cleanup_dangling_discord_files(user_id: int, days: int = 2):
     user = User.objects.get(id=user_id)
 
@@ -109,7 +109,6 @@ def cleanup_dangling_discord_files(user_id: int, days: int = 2):
     }
 
 
-@app.task(queue="deletion", acks_late=True, reject_on_worker_lost=True)
 def cleanup_remote_missing_files(user_id: int) -> int:
     user = User.objects.get(id=user_id)
 
@@ -133,3 +132,25 @@ def cleanup_remote_missing_files(user_id: int) -> int:
     )
 
     return len(files)
+
+@app.task(queue="cleanup", acks_late=True, reject_on_worker_lost=True)
+def cleanup_user_discord(user_id: int):
+    result = {}
+    user = User.objects.get(id=user_id)
+    try:
+        try:
+            result["cleanup_remote_missing_files"] = cleanup_remote_missing_files(user_id)
+        except Exception as e:
+            result["cleanup_remote_missing_files"] = str(e)
+
+        try:
+            result["discord_removed"] = cleanup_dangling_discord_files(user_id)
+        except Exception as e:
+            result["discord_removed"] = str(e)
+
+        summary = format_cleanup_summary(result)
+        if summary:
+            user_service.create_notification(user, NotificationType.INFO, NotificationKind.GENERAL, "notifications.discord_cleanup.title", summary)
+
+    except Exception as e:
+        user_service.create_notification(user, NotificationType.ERROR, NotificationKind.GENERAL, "notifications.discord_cleanup_failed.title", str(e))

@@ -41,7 +41,7 @@ def update_router_public_ip():
 
     return value
 
-@app.task(queue="cleanup", expires=2)
+@app.task(queue="cleanup", expires=1)
 def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)

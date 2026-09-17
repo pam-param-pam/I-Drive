@@ -11,7 +11,7 @@ from website.models import File, ShareableLink, PerDeviceToken, Folder
 from website.models.mixin_models import ItemState
 from website.models.other_models import Notification, UserZIP, RawExtractionClaim, NotificationType, NotificationKind
 from website.services import item_service, user_service
-from website.tasks.cleanup.utils import format_cleanup_summary
+from website.tasks.helper import format_cleanup_summary
 from website.tasks.otherTasks import _handle_parse_failure
 
 
@@ -88,46 +88,41 @@ def cleanup_raw_claims(user) -> int:
     return deleted_count
 
 
-def run_cleanup_for_user(user):
-    result = {}
-
-    try:
-        result["shares_removed"] = cleanup_expired_shares(user)
-    except Exception as e:
-        result["shares_error"] = str(e)
-
-    try:
-        result["notifications_removed"] = cleanup_old_notifications(user)
-    except Exception as e:
-        result["notifications_error"] = str(e)
-
-    try:
-        result["zips_removed"] = cleanup_expired_zips(user)
-    except Exception as e:
-        result["zips_error"] = str(e)
-
-    try:
-        result["tokens_removed"] = cleanup_tokens(user)
-    except Exception as e:
-        result["tokens_error"] = str(e)
-
-    try:
-        result["trash_removed"] = cleanup_trash(user)
-    except Exception as e:
-        result["trash_error"] = str(e)
-
-    return result
-
 @app.task(queue="cleanup", acks_late=True, reject_on_worker_lost=True)
 def cleanup_user_db(user_id: int):
+    result = {}
     user = User.objects.get(id=user_id)
 
     try:
-        user_result = run_cleanup_for_user(user)
-        summary = format_cleanup_summary(user_result)
+        try:
+            result["shares_removed"] = cleanup_expired_shares(user)
+        except Exception as e:
+            result["shares_error"] = str(e)
+
+        try:
+            result["notifications_removed"] = cleanup_old_notifications(user)
+        except Exception as e:
+            result["notifications_error"] = str(e)
+
+        try:
+            result["zips_removed"] = cleanup_expired_zips(user)
+        except Exception as e:
+            result["zips_error"] = str(e)
+
+        try:
+            result["tokens_removed"] = cleanup_tokens(user)
+        except Exception as e:
+            result["tokens_error"] = str(e)
+
+        try:
+            result["trash_removed"] = cleanup_trash(user)
+        except Exception as e:
+            result["trash_error"] = str(e)
+
+        summary = format_cleanup_summary(result)
         if summary:
-            user_service.create_notification(user, NotificationType.INFO, NotificationKind.GENERAL, "notifications.cleanup.title", summary)
+            user_service.create_notification(user, NotificationType.INFO, NotificationKind.GENERAL, "notifications.database_cleanup.title", summary)
 
     except Exception as e:
-        user_service.create_notification(user, NotificationType.ERROR, NotificationKind.GENERAL, "notifications.cleanupFailed.title", str(e))
+        user_service.create_notification(user, NotificationType.ERROR, NotificationKind.GENERAL, "notifications.database_cleanup_failed.title", str(e))
 

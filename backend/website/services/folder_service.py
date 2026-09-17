@@ -171,7 +171,6 @@ def internal_move_to_trash(folder: Folder) -> None:
         folder = (
             Folder.objects
             .select_for_update()
-            .select_related("parent")
             .get(id=folder.id)
         )
 

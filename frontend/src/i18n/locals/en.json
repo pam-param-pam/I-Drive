@@ -196,19 +196,21 @@
     "wrongCredentials": "Wrong credentials"
   },
   "notifications": {
-    "deleteProcessFailed": {
-      "title": "Failed to delete files",
-      "message": "Failed to delete some files. This shouldn't have happened. Report this bug"
-    },
     "account_password_changed": {
       "title": "Account password changed",
       "message": "Your account password was recently changed"
     },
-    "cleanup": {
-      "title": "Cleanup"
+    "database_cleanup": {
+      "title": "Database Cleanup"
     },
-    "cleanup_failed": {
-      "title": "Cleanup failed"
+    "database_cleanup_failed": {
+      "title": "Database cleanup failed"
+    },
+    "discord_cleanup": {
+      "title": "Discord Cleanup"
+    },
+    "discord_cleanup_failed": {
+      "title": "Discord cleanup failed"
     },
     "discord_attachment_missing": {
       "title": "Missing discord attachment",

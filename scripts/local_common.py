@@ -163,6 +163,37 @@ def load_project_environment(*, dotenv_python: Path | None = None) -> dict[str, 
     os.environ.update(env)
     return env
 
+def write_project_environment(env: dict[str, str]) -> None:
+    header = [
+        "# AUTO-GENERATED FILE - DO NOT EDIT MANUALLY.",
+        "# Re-run the local environment setup to regenerate this file.",
+        "",
+    ]
+
+    def write_env_file(path: Path, values: dict[str, str]) -> None:
+        lines = header.copy()
+
+        for name, value in values.items():
+            escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+            lines.append(f'{name}="{escaped}"')
+
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    write_env_file(
+        BACKEND_DIR / ".env",
+        {
+            name: env[name]
+            for name in DEFAULT_ENVIRONMENT
+        },
+    )
+
+    write_env_file(
+        FRONTEND_DIR / ".env",
+        {
+            "VITE_BACKEND_BASE_URL": env["VITE_BACKEND_BASE_URL"],
+            "VITE_BACKEND_BASE_WS": env["VITE_BACKEND_BASE_WS"],
+        },
+    )
 
 def backend_environment(env: dict[str, str]) -> dict[str, str]:
     backend_env = env.copy()
