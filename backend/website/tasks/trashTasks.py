@@ -1,5 +1,3 @@
-import traceback
-
 from celery.utils.log import logger
 
 from website.celery import app

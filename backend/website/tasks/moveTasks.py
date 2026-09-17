@@ -79,7 +79,6 @@ def move_task(context: dict, ids: list[str], new_parent_id: str):
     context = RequestContext.deserialize(context)
 
     try:
-
         files = File.objects.filter(id__in=ids).select_related("parent")
         folders = Folder.objects.filter(id__in=ids).select_related("parent")
         total_length = len(files) + len(folders)

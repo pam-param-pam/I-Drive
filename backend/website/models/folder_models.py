@@ -1,6 +1,6 @@
 import shortuuid
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.db.models import F, CheckConstraint, Q
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
@@ -91,7 +91,11 @@ class Folder(MPTTModel):
 
     @staticmethod
     def _create_user_root(user):
-        Folder.objects.get_or_create(owner=user, name="root")
+        from website.services import mptt_lock_service
+
+        with transaction.atomic():
+            mptt_lock_service.lock_mptt_trees(creating_root=True)
+            Folder.objects.get_or_create(owner=user, parent=None, name="root")
 
     def get_all_subfolders(self, include_self=False) -> TreeQuerySet:
         return self.get_descendants(include_self=include_self)

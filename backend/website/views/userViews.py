@@ -14,7 +14,7 @@ from website.core.decorators import check_resource_permissions, extract_folder
 from website.core.errors import RootFolderError
 from website.core.helpers import extract_key, validate_key
 from website.models import Channel, Folder, UserSettings, UserPerms, DiscordSettings
-from website.models.other_models import Notification
+from website.models.other_models import Notification, NotificationType
 from website.queries.builders import build_discord_settings
 from website.services import user_service
 
@@ -53,7 +53,7 @@ def users_me(request):
         raise RootFolderError("Root folder error.")
 
     encryptionMethod = EncryptionMethod(settings.encryption_method)
-    unread_notifications = Notification.objects.filter(owner=request.user, is_deleted=False, is_read=False).count()
+    unread_notifications = Notification.objects.filter(owner=request.user, is_deleted=False, is_read=False).exclude(type=NotificationType.INFO).count()
 
     response = {"user": {"name": user.username, "root": root.id, "maxDiscordMessageSize": MAX_DISCORD_MESSAGE_SIZE,
                          "maxAttachmentsPerMessage": MAX_ATTACHMENTS_PER_MESSAGE, "unreadNotifications": unread_notifications,

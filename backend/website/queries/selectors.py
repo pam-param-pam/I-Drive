@@ -3,7 +3,7 @@ from typing import Union
 from django.db.models import Q
 
 from website.core.dataModels.general import Item
-from website.core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
+from website.core.errors import ResourceNotFoundError, BadRequestError, NoBotsError
 from website.models import File, Folder, ShareableLink, UserSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
 from website.models.mixin_models import ItemState
 from website.safety.helper import get_classes_extending_discordAttachmentMixin

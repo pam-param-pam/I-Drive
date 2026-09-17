@@ -6,7 +6,6 @@ from itertools import groupby
 import rawpy
 import requests
 from PIL import Image
-from celery.utils.log import logger
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -22,15 +21,15 @@ from website.core.crypto.Encryptor import Encryptor
 from website.core.dataModels.http import RequestContext
 from website.core.errors import FailedToParseRawImage
 from website.discord.Discord import discord
-from website.models import Folder, Fragment, File, DiscordSettings
-from website.models.other_models import RawExtractionClaim, NotificationKind, NotificationType
-from website.services import folder_service, create_file_service, file_service, user_service, touch_service
-from website.websockets.utils import send_event, send_message
+from website.models import Fragment, File, DiscordSettings
+from website.models.other_models import RawExtractionClaim
+from website.services import create_file_service, file_service, touch_service
+from website.websockets.utils import send_event
 
 RAW_EXTRACTION_BATCH_SIZE = 25
 RAW_EXTRACTION_STALE_TIMEOUT = 30
 
-@app.task
+@app.task(queue="cleanup")
 def update_router_public_ip():
     response = requests.get("https://api.ipify.org", timeout=5)
     response.raise_for_status()
@@ -42,35 +41,7 @@ def update_router_public_ip():
 
     return value
 
-@app.task
-def lock_folder_task(context: dict, folder_id: str, password: str, change_type: str):
-    context = RequestContext.deserialize(context)
-    try:
-        folder = Folder.objects.get(id=folder_id)
-        with transaction.atomic():
-            folder_service.internal_apply_lock(folder=folder, lock_from=folder, password=password)
-            user_service.create_notification(context.get_user(), NotificationType.IMPORTANT, NotificationKind.FOLDER_LOCK_CHANGE,
-                                             data={"folder_id": folder.id, "status": change_type})
-        send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
-    except Exception as e:
-        logger.exception("Exception in lock_folder_task")
-        send_message(message=str(e), args=None, finished=True, context=context, isError=True)
-
-@app.task
-def unlock_folder_task(context: dict, folder_id: str, change_type: str):
-    context = RequestContext.deserialize(context)
-    try:
-        folder = Folder.objects.get(id=folder_id)
-        with transaction.atomic():
-            folder_service.internal_remove_lock(folder=folder, lock_from=folder.lockFrom)
-            user_service.create_notification(context.get_user(), NotificationType.IMPORTANT, NotificationKind.FOLDER_LOCK_CHANGE,
-                                             data={"folder_id": folder.id, "status": change_type})
-        send_message("toasts.passwordUpdated", args=None, finished=True, context=context)
-    except Exception as e:
-        logger.exception("Exception in unlock_folder_task")
-        send_message(message=str(e), args=None, finished=True, context=context, isError=True)
-
-@app.task(expires=2)
+@app.task(queue="cleanup", expires=2)
 def prefetch_next_fragments(fragment_id: str, number_to_prefetch: int):
     fragment = Fragment.objects.get(id=fragment_id)
     fragments = Fragment.objects.filter(file=fragment.file)
@@ -327,7 +298,7 @@ def _handle_parse_failure_and_clear_claim(file_obj: File):
     _handle_parse_failure(file_obj)
     _clear_raw_extraction_claim(file_obj)
 
-@app.task()
+@app.task(queue="cleanup")
 def generate_raw_image_thumbnails():
     if not GENERATE_RAW_THUMBNAILS:
         return

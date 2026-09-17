@@ -23,6 +23,9 @@ from website.websockets.utils import send_event
 
 
 def rename_item(context: RequestContext, item_obj: Item, new_name: str) -> None:
+    # todo Renaming a file can leave incompatible dependent rows
+    #  rename_item() recalculates File.type, but does not reconcile:
+    #  metadata, subtitles, moments, thumbnails, media_position
     validate_value(new_name, str, checks=[IsValidItemName])
 
     with transaction.atomic():

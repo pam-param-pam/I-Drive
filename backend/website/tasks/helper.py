@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 
 DISCORD_EPOCH = 1420070400000  # ms
 
+
 def auto_prefetch(fragment_id: str) -> None:
     from .otherTasks import prefetch_next_fragments
     fragments_to_prefetch = 5

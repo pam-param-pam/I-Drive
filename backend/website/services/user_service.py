@@ -310,5 +310,5 @@ def set_notifications_read_status(user, notification_ids: list[str], read=True):
     send_notifications_update(user)
 
 def send_notifications_update(user):
-    unread_notifications = Notification.objects.filter(owner=user, is_read=False, is_deleted=False).count()
+    unread_notifications = Notification.objects.filter(owner=user, is_deleted=False, is_read=False).exclude(type=NotificationType.INFO).count()
     send_event(RequestContext.from_user(user.id), None, EventCode.NOTIFICATIONS_UPDATE, {"unreadNotifications": unread_notifications})

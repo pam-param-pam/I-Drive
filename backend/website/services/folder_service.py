@@ -13,8 +13,8 @@ from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
 from website.models import Folder, File
 from website.models.mixin_models import ItemState
-from website.services import touch_service
-from website.tasks.otherTasks import lock_folder_task, unlock_folder_task
+from website.services import mptt_lock_service, touch_service
+from website.tasks.lockTasks import lock_folder_task, unlock_folder_task
 from website.websockets.utils import send_event
 
 
@@ -29,10 +29,18 @@ class FolderLockChangeType(StrEnum):
 def create_folder(context: RequestContext, user: User, parent: Folder, name: str) -> Folder:
     name = validate_value(name, str, checks=[IsValidItemName])
 
-    if parent.state != ItemState.ACTIVE:
-        raise BadRequestError("Parent not ready")
-
     with transaction.atomic():
+        mptt_lock_service.lock_mptt_trees([parent])
+        parent = (
+            Folder.objects
+            .select_for_update()
+            .select_related("lockFrom")
+            .get(id=parent.id, owner=user)
+        )
+
+        if parent.state != ItemState.ACTIVE:
+            raise BadRequestError("Parent not ready")
+
         if not has_folder_depth_for_subfolder(parent):
             raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
 
@@ -98,6 +106,22 @@ def internal_move_to_new_parent(folder: Folder, new_parent: "Folder") -> None:
     # todo verify if this is secure due to override_nested_locks
 
     with transaction.atomic():
+        mptt_lock_service.lock_mptt_trees([folder, new_parent])
+
+        folder = (
+            Folder.objects
+            .select_related("parent", "lockFrom")
+            .get(id=folder.id)
+        )
+        new_parent = (
+            Folder.objects
+            .select_related("lockFrom")
+            .get(id=new_parent.id)
+        )
+
+        if folder.is_root_node():
+            raise BadRequestError("Cannot move the root folder")
+
         if not has_folder_depth_for_move(folder, new_parent):
             raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
 
@@ -142,12 +166,19 @@ def internal_move_to_new_parent(folder: Folder, new_parent: "Folder") -> None:
         )
 
 def internal_move_to_trash(folder: Folder) -> None:
-    now = timezone.now()
-    subfolders = list(folder.get_all_subfolders())
-
-    folder_ids = [folder.id, *[f.id for f in subfolders]]
-
     with transaction.atomic():
+        mptt_lock_service.lock_mptt_trees([folder])
+        folder = (
+            Folder.objects
+            .select_for_update()
+            .select_related("parent")
+            .get(id=folder.id)
+        )
+
+        subfolders = list(folder.get_all_subfolders())
+        folder_ids = [folder.id, *[subfolder.id for subfolder in subfolders]]
+        now = timezone.now()
+
         Folder.objects.filter(id__in=folder_ids).update(
             inTrash=True,
             inTrashSince=now,
@@ -157,15 +188,22 @@ def internal_move_to_trash(folder: Folder) -> None:
 
 
 def internal_restore_from_trash(folder: Folder) -> None:
-    if folder.parent and folder.parent.inTrash:
-        raise BadRequestError("Cannot restore folder because its parent is in trash.")
-
-    subfolders = list(folder.get_all_subfolders())
-
-    folders = [folder, *subfolders]
-    folder_ids = [f.id for f in folders]
-
     with transaction.atomic():
+        mptt_lock_service.lock_mptt_trees([folder])
+        folder = (
+            Folder.objects
+            .select_for_update()
+            .select_related("parent")
+            .get(id=folder.id)
+        )
+
+        if folder.parent and folder.parent.inTrash:
+            raise BadRequestError("Cannot restore folder because its parent is in trash.")
+
+        subfolders = list(folder.get_all_subfolders())
+        folders = [folder, *subfolders]
+        folder_ids = [current_folder.id for current_folder in folders]
+
         Folder.objects.filter(id__in=folder_ids).update(
             inTrash=False,
             inTrashSince=None,
@@ -188,7 +226,13 @@ def internal_apply_lock(folder: Folder, lock_from: Folder, password: str, reroot
     validate_value(password, str, checks=[NotEmpty])
 
     with transaction.atomic():
-        folder = Folder.objects.select_for_update().get(id=folder.id)
+        mptt_lock_service.lock_mptt_trees([folder, lock_from])
+        folder = (
+            Folder.objects
+            .select_for_update()
+            .get(id=folder.id)
+        )
+        lock_from = Folder.objects.get(id=lock_from.id)
 
         old_lock_from_id = folder.lockFrom_id
 
@@ -214,18 +258,31 @@ def internal_apply_lock(folder: Folder, lock_from: Folder, password: str, reroot
         touch_service.touch_folders([folder.id, *touched_subfolder_ids])
 
 
-def internal_remove_lock(folder: Folder, lock_from: Folder) -> None:
+def internal_remove_lock(folder: Folder) -> None:
     with transaction.atomic():
+        mptt_lock_service.lock_mptt_trees([folder])
+        folder = (
+            Folder.objects
+            .select_for_update()
+            .get(id=folder.id)
+        )
+
+        # The caller may have loaded the folder before waiting for the tree
+        # lock. Use the current lock source from the freshly locked row.
+        lock_from_id = folder.lockFrom_id
+
         folder.autoLock = False
         folder.lockFrom = None
         folder.password = None
         folder.save(update_fields=["autoLock", "lockFrom", "password"])
 
-        touched_subfolder_ids = list(
-            folder.get_all_subfolders()
-            .filter(lockFrom=lock_from)
-            .values_list("id", flat=True)
-        )
+        touched_subfolder_ids = []
+        if lock_from_id is not None:
+            touched_subfolder_ids = list(
+                folder.get_all_subfolders()
+                .filter(lockFrom_id=lock_from_id)
+                .values_list("id", flat=True)
+            )
 
         Folder.objects.filter(id__in=touched_subfolder_ids).update(
             password=None,

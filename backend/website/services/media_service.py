@@ -1,7 +1,7 @@
 import base64
 import hashlib
 
-from website.services import attachment_service
+from website.services import attachment_service, cache_service
 from website.auth.Permissions import CheckIpPrivateOrAllowedIfResourceLocked
 from website.auth.utils import check_resource_perms
 from website.config import MAX_THUMBNAIL_SIZE
@@ -30,7 +30,7 @@ def _stable_file_etag(file_obj: File) -> str:
 def get_thumbnail_response(request, file_obj: File, thumbnail: Thumbnail):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
 
-    cache_key = f"thumbnail:{thumbnail.id}"
+    cache_key = cache_service.get_thumbnail_key(file_obj.id)
     thumbnail_content = cache.get(cache_key)
 
     check_if_bots_exists(file_obj.owner)

@@ -478,7 +478,25 @@ def claim_folder_items(job_id: UUID) -> tuple[UUID, list[DeletionFolderWorkItem]
 
 
 def execute_folder_deletions(folder_ids: list[str]) -> None:
-    Folder.objects.filter(id__in=folder_ids).delete()
+    from website.services import mptt_lock_service
+
+    with transaction.atomic():
+        folders = list(Folder.objects.filter(id__in=folder_ids))
+        if not folders:
+            return
+
+        mptt_lock_service.lock_mptt_trees(folders)
+
+        # Query again after acquiring the roots and delete deepest nodes first.
+        # MPTTModel.delete() closes coordinate gaps; QuerySet.delete() bypasses
+        # that implementation.
+        folders = list(
+            Folder.objects
+            .filter(id__in=folder_ids)
+            .order_by("-level", "-lft")
+        )
+        for folder in folders:
+            folder.delete()
 
 
 def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: UUID) -> None:

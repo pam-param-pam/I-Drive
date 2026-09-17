@@ -21,12 +21,12 @@ def _reclaim_stale_file_claims(minutes: int = 10):
         claimed_at__lt=cutoff,
     )
 
-    stale.update(
+    reclaimed = stale.update(
         state=DeletionFileWorkItem.State.PENDING,
         claim_token=None,
         claimed_at=None
     )
-    print(f"Reclaimed {len(stale)} files")
+    print(f"Reclaimed {reclaimed} folders")
 
 
 def _reclaim_stale_folder_claims(minutes: int = 10):
@@ -36,12 +36,12 @@ def _reclaim_stale_folder_claims(minutes: int = 10):
         claimed_at__lt=cutoff,
     )
 
-    stale.update(
+    reclaimed = stale.update(
         state=DeletionFolderWorkItem.State.PENDING,
         claim_token=None,
         claimed_at=None
     )
-    print(f"Reclaimed {len(stale)} folders")
+    print(f"Reclaimed {reclaimed} folders")
 
 
 def _retry_failed_file_items():
@@ -277,7 +277,7 @@ def _start_stale_pending_jobs(minutes: int = 10):
 
     print(f"Started stale pending jobs: files={started_file}, folders={started_folder}")
 
-@app.task(expires=30)
+@app.task(queue="cleanup", expires=30)
 def supervise_deletion_system():
     _reclaim_stale_file_claims()
     _reclaim_stale_folder_claims()

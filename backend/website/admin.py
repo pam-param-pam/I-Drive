@@ -105,7 +105,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
 
 @admin.register(Folder)
 class FolderAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'last_modified_at')
+    readonly_fields = ('id', 'last_modified_at', 'parent')
     ordering = ["-created_at"]
     list_display = ["name", "owner", "state", "created_at", "inTrash", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'unlock', 'force_ready']
@@ -135,8 +135,9 @@ class FolderAdmin(SimpleHistoryAdmin):
             item_service.delete_items(context, request.user, obj)
 
     def force_delete_model(self, request, queryset: QuerySet[Folder]):
-        for real_obj in queryset:
-            real_obj.delete()
+        from website.tasks.deleteTasks import execute_folder_deletions
+
+        execute_folder_deletions(list(queryset.values_list("id", flat=True)))
 
     def move_to_trash(self, request, queryset: QuerySet[Folder]):
         for folder in queryset:
@@ -148,7 +149,7 @@ class FolderAdmin(SimpleHistoryAdmin):
 
     def unlock(self, request, queryset: QuerySet[Folder]):
         for folder in queryset:
-            folder_service.internal_remove_lock(folder, lock_from=folder.lockFrom)
+            folder_service.internal_remove_lock(folder)
 
     def force_ready(self, request, queryset: QuerySet[File]):
         ids = [f.id for f in queryset]

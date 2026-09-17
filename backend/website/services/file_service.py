@@ -17,7 +17,7 @@ from website.models import Thumbnail, File, Subtitle, VideoMetadataTrackMixin, V
 from website.models.file_related_models import RawMetadata, PhotoMetadata, MediaPosition, Tag, Moment
 from website.models.mixin_models import ItemState
 from website.queries.selectors import get_discord_author, get_discord_channel
-from website.services import attachment_service, touch_service
+from website.services import attachment_service, mptt_lock_service, touch_service
 from website.websockets.utils import send_event
 
 
@@ -270,25 +270,52 @@ def add_moment(user: User, file_obj: File, data: dict) -> Moment:
     return moment
 
 def internal_move_to_trash(files: Iterable[File]) -> None:
-    now = timezone.now()
-
-    ids = [f.id for f in files if not f.parent.inTrash]
-    parent_ids = [f.parent_id for f in files if not f.parent.inTrash]
+    files = list(files)
 
     with transaction.atomic():
+        locked_roots = mptt_lock_service.lock_mptt_trees([file.parent for file in files])
+        locked_tree_ids = {root.tree_id for root in locked_roots}
+
+        files = list(
+            File.objects
+            .select_for_update()
+            .select_related("parent")
+            .filter(id__in=[file.id for file in files])
+        )
+        if any(file.parent.tree_id not in locked_tree_ids for file in files):
+            raise RuntimeError("A file changed trees while its trash lock was being acquired")
+
+        ids = [file.id for file in files if not file.parent.inTrash]
+        parent_ids = list({file.parent_id for file in files if not file.parent.inTrash})
+        now = timezone.now()
+
         File.objects.filter(id__in=ids).update(inTrash=True, inTrashSince=now)
         touch_service.touch_files(ids, parent_ids=parent_ids)
 
 
 def internal_restore_from_trash(files: Iterable[File]) -> None:
-    invalid = [f.id for f in files if f.parent.inTrash]
-    if invalid:
-        raise BadRequestError("Cannot restore from trash! Folder parent is in trash, restore it first.")
-
-    ids = [f.id for f in files]
-    parent_ids = [f.parent_id for f in files]
+    files = list(files)
 
     with transaction.atomic():
+        locked_roots = mptt_lock_service.lock_mptt_trees([file.parent for file in files])
+        locked_tree_ids = {root.tree_id for root in locked_roots}
+
+        files = list(
+            File.objects
+            .select_for_update()
+            .select_related("parent")
+            .filter(id__in=[file.id for file in files])
+        )
+        if any(file.parent.tree_id not in locked_tree_ids for file in files):
+            raise RuntimeError("A file changed trees while its restore lock was being acquired")
+
+        invalid = [file.id for file in files if file.parent.inTrash]
+        if invalid:
+            raise BadRequestError("Cannot restore from trash! Folder parent is in trash, restore it first.")
+
+        ids = [file.id for file in files]
+        parent_ids = list({file.parent_id for file in files})
+
         File.objects.filter(id__in=ids).update(inTrash=False, inTrashSince=None)
         touch_service.touch_files(ids, parent_ids=parent_ids)
 
@@ -355,5 +382,3 @@ def mark_remote_missing(owner, file_obj: File):
         )
 
     send_event(RequestContext.from_user(owner.id), file_obj.parent, EventCode.ITEM_MOVE_OUT, [file_obj.id])
-
-"json schema"
