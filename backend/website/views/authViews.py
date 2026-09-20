@@ -13,7 +13,7 @@ from website.services import auth_service
 
 
 @api_view(['GET'])
-@throttle_classes([defaultAnonUserThrottle])
+@throttle_classes([])
 @permission_classes([AllowAny])
 def healthcheck_view(request):
     return HttpResponse(status=204)
