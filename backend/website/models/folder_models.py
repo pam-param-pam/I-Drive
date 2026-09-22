@@ -8,6 +8,7 @@ from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 
 from .mixin_models import ItemState
+from website.models.constraints.parent_owner_match_constraint import ParentOwnerConstraint
 
 
 class Folder(MPTTModel):
@@ -33,6 +34,11 @@ class Folder(MPTTModel):
 
     class Meta:
         constraints = [
+            # Required as the target of the folder/file composite foreign keys.
+            models.UniqueConstraint(fields=["id", "owner"], name="folder_id_owner_unique"),
+            ParentOwnerConstraint(
+                name="folder_parent_owner_matches",
+            ),
             # 0. folder state must be valid
             CheckConstraint(
                 condition=Q(state__in=[state.value for state in ItemState]),

@@ -42,6 +42,15 @@ class DeletionJob(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["requested_by"],
+                condition=models.Q(state__in=["PENDING", "PLANNING", "RUNNING"]),
+                name="uniq_active_deletion_job_per_user",
+            ),
+        ]
+
 
 class DeletionFileWorkItem(models.Model):
     class State(models.TextChoices):

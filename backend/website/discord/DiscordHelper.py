@@ -1,7 +1,10 @@
+import asyncio
+import json
 import time
 from dataclasses import dataclass
 from typing import List, Callable
 
+import aiohttp
 import httpx
 
 from website.config import NUMBER_OF_CHANNELS, NUMBER_OF_WEBHOOKS_PER_CHANNEL, WEBHOOK_NAME_TEMPLATE
@@ -30,6 +33,8 @@ PRIMARY_BOT_REQUIRED_PERMS = (
         constants.MANAGE_MESSAGES |
         constants.MANAGE_ROLES
 )
+
+MESSAGE_CONTENT_INTENT = 1 << 15
 
 
 @dataclass
@@ -75,6 +80,7 @@ class RollbackStack:
 
 class DiscordApiClient:
     def __init__(self, bot_token: str):
+        self.bot_token = bot_token
         self.client = httpx.Client(timeout=10.0)
         self.headers = {
             "Authorization": f"Bot {bot_token}",
@@ -142,6 +148,49 @@ class DiscordApiClient:
             f"{DISCORD_BASE_URL}/guilds/{guild_id}",
             "Bot not in guild or guild not found"
         )
+
+    async def _check_message_content_intent(self, gateway_url: str):
+        url = f"{gateway_url}?v=10&encoding=json"
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(url) as websocket:
+                hello = await websocket.receive(timeout=3)
+                if hello.type != aiohttp.WSMsgType.TEXT:
+                    raise DiscordTextError("Failed to connect to Discord Gateway", 500)
+
+                await websocket.send_json({
+                    "op": 2,
+                    "d": {
+                        "token": self.bot_token,
+                        "intents": MESSAGE_CONTENT_INTENT,
+                        "properties": {
+                            "os": "linux",
+                            "browser": "idrive",
+                            "device": "idrive",
+                        },
+                    },
+                })
+
+                response = await websocket.receive(timeout=3)
+                if response.type == aiohttp.WSMsgType.CLOSE:
+                    close_code = websocket.close_code or 500
+                    raise DiscordTextError("Discord rejected the Message Content Intent", close_code)
+                if response.type != aiohttp.WSMsgType.TEXT:
+                    raise DiscordTextError("Failed to validate Discord Gateway intents", 500)
+
+                payload = json.loads(response.data)
+                if payload.get("op") == 0:
+                    return
+                if payload.get("op") == 9:
+                    raise DiscordTextError("Discord rejected the Message Content Intent", 4014)
+                raise DiscordTextError("Failed to validate Discord Gateway intents", 500)
+
+    def check_message_content_intent(self):
+        gateway = self._request(
+            "GET",
+            f"{DISCORD_BASE_URL}/gateway/bot",
+            "Failed to fetch Discord Gateway details",
+        )
+        asyncio.run(self._check_message_content_intent(gateway["url"]))
 
     def get_member(self, guild_id, bot_id):
         return self._request(
@@ -385,6 +434,13 @@ class DiscordHelperService:
             api.get_guild(guild_id)
         except Exception:
             raise BadRequestError("Bot is not in the guild")
+
+        try:
+            api.check_message_content_intent()
+        except DiscordTextError as error:
+            if error.status in (4013, 4014):
+                raise BadRequestError("Bot must have the Message Content Intent enabled")
+            raise BadRequestError("Unable to verify the bot's Message Content Intent")
 
         try:
             self.api.assign_role(guild_id, bot_id, role_id)

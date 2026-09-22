@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import math
 import time
 from functools import wraps
@@ -241,3 +242,52 @@ def get_public_ip():
         update_router_public_ip.delay()
 
     return cached_ip
+
+
+def _get_folder_hash_cache_version(folder_entries: list[dict]) -> str:
+    hasher = hashlib.sha256()
+
+    for entry in sorted(folder_entries, key=lambda item: str(item["id"])):
+        modified_at = entry["last_modified_at"]
+        hasher.update(str(entry["id"]).encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(modified_at.isoformat().encode("utf-8") if modified_at else b"")
+        hasher.update(b"\0")
+
+    return hasher.hexdigest()
+
+
+def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], file_entries: list[dict]) -> str:
+    folders_by_parent = {}
+    files_by_parent = {}
+
+    for entry in folder_entries:
+        folders_by_parent.setdefault(entry["parent_id"], []).append(entry)
+
+    for entry in file_entries:
+        files_by_parent.setdefault(entry["parent_id"], []).append(entry)
+
+    def hash_folder(folder_id: str) -> str:
+        hasher = hashlib.sha256()
+
+        for entry in sorted(files_by_parent.get(folder_id, []), key=lambda item: (item["name"], item["crc"])):
+            hasher.update(b"file\0")
+            hasher.update(entry["name"].encode("utf-8"))
+            hasher.update(b"\0")
+            hasher.update(str(entry["crc"]).encode("utf-8"))
+            hasher.update(b"\0")
+
+        child_hashes = []
+        for entry in folders_by_parent.get(folder_id, []):
+            child_hashes.append((entry["name"], hash_folder(entry["id"])))
+
+        for name, digest in sorted(child_hashes):
+            hasher.update(b"folder\0")
+            hasher.update(name.encode("utf-8"))
+            hasher.update(b"\0")
+            hasher.update(digest.encode("utf-8"))
+            hasher.update(b"\0")
+
+        return hasher.hexdigest()
+
+    return hash_folder(root_folder_id)

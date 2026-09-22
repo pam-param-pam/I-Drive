@@ -12,6 +12,7 @@ from simple_history.models import HistoricalRecords
 from website.constants import FILE_TYPE_CHOICES, EncryptionMethod
 from website.models.mixin_models import ItemState, DiscordAttachmentMixin
 from .folder_models import Folder
+from website.models.constraints.parent_owner_match_constraint import ParentOwnerConstraint
 
 
 class File(models.Model):
@@ -57,6 +58,9 @@ class File(models.Model):
         ]
 
         constraints = [
+            ParentOwnerConstraint(
+                name="file_parent_owner_matches",
+            ),
             CheckConstraint(
                 condition=Q(state__in=[state.value for state in ItemState]),
                 name="%(class)s_valid_state",

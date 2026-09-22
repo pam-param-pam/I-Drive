@@ -252,7 +252,7 @@ class FileAdmin(SimpleHistoryAdmin):
         context = RequestContext.from_user(request.user.id)
 
         if isinstance(obj, File):
-            item_service.delete_items(context, request.user, [obj.id])
+            item_service.delete_items(context, request.user, [obj])
         else:
             item_service.delete_items(context, request.user, obj)
 

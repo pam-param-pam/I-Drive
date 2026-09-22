@@ -1,6 +1,6 @@
 from typing import Tuple, Union
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from website.config import MAX_FILES_IN_FOLDER, MAX_FOLDERS_IN_FOLDER
@@ -8,7 +8,7 @@ from website.constants import EventCode
 from website.core.Serializers import FileSerializer, FolderSerializer
 from website.core.dataModels.general import Item
 from website.core.dataModels.http import RequestContext
-from website.core.errors import BadRequestError
+from website.core.errors import BadRequestError, ResourcePermissionError
 from website.core.helpers import validate_value, get_file_extension, get_file_type, get_attr
 from website.core.validators.GeneralChecks import IsValidItemName
 from website.models import File, Folder
@@ -86,6 +86,9 @@ def restore_items_from_trash(context:  RequestContext, items: list[Tuple[Item, d
 
 
 def delete_items(context: RequestContext, user, items: list[Union[Item, dict]]) -> None:
+    if user.pk is None or context.user_id != user.pk:
+        raise ResourcePermissionError("Deletion context must match the requesting user")
+
     check_if_bots_exists(context.get_user())
 
     ids = []
@@ -105,16 +108,38 @@ def delete_items(context: RequestContext, user, items: list[Union[Item, dict]]) 
         else:
             folder_ids.append(item_id)
 
+    # Check persisted ownership rather than trusting owner fields in input dicts.
+    for model, item_ids in [(File, file_ids), (Folder, folder_ids)]:
+        if model.objects.filter(id__in=item_ids, owner_id=user.pk).count() != len(set(item_ids)):
+            raise ResourcePermissionError("All deletion items must belong to the requesting user")
+
     if file_ids:
         touch_service.touch_files(file_ids)
     if folder_ids:
         touch_service.touch_folders(folder_ids)
 
-    job = DeletionJob.objects.create(
-        requested_by=user,
-        request_context=context.__json__(),
-        requested_ids=ids,
-        state=DeletionJob.State.PENDING,
-        started_at=timezone.now(),
-    )
+    active_states = [
+        DeletionJob.State.PENDING,
+        DeletionJob.State.PLANNING,
+        DeletionJob.State.RUNNING,
+    ]
+    if DeletionJob.objects.filter(requested_by=user, state__in=active_states).exists():
+        raise BadRequestError("A deletion job is already running")
+
+    try:
+        with transaction.atomic():
+            job = DeletionJob.objects.create(
+                requested_by=user,
+                request_context=context.__json__(),
+                requested_ids=ids,
+                state=DeletionJob.State.PENDING,
+                started_at=timezone.now(),
+            )
+    except IntegrityError as error:
+        # The conditional unique constraint closes the race between the check
+        # above and two concurrent requests creating their jobs.
+        if DeletionJob.objects.filter(requested_by=user, state__in=active_states).exists():
+            raise BadRequestError("A deletion job is already running") from error
+        raise
+
     plan_deletion_job.delay(job.id)

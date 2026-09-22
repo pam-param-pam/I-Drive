@@ -10,7 +10,7 @@ from django.utils import timezone
 from website.celery import app
 from website.constants import EventCode, MAX_FILE_DELETION_ATTEMPTS
 from website.core.dataModels.http import RequestContext
-from website.core.errors import DiscordError
+from website.core.errors import DiscordError, ResourcePermissionError
 from website.discord.Discord import discord
 from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle
 from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
@@ -245,11 +245,32 @@ def claim_file_work_items(job_id: UUID) -> tuple[None, Optional[list]] | tuple[U
     claim_token = uuid.uuid4()
 
     with transaction.atomic():
+        job = (
+            DeletionJob.objects
+            .select_for_update()
+            .filter(id=job_id, state=DeletionJob.State.RUNNING)
+            .first()
+        )
+        if job is None:
+            return None, []
+
+        # A job may have only one remote file batch in progress. This keeps
+        # attachments from the same Discord message from being edited by
+        # different workers using different database snapshots.
+        if DeletionFileWorkItem.objects.filter(
+            job=job,
+            state__in=[
+                DeletionFileWorkItem.State.CLAIMED,
+                DeletionFileWorkItem.State.REMOTE_DONE,
+            ],
+        ).exists():
+            return None, []
+
         items = list(
             DeletionFileWorkItem.objects
             .select_for_update(skip_locked=True)
             .filter(
-                job_id=job_id,
+                job=job,
                 state=DeletionFileWorkItem.State.PENDING
             )
             .order_by("file__internal_created_at")[:FILE_BATCH]
@@ -489,7 +510,21 @@ def has_unfinished_file_items(job_id: UUID) -> bool:
 
 
 def schedule_next_batch(context_dict: dict, job_id: UUID) -> None:
-    remaining_files = DeletionFileWorkItem.objects.filter(job_id=job_id, state=DeletionFileWorkItem.State.PENDING).exists()
+    batch_in_progress = DeletionFileWorkItem.objects.filter(
+        job_id=job_id,
+        state__in=[
+            DeletionFileWorkItem.State.CLAIMED,
+            DeletionFileWorkItem.State.REMOTE_DONE,
+        ],
+    ).exists()
+
+    if batch_in_progress:
+        return
+
+    remaining_files = DeletionFileWorkItem.objects.filter(
+        job_id=job_id,
+        state=DeletionFileWorkItem.State.PENDING,
+    ).exists()
 
     if remaining_files:
         process_file_batch.delay(context_dict, job_id)

@@ -244,7 +244,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_THROTTLE_RATES': {
         'anon': '60/m',
-        'user': '120/5s',
+        'user': '60/5s',
         'media': '1000/m',
         'uncached_media': '120/m',
         'media_anon': '500/m',
@@ -254,7 +254,8 @@ REST_FRAMEWORK = {
         'search': '60/m',
         'register': '20/h',
         'discord_settings': '30/m',
-        'login': '5/10s'
+        'login': '5/10s',
+        'syncer': '240/5s'
 
     },
     'DEFAULT_RENDERER_CLASSES': (

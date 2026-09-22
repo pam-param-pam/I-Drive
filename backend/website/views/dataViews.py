@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from website.services import attachment_service
 from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked
-from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle
+from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle, SyncerThrottle
 from website.auth.utils import check_resource_perms
 from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EncryptionMethod
 from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, \
@@ -25,7 +25,7 @@ from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
 from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_ids_as_list, extract_key, validate_key
+from website.core.helpers import validate_ids_as_list, extract_key, validate_key, _get_folder_hash_cache_version, _get_folder_content_hash
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
@@ -432,57 +432,8 @@ def get_folder_file_stats(request, folder_obj):
     return JsonResponse(result, safe=False)
 
 
-def _get_folder_hash_cache_version(folder_entries: list[dict]) -> str:
-    hasher = hashlib.sha256()
-
-    for entry in sorted(folder_entries, key=lambda item: str(item["id"])):
-        modified_at = entry["last_modified_at"]
-        hasher.update(str(entry["id"]).encode("utf-8"))
-        hasher.update(b"\0")
-        hasher.update(modified_at.isoformat().encode("utf-8") if modified_at else b"")
-        hasher.update(b"\0")
-
-    return hasher.hexdigest()
-
-
-def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], file_entries: list[dict]) -> str:
-    folders_by_parent = {}
-    files_by_parent = {}
-
-    for entry in folder_entries:
-        folders_by_parent.setdefault(entry["parent_id"], []).append(entry)
-
-    for entry in file_entries:
-        files_by_parent.setdefault(entry["parent_id"], []).append(entry)
-
-    def hash_folder(folder_id: str) -> str:
-        hasher = hashlib.sha256()
-
-        for entry in sorted(files_by_parent.get(folder_id, []), key=lambda item: (item["name"], item["crc"])):
-            hasher.update(b"file\0")
-            hasher.update(entry["name"].encode("utf-8"))
-            hasher.update(b"\0")
-            hasher.update(str(entry["crc"]).encode("utf-8"))
-            hasher.update(b"\0")
-
-        child_hashes = []
-        for entry in folders_by_parent.get(folder_id, []):
-            child_hashes.append((entry["name"], hash_folder(entry["id"])))
-
-        for name, digest in sorted(child_hashes):
-            hasher.update(b"folder\0")
-            hasher.update(name.encode("utf-8"))
-            hasher.update(b"\0")
-            hasher.update(digest.encode("utf-8"))
-            hasher.update(b"\0")
-
-        return hasher.hexdigest()
-
-    return hash_folder(root_folder_id)
-
-
 @api_view(["GET"])
-@throttle_classes([defaultAuthUserThrottle])
+@throttle_classes([SyncerThrottle])
 @permission_classes([IsAuthenticated & ReadPerms])
 @extract_folder()
 @check_resource_permissions(default_checks, resource_key="folder_obj")

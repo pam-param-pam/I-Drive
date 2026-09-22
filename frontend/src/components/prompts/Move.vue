@@ -71,7 +71,7 @@ export default {
       ...mapState(useMainStore, ["perms", "selected"]),
 
       isMoveDisabled() {
-         return this.selected[0].parent_id === this.dest?.id
+         return this.selected.some(item => item.parent_id === this.dest?.id)
       }
    },
 
