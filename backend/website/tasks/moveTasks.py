@@ -74,7 +74,7 @@ def move_group(context: RequestContext, grouped_items, new_parent, processed_cou
 
     return processed_count, last_percentage
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def move_task(context: dict, ids: list[str], new_parent_id: str):
     context = RequestContext.deserialize(context)
 

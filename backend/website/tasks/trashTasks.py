@@ -9,7 +9,7 @@ from website.services import file_service, folder_service
 from website.websockets.utils import group_and_send_event, send_event, send_message
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def move_to_trash_task(context: dict, ids: list[str]):
     context = RequestContext.deserialize(context)
 
@@ -36,7 +36,7 @@ def move_to_trash_task(context: dict, ids: list[str]):
         logger.exception("Exception in move_to_trash_task")
         send_message(message=str(e), args=None, finished=True, context=context, isError=True)
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def restore_from_trash_task(context: dict, ids: list[str]):
     context = RequestContext.deserialize(context)
 
