@@ -34,7 +34,6 @@ def create_folder(context: RequestContext, user: User, parent: Folder, name: str
         parent = (
             Folder.objects
             .select_for_update()
-            .select_related("lockFrom")
             .get(id=parent.id, owner=user)
         )
 
