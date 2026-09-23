@@ -54,7 +54,7 @@ import FolderList from "@/components/FolderList.vue"
 import { move } from "@/api/item.js"
 import { mapActions, mapState } from "pinia"
 import { useMainStore } from "@/stores/mainStore.js"
-import { onceAtATime } from "@/utils/common.js"
+import { onceAtATime, buildResourcePasswords } from "@/utils/common.js"
 
 export default {
    name: "move",
@@ -90,7 +90,9 @@ export default {
 
       submit: onceAtATime(async function() {
          let ids = this.selected.map((obj) => obj.id)
-         let res = await move({ ids: ids, new_parent_id: this.dest.id })
+         let resourcePasswords = buildResourcePasswords(this.selected)
+
+         let res = await move({ ids: ids, new_parent_id: this.dest.id, resourcePasswords })
 
          let message = this.$t("toasts.movingItems")
          this.$toast.info(message, {

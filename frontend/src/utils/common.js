@@ -220,3 +220,23 @@ export function formatDuration(seconds) {
  * Formats filesize as KiB/MiB/...
  */
 export const filesize = partial()
+
+
+/**
+ * Build a resourcePasswords map from an array of items that have lockFrom.
+ * For each item, looks up the saved password via the store's getFolderPassword;
+ * silently skips items whose password is not saved (returns null).
+ */
+export function buildResourcePasswords(items) {
+   const store = useMainStore()
+   const passwords = {}
+   for (const item of items) {
+      if (item.lockFrom) {
+         const password = store.getFolderPassword(item.lockFrom)
+         if (password) {
+            passwords[item.lockFrom] = password
+         }
+      }
+   }
+   return passwords
+}

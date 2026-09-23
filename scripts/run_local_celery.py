@@ -18,7 +18,7 @@ from local_common import (
 )
 
 
-INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49174)
+INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49175)
 INFRASTRUCTURE_SERVICES = ("redis", "postgres", "prometheus", "grafana")
 
 def main() -> int:

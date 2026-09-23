@@ -33,7 +33,7 @@
 import { moveToTrash } from "@/api/item.js"
 import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
-import { onceAtATime } from "@/utils/common.js"
+import { onceAtATime, buildResourcePasswords } from "@/utils/common.js"
 
 export default {
    name: "MoveToTrash",
@@ -47,7 +47,9 @@ export default {
 
       submit: onceAtATime(async function() {
          let ids = this.selected.map((item) => item.id)
-         let res = await moveToTrash({ ids: ids })
+         let resourcePasswords = buildResourcePasswords(this.selected)
+
+         let res = await moveToTrash({ ids: ids, resourcePasswords })
          let message = this.$t("toasts.itemsAreBeingMovedToTrash", { amount: ids.length })
 
          this.$toast.info(message, {
