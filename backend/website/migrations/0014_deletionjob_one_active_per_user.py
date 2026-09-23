@@ -25,7 +25,7 @@ def ensure_one_active_job_per_user(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("website", "0014_bot_discord_id_primary_key"),
+        ("website", "0013_remove_file_file_valid_state_and_more"),
     ]
 
     operations = [
