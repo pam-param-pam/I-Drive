@@ -25,7 +25,7 @@ from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
 from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_ids_as_list, extract_key, validate_key, _get_folder_hash_cache_version, _get_folder_content_hash
+from website.core.helpers import validate_ids_as_list, extract_key, validate_key, _get_folder_content_hash
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
@@ -442,7 +442,7 @@ def get_folder_hash(request, folder_obj: Folder):
 
     folder_entries = list(subfolders.values("id", "name", "parent_id", "last_modified_at"))
 
-    hash_version = _get_folder_hash_cache_version(folder_entries)
+    hash_version = str(folder_obj.hash_input_generation)
     cached_hash = cache_service.get_folder_hash(folder_obj.id, hash_version)
 
     if cached_hash is not None:

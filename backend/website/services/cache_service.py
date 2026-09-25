@@ -4,8 +4,9 @@ FOLDER_CONTENT_CACHE_TIMEOUT = 6 * 60 * 60
 FOLDER_HASH_CACHE_TIMEOUT = 6 * 60 * 60
 
 
-def get_thumbnail_key(file_id: str) -> str:
-    return f"thumbnail:{file_id}"
+def get_thumbnail_key(file_id: str, resource_version: int | None = None) -> str:
+    suffix = f":{resource_version}" if resource_version is not None else ""
+    return f"thumbnail:{file_id}{suffix}"
 
 def get_folder_content_key(folder_id: str) -> str:
     return f"folder-content:{folder_id}"
@@ -18,7 +19,7 @@ def get_router_ip_key():
     return "router_public_ip"
 
 def get_folder_content_version(folder) -> str:
-    return folder.last_modified_at.isoformat() if folder.last_modified_at else ""
+    return str(folder.listing_version)
 
 
 def get_folder_content(folder):

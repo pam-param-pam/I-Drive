@@ -10,9 +10,10 @@ from website.core.decorators import check_resource_permissions, extract_folder, 
     extract_file
 from website.core.errors import BadRequestError
 from website.core.helpers import extract_key
+from website.core.http.utils import extract_resource_credentials
 from website.core.http.utils import build_response
 from website.models import File, Folder
-from website.services import folder_service, item_service, zip_service, file_service, create_file_service
+from website.services import folder_service, item_service, zip_service, file_service, thumbnail_service
 
 
 @api_view(['POST'])
@@ -206,7 +207,12 @@ def rename_subtitle_view(request, file_obj, subtitle_id):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def delete_thumbnail_view(request, file_obj):
-    create_file_service.delete_thumbnail(file_obj, must_exist=True)
+    thumbnail_service.thumbnail_service.remove(
+        request.user,
+        str(file_obj.id),
+        must_exist=True,
+        credentials=extract_resource_credentials(request),
+    )
     return HttpResponse(status=204)
 
 @api_view(['DELETE'])

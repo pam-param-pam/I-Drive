@@ -29,6 +29,26 @@ class Folder(MPTTModel):
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True, blank=True)
 
+    # Authoritative, transactionally maintained subtree aggregates.
+    physical_descendant_folder_count = models.PositiveBigIntegerField(default=0)
+    physical_descendant_file_count = models.PositiveBigIntegerField(default=0)
+    physical_descendant_file_size = models.PositiveBigIntegerField(default=0)
+    visible_descendant_folder_count = models.PositiveBigIntegerField(default=0)
+    visible_descendant_file_count = models.PositiveBigIntegerField(default=0)
+    visible_descendant_file_size = models.PositiveBigIntegerField(default=0)
+
+    # Safe upper bound. It may temporarily overestimate after removal/move-out.
+    subtree_height_bound = models.PositiveSmallIntegerField(default=0)
+
+    # Persisted flat Merkle hash state.
+    subtree_hash = models.CharField(max_length=64, null=True, blank=True)
+    hash_input_generation = models.PositiveBigIntegerField(default=0)
+    hash_computed_generation = models.PositiveBigIntegerField(default=0)
+
+    # Database-backed cache invalidation versions.
+    resource_version = models.PositiveBigIntegerField(default=1)
+    listing_version = models.PositiveBigIntegerField(default=1)
+
     class MPTTMeta:
         order_insertion_by = ['-created_at']
 

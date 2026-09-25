@@ -244,19 +244,6 @@ def get_public_ip():
     return cached_ip
 
 
-def _get_folder_hash_cache_version(folder_entries: list[dict]) -> str:
-    hasher = hashlib.sha256()
-
-    for entry in sorted(folder_entries, key=lambda item: str(item["id"])):
-        modified_at = entry["last_modified_at"]
-        hasher.update(str(entry["id"]).encode("utf-8"))
-        hasher.update(b"\0")
-        hasher.update(modified_at.isoformat().encode("utf-8") if modified_at else b"")
-        hasher.update(b"\0")
-
-    return hasher.hexdigest()
-
-
 def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], file_entries: list[dict]) -> str:
     folders_by_parent = {}
     files_by_parent = {}

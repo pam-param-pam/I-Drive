@@ -1,4 +1,21 @@
+from datetime import datetime
+
+from django.utils import timezone
+
 from website.config import MAX_RESOURCE_NAME_LENGTH
+from website.core.errors import BadRequestError
+
+
+def parse_unix_milliseconds(value, allow_future: bool = False):
+    if value is None:
+        return None
+    try:
+        parsed = timezone.make_aware(datetime.fromtimestamp(int(value) / 1000))
+    except (TypeError, ValueError, OverflowError, OSError):
+        raise BadRequestError("Invalid millisecond Unix timestamp.")
+    if not allow_future and parsed > timezone.now():
+        raise BadRequestError("Timestamp cannot be in the future.")
+    return parsed
 
 
 def param_to_bool(value: str | bool) -> bool:

@@ -1,6 +1,6 @@
 import ipaddress
 import re
-from typing import Optional
+from typing import Mapping, Optional
 
 import requests
 import shortuuid
@@ -8,6 +8,14 @@ import shortuuid
 from ..dataModels.general import ResponseDict, ErrorDict
 from ..errors import BadRequestError
 from ..helpers import get_ip
+
+
+def extract_resource_credentials(request) -> Mapping[str, str] | None:
+    credentials = dict(request.data.get("resourcePasswords") or {})
+    header_password = request.headers.get("X-Resource-Password")
+    if header_password:
+        credentials["*"] = header_password
+    return credentials or None
 
 def build_response(task_id: str, message: str) -> ResponseDict:
     return {"task_id": task_id, "message": message}

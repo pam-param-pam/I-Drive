@@ -38,6 +38,7 @@ class File(models.Model):
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True)
+    resource_version = models.PositiveBigIntegerField(default=1)
 
     history = HistoricalRecords()
 

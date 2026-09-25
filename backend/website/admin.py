@@ -21,7 +21,7 @@ from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLi
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata, PhotoMetadata
 from .models.other_models import Notification, RawExtractionClaim
-from .services import folder_service, file_service, create_file_service, item_service, auth_service
+from .services import folder_service, file_service, item_service, auth_service, thumbnail_service
 
 admin.site.index_template = "admin/idrive_index.html"
 
@@ -279,14 +279,14 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 
     def delete_queryset(self, request, queryset: QuerySet[Thumbnail]):
         for thumb in queryset:
-            create_file_service.delete_thumbnail(thumb.file)
+            thumbnail_service.thumbnail_service.remove(thumb.file.owner_id, str(thumb.file_id))
 
     def delete_model(self, request, obj: Union[Thumbnail, List[Thumbnail]]):
         if isinstance(obj, Thumbnail):
-            create_file_service.delete_thumbnail(obj.file)
+            thumbnail_service.thumbnail_service.remove(obj.file.owner_id, str(obj.file_id))
         else:
             for thumb in obj:
-                create_file_service.delete_thumbnail(thumb.file)
+                thumbnail_service.thumbnail_service.remove(thumb.file.owner_id, str(thumb.file_id))
 
     def has_add_permission(self, request):
         return False

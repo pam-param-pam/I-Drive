@@ -30,7 +30,7 @@ def _stable_file_etag(file_obj: File) -> str:
 def get_thumbnail_response(request, file_obj: File, thumbnail: Thumbnail):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
 
-    cache_key = cache_service.get_thumbnail_key(file_obj.id)
+    cache_key = cache_service.get_thumbnail_key(file_obj.id, file_obj.resource_version)
     thumbnail_content = cache.get(cache_key)
 
     check_if_bots_exists(file_obj.owner)

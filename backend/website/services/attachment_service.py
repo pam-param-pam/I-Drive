@@ -1,7 +1,7 @@
 from website.discord.constants import ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSAGE_ATTACHMENT
 from website.models import Fragment, File, Thumbnail, Subtitle, Moment
 from website.models.other_models import NotificationType, NotificationKind
-from website.services import user_service, file_service, create_file_service
+from website.services import user_service, file_service, thumbnail_service
 from website.core.errors import DiscordBotAttachmentAuthor, DiscordError
 from website.discord.Discord import discord
 from website.models import DiscordAttachmentMixin, Webhook
@@ -30,7 +30,7 @@ def _handle_missing_media_attachment(resource: DiscordAttachmentMixin, owner, fi
         file_service.remove_subtitle(owner, file_obj, resource.id)
 
     if isinstance(resource, Thumbnail):
-        create_file_service.delete_thumbnail(file_obj, must_exist=False)
+        thumbnail_service.thumbnail_service.remove(owner, str(file_obj.id), must_exist=False)
 
     user_service.create_notification(
         owner,

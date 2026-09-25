@@ -23,7 +23,7 @@ from website.core.errors import FailedToParseRawImage
 from website.discord.Discord import discord
 from website.models import Fragment, File, DiscordSettings
 from website.models.other_models import RawExtractionClaim
-from website.services import create_file_service, file_service, touch_service
+from website.services import file_service, thumbnail_service, touch_service
 from website.websockets.utils import send_event
 
 RAW_EXTRACTION_BATCH_SIZE = 25
@@ -120,7 +120,7 @@ def _encrypt_thumbnail(data, file_obj: File):
 
 def _save_thumbnail_and_metadata(user, file_obj: File, thumbnail_info: dict, metadata: dict):
     with transaction.atomic():
-        create_file_service.create_or_edit_thumbnail(user, file_obj, thumbnail_info)
+        thumbnail_service.thumbnail_service.replace(user, str(file_obj.id), thumbnail_info)
         file_service.create_raw_metadata_internal(file_obj, metadata)
         touch_service.touch_file_object(file_obj)
     send_event(RequestContext.from_user(file_obj.owner.id), file_obj.parent, EventCode.ITEM_UPDATE, FileSerializer.serialize_object(file_obj))

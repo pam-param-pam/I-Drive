@@ -1,338 +1,322 @@
-from enum import StrEnum
+from dataclasses import dataclass
+from typing import Mapping
 
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
-from website.config import MAX_FILES_IN_FOLDER, MAX_FOLDERS_IN_FOLDER, MAX_FOLDER_DEPTH
-from website.constants import EventCode
-from website.core.Serializers import FolderSerializer
-from website.core.dataModels.http import RequestContext
-from website.core.errors import BadRequestError, ResourcePermissionError
+from website.config import MAX_FOLDERS_IN_FOLDER
+from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
-from website.models import Folder, File
+from website.models import (DeletionFolderWorkItem, DeletionScope, Folder,
+                            FolderLockPolicy, TrashRoot)
 from website.models.mixin_models import ItemState
-from website.services import mptt_lock_service, touch_service
-from website.tasks.lockTasks import lock_folder_task, unlock_folder_task
-from website.websockets.utils import send_event
+from website.services import namespace_lock_service
+from website.services.derived_state_service import (
+    apply_counter_deltas, bump_folder_listings, bump_folder_resources,
+    dirty_hashes, enqueue_height_repair, merge_delta, raise_height_bounds)
+from website.services.hierarchy_service import (assert_move_depth,
+                                                assert_move_has_no_cycle,
+                                                assert_not_root,
+                                                lock_folder_chains)
+from website.services.namespace_command_support import actor_id
+from website.services.resource_context_service import (
+    assert_no_active_scope_in_subtree, authorize_context,
+    authorize_restore_context, resolve_folder_context)
 
 
-class FolderLockChangeType(StrEnum):
-    LOCKED = "locked"
-    UNLOCKED = "unlocked"
-    RESET_CHANGED = "reset_changed"
-    RESET_UNLOCKED = "reset_unlocked"
-    PASSWORD_CHANGED = "password_changed"
+@dataclass(frozen=True)
+class FolderCommandResult:
+    folder_id: str
+    resource_version: int
+    operation_id: str | None = None
 
 
-def create_folder(context: RequestContext, user: User, parent: Folder, name: str) -> Folder:
-    name = validate_value(name, str, checks=[IsValidItemName])
+class FolderService:
+    @staticmethod
+    def create(
+        actor: User | int,
+        parent_id: str,
+        name: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        name = validate_value(name, str, checks=[IsValidItemName])
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [parent_id])
+            parent = hierarchy.folders[str(parent_id)]
+            authorize_context(resolve_folder_context(parent, hierarchy), credentials=credentials)
 
-    with transaction.atomic():
-        mptt_lock_service.lock_mptt_trees([parent])
-        parent = (
-            Folder.objects
-            .select_for_update()
-            .get(id=parent.id, owner=user)
-        )
+            if parent.subfolders.count() >= MAX_FOLDERS_IN_FOLDER:
+                raise BadRequestError(f"Too many folders in folder. Max = {MAX_FOLDERS_IN_FOLDER}")
+            if hierarchy.depth(str(parent.id)) + 1 > 15:
+                raise BadRequestError("Folder depth exceeded")
 
-        if parent.state != ItemState.ACTIVE:
-            raise BadRequestError("Parent not ready")
+            folder = Folder.objects.create(owner_id=owner_id, parent_id=parent.id, name=name)
+            chain = hierarchy.chain(str(parent.id))
+            deltas: dict[str, dict[str, int]] = {}
+            merge_delta(
+                deltas,
+                chain,
+                physical_descendant_folder_count=1,
+                visible_descendant_folder_count=1,
+            )
+            apply_counter_deltas(deltas)
+            raise_height_bounds(chain, 0, hierarchy.folders)
+            dirty_hashes(chain)
+            bump_folder_listings([parent.id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        if not has_folder_depth_for_subfolder(parent):
-            raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
+    @staticmethod
+    def rename(
+        actor: User | int,
+        folder_id: str,
+        name: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        name = validate_value(name, str, checks=[IsValidItemName])
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id])
+            folder = hierarchy.folders[str(folder_id)]
+            assert_not_root(folder)
+            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
 
-        if not has_folder_enough_space_for_folders(folder=parent, folders_length=1):
-            raise BadRequestError(f"Too many folders in folder. Max = {MAX_FOLDERS_IN_FOLDER}. Folders in trash count too.")
+            Folder.objects.filter(id=folder.id).update(name=name, last_modified_at=timezone.now())
+            bump_folder_resources([folder.id])
+            dirty_hashes(hierarchy.chain(str(folder.id))[1:])
+            bump_folder_listings([folder.parent_id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        folder_obj = Folder(name=name, parent=parent, owner=user)
-        folder_obj.save()
+    @staticmethod
+    def move(
+        actor: User | int,
+        folder_id: str,
+        destination_id: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id, destination_id])
+            folder = hierarchy.folders[str(folder_id)]
+            destination = hierarchy.folders[str(destination_id)]
+            assert_not_root(folder)
+            if str(folder.parent_id) == str(destination.id):
+                return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        # apply lock if needed
-        if parent.is_locked:
-            internal_apply_lock(folder=folder_obj, lock_from=parent.lockFrom, password=parent.password)
+            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
+            authorize_context(resolve_folder_context(destination, hierarchy), credentials=credentials)
+            assert_no_active_scope_in_subtree(owner_id, str(folder.id))
+            destination_chain = hierarchy.chain(str(destination.id))
+            assert_move_has_no_cycle(str(folder.id), destination_chain)
+            assert_move_depth(hierarchy.depth(str(destination.id)), folder.subtree_height_bound)
+            if destination.subfolders.count() >= MAX_FOLDERS_IN_FOLDER:
+                raise BadRequestError(f"Too many folders in folder. Max = {MAX_FOLDERS_IN_FOLDER}")
 
-        folder_obj.refresh_from_db()
-
-        touch_service.touch_folder_object(folder_obj)
-
-    folder_dict = FolderSerializer.serialize_object(folder_obj)
-    send_event(context.without_device_id(), parent, EventCode.ITEM_CREATE, folder_dict)
-    return folder_obj
-
-
-def _change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str, change_type: FolderLockChangeType) -> bool:
-    validate_value(new_password, str, default=None)
-
-    if new_password:
-        lock_folder_task.delay(context, folder_obj.id, new_password, change_type.value)
-    else:
-        unlock_folder_task.delay(context, folder_obj.id, change_type.value)
-
-    is_locked = bool(new_password)
-    lock_from = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
-
-    send_event(context.without_device_id(), folder_obj.parent, EventCode.FOLDER_LOCK_STATUS_CHANGE,
-        [{"parent_id": folder_obj.parent.id, "id": folder_obj.id, "isLocked": is_locked, "lockFrom": lock_from}]
-    )
-
-    return is_locked
-
-def change_folder_password(context: RequestContext, folder_obj: Folder, new_password: str) -> bool:
-    change_type = (
-        FolderLockChangeType.PASSWORD_CHANGED
-        if new_password and folder_obj.is_locked
-        else FolderLockChangeType.LOCKED
-        if new_password
-        else FolderLockChangeType.UNLOCKED
-    )
-
-    return _change_folder_password(context, folder_obj, new_password, change_type)
-
-def reset_folder_password(context: RequestContext, user, folder_obj: Folder, account_password: str, new_folder_password: str) -> bool:
-    validate_value(new_folder_password, str)
-
-    if not user.check_password(account_password):
-        raise ResourcePermissionError("Account password is incorrect")
-
-    change_type = FolderLockChangeType.RESET_CHANGED  if new_folder_password else FolderLockChangeType.RESET_UNLOCKED
-
-    return _change_folder_password(context, folder_obj, new_folder_password, change_type)
-
-
-def internal_move_to_new_parent(folder: Folder, new_parent: "Folder") -> None:
-    # todo verify if this is secure due to override_nested_locks
-
-    with transaction.atomic():
-        mptt_lock_service.lock_mptt_trees([folder, new_parent])
-
-        folder = (
-            Folder.objects
-            .select_related("parent", "lockFrom")
-            .get(id=folder.id)
-        )
-        new_parent = (
-            Folder.objects
-            .select_related("lockFrom")
-            .get(id=new_parent.id)
-        )
-
-        if folder.is_root_node():
-            raise BadRequestError("Cannot move the root folder")
-
-        if not has_folder_depth_for_move(folder, new_parent):
-            raise BadRequestError(f"Folder depth exceeded. Max = {MAX_FOLDER_DEPTH}")
-
-        if not has_folder_enough_space_for_folders(folder=new_parent, folders_length=1):
-            raise BadRequestError(f"Too many folders in folder. Max = {MAX_FILES_IN_FOLDER}. Folders in trash count too.")
-
-        old_parent = folder.parent
-
-        is_folder_locked = folder.is_locked
-        is_parent_locked = new_parent.is_locked
-
-        old_password = folder.password if is_folder_locked else None
-
-        if is_parent_locked:
-            # Always inherit parent lock
-            internal_apply_lock(
-                folder=folder,
-                lock_from=new_parent.lockFrom if new_parent.autoLock else new_parent,
-                password=new_parent.password,
+            source_chain = hierarchy.chain(str(folder.id))
+            old_ancestors = source_chain[1:]
+            new_ancestors = destination_chain
+            physical_folder_delta = 1 + folder.physical_descendant_folder_count
+            visible_folder_delta = 1 + folder.visible_descendant_folder_count
+            deltas: dict[str, dict[str, int]] = {}
+            merge_delta(
+                deltas,
+                old_ancestors,
+                physical_descendant_folder_count=-physical_folder_delta,
+                physical_descendant_file_count=-folder.physical_descendant_file_count,
+                physical_descendant_file_size=-folder.physical_descendant_file_size,
+                visible_descendant_folder_count=-visible_folder_delta,
+                visible_descendant_file_count=-folder.visible_descendant_file_count,
+                visible_descendant_file_size=-folder.visible_descendant_file_size,
+            )
+            merge_delta(
+                deltas,
+                new_ancestors,
+                physical_descendant_folder_count=physical_folder_delta,
+                physical_descendant_file_count=folder.physical_descendant_file_count,
+                physical_descendant_file_size=folder.physical_descendant_file_size,
+                visible_descendant_folder_count=visible_folder_delta,
+                visible_descendant_file_count=folder.visible_descendant_file_count,
+                visible_descendant_file_size=folder.visible_descendant_file_size,
             )
 
-        elif is_folder_locked:
-            # Preserve original lock, reroot it to itself
-            # respect subfolders with diff lock_from
-            internal_apply_lock(
-                folder=folder,
-                lock_from=folder,
-                password=old_password,
-                reroot=True,
+            old_parent_id = str(folder.parent_id)
+            Folder.objects.filter(id=folder.id).update(parent_id=destination.id, last_modified_at=timezone.now())
+            apply_counter_deltas(deltas)
+            raise_height_bounds(new_ancestors, folder.subtree_height_bound, hierarchy.folders)
+            enqueue_height_repair(old_parent_id)
+            dirty_hashes({*old_ancestors, *new_ancestors})
+            bump_folder_resources([folder.id])
+            bump_folder_listings([old_parent_id, destination.id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
+
+    @staticmethod
+    def trash(
+        actor: User | int,
+        folder_id: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id])
+            folder = hierarchy.folders[str(folder_id)]
+            assert_not_root(folder)
+            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
+            assert_no_active_scope_in_subtree(owner_id, str(folder.id))
+
+            TrashRoot.objects.create(folder_id=folder.id, owner_id=owner_id)
+            outside = hierarchy.chain(str(folder.id))[1:]
+            deltas: dict[str, dict[str, int]] = {}
+            merge_delta(
+                deltas,
+                outside,
+                visible_descendant_folder_count=-(1 + folder.visible_descendant_folder_count),
+                visible_descendant_file_count=-folder.visible_descendant_file_count,
+                visible_descendant_file_size=-folder.visible_descendant_file_size,
             )
+            apply_counter_deltas(deltas)
+            dirty_hashes(outside)
+            bump_folder_resources([folder.id])
+            bump_folder_listings([folder.parent_id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        folder.refresh_from_db()
+    @staticmethod
+    def restore(
+        actor: User | int,
+        folder_id: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id])
+            folder = hierarchy.folders[str(folder_id)]
+            context = resolve_folder_context(folder, hierarchy)
+            authorize_restore_context(context, credentials)
+            if context.trash_root_id != str(folder.id):
+                raise BadRequestError("Restore the enclosing trash root first")
 
-        folder.parent = new_parent
-        folder.move_to(new_parent, "last-child")
-        folder.save()
-
-        touch_service.touch_folder_move(
-            [folder.id],
-            old_parent_ids=[old_parent.id] if old_parent else [],
-            new_parent_ids=[new_parent.id],
-        )
-
-def internal_move_to_trash(folder: Folder) -> None:
-    with transaction.atomic():
-        mptt_lock_service.lock_mptt_trees([folder])
-        folder = (
-            Folder.objects
-            .select_for_update()
-            .get(id=folder.id)
-        )
-
-        subfolders = list(folder.get_all_subfolders())
-        folder_ids = [folder.id, *[subfolder.id for subfolder in subfolders]]
-        now = timezone.now()
-
-        Folder.objects.filter(id__in=folder_ids).update(
-            inTrash=True,
-            inTrashSince=now,
-        )
-
-        touch_service.touch_folders(folder_ids)
-
-
-def internal_restore_from_trash(folder: Folder) -> None:
-    with transaction.atomic():
-        mptt_lock_service.lock_mptt_trees([folder])
-        folder = (
-            Folder.objects
-            .select_for_update()
-            .select_related("parent")
-            .get(id=folder.id)
-        )
-
-        if folder.parent and folder.parent.inTrash:
-            raise BadRequestError("Cannot restore folder because its parent is in trash.")
-
-        subfolders = list(folder.get_all_subfolders())
-        folders = [folder, *subfolders]
-        folder_ids = [current_folder.id for current_folder in folders]
-
-        Folder.objects.filter(id__in=folder_ids).update(
-            inTrash=False,
-            inTrashSince=None,
-        )
-
-        restored_file_ids = list(File.objects.filter(parent__in=folders, inTrash=True).values_list("id", flat=True))
-
-        File.objects.filter(id__in=restored_file_ids).update(
-            inTrash=False,
-            inTrashSince=None,
-        )
-
-        touch_service.touch_folders(folder_ids)
-
-        if restored_file_ids:
-            touch_service.touch_files(restored_file_ids)
-
-
-def internal_apply_lock(folder: Folder, lock_from: Folder, password: str, reroot: bool = False) -> None:
-    validate_value(password, str, checks=[NotEmpty])
-
-    with transaction.atomic():
-        mptt_lock_service.lock_mptt_trees([folder, lock_from])
-        folder = (
-            Folder.objects
-            .select_for_update()
-            .get(id=folder.id)
-        )
-        lock_from = Folder.objects.get(id=lock_from.id)
-
-        old_lock_from_id = folder.lockFrom_id
-
-        folder.autoLock = folder.id != lock_from.id
-        folder.password = password
-        folder.lockFrom = lock_from
-        folder.save(update_fields=["autoLock", "password", "lockFrom"])
-
-        subfolders = folder.get_all_subfolders()
-
-        if reroot:
-            subfolders = subfolders.filter(lockFrom_id=old_lock_from_id)
-
-        touched_subfolder_ids = list(subfolders.values_list("id", flat=True))
-
-        if touched_subfolder_ids:
-            Folder.objects.filter(id__in=touched_subfolder_ids).update(
-                password=password,
-                lockFrom=lock_from,
-                autoLock=True,
+            deleted, _ = TrashRoot.objects.filter(folder_id=folder.id, owner_id=owner_id).delete()
+            if not deleted:
+                raise ResourceNotFoundError()
+            outside = hierarchy.chain(str(folder.id))[1:]
+            deltas: dict[str, dict[str, int]] = {}
+            merge_delta(
+                deltas,
+                outside,
+                visible_descendant_folder_count=1 + folder.visible_descendant_folder_count,
+                visible_descendant_file_count=folder.visible_descendant_file_count,
+                visible_descendant_file_size=folder.visible_descendant_file_size,
             )
+            apply_counter_deltas(deltas)
+            dirty_hashes(outside)
+            bump_folder_resources([folder.id])
+            bump_folder_listings([folder.parent_id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        touch_service.touch_folders([folder.id, *touched_subfolder_ids])
-
-
-def internal_remove_lock(folder: Folder) -> None:
-    with transaction.atomic():
-        mptt_lock_service.lock_mptt_trees([folder])
-        folder = (
-            Folder.objects
-            .select_for_update()
-            .get(id=folder.id)
-        )
-
-        # The caller may have loaded the folder before waiting for the tree
-        # lock. Use the current lock source from the freshly locked row.
-        lock_from_id = folder.lockFrom_id
-
-        folder.autoLock = False
-        folder.lockFrom = None
-        folder.password = None
-        folder.save(update_fields=["autoLock", "lockFrom", "password"])
-
-        touched_subfolder_ids = []
-        if lock_from_id is not None:
-            touched_subfolder_ids = list(
-                folder.get_all_subfolders()
-                .filter(lockFrom_id=lock_from_id)
-                .values_list("id", flat=True)
+    @staticmethod
+    def apply_lock(
+        actor: User | int,
+        folder_id: str,
+        password: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        password = validate_value(password, str, checks=[NotEmpty])
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id])
+            folder = hierarchy.folders[str(folder_id)]
+            assert_not_root(folder)
+            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
+            FolderLockPolicy.objects.update_or_create(
+                folder_id=folder.id,
+                defaults={"owner_id": owner_id, "password_verifier": make_password(password)},
             )
+            bump_folder_resources([folder.id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        Folder.objects.filter(id__in=touched_subfolder_ids).update(
-            password=None,
-            lockFrom=None,
-            autoLock=False,
-        )
+    @staticmethod
+    def remove_lock(
+        actor: User | int,
+        folder_id: str,
+        credentials: Mapping[str, str] | None = None,
+        reset_authorized: bool = False,
+    ) -> FolderCommandResult:
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id])
+            folder = hierarchy.folders[str(folder_id)]
+            assert_not_root(folder)
+            context = resolve_folder_context(folder, hierarchy)
+            if not reset_authorized:
+                authorize_context(context, credentials=credentials)
+            if context.lock_policy_id != str(folder.id):
+                raise BadRequestError("Folder has no explicit lock policy")
+            FolderLockPolicy.objects.filter(folder_id=folder.id, owner_id=owner_id).delete()
+            bump_folder_resources([folder.id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version)
 
-        touch_service.touch_folders([folder.id, *touched_subfolder_ids])
+    @staticmethod
+    def request_deletion(
+        actor: User | int,
+        folder_id: str,
+        credentials: Mapping[str, str] | None = None,
+    ) -> FolderCommandResult:
+        owner_id = actor_id(actor)
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_exclusive(owner_id)
+            hierarchy = lock_folder_chains(owner_id, [folder_id])
+            folder = hierarchy.folders[str(folder_id)]
+            assert_not_root(folder)
+            context = resolve_folder_context(folder, hierarchy)
+            authorize_context(context, credentials=credentials, allow_trash=True)
+            assert_no_active_scope_in_subtree(owner_id, str(folder.id))
 
-def internal_force_ready(folder_ids: list[str]) -> None:
-    now = timezone.now()
+            visible = not context.is_trashed
+            scope = DeletionScope.objects.create(
+                owner_id=owner_id,
+                root_folder_id=folder.id,
+                physical_folder_count=1 + folder.physical_descendant_folder_count,
+                physical_file_count=folder.physical_descendant_file_count,
+                physical_file_size=folder.physical_descendant_file_size,
+                visible_folder_count=(1 + folder.visible_descendant_folder_count) if visible else 0,
+                visible_file_count=folder.visible_descendant_file_count if visible else 0,
+                visible_file_size=folder.visible_descendant_file_size if visible else 0,
+            )
+            DeletionFolderWorkItem.objects.create(scope=scope, folder_id=folder.id)
+            Folder.objects.filter(id=folder.id).update(state=ItemState.DELETING, state_changed_at=timezone.now())
 
-    with transaction.atomic():
-        Folder.objects.filter(id__in=folder_ids).update(
-            state=ItemState.ACTIVE,
-            state_changed_at=now,
-        )
+            outside = hierarchy.chain(str(folder.id))[1:]
+            if visible:
+                deltas: dict[str, dict[str, int]] = {}
+                merge_delta(
+                    deltas,
+                    outside,
+                    visible_descendant_folder_count=-scope.visible_folder_count,
+                    visible_descendant_file_count=-scope.visible_file_count,
+                    visible_descendant_file_size=-scope.visible_file_size,
+                )
+                apply_counter_deltas(deltas)
+                dirty_hashes(outside)
+            bump_folder_resources([folder.id])
+            bump_folder_listings([folder.parent_id])
+            folder.refresh_from_db(fields=["resource_version"])
+            return FolderCommandResult(str(folder.id), folder.resource_version, str(scope.id))
 
-        touch_service.touch_folders(folder_ids)
 
-
-def has_folder_enough_space_for_files(folder: Folder, files_length: int) -> bool:
-    with transaction.atomic():
-        folder = Folder.objects.select_for_update().get(id=folder.id)
-        current_file_count = folder.files.filter(state=ItemState.ACTIVE).count()
-
-        return current_file_count + files_length <= MAX_FILES_IN_FOLDER
-
-
-def has_folder_enough_space_for_folders(folder: Folder, folders_length: int) -> bool:
-    with transaction.atomic():
-        folder = Folder.objects.select_for_update().get(id=folder.id)
-        current_folder_count = folder.subfolders.filter(state=ItemState.ACTIVE).count()
-
-        return current_folder_count + folders_length <= MAX_FOLDERS_IN_FOLDER
-
-def has_folder_depth_for_subfolder(parent: Folder) -> bool:
-    return parent.get_level() + 1 <= MAX_FOLDER_DEPTH
-
-def has_folder_depth_for_move(folder: Folder, new_parent: Folder) -> bool:
-    # Moving another folder can update MPTT coordinates for this object while
-    # it is still held in the move task's original queryset. Refresh the tree
-    # fields before using get_descendants().
-    folder.refresh_from_db()
-
-    deepest_level = (
-        folder
-        .get_descendants(include_self=True)
-        .order_by("-level")
-        .values_list("level", flat=True)
-        .first()
-    )
-
-    folder_subtree_depth = deepest_level - folder.get_level()
-    return new_parent.get_level() + 1 + folder_subtree_depth <= MAX_FOLDER_DEPTH
+folder_service = FolderService()

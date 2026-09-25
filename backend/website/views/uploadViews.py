@@ -6,7 +6,8 @@ from website.auth.Permissions import CreatePerms, ModifyPerms, default_checks
 from website.auth.throttle import defaultAuthUserThrottle
 from website.core.decorators import extract_file, check_resource_permissions
 from website.core.helpers import extract_key
-from website.services import create_file_service
+from website.core.http.utils import extract_resource_credentials
+from website.services import file_service, thumbnail_service
 
 
 @api_view(['POST'])
@@ -15,7 +16,11 @@ from website.services import create_file_service
 def create_file_view(request):
     files_data = extract_key(request.data, "files")
 
-    file_objs = create_file_service.create_files(request, request.user, files_data)
+    file_objs = file_service.file_service.create_files(
+        request.user,
+        files_data,
+        extract_resource_credentials(request),
+    )
 
     response_json = []
     for file in file_objs:
@@ -40,7 +45,12 @@ def create_file_view(request):
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def edit_file_view(request, file_obj):
     file_data = extract_key(request.data, "file_data")
-    create_file_service.edit_file(request.user, file_obj, file_data)
+    file_service.file_service.edit_file(
+        request.user,
+        file_obj,
+        file_data,
+        credentials=extract_resource_credentials(request),
+    )
     return HttpResponse(status=204)
 
 
@@ -50,5 +60,10 @@ def edit_file_view(request, file_obj):
 @extract_file()
 @check_resource_permissions(default_checks, resource_key="file_obj")
 def create_or_edit_thumbnail_view(request, file_obj):
-    create_file_service.create_or_edit_thumbnail(request.user, file_obj, request.data)
+    thumbnail_service.thumbnail_service.replace(
+        request.user,
+        str(file_obj.id),
+        request.data,
+        credentials=extract_resource_credentials(request),
+    )
     return HttpResponse(status=204)
