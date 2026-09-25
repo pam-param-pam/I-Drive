@@ -338,7 +338,7 @@ def generate_raw_image_thumbnails():
                 state["upload_map"].append((file_obj, key_b64, iv_b64, enc_size, metadata))
                 state["current_size"] += enc_size
 
-            except FailedToParseRawImage as e:
+            except FailedToParseRawImage:
                 _handle_parse_failure_and_clear_claim(file_obj)
 
             except Exception as e:

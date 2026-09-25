@@ -51,7 +51,7 @@ export class Uploader {
          value => this.setUploadConcurrency(value)
       )
 
-      this.startQueueStatsLogging()
+      // this.startQueueStatsLogging()
    }
 
    startQueueStatsLogging() {

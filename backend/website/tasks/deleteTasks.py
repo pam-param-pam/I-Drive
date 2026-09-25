@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional, Literal
 from uuid import UUID
 
+from celery.utils.log import get_task_logger
 from django.db import transaction, models
 from django.utils import timezone
 
 from website.celery import app
 from website.constants import EventCode, MAX_FILE_DELETION_ATTEMPTS
 from website.core.dataModels.http import RequestContext
-from website.core.errors import DiscordError, ResourcePermissionError
+from website.core.errors import DiscordError
 from website.discord.Discord import discord
 from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle
 from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, DeletionFileWorkItem
@@ -19,8 +20,6 @@ from website.queries.selectors import check_if_bots_exists, query_attachments
 from website.services import touch_service
 from website.tasks.helper import is_bulk_deletable
 from website.websockets.utils import send_event, send_message
-from celery.utils.log import get_task_logger
-
 
 AuthorType = Literal["bot", "webhook"]
 ItemKind = Literal["fragment", "thumbnail", "moment", "subtitle"]
