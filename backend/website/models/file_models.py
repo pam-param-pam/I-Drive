@@ -4,7 +4,7 @@ import os
 import shortuuid
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists, Subquery
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
@@ -37,6 +37,7 @@ class File(models.Model):
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True)
     resource_version = models.PositiveBigIntegerField(default=1)
+    trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     history = HistoricalRecords()
 
@@ -134,13 +135,9 @@ class File(models.Model):
 
     @classmethod
     def get_display_annotate(cls):
-        from .namespace_models import FileTrashMarker
-
         return {
-            "in_trash": Exists(FileTrashMarker.objects.filter(file_id=OuterRef("pk"))),
-            "in_trash_since": Subquery(
-                FileTrashMarker.objects.filter(file_id=OuterRef("pk")).values("created_at")[:1]
-            ),
+            "in_trash": Case(When(trashed_at__isnull=False, then=Value(True)), default=Value(False), output_field=BooleanField()),
+            "in_trash_since": F("trashed_at"),
             **cls.get_file_metadata_annotate(),
             "is_dir": Value(False, output_field=BooleanField()),
         }

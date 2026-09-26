@@ -82,6 +82,9 @@ def validate_ids_as_list(ids: list, max_length: int = 1000, child_type: Union[Ty
     if len(ids) > max_length:
         raise BadRequestError(f"'ids' length cannot > {max_length}.")
 
+    if all(isinstance(item, str) for item in ids) and len(ids) != len(set(ids)):
+        raise BadRequestError("Duplicate item IDs are not allowed")
+
     for x in ids:
         if not isinstance(x, child_type):
             types_tuple = child_type if isinstance(child_type, tuple) else (child_type,)
@@ -223,17 +226,6 @@ def normalize_blocked_until(value):
     return value
 
 
-def timed(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration = time.perf_counter() - start
-        print(f"{func.__name__} took {duration:.6f}s")
-        return result
-    return wrapper
-
-
 def get_public_ip():
     key = cache_service.get_router_ip_key()
     cached_ip = cache.get(key)
@@ -242,6 +234,23 @@ def get_public_ip():
         update_router_public_ip.delay()
 
     return cached_ip
+
+
+def hash_direct_folder_entries(file_entries: list[dict], child_entries: list[dict]) -> str:
+    hasher = hashlib.sha256()
+    for entry in sorted(file_entries, key=lambda item: (item["name"], str(item["crc"]))):
+        hasher.update(b"file\0")
+        hasher.update(entry["name"].encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(str(entry["crc"]).encode("utf-8"))
+        hasher.update(b"\0")
+    for entry in sorted(child_entries, key=lambda item: (item["name"], item["hash"])):
+        hasher.update(b"folder\0")
+        hasher.update(entry["name"].encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(entry["hash"].encode("utf-8"))
+        hasher.update(b"\0")
+    return hasher.hexdigest()
 
 
 def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], file_entries: list[dict]) -> str:
@@ -255,26 +264,10 @@ def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], fi
         files_by_parent.setdefault(entry["parent_id"], []).append(entry)
 
     def hash_folder(folder_id: str) -> str:
-        hasher = hashlib.sha256()
-
-        for entry in sorted(files_by_parent.get(folder_id, []), key=lambda item: (item["name"], item["crc"])):
-            hasher.update(b"file\0")
-            hasher.update(entry["name"].encode("utf-8"))
-            hasher.update(b"\0")
-            hasher.update(str(entry["crc"]).encode("utf-8"))
-            hasher.update(b"\0")
-
-        child_hashes = []
-        for entry in folders_by_parent.get(folder_id, []):
-            child_hashes.append((entry["name"], hash_folder(entry["id"])))
-
-        for name, digest in sorted(child_hashes):
-            hasher.update(b"folder\0")
-            hasher.update(name.encode("utf-8"))
-            hasher.update(b"\0")
-            hasher.update(digest.encode("utf-8"))
-            hasher.update(b"\0")
-
-        return hasher.hexdigest()
+        children = [
+            {"name": entry["name"], "hash": hash_folder(entry["id"])}
+            for entry in folders_by_parent.get(folder_id, [])
+        ]
+        return hash_direct_folder_entries(files_by_parent.get(folder_id, []), children)
 
     return hash_folder(root_folder_id)

@@ -1,4 +1,5 @@
 from collections import defaultdict
+import logging
 from typing import List, Union, Optional
 
 from asgiref.sync import async_to_sync
@@ -6,9 +7,11 @@ from channels.layers import get_channel_layer
 
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
-from ..core.crypto.utils import encrypt_message
 from ..core.dataModels.http import RequestContext
 from ..models import File, Folder
+
+
+logger = logging.getLogger(__name__)
 
 
 def send_message(message: str, args: Optional[dict], finished: bool, context: RequestContext, isError=False):
@@ -27,14 +30,14 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
 
     for resource in resources:
         parent_mapping[resource.parent_id] = resource.parent
-        if isinstance(resource, Folder):
-            grouped_files[resource.parent.id].append(FolderSerializer.serialize_object(resource))
-        else:
-            grouped_files[resource.parent_id].append(FileSerializer.serialize_object(resource))
+        grouped_files[resource.parent_id].append(resource)
 
-    for parent_id, file_dicts in grouped_files.items():
+    for parent_id, items in grouped_files.items():
         parent = parent_mapping[parent_id]
-        send_event(context, parent, op_code, file_dicts)
+        send_event(context, parent, op_code, [
+            FolderSerializer.serialize_object(item) if isinstance(item, Folder)
+            else FileSerializer.serialize_object(item) for item in items
+        ])
 
 
 def send_event(context: RequestContext, folder_context: Optional[Folder], op_code: EventCode, payload: Union[List, dict, str, None] = None) -> None:
@@ -42,40 +45,28 @@ def send_event(context: RequestContext, folder_context: Optional[Folder], op_cod
     Sends an event to the websocket layer.
     Handles optional encryption when a folder is locked.
     """
-    if payload and not isinstance(payload, list):
-        payload = [payload]
+    try:
+        if payload and not isinstance(payload, list):
+            payload = [payload]
 
-    ws_payload = {
-        'is_encrypted': False
-    }
+        ws_payload = {'is_encrypted': False}
+        if folder_context:
+            ws_payload['folder_context_id'] = folder_context.id
+        event_body = {'op_code': op_code.value}
+        if payload:
+            event_body['data'] = payload
+        ws_payload['event'] = event_body
 
-    if folder_context:
-        ws_payload['folder_context_id'] = folder_context.id
-
-    event_body = {
-        'op_code': op_code.value
-    }
-
-    if payload:
-        event_body['data'] = payload
-
-    # Encrypt event body when the folder is locked
-    if folder_context and folder_context.is_locked:
-        ws_payload['is_encrypted'] = True
-        ws_payload['lockFrom'] = folder_context.lockFrom.id
-        event_body = encrypt_message(folder_context.password, event_body)
-
-    # Attach final event object
-    ws_payload['event'] = event_body
-
-    send_channels_message(
-        'user',
-        {
-            'type': 'send_event',
-            'context': context.__json__(),
-            'ws_payload': ws_payload
-        }
-    )
+        send_channels_message(
+            'user',
+            {
+                'type': 'send_event',
+                'context': context.__json__(),
+                'ws_payload': ws_payload
+            }
+        )
+    except Exception:
+        logger.exception("Failed to send websocket event %s", op_code)
 
 
 def send_channels_message(ws_channel, ws_event: dict):

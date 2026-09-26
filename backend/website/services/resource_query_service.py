@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-from website.models import File, FileTrashMarker, Folder, TrashRoot
+from django.db.models import BooleanField, CharField, Exists, OuterRef, Value
+
+from website.models import File, Folder, TrashRoot
+from website.models import DeletionScope
+from website.models.mixin_models import ItemState
+from website.queries.hierarchy import get_descendant_folder_ids
+from website.core.errors import BadRequestError
 from website.auth.permissions import (
     AuthorizationResult, Authorizer, ContextSet, CredentialSet,
     ResourceAction, ResourceContextResolver, ResourceRef, ResourceType,
@@ -26,7 +32,7 @@ class AuthorizedFolder:
 @dataclass(frozen=True)
 class FolderListing:
     folder: Folder
-    files: tuple[File, ...]
+    files: tuple[dict, ...]
     folders: tuple[Folder, ...]
     authorization: AuthorizationResult
 
@@ -97,44 +103,68 @@ class FolderQueryService:
         folder_id: str,
         credentials: CredentialSet | None = None,
     ) -> FolderListing:
-        authorized_folder = FolderQueryService.get(
-            principal, folder_id, ResourceAction.READ, credentials,
+        parent_context = context_resolver.resolve_folder(folder_id, principal.user_id)
+        file_queryset = (
+            File.objects.filter(
+                owner_id=principal.user_id,
+                parent_id=folder_id,
+            )
+            .annotate(
+                has_active_deletion=Exists(DeletionScope.objects.filter(
+                    owner_id=principal.user_id,
+                    root_file_id=OuterRef("pk"),
+                    state=DeletionScope.State.ACTIVE,
+                ))
+            )
+            .filter(has_active_deletion=False)
+            .annotate(
+                **File.get_display_annotate(),
+                is_locked=Value(
+                    parent_context.effective_lock_policy_id is not None,
+                    output_field=BooleanField(),
+                ),
+                lock_from_id=Value(
+                    parent_context.effective_lock_policy_id,
+                    output_field=CharField(max_length=22),
+                ),
+                lock_from_name=Value(
+                    parent_context.effective_lock_policy_name,
+                    output_field=CharField(max_length=100),
+                ),
+            )
         )
-        file_ids = list(
-            File.objects.filter(owner_id=principal.user_id, parent_id=folder_id)
-            .values_list("id", flat=True)
+        rows = file_queryset.values(
+            *File.DISPLAY_VALUES, "trashed_at", "has_active_deletion",
+        )[:10001]
+        parent_authorization, files = authorizer.filter_user_file_batch(
+            principal, ResourceAction.DOWNLOAD, parent_context, rows, credentials,
+        )
+        folder = Folder.objects.select_related("owner", "parent").get(
+            id=folder_id, owner_id=principal.user_id,
         )
         folder_ids = list(
             Folder.objects.filter(owner_id=principal.user_id, parent_id=folder_id)
+            .filter(state=ItemState.ACTIVE, trash_root__isnull=True)
             .values_list("id", flat=True)
         )
-        refs = [ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids]
-        refs.extend(ResourceRef(ResourceType.FOLDER, child_id) for child_id in folder_ids)
+        refs = [ResourceRef(ResourceType.FOLDER, child_id) for child_id in folder_ids]
         contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())
         visible = authorizer.filter_user_contexts(
             principal, ResourceAction.READ, contexts, credentials,
         )
-        visible_file_ids = {
-            resource.resource_id for resource in visible.resources
-            if resource.resource_type == ResourceType.FILE.value
-        }
         visible_folder_ids = {
             resource.resource_id for resource in visible.resources
             if resource.resource_type == ResourceType.FOLDER.value
         }
-        files = tuple(
-            File.objects.filter(owner_id=principal.user_id, id__in=visible_file_ids)
-            .select_related("parent")
-        )
         folders = tuple(
             Folder.objects.filter(owner_id=principal.user_id, id__in=visible_folder_ids)
             .select_related("parent")
         )
         return FolderListing(
-            authorized_folder.folder,
+            folder,
             files,
             folders,
-            authorized_folder.authorization,
+            parent_authorization,
         )
 
     @staticmethod
@@ -144,10 +174,7 @@ class FolderQueryService:
         credentials: CredentialSet | None = None,
     ) -> FolderSubtree:
         authorized_folder = FolderQueryService.get(principal, folder_id, ResourceAction.READ, credentials)
-        folder_ids = [
-            str(value) for value in authorized_folder.folder.get_all_subfolders(include_self=True)
-            .values_list("id", flat=True)[:1000]
-        ]
+        folder_ids = sorted(get_descendant_folder_ids([folder_id], include_roots=True))[:1000]
         file_ids = [
             str(value) for value in File.objects.filter(owner_id=principal.user_id, parent_id__in=folder_ids)
             .values_list("id", flat=True)[:1000]
@@ -192,10 +219,8 @@ class TrashQueryService:
             TrashRoot.objects.filter(owner_id=principal.user_id)
             .values_list("folder_id", flat=True)
         )
-        file_ids = list(
-            FileTrashMarker.objects.filter(owner_id=principal.user_id)
-            .values_list("file_id", flat=True)
-        )
+        file_ids = list(File.objects.filter(owner_id=principal.user_id, trashed_at__isnull=False)
+                        .values_list("id", flat=True))
         refs = [ResourceRef(ResourceType.FOLDER, folder_id) for folder_id in folder_ids]
         refs.extend(ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids)
         contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())

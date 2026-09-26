@@ -67,6 +67,10 @@ urlpatterns = [
     path("files/<file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_moment"),
     path("files/<file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_subtitle"),
     path("files/<file_id>/stream", ["GET"], stream_file, name="stream file"),
+    path("shares/<share_id>/files/<file_id>/thumbnail/<thumbnail_id>/stream", ["GET"], serve_thumbnail, name="stream_share_thumbnail"),
+    path("shares/<share_id>/files/<file_id>/moments/<moment_id>/stream", ["GET"], serve_moment, name="stream_share_moment"),
+    path("shares/<share_id>/files/<file_id>/subtitles/<subtitle_id>/stream", ["GET"], serve_subtitle, name="stream_share_subtitle"),
+    path("shares/<share_id>/files/<file_id>/stream", ["GET"], stream_file, name="stream_share_file"),
 
     path("files", ["POST"], create_file_view, name="create file"),
     path("files/media-positions", ["POST"], get_files_media_position, name="returns a media position for many files"),

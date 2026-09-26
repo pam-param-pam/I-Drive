@@ -54,7 +54,7 @@ def cleanup_trash(user) -> int:
     now = django_timezone.now()
     cutoff = now - timedelta(days=MAX_TIME_FILES_IN_TRASH)
 
-    files = File.objects.filter(owner=user, state=ItemState.ACTIVE, trash_marker__created_at__lte=cutoff)
+    files = File.objects.filter(owner=user, state=ItemState.ACTIVE, trashed_at__lte=cutoff)
     folders = Folder.objects.filter(owner=user, state=ItemState.ACTIVE, trash_root__created_at__lte=cutoff)
 
     items = list(files) + list(folders)

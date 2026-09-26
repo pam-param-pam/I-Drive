@@ -193,7 +193,7 @@ def _claim_raw_image_files():
             type="Raw image",
             thumbnail__isnull=True,
             rawmetadata__isnull=True,
-            trash_marker__isnull=True,
+            trashed_at__isnull=True,
             parent__trash_root__isnull=True,
         )
         .filter(
@@ -234,7 +234,7 @@ def _claim_raw_image_files():
                         type="Raw image",
                         thumbnail__isnull=True,
                         rawmetadata__isnull=True,
-                        trash_marker__isnull=True,
+                        trashed_at__isnull=True,
                         parent__trash_root__isnull=True,
                     )
                     .exists()

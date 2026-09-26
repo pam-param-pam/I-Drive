@@ -4,10 +4,11 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from website.core.errors import ResourcePermissionError
+from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.models import Folder, TrashRoot, UserPerms
 from website.auth.permissions import CredentialSet, PrincipalFactory
 from website.services.folder_service import FolderService
+from website.services import namespace_service
 
 
 def _principal(user: User):
@@ -69,3 +70,19 @@ class FolderServicePermissionTests(TestCase):
             CredentialSet.empty(),
         )
         self.assertFalse(TrashRoot.objects.filter(folder=trashed).exists())
+
+
+class NamespaceClassificationTests(TestCase):
+    @patch("website.services.folder_service.namespace_lock_service.lock_owner_scope_shared")
+    def test_classification_does_not_replace_command_ownership_check(self, _lock_scope):
+        owner = User.objects.create_user(username="owner")
+        other = User.objects.create_user(username="other")
+        folder = Folder.objects.create(name="private", owner=other)
+
+        refs = namespace_service.classify_item_ids([str(folder.id)])
+        self.assertEqual(refs[0].type, "folder")
+
+        with self.assertRaises(ResourceNotFoundError):
+            namespace_service.rename(_principal(owner), str(folder.id), "changed", CredentialSet.empty())
+        folder.refresh_from_db()
+        self.assertEqual(folder.name, "private")

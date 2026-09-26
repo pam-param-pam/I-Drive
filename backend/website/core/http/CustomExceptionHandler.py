@@ -7,7 +7,6 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import OperationalError, IntegrityError, ProgrammingError
 from django.http import JsonResponse
 from httpx import ConnectError
-from mptt.exceptions import InvalidMove
 from requests.exceptions import SSLError
 from rest_framework.exceptions import PermissionDenied, APIException
 from rest_framework.exceptions import Throttled
@@ -53,9 +52,6 @@ def custom_exception_handler(exception, context):
     elif isinstance(exception, NotImplementedError):
         return JsonResponse(build_http_error_response(code=400, error="errors.notImplemented", details=str(exception)), status=400)
 
-    elif isinstance(exception, InvalidMove):
-        return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Invalid parent, recursion detected."), status=400)
-
     elif isinstance(exception, OverflowError):
         return JsonResponse(build_http_error_response(code=400, error="errors.badRequest", details="Params are too big"), status=400)
 
@@ -77,7 +73,7 @@ def custom_exception_handler(exception, context):
         return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=""), status=404)
 
     elif isinstance(exception, ShareableLink.DoesNotExist):
-        return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found or expired"), status=404)
+        return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details="Share not found"), status=404)
 
     elif isinstance(exception, ResourceNotFoundError):
         return JsonResponse(build_http_error_response(code=404, error="errors.resourceNotFound", details=str(exception)), status=404)

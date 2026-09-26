@@ -97,9 +97,8 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 102400000  # higher than the count of fields
 INSTALLED_APPS = [
     'django_prometheus',
     'simple_history',
-    'django.contrib.admin',
+    'website.admin.apps.WebsiteAdminConfig',
     'website',
-    'mptt',
     'corsheaders',
     'daphne',
     'django_celery_beat',
@@ -147,6 +146,9 @@ TEMPLATES = [
 
         'APP_DIRS': True,
         'OPTIONS': {
+            'libraries': {
+                'monitoring_tags': 'website.admin.templatetags.monitoring_tags',
+            },
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',

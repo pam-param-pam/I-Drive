@@ -5,6 +5,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from website.config import MAX_FOLDERS_IN_FOLDER
+from website.constants import EventCode
+from website.core.Serializers import FolderSerializer
+from website.core.dataModels.http import RequestContext
 from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
@@ -21,6 +24,7 @@ from website.services.derived_state_service import (
 from website.services.hierarchy_service import (
     assert_move_depth, assert_move_has_no_cycle,
     assert_no_active_scope_in_subtree, lock_folder_chains)
+from website.websockets.utils import send_event
 
 
 authorizer = Authorizer()
@@ -77,6 +81,8 @@ class FolderService:
             dirty_hashes(chain)
             bump_folder_listings([parent.id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), parent, EventCode.ITEM_CREATE,
+                       FolderSerializer.serialize_object(folder))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -97,6 +103,8 @@ class FolderService:
             dirty_hashes(hierarchy.chain(str(folder.id))[1:])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)), EventCode.ITEM_UPDATE,
+                       FolderSerializer.serialize_object(Folder.objects.get(id=folder.id)))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -157,6 +165,10 @@ class FolderService:
             bump_folder_resources([folder.id])
             bump_folder_listings([old_parent_id, destination.id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders[old_parent_id], EventCode.ITEM_MOVE_OUT,
+                       [str(folder.id)])
+            send_event(RequestContext.from_user(owner_id), destination, EventCode.ITEM_MOVE_IN,
+                       FolderSerializer.serialize_object(Folder.objects.get(id=folder.id)))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -187,6 +199,8 @@ class FolderService:
             bump_folder_resources([folder.id])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+                       EventCode.ITEM_MOVE_TO_TRASH, FolderSerializer.serialize_object(folder))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -203,7 +217,7 @@ class FolderService:
 
             deleted, _ = TrashRoot.objects.filter(folder_id=folder.id, owner_id=owner_id).delete()
             if not deleted:
-                raise ResourceNotFoundError()
+                raise ResourcePermissionError("Folder is not in trash")
             outside = hierarchy.chain(str(folder.id))[1:]
             deltas: dict[str, dict[str, int]] = {}
             merge_delta(
@@ -218,6 +232,8 @@ class FolderService:
             bump_folder_resources([folder.id])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+                       EventCode.ITEM_RESTORE_FROM_TRASH, FolderSerializer.serialize_object(folder))
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -238,6 +254,10 @@ class FolderService:
             )
             bump_folder_resources([folder.id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+                       EventCode.FOLDER_LOCK_STATUS_CHANGE,
+                       {"parent_id": str(folder.parent_id), "id": str(folder.id), "isLocked": True,
+                        "lockFrom": str(folder.id)})
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -254,9 +274,8 @@ class FolderService:
     ) -> FolderCommandResult:
         if not User.objects.get(id=principal.user_id).check_password(account_password):
             raise ResourcePermissionError("Password is incorrect!")
-        return FolderService._remove_lock(
-            principal, folder_id, credentials, ResourceAction.RESET_LOCK, new_password,
-        )
+
+        return FolderService._remove_lock(principal, folder_id, credentials, ResourceAction.RESET_LOCK, new_password)
 
     @staticmethod
     def _remove_lock(
@@ -270,11 +289,12 @@ class FolderService:
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
-            folder = hierarchy.folders[str(folder_id)]
+            folder = hierarchy.folders[folder_id]
             context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
             authorizer.authorize_user_action(principal, action, ContextSet((context,)), credentials)
             if context.effective_lock_policy_id != str(folder.id):
                 raise BadRequestError("Folder has no explicit lock policy")
+
             FolderLockPolicy.objects.filter(folder_id=folder.id, owner_id=owner_id).delete()
             if replacement_password:
                 FolderLockPolicy.objects.create(
@@ -284,6 +304,16 @@ class FolderService:
                 )
             bump_folder_resources([folder.id])
             folder.refresh_from_db(fields=["resource_version"])
+            ancestor_ids = hierarchy.chain(str(folder.id))[1:]
+            inherited_policies = set(FolderLockPolicy.objects.filter(
+                owner_id=owner_id, folder_id__in=ancestor_ids,
+            ).values_list("folder_id", flat=True))
+            inherited_lock_id = next((str(folder_id) for folder_id in ancestor_ids if folder_id in inherited_policies), None)
+            effective_lock_id = str(folder.id) if replacement_password else inherited_lock_id
+            send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
+                       EventCode.FOLDER_LOCK_STATUS_CHANGE,
+                       {"parent_id": str(folder.parent_id), "id": str(folder.id),
+                        "isLocked": effective_lock_id is not None, "lockFrom": effective_lock_id})
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
@@ -328,6 +358,7 @@ class FolderService:
             bump_folder_resources([folder.id])
             bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
+            send_event(RequestContext.from_user(owner_id), None, EventCode.ITEM_DELETE, [str(folder.id)])
             return FolderCommandResult(str(folder.id), folder.resource_version, str(scope.id))
 
 

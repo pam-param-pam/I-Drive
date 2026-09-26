@@ -1,14 +1,12 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from django.conf import settings
 
-from website.core.errors import ResourcePermissionError
-
-
-_FACTORY_TOKEN = object()
+from website.core.crypto.signer import unsign_resource
+from website.core.errors import ResourcePermissionError, URLInvalidOrExpired
 
 
 def _trusted_client_ip(request) -> str:
@@ -19,80 +17,31 @@ def _trusted_client_ip(request) -> str:
     return request.META.get("REMOTE_ADDR", "")
 
 
-class _TrustedPrincipal:
-    @staticmethod
-    def _assert_factory(token: object) -> None:
-        if token is not _FACTORY_TOKEN:
-            raise TypeError("Principals must be created by a trusted principal factory")
-
-
-@dataclass(frozen=True, init=False)
-class UserPrincipal(_TrustedPrincipal):
+@dataclass(frozen=True)
+class UserPrincipal:
     user_id: int
     device_id: str | None
     request_id: str
     client_ip: str
 
-    def __init__(self, user_id: int, device_id: str | None, request_id: str, client_ip: str, *, _token: object = None):
-        self._assert_factory(_token)
-        object.__setattr__(self, "user_id", user_id)
-        object.__setattr__(self, "device_id", device_id)
-        object.__setattr__(self, "request_id", request_id)
-        object.__setattr__(self, "client_ip", client_ip)
-
-
-@dataclass(frozen=True, init=False)
-class SharePrincipal(_TrustedPrincipal):
+@dataclass(frozen=True)
+class SharePrincipal:
     share_token: str
     authenticated_user_id: int | None
 
-    def __init__(self, share_token: str, authenticated_user_id: int | None, *, _token: object = None):
-        self._assert_factory(_token)
-        object.__setattr__(self, "share_token", share_token)
-        object.__setattr__(self, "authenticated_user_id", authenticated_user_id)
 
-
-@dataclass(frozen=True, init=False)
-class SignedResourcePrincipal(_TrustedPrincipal):
+@dataclass(frozen=True)
+class SignedResourcePrincipal:
     file_id: str
-    purpose: str
-    resource_version: int
     expires_at: datetime
     client_ip: str | None
     share_id: str | None
 
-    def __init__(
-        self,
-        file_id: str,
-        purpose: str,
-        resource_version: int,
-        expires_at: datetime,
-        client_ip: str | None,
-        share_id: str | None,
-        *,
-        _token: object = None,
-    ):
-        self._assert_factory(_token)
-        object.__setattr__(self, "file_id", file_id)
-        object.__setattr__(self, "purpose", purpose)
-        object.__setattr__(self, "resource_version", resource_version)
-        object.__setattr__(self, "expires_at", expires_at)
-        object.__setattr__(self, "client_ip", client_ip)
-        object.__setattr__(self, "share_id", share_id)
-
-
-@dataclass(frozen=True, init=False)
-class WorkPrincipal(_TrustedPrincipal):
+@dataclass(frozen=True)
+class WorkPrincipal:
     work_type: str
     work_id: str
     owner_id: int
-
-    def __init__(self, work_type: str, work_id: str, owner_id: int, *, _token: object = None):
-        self._assert_factory(_token)
-        object.__setattr__(self, "work_type", work_type)
-        object.__setattr__(self, "work_id", work_id)
-        object.__setattr__(self, "owner_id", owner_id)
-
 
 class PrincipalFactory:
     @staticmethod
@@ -110,7 +59,6 @@ class PrincipalFactory:
             device_id=device_id,
             request_id=str(request_id),
             client_ip=_trusted_client_ip(request),
-            _token=_FACTORY_TOKEN,
         )
 
     @staticmethod
@@ -119,28 +67,22 @@ class PrincipalFactory:
             raise ResourcePermissionError("A valid share token is required")
         user = getattr(request, "user", None)
         authenticated_user_id = user.id if user and user.is_authenticated else None
-        return SharePrincipal(token, authenticated_user_id, _token=_FACTORY_TOKEN)
+        return SharePrincipal(token, authenticated_user_id)
 
     @staticmethod
-    def from_signed_request(request, expected_purpose: str) -> SignedResourcePrincipal:
-        claims = getattr(request, "signed_resource_claims", None)
-        if not isinstance(claims, dict) or claims.get("purpose") != expected_purpose:
-            raise ResourcePermissionError("The signed resource capability is invalid for this purpose")
+    def from_signed_request(request, file_id: str, share_id: str | None = None) -> SignedResourcePrincipal:
         try:
-            expires_at = claims["expires_at"]
-            if not isinstance(expires_at, datetime):
-                raise TypeError
-            return SignedResourcePrincipal(
-                file_id=str(claims["resource_id"]),
-                purpose=expected_purpose,
-                resource_version=int(claims["resource_version"]),
-                expires_at=expires_at,
-                client_ip=None if claims.get("share_id") else _trusted_client_ip(request),
-                share_id=str(claims["share_id"]) if claims.get("share_id") else None,
-                _token=_FACTORY_TOKEN,
-            )
+            expires = int(request.GET["expires"])
+            sig = request.GET["sig"]
         except (KeyError, TypeError, ValueError) as exception:
-            raise ResourcePermissionError("The signed resource capability is malformed") from exception
+            raise URLInvalidOrExpired("Malformed signed URL.") from exception
+        unsign_resource(request.path_info, expires, sig)
+        return SignedResourcePrincipal(
+            file_id=str(file_id),
+            expires_at=datetime.fromtimestamp(expires, tz=timezone.utc),
+            client_ip=None if share_id else _trusted_client_ip(request),
+            share_id=str(share_id) if share_id else None,
+        )
 
 
 class WorkPrincipalFactory:
@@ -157,5 +99,4 @@ class WorkPrincipalFactory:
             work_type=work_row._meta.label_lower,
             work_id=str(work_id),
             owner_id=int(owner_id),
-            _token=_FACTORY_TOKEN,
         )

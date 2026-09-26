@@ -10,6 +10,7 @@ from website.models.file_related_models import PhotoMetadata, RawMetadata, Subti
 from website.models.other_models import Notification
 from website.queries.selectors import get_item_inside_share
 from website.queries.file_lock_annotations import file_lock_annotations
+from website.auth.permissions import ResourceContextResolver
 
 
 class SimpleSerializer(ABC):
@@ -62,6 +63,46 @@ class AdvancedSerializer(ABC):
 
 
 class FileSerializer(AdvancedSerializer):
+
+    @classmethod
+    def serialize_many(
+        cls,
+        file_objects: Iterable[File],
+        hide=False,
+        sign_urls: bool = True,
+        effective_lock_policy_id: str | None = None,
+        lock_context_resolved: bool = False,
+    ) -> list[dict]:
+        file_objects = tuple(file_objects)
+        if not file_objects:
+            return []
+
+        if not lock_context_resolved:
+            tuples_by_id = {
+                str(row[0]): row
+                for row in File.objects.filter(id__in=[obj.id for obj in file_objects])
+                .annotate(**File.get_display_annotate(), **file_lock_annotations())
+                .values_list(*File.DISPLAY_VALUES)
+            }
+        else:
+            lock_fields = {"is_locked", "lock_from_id", "lock_from_name"}
+            value_fields = tuple(field for field in File.DISPLAY_VALUES if field not in lock_fields)
+            tuples_by_id = {}
+            for row in (
+                File.objects.filter(id__in=[obj.id for obj in file_objects])
+                .annotate(**File.get_display_annotate())
+                .values_list(*value_fields)
+            ):
+                values = dict(zip(value_fields, row))
+                values["is_locked"] = effective_lock_policy_id is not None
+                values["lock_from_id"] = effective_lock_policy_id
+                values["lock_from_name"] = None
+                tuples_by_id[str(values["id"])] = tuple(values[field] for field in File.DISPLAY_VALUES)
+        return [
+            cls.serialize_tuple(tuples_by_id[str(obj.id)], hide=hide, sign_urls=sign_urls)
+            for obj in file_objects
+            if str(obj.id) in tuples_by_id
+        ]
 
     @staticmethod
     def _object_to_tuple(obj) -> tuple:
@@ -132,7 +173,7 @@ class FileSerializer(AdvancedSerializer):
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
             if sign_urls:
-                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, purpose='zip_entry')}"
+                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
@@ -191,7 +232,7 @@ class ShareFileSerializer(FileSerializer):
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
             if sign_urls:
-                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, purpose='zip_entry')}"
+                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
@@ -210,6 +251,8 @@ class FolderSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(folder_obj: Folder) -> dict:
+        context = ResourceContextResolver().resolve_folder(str(folder_obj.id), folder_obj.owner_id)
+        is_locked = context.effective_lock_policy_id is not None
         folder_dict = {
             'isDir': True,
             'id': folder_obj.id,
@@ -217,11 +260,11 @@ class FolderSerializer(SimpleSerializer):
             'parent_id': folder_obj.parent.id if folder_obj.parent else None,
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
-            'isLocked': folder_obj.is_locked,
+            'isLocked': is_locked,
         }
 
-        if folder_obj.is_locked:
-            folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
+        if is_locked:
+            folder_dict['lockFrom'] = context.effective_lock_policy_id
 
         try:
             trash_marker = folder_obj.trash_root

@@ -69,7 +69,7 @@ def delete_view(request):
 @permission_classes([IsAuthenticated])
 def create_zip_model_view(request):
     principal, credentials = _inputs(request)
-    refs = namespace_service.classify_item_ids(principal, extract_key(request.data, "ids"))
+    refs = namespace_service.classify_item_ids(extract_key(request.data, "ids"))
     user_zip = zip_service.create_zip_model(principal, [ref.as_dict() for ref in refs], credentials)
     return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
 

@@ -2,26 +2,30 @@ import datetime
 from typing import Union, List
 
 import easy
-from django import forms
 from django.contrib import admin
-from django.db import transaction
 from django.db.models import QuerySet
 from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
-from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
 from website.services import attachment_service
-from website.auth.permissions import CredentialSet, PrincipalFactory
-from .constants import API_BASE_URL, EncryptionMethod
-from .core.crypto.signer import sign_resource
-from .core.errors import DiscordError
-from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
+from website.auth.permissions import CredentialSet, PrincipalFactory, ResourceContextResolver
+from website.constants import API_BASE_URL, EncryptionMethod
+from website.core.crypto.signer import sign_resource
+from website.core.errors import DiscordError
+from website.models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
-from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
-from .models.file_related_models import RawMetadata, PhotoMetadata
-from .models.other_models import Notification, RawExtractionClaim
-from .services import folder_service, file_service, namespace_service, auth_service, thumbnail_service
+from website.models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem
+from website.models.namespace_models import (
+    DeletionScope,
+    FolderHashWork,
+    FolderHeightRepair,
+    FolderLockPolicy,
+    TrashRoot,
+)
+from website.models.file_related_models import RawMetadata, PhotoMetadata
+from website.models.other_models import Notification, RawExtractionClaim
+from website.services import namespace_service, auth_service, thumbnail_service
 
 
 def _request_admin_deletion(request, objects):
@@ -45,6 +49,44 @@ admin.site.register(SubtitleTrack)
 admin.site.register(MediaPosition)
 
 admin.site.register(RawExtractionClaim)
+
+
+class InternalNamespaceAdmin(admin.ModelAdmin):
+    def get_readonly_fields(self, request, obj=None):
+        model = obj or self.model
+        return tuple(field.name for field in model._meta.fields)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(TrashRoot)
+class TrashRootAdmin(InternalNamespaceAdmin):
+    list_display = ("folder", "owner", "created_at")
+    list_select_related = ("folder", "owner")
+
+
+@admin.register(FolderLockPolicy)
+class FolderLockPolicyAdmin(InternalNamespaceAdmin):
+    list_display = ("folder", "owner", "created_at", "updated_at")
+    list_select_related = ("folder", "owner")
+    exclude = ("password_verifier",)
+
+
+@admin.register(FolderHashWork)
+class FolderHashWorkAdmin(InternalNamespaceAdmin):
+    list_display = ("folder", "created_at", "updated_at")
+    list_select_related = ("folder",)
+
+
+@admin.register(FolderHeightRepair)
+class FolderHeightRepairAdmin(InternalNamespaceAdmin):
+    list_display = ("folder", "created_at", "updated_at")
+    list_select_related = ("folder",)
+
 
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
@@ -117,15 +159,15 @@ class FolderAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'last_modified_at', 'parent')
     ordering = ["-created_at"]
     list_display = ["name", "owner", "state", "created_at", "is_trashed", "is_locked"]
-    actions = ['move_to_trash', 'restore_from_trash', 'unlock', 'force_ready']
     search_fields = ["id", "name"]
 
     def has_add_permission(self, request):
         return False
 
-    @easy.smart(short_description="Is locked", admin_order_field="password", boolean=True)
-    def is_locked(self, obj: File):
-        return obj._is_locked()
+    @easy.smart(short_description="Is locked", boolean=True)
+    def is_locked(self, obj: Folder):
+        context = ResourceContextResolver().resolve_folder(str(obj.id), obj.owner_id)
+        return context.effective_lock_policy_id is not None
 
     @easy.smart(short_description="In trash", boolean=True)
     def is_trashed(self, obj: Folder):
@@ -145,22 +187,6 @@ class FolderAdmin(SimpleHistoryAdmin):
         else:
             _request_admin_deletion(request, obj)
 
-    def move_to_trash(self, request, queryset: QuerySet[Folder]):
-        for folder in queryset:
-            folder_service.internal_move_to_trash(folder)
-
-    def restore_from_trash(self, request, queryset: QuerySet[Folder]):
-        for folder in queryset:
-            folder_service.internal_restore_from_trash(folder)
-
-    def unlock(self, request, queryset: QuerySet[Folder]):
-        for folder in queryset:
-            folder_service.internal_remove_lock(folder)
-
-    def force_ready(self, request, queryset: QuerySet[File]):
-        ids = [f.id for f in queryset]
-        folder_service.internal_force_ready(ids)
-
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
@@ -169,20 +195,21 @@ class FileAdmin(SimpleHistoryAdmin):
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
                     'is_trashed', 'is_locked']
-    actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'force_ready']
+    actions = ['force_delete_model']
     search_fields = ['name', 'id', 'type', 'owner__username']
     filter_horizontal = ('tags',)
 
     def has_add_permission(self, request):
         return False
 
-    @easy.smart(short_description="Locked", admin_order_field="parent__password", boolean=True)
+    @easy.smart(short_description="Locked", boolean=True)
     def is_locked(self, obj: File):
-        return obj._is_locked()
+        context = ResourceContextResolver().resolve_file(str(obj.id), obj.owner_id)
+        return context.effective_lock_policy_id is not None
 
     @easy.smart(short_description="In trash", boolean=True)
     def is_trashed(self, obj: File):
-        return hasattr(obj, "trash_marker")
+        return obj.trashed_at is not None
 
     @easy.smart(short_description="Readable size", admin_order_field="size")
     def readable_size(self, obj: File):
@@ -272,16 +299,6 @@ class FileAdmin(SimpleHistoryAdmin):
         for real_obj in queryset:
             real_obj.delete()
 
-    def move_to_trash(self, request, queryset: QuerySet[File]):
-        file_service.internal_move_to_trash(queryset)
-
-    def restore_from_trash(self, request, queryset: QuerySet[File]):
-        file_service.internal_restore_from_trash(queryset)
-
-    def force_ready(self, request, queryset: QuerySet[File]):
-        ids = [f.id for f in queryset]
-        file_service.internal_force_ready(ids)
-
 @admin.register(Thumbnail)
 class ThumbnailAdmin(SimpleHistoryAdmin):
     search_fields = ['file__name', 'file__id', 'file__owner__username']
@@ -329,19 +346,10 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
         return EncryptionMethod(obj.file.encryption_method).name
 
 
-class ShareableLinkAdminForm(forms.ModelForm):
-    class Meta:
-        model = ShareableLink
-        fields = "__all__"
-
-    def clean_password(self):
-        return self.cleaned_data.get("password") or None
-
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
     list_display = ('id', 'resource_link', 'get_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
-    readonly_fields = ('resource_link', 'root_id', 'get_type', 'owner', 'is_expired')
-    form = ShareableLinkAdminForm
+    readonly_fields = ('token', 'password_verifier', 'root_folder', 'root_file', 'resource_link', 'root_id', 'get_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
 
     def has_add_permission(self, request):
         return False
@@ -615,101 +623,32 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(DeletionFileWorkItem)
 class DeletionFileWorkItemAdmin(admin.ModelAdmin):
-    list_display = ['file_id', 'state', 'scope_id', 'claimed_at']
-    actions = ['reset_attempts_to_1']
+    list_display = ['file', 'scope', 'state', 'attempts', 'claimed_at', 'finished_at']
+    list_select_related = ['file', 'scope']
+    readonly_fields = [field.name for field in DeletionFileWorkItem._meta.fields]
 
     def has_add_permission(self, request):
         return False
-
-    def reset_attempts_to_1(self, request, queryset):
-        updated = queryset.update(attempts=1)
-        self.message_user(request, f"{updated} items updated")
 
 @admin.register(DeletionFolderWorkItem)
 class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
-    list_display = ['folder_id', 'state', 'scope_id', 'claimed_at']
-    actions = ['reset_attempts_to_1']
+    list_display = ['folder', 'scope', 'state', 'attempts', 'expansion_complete', 'claimed_at', 'finished_at']
+    list_select_related = ['folder', 'scope']
+    readonly_fields = [field.name for field in DeletionFolderWorkItem._meta.fields]
 
     def has_add_permission(self, request):
         return False
 
-    def reset_attempts_to_1(self, request, queryset):
-        updated = queryset.update(attempts=1)
-        self.message_user(request, f"{updated} items updated")
-
-@admin.register(DeletionJob)
-class DeletionJobAdmin(admin.ModelAdmin):
-    ordering = ["-started_at"]
-    list_display = ['state', 'started_at', 'heartbeat_at', 'last_progress_percentage']
-    actions = ['retry_failed_jobs']
+@admin.register(DeletionScope)
+class DeletionScopeAdmin(admin.ModelAdmin):
+    ordering = ['-created_at']
+    list_display = ['id', 'owner', 'root_folder', 'root_file', 'state', 'created_at', 'completed_at']
+    list_filter = ['state']
+    list_select_related = ['owner', 'root_folder', 'root_file']
+    readonly_fields = [field.name for field in DeletionScope._meta.fields]
 
     def has_add_permission(self, request):
         return False
-
-    @admin.action(description="Reset failed items and retry selected deletion jobs")
-    def retry_failed_jobs(self, request, queryset):
-        from website.tasks.deleteTasks import process_file_batch, process_folder_batch
-
-        jobs_to_retry = []
-        reset_file_items = 0
-        reset_folder_items = 0
-
-        with transaction.atomic():
-            jobs = queryset.select_for_update().filter(state=DeletionJob.State.PARTIAL)
-
-            for job in jobs:
-                file_items = job.file_items.filter(state=DeletionFileWorkItem.State.FAILED)
-                folder_items = job.folder_items.filter(state=DeletionFolderWorkItem.State.FAILED)
-                file_count = file_items.count()
-                folder_count = folder_items.count()
-
-                if not file_count and not folder_count:
-                    continue
-
-                reset_file_items += file_items.update(
-                    state=DeletionFileWorkItem.State.PENDING,
-                    attempts=0,
-                    last_error="",
-                    claim_token=None,
-                    claimed_at=None,
-                    remote_done_at=None,
-                    finished_at=None,
-                )
-                reset_folder_items += folder_items.update(
-                    state=DeletionFolderWorkItem.State.PENDING,
-                    attempts=0,
-                    last_error="",
-                    claim_token=None,
-                    claimed_at=None,
-                    finished_at=None,
-                )
-
-                job.state = DeletionJob.State.RUNNING
-                job.failed_file_items = 0
-                job.failed_folder_items = 0
-                job.error = ""
-                job.finished_at = None
-                job.heartbeat_at = timezone.now()
-                job.save(update_fields=[
-                    "state",
-                    "failed_file_items",
-                    "failed_folder_items",
-                    "error",
-                    "finished_at",
-                    "heartbeat_at",
-                ])
-
-                jobs_to_retry.append((job.request_context, job.id, file_count > 0))
-
-        for context, job_id, has_file_items in jobs_to_retry:
-            task = process_file_batch if has_file_items else process_folder_batch
-            task.delay(context, job_id)
-
-        self.message_user(
-            request,
-            f"Retried {len(jobs_to_retry)} jobs; reset {reset_file_items} file items and "
-            f"{reset_folder_items} folder items",
-        )
 
 
 @admin.register(PerDeviceToken)

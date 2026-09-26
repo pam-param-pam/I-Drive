@@ -2,26 +2,19 @@ import shortuuid
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import F, CheckConstraint, Q
-from mptt.fields import TreeForeignKey
-from mptt.models import MPTTModel
-from mptt.querysets import TreeQuerySet
 from shortuuidfield import ShortUUIDField
 
 from .mixin_models import ItemState
 from website.models.constraints.parent_owner_match_constraint import ParentOwnerConstraint
 
 
-class Folder(MPTTModel):
+class Folder(models.Model):
     id = ShortUUIDField(default=shortuuid.uuid, primary_key=True, editable=False)
     name = models.CharField(max_length=100)
-    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders', blank=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    ready = models.BooleanField(default=True)
-    password = models.CharField(max_length=50, null=True, blank=True)
-    autoLock = models.BooleanField(default=False, blank=True)
-    lockFrom = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, related_name='+', blank=True)
 
     # --- lifecycle state ---
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
@@ -47,9 +40,6 @@ class Folder(MPTTModel):
     resource_version = models.PositiveBigIntegerField(default=1)
     listing_version = models.PositiveBigIntegerField(default=1)
 
-    class MPTTMeta:
-        order_insertion_by = ['-created_at']
-
     class Meta:
         constraints = [
             # Required as the target of the folder/file composite foreign keys.
@@ -74,22 +64,7 @@ class Folder(MPTTModel):
                 name="%(class)s_last_modified_after_created"
             ),
 
-            # 3. lockFrom requires password
-            CheckConstraint(
-                condition=(
-                        Q(lockFrom__isnull=True) |                # unlocked (password may or may not be NULL)
-                        (Q(lockFrom__isnull=False) & Q(password__isnull=False))  # locked requires password
-                ),
-                name="%(class)s_lock_password_consistent_v2",
-            ),
-
-            # 4. autoLock must be False unless lockFrom exists
-            CheckConstraint(
-                condition=Q(lockFrom__isnull=False) | Q(autoLock=False) | Q(state=ItemState.DELETING),
-                name="%(class)s_autoLock_valid",
-            ),
-
-            # 5. prevent folder from being its own parent
+            # 3. prevent folder from being its own parent
             CheckConstraint(
                 condition=~Q(id=F('parent')),
                 name="%(class)s_parent_not_self"
@@ -99,18 +74,3 @@ class Folder(MPTTModel):
     def __str__(self):
         return self.name
 
-    def _is_locked(self):
-        if self.password:
-            return True
-        return False
-
-    is_locked = property(_is_locked)
-
-    def get_all_subfolders(self, include_self=False) -> TreeQuerySet:
-        return self.get_descendants(include_self=include_self)
-
-    def get_all_files(self) -> TreeQuerySet:
-        from .file_models import File
-        # todo move to queries
-        queryset = self.get_all_subfolders(include_self=True)
-        return File.objects.filter(parent__in=queryset)

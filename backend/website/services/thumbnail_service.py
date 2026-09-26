@@ -101,7 +101,7 @@ class ThumbnailService:
         return existing
 
     @staticmethod
-    def _remove_missing_attachment(owner_id: int, file_id: str, thumbnail_id: str) -> ThumbnailMutationResult:
+    def _remove_missing_thumbnail_attachment(owner_id: int, file_id: str, thumbnail_id: str) -> ThumbnailMutationResult:
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             command_context = lock_files_and_parents(owner_id, [file_id])
@@ -126,12 +126,8 @@ class ThumbnailService:
             for attachment in result.removed_attachments:
                 attachment_service.delete_remote_single_discord_attachment(owner, attachment)
         file_obj = File.objects.select_related("parent").get(id=result.file_id)
-        send_event(
-            RequestContext.from_user(owner.id),
-            file_obj.parent,
-            EventCode.ITEM_UPDATE,
-            FileSerializer.serialize_object(file_obj),
-        )
+        send_event(RequestContext.from_user(owner.id), file_obj.parent, EventCode.ITEM_UPDATE,
+                   FileSerializer.serialize_object(file_obj))
 
     @staticmethod
     def _change(principal: UserPrincipal, file_id: str, replacement: dict | None, must_exist: bool, credentials: CredentialSet | None) -> ThumbnailMutationResult:

@@ -23,13 +23,14 @@ from website.core.Serializers import FileSerializer, VideoTrackSerializer, Subti
 from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_ids_as_list, extract_key, validate_key, _get_folder_content_hash
-from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
+from website.core.helpers import validate_ids_as_list, extract_key, validate_key
+from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment, FolderHashWork
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
 from website.queries.file_lock_annotations import file_lock_annotations
-from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
-from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists
+from website.queries.hierarchy import get_descendant_folder_ids
+from website.queries.builders import build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
+from website.queries.selectors import check_if_bots_exists
 from website.services import cache_service, search_service
 from website.services.resource_query_service import FileQueryService, FolderQueryService, ItemQueryService, TrashQueryService
 
@@ -40,25 +41,18 @@ def _inputs(request):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated])
 def get_folder_info(request, folder_id):
     principal, credentials = _inputs(request)
     listing = FolderQueryService.list_children(principal, folder_id, credentials)
     folder_obj = listing.folder
     folder_content = FolderSerializer.serialize_object(folder_obj)
     folder_content["children"] = [
-        *(FileSerializer.serialize_object(file, sign_urls=False) for file in listing.files),
+        *(FileSerializer.serialize_dict(row, sign_urls=False) for row in listing.files),
         *(FolderSerializer.serialize_object(folder) for folder in listing.folders),
     ]
     breadcrumbs = build_breadcrumbs(folder_obj)
 
-    downloadable_ids = [str(item["id"]) for item in folder_content["children"] if not item.get("isDir")]
-    downloadable_files = {
-        str(file.id): file
-        for file in FileQueryService.get_many(
-            principal, downloadable_ids, ResourceAction.DOWNLOAD, credentials,
-        )
-    } if downloadable_ids else {}
+    downloadable_files = {str(row["id"]): row for row in listing.files}
 
     unsigned_payload = {
         "folder": folder_content,
@@ -87,12 +81,12 @@ def get_folder_info(request, folder_id):
 
         if thumbnail_path:
             source = downloadable_files[str(file["id"])]
-            file["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{sign_resource(thumbnail_path, resource_id=str(source.id), resource_version=source.resource_version, purpose='thumbnail')}"
+            file["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{sign_resource(thumbnail_path)}"
 
         if download_path:
             source = downloadable_files[str(file["id"])]
-            file["download_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, resource_id=str(source.id), resource_version=source.resource_version, purpose='file_download')}"
-            file["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, resource_id=str(source.id), resource_version=source.resource_version, purpose='zip_entry')}"
+            file["download_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
+            file["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
         file.pop("_download_path", None)
         file.pop("_thumbnail_path", None)
@@ -136,11 +130,11 @@ def get_usage(request, folder_id):
     key = cache_service.get_total_used_size_key(request.user.id)
     total_used_size = cache.get(key)
     if not total_used_size:
-        file_used = File.objects.filter(owner=request.user, trash_marker__isnull=True, state=ItemState.ACTIVE, parent__trash_root__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
-        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trash_marker__isnull=True).aggregate(Sum('size'))[
+        file_used = File.objects.filter(owner=request.user, trashed_at__isnull=True, state=ItemState.ACTIVE, parent__trash_root__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
+        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trashed_at__isnull=True).aggregate(Sum('size'))[
                              'size__sum'] or 0
-        moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trash_marker__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
-        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trash_marker__isnull=True).aggregate(Sum('size'))[
+        moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trashed_at__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
+        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trashed_at__isnull=True).aggregate(Sum('size'))[
                             'size__sum'] or 0
 
         total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
@@ -215,7 +209,7 @@ def fetch_additional_info(request, item_id):
                 raise ResourceNotFoundError("No photo metadata for this file :(")
 
         else:
-            raise ResourceNotFoundError("Wrong item type.")
+            raise ResourcePermissionError("Wrong item type")
 
 
 @api_view(['POST'])
@@ -326,8 +320,8 @@ def ultra_download_files_metadata(request, item_id):
     else:
         base_folder: Folder = item_obj
 
-        files = base_folder.get_all_files().filter(
-            trash_marker__isnull=True,
+        files = File.objects.filter(parent_id__in=get_descendant_folder_ids([base_folder.id]),
+            trashed_at__isnull=True,
             state=ItemState.ACTIVE,
             parent__trash_root__isnull=True,
         )
@@ -444,19 +438,9 @@ def get_folder_file_stats(request, folder_id):
 @permission_classes([IsAuthenticated])
 def get_folder_hash(request, folder_id):
     principal, credentials = _inputs(request)
-    subtree = FolderQueryService.list_subtree(principal, folder_id, credentials)
-    folder_obj = subtree.folder
-    folder_entries = [
-        {"id": folder.id, "name": folder.name, "parent_id": folder.parent_id, "last_modified_at": folder.last_modified_at}
-        for folder in subtree.folders
-    ]
-
-    file_entries = [
-        {"id": file.id, "name": file.name, "crc": file.crc, "parent_id": file.parent_id}
-        for file in subtree.files
-    ]
-
-    digest = _get_folder_content_hash(folder_obj.id, folder_entries, file_entries)
-
-    return JsonResponse({"hash": digest})
+    folder_obj = FolderQueryService.get(principal, folder_id, ResourceAction.READ, credentials).folder
+    if folder_obj.subtree_hash is None or folder_obj.hash_input_generation != folder_obj.hash_computed_generation:
+        FolderHashWork.objects.get_or_create(folder_id=folder_obj.id)
+        return JsonResponse({"status": "pending"}, status=202)
+    return JsonResponse({"hash": folder_obj.subtree_hash})
 

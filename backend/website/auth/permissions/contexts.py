@@ -6,7 +6,7 @@ from typing import Iterable, Mapping
 from website.config import MAX_FOLDER_DEPTH
 from website.core.errors import BadRequestError, ResourceNotFoundError
 from django.db import connection
-from website.models import DeletionScope, File, FileTrashMarker, Folder, FolderLockPolicy, TrashRoot
+from website.models import DeletionScope, File, Folder, FolderLockPolicy, TrashRoot
 from website.models.mixin_models import ItemState
 from website.services.hierarchy_service import LockedHierarchy
 
@@ -130,7 +130,52 @@ def _load_hierarchy(owner_id: int, start_ids: set[str]) -> LockedHierarchy:
             folders[folder_id] = folder
             if folder.parent_id is not None:
                 pending.add(str(folder.parent_id))
+
     raise BadRequestError("Folder hierarchy exceeds the configured maximum depth or contains a cycle")
+
+
+@dataclass(frozen=True)
+class _NamespaceMarkers:
+    trashed_folder_ids: frozenset[str]
+    trashed_file_ids: frozenset[str]
+    folder_scopes: Mapping[str, str]
+    file_scopes: Mapping[str, str]
+    lock_policies: Mapping[str, FolderLockPolicy]
+
+
+def _load_namespace_markers(owner_id: int, chain_ids: set[str], file_ids: set[str]) -> _NamespaceMarkers:
+    return _NamespaceMarkers(
+        trashed_folder_ids=frozenset(
+            str(value)
+            for value in TrashRoot.objects.filter(
+                owner_id=owner_id, folder_id__in=chain_ids,
+            ).values_list("folder_id", flat=True)
+        ),
+        trashed_file_ids=frozenset(
+            str(value)
+            for value in File.objects.filter(
+                owner_id=owner_id, id__in=file_ids, trashed_at__isnull=False,
+            ).values_list("id", flat=True)
+        ),
+        folder_scopes={
+            str(root_id): str(scope_id)
+            for root_id, scope_id in DeletionScope.objects.filter(
+                owner_id=owner_id, state=DeletionScope.State.ACTIVE, root_folder_id__in=chain_ids,
+            ).values_list("root_folder_id", "id")
+        },
+        file_scopes={
+            str(root_id): str(scope_id)
+            for root_id, scope_id in DeletionScope.objects.filter(
+                owner_id=owner_id, state=DeletionScope.State.ACTIVE, root_file_id__in=file_ids,
+            ).values_list("root_file_id", "id")
+        },
+        lock_policies={
+            str(policy.folder_id): policy
+            for policy in FolderLockPolicy.objects.filter(
+                owner_id=owner_id, folder_id__in=chain_ids,
+            ).select_related("folder")
+        },
+    )
 
 
 class ResourceContextResolver:
@@ -169,7 +214,7 @@ class ResourceContextResolver:
         refs = tuple(resource_refs)
         if not refs:
             return ContextSet(())
-        if len(refs) > 1000:
+        if len(refs) > 10000:
             raise BadRequestError("Too many resource references")
         if locked_hierarchy is not None and not connection.in_atomic_block:
             raise RuntimeError("A locked hierarchy may only be consumed inside its database transaction")
@@ -216,58 +261,28 @@ class ResourceContextResolver:
             for start_id in hierarchy_starts
             for chain_id in hierarchy_chain(start_id)
         }
-        trash_folder_ids = {
-            str(folder_id)
-            for folder_id in TrashRoot.objects.filter(owner_id=owner_id, folder_id__in=all_chain_ids)
-            .values_list("folder_id", flat=True)
-        }
-        trash_file_ids = {
-            str(file_id)
-            for file_id in FileTrashMarker.objects.filter(owner_id=owner_id, file_id__in=file_ids)
-            .values_list("file_id", flat=True)
-        }
-        folder_scopes = {
-            str(root_id): str(scope_id)
-            for root_id, scope_id in DeletionScope.objects.filter(
-                owner_id=owner_id,
-                state=DeletionScope.State.ACTIVE,
-                root_folder_id__in=all_chain_ids,
-            ).values_list("root_folder_id", "id")
-        }
-        file_scopes = {
-            str(root_id): str(scope_id)
-            for root_id, scope_id in DeletionScope.objects.filter(
-                owner_id=owner_id,
-                state=DeletionScope.State.ACTIVE,
-                root_file_id__in=file_ids,
-            ).values_list("root_file_id", "id")
-        }
-        lock_policies = {
-            str(policy.folder_id): policy
-            for policy in FolderLockPolicy.objects.filter(owner_id=owner_id, folder_id__in=all_chain_ids)
-            .select_related("folder")
-        }
+        markers = _load_namespace_markers(owner_id, all_chain_ids, file_ids)
 
         contexts: list[ResourceContext] = []
         for ref in typed_refs:
             if ref.resource_type == ResourceType.FOLDER:
                 resource = folders_by_id[ref.resource_id]
                 start_id = ref.resource_id
-                explicit_trash = ref.resource_id in trash_folder_ids
+                explicit_trash = ref.resource_id in markers.trashed_folder_ids
                 own_file_scope = None
             else:
                 resource = files_by_id[ref.resource_id]
                 start_id = str(resource.parent_id)
-                explicit_trash = ref.resource_id in trash_file_ids
-                own_file_scope = file_scopes.get(ref.resource_id)
+                explicit_trash = ref.resource_id in markers.trashed_file_ids
+                own_file_scope = markers.file_scopes.get(ref.resource_id)
 
             chain = hierarchy_chain(start_id)
             trash_root_id = ref.resource_id if explicit_trash else next(
-                (folder_id for folder_id in chain if folder_id in trash_folder_ids), None
+                (folder_id for folder_id in chain if folder_id in markers.trashed_folder_ids), None
             )
-            deletion_root_id = next((folder_id for folder_id in chain if folder_id in folder_scopes), None)
-            lock_root_id = next((folder_id for folder_id in chain if folder_id in lock_policies), None)
-            lock_policy = lock_policies.get(lock_root_id) if lock_root_id else None
+            deletion_root_id = next((folder_id for folder_id in chain if folder_id in markers.folder_scopes), None)
+            lock_root_id = next((folder_id for folder_id in chain if folder_id in markers.lock_policies), None)
+            lock_policy = markers.lock_policies.get(lock_root_id) if lock_root_id else None
             contexts.append(ResourceContext(
                 resource_type=ref.resource_type,
                 resource_id=ref.resource_id,
@@ -278,7 +293,7 @@ class ResourceContextResolver:
                 is_root_folder=ref.resource_type == ResourceType.FOLDER and resource.parent_id is None,
                 explicit_trash_root=explicit_trash,
                 effective_trash_root_id=trash_root_id,
-                effective_deletion_scope_id=own_file_scope or folder_scopes.get(deletion_root_id),
+                effective_deletion_scope_id=own_file_scope or markers.folder_scopes.get(deletion_root_id),
                 effective_lock_policy_id=lock_root_id,
                 effective_lock_policy_name=lock_policy.folder.name if lock_policy else None,
                 effective_lock_password_verifier=lock_policy.password_verifier if lock_policy else None,

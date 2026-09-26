@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.permissions import PrincipalFactory, ResourceAction, extract_resource_credentials
+from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceContextResolver, extract_resource_credentials
 from website.auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
 from website.config import MAX_FOLDER_DEPTH
 from website.constants import FILE_TYPES, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, EXTENSION_TO_FILE_TYPE
@@ -40,7 +40,8 @@ def can_upload(request, folder_id):
     webhooks = discord_settings["webhooks"]
 
     allowed_to_upload = bool(discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and len(bots) > 0 and channels.exists())
-    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhooks, "attachment_name": discordSettings.attachment_name, "lockFrom": folder_obj.lockFrom_id,
+    lock_context = ResourceContextResolver().resolve_folder(str(folder_obj.id), principal.user_id)
+    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhooks, "attachment_name": discordSettings.attachment_name, "lockFrom": lock_context.effective_lock_policy_id,
                          "extensions": FILE_TYPES})
 
 

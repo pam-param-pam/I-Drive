@@ -15,15 +15,6 @@ class TrashRoot(models.Model):
         indexes = [models.Index(fields=["owner", "created_at"])]
 
 
-class FileTrashMarker(models.Model):
-    file = models.OneToOneField("File", on_delete=models.CASCADE, primary_key=True, related_name="trash_marker")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="file_trash_markers")
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        indexes = [models.Index(fields=["owner", "created_at"])]
-
-
 class FolderLockPolicy(models.Model):
     folder = models.OneToOneField("Folder", on_delete=models.CASCADE, primary_key=True, related_name="lock_policy")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="folder_lock_policies")
@@ -83,4 +74,3 @@ class DeletionScope(models.Model):
             ),
         ]
         indexes = [models.Index(fields=["owner", "state", "created_at"])]
-

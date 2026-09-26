@@ -11,6 +11,7 @@ from website.core.helpers import validate_key, validate_ids_as_list
 from website.core.validators.GeneralChecks import MaxLength, Max, Min
 from website.models import Folder, File
 from website.queries.file_lock_annotations import file_lock_annotations
+from website.queries.hierarchy import get_descendant_folder_ids
 from website.auth.permissions import (
     Authorizer, ContextSet, CredentialSet, ResourceAction,
     ResourceContextResolver, ResourceRef, ResourceType, UserPrincipal)
@@ -160,18 +161,6 @@ def validate_search_request(data: dict) -> dict:
 
     return out
 
-def get_subtree_q(folder_ids):
-    folders = Folder.objects.filter(id__in=folder_ids).only("lft", "rght", "tree_id")
-
-    q = Q()
-    for f in folders:
-        q |= Q(
-            tree_id=f.tree_id,
-            lft__gte=f.lft,
-            rght__lte=f.rght
-        )
-    return q
-
 def build_attr_filter(filter_obj):
     if not filter_obj:
         return None
@@ -319,16 +308,14 @@ def perform_search(
     # Folder scope filters
     # ------------------------
     if validated["limitToFolders"]:
-        subtree_q = get_subtree_q(validated["limitToFolders"])
-
-        folder_q &= subtree_q
-        file_q &= Q(parent__in=Folder.objects.filter(subtree_q))
+        subtree_ids = get_descendant_folder_ids(validated["limitToFolders"])
+        folder_q &= Q(id__in=subtree_ids)
+        file_q &= Q(parent_id__in=subtree_ids)
 
     if validated["excludeFolders"]:
-        subtree_q = get_subtree_q(validated["excludeFolders"])
-
-        folder_q &= ~subtree_q
-        file_q &= ~Q(parent__in=Folder.objects.filter(subtree_q))
+        subtree_ids = get_descendant_folder_ids(validated["excludeFolders"])
+        folder_q &= ~Q(id__in=subtree_ids)
+        file_q &= ~Q(parent_id__in=subtree_ids)
 
     # ------------------------
     # Property filter

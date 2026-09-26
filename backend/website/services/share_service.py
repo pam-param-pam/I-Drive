@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Q
@@ -115,7 +114,7 @@ def delete_share(principal: UserPrincipal, share_id: str) -> None:
                 Q(id=share_id) | Q(token=share_id), owner_id=principal.user_id,
             )
         except ShareableLink.DoesNotExist as exception:
-            raise ResourceNotFoundError("Share not found or expired") from exception
+            raise ResourceNotFoundError("Share not found") from exception
         authorizer.authorize_share_action(
             principal, ResourceAction.MANAGE_SHARE, _owner_share_context(share),
         )
@@ -126,7 +125,7 @@ def get_share_accesses(principal: UserPrincipal, share_id: str):
     try:
         share = ShareableLink.objects.get(Q(id=share_id) | Q(token=share_id), owner_id=principal.user_id)
     except ShareableLink.DoesNotExist as exception:
-        raise ResourceNotFoundError("Share not found or expired") from exception
+        raise ResourceNotFoundError("Share not found") from exception
     authorizer.authorize_share_action(
         principal, ResourceAction.MANAGE_SHARE, _owner_share_context(share),
     )
@@ -137,7 +136,7 @@ def get_share_events(principal: UserPrincipal, share_id: str, visit_id: str):
     try:
         share = ShareableLink.objects.get(Q(id=share_id) | Q(token=share_id), owner_id=principal.user_id)
     except ShareableLink.DoesNotExist as exception:
-        raise ResourceNotFoundError("Share not found or expired") from exception
+        raise ResourceNotFoundError("Share not found") from exception
     authorizer.authorize_share_action(
         principal, ResourceAction.MANAGE_SHARE, _owner_share_context(share),
     )
@@ -156,14 +155,14 @@ def _folder_chain_ids(owner_id: int, folder_id: str) -> tuple[str, ...]:
             return tuple(chain)
         row = Folder.objects.filter(owner_id=owner_id, id=current).values_list("id", "parent_id").first()
         if row is None:
-            raise ResourceNotFoundError("Share not found or expired")
+            raise ResourceNotFoundError("Share not found")
         current_id, parent_id = row
         current_id = str(current_id)
         if current_id in chain:
-            raise ResourceNotFoundError("Share not found or expired")
+            raise ResourceNotFoundError("Share not found")
         chain.append(current_id)
         current = str(parent_id) if parent_id is not None else None
-    raise ResourceNotFoundError("Share not found or expired")
+    raise ResourceNotFoundError("Share not found")
 
 
 def _share_membership(
@@ -200,7 +199,7 @@ def resolve_share(
     try:
         share = ShareableLink.objects.get(token=principal.share_token)
     except ShareableLink.DoesNotExist as exception:
-        raise ResourceNotFoundError("Share not found or expired") from exception
+        raise ResourceNotFoundError("Share not found") from exception
 
     root_type = ResourceType(share.get_type())
     root_id = share.root_id

@@ -21,6 +21,7 @@ def setup_periodic_tasks(sender, **kwargs):
         from website.tasks.otherTasks import generate_raw_image_thumbnails, update_router_public_ip
         from website.tasks.cleanupDiscordTasks import cleanup_user_discord
         from website.tasks.cleanupDatabaseTasks import cleanup_user_db
+        from website.tasks.derivedStateTasks import process_folder_hash_work, process_folder_height_repairs
 
         print("### IMPORTS SUCCESS")
 
@@ -28,6 +29,17 @@ def setup_periodic_tasks(sender, **kwargs):
             timedelta(minutes=1),
             supervise_deletion_system.s(),
             name="supervise-deletion-system",
+        )
+
+        sender.add_periodic_task(
+            timedelta(seconds=15),
+            process_folder_hash_work.s(),
+            name="process-folder-hash-work",
+        )
+        sender.add_periodic_task(
+            timedelta(seconds=15),
+            process_folder_height_repairs.s(),
+            name="process-folder-height-repairs",
         )
 
         print("### SUPERVISOR ADDED")

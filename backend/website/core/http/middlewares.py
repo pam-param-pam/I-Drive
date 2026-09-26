@@ -38,7 +38,7 @@ class FailedRequestLoggerMiddleware:
             key = self._get_key(request)
             data = cache.get(key, [])
             data.append(time.time())
-            data = [t for t in data if time.time() - t < 60]  # tylko z ostatniej minuty
+            data = [t for t in data if time.time() - t < 60]  # only last minute
             cache.set(key, data, timeout=60)
         return response
 

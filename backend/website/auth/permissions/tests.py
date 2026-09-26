@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest import TestCase
@@ -7,18 +8,21 @@ from urllib.parse import parse_qs
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.test import TestCase as DjangoTestCase
+from django.urls import resolve
 
 from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
-from website.core.crypto.signer import sign_resource, verify_signed_resource_request
+from website.core.crypto.signer import sign_resource, unsign_resource
 from website.models import DeletionScope, File, Folder, FolderLockPolicy, TrashRoot
 
 from .actions import ResourceAction
 from .authorizer import Authorizer
 from .contexts import ContextSet, ResourceContext, ResourceContextResolver, ShareContext
 from .credentials import CredentialSet
+from .drf import AllowedNetwork
 from .errors import PermissionPasswordError
-from .policies import POLICIES, PolicyRegistry, ResourceRole, ResourceType
-from .principals import PrincipalFactory, UserPrincipal
+from .network import ip_is_allowed
+from .policies import ActionPolicy, Disclosure, POLICIES, PolicyRegistry, PrincipalKind, ResourceRole, ResourceType
+from .principals import PrincipalFactory, SignedResourcePrincipal, UserPrincipal
 
 
 class _User:
@@ -81,13 +85,161 @@ class PermissionApiTests(TestCase):
     def setUp(self):
         self.user_principal = PrincipalFactory.from_authenticated_request(_request())
 
-    def test_principals_cannot_be_constructed_directly(self):
-        with self.assertRaises(TypeError):
-            UserPrincipal(7, "device", "request", "127.0.0.1")
+    def test_principals_can_be_constructed_directly(self):
+        principal = UserPrincipal(7, "device", "request", "127.0.0.1")
+        self.assertEqual(principal.user_id, 7)
 
     def test_policy_registry_is_complete(self):
         PolicyRegistry.validate_complete()
         self.assertEqual(set(ResourceAction), set(POLICIES))
+
+    def test_resource_policies_hide_denied_resource_ids(self):
+        for action, policy in POLICIES.items():
+            if policy.resource_types:
+                with self.subTest(action=action):
+                    self.assertEqual(policy.disclosure, Disclosure.NOT_FOUND)
+
+    def test_policies_are_keyword_only_and_immutable(self):
+        with self.assertRaises(TypeError):
+            ActionPolicy({PrincipalKind.USER})
+        policy = PolicyRegistry.get(ResourceAction.READ)
+        self.assertIsInstance(policy.resource_types, frozenset)
+        with self.assertRaises(AttributeError):
+            policy.resource_types.add(ResourceType.FILE)
+
+    @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
+    def test_resource_state_and_trash_decisions(self, _get_permissions):
+        cases = (
+            (ResourceAction.READ, {}, None),
+            (ResourceAction.READ, {"direct_state": "remote_missing"}, ResourcePermissionError),
+            (ResourceAction.READ, {"effective_deletion_scope_id": "scope-1"}, ResourcePermissionError),
+            (ResourceAction.READ, {"effective_trash_root_id": "folder-1"}, ResourcePermissionError),
+            (ResourceAction.RESTORE, {"explicit_trash_root": True, "effective_trash_root_id": "file-1"}, None),
+            (ResourceAction.RESTORE, {"effective_trash_root_id": "folder-1"}, ResourcePermissionError),
+            (ResourceAction.REQUEST_DELETE, {"explicit_trash_root": True, "effective_trash_root_id": "file-1"}, None),
+            (ResourceAction.REQUEST_DELETE, {"effective_trash_root_id": "folder-1"}, ResourcePermissionError),
+        )
+        for action, overrides, error in cases:
+            with self.subTest(action=action, context=overrides):
+                authorize = lambda: Authorizer().authorize_user_action(
+                    self.user_principal, action, ContextSet((_context(**overrides),)),
+                )
+                if error is None:
+                    authorize()
+                else:
+                    with self.assertRaises(error) as raised:
+                        authorize()
+                    self.assertTrue(str(raised.exception))
+
+    @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
+    def test_root_restriction_has_a_reason(self, _get_permissions):
+        root = _context(resource_type=ResourceType.FOLDER, is_root_folder=True)
+        with self.assertRaisesRegex(ResourcePermissionError, "Root folder"):
+            Authorizer().authorize_user_action(
+                self.user_principal, ResourceAction.RENAME, ContextSet((root,)),
+            )
+
+    @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
+    def test_file_batch_uses_same_state_and_trash_rules(self, _get_permissions):
+        parent = _context(resource_type=ResourceType.FOLDER, resource_id="folder-1", parent_id="root")
+        rows = (
+            {"id": "active", "owner_id": 7, "parent_id": "folder-1", "state": "active", "has_active_deletion": False, "trashed_at": None},
+            {"id": "missing", "owner_id": 7, "parent_id": "folder-1", "state": "remote_missing", "has_active_deletion": False, "trashed_at": None},
+            {"id": "deleting", "owner_id": 7, "parent_id": "folder-1", "state": "active", "has_active_deletion": True, "trashed_at": None},
+            {"id": "trashed", "owner_id": 7, "parent_id": "folder-1", "state": "active", "has_active_deletion": False, "trashed_at": datetime.now(timezone.utc)},
+            {"id": "foreign", "owner_id": 8, "parent_id": "folder-1", "state": "active", "has_active_deletion": False, "trashed_at": None},
+        )
+        authorizer = Authorizer()
+        _, allowed_rows = authorizer.filter_user_file_batch(
+            self.user_principal, ResourceAction.READ, parent, rows,
+        )
+        self.assertEqual([row["id"] for row in allowed_rows], ["active"])
+        authorizer.authorize_user_file_batch(self.user_principal, ResourceAction.READ, (parent,), rows[:1])
+        for row in rows[1:]:
+            expected = ResourceNotFoundError if row["id"] == "foreign" else ResourcePermissionError
+            with self.subTest(row=row["id"]), self.assertRaises(expected):
+                authorizer.authorize_user_file_batch(self.user_principal, ResourceAction.READ, (parent,), (row,))
+
+    def test_network_rule_is_shared_with_drf(self):
+        for ip, expected in (("127.0.0.1", True), ("invalid-ip", False)):
+            with self.subTest(ip=ip):
+                request = _request()
+                request.META["REMOTE_ADDR"] = ip
+                self.assertEqual(ip_is_allowed(ip), expected)
+                self.assertEqual(AllowedNetwork().has_permission(request, None), expected)
+
+    def test_share_uses_same_resource_state_rule(self):
+        principal = PrincipalFactory.from_share_request(_request(_AnonymousUser()), "token")
+        share = ShareContext(
+            share_id="share-1",
+            share_token="token",
+            owner_id=7,
+            root_type=ResourceType.FOLDER,
+            root_id="folder-1",
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            password_verifier=None,
+        )
+        root = _context(resource_type=ResourceType.FOLDER, resource_id="folder-1", role=ResourceRole.SHARE_ROOT)
+        Authorizer().authorize_share_action(
+            principal, ResourceAction.READ_SHARE, share, ContextSet((root,)),
+        )
+        deleting_root = _context(
+            resource_type=ResourceType.FOLDER, resource_id="folder-1",
+            role=ResourceRole.SHARE_ROOT, effective_deletion_scope_id="scope-1",
+        )
+        with self.assertRaisesRegex(ResourcePermissionError, "being deleted"):
+            Authorizer().authorize_share_action(
+                principal, ResourceAction.READ_SHARE, share, ContextSet((deleting_root,)),
+            )
+        with self.assertRaisesRegex(ResourcePermissionError, "expired"):
+            Authorizer().authorize_share_action(
+                principal, ResourceAction.READ_SHARE,
+                replace(share, expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)),
+                ContextSet((root,)),
+            )
+
+    def test_signed_resource_checks_the_shared_network_rule(self):
+        signed = SignedResourcePrincipal(
+            file_id="file-1",
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            client_ip="invalid-ip",
+            share_id=None,
+        )
+        locked = _context(effective_lock_policy_id="folder-1")
+        with self.assertRaises(ResourceNotFoundError):
+            Authorizer().authorize_signed_resource(signed, locked)
+        unlocked = _context()
+        Authorizer().authorize_signed_resource(signed, unlocked)
+
+    def test_signed_resource_denials_preserve_the_reason_except_identity_and_lock(self):
+        signed = SignedResourcePrincipal(
+            file_id="file-1",
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            client_ip="127.0.0.1",
+            share_id=None,
+        )
+        for principal, context, error, message in (
+            (replace(signed, expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)), _context(), ResourcePermissionError, "expired"),
+            (signed, _context(resource_type=ResourceType.FOLDER), ResourcePermissionError, "requires a file"),
+            (signed, _context(effective_deletion_scope_id="scope-1"), ResourcePermissionError, "being deleted"),
+            (signed, _context(direct_state="remote_missing"), ResourcePermissionError, "not active"),
+            (signed, _context(effective_trash_root_id="folder-1"), ResourcePermissionError, "trash"),
+            (signed, _context(resource_id="file-2"), ResourceNotFoundError, ""),
+            (replace(signed, client_ip="invalid-ip"), _context(effective_lock_policy_id="folder-1"), ResourceNotFoundError, ""),
+        ):
+            with self.subTest(message=message), self.assertRaises(error) as raised:
+                Authorizer().authorize_signed_resource(principal, context)
+            self.assertIn(message, str(raised.exception))
+
+    def test_signed_resource_remains_valid_after_file_version_changes(self):
+        signed = SignedResourcePrincipal(
+            file_id="file-1",
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            client_ip="127.0.0.1",
+            share_id=None,
+        )
+        context = _context(resource_version=4)
+        Authorizer().authorize_signed_resource(signed, context)
 
     @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
     def test_authorization_result_does_not_expose_verifier(self, _get_permissions):
@@ -218,39 +370,46 @@ class PermissionApiTests(TestCase):
 
 
 class SignedCapabilityTests(TestCase):
-    def test_signature_is_bound_to_resource_version_and_purpose(self):
+    def test_signature_contains_only_signature_and_expiry(self):
         path = "/files/file-1/thumbnail/thumb-1/stream"
-        query = parse_qs(sign_resource(
-            path,
-            resource_id="file-1",
-            resource_version=7,
-            purpose="thumbnail",
-        ).removeprefix("?"))
+        query = parse_qs(sign_resource(path).removeprefix("?"))
+        self.assertEqual(set(query), {"sig", "expires"})
         request = SimpleNamespace(
             path_info=path,
             GET={key: values[0] for key, values in query.items()},
             META={"REMOTE_ADDR": "127.0.0.1"},
         )
-        claims = verify_signed_resource_request(request, "file-1", "thumbnail")
-        self.assertEqual(claims["resource_version"], 7)
-        self.assertEqual(claims["purpose"], "thumbnail")
+        principal = PrincipalFactory.from_signed_request(request, "file-1")
+        self.assertEqual(principal.file_id, "file-1")
+        self.assertIsNone(principal.share_id)
 
-    def test_signature_cannot_be_reused_for_another_purpose(self):
+    def test_signature_cannot_be_reused_for_another_path(self):
         path = "/files/file-1/stream"
-        query = parse_qs(sign_resource(
-            path,
-            resource_id="file-1",
-            resource_version=7,
-            purpose="file_download",
-        ).removeprefix("?"))
+        query = parse_qs(sign_resource(path).removeprefix("?"))
         request = SimpleNamespace(
-            path_info=path,
+            path_info="/files/file-1/thumbnail/thumb-1/stream",
             GET={key: values[0] for key, values in query.items()},
             META={"REMOTE_ADDR": "127.0.0.1"},
         )
         from website.core.errors import URLInvalidOrExpired
         with self.assertRaises(URLInvalidOrExpired):
-            verify_signed_resource_request(request, "file-1", "thumbnail")
+            PrincipalFactory.from_signed_request(request, "file-1")
+
+    def test_share_id_is_protected_by_the_signed_path(self):
+        path = "/shares/share-1/files/file-1/stream"
+        self.assertEqual(resolve(path).kwargs, {"share_id": "share-1", "file_id": "file-1"})
+        query = parse_qs(sign_resource(path).removeprefix("?"))
+        request = SimpleNamespace(
+            path_info=path,
+            GET={key: values[0] for key, values in query.items()},
+            META={"REMOTE_ADDR": "127.0.0.1"},
+        )
+        principal = PrincipalFactory.from_signed_request(request, "file-1", "share-1")
+        self.assertEqual(principal.share_id, "share-1")
+        from website.core.errors import URLInvalidOrExpired
+
+        with self.assertRaises(URLInvalidOrExpired):
+            unsign_resource("/shares/share-2/files/file-1/stream", int(request.GET["expires"]), request.GET["sig"])
 
 
 class ResourceContextResolverTests(DjangoTestCase):

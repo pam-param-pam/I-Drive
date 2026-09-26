@@ -18,6 +18,8 @@ from website.models.delete_models import DeletionJob, DeletionFolderWorkItem, De
 from website.models.mixin_models import ItemState
 from website.queries.selectors import check_if_bots_exists, query_attachments
 from website.services import touch_service
+from website.services import namespace_lock_service
+from website.queries.hierarchy import get_descendant_folder_ids
 from website.tasks.helper import is_bulk_deletable
 from website.websockets.utils import send_event, send_message
 
@@ -52,12 +54,7 @@ def expand_ids(ids: list[str]) -> tuple[set[str], set[str], set[str], set[str], 
         .values_list("id", flat=True)
     )
 
-    expanded_folder_ids = set(
-        Folder.objects
-        .filter(id__in=input_folder_ids)
-        .get_descendants(include_self=True)
-        .values_list("id", flat=True)
-    )
+    expanded_folder_ids = get_descendant_folder_ids(input_folder_ids)
 
     expanded_file_ids = (
             set(
@@ -120,7 +117,7 @@ def plan_deletion_job(job_id: UUID) -> None:
 
                 folders = Folder.objects.filter(id__in=expanded_folder_ids)
                 folder_items = [
-                    DeletionFolderWorkItem(job=job, folder_id=f.id, level=f.level)
+                    DeletionFolderWorkItem(job=job, folder_id=f.id)
                     for f in folders
                 ]
 
@@ -547,7 +544,7 @@ def claim_folder_items(job_id: UUID) -> tuple[UUID, list[DeletionFolderWorkItem]
                 job_id=job_id,
                 state=DeletionFolderWorkItem.State.PENDING
             )
-            .order_by("-level")[:FOLDER_BATCH]
+            .order_by("id")[:FOLDER_BATCH]
         )
 
         now = timezone.now()
@@ -595,18 +592,16 @@ def folder_deletion_blocker(job_id: UUID, folder_id: str) -> tuple[bool, str | N
 
 
 def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: UUID) -> int:
-    from website.services import mptt_lock_service
-
     with transaction.atomic():
-        # Acquire tree locks before work-item locks, so batches from the same
-        # tree cannot hold each other's work items while waiting for the root.
         candidates = Folder.objects.filter(
             id__in=DeletionFolderWorkItem.objects.filter(
                 job_id=job_id, folder_id__in=folder_ids,
                 claim_token=claim_token, state=DeletionFolderWorkItem.State.CLAIMED,
             ).values_list("folder_id", flat=True)
         )
-        mptt_lock_service.lock_mptt_trees(list(candidates))
+        owner_ids = sorted(set(candidates.values_list("owner_id", flat=True)))
+        for owner_id in owner_ids:
+            namespace_lock_service.lock_owner_scope_exclusive(owner_id)
 
         owned_items = list(
             DeletionFolderWorkItem.objects.select_for_update().filter(
@@ -620,14 +615,12 @@ def finalize_folder_deletions(job_id: UUID, folder_ids: list[str], claim_token: 
         items_by_folder = {item.folder_id: item for item in owned_items}
         folders = list(
             Folder.objects.select_for_update()
-            .filter(id__in=items_by_folder).order_by("-level", "-lft")
+            .filter(id__in=items_by_folder).order_by("id")
         )
         now = timezone.now()
         completed = 0
         failed = 0
         for folder in folders:
-            # Earlier deletions in this batch may have changed MPTT coordinates.
-            folder.refresh_from_db()
             item = items_by_folder[folder.id]
             must_wait, error = folder_deletion_blocker(job_id, folder.id)
             owned = DeletionFolderWorkItem.objects.filter(

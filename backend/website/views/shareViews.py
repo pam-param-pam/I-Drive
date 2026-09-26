@@ -9,7 +9,7 @@ from website.constants import ShareEventType
 from website.constants import API_BASE_URL
 from website.core.crypto.signer import sign_resource
 from website.core.Serializers import ShareAccessSerializer, ShareSerializer, SubtitleSerializer, ZipSerializer
-from website.core.errors import ResourceNotFoundError
+from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import extract_key, validate_ids_as_list
 from website.models import File, Folder, Subtitle, UserSettings
 from website.queries.builders import build_share_breadcrumbs, build_share_folder_content, build_share_resource_dict, create_share_events
@@ -29,24 +29,15 @@ def _resource(owner_id, resource_type, resource_id):
     return model.objects.get(owner_id=owner_id, id=resource_id)
 
 
-def _bind_share_urls(items, owner_id, share_id):
-    file_ids = [str(item["id"]) for item in items if not item.get("isDir")]
-    versions = {
-        str(file.id): file.resource_version
-        for file in File.objects.filter(owner_id=owner_id, id__in=file_ids)
-    }
+def _bind_share_urls(items, share_id):
     for item in items:
         if item.get("isDir"):
             continue
-        for key, purpose in (
-            ("download_url", "file_download"),
-            ("zip_entry_url", "zip_entry"),
-            ("thumbnail_url", "thumbnail"),
-        ):
+        for key in ("download_url", "zip_entry_url", "thumbnail_url"):
             if not item.get(key):
                 continue
-            path = urlsplit(item[key]).path
-            item[key] = f"{API_BASE_URL}{path}{sign_resource(path, resource_id=str(item['id']), resource_version=versions[str(item['id'])], purpose=purpose, share_id=share_id)}"
+            path = f"/shares/{share_id}{urlsplit(item[key]).path}"
+            item[key] = f"{API_BASE_URL}{path}{sign_resource(path)}"
 
 
 @api_view(["GET"])
@@ -58,7 +49,7 @@ def get_shares(request):
     for share in share_service.list_shares(principal):
         try:
             items.append(ShareSerializer.serialize_object(share))
-        except ResourceNotFoundError:
+        except (ResourceNotFoundError, ResourcePermissionError):
             continue
     return JsonResponse(items, status=200, safe=False)
 
@@ -152,8 +143,14 @@ def view_share(request, token, folder_id=None):
         candidates = build_share_folder_content(requested, include_folders=include_folders)["children"]
         folder_content = []
         for item in candidates:
-            resource_type = ResourceType.FOLDER if item.get("isDir") else ResourceType.FILE
-            action = ResourceAction.READ_SHARE if resource_type == ResourceType.FOLDER else ResourceAction.DOWNLOAD_SHARE
+            if not item.get("isDir"):
+                # The requested folder has already been authorized for this live
+                # share. Direct child files inherit that membership, and their
+                # active/trash/deletion state was checked in the bounded query.
+                folder_content.append(item)
+                continue
+            resource_type = ResourceType.FOLDER
+            action = ResourceAction.READ_SHARE
             try:
                 share_service.resolve_share(principal, action, resource_type, str(item["id"]), credentials)
             except ResourceNotFoundError:
@@ -161,7 +158,7 @@ def view_share(request, token, folder_id=None):
             folder_content.append(item)
     else:
         folder_content = [root_dict]
-    _bind_share_urls(folder_content, resolution.owner_id, resolution.share_id)
+    _bind_share_urls(folder_content, resolution.share_id)
     return JsonResponse({
         "share": folder_content,
         "breadcrumbs": breadcrumbs,
@@ -204,8 +201,7 @@ def share_get_subtitles(request, token, file_id):
     )
     subtitles = Subtitle.objects.filter(file_id=resolution.requested_id, file__owner_id=resolution.owner_id)
     data = SubtitleSerializer.serialize_objects(subtitles)
-    version = File.objects.get(id=resolution.requested_id, owner_id=resolution.owner_id).resource_version
     for item in data:
-        path = urlsplit(item["url"]).path
-        item["url"] = f"{API_BASE_URL}{path}{sign_resource(path, resource_id=resolution.requested_id, resource_version=version, purpose='subtitle', share_id=resolution.share_id)}"
+        path = f"/shares/{resolution.share_id}{urlsplit(item['url']).path}"
+        item["url"] = f"{API_BASE_URL}{path}{sign_resource(path)}"
     return JsonResponse(data, safe=False)

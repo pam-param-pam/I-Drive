@@ -1,12 +1,7 @@
-from typing import Union
-
 from django.db.models import Q
 
-from website.core.dataModels.general import Item
-from website.core.errors import ResourceNotFoundError, BadRequestError, NoBotsError
-from website.models import File, Folder, ShareableLink, UserSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
-from website.models.mixin_models import ItemState
-from website.queries.file_lock_annotations import file_lock_annotations
+from website.core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
+from website.models import File, Folder, ShareableLink, Bot, Webhook, Channel, DiscordAttachmentMixin
 from website.safety.helper import get_classes_extending_discordAttachmentMixin
 
 
@@ -24,29 +19,6 @@ def get_folder(folder_id: str) -> Folder:
     except Folder.DoesNotExist:
         raise ResourceNotFoundError()
     return folder
-
-
-def get_item(obj_id: str) -> Item:
-    try:
-        item = get_folder(obj_id)
-    except ResourceNotFoundError:
-        try:
-            item = get_file(obj_id)
-        except ResourceNotFoundError:
-            raise ResourceNotFoundError()
-    return item
-
-
-def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
-    """:return: True if the item is a subfile/subfolder of parent_folder, otherwise False."""
-
-    if isinstance(item, File):
-        return parent_folder.get_all_files().filter(id=item.id).exists()
-
-    elif isinstance(item, Folder):
-        return parent_folder.get_all_subfolders().filter(id=item.id).exists()
-
-    return False
 
 
 def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
@@ -100,7 +72,7 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
 def get_item_inside_share(share: ShareableLink):
     if share.is_expired():
         share.delete()
-        raise ResourceNotFoundError()
+        raise ResourcePermissionError("Share has expired")
 
     try:
         return share.root
@@ -108,11 +80,3 @@ def get_item_inside_share(share: ShareableLink):
         # looks like folder/file no longer exist, deleting time!
         share.delete()
         raise ResourceNotFoundError()
-
-
-def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
-    files = (File.objects.filter(owner=user, state=ItemState.ACTIVE, trash_marker__isnull=False)
-             .annotate(**File.get_display_annotate(), **file_lock_annotations()).values_list(*File.DISPLAY_VALUES))
-    folders = Folder.objects.filter(owner=user, state=ItemState.ACTIVE, trash_root__isnull=False).select_related("parent")
-
-    return files, folders
