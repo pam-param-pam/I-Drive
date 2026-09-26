@@ -20,17 +20,25 @@ def _handle_missing_media_attachment(resource: DiscordAttachmentMixin, owner, fi
     model_name = resource._meta.model_name
 
     if isinstance(resource, Fragment):
-        file_service.mark_remote_missing(owner, file_obj)
+        file_service.file_service._mark_remote_missing_attachment(
+            file_obj.owner_id, str(file_obj.id), str(resource.id),
+        )
         return
 
     if isinstance(resource, Moment):
-        file_service.remove_moment(owner, file_obj, resource.id)
+        file_service.file_service._remove_missing_related_attachment(
+            file_obj.owner_id, str(file_obj.id), "moment", str(resource.id),
+        )
 
     if isinstance(resource, Subtitle):
-        file_service.remove_subtitle(owner, file_obj, resource.id)
+        file_service.file_service._remove_missing_related_attachment(
+            file_obj.owner_id, str(file_obj.id), "subtitle", str(resource.id),
+        )
 
     if isinstance(resource, Thumbnail):
-        thumbnail_service.thumbnail_service.remove(owner, str(file_obj.id), must_exist=False)
+        thumbnail_service.thumbnail_service._remove_missing_attachment(
+            file_obj.owner_id, str(file_obj.id), str(resource.id),
+        )
 
     user_service.create_notification(
         owner,

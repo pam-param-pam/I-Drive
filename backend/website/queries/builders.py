@@ -12,6 +12,7 @@ from website.core.helpers import get_attr, normalize_blocked_until
 from website.discord.Discord import discord
 from website.models import Folder, File, Channel, Webhook, Bot, ShareAccessEvent
 from website.models.mixin_models import ItemState
+from website.queries.file_lock_annotations import file_lock_annotations
 
 
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
@@ -32,14 +33,14 @@ def build_folder_content(folder_obj: Folder, include_folders: bool = True, inclu
     if include_files:
         file_children = (
             folder_obj.files
-            .filter(state=ItemState.ACTIVE, inTrash=False)
-            .annotate(**File.get_display_annotate())
+            .filter(state=ItemState.ACTIVE, trash_marker__isnull=True)
+            .annotate(**File.get_display_annotate(), **file_lock_annotations())
             .values_list(*File.DISPLAY_VALUES)
         )
 
     folder_children = []
     if include_folders:
-        folder_children = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False).select_related("parent")
+        folder_children = folder_obj.subfolders.filter(state=ItemState.ACTIVE, trash_root__isnull=True).select_related("parent")
 
     file_dicts = [FileSerializer.serialize_tuple(file, sign_urls=False) for file in file_children]
     folder_dicts = [FolderSerializer.serialize_object(folder) for folder in folder_children]
@@ -71,7 +72,7 @@ def calculate_size(folder: Folder, includeTrash: bool = False) -> int:
     qs = folder.get_all_files().filter(state=ItemState.ACTIVE)
 
     if not includeTrash:
-        qs = qs.filter(inTrash=False, parent__inTrash=False)
+        qs = qs.filter(trash_marker__isnull=True, parent__trash_root__isnull=True)
 
     size_result = qs.aggregate(Sum("size"))
     return size_result["size__sum"] or 0
@@ -86,8 +87,8 @@ def calculate_file_and_folder_count(folder: Folder, includeTrash: bool = False) 
     folder_qs = folder.get_all_subfolders().filter(state=ItemState.ACTIVE)
 
     if not includeTrash:
-        file_qs = file_qs.filter(inTrash=False, parent__inTrash=False)
-        folder_qs = folder_qs.filter(inTrash=False)
+        file_qs = file_qs.filter(trash_marker__isnull=True, parent__trash_root__isnull=True)
+        folder_qs = folder_qs.filter(trash_root__isnull=True)
 
     file_count = file_qs.count()
     folder_count = folder_qs.count()
@@ -146,9 +147,9 @@ def build_flattened_children_mptt_values(root_folder: dict, include_root_name: b
     root_lock_from_id = root_folder["lockFrom_id"]
     root_id = root_folder["id"]
 
-    folder_filter = Q(tree_id=root_folder["tree_id"], lft__gte=root_folder["lft"], rght__lte=root_folder["rght"], state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-    file_filter = Q(parent__tree_id=root_folder["tree_id"], parent__lft__gte=root_folder["lft"], parent__rght__lte=root_folder["rght"], state=ItemState.ACTIVE, inTrash=False,
-                    parent__state=ItemState.ACTIVE, parent__inTrash=False)
+    folder_filter = Q(tree_id=root_folder["tree_id"], lft__gte=root_folder["lft"], rght__lte=root_folder["rght"], state=ItemState.ACTIVE, trash_root__isnull=True, parent__trash_root__isnull=True)
+    file_filter = Q(parent__tree_id=root_folder["tree_id"], parent__lft__gte=root_folder["lft"], parent__rght__lte=root_folder["rght"], state=ItemState.ACTIVE, trash_marker__isnull=True,
+                    parent__state=ItemState.ACTIVE, parent__trash_root__isnull=True)
 
     if root_lock_from_id is not None:
         folder_filter &= Q(lockFrom_id=root_lock_from_id)
@@ -222,17 +223,15 @@ def build_share_resource_dict(resource_in_share: Item) -> Dict:
 
 
 def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> Dict:
-    lock_from_id = folder_obj.lockFrom_id
-
     files = list(
         folder_obj.files
-        .filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False, parent__lockFrom_id=lock_from_id)
-        .annotate(**File.get_display_annotate()).values(*File.DISPLAY_VALUES)
+        .filter(state=ItemState.ACTIVE, trash_marker__isnull=True, parent__trash_root__isnull=True)
+        .annotate(**File.get_display_annotate(), **file_lock_annotations()).values(*File.DISPLAY_VALUES)
     )
 
     folders = []
     if include_folders:
-        folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, inTrash=False, lockFrom_id=lock_from_id).select_related("parent")
+        folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, trash_root__isnull=True).select_related("parent")
 
     file_dicts = [ShareFileSerializer.serialize_dict(file) for file in files]
     folder_dicts = [ShareFolderSerializer.serialize_object(folder) for folder in folders]

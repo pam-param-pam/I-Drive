@@ -6,6 +6,7 @@ from website.core.dataModels.general import Item
 from website.core.errors import ResourceNotFoundError, BadRequestError, NoBotsError
 from website.models import File, Folder, ShareableLink, UserSettings, Bot, Webhook, Channel, DiscordAttachmentMixin
 from website.models.mixin_models import ItemState
+from website.queries.file_lock_annotations import file_lock_annotations
 from website.safety.helper import get_classes_extending_discordAttachmentMixin
 
 
@@ -46,40 +47,6 @@ def is_subitem(item: Union[File, Folder], parent_folder: Folder) -> bool:
         return parent_folder.get_all_subfolders().filter(id=item.id).exists()
 
     return False
-
-
-def check_if_item_belongs_to_share(share: ShareableLink, requested_item: Union[File, Folder]) -> None:
-    obj_in_share = get_item(share.object_id)
-    settings = UserSettings.objects.get(user=share.owner)
-
-    if requested_item == obj_in_share:
-        return
-
-    if not settings.subfolders_in_shares:
-        if isinstance(obj_in_share, Folder):
-            if isinstance(requested_item, File):
-                if requested_item.parent_id != obj_in_share.id:
-                    raise ResourceNotFoundError()
-            else:
-                raise ResourceNotFoundError()
-        else:
-            raise ResourceNotFoundError()
-
-    else:
-        if isinstance(obj_in_share, Folder):
-            if isinstance(requested_item, Folder):
-                node = requested_item
-            else:
-                node = requested_item.parent
-
-            if node.tree_id != obj_in_share.tree_id or not (obj_in_share.lft <= node.lft <= obj_in_share.rght):
-                raise ResourceNotFoundError()
-
-        else:
-            raise ResourceNotFoundError()
-
-    if obj_in_share.lockFrom != requested_item.lockFrom:
-        raise ResourceNotFoundError()
 
 
 def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
@@ -136,8 +103,7 @@ def get_item_inside_share(share: ShareableLink):
         raise ResourceNotFoundError()
 
     try:
-        obj = get_item(share.object_id)
-        return obj
+        return share.root
     except ResourceNotFoundError:
         # looks like folder/file no longer exist, deleting time!
         share.delete()
@@ -145,7 +111,8 @@ def get_item_inside_share(share: ShareableLink):
 
 
 def get_trash_files_and_folders(user) -> tuple[list[tuple], list[Folder]]:
-    files = File.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE).annotate(**File.get_display_annotate()) .values_list(*File.DISPLAY_VALUES)
-    folders = Folder.objects.filter(inTrash=True, owner=user, parent__inTrash=False, state=ItemState.ACTIVE).select_related("parent")
+    files = (File.objects.filter(owner=user, state=ItemState.ACTIVE, trash_marker__isnull=False)
+             .annotate(**File.get_display_annotate(), **file_lock_annotations()).values_list(*File.DISPLAY_VALUES))
+    folders = Folder.objects.filter(owner=user, state=ItemState.ACTIVE, trash_root__isnull=False).select_related("parent")
 
     return files, folders

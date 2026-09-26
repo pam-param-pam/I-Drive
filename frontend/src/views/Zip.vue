@@ -118,7 +118,10 @@ export default {
             this.realFolderList.push({ name: this.file.name, id: this.file.parent_id })
             this.setLastFile(this.file)
 
-            await this.sendWorker("init", { url: this.file.download_url, extensions: { ...this.config.extensions } })
+            await this.sendWorker("init", {
+               url: this.file.zip_entry_url || this.file.download_url,
+               extensions: { ...this.config.extensions }
+            })
 
             this.setItems(null)
             await this.loadList()

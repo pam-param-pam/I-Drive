@@ -1,225 +1,192 @@
 from django.http import HttpResponse, JsonResponse
-from rest_framework.decorators import permission_classes, api_view, throttle_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.Permissions import CreatePerms, default_checks, ModifyPerms, CheckRoot, CheckTrash, DeletePerms, ReadPerms, DownloadPerms, LockPerms, ResetLockPerms, \
-    CheckItemLock, AllowedIP
-from website.auth.throttle import defaultAuthUserThrottle, FolderPasswordThrottle
-from website.core.Serializers import FolderSerializer, ZipSerializer, TagSerializer, MomentSerializer, SubtitleSerializer
-from website.core.decorators import check_resource_permissions, extract_folder, extract_items_from_ids_annotated, accumulate_password_errors, check_bulk_permissions, extract_item, \
-    extract_file
-from website.core.errors import BadRequestError
+from website.auth.permissions import PrincipalFactory, ResourceAction, extract_resource_credentials
+from website.auth.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
+from website.core.Serializers import MomentSerializer, SubtitleSerializer, TagSerializer, ZipSerializer
 from website.core.helpers import extract_key
-from website.core.http.utils import extract_resource_credentials
 from website.core.http.utils import build_response
-from website.models import File, Folder
-from website.services import folder_service, item_service, zip_service, file_service, thumbnail_service
+from website.services import namespace_service, zip_service
+from website.services.file_service import FileService
+from website.services.folder_service import FolderService
+from website.services.resource_query_service import FileQueryService
+from website.services.thumbnail_service import ThumbnailService
 
 
-@api_view(['POST'])
+def _inputs(request):
+    return PrincipalFactory.from_authenticated_request(request), extract_resource_credentials(request)
+
+
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & CreatePerms])
-@extract_folder(source="data", key="parent_id", inject_as="parent")
-@check_resource_permissions(default_checks, resource_key="parent")
-def create_folder_view(request, parent):
-    name = extract_key(request.data, "name")
-    folder_obj = folder_service.create_folder(request.context, request.user, parent, name)
-    folder_dict = FolderSerializer.serialize_object(folder_obj)
-    return JsonResponse(folder_dict, status=200)
+@permission_classes([IsAuthenticated])
+def create_folder_view(request):
+    principal, credentials = _inputs(request)
+    result = FolderService.create(principal, str(extract_key(request.data, "parent_id")), extract_key(request.data, "name"), credentials)
+    return JsonResponse({"id": result.folder_id, "resource_version": result.resource_version}, status=200)
 
 
-@api_view(['PATCH'])
+@api_view(["PATCH"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_folder(source="data", key="new_parent_id", inject_as="new_parent_obj")
-@extract_items_from_ids_annotated(file_values=File.MINIMAL_VALUES, file_annotate=File.get_lock_from_annotate())
-@accumulate_password_errors(
-    check_resource_permissions(default_checks, resource_key="new_parent_obj"),
-    check_bulk_permissions(default_checks & CheckRoot)
-)
-def move_items_view(request, new_parent_obj, items):
-    """This view uses values instead of ORM objects for files"""
-    item_service.move_items(request.context, items, new_parent_obj)
-    return JsonResponse(build_response(request.context.request_id, "Moving items..."))
+@permission_classes([IsAuthenticated])
+def move_items_view(request):
+    principal, credentials = _inputs(request)
+    namespace_service.move(principal, extract_key(request.data, "ids"), str(extract_key(request.data, "new_parent_id")), credentials)
+    return JsonResponse(build_response(principal.request_id, "Moving items..."))
 
 
-@api_view(['PATCH'])
+@api_view(["PATCH"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & DeletePerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
-@check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
-def move_items_to_trash_view(request, items):
-    """This view uses values instead of ORM objects for files"""
-    item_service.move_items_to_trash(request.context, items)
-    return JsonResponse(build_response(request.context.request_id, "Moving to Trash..."))
+@permission_classes([IsAuthenticated])
+def move_items_to_trash_view(request):
+    principal, credentials = _inputs(request)
+    namespace_service.trash(principal, extract_key(request.data, "ids"), credentials)
+    return JsonResponse(build_response(principal.request_id, "Moving to Trash..."))
 
 
-@api_view(['PATCH'])
+@api_view(["PATCH"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & DeletePerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
-@check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
-def restore_from_trash_view(request, items):
-    """This view uses values instead of ORM objects for files"""
-    item_service.restore_items_from_trash(request.context, items)
-    return JsonResponse(build_response(request.context.request_id, "Restoring from Trash..."))
+@permission_classes([IsAuthenticated])
+def restore_from_trash_view(request):
+    principal, credentials = _inputs(request)
+    namespace_service.restore(principal, extract_key(request.data, "ids"), credentials)
+    return JsonResponse(build_response(principal.request_id, "Restoring from Trash..."))
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & DeletePerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
-@check_bulk_permissions((default_checks & CheckRoot) - CheckTrash)
-def delete_view(request, items):
-    """This view uses values instead of ORM objects for files"""
-    item_service.delete_items(request.context, request.user, items)
-    return JsonResponse(build_response(request.context.request_id, f"{len(items)} items are being deleted..."))
+@permission_classes([IsAuthenticated])
+def delete_view(request):
+    principal, credentials = _inputs(request)
+    ids = extract_key(request.data, "ids")
+    namespace_service.request_deletion(principal, ids, credentials)
+    return JsonResponse(build_response(principal.request_id, f"{len(ids)} items are being deleted..."))
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms & DownloadPerms])
-@extract_items_from_ids_annotated(file_values=File.STANDARD_VALUES, file_annotate=File.get_lock_from_annotate())
-@check_bulk_permissions(default_checks)
-def create_zip_model_view(request, items):
-    """This view uses values instead of ORM objects for files"""
-    user_zip = zip_service.create_zip_model(request.user, items)
+@permission_classes([IsAuthenticated])
+def create_zip_model_view(request):
+    principal, credentials = _inputs(request)
+    refs = namespace_service.classify_item_ids(principal, extract_key(request.data, "ids"))
+    user_zip = zip_service.create_zip_model(principal, [ref.as_dict() for ref in refs], credentials)
     return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
 
 
-@api_view(['PATCH'])
+@api_view(["PATCH"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_item()
-@check_resource_permissions(default_checks & CheckRoot, resource_key="item_obj")
-def rename_view(request, item_obj):
-    new_name = extract_key(request.data, "new_name")
-    item_service.rename_item(request.context, item_obj, new_name)
+@permission_classes([IsAuthenticated])
+def rename_view(request, item_id):
+    principal, credentials = _inputs(request)
+    namespace_service.rename(principal, item_id, extract_key(request.data, "new_name"), credentials)
     return HttpResponse(status=204)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([FolderPasswordThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & LockPerms & AllowedIP])
-@extract_folder()
-@check_resource_permissions(default_checks & CheckRoot, resource_key="folder_obj")
-def change_folder_password_view(request, folder_obj):
+@permission_classes([IsAuthenticated])
+def change_folder_password_view(request, folder_id):
+    principal, credentials = _inputs(request)
     new_password = extract_key(request.data, "new_password")
-    is_locked = folder_service.change_folder_password(request.context, folder_obj, new_password)
-    if is_locked:
-        return JsonResponse(build_response(request.context.request_id, "Folder is being locked..."))
-    return JsonResponse(build_response(request.context.request_id, "Folder is being unlocked..."))
+    if new_password:
+        FolderService.apply_lock(principal, folder_id, new_password, credentials)
+        message = "Folder is being locked..."
+    else:
+        FolderService.remove_lock(principal, folder_id, credentials)
+        message = "Folder is being unlocked..."
+    return JsonResponse(build_response(principal.request_id, message))
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([FolderPasswordThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & ResetLockPerms & AllowedIP])
-@extract_folder()
-@check_resource_permissions((default_checks & CheckRoot) - CheckItemLock, resource_key="folder_obj")
-def reset_folder_password_view(request, folder_obj: Folder):
-    account_password = extract_key(request.data, "accountPassword")
-    new_folder_password = extract_key(request.data, "folderPassword")
-    if not folder_obj.is_locked:
-        raise BadRequestError("There is nothing to reset, folder is unlocked.")
-
-    is_locked = folder_service.reset_folder_password(request.context, request.user, folder_obj, account_password, new_folder_password)
-    if is_locked:
-        return JsonResponse(build_response(request.context.request_id, "Folder password is being changed..."))
-    return JsonResponse(build_response(request.context.request_id, "Folder is being unlocked..."))
+@permission_classes([IsAuthenticated])
+def reset_folder_password_view(request, folder_id):
+    principal, credentials = _inputs(request)
+    new_password = extract_key(request.data, "folderPassword")
+    FolderService.reset_lock(principal, folder_id, extract_key(request.data, "accountPassword"), new_password, credentials)
+    message = "Folder password is being changed..." if new_password else "Folder is being unlocked..."
+    return JsonResponse(build_response(principal.request_id, message))
 
 
-@api_view(['PUT'])
+@api_view(["PUT"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def update_media_position_view(request, file_obj):
-    new_position = extract_key(request.data, "position")
-    file_service.update_media_position(file_obj, new_position)
+@permission_classes([IsAuthenticated])
+def update_media_position_view(request, file_id):
+    principal, credentials = _inputs(request)
+    FileService.update_media_position(principal, file_id, extract_key(request.data, "position"), credentials)
     return HttpResponse(status=204)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def add_tag_view(request, file_obj):
-    tag_name = extract_key(request.data, "tag_name")
-    tag = file_service.add_tag(file_obj, tag_name)
+@permission_classes([IsAuthenticated])
+def add_tag_view(request, file_id):
+    principal, credentials = _inputs(request)
+    tag = FileService.add_tag(principal, file_id, extract_key(request.data, "tag_name"), credentials)
     return JsonResponse(TagSerializer.serialize_object(tag), status=200)
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def remove_tag_view(request, file_obj, tag_id):
-    file_service.remove_tag(file_obj, tag_id)
+@permission_classes([IsAuthenticated])
+def remove_tag_view(request, file_id, tag_id):
+    principal, credentials = _inputs(request)
+    FileService.remove_tag(principal, file_id, tag_id, credentials)
     return HttpResponse(status=204)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def add_moment_view(request, file_obj):
-    moment = file_service.add_moment(request.user, file_obj, request.data)
+@permission_classes([IsAuthenticated])
+def add_moment_view(request, file_id):
+    principal, credentials = _inputs(request)
+    FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials)
+    moment = FileService.add_moment(principal, file_id, request.data, credentials)
     return JsonResponse(MomentSerializer.serialize_object(moment), status=200)
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def remove_moment_view(request, file_obj, moment_id):
-    file_service.remove_moment(request.user, file_obj, moment_id)
+@permission_classes([IsAuthenticated])
+def remove_moment_view(request, file_id, moment_id):
+    principal, credentials = _inputs(request)
+    FileService.remove_moment(principal, file_id, moment_id, credentials)
     return HttpResponse(status=204)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def add_subtitle_view(request, file_obj):
-    subtitle = file_service.create_subtitle(file_obj, request.data)
+@permission_classes([IsAuthenticated])
+def add_subtitle_view(request, file_id):
+    principal, credentials = _inputs(request)
+    FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials)
+    subtitle = FileService.create_subtitle(principal, file_id, request.data, credentials)
     return JsonResponse(SubtitleSerializer.serialize_object(subtitle), status=200)
 
 
-@api_view(['PATCH'])
+@api_view(["PATCH"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def rename_subtitle_view(request, file_obj, subtitle_id):
-    new_language = extract_key(request.data, "new_language")
-    file_service.rename_subtitle(file_obj, subtitle_id, new_language)
+@permission_classes([IsAuthenticated])
+def rename_subtitle_view(request, file_id, subtitle_id):
+    principal, credentials = _inputs(request)
+    FileService.rename_subtitle(principal, file_id, subtitle_id, extract_key(request.data, "new_language"), credentials)
     return HttpResponse(status=204)
 
 
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & DeletePerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def delete_thumbnail_view(request, file_obj):
-    thumbnail_service.thumbnail_service.remove(
-        request.user,
-        str(file_obj.id),
-        must_exist=True,
-        credentials=extract_resource_credentials(request),
-    )
+@permission_classes([IsAuthenticated])
+def delete_thumbnail_view(request, file_id):
+    principal, credentials = _inputs(request)
+    ThumbnailService.remove(principal, file_id, must_exist=True, credentials=credentials)
     return HttpResponse(status=204)
 
-@api_view(['DELETE'])
+
+@api_view(["DELETE"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def remove_subtitle_view(request, file_obj, subtitle_id):
-    file_service.remove_subtitle(request.user, file_obj, subtitle_id)
+@permission_classes([IsAuthenticated])
+def remove_subtitle_view(request, file_id, subtitle_id):
+    principal, credentials = _inputs(request)
+    FileService.remove_subtitle(principal, file_id, subtitle_id, credentials)
     return HttpResponse(status=204)

@@ -12,16 +12,25 @@ from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 
 from website.services import attachment_service
+from website.auth.permissions import CredentialSet, PrincipalFactory
 from .constants import API_BASE_URL, EncryptionMethod
 from .core.crypto.signer import sign_resource
-from .core.dataModels.http import RequestContext
 from .core.errors import DiscordError
 from .models import Fragment, Folder, File, UserSettings, UserPerms, ShareableLink, Thumbnail, UserZIP, MediaPosition, Tag, Webhook, Bot, DiscordSettings, Moment, \
     VideoMetadata, VideoTrack, AudioTrack, SubtitleTrack, Subtitle, Channel, ShareAccess, PerDeviceToken, ShareAccessEvent
 from .models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from .models.file_related_models import RawMetadata, PhotoMetadata
 from .models.other_models import Notification, RawExtractionClaim
-from .services import folder_service, file_service, item_service, auth_service, thumbnail_service
+from .services import folder_service, file_service, namespace_service, auth_service, thumbnail_service
+
+
+def _request_admin_deletion(request, objects):
+    principal = PrincipalFactory.from_authenticated_request(request)
+    namespace_service.request_deletion(
+        principal,
+        [str(obj.id) for obj in objects],
+        CredentialSet.empty(),
+    )
 
 admin.site.index_template = "admin/idrive_index.html"
 
@@ -107,7 +116,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
 class FolderAdmin(SimpleHistoryAdmin):
     readonly_fields = ('id', 'last_modified_at', 'parent')
     ordering = ["-created_at"]
-    list_display = ["name", "owner", "state", "created_at", "inTrash", "is_locked"]
+    list_display = ["name", "owner", "state", "created_at", "is_trashed", "is_locked"]
     actions = ['move_to_trash', 'restore_from_trash', 'unlock', 'force_ready']
     search_fields = ["id", "name"]
 
@@ -118,21 +127,23 @@ class FolderAdmin(SimpleHistoryAdmin):
     def is_locked(self, obj: File):
         return obj._is_locked()
 
+    @easy.smart(short_description="In trash", boolean=True)
+    def is_trashed(self, obj: Folder):
+        return hasattr(obj, "trash_root")
+
     def get_form(self, request, obj=None, **kwargs):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['name'].widget.attrs['style'] = 'height: 2em;'
         return form
 
     def delete_queryset(self, request, queryset: QuerySet[Folder]):
-        context = RequestContext.from_user(request.user.id)
-        item_service.delete_items(context, request.user, list(queryset))
+        _request_admin_deletion(request, list(queryset))
 
     def delete_model(self, request, obj: Union[Folder, List[Folder]]):
-        context = RequestContext.from_user(request.user.id)
         if isinstance(obj, Folder):
-            item_service.delete_items(context, request.user, [obj])
+            _request_admin_deletion(request, [obj])
         else:
-            item_service.delete_items(context, request.user, obj)
+            _request_admin_deletion(request, obj)
 
     def move_to_trash(self, request, queryset: QuerySet[Folder]):
         for folder in queryset:
@@ -153,11 +164,11 @@ class FolderAdmin(SimpleHistoryAdmin):
 @admin.register(File)
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
-    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'inTrashSince', 'state', 'is_locked', 'created_at',
+    readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'state', 'is_locked', 'created_at',
                        'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag", "iv_hex", "key_hex")
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
-                    'inTrash', 'is_locked']
+                    'is_trashed', 'is_locked']
     actions = ['move_to_trash', 'restore_from_trash', 'force_delete_model', 'force_ready']
     search_fields = ['name', 'id', 'type', 'owner__username']
     filter_horizontal = ('tags',)
@@ -168,6 +179,10 @@ class FileAdmin(SimpleHistoryAdmin):
     @easy.smart(short_description="Locked", admin_order_field="parent__password", boolean=True)
     def is_locked(self, obj: File):
         return obj._is_locked()
+
+    @easy.smart(short_description="In trash", boolean=True)
+    def is_trashed(self, obj: File):
+        return hasattr(obj, "trash_marker")
 
     @easy.smart(short_description="Readable size", admin_order_field="size")
     def readable_size(self, obj: File):
@@ -245,16 +260,13 @@ class FileAdmin(SimpleHistoryAdmin):
         return form
 
     def delete_queryset(self, request, queryset: QuerySet[File]):
-        context = RequestContext.from_user(request.user.id)
-        item_service.delete_items(context, request.user, list(queryset))
+        _request_admin_deletion(request, list(queryset))
 
     def delete_model(self, request, obj: Union[File, List[File]]):
-        context = RequestContext.from_user(request.user.id)
-
         if isinstance(obj, File):
-            item_service.delete_items(context, request.user, [obj])
+            _request_admin_deletion(request, [obj])
         else:
-            item_service.delete_items(context, request.user, obj)
+            _request_admin_deletion(request, obj)
 
     def force_delete_model(self, request, queryset: QuerySet[File]):
         for real_obj in queryset:
@@ -327,8 +339,8 @@ class ShareableLinkAdminForm(forms.ModelForm):
 
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
-    list_display = ('id', 'resource_link', 'content_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
-    readonly_fields = ('resource_link', 'object_id', 'content_type', 'owner', 'is_expired')
+    list_display = ('id', 'resource_link', 'get_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
+    readonly_fields = ('resource_link', 'root_id', 'get_type', 'owner', 'is_expired')
     form = ShareableLinkAdminForm
 
     def has_add_permission(self, request):
@@ -337,23 +349,9 @@ class ShareableLinkAdmin(admin.ModelAdmin):
     @easy.with_tags()
     @easy.smart(short_description="Resource")
     def resource_link(self, obj: ShareableLink):
-        model = obj.content_type.model_class()
-
-        if not model:
-            return "<INVALID CONTENT TYPE>"
-
-        try:
-            resource = model.objects.filter(pk=obj.object_id).first()
-        except Exception:
-            return "<BROKEN REFERENCE>"
-
-        if not resource:
-            return "<RESOURCE DELETED>"
-
-        url = reverse(
-            f"admin:{obj.content_type.app_label}_{obj.content_type.model}_change",
-            args=[obj.object_id]
-        )
+        resource = obj.root
+        model = type(resource)
+        url = reverse(f"admin:{model._meta.app_label}_{model._meta.model_name}_change", args=[obj.root_id])
 
         return f'<a href="{url}">{resource.name}</a>'
 
@@ -617,7 +615,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(DeletionFileWorkItem)
 class DeletionFileWorkItemAdmin(admin.ModelAdmin):
-    list_display = ['file_id', 'state', 'job_id', 'claimed_at']
+    list_display = ['file_id', 'state', 'scope_id', 'claimed_at']
     actions = ['reset_attempts_to_1']
 
     def has_add_permission(self, request):
@@ -629,7 +627,7 @@ class DeletionFileWorkItemAdmin(admin.ModelAdmin):
 
 @admin.register(DeletionFolderWorkItem)
 class DeletionFolderWorkItemAdmin(admin.ModelAdmin):
-    list_display = ['folder_id', 'state', 'job_id', 'claimed_at']
+    list_display = ['folder_id', 'state', 'scope_id', 'claimed_at']
     actions = ['reset_attempts_to_1']
 
     def has_add_permission(self, request):

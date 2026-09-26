@@ -14,41 +14,51 @@ from rest_framework.decorators import permission_classes, throttle_classes, api_
 from rest_framework.permissions import IsAuthenticated
 
 from website.services import attachment_service
-from website.auth.Permissions import ReadPerms, default_checks, CheckTrash, CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked
+from website.auth.permissions import PrincipalFactory, ResourceAction, extract_resource_credentials
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle, SyncerThrottle
-from website.auth.utils import check_resource_perms
 from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EncryptionMethod
 from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, \
     FolderSerializer, \
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
 from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
-from website.core.decorators import check_resource_permissions, extract_folder, extract_file, extract_item
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import validate_ids_as_list, extract_key, validate_key, _get_folder_content_hash
 from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
+from website.queries.file_lock_annotations import file_lock_annotations
 from website.queries.builders import build_folder_content, build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
 from website.queries.selectors import get_trash_files_and_folders, check_if_bots_exists
 from website.services import cache_service, search_service
+from website.services.resource_query_service import FileQueryService, FolderQueryService, ItemQueryService, TrashQueryService
+
+
+def _inputs(request):
+    return PrincipalFactory.from_authenticated_request(request), extract_resource_credentials(request)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
-def get_folder_info(request, folder_obj: Folder):
-    # todo optimize this
-    folder_content = cache_service.get_folder_content(folder_obj)
-
-    if folder_content is None:
-        folder_content = build_folder_content(folder_obj)
-        cache_service.set_folder_content(folder_obj, folder_content)
-
-    folder_content = folder_content
+@permission_classes([IsAuthenticated])
+def get_folder_info(request, folder_id):
+    principal, credentials = _inputs(request)
+    listing = FolderQueryService.list_children(principal, folder_id, credentials)
+    folder_obj = listing.folder
+    folder_content = FolderSerializer.serialize_object(folder_obj)
+    folder_content["children"] = [
+        *(FileSerializer.serialize_object(file, sign_urls=False) for file in listing.files),
+        *(FolderSerializer.serialize_object(folder) for folder in listing.folders),
+    ]
     breadcrumbs = build_breadcrumbs(folder_obj)
+
+    downloadable_ids = [str(item["id"]) for item in folder_content["children"] if not item.get("isDir")]
+    downloadable_files = {
+        str(file.id): file
+        for file in FileQueryService.get_many(
+            principal, downloadable_ids, ResourceAction.DOWNLOAD, credentials,
+        )
+    } if downloadable_ids else {}
 
     unsigned_payload = {
         "folder": folder_content,
@@ -76,10 +86,13 @@ def get_folder_info(request, folder_obj: Folder):
         thumbnail_path = file.get("_thumbnail_path")
 
         if thumbnail_path:
-            file["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{sign_resource(thumbnail_path)}"
+            source = downloadable_files[str(file["id"])]
+            file["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{sign_resource(thumbnail_path, resource_id=str(source.id), resource_version=source.resource_version, purpose='thumbnail')}"
 
         if download_path:
-            file["download_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
+            source = downloadable_files[str(file["id"])]
+            file["download_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, resource_id=str(source.id), resource_version=source.resource_version, purpose='file_download')}"
+            file["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, resource_id=str(source.id), resource_version=source.resource_version, purpose='zip_entry')}"
 
         file.pop("_download_path", None)
         file.pop("_thumbnail_path", None)
@@ -103,37 +116,38 @@ def get_folder_info(request, folder_obj: Folder):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def get_file_info(request, file_obj: File):
+@permission_classes([IsAuthenticated])
+def get_file_info(request, file_id):
+    principal, credentials = _inputs(request)
+    file_obj = FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials).file
     file_content = FileSerializer.serialize_object(file_obj)
     return JsonResponse(file_content)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
+@permission_classes([IsAuthenticated])
 @vary_on_headers("x-resource-password")
 @cache_page(60 * 1)
-def get_usage(request, folder_obj: Folder):
+def get_usage(request, folder_id):
+    principal, credentials = _inputs(request)
+    subtree = FolderQueryService.list_subtree(principal, folder_id, credentials)
+    folder_obj = subtree.folder
     key = cache_service.get_total_used_size_key(request.user.id)
     total_used_size = cache.get(key)
     if not total_used_size:
-        file_used = File.objects.filter(owner=request.user, inTrash=False, state=ItemState.ACTIVE, parent__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))[
+        file_used = File.objects.filter(owner=request.user, trash_marker__isnull=True, state=ItemState.ACTIVE, parent__trash_root__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
+        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trash_marker__isnull=True).aggregate(Sum('size'))[
                              'size__sum'] or 0
-        moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))['size__sum'] or 0
-        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__inTrash=False, file__inTrash=False).aggregate(Sum('size'))[
+        moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trash_marker__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
+        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trash_marker__isnull=True).aggregate(Sum('size'))[
                             'size__sum'] or 0
 
         total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
         cache.set(key, total_used_size, 60)
 
     if folder_obj.parent:
-        folder_used_size = calculate_size(folder_obj)
+        folder_used_size = sum(file.size for file in subtree.files)
     else:
         folder_used_size = total_used_size
 
@@ -142,15 +156,23 @@ def get_usage(request, folder_obj: Folder):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_item()
-@check_resource_permissions(default_checks - CheckTrash, resource_key="item_obj")
-def fetch_additional_info(request, item_obj):
+@permission_classes([IsAuthenticated])
+def fetch_additional_info(request, item_id):
     isTrash = validate_key(request.GET, "isTrash", bool, default=False, converter=param_to_bool)
+    principal, credentials = _inputs(request)
+    action = ResourceAction.READ_TRASH if isTrash else ResourceAction.READ
+    authorized = ItemQueryService.get(principal, item_id, action, credentials)
+    item_obj = authorized.file if hasattr(authorized, "file") else authorized.folder
 
     if isinstance(item_obj, Folder):
-        folder_used_size = calculate_size(item_obj, includeTrash=isTrash)
-        folder_count, file_count = calculate_file_and_folder_count(item_obj, includeTrash=isTrash)
+        if isTrash:
+            folder_used_size = calculate_size(item_obj, includeTrash=True)
+            folder_count, file_count = calculate_file_and_folder_count(item_obj, includeTrash=True)
+        else:
+            subtree = FolderQueryService.list_subtree(principal, str(item_obj.id), credentials)
+            folder_used_size = sum(file.size for file in subtree.files)
+            folder_count = max(0, len(subtree.folders) - 1)
+            file_count = len(subtree.files)
         return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
 
     else:
@@ -198,19 +220,30 @@ def fetch_additional_info(request, item_obj):
 
 @api_view(['POST'])
 @throttle_classes([SearchThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated])
 def search(request):
-    data = search_service.perform_search(request)
+    principal, credentials = _inputs(request)
+    data = search_service.perform_search(principal, request.data, credentials)
     return JsonResponse(data, safe=False)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated])
 def get_trash(request):
-    files, folders = get_trash_files_and_folders(request.user)
+    principal, credentials = _inputs(request)
+    files, folders = TrashQueryService.list(principal, credentials)
 
-    file_dicts = [FileSerializer.serialize_tuple(file) for file in files]
+    file_dicts = []
+    for file in files:
+        item = FileSerializer.serialize_object(file, sign_urls=False)
+        item.pop("download_url", None)
+        item.pop("thumbnail_url", None)
+        item.pop("_download_path", None)
+        item.pop("_thumbnail_path", None)
+        item.pop("iv", None)
+        item.pop("key", None)
+        file_dicts.append(item)
     folder_dicts = [FolderSerializer.serialize_object(folder) for folder in folders]
 
     return JsonResponse({"trash": file_dicts + folder_dicts})
@@ -218,67 +251,63 @@ def get_trash(request):
 
 @api_view(['GET'])
 @throttle_classes([FolderPasswordThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_item()
-@check_resource_permissions([CheckOwnership, CheckIpPrivateOrAllowedIfResourceLocked], resource_key="item_obj")
-def check_password(request, item_obj):
-    password = request.headers.get("X-Resource-Password")
-
-    if item_obj.password == password:
-        return HttpResponse(status=204)
-
-    raise ResourcePermissionError("Folder password is incorrect")
+@permission_classes([IsAuthenticated])
+def check_password(request, item_id):
+    principal, credentials = _inputs(request)
+    ItemQueryService.get(principal, item_id, ResourceAction.VERIFY_LOCK_CREDENTIAL, credentials)
+    return HttpResponse(status=204)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def get_moments(request, file_obj: File):
+@permission_classes([IsAuthenticated])
+def get_moments(request, file_id):
+    principal, credentials = _inputs(request)
+    file_obj = FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials).file
     moments = Moment.objects.filter(file=file_obj).all()
     return JsonResponse(MomentSerializer.serialize_objects(moments), safe=False)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def get_tags(request, file_obj: File):
+@permission_classes([IsAuthenticated])
+def get_tags(request, file_id):
+    principal, credentials = _inputs(request)
+    file_obj = FileQueryService.get(principal, file_id, ResourceAction.READ, credentials).file
     return JsonResponse(TagSerializer.serialize_objects(file_obj.tags.all()), safe=False)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def get_subtitles(request, file_obj: File):
+@permission_classes([IsAuthenticated])
+def get_subtitles(request, file_id):
+    principal, credentials = _inputs(request)
+    file_obj = FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials).file
     subtitles = Subtitle.objects.filter(file=file_obj)
     return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated])
 def get_all_tags(request):
+    principal, _ = _inputs(request)
+    from website.services import user_service
+    user_service.authorize_user(principal, ResourceAction.READ_ACCOUNT)
     tags = Tag.objects.filter(owner=request.user)
     return JsonResponse(TagSerializer.serialize_objects(tags), safe=False)
 
 
 @api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated])
 def get_files_media_position(request):
     ids = extract_key(request.data, "ids")
     validate_ids_as_list(ids, max_length=100)
 
-    files = File.objects.filter(id__in=ids)
-    item_ids = []
-    for file in files:
-        check_resource_perms(request=request, resource=file, checks=default_checks)
-        item_ids.append(file.id)
+    principal, credentials = _inputs(request)
+    files = FileQueryService.get_many(principal, ids, ResourceAction.READ, credentials)
+    item_ids = [file.id for file in files]
 
     media_positions = MediaPosition.objects.filter(file_id__in=item_ids).values_list("timestamp", "modified_at", "file_id")
     data = [MediaPositionSerializer.serialize_tuple(pos) for pos in media_positions]
@@ -287,31 +316,25 @@ def get_files_media_position(request):
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_item()
-@check_resource_permissions(default_checks, resource_key="item_obj")
-def ultra_download_files_metadata(request, item_obj):
+@permission_classes([IsAuthenticated])
+def ultra_download_files_metadata(request, item_id):
+    principal, credentials = _inputs(request)
+    authorized = ItemQueryService.get(principal, item_id, ResourceAction.DOWNLOAD, credentials)
+    item_obj = authorized.file if hasattr(authorized, "file") else authorized.folder
     if isinstance(item_obj, File):
         files = File.objects.filter(pk=item_obj.pk)
     else:
         base_folder: Folder = item_obj
 
         files = base_folder.get_all_files().filter(
-            inTrash=False,
+            trash_marker__isnull=True,
             state=ItemState.ACTIVE,
-            parent__inTrash=False,
+            parent__trash_root__isnull=True,
         )
 
-        folders = base_folder.get_all_subfolders().filter(
-            inTrash=False,
-            state=ItemState.ACTIVE,
-            parent__inTrash=False,
-        )
-
-        for folder in folders.iterator():
-            check_resource_perms(request, folder, default_checks)
-
-    files = files.values_list("id", "name", "size", "crc", "encryption_method", "parent__lockFrom_id", "key", "iv")
+    files = files.annotate(**file_lock_annotations()).values_list(
+        "id", "name", "size", "crc", "encryption_method", "lock_from_id", "key", "iv",
+    )
 
     response_data = [
         {
@@ -337,12 +360,14 @@ def ultra_download_files_metadata(request, item_obj):
 
 @api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder(source="GET", optional=True)
-@check_resource_permissions(default_checks, resource_key="folder_obj", optional=True)
-@extract_file()
-@check_resource_permissions(default_checks, resource_key="file_obj")
-def ultra_download_file_fragments_metadata(request, file_obj, folder_obj: Optional[Folder]):
+@permission_classes([IsAuthenticated])
+def ultra_download_file_fragments_metadata(request, file_id):
+    principal, credentials = _inputs(request)
+    file_obj = FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials).file
+    folder_id = request.GET.get("folder_id")
+    folder_obj = None
+    if folder_id:
+        folder_obj = FolderQueryService.get(principal, folder_id, ResourceAction.DOWNLOAD, credentials).folder
     fragments = (
         Fragment.objects
         .filter(file_id=file_obj.id)
@@ -377,13 +402,12 @@ def ultra_download_file_fragments_metadata(request, file_obj, folder_obj: Option
 
 @api_view(['GET'])
 @throttle_classes([MediaThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated])
 def get_fragment_url_view(request, fragment_id):
+    principal, credentials = _inputs(request)
+    fragment = Fragment.objects.select_related("file").get(id=fragment_id, file__owner_id=principal.user_id)
+    file = FileQueryService.get(principal, str(fragment.file_id), ResourceAction.DOWNLOAD, credentials).file
     check_if_bots_exists(request.user)
-    fragment = Fragment.objects.get(id=fragment_id)
-
-    file = fragment.file
-    check_resource_perms(request, file, default_checks)
 
     url = attachment_service.get_attachment_url(request.user, fragment, file)
     return JsonResponse({"url": url})
@@ -391,32 +415,15 @@ def get_fragment_url_view(request, fragment_id):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
+@permission_classes([IsAuthenticated])
 @cache_page(60 * 1)
-def get_folder_file_stats(request, folder_obj):
-    files_qs = folder_obj.get_all_files().filter(owner=request.user, inTrash=False, parent__inTrash=False)
-
-    # Annotate lock-related fields
-    files_qs = files_qs.annotate(
-        is_locked=Case(
-            When(parent__password__isnull=False, then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField()
-        ),
-        lockFrom_id=F("parent__lockFrom__id")
-    )
-
-    # Annotate type: 'hidden' properly
+def get_folder_file_stats(request, folder_id):
+    principal, credentials = _inputs(request)
+    subtree = FolderQueryService.list_subtree(principal, folder_id, credentials)
     qs = (
-        files_qs
-        .annotate(file_type=Case(
-            When(Q(is_locked=True) & ~Q(lockFrom_id=folder_obj.id), then=Value('hidden')),
-            default=F('type'),
-            output_field=CharField()
-        ))
-        .values('file_type')
+        File.objects.filter(id__in=[file.id for file in subtree.files])
+        .annotate(file_type=F("type"))
+        .values("file_type")
         .annotate(count=Count('id'), total_size=Sum('size'))
         .order_by('file_type')
     )
@@ -434,30 +441,22 @@ def get_folder_file_stats(request, folder_obj):
 
 @api_view(["GET"])
 @throttle_classes([SyncerThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
-@extract_folder()
-@check_resource_permissions(default_checks, resource_key="folder_obj")
-def get_folder_hash(request, folder_obj: Folder):
-    subfolders = folder_obj.get_all_subfolders(include_self=True).filter(inTrash=False)
+@permission_classes([IsAuthenticated])
+def get_folder_hash(request, folder_id):
+    principal, credentials = _inputs(request)
+    subtree = FolderQueryService.list_subtree(principal, folder_id, credentials)
+    folder_obj = subtree.folder
+    folder_entries = [
+        {"id": folder.id, "name": folder.name, "parent_id": folder.parent_id, "last_modified_at": folder.last_modified_at}
+        for folder in subtree.folders
+    ]
 
-    folder_entries = list(subfolders.values("id", "name", "parent_id", "last_modified_at"))
-
-    hash_version = str(folder_obj.hash_input_generation)
-    cached_hash = cache_service.get_folder_hash(folder_obj.id, hash_version)
-
-    if cached_hash is not None:
-        return JsonResponse({"hash": cached_hash})
-
-    file_entries = list(
-        File.objects
-        .filter(parent__in=subfolders, inTrash=False)
-        .distinct()
-        .values("id", "name", "crc", "parent_id")
-    )
+    file_entries = [
+        {"id": file.id, "name": file.name, "crc": file.crc, "parent_id": file.parent_id}
+        for file in subtree.files
+    ]
 
     digest = _get_folder_content_hash(folder_obj.id, folder_entries, file_entries)
-
-    cache_service.set_folder_hash(folder_obj.id, hash_version, digest)
 
     return JsonResponse({"hash": digest})
 

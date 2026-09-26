@@ -5,7 +5,7 @@ from django.http import JsonResponse, HttpResponse
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import AllowAny
 
-from website.auth.Permissions import AllowedIP
+from website.auth.permissions import AllowedNetwork
 from website.auth.throttle import defaultAuthUserThrottle
 from website.core.helpers import get_ip
 from website.discord.Discord import discord
@@ -13,7 +13,7 @@ from website.discord.Discord import discord
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([AllowAny & AllowedIP])
+@permission_classes([AllowAny & AllowedNetwork])
 def get_discord_state(request, user_id):
     ip, _ = get_ip(request)
     ip_obj = ipaddress.ip_address(ip)
@@ -27,7 +27,7 @@ def get_discord_state(request, user_id):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([AllowAny & AllowedIP])
+@permission_classes([AllowAny & AllowedNetwork])
 def your_ip(request):
     ip, from_nginx = get_ip(request)
     return JsonResponse({"ip": ip, "nginx": from_nginx})

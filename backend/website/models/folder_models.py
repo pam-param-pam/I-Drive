@@ -1,6 +1,6 @@
 import shortuuid
 from django.contrib.auth.models import User
-from django.db import models, transaction
+from django.db import models
 from django.db.models import F, CheckConstraint, Q
 from mptt.fields import TreeForeignKey
 from mptt.models import MPTTModel
@@ -17,9 +17,7 @@ class Folder(MPTTModel):
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, related_name='subfolders', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now=True)
-    inTrash = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    inTrashSince = models.DateTimeField(null=True, blank=True)
     ready = models.BooleanField(default=True)
     password = models.CharField(max_length=50, null=True, blank=True)
     autoLock = models.BooleanField(default=False, blank=True)
@@ -76,14 +74,7 @@ class Folder(MPTTModel):
                 name="%(class)s_last_modified_after_created"
             ),
 
-            # 3. inTrash and inTrashSince consistency
-            CheckConstraint(
-                condition=Q(inTrash=False, inTrashSince__isnull=True) |
-                      Q(inTrash=True, inTrashSince__isnull=False),
-                name="%(class)s_trash_consistent"
-            ),
-
-            # 4. lockFrom requires password
+            # 3. lockFrom requires password
             CheckConstraint(
                 condition=(
                         Q(lockFrom__isnull=True) |                # unlocked (password may or may not be NULL)
@@ -92,13 +83,13 @@ class Folder(MPTTModel):
                 name="%(class)s_lock_password_consistent_v2",
             ),
 
-            # 5. autoLock must be False unless lockFrom exists
+            # 4. autoLock must be False unless lockFrom exists
             CheckConstraint(
                 condition=Q(lockFrom__isnull=False) | Q(autoLock=False) | Q(state=ItemState.DELETING),
                 name="%(class)s_autoLock_valid",
             ),
 
-            # 6. prevent folder from being its own parent
+            # 5. prevent folder from being its own parent
             CheckConstraint(
                 condition=~Q(id=F('parent')),
                 name="%(class)s_parent_not_self"
@@ -114,14 +105,6 @@ class Folder(MPTTModel):
         return False
 
     is_locked = property(_is_locked)
-
-    @staticmethod
-    def _create_user_root(user):
-        from website.services import mptt_lock_service
-
-        with transaction.atomic():
-            mptt_lock_service.lock_mptt_trees(creating_root=True)
-            Folder.objects.get_or_create(owner=user, parent=None, name="root")
 
     def get_all_subfolders(self, include_self=False) -> TreeQuerySet:
         return self.get_descendants(include_self=include_self)

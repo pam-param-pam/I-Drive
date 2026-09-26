@@ -4,12 +4,13 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.Permissions import AllowedIP, ChangePasswordPerms, ReadPerms
+from website.auth.permissions import AllowedNetwork, PrincipalFactory, ResourceAction
 from website.auth.throttle import defaultAnonUserThrottle, LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAuthUserThrottle
 from website.core.Serializers import DeviceTokenSerializer
 from website.core.helpers import extract_key
 from website.models import PerDeviceToken
 from website.services import auth_service
+from website.services import user_service
 
 
 @api_view(['GET'])
@@ -40,7 +41,7 @@ def logout_per_device_view(request):
 
 @api_view(['POST'])
 @throttle_classes([RegisterThrottle])
-@permission_classes([AllowAny & AllowedIP])
+@permission_classes([AllowAny & AllowedNetwork])
 def register_user_view(request):
     username = extract_key(request.data, "username")
     password = extract_key(request.data, "password")
@@ -52,12 +53,17 @@ def register_user_view(request):
 
 @api_view(['PATCH'])
 @throttle_classes([PasswordChangeThrottle])
-@permission_classes([IsAuthenticated & ChangePasswordPerms])
+@permission_classes([IsAuthenticated])
 def change_password_view(request):
     current_password = extract_key(request.data, "current_password")
     new_password = extract_key(request.data, "new_password")
 
-    auth_service.change_password(request, request.context, current_password, new_password)
+    auth_service.change_password(
+        request,
+        PrincipalFactory.from_authenticated_request(request),
+        current_password,
+        new_password,
+    )
     return HttpResponse(status=204)
 
 
@@ -96,8 +102,11 @@ def cancel_pending_qr_session_view(request, session_id):
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms])
+@permission_classes([IsAuthenticated])
 def list_active_devices_view(request):
+    user_service.authorize_user(
+        PrincipalFactory.from_authenticated_request(request), ResourceAction.READ_ACCOUNT,
+    )
     tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
     data = DeviceTokenSerializer.serialize_objects(tokens)
     return JsonResponse(data, safe=False)

@@ -1,30 +1,30 @@
 from dataclasses import dataclass
-from typing import Mapping
-
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
 
 from website.config import MAX_FOLDERS_IN_FOLDER
-from website.core.errors import BadRequestError, ResourceNotFoundError
+from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
-from website.models import (DeletionFolderWorkItem, DeletionScope, Folder,
-                            FolderLockPolicy, TrashRoot)
+from website.models import (DeletionFolderWorkItem, DeletionScope, Folder, FolderLockPolicy, TrashRoot)
 from website.models.mixin_models import ItemState
+from website.auth.permissions import (
+    Authorizer, ContextSet, CredentialSet, ResourceAction,
+    ResourceContextResolver, ResourceRef, ResourceRole, ResourceType,
+    UserPrincipal)
 from website.services import namespace_lock_service
 from website.services.derived_state_service import (
     apply_counter_deltas, bump_folder_listings, bump_folder_resources,
     dirty_hashes, enqueue_height_repair, merge_delta, raise_height_bounds)
-from website.services.hierarchy_service import (assert_move_depth,
-                                                assert_move_has_no_cycle,
-                                                assert_not_root,
-                                                lock_folder_chains)
-from website.services.namespace_command_support import actor_id
-from website.services.resource_context_service import (
-    assert_no_active_scope_in_subtree, authorize_context,
-    authorize_restore_context, resolve_folder_context)
+from website.services.hierarchy_service import (
+    assert_move_depth, assert_move_has_no_cycle,
+    assert_no_active_scope_in_subtree, lock_folder_chains)
+
+
+authorizer = Authorizer()
+context_resolver = ResourceContextResolver()
 
 
 @dataclass(frozen=True)
@@ -36,19 +36,32 @@ class FolderCommandResult:
 
 class FolderService:
     @staticmethod
-    def create(
-        actor: User | int,
-        parent_id: str,
-        name: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
+    def create_user_root(user: User) -> Folder:
+        """Create the user's namespace root, safely handling concurrent setup calls."""
+        owner_id = user.pk
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_exclusive(owner_id)
+            roots = Folder.objects.select_for_update().filter(owner_id=owner_id, parent__isnull=True)
+            root = roots.order_by("created_at", "id").first()
+            if root is not None:
+                return root
+
+            root = Folder.objects.create(owner_id=owner_id, parent=None, name="root")
+            dirty_hashes([root.id])
+            return root
+
+    @staticmethod
+    def create(principal: UserPrincipal, parent_id: str, name: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
         name = validate_value(name, str, checks=[IsValidItemName])
-        owner_id = actor_id(actor)
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [parent_id])
             parent = hierarchy.folders[str(parent_id)]
-            authorize_context(resolve_folder_context(parent, hierarchy), credentials=credentials)
+            context = context_resolver.resolve_folder(parent_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(
+                principal, ResourceAction.CREATE_CHILD, ContextSet((context,)), credentials,
+            )
 
             if parent.subfolders.count() >= MAX_FOLDERS_IN_FOLDER:
                 raise BadRequestError(f"Too many folders in folder. Max = {MAX_FOLDERS_IN_FOLDER}")
@@ -58,12 +71,7 @@ class FolderService:
             folder = Folder.objects.create(owner_id=owner_id, parent_id=parent.id, name=name)
             chain = hierarchy.chain(str(parent.id))
             deltas: dict[str, dict[str, int]] = {}
-            merge_delta(
-                deltas,
-                chain,
-                physical_descendant_folder_count=1,
-                visible_descendant_folder_count=1,
-            )
+            merge_delta(deltas, chain, physical_descendant_folder_count=1, visible_descendant_folder_count=1)
             apply_counter_deltas(deltas)
             raise_height_bounds(chain, 0, hierarchy.folders)
             dirty_hashes(chain)
@@ -72,20 +80,17 @@ class FolderService:
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def rename(
-        actor: User | int,
-        folder_id: str,
-        name: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
+    def rename(principal: UserPrincipal, folder_id: str, name: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
         name = validate_value(name, str, checks=[IsValidItemName])
-        owner_id = actor_id(actor)
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            assert_not_root(folder)
-            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
+            context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(
+                principal, ResourceAction.RENAME, ContextSet((context,)), credentials,
+            )
 
             Folder.objects.filter(id=folder.id).update(name=name, last_modified_at=timezone.now())
             bump_folder_resources([folder.id])
@@ -95,24 +100,20 @@ class FolderService:
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def move(
-        actor: User | int,
-        folder_id: str,
-        destination_id: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
-        owner_id = actor_id(actor)
+    def move(principal: UserPrincipal, folder_id: str, destination_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id, destination_id])
             folder = hierarchy.folders[str(folder_id)]
             destination = hierarchy.folders[str(destination_id)]
-            assert_not_root(folder)
+            contexts = context_resolver.resolve_many((
+                ResourceRef(ResourceType.FOLDER, folder_id, ResourceRole.SOURCE),
+                ResourceRef(ResourceType.FOLDER, destination_id, ResourceRole.DESTINATION),
+            ), owner_id, hierarchy)
+            authorizer.authorize_user_action(principal, ResourceAction.MOVE, contexts, credentials)
             if str(folder.parent_id) == str(destination.id):
                 return FolderCommandResult(str(folder.id), folder.resource_version)
-
-            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
-            authorize_context(resolve_folder_context(destination, hierarchy), credentials=credentials)
             assert_no_active_scope_in_subtree(owner_id, str(folder.id))
             destination_chain = hierarchy.chain(str(destination.id))
             assert_move_has_no_cycle(str(folder.id), destination_chain)
@@ -159,18 +160,16 @@ class FolderService:
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def trash(
-        actor: User | int,
-        folder_id: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
-        owner_id = actor_id(actor)
+    def trash(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            assert_not_root(folder)
-            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
+            context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(
+                principal, ResourceAction.TRASH, ContextSet((context,)), credentials,
+            )
             assert_no_active_scope_in_subtree(owner_id, str(folder.id))
 
             TrashRoot.objects.create(folder_id=folder.id, owner_id=owner_id)
@@ -191,20 +190,16 @@ class FolderService:
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def restore(
-        actor: User | int,
-        folder_id: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
-        owner_id = actor_id(actor)
+    def restore(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            context = resolve_folder_context(folder, hierarchy)
-            authorize_restore_context(context, credentials)
-            if context.trash_root_id != str(folder.id):
-                raise BadRequestError("Restore the enclosing trash root first")
+            context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(
+                principal, ResourceAction.RESTORE, ContextSet((context,)), credentials,
+            )
 
             deleted, _ = TrashRoot.objects.filter(folder_id=folder.id, owner_id=owner_id).delete()
             if not deleted:
@@ -226,20 +221,17 @@ class FolderService:
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def apply_lock(
-        actor: User | int,
-        folder_id: str,
-        password: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
+    def apply_lock(principal: UserPrincipal, folder_id: str, password: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
         password = validate_value(password, str, checks=[NotEmpty])
-        owner_id = actor_id(actor)
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            assert_not_root(folder)
-            authorize_context(resolve_folder_context(folder, hierarchy), credentials=credentials)
+            context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(
+                principal, ResourceAction.MANAGE_LOCK, ContextSet((context,)), credentials,
+            )
             FolderLockPolicy.objects.update_or_create(
                 folder_id=folder.id,
                 defaults={"owner_id": owner_id, "password_verifier": make_password(password)},
@@ -249,42 +241,62 @@ class FolderService:
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def remove_lock(
-        actor: User | int,
+    def remove_lock(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
+        return FolderService._remove_lock(principal, folder_id, credentials, ResourceAction.MANAGE_LOCK)
+
+    @staticmethod
+    def reset_lock(
+        principal: UserPrincipal,
         folder_id: str,
-        credentials: Mapping[str, str] | None = None,
-        reset_authorized: bool = False,
+        account_password: str,
+        new_password: str | None = None,
+        credentials: CredentialSet | None = None,
     ) -> FolderCommandResult:
-        owner_id = actor_id(actor)
+        if not User.objects.get(id=principal.user_id).check_password(account_password):
+            raise ResourcePermissionError("Password is incorrect!")
+        return FolderService._remove_lock(
+            principal, folder_id, credentials, ResourceAction.RESET_LOCK, new_password,
+        )
+
+    @staticmethod
+    def _remove_lock(
+        principal: UserPrincipal,
+        folder_id: str,
+        credentials: CredentialSet | None,
+        action: ResourceAction,
+        replacement_password: str | None = None,
+    ) -> FolderCommandResult:
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            assert_not_root(folder)
-            context = resolve_folder_context(folder, hierarchy)
-            if not reset_authorized:
-                authorize_context(context, credentials=credentials)
-            if context.lock_policy_id != str(folder.id):
+            context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(principal, action, ContextSet((context,)), credentials)
+            if context.effective_lock_policy_id != str(folder.id):
                 raise BadRequestError("Folder has no explicit lock policy")
             FolderLockPolicy.objects.filter(folder_id=folder.id, owner_id=owner_id).delete()
+            if replacement_password:
+                FolderLockPolicy.objects.create(
+                    folder_id=folder.id,
+                    owner_id=owner_id,
+                    password_verifier=make_password(replacement_password),
+                )
             bump_folder_resources([folder.id])
             folder.refresh_from_db(fields=["resource_version"])
             return FolderCommandResult(str(folder.id), folder.resource_version)
 
     @staticmethod
-    def request_deletion(
-        actor: User | int,
-        folder_id: str,
-        credentials: Mapping[str, str] | None = None,
-    ) -> FolderCommandResult:
-        owner_id = actor_id(actor)
+    def request_deletion(principal: UserPrincipal, folder_id: str, credentials: CredentialSet | None = None) -> FolderCommandResult:
+        owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)
             hierarchy = lock_folder_chains(owner_id, [folder_id])
             folder = hierarchy.folders[str(folder_id)]
-            assert_not_root(folder)
-            context = resolve_folder_context(folder, hierarchy)
-            authorize_context(context, credentials=credentials, allow_trash=True)
+            context = context_resolver.resolve_folder(folder_id, owner_id, hierarchy)
+            authorizer.authorize_user_action(
+                principal, ResourceAction.REQUEST_DELETE, ContextSet((context,)), credentials,
+            )
             assert_no_active_scope_in_subtree(owner_id, str(folder.id))
 
             visible = not context.is_trashed

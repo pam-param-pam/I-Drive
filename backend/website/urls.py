@@ -154,6 +154,7 @@ urlpatterns = [
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     path("shares/<token>/zip", ['POST'], create_share_zip_model, name="create zip for share"),
+    path("shares/<share_token>/zip/<token>/stream", ['GET'], stream_zip_files, name="stream share zip"),
 
     django_path('admin', admin.site.urls),
     django_path("", include("django_prometheus.urls")),

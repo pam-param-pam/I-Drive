@@ -1,171 +1,211 @@
-from django.db import transaction
 from django.http import HttpResponse, JsonResponse
-from rest_framework.decorators import permission_classes, throttle_classes, api_view
+from urllib.parse import urlsplit
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from website.auth.Permissions import ReadPerms, SharePerms, ModifyPerms, default_checks, CheckShareOwnership, CheckShareExpired, CheckSharePassword, CheckShareTrash, \
-    CheckShareReady, \
-    CheckShareItemBelongings, CheckTrash, CheckState
-from website.auth.throttle import defaultAuthUserThrottle, defaultAnonUserThrottle, AnonUserMediaThrottle
-from website.auth.utils import check_resource_perms
+from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceType, extract_resource_credentials
+from website.auth.throttle import AnonUserMediaThrottle, defaultAnonUserThrottle, defaultAuthUserThrottle
 from website.constants import ShareEventType
-from website.core.Serializers import ShareSerializer, ShareAccessSerializer, SubtitleSerializer, ZipSerializer
-from website.core.decorators import check_resource_permissions, extract_item, extract_share, extract_folder, extract_file, extract_items_from_ids_annotated
-from website.core.errors import ResourceNotFoundError, ResourcePermissionError
+from website.constants import API_BASE_URL
+from website.core.crypto.signer import sign_resource
+from website.core.Serializers import ShareAccessSerializer, ShareSerializer, SubtitleSerializer, ZipSerializer
+from website.core.errors import ResourceNotFoundError
 from website.core.helpers import extract_key, validate_ids_as_list
-from website.models import ShareableLink, ShareAccess, ShareAccessEvent, UserSettings, Subtitle, File
-from website.queries.builders import create_share_events, build_share_breadcrumbs, build_share_resource_dict, build_share_folder_content
-from website.queries.selectors import get_item_inside_share, check_if_item_belongs_to_share, get_item
+from website.models import File, Folder, Subtitle, UserSettings
+from website.queries.builders import build_share_breadcrumbs, build_share_folder_content, build_share_resource_dict, create_share_events
 from website.services import share_service, zip_service
 
 
-@api_view(['GET'])
+def _user_inputs(request):
+    return PrincipalFactory.from_authenticated_request(request), extract_resource_credentials(request)
+
+
+def _share_inputs(request, token):
+    return PrincipalFactory.from_share_request(request, token), extract_resource_credentials(request)
+
+
+def _resource(owner_id, resource_type, resource_id):
+    model = File if ResourceType(resource_type) == ResourceType.FILE else Folder
+    return model.objects.get(owner_id=owner_id, id=resource_id)
+
+
+def _bind_share_urls(items, owner_id, share_id):
+    file_ids = [str(item["id"]) for item in items if not item.get("isDir")]
+    versions = {
+        str(file.id): file.resource_version
+        for file in File.objects.filter(owner_id=owner_id, id__in=file_ids)
+    }
+    for item in items:
+        if item.get("isDir"):
+            continue
+        for key, purpose in (
+            ("download_url", "file_download"),
+            ("zip_entry_url", "zip_entry"),
+            ("thumbnail_url", "thumbnail"),
+        ):
+            if not item.get(key):
+                continue
+            path = urlsplit(item[key]).path
+            item[key] = f"{API_BASE_URL}{path}{sign_resource(path, resource_id=str(item['id']), resource_version=versions[str(item['id'])], purpose=purpose, share_id=share_id)}"
+
+
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ReadPerms & SharePerms])
+@permission_classes([IsAuthenticated])
 def get_shares(request):
-    shares = ShareableLink.objects.filter(owner=request.user)
+    principal, _ = _user_inputs(request)
     items = []
-
-    for share in shares:
+    for share in share_service.list_shares(principal):
         try:
-            item = ShareSerializer.serialize_object(share)
-            items.append(item)
+            items.append(ShareSerializer.serialize_object(share))
         except ResourceNotFoundError:
-            pass
-
+            continue
     return JsonResponse(items, status=200, safe=False)
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
-@extract_item(source="data")
-@check_resource_permissions(default_checks, resource_key="item_obj")
-def create_share(request, item_obj):
-    value = extract_key(request.data, "value")
-    unit = extract_key(request.data, "unit")
-    password = extract_key(request.data, "password", default=None)
+@permission_classes([IsAuthenticated])
+def create_share(request):
+    principal, credentials = _user_inputs(request)
+    item_id = str(extract_key(request.data, "item_id"))
+    if File.objects.filter(owner_id=principal.user_id, id=item_id).exists():
+        resource_type = ResourceType.FILE
+    else:
+        resource_type = ResourceType.FOLDER
+    share = share_service.create_share(
+        principal,
+        resource_type,
+        item_id,
+        extract_key(request.data, "unit"),
+        extract_key(request.data, "value"),
+        extract_key(request.data, "password", default=None),
+        credentials,
+    )
+    return JsonResponse(ShareSerializer.serialize_object(share), status=200)
 
-    share = share_service.create_share(request.user, item_obj, unit, value, password)
-    item = ShareSerializer.serialize_object(share)
-    return JsonResponse(item, status=200, safe=False)
 
-
-@api_view(['DELETE'])
+@api_view(["DELETE"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
-@extract_share()
-@check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
-def delete_share(request, share_obj):
-    share_service.delete_share(share_obj)
+@permission_classes([IsAuthenticated])
+def delete_share(request, token):
+    principal, _ = _user_inputs(request)
+    share_service.delete_share(principal, token)
     return HttpResponse(status=204)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
-@extract_share()
-@check_resource_permissions([CheckShareOwnership, CheckShareExpired], resource_key="share_obj")
-def get_share_visits(request, share_obj):
-    accesses = ShareAccess.objects.filter(share=share_obj)
+@permission_classes([IsAuthenticated])
+def get_share_visits(request, token):
+    principal, _ = _user_inputs(request)
+    accesses = share_service.get_share_accesses(principal, token)
     return JsonResponse(ShareAccessSerializer.serialize_objects(accesses), status=200, safe=False)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
-@permission_classes([IsAuthenticated & ModifyPerms & SharePerms])
-@extract_share()
-@check_resource_permissions([CheckShareOwnership, CheckShareExpired, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-def get_visit_events(request, share_obj, visit_id):
-    access = ShareAccess.objects.get(share=share_obj, id=visit_id)
-    events = ShareAccessEvent.objects.filter(access=access).all()
-    data = create_share_events(events)
-    return JsonResponse(data, status=200, safe=False)
+@permission_classes([IsAuthenticated])
+def get_visit_events(request, token, visit_id):
+    principal, _ = _user_inputs(request)
+    events = share_service.get_share_events(principal, token, visit_id)
+    return JsonResponse(create_share_events(events), status=200, safe=False)
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareExpired, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-def check_share_password(request, share_obj):
-    password = request.headers.get("X-Resource-Password")
-
-    if share_obj.password == password:
-        return HttpResponse(status=204)
-
-    raise ResourcePermissionError("Share password is incorrect")
+def check_share_password(request, token):
+    principal, credentials = _share_inputs(request, token)
+    share_service.resolve_share(principal, ResourceAction.READ_SHARE, credentials=credentials)
+    return HttpResponse(status=204)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @throttle_classes([defaultAnonUserThrottle])
 @permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-@extract_folder(optional=True, hide_error_details=True)
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "folder_obj"], optional=True)
-@check_resource_permissions([CheckTrash, CheckState], resource_key="folder_obj", optional=True)
-def view_share(request, share_obj: ShareableLink, folder_obj=None):
-    share_service.log_event_http(request, share_obj, ShareEventType.SHARE_VIEW, share_id=share_obj.id)
+def view_share(request, token, folder_id=None):
+    principal, credentials = _share_inputs(request, token)
+    requested_type = ResourceType.FOLDER if folder_id else None
+    resolution = share_service.resolve_share(principal, ResourceAction.READ_SHARE, requested_type, folder_id, credentials)
+    root = _resource(resolution.owner_id, resolution.root_type, resolution.root_id)
+    requested = _resource(resolution.owner_id, resolution.requested_type, resolution.requested_id)
+    if resolution.requested_type == ResourceType.FILE:
+        resolution = share_service.resolve_share(
+            principal,
+            ResourceAction.DOWNLOAD_SHARE,
+            resolution.requested_type,
+            resolution.requested_id,
+            credentials,
+        )
+    share_service.log_event_http(request, resolution, ShareEventType.SHARE_VIEW, share_id=resolution.share_id)
 
-    settings = UserSettings.objects.get(user=share_obj.owner)
-    obj_in_share = get_item_inside_share(share_obj)
-
-    if share_obj.get_type() == "folder":
-        breadcrumbs = build_share_breadcrumbs(obj_in_share, obj_in_share)
+    if resolution.root_type == ResourceType.FOLDER:
+        breadcrumbs = build_share_breadcrumbs(requested if folder_id else root, root, bool(folder_id))
     else:
         breadcrumbs = []
-
-    response_dict = build_share_resource_dict(obj_in_share)
-    del response_dict["parent_id"]
-
-    if folder_obj:
-        share_service.log_event_http(request, share_obj, ShareEventType.FOLDER_OPEN, folder_id=folder_obj.id)
-
-        breadcrumbs = build_share_breadcrumbs(folder_obj, obj_in_share, True)
-        folder_content = build_share_folder_content(folder_obj, include_folders=settings.subfolders_in_shares)["children"]
-
+    root_dict = build_share_resource_dict(root)
+    root_dict.pop("parent_id", None)
+    if folder_id:
+        share_service.log_event_http(request, resolution, ShareEventType.FOLDER_OPEN, folder_id=folder_id)
+        include_folders = UserSettings.objects.get(user_id=resolution.owner_id).subfolders_in_shares
+        candidates = build_share_folder_content(requested, include_folders=include_folders)["children"]
+        folder_content = []
+        for item in candidates:
+            resource_type = ResourceType.FOLDER if item.get("isDir") else ResourceType.FILE
+            action = ResourceAction.READ_SHARE if resource_type == ResourceType.FOLDER else ResourceAction.DOWNLOAD_SHARE
+            try:
+                share_service.resolve_share(principal, action, resource_type, str(item["id"]), credentials)
+            except ResourceNotFoundError:
+                continue
+            folder_content.append(item)
     else:
-        folder_content = [response_dict]
+        folder_content = [root_dict]
+    _bind_share_urls(folder_content, resolution.owner_id, resolution.share_id)
+    return JsonResponse({
+        "share": folder_content,
+        "breadcrumbs": breadcrumbs,
+        "expiry": resolution.expiration_time.isoformat(),
+        "id": resolution.share_id,
+    })
 
-    return JsonResponse({"share": folder_content, "breadcrumbs": breadcrumbs, "expiry": share_obj.expiration_time.isoformat(), "id": share_obj.id}, status=200)
 
-
-@api_view(['POST'])
+@api_view(["POST"])
 @throttle_classes([defaultAnonUserThrottle])
 @permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareExpired, CheckSharePassword, CheckShareTrash, CheckShareReady], resource_key="share_obj")
-def create_share_zip_model(request, share_obj: ShareableLink):
-    user = get_item_inside_share(share_obj).owner #  hack ngl
+def create_share_zip_model(request, token):
+    principal, credentials = _share_inputs(request, token)
     ids = extract_key(request.data, "ids")
     validate_ids_as_list(ids, max_length=1_000)
+    root = share_service.resolve_share(principal, ResourceAction.READ_SHARE, credentials=credentials)
     items = []
     for item_id in ids:
-        item = get_item(item_id)
-        check_if_item_belongs_to_share(share_obj, item)
-        check_resource_perms(request, item, [CheckTrash, CheckState])
-        items.append(item)
-
-    with transaction.atomic():
-        user_zip = zip_service.create_zip_model(user, items)
-
-        file_ids = list(user_zip.files.values_list("id", flat=True))
-        folder_ids = list(user_zip.folders.values_list("id", flat=True))
-        share_service.log_event_http(request, share_obj, ShareEventType.ZIP_DOWNLOAD, files=file_ids, folders=folder_ids)
-
-
-    return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
+        if File.objects.filter(owner_id=root.owner_id, id=item_id).exists():
+            item_type = ResourceType.FILE
+        elif Folder.objects.filter(owner_id=root.owner_id, id=item_id).exists():
+            item_type = ResourceType.FOLDER
+        else:
+            item_type = ResourceType.FILE
+        items.append({"type": item_type.value, "id": str(item_id)})
+    user_zip = zip_service.create_share_zip_model(principal, items, credentials)
+    response = ZipSerializer.serialize_object(user_zip)
+    response["download_url"] = f"{API_BASE_URL}/shares/{token}/zip/{user_zip.token}/stream"
+    share_service.log_event_http(request, root, ShareEventType.ZIP_DOWNLOAD, files=[], folders=[])
+    return JsonResponse(response, status=200)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @throttle_classes([AnonUserMediaThrottle])
 @permission_classes([AllowAny])
-@extract_share()
-@check_resource_permissions([CheckShareTrash, CheckSharePassword, CheckShareExpired, CheckShareReady], resource_key="share_obj")
-@extract_file(hide_error_details=True)
-@check_resource_permissions([CheckShareItemBelongings], resource_key=["share_obj", "file_obj"])
-@check_resource_permissions([CheckTrash, CheckState], resource_key="file_obj")
-def share_get_subtitles(request, share_obj: ShareableLink, file_obj: File):
-    subtitles = Subtitle.objects.filter(file=file_obj)
-    return JsonResponse(SubtitleSerializer.serialize_objects(subtitles), safe=False)
-
+def share_get_subtitles(request, token, file_id):
+    principal, credentials = _share_inputs(request, token)
+    resolution = share_service.resolve_share(
+        principal, ResourceAction.DOWNLOAD_SHARE, ResourceType.FILE, file_id, credentials,
+    )
+    subtitles = Subtitle.objects.filter(file_id=resolution.requested_id, file__owner_id=resolution.owner_id)
+    data = SubtitleSerializer.serialize_objects(subtitles)
+    version = File.objects.get(id=resolution.requested_id, owner_id=resolution.owner_id).resource_version
+    for item in data:
+        path = urlsplit(item["url"]).path
+        item["url"] = f"{API_BASE_URL}{path}{sign_resource(path, resource_id=resolution.requested_id, resource_version=version, purpose='subtitle', share_id=resolution.share_id)}"
+    return JsonResponse(data, safe=False)

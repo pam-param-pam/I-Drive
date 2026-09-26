@@ -4,7 +4,7 @@ import os
 import shortuuid
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists, Subquery
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
@@ -22,12 +22,10 @@ class File(models.Model):
     extension = models.CharField(max_length=20)
     size = models.PositiveBigIntegerField()
     type = models.CharField(max_length=50, default="text", choices=FILE_TYPE_CHOICES)
-    inTrash = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_modified_at = models.DateTimeField(auto_now=True)
     parent = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='files')
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    inTrashSince = models.DateTimeField(null=True)
     key = models.BinaryField(null=True)
     iv = models.BinaryField(null=True)
     encryption_method = models.SmallIntegerField()
@@ -43,21 +41,6 @@ class File(models.Model):
     history = HistoricalRecords()
 
     class Meta:
-        indexes = [
-            models.Index(
-                fields=["parent", "state", "inTrash"],
-                name="file_parent_state_trash_idx",
-            ),
-            models.Index(
-                fields=["owner", "state", "inTrash"],
-                name="file_owner_state_trash_idx",
-            ),
-            models.Index(
-                fields=["owner", "state", "inTrash", "inTrashSince"],
-                name="file_cleanup_idx",
-            ),
-        ]
-
         constraints = [
             ParentOwnerConstraint(
                 name="file_parent_owner_matches",
@@ -116,27 +99,13 @@ class File(models.Model):
             )
         ]
 
-    MINIMAL_VALUES = ("id", "name", "inTrash", "state", "parent_id", "owner_id", "is_locked", "lockFrom_id", "lockFrom__name", "password", "is_dir")
+    MINIMAL_VALUES = ("id", "name", "in_trash", "state", "parent_id", "owner_id", "is_locked", "lock_from_id", "lock_from_name", "is_dir")
 
     STANDARD_VALUES = MINIMAL_VALUES + ("type", )
     DISPLAY_VALUES = STANDARD_VALUES + (
-        "size", "created_at", "last_modified_at", "encryption_method", "inTrashSince", "extension",
+        "size", "created_at", "last_modified_at", "encryption_method", "in_trash_since", "extension",
         "parent_id", "crc", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata", "iv", "key"
     )
-
-    @classmethod
-    def get_lock_from_annotate(cls):
-        return {
-            "is_locked": Case(
-                When(parent__password__isnull=False, then=Value(True)),
-                default=Value(False),
-                output_field=BooleanField()
-            ),
-            "lockFrom_id": F("parent__lockFrom__id"),
-            "lockFrom__name": F("parent__lockFrom__name"),
-            "password": F("parent__password"),
-            "is_dir": Value(False, output_field=BooleanField()),
-        }
 
     @classmethod
     def get_file_metadata_annotate(cls):
@@ -165,36 +134,19 @@ class File(models.Model):
 
     @classmethod
     def get_display_annotate(cls):
+        from .namespace_models import FileTrashMarker
+
         return {
+            "in_trash": Exists(FileTrashMarker.objects.filter(file_id=OuterRef("pk"))),
+            "in_trash_since": Subquery(
+                FileTrashMarker.objects.filter(file_id=OuterRef("pk")).values("created_at")[:1]
+            ),
             **cls.get_file_metadata_annotate(),
-            **cls.get_lock_from_annotate(),
+            "is_dir": Value(False, output_field=BooleanField()),
         }
 
     def get_name_no_extension(self):
         return os.path.splitext(self.name)[0]
-
-    def _is_locked(self):
-        if self.parent._is_locked():
-            return True
-        return False
-
-    def _lockFrom(self):
-        return self.parent.lockFrom
-
-    def _lockFrom_id(self):
-        return self.parent.lockFrom.id
-
-    def _lockFrom__name(self):
-        return self.parent.lockFrom.name
-
-    def _password(self):
-        return self.parent.password
-
-    is_locked = property(_is_locked)
-    password = property(_password)
-    lockFrom = property(_lockFrom)
-    lockFrom_id = property(_lockFrom_id)
-    lockFrom__name = property(_lockFrom__name)
 
     def get_encryption_method(self) -> EncryptionMethod:
         return EncryptionMethod(self.encryption_method)
@@ -211,9 +163,6 @@ class File(models.Model):
 
     def is_encrypted(self):
         return self.get_encryption_method() != EncryptionMethod.Not_Encrypted
-
-    def is_in_trash(self):
-        return self.inTrash or self.parent.inTrash
 
     def __str__(self):
         return self.name

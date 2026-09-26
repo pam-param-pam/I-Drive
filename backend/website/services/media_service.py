@@ -1,9 +1,13 @@
 import base64
 import hashlib
+from itertools import chain
 
-from website.services import attachment_service, cache_service
-from website.auth.Permissions import CheckIpPrivateOrAllowedIfResourceLocked
-from website.auth.utils import check_resource_perms
+from django.db.models import Q
+
+from website.auth.permissions import (
+    Authorizer, CredentialSet, ResourceAction,
+    ResourceContextResolver, ResourceRef, ResourceType, SharePrincipal,
+    SignedResourcePrincipal, UserPrincipal)
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
@@ -19,7 +23,19 @@ from website.models import File, Moment, Subtitle, UserZIP, Thumbnail
 from website.models.mixin_models import ItemState
 from website.queries.builders import build_zip_file_dict, build_flattened_children_mptt_values, FILE_VALUE_FIELDS, FOLDER_VALUE_FIELDS
 from website.queries.selectors import check_if_bots_exists
-from itertools import chain
+from website.services import attachment_service, cache_service
+
+authorizer = Authorizer()
+context_resolver = ResourceContextResolver()
+
+
+def _authorized_signed_file(principal: SignedResourcePrincipal, purpose: str) -> File:
+    owner_id = File.objects.filter(id=principal.file_id).values_list("owner_id", flat=True).first()
+    if owner_id is None:
+        raise ResourceNotFoundError()
+    context = context_resolver.resolve_file(principal.file_id, owner_id)
+    authorizer.authorize_signed_resource(principal, context, purpose)
+    return File.objects.select_related("owner", "parent").get(id=principal.file_id, owner_id=owner_id)
 
 
 def _stable_file_etag(file_obj: File) -> str:
@@ -27,8 +43,13 @@ def _stable_file_etag(file_obj: File) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def get_thumbnail_response(request, file_obj: File, thumbnail: Thumbnail):
+def get_thumbnail_response(request, principal: SignedResourcePrincipal, thumbnail_id: str):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
+    file_obj = _authorized_signed_file(principal, "thumbnail")
+    try:
+        thumbnail = Thumbnail.objects.get(id=thumbnail_id, file_id=file_obj.id)
+    except Thumbnail.DoesNotExist as exception:
+        raise ResourceNotFoundError() from exception
 
     cache_key = cache_service.get_thumbnail_key(file_obj.id, file_obj.resource_version)
     thumbnail_content = cache.get(cache_key)
@@ -53,8 +74,13 @@ def get_thumbnail_response(request, file_obj: File, thumbnail: Thumbnail):
     )
 
 
-def get_moment_response(request, file_obj: File, moment: Moment):
+def get_moment_response(request, principal: SignedResourcePrincipal, moment_id: str):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
+    file_obj = _authorized_signed_file(principal, "moment")
+    try:
+        moment = Moment.objects.get(id=moment_id, file_id=file_obj.id)
+    except Moment.DoesNotExist as exception:
+        raise ResourceNotFoundError() from exception
 
     check_if_bots_exists(file_obj.owner)
 
@@ -72,8 +98,13 @@ def get_moment_response(request, file_obj: File, moment: Moment):
     )
 
 
-def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
+def get_subtitle_response(request, principal: SignedResourcePrincipal, subtitle_id: str):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
+    file_obj = _authorized_signed_file(principal, "subtitle")
+    try:
+        subtitle = Subtitle.objects.get(id=subtitle_id, file_id=file_obj.id)
+    except Subtitle.DoesNotExist as exception:
+        raise ResourceNotFoundError() from exception
 
     check_if_bots_exists(file_obj.owner)
 
@@ -91,9 +122,10 @@ def get_subtitle_response(request, file_obj: File, subtitle: Subtitle):
     )
 
 
-def get_file_response(request, file_obj: File):
+def get_file_response(request, principal: SignedResourcePrincipal):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
     raw = validate_key(request.GET, "raw", bool, default=False, converter=param_to_bool)
+    file_obj = _authorized_signed_file(principal, "file_download")
 
     referer = request.headers.get('Referer')
 
@@ -123,22 +155,43 @@ def iter_zip_file_dicts(file_rows):
         yield build_zip_file_dict(file_row, file_row["name"])
 
 
-def get_zip_response(request, user_zip: UserZIP):
+def get_zip_response(
+        request,
+        principal: UserPrincipal | SharePrincipal,
+        zip_id: str,
+        credentials: CredentialSet | None = None,
+):
     raw = validate_key(request.GET, "raw", bool, default=False, converter=param_to_bool)
+    try:
+        user_zip = UserZIP.objects.select_related("owner").get(Q(id=zip_id) | Q(token=zip_id))
+    except UserZIP.DoesNotExist as exception:
+        raise ResourceNotFoundError() from exception
+    if isinstance(principal, UserPrincipal) and user_zip.owner_id != principal.user_id:
+        raise ResourceNotFoundError()
     user = user_zip.owner
     num_bots = check_if_bots_exists(user)
 
-    files_qs = user_zip.files.filter(state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-    folders_qs = user_zip.folders.filter(state=ItemState.ACTIVE, inTrash=False)
+    files_qs = user_zip.files.all()
+    folders_qs = user_zip.folders.all()
+    file_ids = list(files_qs.values_list("id", flat=True))
+    folder_ids = list(folders_qs.values_list("id", flat=True))
+    refs = [ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids]
+    refs.extend(ResourceRef(ResourceType.FOLDER, folder_id) for folder_id in folder_ids)
+    if isinstance(principal, UserPrincipal):
+        contexts = context_resolver.resolve_many(refs, principal.user_id)
+        authorizer.authorize_user_action(
+            principal, ResourceAction.DOWNLOAD, contexts, credentials,
+        )
+    else:
+        from website.services.share_service import resolve_share
 
-    # this works only because all items must be in the same parent (ensured during zip model creation)
+        for ref in refs:
+            resolve_share(principal, ResourceAction.DOWNLOAD_SHARE, ref.resource_type, ref.resource_id, credentials)
+
+    files_qs = files_qs.filter(state=ItemState.ACTIVE)
+    folders_qs = folders_qs.filter(state=ItemState.ACTIVE)
     first_file = files_qs.first()
-    if first_file is not None:
-        check_resource_perms(request, first_file, [CheckIpPrivateOrAllowedIfResourceLocked])
-
     first_folder = folders_qs.first()
-    if first_folder is not None:
-        check_resource_perms(request, first_folder, [CheckIpPrivateOrAllowedIfResourceLocked])
 
     if first_file is None and first_folder is None:
         raise ResourceNotFoundError("ZIP is empty")
@@ -180,7 +233,7 @@ def get_zip_response(request, user_zip: UserZIP):
     )
 
 
-def get_zip_entry_response(request, file_obj: File):
+def get_zip_entry_response(request, principal: SignedResourcePrincipal):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
     referer = request.headers.get('Referer')
 
@@ -191,6 +244,7 @@ def get_zip_entry_response(request, file_obj: File):
     filename_b64 = validate_key(request.GET, "filename", str)
 
     filename = base64.b64decode(filename_b64).decode()
+    file_obj = _authorized_signed_file(principal, "zip_entry")
     fragments = file_obj.fragments.all().order_by("sequence")
     user = file_obj.owner
 

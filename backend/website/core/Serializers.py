@@ -9,6 +9,7 @@ from website.models import File, Folder, ShareableLink, ShareAccessEvent, ShareA
 from website.models.file_related_models import PhotoMetadata, RawMetadata, SubtitleTrack, Moment
 from website.models.other_models import Notification
 from website.queries.selectors import get_item_inside_share
+from website.queries.file_lock_annotations import file_lock_annotations
 
 
 class SimpleSerializer(ABC):
@@ -67,7 +68,7 @@ class FileSerializer(AdvancedSerializer):
         file_tuple = (
             File.objects
             .filter(id=obj.id)
-            .annotate(**File.get_display_annotate())
+            .annotate(**File.get_display_annotate(), **file_lock_annotations())
             .values_list(*File.DISPLAY_VALUES)
             .first()
         )
@@ -85,7 +86,7 @@ class FileSerializer(AdvancedSerializer):
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
-            _id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
+            _id, name, in_trash, state, parent_id, owner_id, is_locked, lock_from_id, lock_from_name, is_dir,
             type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
             parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
@@ -130,6 +131,8 @@ class FileSerializer(AdvancedSerializer):
                 signed = ""
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
+            if sign_urls:
+                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, purpose='zip_entry')}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
@@ -150,7 +153,7 @@ class ShareFileSerializer(FileSerializer):
     @staticmethod
     def _serialize(tuple_data: tuple, hide=False, sign_urls: bool = True) -> dict:
         (
-            _id, name, in_trash, ready, parent_id, owner_id, is_locked, lock_from_id, lock_from__name, password, is_dir,
+            _id, name, in_trash, state, parent_id, owner_id, is_locked, lock_from_id, lock_from_name, is_dir,
             type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
             parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
         ) = tuple_data
@@ -187,6 +190,8 @@ class ShareFileSerializer(FileSerializer):
                 signed = sign_resource(download_path)
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
+            if sign_urls:
+                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path, purpose='zip_entry')}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
@@ -218,8 +223,12 @@ class FolderSerializer(SimpleSerializer):
         if folder_obj.is_locked:
             folder_dict['lockFrom'] = folder_obj.lockFrom.id if folder_obj.lockFrom else folder_obj.id
 
-        if folder_obj.inTrashSince:
-            folder_dict["in_trash_since"] = folder_obj.inTrashSince.isoformat()
+        try:
+            trash_marker = folder_obj.trash_root
+        except Folder.trash_root.RelatedObjectDoesNotExist:
+            trash_marker = None
+        if trash_marker:
+            folder_dict["in_trash_since"] = trash_marker.created_at.isoformat()
 
         return folder_dict
 
@@ -253,7 +262,7 @@ class ShareSerializer(SimpleSerializer):
             "name": obj.name,
             "isDir": is_dir,
             "token": share.token,
-            "resource_id": share.object_id,
+            "resource_id": share.root_id,
             "id": share.id,
         }
 

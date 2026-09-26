@@ -16,10 +16,14 @@ from website.core.errors import ResourceNotFoundError, BadRequestError, Resource
 from website.core.helpers import get_ip, validate_value
 from website.core.http.utils import get_device_metadata
 from website.core.validators.GeneralChecks import NotEmpty
-from website.models import PerDeviceToken, UserPerms, Folder, UserSettings, DiscordSettings
+from website.models import PerDeviceToken, UserPerms, UserSettings, DiscordSettings
 from website.models.other_models import NotificationType, NotificationKind
-from website.services import cache_service, user_service
+from website.auth.permissions import Authorizer, ResourceAction, UserPrincipal
+from website.services import cache_service, folder_service, user_service
 from website.websockets.utils import send_event, send_channels_message
+
+
+authorizer = Authorizer()
 
 
 def _create_token_internal(user: User, device_info: dict) -> tuple[str, PerDeviceToken]:
@@ -204,18 +208,19 @@ def register_user(request, username: str, password: str) -> tuple[str, PerDevice
     create_new_user(username, password, is_superuser=False)
     return login_device(request, username, password, send_notification=False)
 
-def change_password(request, context: RequestContext, current_password: str, new_password: str) -> None:
+def change_password(request, principal: UserPrincipal, current_password: str, new_password: str) -> None:
     current_password = validate_value(current_password, str, checks=[NotEmpty])
     new_password = validate_value(new_password, str, checks=[NotEmpty])
 
-    user = context.get_user()
+    authorizer.authorize_user_action(principal, ResourceAction.CHANGE_PASSWORD)
+    user = User.objects.get(id=principal.user_id)
     if not user.check_password(current_password):
         raise ResourcePermissionError("Password is incorrect!")
 
     user.set_password(new_password)
     user.save()
 
-    logout_all_devices_for_user(request, user, ignore_device_id=context.device_id)
+    logout_all_devices_for_user(request, user, ignore_device_id=principal.device_id)
     user_service.create_notification(user, NotificationType.IMPORTANT, NotificationKind.GENERAL, "notifications.accountPasswordChangedTitle", "notifications.accountPasswordChangedMessage")
 
 
@@ -224,5 +229,5 @@ def create_new_user(username: str, password: str, is_superuser: bool):
         user = User.objects.create_user(username=username, password=password, is_superuser=is_superuser, is_staff=is_superuser)
         UserPerms._create_user_perms(user=user)
         UserSettings._create_user_settings(user=user)
-        Folder._create_user_root(user=user)
+        folder_service.FolderService.create_user_root(user)
         DiscordSettings._create_user_discord_settings(user=user)

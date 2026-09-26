@@ -10,7 +10,14 @@ from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_ids_as_list
 from website.core.validators.GeneralChecks import MaxLength, Max, Min
 from website.models import Folder, File
-from website.models.mixin_models import ItemState
+from website.queries.file_lock_annotations import file_lock_annotations
+from website.auth.permissions import (
+    Authorizer, ContextSet, CredentialSet, ResourceAction,
+    ResourceContextResolver, ResourceRef, ResourceType, UserPrincipal)
+
+
+authorizer = Authorizer()
+context_resolver = ResourceContextResolver()
 
 
 def validate_filter(f: Optional[dict]) -> Optional[dict]:
@@ -135,12 +142,6 @@ def validate_search_request(data: dict) -> dict:
     out["filter"] = validate_filter(validate_key(data, "filter", dict, default=None))
 
     # -----------------------------
-    # LOCK
-    # -----------------------------
-    out["lockFrom"] = validate_key(data, "lockFrom", str, default=None)
-    out["password"] = validate_key(data, "password", str, default=None)
-
-    # -----------------------------
     # CROSS-FIELD RULES
     # -----------------------------
 
@@ -170,30 +171,6 @@ def get_subtree_q(folder_ids):
             rght__lte=f.rght
         )
     return q
-
-def file_lock_q(lock_from, password):
-    if lock_from and password:
-        return (
-            Q(parent__lockFrom__isnull=True) |
-            Q(parent__lockFrom=lock_from, parent__password=password)
-        )
-    else:
-        return Q(parent__lockFrom__isnull=True)
-
-def folder_lock_q(lock_from, password):
-    if lock_from and password:
-        return (
-            Q(lockFrom__isnull=True) |
-            Q(lockFrom=lock_from, password=password) |
-            Q(parent__lockFrom__isnull=True) |
-            Q(parent__lockFrom=lock_from, parent__password=password)
-        )
-    else:
-        return (
-            Q(lockFrom__isnull=True) |
-            Q(parent__lockFrom__isnull=True)
-        )
-
 
 def build_attr_filter(filter_obj):
     if not filter_obj:
@@ -300,25 +277,23 @@ def build_attr_filter(filter_obj):
 
     return None
 
-def perform_search(request):
-    user = request.user
-    validated = validate_search_request(request.data)
+def perform_search(
+    principal: UserPrincipal,
+    data: dict,
+    credentials: CredentialSet | None = None,
+):
+    validated = validate_search_request(data)
 
     query = validated["query"]
     include_files = validated["files"]
     include_folders = validated["folders"]
 
-    lock_from = validated.get("lockFrom")
-    password = validated.get("password")
-
     result_limit = validated["resultLimit"]
     order_by = validated["orderBy"]
     order_prefix = "" if validated["ascending"] else "-"
 
-    base = Q(owner=user, state=ItemState.ACTIVE, inTrash=False, parent__inTrash=False)
-
-    file_q = base & file_lock_q(lock_from, password)
-    folder_q = base & folder_lock_q(lock_from, password)
+    file_q = Q(owner_id=principal.user_id)
+    folder_q = Q(owner_id=principal.user_id)
 
     # ------------------------
     # query
@@ -371,23 +346,56 @@ def perform_search(request):
     # ------------------------
     # EXECUTION
     # ------------------------
-    result = []
+    candidate_limit = min(result_limit * 4, 4000)
+    file_candidate_ids = list(
+        File.objects.filter(file_q).distinct()
+        .order_by(f"{order_prefix}{order_by}")
+        .values_list("id", flat=True)[:candidate_limit]
+    ) if include_files else []
+    folder_candidate_ids = list(
+        Folder.objects.filter(folder_q).distinct()
+        .order_by(f"{order_prefix}{order_by}")
+        .values_list("id", flat=True)[:candidate_limit]
+    ) if include_folders else []
 
-    if include_files:
+    refs = [ResourceRef(ResourceType.FILE, file_id) for file_id in file_candidate_ids]
+    refs.extend(ResourceRef(ResourceType.FOLDER, folder_id) for folder_id in folder_candidate_ids)
+    contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())
+    authorization = authorizer.filter_user_contexts(
+        principal, ResourceAction.SEARCH, contexts, credentials,
+    )
+    authorized_files = {
+        resource.resource_id for resource in authorization.resources
+        if resource.resource_type == ResourceType.FILE.value
+    }
+    authorized_folders = {
+        resource.resource_id for resource in authorization.resources
+        if resource.resource_type == ResourceType.FOLDER.value
+    }
+
+    result = []
+    if include_files and authorized_files:
         files = (
-            File.objects.filter(file_q)
+            File.objects.filter(id__in=authorized_files)
             .order_by(f"{order_prefix}{order_by}")
-            .annotate(**File.get_display_annotate())
+            .annotate(**File.get_display_annotate(), **file_lock_annotations())
             .values_list(*File.DISPLAY_VALUES)[:result_limit]
         )
-        result.extend(FileSerializer.serialize_tuple(f) for f in files)
-
-    if include_folders:
+        for file_obj in files:
+            item = FileSerializer.serialize_tuple(file_obj, sign_urls=False)
+            item.pop("download_url", None)
+            item.pop("thumbnail_url", None)
+            item.pop("_download_path", None)
+            item.pop("_thumbnail_path", None)
+            item.pop("iv", None)
+            item.pop("key", None)
+            result.append(item)
+    if include_folders and authorized_folders:
         folders = (
-            Folder.objects.filter(folder_q)
+            Folder.objects.filter(id__in=authorized_folders)
             .select_related("parent")
             .order_by(f"{order_prefix}{order_by}")[:result_limit]
         )
-        result.extend(FolderSerializer.serialize_object(f) for f in folders)
+        result.extend(FolderSerializer.serialize_object(folder) for folder in folders)
 
     return result

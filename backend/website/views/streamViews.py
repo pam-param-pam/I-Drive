@@ -1,79 +1,68 @@
-from rest_framework.decorators import api_view, throttle_classes, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
-from django.views.decorators.cache import cache_page
 
-from website.auth.Permissions import CheckIpPrivateOrAllowedIfResourceLocked, CheckTrash, CheckState
+from website.auth.permissions import PrincipalFactory, extract_resource_credentials
 from website.auth.throttle import MediaThrottle, NonCacheMediaThrottle
-from website.constants import MAX_MEDIA_CACHE_AGE
-from website.core.decorators import check_resource_permissions, extract_file_from_signed_url, no_gzip
-from website.core.errors import ResourceNotFoundError
-from website.models import File, Subtitle, Moment, UserZIP, Thumbnail
+from website.core.crypto.signer import verify_signed_resource_request
+from website.core.decorators import no_gzip
 from website.services import media_service
 from website.services.metric_service import record_stream_response
 
 
-@api_view(['GET'])
+def _signed_principal(request, file_id, purpose):
+    verify_signed_resource_request(request, file_id, purpose)
+    return PrincipalFactory.from_signed_request(request, purpose)
+
+
+@api_view(["GET"])
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
-@extract_file_from_signed_url
-@check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckState], resource_key="file_obj")
-def serve_thumbnail(request, file_obj: File, thumbnail_id):
-    thumbnail = Thumbnail.objects.get(file=file_obj, id=thumbnail_id)
-    response = media_service.get_thumbnail_response(request, file_obj, thumbnail)
+def serve_thumbnail(request, file_id, thumbnail_id):
+    response = media_service.get_thumbnail_response(request, _signed_principal(request, file_id, "thumbnail"), thumbnail_id)
     record_stream_response(response)
     return response
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
-@extract_file_from_signed_url
-@check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckTrash, CheckState], resource_key="file_obj")
-def serve_subtitle(request, file_obj: File, subtitle_id):
-    subtitle = Subtitle.objects.get(file=file_obj, id=subtitle_id)
-    response = media_service.get_subtitle_response(request, file_obj, subtitle)
+def serve_subtitle(request, file_id, subtitle_id):
+    response = media_service.get_subtitle_response(request, _signed_principal(request, file_id, "subtitle"), subtitle_id)
     record_stream_response(response)
     return response
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @throttle_classes([MediaThrottle])
 @permission_classes([AllowAny])
-@extract_file_from_signed_url
-@check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckTrash, CheckState], resource_key="file_obj")
-def serve_moment(request, file_obj: File, moment_id):
-    moment = Moment.objects.get(file=file_obj, id=moment_id)
-    response = media_service.get_moment_response(request, file_obj, moment)
+def serve_moment(request, file_id, moment_id):
+    response = media_service.get_moment_response(request, _signed_principal(request, file_id, "moment"), moment_id)
     record_stream_response(response)
     return response
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @no_gzip
 @throttle_classes([NonCacheMediaThrottle])
 @permission_classes([AllowAny])
-@extract_file_from_signed_url
-@check_resource_permissions([CheckIpPrivateOrAllowedIfResourceLocked, CheckState], resource_key="file_obj")
-def stream_file(request, file_obj: File):
-    zip_mode = request.GET.get("zip_mode", False)
-    if zip_mode:
-        response = media_service.get_zip_entry_response(request, file_obj)
+def stream_file(request, file_id):
+    zip_mode = bool(request.GET.get("zip_mode", False))
+    purpose = "zip_entry" if zip_mode else "file_download"
+    principal = _signed_principal(request, file_id, purpose)
+    response = media_service.get_zip_entry_response(request, principal) if zip_mode else media_service.get_file_response(request, principal)
+    record_stream_response(response)
+    return response
+
+
+@api_view(["GET"])
+@no_gzip
+@throttle_classes([NonCacheMediaThrottle])
+@permission_classes([AllowAny])
+def stream_zip_files(request, token, share_token=None):
+    if share_token:
+        principal = PrincipalFactory.from_share_request(request, share_token)
     else:
-        response = media_service.get_file_response(request, file_obj)
-    record_stream_response(response)
-    return response
-
-
-@api_view(['GET'])
-@no_gzip
-@throttle_classes([NonCacheMediaThrottle])
-@permission_classes([AllowAny])
-def stream_zip_files(request, token):
-    user_zip = UserZIP.objects.get(token=token)
-    if user_zip.is_expired():
-        user_zip.delete()
-        raise ResourceNotFoundError()
-
-    response = media_service.get_zip_response(request, user_zip)
+        principal = PrincipalFactory.from_authenticated_request(request)
+    response = media_service.get_zip_response(request, principal, token, extract_resource_credentials(request))
     record_stream_response(response)
     return response
