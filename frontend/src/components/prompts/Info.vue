@@ -235,9 +235,6 @@ export default {
 
    data() {
       return {
-         numberDirs: "Loading...",
-         numberFiles: "Loading...",
-         folderSize: "Loading...",
          currentTrack: null,
          isFolderExpanded: false,
          isFileExpanded: false,
@@ -247,8 +244,17 @@ export default {
 
    computed: {
       ...mapState(useMainStore, ["selected", "settings", "currentFolder", "selectedCount", "isLogged"]),
-      isMoreDataFetched() {
-         return this.folderSize !== "Loading..."
+      folderInfo() {
+         return this.selectedCount === 0 ? this.currentFolder : this.selectedCount === 1 ? this.selected[0] : null
+      },
+      numberDirs() {
+         return this.folderInfo?.folder_count
+      },
+      numberFiles() {
+         return this.folderInfo?.file_count
+      },
+      folderSize() {
+         return this.folderInfo?.size
       },
       isInShareContext() {
          return !this.isLogged
@@ -460,33 +466,21 @@ export default {
       ...mapActions(useMainStore, ["closeHover"]),
 
       async fetchMoreInfo() {
-         let item
-         if (this.selectedCount === 0) item = this.currentFolder
-         else item = this.selected[0]
-
-         // we want to fetch data only once
-         if (this.isMoreDataFetched) {
-            if (item.isDir) {
-               this.isFolderExpanded = !this.isFolderExpanded
-            } else {
-               this.isFileExpanded = !this.isFileExpanded
-            }
+         const item = this.folderInfo
+         if (item.isDir) {
+            this.isFolderExpanded = !this.isFolderExpanded
+            return
+         }
+         if (this.metadata !== null) {
+            this.isFileExpanded = !this.isFileExpanded
             return
          }
          let isTrash = false
          if (this.$route.name === "Trash") isTrash = true
 
          let res = await fetchAdditionalInfo(item.id, isTrash)
-         if (item.isDir) {
-            this.folderSize = res.folder_size
-            this.numberDirs = res.folder_count
-            this.numberFiles = res.file_count
-            this.isFolderExpanded = !this.isFolderExpanded
-         } else {
-            this.metadata = res
-            this.isFileExpanded = !this.isFileExpanded
-
-         }
+         this.metadata = res
+         this.isFileExpanded = !this.isFileExpanded
       },
 
       humanSize(size) {

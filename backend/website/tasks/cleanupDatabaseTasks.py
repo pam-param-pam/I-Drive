@@ -1,7 +1,6 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.db import transaction
 from django.utils import timezone as django_timezone
 
 from website.celery import app
@@ -12,7 +11,7 @@ from website.models.mixin_models import ItemState
 from website.models.other_models import Notification, UserZIP, RawExtractionClaim, NotificationType, NotificationKind
 from website.services import item_service, user_service
 from website.tasks.helper import format_cleanup_summary
-from website.tasks.otherTasks import _handle_parse_failure
+from website.tasks.raw_image.workflow import handle_parse_failure
 
 
 def cleanup_old_notifications(user) -> int:
@@ -75,17 +74,10 @@ def cleanup_raw_claims(user) -> int:
     if not claims:
         return 0
 
-    with transaction.atomic():
-        for claim in claims:
-            _handle_parse_failure(claim.file)
-
-        deleted_count, _ = (
-            RawExtractionClaim.objects
-            .filter(id__in=[claim.id for claim in claims])
-            .delete()
-        )
-
-    return deleted_count
+    return sum(
+        handle_parse_failure(user.id, str(claim.file_id), claim.attempts)
+        for claim in claims
+    )
 
 
 @app.task(queue="cleanup", acks_late=True, reject_on_worker_lost=True)

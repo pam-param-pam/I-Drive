@@ -13,9 +13,10 @@ class WebsocketEnvelope(TypedDict, total=False):
     lockFrom: Optional[str]
 
 class RequestContextDict(TypedDict):
-    user_id: str
-    request_id: int
+    user_id: int
+    request_id: Optional[str]
     device_id: Optional[str]
+    client_ip: Optional[str]
 
 class WebsocketEvent(TypedDict):
     type: str

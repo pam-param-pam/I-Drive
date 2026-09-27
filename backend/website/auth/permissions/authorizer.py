@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 
-from django.contrib.auth.hashers import check_password, identify_hasher
 
 from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
 from website.models import UserPerms
@@ -39,14 +38,6 @@ def _principal_kind(principal) -> PrincipalKind:
     if isinstance(principal, SharePrincipal):
         return PrincipalKind.SHARE
     raise TypeError("Unsupported permission principal")
-
-
-def _password_matches(supplied: str, verifier: str) -> bool:
-    try:
-        identify_hasher(verifier)
-    except ValueError:
-        return hmac.compare_digest(supplied, verifier)
-    return check_password(supplied, verifier)
 
 
 def _now_for(value: datetime) -> datetime:
@@ -150,9 +141,9 @@ class Authorizer:
             now = _now_for(share_context.expires_at)
             if now >= share_context.expires_at:
                 raise ResourcePermissionError("Share has expired")
-            supplied = credentials.for_share(share_context.share_id, share_context.share_token)
-            if share_context.password_verifier and (
-                not supplied or not _password_matches(supplied, share_context.password_verifier)
+            supplied = credentials.for_share(share_context.share_id)
+            if share_context.password and (
+                not supplied or not hmac.compare_digest(supplied, share_context.password)
             ):
                 raise PermissionPasswordError((PasswordChallenge(share_context.share_id, "Share"),))
             if not share_context.requested_item_is_member or not share_context.descendant_folders_allowed:
@@ -241,12 +232,12 @@ class Authorizer:
         policy = PolicyRegistry.get(action)
         if ResourceType.FILE not in policy.resource_types or ResourceRole.TARGET not in policy.resource_roles:
             raise BadRequestError("This action cannot authorize a file batch")
+
         parents = tuple(parent_contexts)
         contexts_by_parent = {context.resource_id: context for context in parents}
-        if len(contexts_by_parent) != len(parents) or any(
-            context.resource_type != ResourceType.FOLDER for context in parents
-        ):
+        if len(contexts_by_parent) != len(parents) or any(context.resource_type != ResourceType.FOLDER for context in parents):
             raise BadRequestError("File batch parents must be distinct folders")
+
         context_set = ContextSet((*parents, *tuple(additional_contexts)))
         authorization = self.authorize_user_action(principal, action, context_set, credentials)
         for row in file_rows:
@@ -274,8 +265,8 @@ class Authorizer:
             raise ResourcePermissionError("Resource is being deleted")
         if context.direct_state != "active":
             raise ResourcePermissionError("Resource is not active")
-        if context.is_trashed:
-            raise ResourcePermissionError("Cannot access a resource in trash")
+        if context.is_trashed and context.effective_lock_policy_id:
+            raise ResourcePermissionError("Cannot stream a locked file in trash")
         if context.effective_lock_policy_id and principal.share_id is None and not ip_is_allowed(principal.client_ip):
             raise ResourceNotFoundError()
         action = ResourceAction.DOWNLOAD_SHARE if principal.share_id else ResourceAction.DOWNLOAD
@@ -315,12 +306,10 @@ class Authorizer:
 
             if isinstance(principal, UserPrincipal) and not ip_is_allowed(principal.client_ip):
                 self._deny(policy, "Resource is inaccessible from this network")
-            if policy.lock_rule == LockRule.REQUIRE_UNLOCKED:
-                self._deny(policy, "Resource must be unlocked for this action")
             if policy.lock_rule in {LockRule.REQUIRE_CREDENTIAL, LockRule.VERIFY_CREDENTIAL}:
                 supplied = credentials.for_policy(lock_id)
-                verifier = context.effective_lock_password_verifier
-                if not supplied or not verifier or not _password_matches(supplied, verifier):
+                password = context.effective_lock_password
+                if not supplied or not password or not hmac.compare_digest(supplied, password):
                     challenges.setdefault(
                         lock_id,
                         PasswordChallenge(lock_id, context.effective_lock_policy_name or "Locked folder"),

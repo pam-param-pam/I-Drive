@@ -17,8 +17,16 @@ def setup_periodic_tasks(sender, **kwargs):
     print("### ON_AFTER_FINALIZE", sender)
 
     try:
+        from website.tasks.otherTasks import update_router_public_ip
+        from website.tasks.raw_image.workflow import generate_raw_image_thumbnails
+        sender.add_periodic_task(
+            timedelta(minutes=5), update_router_public_ip.s(), name="update-router-public-ip",
+        )
+        sender.add_periodic_task(
+            timedelta(minutes=5), generate_raw_image_thumbnails.s(), name="generate-raw-image-thumbnails",
+        )
+
         from website.tasks.cleanupDeletionTasks import supervise_deletion_system
-        from website.tasks.otherTasks import generate_raw_image_thumbnails, update_router_public_ip
         from website.tasks.cleanupDiscordTasks import cleanup_user_discord
         from website.tasks.cleanupDatabaseTasks import cleanup_user_db
         from website.tasks.derivedStateTasks import process_folder_hash_work, process_folder_height_repairs
@@ -43,18 +51,6 @@ def setup_periodic_tasks(sender, **kwargs):
         )
 
         print("### SUPERVISOR ADDED")
-
-        sender.add_periodic_task(
-            timedelta(minutes=5),
-            update_router_public_ip.s(),
-            name="update-router-public-ip",
-        )
-
-        sender.add_periodic_task(
-            timedelta(minutes=5),
-            generate_raw_image_thumbnails.s(),
-            name="generate-raw-image-thumbnails",
-        )
 
         sender.add_periodic_task(
             crontab(hour="5", minute="0"),

@@ -28,3 +28,13 @@ def unsign_resource(path: str, expires: int, sig: str) -> str:
     if not hmac.compare_digest(sig, _signature(path, expires)):
         raise URLInvalidOrExpired("Bad signature.")
     return path
+
+def verify_signed_url(request) -> int:
+    try:
+        expires = int(request.GET["expires"])
+        sig = request.GET["sig"]
+    except (KeyError, TypeError, ValueError) as exception:
+        raise URLInvalidOrExpired("Malformed signed URL.") from exception
+
+    unsign_resource(request.path_info, expires, sig)
+    return expires

@@ -18,7 +18,7 @@ class TrashRoot(models.Model):
 class FolderLockPolicy(models.Model):
     folder = models.OneToOneField("Folder", on_delete=models.CASCADE, primary_key=True, related_name="lock_policy")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="folder_lock_policies")
-    password_verifier = models.CharField(max_length=128)
+    password = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

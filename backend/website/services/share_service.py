@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -85,7 +84,7 @@ def create_share(
         return ShareableLink.objects.create(
             expiration_time=expiration_time,
             owner_id=owner_id,
-            password_verifier=make_password(password) if password else None,
+            password=password,
             **root_fields,
         )
 
@@ -103,7 +102,7 @@ def _owner_share_context(share: ShareableLink) -> PermissionShareContext:
         root_type=ResourceType(share.get_type()),
         root_id=share.root_id,
         expires_at=share.expiration_time,
-        password_verifier=share.password_verifier,
+        password=share.password,
     )
 
 
@@ -220,7 +219,7 @@ def resolve_share(
         root_type=root_type,
         root_id=root_id,
         expires_at=share.expiration_time,
-        password_verifier=share.password_verifier,
+        password=share.password,
         requested_item_is_member=membership,
         descendant_folders_allowed=(
             requested_type != ResourceType.FOLDER

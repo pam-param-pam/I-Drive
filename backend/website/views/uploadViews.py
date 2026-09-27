@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 
 from website.auth.permissions import (
-    PrincipalFactory, ResourceContextResolver, ResourceRef, ResourceType,
+    PrincipalFactory, ResourceContextResolver, ResourceRef, ResourceRole, ResourceType,
     extract_resource_credentials,
 )
 from website.auth.throttle import defaultAuthUserThrottle
@@ -23,7 +23,7 @@ def create_file_view(request):
     principal, credentials = _inputs(request)
     files = FileService.create_files(principal, extract_key(request.data, "files"), credentials)
     contexts = ResourceContextResolver().resolve_many(
-        (ResourceRef(ResourceType.FILE, file.id) for file in files), principal.user_id,
+        (ResourceRef(ResourceType.FILE, file.id, ResourceRole.TARGET) for file in files), principal.user_id,
     )
     lock_from_by_file = {
         context.resource_id: context.effective_lock_policy_id

@@ -3,7 +3,6 @@ from typing import Dict
 from typing import List, Iterable, Iterator
 
 from django.db.models import Exists, OuterRef
-from django.db.models.aggregates import Sum
 from rest_framework.exceptions import ValidationError
 
 from website.core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
@@ -13,16 +12,17 @@ from website.discord.Discord import discord
 from website.models import DeletionScope, Folder, File, Channel, Webhook, Bot, ShareAccessEvent
 from website.models.mixin_models import ItemState
 from website.queries.file_lock_annotations import file_lock_annotations, folder_lock_annotations
-from website.queries.hierarchy import get_descendant_file_ids, get_descendant_folder_ids, get_folder_chain
-from website.auth.permissions import ResourceContextResolver, ResourceRef, ResourceType
+from website.queries.hierarchy import get_descendant_folder_ids, get_folder_chain
+from website.queries._zip_fields import ZIP_FILE_VALUE_FIELDS
+from website.auth.permissions import ResourceContextResolver, ResourceRef, ResourceRole, ResourceType
 
 
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
     breadcrumbs = []
     folder_obj.refresh_from_db()
-    ancestors = get_folder_chain(str(folder_obj.id))
+    ancestors = get_folder_chain(str(folder_obj.id), folder_obj.owner_id)
     contexts = ResourceContextResolver().resolve_many(
-        (ResourceRef(ResourceType.FOLDER, ancestor.id) for ancestor in ancestors),
+        (ResourceRef(ResourceType.FOLDER, ancestor.id, ResourceRole.TARGET) for ancestor in ancestors),
         folder_obj.owner_id,
     )
     lock_from_by_id = {
@@ -37,7 +37,7 @@ def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
 
 
 def build_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id: bool = False) -> List[Dict]:
-    subfolders = get_folder_chain(str(folder_obj.id))
+    subfolders = get_folder_chain(str(folder_obj.id), folder_obj.owner_id)
 
     breadcrumbs = []
     for subfolder in subfolders:
@@ -50,59 +50,7 @@ def build_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id
     return list(reversed(breadcrumbs))
 
 
-def calculate_size(folder: Folder, includeTrash: bool = False) -> int:
-    """
-    Function to calculate size of a folder
-    """
-    qs = File.objects.filter(id__in=get_descendant_file_ids([folder.id]), state=ItemState.ACTIVE)
-
-    if not includeTrash:
-        qs = qs.filter(trashed_at__isnull=True, parent__trash_root__isnull=True)
-
-    size_result = qs.aggregate(Sum("size"))
-    return size_result["size__sum"] or 0
-
-
-def calculate_file_and_folder_count(folder: Folder, includeTrash: bool = False) -> tuple[int, int]:
-    """
-    Function to calculate entire file & folder count of a given folder
-    """
-
-    file_qs = File.objects.filter(id__in=get_descendant_file_ids([folder.id]), state=ItemState.ACTIVE)
-    folder_qs = Folder.objects.filter(
-        id__in=get_descendant_folder_ids([folder.id], include_roots=False), state=ItemState.ACTIVE,
-    )
-
-    if not includeTrash:
-        file_qs = file_qs.filter(trashed_at__isnull=True, parent__trash_root__isnull=True)
-        folder_qs = folder_qs.filter(trash_root__isnull=True)
-
-    file_count = file_qs.count()
-    folder_count = folder_qs.count()
-
-    return folder_count, file_count
-
-
-FILE_VALUE_FIELDS = (
-    "id",
-    "name",
-    "crc",
-    "size",
-    "parent_id",
-    "encryption_method",
-    "iv",
-    "key",
-)
-
-FOLDER_VALUE_FIELDS = (
-    "id",
-    "name",
-    "parent_id",
-    "owner_id",
-)
-
-
-def build_zip_file_dict(file_row: dict, file_name: str) -> dict:
+def build_zip_entry_dict(file_row: dict, file_name: str) -> dict:
     file_dict = {
         "isDir": False,
         "name": file_name,
@@ -175,7 +123,7 @@ def build_flattened_children_values(root_folder: dict, include_root_name: bool =
             state=DeletionScope.State.ACTIVE,
         )),
         **file_lock_annotations(),
-    ).filter(lock_from_id=root_lock_id, has_active_deletion=False).values(*FILE_VALUE_FIELDS).order_by("parent_id", "name")
+    ).filter(lock_from_id=root_lock_id, has_active_deletion=False).values(*ZIP_FILE_VALUE_FIELDS).order_by("parent_id", "name")
     parent_ids_with_files = {str(value) for value in files_qs.values_list("parent_id", flat=True).distinct()}
 
     for folder_id in traversal_ids:
@@ -184,7 +132,7 @@ def build_flattened_children_values(root_folder: dict, include_root_name: bool =
     for row in files_qs.iterator(chunk_size=chunk_size):
         parent_path = path_by_folder_id.get(str(row["parent_id"]))
         if parent_path is not None:
-            yield build_zip_file_dict(row, f"{parent_path}{row['name']}")
+            yield build_zip_entry_dict(row, f"{parent_path}{row['name']}")
 
 
 def build_share_resource_dict(resource_in_share: Item) -> Dict:
@@ -325,7 +273,7 @@ def build_file_path(file: File, max_folder_id=None) -> str:
 
         return file.name
 
-    folder_parts = [{"id": item.id, "name": item.name} for item in get_folder_chain(str(folder.id))]
+    folder_parts = [{"id": item.id, "name": item.name} for item in get_folder_chain(str(folder.id), folder.owner_id)]
 
     if max_folder_id is not None:
         max_folder_id = str(max_folder_id)

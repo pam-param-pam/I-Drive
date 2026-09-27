@@ -18,14 +18,10 @@ class ShareableLink(models.Model):
     token = models.CharField(max_length=255, unique=True)
     expiration_time = models.DateTimeField()
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="shareable_links")
-    password_verifier = models.CharField(max_length=128, null=True, blank=True)
+    password = models.CharField(max_length=128, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
-    root_folder = models.ForeignKey(
-        "Folder", null=True, blank=True, on_delete=models.CASCADE, related_name="shareable_links",
-    )
-    root_file = models.ForeignKey(
-        "File", null=True, blank=True, on_delete=models.CASCADE, related_name="shareable_links",
-    )
+    root_folder = models.ForeignKey("Folder", null=True, blank=True, on_delete=models.CASCADE, related_name="shareable_links")
+    root_file = models.ForeignKey("File", null=True, blank=True, on_delete=models.CASCADE, related_name="shareable_links")
 
     class Meta:
         constraints = [
@@ -37,7 +33,7 @@ class ShareableLink(models.Model):
 
             # Password cannot be empty string
             CheckConstraint(
-                condition=(Q(password_verifier__isnull=True) | ~Q(password_verifier__exact="")),
+                condition=(Q(password__isnull=True) | ~Q(password__exact="")),
                 name="%(class)s_password_verifier_not_empty",
             ),
             CheckConstraint(
@@ -67,7 +63,7 @@ class ShareableLink(models.Model):
         return timezone.now() >= self.expiration_time
 
     def is_locked(self):
-        return bool(self.password_verifier)
+        return bool(self.password)
 
     def get_type(self):
         if self.root_folder_id is not None:

@@ -96,25 +96,27 @@ export default {
 
          const fileIds = this.sortedItems
            .slice(Math.max(0, currentIndex - 45), currentIndex + 45)
+           .filter(item => item.type === 'Video' || item.type === 'Audio')
            .map(item => item.id)
 
          fileIds.forEach(id => this.loadingMediaPositionIds.add(id))
 
          try {
-            const positions = await getMediaPositions({ ids: fileIds })
+            if (fileIds.length !== 0) {
+               const positions = await getMediaPositions({ ids: fileIds })
 
-            for (const position of positions) {
-               const existing = this.mediaPositions.find(
-                 pos => pos.file_id === position.file_id
-               )
+               for (const position of positions) {
+                  const existing = this.mediaPositions.find(
+                    pos => pos.file_id === position.file_id
+                  )
 
-               if (existing) {
-                  Object.assign(existing, position)
-               } else {
-                  this.mediaPositions.push(position)
+                  if (existing) {
+                     Object.assign(existing, position)
+                  } else {
+                     this.mediaPositions.push(position)
+                  }
                }
             }
-
             fileIds.forEach(id => this.checkedMediaPositionIds.add(id))
          } finally {
             fileIds.forEach(id => this.loadingMediaPositionIds.delete(id))

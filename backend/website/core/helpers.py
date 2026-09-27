@@ -238,7 +238,7 @@ def get_public_ip():
 
 def hash_direct_folder_entries(file_entries: list[dict], child_entries: list[dict]) -> str:
     hasher = hashlib.sha256()
-    for entry in sorted(file_entries, key=lambda item: (item["name"], str(item["crc"]))):
+    for entry in sorted(file_entries, key=lambda item: (item["name"], item["crc"])):
         hasher.update(b"file\0")
         hasher.update(entry["name"].encode("utf-8"))
         hasher.update(b"\0")
@@ -264,10 +264,26 @@ def _get_folder_content_hash(root_folder_id: str, folder_entries: list[dict], fi
         files_by_parent.setdefault(entry["parent_id"], []).append(entry)
 
     def hash_folder(folder_id: str) -> str:
-        children = [
-            {"name": entry["name"], "hash": hash_folder(entry["id"])}
-            for entry in folders_by_parent.get(folder_id, [])
-        ]
-        return hash_direct_folder_entries(files_by_parent.get(folder_id, []), children)
+        hasher = hashlib.sha256()
+
+        for entry in sorted(files_by_parent.get(folder_id, []), key=lambda item: (item["name"], item["crc"])):
+            hasher.update(b"file\0")
+            hasher.update(entry["name"].encode("utf-8"))
+            hasher.update(b"\0")
+            hasher.update(str(entry["crc"]).encode("utf-8"))
+            hasher.update(b"\0")
+
+        child_hashes = []
+        for entry in folders_by_parent.get(folder_id, []):
+            child_hashes.append((entry["name"], hash_folder(entry["id"])))
+
+        for name, digest in sorted(child_hashes):
+            hasher.update(b"folder\0")
+            hasher.update(name.encode("utf-8"))
+            hasher.update(b"\0")
+            hasher.update(digest.encode("utf-8"))
+            hasher.update(b"\0")
+
+        return hasher.hexdigest()
 
     return hash_folder(root_folder_id)

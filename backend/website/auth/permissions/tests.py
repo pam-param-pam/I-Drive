@@ -5,17 +5,21 @@ from unittest import TestCase
 from unittest.mock import patch
 from urllib.parse import parse_qs
 
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.test import TestCase as DjangoTestCase
 from django.urls import resolve
 
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
+from website.config import MAX_FOLDER_DEPTH
 from website.core.crypto.signer import sign_resource, unsign_resource
+from website.core.dataModels.http import RequestContext
 from website.models import DeletionScope, File, Folder, FolderLockPolicy, TrashRoot
 
 from .actions import ResourceAction
 from .authorizer import Authorizer
+from website.queries.hierarchy import build_folder_chain, get_folder_chain, load_folder_hierarchy
+from website.services.hierarchy_service import lock_folder_chains
+
 from .contexts import ContextSet, ResourceContext, ResourceContextResolver, ShareContext
 from .credentials import CredentialSet
 from .drf import AllowedNetwork
@@ -34,11 +38,29 @@ class _AnonymousUser:
     is_authenticated = False
 
 
+class CorruptedHierarchyTests(TestCase):
+    def test_cycle_is_reported_as_corrupted_namespace_state(self):
+        folders = {
+            "a": SimpleNamespace(parent_id="b"),
+            "b": SimpleNamespace(parent_id="a"),
+        }
+        with self.assertRaises(MalformedDatabaseState):
+            build_folder_chain("a", folders)
+
+    def test_excessive_persisted_depth_is_reported_as_corrupted_namespace_state(self):
+        folders = {
+            str(index): SimpleNamespace(parent_id=str(index + 1))
+            for index in range(MAX_FOLDER_DEPTH + 2)
+        }
+        with self.assertRaises(MalformedDatabaseState):
+            build_folder_chain("0", folders)
+
+
 def _request(user=None):
     return SimpleNamespace(
         user=user or _User(),
         auth=SimpleNamespace(device_id="device-1"),
-        context=SimpleNamespace(device_id="device-1", request_id="request-1"),
+        context=SimpleNamespace(device_id="device-1", request_id="request-1", client_ip="127.0.0.1"),
         META={"REMOTE_ADDR": "127.0.0.1"},
     )
 
@@ -57,7 +79,7 @@ def _context(**overrides):
         "effective_deletion_scope_id": None,
         "effective_lock_policy_id": None,
         "effective_lock_policy_name": None,
-        "effective_lock_password_verifier": None,
+        "effective_lock_password": None,
         "resource_version": 3,
     }
     values.update(overrides)
@@ -85,6 +107,13 @@ class PermissionApiTests(TestCase):
     def setUp(self):
         self.user_principal = PrincipalFactory.from_authenticated_request(_request())
 
+    def test_request_context_preserves_client_ip(self):
+        context = RequestContext(7, "device-1", "request-1", "192.0.2.1")
+        self.assertEqual(context.without_device_id().client_ip, "192.0.2.1")
+        restored = RequestContext.deserialize(context.__json__())
+        self.assertEqual(restored.client_ip, "192.0.2.1")
+        self.assertEqual(restored.device_id, "device-1")
+
     def test_principals_can_be_constructed_directly(self):
         principal = UserPrincipal(7, "device", "request", "127.0.0.1")
         self.assertEqual(principal.user_id, 7)
@@ -99,13 +128,12 @@ class PermissionApiTests(TestCase):
                 with self.subTest(action=action):
                     self.assertEqual(policy.disclosure, Disclosure.NOT_FOUND)
 
-    def test_policies_are_keyword_only_and_immutable(self):
+    def test_policies_are_keyword_only_and_preserve_set_values(self):
         with self.assertRaises(TypeError):
             ActionPolicy({PrincipalKind.USER})
-        policy = PolicyRegistry.get(ResourceAction.READ)
-        self.assertIsInstance(policy.resource_types, frozenset)
-        with self.assertRaises(AttributeError):
-            policy.resource_types.add(ResourceType.FILE)
+        resource_types = {ResourceType.FILE}
+        policy = ActionPolicy(principal_kinds={PrincipalKind.USER}, resource_types=resource_types)
+        self.assertIs(policy.resource_types, resource_types)
 
     @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
     def test_resource_state_and_trash_decisions(self, _get_permissions):
@@ -138,6 +166,23 @@ class PermissionApiTests(TestCase):
             Authorizer().authorize_user_action(
                 self.user_principal, ResourceAction.RENAME, ContextSet((root,)),
             )
+
+    @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
+    def test_locked_rename_restore_and_delete_accept_valid_credentials(self, _get_permissions):
+        locked = _context(effective_lock_policy_id="folder-1", effective_lock_password="secret")
+        trashed = replace(locked, explicit_trash_root=True, effective_trash_root_id="file-1")
+        for action, context in (
+            (ResourceAction.RENAME, locked),
+            (ResourceAction.RESTORE, trashed),
+            (ResourceAction.REQUEST_DELETE, trashed),
+        ):
+            with self.subTest(action=action):
+                with self.assertRaises(PermissionPasswordError):
+                    Authorizer().authorize_user_action(self.user_principal, action, ContextSet((context,)))
+                Authorizer().authorize_user_action(
+                    self.user_principal, action, ContextSet((context,)),
+                    CredentialSet({"folder-1": "secret"}),
+                )
 
     @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
     def test_file_batch_uses_same_state_and_trash_rules(self, _get_permissions):
@@ -177,7 +222,7 @@ class PermissionApiTests(TestCase):
             root_type=ResourceType.FOLDER,
             root_id="folder-1",
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
-            password_verifier=None,
+            password=None,
         )
         root = _context(resource_type=ResourceType.FOLDER, resource_id="folder-1", role=ResourceRole.SHARE_ROOT)
         Authorizer().authorize_share_action(
@@ -223,13 +268,15 @@ class PermissionApiTests(TestCase):
             (signed, _context(resource_type=ResourceType.FOLDER), ResourcePermissionError, "requires a file"),
             (signed, _context(effective_deletion_scope_id="scope-1"), ResourcePermissionError, "being deleted"),
             (signed, _context(direct_state="remote_missing"), ResourcePermissionError, "not active"),
-            (signed, _context(effective_trash_root_id="folder-1"), ResourcePermissionError, "trash"),
+            (signed, _context(effective_trash_root_id="folder-1", effective_lock_policy_id="folder-1"), ResourcePermissionError, "locked file in trash"),
             (signed, _context(resource_id="file-2"), ResourceNotFoundError, ""),
             (replace(signed, client_ip="invalid-ip"), _context(effective_lock_policy_id="folder-1"), ResourceNotFoundError, ""),
         ):
             with self.subTest(message=message), self.assertRaises(error) as raised:
                 Authorizer().authorize_signed_resource(principal, context)
             self.assertIn(message, str(raised.exception))
+
+        Authorizer().authorize_signed_resource(signed, _context(effective_trash_root_id="folder-1"))
 
     def test_signed_resource_remains_valid_after_file_version_changes(self):
         signed = SignedResourcePrincipal(
@@ -242,11 +289,11 @@ class PermissionApiTests(TestCase):
         Authorizer().authorize_signed_resource(signed, context)
 
     @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
-    def test_authorization_result_does_not_expose_verifier(self, _get_permissions):
+    def test_authorization_result_does_not_expose_password(self, _get_permissions):
         context = _context(
             effective_lock_policy_id="folder-1",
             effective_lock_policy_name="Private",
-            effective_lock_password_verifier=make_password("secret"),
+            effective_lock_password="secret",
         )
         result = Authorizer().authorize_user_action(
             self.user_principal,
@@ -255,14 +302,14 @@ class PermissionApiTests(TestCase):
             CredentialSet({"folder-1": "secret"}),
         )
         self.assertEqual(result.resources[0].effective_lock_policy_id, "folder-1")
-        self.assertFalse(hasattr(result.resources[0], "password_verifier"))
+        self.assertFalse(hasattr(result.resources[0], "password"))
 
     @patch("website.auth.permissions.authorizer.UserPerms.objects.get", return_value=_permissions())
     def test_bulk_lock_failures_are_deduplicated(self, _get_permissions):
-        verifier = make_password("secret")
+        password = "secret"
         contexts = ContextSet((
-            _context(effective_lock_policy_id="folder-1", effective_lock_policy_name="Private", effective_lock_password_verifier=verifier),
-            _context(resource_id="file-2", effective_lock_policy_id="folder-1", effective_lock_policy_name="Private", effective_lock_password_verifier=verifier),
+            _context(effective_lock_policy_id="folder-1", effective_lock_policy_name="Private", effective_lock_password=password),
+            _context(resource_id="file-2", effective_lock_policy_id="folder-1", effective_lock_policy_name="Private", effective_lock_password=password),
         ))
         with self.assertRaises(PermissionPasswordError) as raised:
             Authorizer().authorize_user_action(self.user_principal, ResourceAction.READ, contexts)
@@ -285,7 +332,7 @@ class PermissionApiTests(TestCase):
             root_type=ResourceType.FOLDER,
             root_id="folder-1",
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
-            password_verifier=None,
+            password=None,
         )
         wrong_root = _context(role=ResourceRole.SHARE_ROOT)
         with self.assertRaises(ResourceNotFoundError):
@@ -413,6 +460,24 @@ class SignedCapabilityTests(TestCase):
 
 
 class ResourceContextResolverTests(DjangoTestCase):
+    def test_loaded_locked_and_breadcrumb_chains_agree(self):
+        owner = User.objects.create_user(username="hierarchy-owner")
+        root = Folder.objects.create(name="root", owner=owner)
+        parent = Folder.objects.create(name="parent", owner=owner, parent=root)
+        child = Folder.objects.create(name="child", owner=owner, parent=parent)
+        sibling = Folder.objects.create(name="sibling", owner=owner, parent=root)
+        child_id, sibling_id = str(child.id), str(sibling.id)
+
+        folders, chains = load_folder_hierarchy(owner.id, {child_id, sibling_id})
+        self.assertEqual(set(folders), {str(root.id), str(parent.id), child_id, sibling_id})
+        self.assertEqual(chains[child_id], (child_id, str(parent.id), str(root.id)))
+        self.assertEqual(chains[sibling_id], (sibling_id, str(root.id)))
+        self.assertEqual(lock_folder_chains(owner.id, [child_id]).chain(child_id), chains[child_id])
+        self.assertEqual(
+            tuple(str(folder.id) for folder in get_folder_chain(child_id, owner.id)),
+            tuple(reversed(chains[child_id])),
+        )
+
     def test_file_context_contains_inherited_namespace_facts(self):
         owner = User.objects.create_user(username="owner")
         root = Folder.objects.create(name="root", owner=owner)
@@ -430,7 +495,7 @@ class ResourceContextResolverTests(DjangoTestCase):
         FolderLockPolicy.objects.create(
             folder=locked_folder,
             owner=owner,
-            password_verifier=make_password("secret"),
+            password="secret",
         )
         TrashRoot.objects.create(folder=locked_folder, owner=owner)
         deletion_scope = DeletionScope.objects.create(owner=owner, root_folder=locked_folder)

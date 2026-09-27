@@ -101,7 +101,7 @@ export const useMainStore = defineStore("main", {
          let orderFactor = this.settings.sortByAsc ? 1 : -1
          let filteredItems
          if (hideLocked) {
-            filteredItems = items.filter(item => !item.isLocked)
+            filteredItems = items.filter(item => !item.isDir || !item.isLocked || item.in_trash_since)
          } else {
             filteredItems = items.slice()
          }

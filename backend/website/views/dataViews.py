@@ -29,7 +29,7 @@ from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, 
 from website.models.mixin_models import ItemState
 from website.queries.file_lock_annotations import file_lock_annotations
 from website.queries.hierarchy import get_descendant_folder_ids
-from website.queries.builders import build_breadcrumbs, calculate_size, calculate_file_and_folder_count, build_file_path
+from website.queries.builders import build_breadcrumbs, build_file_path
 from website.queries.selectors import check_if_bots_exists
 from website.services import cache_service, search_service
 from website.services.resource_query_service import FileQueryService, FolderQueryService, ItemQueryService, TrashQueryService
@@ -155,61 +155,48 @@ def fetch_additional_info(request, item_id):
     isTrash = validate_key(request.GET, "isTrash", bool, default=False, converter=param_to_bool)
     principal, credentials = _inputs(request)
     action = ResourceAction.READ_TRASH if isTrash else ResourceAction.READ
-    authorized = ItemQueryService.get(principal, item_id, action, credentials)
-    item_obj = authorized.file if hasattr(authorized, "file") else authorized.folder
+    item_obj = FileQueryService.get(principal, item_id, action, credentials).file
 
-    if isinstance(item_obj, Folder):
-        if isTrash:
-            folder_used_size = calculate_size(item_obj, includeTrash=True)
-            folder_count, file_count = calculate_file_and_folder_count(item_obj, includeTrash=True)
-        else:
-            subtree = FolderQueryService.list_subtree(principal, str(item_obj.id), credentials)
-            folder_used_size = sum(file.size for file in subtree.files)
-            folder_count = max(0, len(subtree.folders) - 1)
-            file_count = len(subtree.files)
-        return JsonResponse({"folder_size": folder_used_size, "folder_count": folder_count, "file_count": file_count}, status=200)
+    if item_obj.type == "Video":
+        tracks = []
+
+        for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
+            tracks.append(VideoTrackSerializer.serialize_object(track))
+
+        for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
+            tracks.append(AudioTrackSerializer.serialize_object(track))
+
+        for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
+            tracks.append(SubtitleTrackSerializer.serialize_object(track))
+        try:
+            metadata = VideoMetadata.objects.get(file=item_obj)
+        except VideoMetadata.DoesNotExist:
+            raise ResourceNotFoundError("No video metadata for this file :(")
+
+        metadata_dict = {
+            "tracks": tracks, "is_fragmented": metadata.is_fragmented, "is_progressive": metadata.is_progressive,
+            "has_moov": metadata.has_moov, "has_IOD": metadata.has_IOD, "brands": metadata.brands, "mime": metadata.mime,
+        }
+        return JsonResponse(metadata_dict, status=200)
+
+    elif item_obj.type == "Raw image":
+        try:
+            raw_metadata = RawMetadata.objects.get(file=item_obj)
+            metadata_dict = RawMetadataSerializer.serialize_object(raw_metadata)
+            return JsonResponse(metadata_dict, status=200)
+        except RawMetadata.DoesNotExist:
+            raise ResourceNotFoundError("No raw metadata for this file :(")
+
+    elif item_obj.type == "Image":
+        try:
+            photo_metadata = PhotoMetadata.objects.get(file=item_obj)
+            photo_metadata = PhotoMetadataSerializer.serialize_object(photo_metadata)
+            return JsonResponse(photo_metadata, status=200)
+        except PhotoMetadata.DoesNotExist:
+            raise ResourceNotFoundError("No photo metadata for this file :(")
 
     else:
-        if item_obj.type == "Video":
-            tracks = []
-
-            for track in VideoTrack.objects.filter(video_metadata__file=item_obj):
-                tracks.append(VideoTrackSerializer.serialize_object(track))
-
-            for track in AudioTrack.objects.filter(video_metadata__file=item_obj):
-                tracks.append(AudioTrackSerializer.serialize_object(track))
-
-            for track in SubtitleTrack.objects.filter(video_metadata__file=item_obj):
-                tracks.append(SubtitleTrackSerializer.serialize_object(track))
-            try:
-                metadata = VideoMetadata.objects.get(file=item_obj)
-            except VideoMetadata.DoesNotExist:
-                raise ResourceNotFoundError("No video metadata for this file :(")
-
-            metadata_dict = {
-                "tracks": tracks, "is_fragmented": metadata.is_fragmented, "is_progressive": metadata.is_progressive,
-                "has_moov": metadata.has_moov, "has_IOD": metadata.has_IOD, "brands": metadata.brands, "mime": metadata.mime,
-            }
-            return JsonResponse(metadata_dict, status=200)
-
-        elif item_obj.type == "Raw image":
-            try:
-                raw_metadata = RawMetadata.objects.get(file=item_obj)
-                metadata_dict = RawMetadataSerializer.serialize_object(raw_metadata)
-                return JsonResponse(metadata_dict, status=200)
-            except RawMetadata.DoesNotExist:
-                raise ResourceNotFoundError("No raw metadata for this file :(")
-
-        elif item_obj.type == "Image":
-            try:
-                photo_metadata = PhotoMetadata.objects.get(file=item_obj)
-                photo_metadata = PhotoMetadataSerializer.serialize_object(photo_metadata)
-                return JsonResponse(photo_metadata, status=200)
-            except PhotoMetadata.DoesNotExist:
-                raise ResourceNotFoundError("No photo metadata for this file :(")
-
-        else:
-            raise ResourcePermissionError("Wrong item type")
+        raise ResourcePermissionError("Wrong item type")
 
 
 @api_view(['POST'])
@@ -230,9 +217,8 @@ def get_trash(request):
 
     file_dicts = []
     for file in files:
-        item = FileSerializer.serialize_object(file, sign_urls=False)
-        item.pop("download_url", None)
-        item.pop("thumbnail_url", None)
+        item = FileSerializer.serialize_object(file)
+        item.pop("zip_entry_url", None)
         item.pop("_download_path", None)
         item.pop("_thumbnail_path", None)
         item.pop("iv", None)
@@ -287,7 +273,7 @@ def get_subtitles(request, file_id):
 def get_all_tags(request):
     principal, _ = _inputs(request)
     from website.services import user_service
-    user_service.authorize_user(principal, ResourceAction.READ_ACCOUNT)
+    user_service.authorize_user(principal, ResourceAction.READ)
     tags = Tag.objects.filter(owner=request.user)
     return JsonResponse(TagSerializer.serialize_objects(tags), safe=False)
 

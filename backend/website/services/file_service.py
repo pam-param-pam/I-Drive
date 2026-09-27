@@ -26,6 +26,7 @@ from website.models import (
     Moment, Subtitle, SubtitleTrack, Tag, VideoMetadata,
     VideoMetadataTrackMixin, VideoTrack)
 from website.models.file_related_models import PhotoMetadata, RawMetadata
+from website.models.other_models import RawExtractionClaim
 from website.models.mixin_models import DiscordAttachmentMixin, ItemState
 from website.auth.permissions import (
     Authorizer, ContextSet, CredentialSet, ResourceAction,
@@ -115,7 +116,7 @@ def _change_trash_state(
         namespace_lock_service.lock_owner_scope_shared(owner_id)
         locked = lock_files_and_parents(owner_id, file_ids)
         contexts = context_resolver.resolve_many(
-            [ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids],
+            [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids],
             owner_id,
             locked.hierarchy,
         )
@@ -275,6 +276,58 @@ def _create_photo_metadata(file_obj: File, metadata: dict) -> PhotoMetadata:
 
 
 class FileService:
+    @staticmethod
+    def complete_raw_image_extraction(
+        owner_id: int,
+        file_id: str,
+        claim_attempts: int,
+        metadata: dict,
+        thumbnail: dict | None = None,
+        failed: bool = False,
+    ) -> bool:
+        """Commit a claimed raw-image result and its cache versions together."""
+        if failed == (thumbnail is not None):
+            raise BadRequestError("Raw extraction requires a thumbnail on success and none on failure")
+        with transaction.atomic():
+            namespace_lock_service.lock_owner_scope_shared(owner_id)
+            locked = lock_files_and_parents(owner_id, [file_id])
+            file_obj = locked.require_locked_file(file_id)
+            claim = RawExtractionClaim.objects.select_for_update().filter(file_id=file_id).first()
+            if claim is None or claim.attempts != claim_attempts:
+                return False
+            if claim.state != RawExtractionClaim.State.RUNNING and not failed:
+                return False
+            context = context_resolver.resolve_file(file_id, owner_id, locked.hierarchy)
+            if context.is_deleting or context.is_trashed or file_obj.state != ItemState.ACTIVE:
+                return False
+            if file_obj.type != "Raw image":
+                return False
+            if RawMetadata.objects.filter(file_id=file_id).exists() or hasattr(file_obj, "thumbnail"):
+                RawExtractionClaim.objects.filter(file_id=file_id).delete()
+                return False
+
+            if thumbnail is not None:
+                thumbnail_service.add_to_new_file(locked, file_id, thumbnail)
+            raw_metadata = _create_raw_metadata(file_obj, metadata)
+            if failed:
+                raw_metadata.failed_to_process = True
+                raw_metadata.save(update_fields=["failed_to_process"])
+            File.objects.filter(id=file_id).update(last_modified_at=timezone.now())
+            bump_file_resources([file_id])
+            bump_folder_listings([file_obj.parent_id])
+            RawExtractionClaim.objects.filter(file_id=file_id).delete()
+
+            def notify_after_commit():
+                updated = File.objects.select_related("parent").get(id=file_id)
+                send_event(
+                    RequestContext.from_user(owner_id), updated.parent,
+                    EventCode.ITEM_UPDATE, FileSerializer.serialize_object(updated),
+                )
+
+            transaction.on_commit(lambda: thumbnail_service._cleanup_committed_cache(file_id), robust=True)
+            transaction.on_commit(notify_after_commit, robust=True)
+            return True
+
     @staticmethod
     def create(principal: UserPrincipal, parent_id: str, name: str, size: int, frontend_id: str, encryption_method: int, crc: int,
                fragments: list[dict], key_b64: str | None = None, iv_b64: str | None = None, created_at=None, thumbnail: dict | None = None,
@@ -614,7 +667,7 @@ class FileService:
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)
             locked = lock_files_and_parents(owner_id, file_ids)
             contexts = context_resolver.resolve_many(
-                [ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids],
+                [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids],
                 owner_id,
                 locked.hierarchy,
             )
@@ -789,6 +842,7 @@ class FileService:
             if not Fragment.objects.select_for_update().filter(id=fragment_id, file_id=file_obj.id).exists():
                 raise ResourceNotFoundError()
             File.objects.filter(id=file_obj.id).update(state=ItemState.REMOTE_MISSING, state_changed_at=timezone.now())
+            dirty_hashes(locked.hierarchy.chain(str(file_obj.parent_id)))
             bump_file_resources([file_obj.id])
             bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])

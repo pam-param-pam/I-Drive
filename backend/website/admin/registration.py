@@ -73,7 +73,7 @@ class TrashRootAdmin(InternalNamespaceAdmin):
 class FolderLockPolicyAdmin(InternalNamespaceAdmin):
     list_display = ("folder", "owner", "created_at", "updated_at")
     list_select_related = ("folder", "owner")
-    exclude = ("password_verifier",)
+    exclude = ("password",)
 
 
 @admin.register(FolderHashWork)
@@ -167,7 +167,7 @@ class FolderAdmin(SimpleHistoryAdmin):
     @easy.smart(short_description="Is locked", boolean=True)
     def is_locked(self, obj: Folder):
         context = ResourceContextResolver().resolve_folder(str(obj.id), obj.owner_id)
-        return context.effective_lock_policy_id is not None
+        return context.is_locked
 
     @easy.smart(short_description="In trash", boolean=True)
     def is_trashed(self, obj: Folder):
@@ -205,7 +205,7 @@ class FileAdmin(SimpleHistoryAdmin):
     @easy.smart(short_description="Locked", boolean=True)
     def is_locked(self, obj: File):
         context = ResourceContextResolver().resolve_file(str(obj.id), obj.owner_id)
-        return context.effective_lock_policy_id is not None
+        return context.is_locked
 
     @easy.smart(short_description="In trash", boolean=True)
     def is_trashed(self, obj: File):
@@ -349,7 +349,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
 @admin.register(ShareableLink)
 class ShareableLinkAdmin(admin.ModelAdmin):
     list_display = ('id', 'resource_link', 'get_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
-    readonly_fields = ('token', 'password_verifier', 'root_folder', 'root_file', 'resource_link', 'root_id', 'get_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
+    readonly_fields = ('token', 'password', 'root_folder', 'root_file', 'resource_link', 'root_id', 'get_type', 'owner', 'is_expired', 'expiration_time', 'created_at')
 
     def has_add_permission(self, request):
         return False

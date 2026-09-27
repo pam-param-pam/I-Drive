@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
@@ -250,7 +249,7 @@ class FolderService:
             )
             FolderLockPolicy.objects.update_or_create(
                 folder_id=folder.id,
-                defaults={"owner_id": owner_id, "password_verifier": make_password(password)},
+                defaults={"owner_id": owner_id, "password": password},
             )
             bump_folder_resources([folder.id])
             folder.refresh_from_db(fields=["resource_version"])
@@ -300,7 +299,7 @@ class FolderService:
                 FolderLockPolicy.objects.create(
                     folder_id=folder.id,
                     owner_id=owner_id,
-                    password_verifier=make_password(replacement_password),
+                    password=replacement_password,
                 )
             bump_folder_resources([folder.id])
             folder.refresh_from_db(fields=["resource_version"])

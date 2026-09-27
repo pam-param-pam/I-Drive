@@ -172,7 +172,7 @@ class FileSerializer(AdvancedSerializer):
                 signed = ""
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
-            if sign_urls:
+            if sign_urls and not in_trash:
                 d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
             if thumbnail_id:
@@ -231,7 +231,7 @@ class ShareFileSerializer(FileSerializer):
                 signed = sign_resource(download_path)
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
-            if sign_urls:
+            if sign_urls and not in_trash:
                 d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
             if thumbnail_id:
@@ -252,12 +252,15 @@ class FolderSerializer(SimpleSerializer):
     @staticmethod
     def serialize_object(folder_obj: Folder) -> dict:
         context = ResourceContextResolver().resolve_folder(str(folder_obj.id), folder_obj.owner_id)
-        is_locked = context.effective_lock_policy_id is not None
+        is_locked = context.is_locked
         folder_dict = {
             'isDir': True,
             'id': folder_obj.id,
             'name': folder_obj.name,
             'parent_id': folder_obj.parent.id if folder_obj.parent else None,
+            'size': folder_obj.visible_descendant_file_size,
+            'folder_count': folder_obj.visible_descendant_folder_count,
+            'file_count': folder_obj.visible_descendant_file_count,
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
             'isLocked': is_locked,
@@ -285,6 +288,9 @@ class ShareFolderSerializer(SimpleSerializer):
             'id': folder_obj.id,
             "parent_id": folder_obj.parent.id,
             'name': folder_obj.name,
+            'size': folder_obj.visible_descendant_file_size,
+            'folder_count': folder_obj.visible_descendant_folder_count,
+            'file_count': folder_obj.visible_descendant_file_count,
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
         }

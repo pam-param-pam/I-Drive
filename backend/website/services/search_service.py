@@ -14,7 +14,7 @@ from website.queries.file_lock_annotations import file_lock_annotations
 from website.queries.hierarchy import get_descendant_folder_ids
 from website.auth.permissions import (
     Authorizer, ContextSet, CredentialSet, ResourceAction,
-    ResourceContextResolver, ResourceRef, ResourceType, UserPrincipal)
+    ResourceContextResolver, ResourceRef, ResourceRole, ResourceType, UserPrincipal)
 
 
 authorizer = Authorizer()
@@ -266,11 +266,7 @@ def build_attr_filter(filter_obj):
 
     return None
 
-def perform_search(
-    principal: UserPrincipal,
-    data: dict,
-    credentials: CredentialSet | None = None,
-):
+def perform_search(principal: UserPrincipal, data: dict, credentials: CredentialSet | None = None):
     validated = validate_search_request(data)
 
     query = validated["query"]
@@ -345,8 +341,8 @@ def perform_search(
         .values_list("id", flat=True)[:candidate_limit]
     ) if include_folders else []
 
-    refs = [ResourceRef(ResourceType.FILE, file_id) for file_id in file_candidate_ids]
-    refs.extend(ResourceRef(ResourceType.FOLDER, folder_id) for folder_id in folder_candidate_ids)
+    refs = [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_candidate_ids]
+    refs.extend(ResourceRef(ResourceType.FOLDER, folder_id, ResourceRole.TARGET) for folder_id in folder_candidate_ids)
     contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())
     authorization = authorizer.filter_user_contexts(
         principal, ResourceAction.SEARCH, contexts, credentials,
@@ -368,15 +364,8 @@ def perform_search(
             .annotate(**File.get_display_annotate(), **file_lock_annotations())
             .values_list(*File.DISPLAY_VALUES)[:result_limit]
         )
-        for file_obj in files:
-            item = FileSerializer.serialize_tuple(file_obj, sign_urls=False)
-            item.pop("download_url", None)
-            item.pop("thumbnail_url", None)
-            item.pop("_download_path", None)
-            item.pop("_thumbnail_path", None)
-            item.pop("iv", None)
-            item.pop("key", None)
-            result.append(item)
+        result.extend(FileSerializer.serialize_tuple(f) for f in files)
+
     if include_folders and authorized_folders:
         folders = (
             Folder.objects.filter(id__in=authorized_folders)

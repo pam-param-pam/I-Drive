@@ -39,7 +39,7 @@ export default {
    },
 
    computed: {
-      ...mapState(useMainStore, ["currentFolder", "selected"])
+      ...mapState(useMainStore, ["currentFolder", "selected", "settings"])
    },
 
    mounted() {
@@ -51,7 +51,7 @@ export default {
          let res = await getItems(folder.id, folder.lockFrom)
 
          let dirs = res.folder.children
-            .filter(item => item.isDir)
+            .filter(item => item.isDir && (!this.settings?.hideLockedFolders || !item.isLocked))
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
 
          if (res.folder.parent_id) {

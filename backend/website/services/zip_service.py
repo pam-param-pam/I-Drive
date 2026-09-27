@@ -1,12 +1,12 @@
 from django.db import transaction
 
 from website.constants import MAX_FILES_IN_ZIP
-from website.core.errors import BadRequestError
+from website.core.errors import BadRequestError, ResourcePermissionError
 from website.core.helpers import validate_ids_as_list
 from website.models import Folder, UserZIP
 from website.auth.permissions import (
     Authorizer, CredentialSet, ResourceAction, ResourceContextResolver,
-    ResourceRef, ResourceType, SharePrincipal, UserPrincipal)
+    ResourceRef, ResourceRole, ResourceType, SharePrincipal, UserPrincipal)
 from website.services import namespace_lock_service
 from website.services.namespace_command_support import lock_files_and_parents
 
@@ -29,7 +29,7 @@ def _normalize_items(items: list[dict]) -> tuple[ResourceRef, ...]:
         if key in seen:
             raise BadRequestError("Duplicate ZIP items are not allowed")
         seen.add(key)
-        refs.append(ResourceRef(resource_type, resource_id))
+        refs.append(ResourceRef(resource_type, resource_id, ResourceRole.TARGET))
     return tuple(refs)
 
 
@@ -47,6 +47,8 @@ def create_zip_model(
         namespace_lock_service.lock_owner_scope_shared(owner_id)
         locked = lock_files_and_parents(owner_id, file_ids, folder_ids)
         contexts = context_resolver.resolve_many(refs, owner_id, locked.hierarchy)
+        if any(context.is_trashed for context in contexts):
+            raise ResourcePermissionError("ZIP downloads of items in trash are not allowed")
         authorizer.authorize_user_action(principal, ResourceAction.DOWNLOAD, contexts, credentials)
 
         parent_ids = {context.parent_id for context in contexts}

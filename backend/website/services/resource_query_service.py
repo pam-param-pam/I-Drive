@@ -9,7 +9,7 @@ from website.queries.hierarchy import get_descendant_folder_ids
 from website.core.errors import BadRequestError
 from website.auth.permissions import (
     AuthorizationResult, Authorizer, ContextSet, CredentialSet,
-    ResourceAction, ResourceContextResolver, ResourceRef, ResourceType,
+    ResourceAction, ResourceContextResolver, ResourceRef, ResourceRole, ResourceType,
     UserPrincipal)
 
 
@@ -69,7 +69,7 @@ class FileQueryService:
         action: ResourceAction = ResourceAction.READ,
         credentials: CredentialSet | None = None,
     ) -> tuple[File, ...]:
-        refs = tuple(ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids)
+        refs = tuple(ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids)
         contexts = context_resolver.resolve_many(refs, principal.user_id)
         authorizer.authorize_user_action(principal, action, contexts, credentials)
         files_by_id = {
@@ -120,7 +120,7 @@ class FolderQueryService:
             .annotate(
                 **File.get_display_annotate(),
                 is_locked=Value(
-                    parent_context.effective_lock_policy_id is not None,
+                    parent_context.is_locked,
                     output_field=BooleanField(),
                 ),
                 lock_from_id=Value(
@@ -142,23 +142,21 @@ class FolderQueryService:
         folder = Folder.objects.select_related("owner", "parent").get(
             id=folder_id, owner_id=principal.user_id,
         )
-        folder_ids = list(
-            Folder.objects.filter(owner_id=principal.user_id, parent_id=folder_id)
-            .filter(state=ItemState.ACTIVE, trash_root__isnull=True)
-            .values_list("id", flat=True)
-        )
-        refs = [ResourceRef(ResourceType.FOLDER, child_id) for child_id in folder_ids]
-        contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())
-        visible = authorizer.filter_user_contexts(
-            principal, ResourceAction.READ, contexts, credentials,
-        )
-        visible_folder_ids = {
-            resource.resource_id for resource in visible.resources
-            if resource.resource_type == ResourceType.FOLDER.value
-        }
+        # The parent is authorized above. Listing a child's metadata must not
+        # require the child's password; opening that child still does.
         folders = tuple(
-            Folder.objects.filter(owner_id=principal.user_id, id__in=visible_folder_ids)
-            .select_related("parent")
+            Folder.objects.filter(
+                owner_id=principal.user_id,
+                parent_id=folder_id,
+                state=ItemState.ACTIVE,
+                trash_root__isnull=True,
+            ).annotate(
+                has_active_deletion=Exists(DeletionScope.objects.filter(
+                    owner_id=principal.user_id,
+                    root_folder_id=OuterRef("pk"),
+                    state=DeletionScope.State.ACTIVE,
+                ))
+            ).filter(has_active_deletion=False).select_related("parent")
         )
         return FolderListing(
             folder,
@@ -179,8 +177,8 @@ class FolderQueryService:
             str(value) for value in File.objects.filter(owner_id=principal.user_id, parent_id__in=folder_ids)
             .values_list("id", flat=True)[:1000]
         ]
-        refs = [ResourceRef(ResourceType.FOLDER, value) for value in folder_ids]
-        refs.extend(ResourceRef(ResourceType.FILE, value) for value in file_ids)
+        refs = [ResourceRef(ResourceType.FOLDER, value, ResourceRole.TARGET) for value in folder_ids]
+        refs.extend(ResourceRef(ResourceType.FILE, value, ResourceRole.TARGET) for value in file_ids)
         contexts = context_resolver.resolve_many(refs, principal.user_id)
         visible = authorizer.filter_user_contexts(principal, ResourceAction.READ, contexts, credentials)
         visible_files = {
@@ -221,8 +219,8 @@ class TrashQueryService:
         )
         file_ids = list(File.objects.filter(owner_id=principal.user_id, trashed_at__isnull=False)
                         .values_list("id", flat=True))
-        refs = [ResourceRef(ResourceType.FOLDER, folder_id) for folder_id in folder_ids]
-        refs.extend(ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids)
+        refs = [ResourceRef(ResourceType.FOLDER, folder_id, ResourceRole.TARGET) for folder_id in folder_ids]
+        refs.extend(ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids)
         contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())
         authorizer.authorize_user_action(
             principal, ResourceAction.LIST_TRASH, contexts, credentials,

@@ -5,7 +5,7 @@ from httpx import Response
 class IDriveException(Exception):
     """A base class for all I Drive exceptions."""
 
-class MalformedDatabaseRecord(IDriveException):
+class MalformedDatabaseState(IDriveException):
     """Raised when data is malformed in the database."""
 
 class ResourceNotFoundError(IDriveException):

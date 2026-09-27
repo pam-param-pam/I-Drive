@@ -3,6 +3,9 @@ import uuid
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
 
+from django.conf import settings
+
+from website.auth.utils import _trusted_client_ip
 from website.core.dataModels.http import RequestContext
 from website.models import PerDeviceToken
 
@@ -32,7 +35,7 @@ class PerDeviceTokenAuthentication(BaseAuthentication):
             raise exceptions.AuthenticationFailed('Invalid user agent')
 
         request_id = uuid.uuid4().hex
-        request.context = RequestContext(user_id=token_obj.user_id, device_id=token_obj.device_id, request_id=request_id)
+        request.context = RequestContext(user_id=token_obj.user_id, device_id=token_obj.device_id, request_id=request_id, client_ip=_trusted_client_ip(request))
 
         return token_obj.user, token_obj
 

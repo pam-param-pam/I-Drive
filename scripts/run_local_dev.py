@@ -19,7 +19,7 @@ from local_common import (
 )
 
 
-INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 49173)
+INSTANCE_LOCK_ADDRESS = ("127.0.0.1", 55234)
 def main() -> int:
     instance_lock = acquire_instance_lock(INSTANCE_LOCK_ADDRESS)
     processes: list[subprocess.Popen] = []

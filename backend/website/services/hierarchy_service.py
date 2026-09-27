@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from website.config import MAX_FOLDER_DEPTH
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
 from website.models import DeletionScope, Folder
+from website.queries.hierarchy import load_folder_hierarchy
 
 
 @dataclass(frozen=True)
@@ -18,77 +19,26 @@ class LockedHierarchy:
         return len(self.chain(folder_id)) - 1
 
 
-def _load_graph(owner_id: int, start_ids: set[str]) -> dict[str, tuple[str | None, int]]:
-    graph: dict[str, tuple[str | None, int]] = {}
-    pending = set(start_ids)
-
-    for _ in range(MAX_FOLDER_DEPTH + 2):
-        pending -= graph.keys()
-        if not pending:
-            return graph
-
-        rows = list(
-            Folder.objects.filter(owner_id=owner_id, id__in=pending)
-            .values_list("id", "parent_id", "subtree_height_bound")
-        )
-        if len(rows) != len(pending):
-            raise ResourceNotFoundError()
-
-        next_pending: set[str] = set()
-        for folder_id, parent_id, height_bound in rows:
-            folder_id = str(folder_id)
-            parent_id = str(parent_id) if parent_id is not None else None
-            graph[folder_id] = (parent_id, height_bound)
-            if parent_id is not None and parent_id not in graph:
-                next_pending.add(parent_id)
-        pending = next_pending
-
-    raise BadRequestError("Folder hierarchy exceeds the configured maximum depth or contains a cycle")
-
-
-def _build_chain(start_id: str, graph: dict[str, tuple[str | None, int]]) -> tuple[str, ...]:
-    chain: list[str] = []
-    seen: set[str] = set()
-    current: str | None = str(start_id)
-
-    while current is not None:
-        if current in seen:
-            raise BadRequestError("Folder hierarchy contains a cycle")
-        if current not in graph:
-            raise ResourceNotFoundError()
-        seen.add(current)
-        chain.append(current)
-        current = graph[current][0]
-        if len(chain) > MAX_FOLDER_DEPTH + 1:
-            raise BadRequestError("Folder hierarchy exceeds the configured maximum depth")
-
-    return tuple(chain)
-
-
 def lock_folder_chains(owner_id: int, folder_ids: Iterable[str]) -> LockedHierarchy:
     owner_id = int(owner_id)
     start_ids = {str(folder_id) for folder_id in folder_ids}
     if not start_ids:
         return LockedHierarchy({}, {})
 
-    snapshot = _load_graph(owner_id, start_ids)
-    locked = list(Folder.objects.select_for_update().filter(owner_id=owner_id, id__in=snapshot.keys()).order_by("id"))
-    if len(locked) != len(snapshot):
+    snapshot_folders, snapshot_chains = load_folder_hierarchy(owner_id, start_ids)
+    locked = list(Folder.objects.select_for_update().filter(owner_id=owner_id, id__in=snapshot_folders).order_by("id"))
+    if len(locked) != len(snapshot_folders):
         raise ResourceNotFoundError()
 
     folders = {str(folder.id): folder for folder in locked}
-    current_graph = {
-        folder_id: (
-            str(folder.parent_id) if folder.parent_id is not None else None,
-            folder.subtree_height_bound,
-        )
+    if any(
+        folder.parent_id != snapshot_folders[folder_id].parent_id
+        or folder.subtree_height_bound != snapshot_folders[folder_id].subtree_height_bound
         for folder_id, folder in folders.items()
-    }
-    if current_graph != snapshot:
+    ):
         raise BadRequestError("Folder hierarchy changed concurrently; retry the request")
 
-    chains = {folder_id: _build_chain(folder_id, current_graph) for folder_id in start_ids}
-    return LockedHierarchy(folders, chains)
+    return LockedHierarchy(folders, snapshot_chains)
 
 
 def assert_not_root(folder: Folder) -> None:
@@ -129,4 +79,4 @@ def assert_no_active_scope_in_subtree(owner_id: int, folder_id: str) -> None:
             .exclude(parent_id__isnull=True)
             .values_list("parent_id", flat=True)
         }
-    raise BadRequestError("Folder hierarchy exceeds the configured maximum depth or contains a cycle")
+    raise MalformedDatabaseState("Folder hierarchy exceeds the configured maximum depth or contains a cycle")

@@ -86,10 +86,12 @@ class File(models.Model):
                 condition=Q(last_modified_at__gte=F("created_at")),
                 name="%(class)s_last_modified_after_created"
             ),
+            # crc must me non-negative or null
             CheckConstraint(
                 condition=Q(crc__gte=0) | Q(crc__isnull=True),
                 name="%(class)s_crc_non_negative_or_null"
             ),
+            # crc must be > 0 or null if size > 0
             CheckConstraint(
                 condition=(
                         Q(size__lte=0, crc=0) |

@@ -9,6 +9,11 @@ import { FilePickerNotSupported } from "@/transfers/downloads/utils/helper.js"
 import { isAxiosError } from "axios"
 import buttons from "@/utils/buttons.js"
 
+function isDownloadAborted(error) {
+   return error?.name === "AbortError" || error?.code === "ABORT_ERR" || error?.code === "ERR_CANCELED" ||
+      error?.aborted === true || (typeof error?.message === "string" && error.message.toLowerCase().includes("aborted"))
+}
+
 export async function smartDownload({ shareToken = null, zipEntryDownload = false } = {}) {
    try {
       buttons.loading("download")
@@ -53,9 +58,10 @@ async function downloadSingleFile({ file, wsStore, useClientSideDecryption, shar
          await getDownloader().downloadFile(file)
          return
       } catch (error) {
+         if (isDownloadAborted(error)) return
          console.warn("Client-side file download failed", error)
-         if (!(error instanceof FilePickerNotSupported || isAxiosError(error) || "aborted" in error.message)) {
-            showToast("error", error.message)
+         if (!(error instanceof FilePickerNotSupported || isAxiosError(error))) {
+            showToast("error", error?.message ?? String(error))
             return
          }
       }
@@ -74,9 +80,10 @@ async function downloadZip({ ids, useClientSideDecryption, shareToken }) {
          await getDownloader().downloadZip(ids, shareToken)
          return
       } catch (error) {
+         if (isDownloadAborted(error)) return
          console.warn("Client-side ZIP download failed", error)
-         if (!(error instanceof FilePickerNotSupported || isAxiosError(error) || "aborted" in error.message)) {
-            showToast("error", error.message)
+         if (!(error instanceof FilePickerNotSupported || isAxiosError(error))) {
+            showToast("error", error?.message ?? String(error))
             return
          }
       }

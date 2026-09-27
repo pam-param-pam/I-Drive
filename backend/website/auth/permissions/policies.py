@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Mapping
+from typing import AbstractSet, Mapping
 
 from website.models.mixin_models import ItemState
 
@@ -34,7 +34,6 @@ class TrashAccess(StrEnum):
 
 class LockRule(StrEnum):
     REQUIRE_CREDENTIAL = "require_credential"
-    REQUIRE_UNLOCKED = "require_unlocked"
     NETWORK_ONLY = "network_only"
     VERIFY_CREDENTIAL = "verify_credential"
     IGNORE = "ignore"
@@ -47,26 +46,18 @@ class Disclosure(StrEnum):
 
 @dataclass(frozen=True, kw_only=True)
 class ActionPolicy:
-    principal_kinds: frozenset[PrincipalKind]
-    account_capabilities: frozenset[str] = frozenset()
-    resource_types: frozenset[ResourceType] = frozenset()
-    resource_roles: frozenset[ResourceRole] = frozenset({ResourceRole.TARGET})
-    forbidden_root_roles: frozenset[ResourceRole] = frozenset()
-    allowed_states: frozenset[str] = frozenset({ItemState.ACTIVE})
+    principal_kinds: AbstractSet[PrincipalKind]
+    account_capabilities: AbstractSet[str] = frozenset()
+    resource_types: AbstractSet[ResourceType] = frozenset()
+    resource_roles: AbstractSet[ResourceRole] = frozenset({ResourceRole.TARGET})
+    forbidden_root_roles: AbstractSet[ResourceRole] = frozenset()
+    allowed_states: AbstractSet[str] = frozenset({ItemState.ACTIVE})
     trash_access: TrashAccess = TrashAccess.OUTSIDE_TRASH
     lock_rule: LockRule = LockRule.REQUIRE_CREDENTIAL
     ownership_required: bool = True
     disclosure: Disclosure = Disclosure.NOT_FOUND
     resource_context_optional: bool = False
     allow_global_lock: bool = False
-
-    def __post_init__(self) -> None:
-        for field_name in (
-            "principal_kinds", "account_capabilities", "resource_types",
-            "resource_roles", "forbidden_root_roles", "allowed_states",
-        ):
-            object.__setattr__(self, field_name, frozenset(getattr(self, field_name)))
-
 
 _USER = frozenset({PrincipalKind.USER})
 _SHARE = frozenset({PrincipalKind.SHARE})
@@ -113,7 +104,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         account_capabilities={"modify"},
         resource_types=_BOTH_RESOURCES,
         forbidden_root_roles=_TARGET,
-        lock_rule=LockRule.REQUIRE_UNLOCKED,
+        lock_rule=LockRule.REQUIRE_CREDENTIAL,
     ),
     ResourceAction.MOVE: ActionPolicy(
         principal_kinds=_USER,
@@ -134,7 +125,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         resource_types=_BOTH_RESOURCES,
         forbidden_root_roles=_TARGET,
         trash_access=TrashAccess.EXPLICIT_TRASH_ROOT,
-        lock_rule=LockRule.REQUIRE_UNLOCKED,
+        lock_rule=LockRule.REQUIRE_CREDENTIAL,
     ),
     ResourceAction.REQUEST_DELETE: ActionPolicy(
         principal_kinds=_USER,
@@ -142,7 +133,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         resource_types=_BOTH_RESOURCES,
         forbidden_root_roles=_TARGET,
         trash_access=TrashAccess.OUTSIDE_OR_EXPLICIT_ROOT,
-        lock_rule=LockRule.REQUIRE_UNLOCKED,
+        lock_rule=LockRule.REQUIRE_CREDENTIAL,
     ),
     ResourceAction.DOWNLOAD: ActionPolicy(
         principal_kinds=_USER,
@@ -191,7 +182,6 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         resource_roles={ResourceRole.SHARE_ROOT, ResourceRole.SHARE_ITEM},
         lock_rule=LockRule.IGNORE,
         ownership_required=False,
-        disclosure=Disclosure.NOT_FOUND,
     ),
     ResourceAction.DOWNLOAD_SHARE: ActionPolicy(
         principal_kinds=_SHARE,
@@ -199,7 +189,6 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         resource_roles={ResourceRole.SHARE_ROOT, ResourceRole.SHARE_ITEM},
         lock_rule=LockRule.IGNORE,
         ownership_required=False,
-        disclosure=Disclosure.NOT_FOUND,
     ),
     ResourceAction.SEARCH: ActionPolicy(
         principal_kinds=_USER,
@@ -212,6 +201,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         account_capabilities={"read"},
         resource_types=_BOTH_RESOURCES,
         trash_access=TrashAccess.EXPLICIT_TRASH_ROOT,
+        lock_rule=LockRule.IGNORE,
         resource_context_optional=True,
     ),
     ResourceAction.MODIFY_SETTINGS: ActionPolicy(
