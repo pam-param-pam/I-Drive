@@ -44,7 +44,7 @@ class QrLoginConsumer(RateLimitedWebsocketConsumer):
                 self.close_timer.cancel()
                 self.close_timer = None
 
-    def authorize(self) -> tuple[bool, bool, str]:
+    def authorize(self) -> tuple[bool, bool, str | None, str | None]:
         session_id, is_standard_protocol = self.get_token_key()
         self.session_id = session_id
 
@@ -56,9 +56,10 @@ class QrLoginConsumer(RateLimitedWebsocketConsumer):
                 self.close_timer = threading.Timer(QR_CODE_SESSION_EXPIRY + 5, lambda: self.safe_close())
                 self.close_timer.daemon = True
                 self.close_timer.start()
-                return True, is_standard_protocol, session_id
+                return True, is_standard_protocol, session_id, None
 
-        return False, is_standard_protocol, session_id
+        reason = "Missing QR session ID" if not session_id else "QR session not found or expired"
+        return False, is_standard_protocol, session_id, reason
 
     def approve_session(self, event):
         if event["session_id"] == self.session_id:

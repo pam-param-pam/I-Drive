@@ -5,7 +5,7 @@ from website.services import user_service, file_service, thumbnail_service
 from website.core.errors import DiscordBotAttachmentAuthor, DiscordError
 from website.discord.Discord import discord
 from website.models import DiscordAttachmentMixin, Webhook
-from website.queries.selectors import query_attachments, get_file
+from website.queries.selectors import query_attachments
 
 
 def _handle_missing_media_attachment(resource: DiscordAttachmentMixin, owner, file_obj: File, error: DiscordError) -> None:
@@ -50,7 +50,7 @@ def get_attachment_url(user, resource: DiscordAttachmentMixin, file: File | str,
     except DiscordError as error:
         if error.status == 404:
             if isinstance(file, str):
-                file = get_file(file)
+                file = File.objects.get(id=file)
             _handle_missing_media_attachment(resource, user, file, error)
         raise
 

@@ -2,7 +2,7 @@ import re
 
 from django.http import StreamingHttpResponse
 
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.core.errors import DiscordError, RangeNotSatisfiable
 from website.core.media.stream.ByteRange import ByteRange
 from website.core.media.stream.sources.ByteSource import ByteSource

@@ -1,24 +1,8 @@
 from django.db.models import Q
 
-from website.core.errors import ResourceNotFoundError, ResourcePermissionError, BadRequestError, NoBotsError
-from website.models import File, Folder, ShareableLink, Bot, Webhook, Channel, DiscordAttachmentMixin
+from website.core.errors import BadRequestError, NoBotsError
+from website.models import Bot, Webhook, Channel, DiscordAttachmentMixin
 from website.safety.helper import get_classes_extending_discordAttachmentMixin
-
-
-def get_file(file_id: str) -> File:
-    try:
-        file = File.objects.select_related("owner", "parent").get(id=file_id)
-    except File.DoesNotExist:
-        raise ResourceNotFoundError()
-    return file
-
-
-def get_folder(folder_id: str) -> Folder:
-    try:
-        folder = Folder.objects.select_related("owner", "parent").get(id=folder_id)
-    except Folder.DoesNotExist:
-        raise ResourceNotFoundError()
-    return folder
 
 
 def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
@@ -67,16 +51,3 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
         combined_results.extend(cls.objects.filter(query))
 
     return combined_results
-
-
-def get_item_inside_share(share: ShareableLink):
-    if share.is_expired():
-        share.delete()
-        raise ResourcePermissionError("Share has expired")
-
-    try:
-        return share.root
-    except ResourceNotFoundError:
-        # looks like folder/file no longer exist, deleting time!
-        share.delete()
-        raise ResourceNotFoundError()

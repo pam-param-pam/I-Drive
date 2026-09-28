@@ -24,9 +24,7 @@ def build_folder_chain(folder_id: str, folders: Mapping[str, Folder]) -> tuple[s
     return tuple(chain)
 
 
-def load_folder_hierarchy(
-    owner_id: int, start_ids: set[str],
-) -> tuple[dict[str, Folder], dict[str, tuple[str, ...]]]:
+def load_folder_hierarchy(start_ids: set[str]) -> tuple[dict[str, Folder], dict[str, tuple[str, ...]]]:
     """Load all ancestors and their chains in bounded batches."""
     folders: dict[str, Folder] = {}
     pending = set(start_ids)
@@ -34,7 +32,7 @@ def load_folder_hierarchy(
         pending -= folders.keys()
         if not pending:
             break
-        rows = list(Folder.objects.filter(owner_id=owner_id, id__in=pending))
+        rows = list(Folder.objects.filter(id__in=pending))
         if len(rows) != len(pending):
             raise ResourceNotFoundError()
         folders.update((str(folder.id), folder) for folder in rows)
@@ -47,10 +45,10 @@ def load_folder_hierarchy(
     return folders, {folder_id: build_folder_chain(folder_id, folders) for folder_id in start_ids}
 
 
-def get_folder_chain(folder_id: str, owner_id: int) -> tuple[Folder, ...]:
+def get_folder_chain(folder_id: str) -> tuple[Folder, ...]:
     """Return ancestors from root to the requested folder."""
     folder_id = str(folder_id)
-    folders, chains = load_folder_hierarchy(owner_id, {folder_id})
+    folders, chains = load_folder_hierarchy({folder_id})
     return tuple(folders[ancestor_id] for ancestor_id in reversed(chains[folder_id]))
 
 
@@ -81,17 +79,3 @@ def get_descendant_folder_ids(folder_ids: Iterable[str], include_roots: bool = T
     if include_roots:
         return discovered
     return discovered - roots
-
-
-def get_descendant_file_ids(folder_ids: Iterable[str]) -> set[str]:
-    descendant_ids = get_descendant_folder_ids(folder_ids)
-    return _file_ids_in_folders(descendant_ids) if descendant_ids else set()
-
-
-def _file_ids_in_folders(folder_ids: set[str]) -> set[str]:
-    from website.models import File
-
-    return {
-        str(file_id)
-        for file_id in File.objects.filter(parent_id__in=folder_ids).values_list("id", flat=True)
-    }

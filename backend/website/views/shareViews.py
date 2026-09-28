@@ -33,7 +33,7 @@ def _bind_share_urls(items, share_id):
     for item in items:
         if item.get("isDir"):
             continue
-        for key in ("download_url", "zip_entry_url", "thumbnail_url"):
+        for key in ("download_url", "thumbnail_url"):
             if not item.get(key):
                 continue
             path = f"/shares/{share_id}{urlsplit(item[key]).path}"
@@ -131,8 +131,8 @@ def view_share(request, token, folder_id=None):
         )
     share_service.log_event_http(request, resolution, ShareEventType.SHARE_VIEW, share_id=resolution.share_id)
 
-    if resolution.root_type == ResourceType.FOLDER:
-        breadcrumbs = build_share_breadcrumbs(requested if folder_id else root, root, bool(folder_id))
+    if folder_id and resolution.root_type == ResourceType.FOLDER:
+        breadcrumbs = build_share_breadcrumbs(requested, root)
     else:
         breadcrumbs = []
     root_dict = build_share_resource_dict(root)

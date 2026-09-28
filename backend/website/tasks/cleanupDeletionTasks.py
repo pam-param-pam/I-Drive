@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from website.celery import app
 from website.constants import MAX_FILE_DELETION_ATTEMPTS
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.models.delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob
 from website.models.other_models import NotificationType, NotificationKind
 from website.services import user_service

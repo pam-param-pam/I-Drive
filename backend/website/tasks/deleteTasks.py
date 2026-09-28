@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from website.celery import app
 from website.constants import EventCode, MAX_FILE_DELETION_ATTEMPTS
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.core.errors import DiscordError
 from website.discord.Discord import discord
 from website.models import File, Folder, Fragment, Thumbnail, Moment, Subtitle

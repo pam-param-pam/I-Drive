@@ -475,10 +475,7 @@ export default {
             this.isFileExpanded = !this.isFileExpanded
             return
          }
-         let isTrash = false
-         if (this.$route.name === "Trash") isTrash = true
-
-         let res = await fetchAdditionalInfo(item.id, isTrash)
+         let res = await fetchAdditionalInfo(item.id)
          this.metadata = res
          this.isFileExpanded = !this.isFileExpanded
       },

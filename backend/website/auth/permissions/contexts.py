@@ -164,7 +164,7 @@ class ResourceContextResolver:
             raise ResourceNotFoundError()
 
         hierarchy_starts = folder_ids | {str(file_obj.parent_id) for file_obj in files_by_id.values()}
-        hierarchy = locked_hierarchy or LockedHierarchy(*load_folder_hierarchy(owner_id, hierarchy_starts))
+        hierarchy = locked_hierarchy or LockedHierarchy(*load_folder_hierarchy(hierarchy_starts))
         for start_id in hierarchy_starts:
             if start_id not in hierarchy.folders:
                 raise ResourceNotFoundError()

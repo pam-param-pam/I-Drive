@@ -7,7 +7,7 @@ from channels.layers import get_channel_layer
 
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
-from ..core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from ..models import File, Folder
 
 

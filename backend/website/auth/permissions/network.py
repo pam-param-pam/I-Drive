@@ -5,7 +5,7 @@ from website.constants import cache
 from website.services import cache_service
 
 
-def ip_is_allowed(ip: str) -> bool:
+def ip_is_allowed(ip: str | None) -> bool:
     try:
         address = ipaddress.ip_address(ip)
     except (TypeError, ValueError):

@@ -5,7 +5,34 @@ from typing import AbstractSet, Mapping
 
 from website.models.mixin_models import ItemState
 
-from .actions import ResourceAction
+class ResourceAction(StrEnum):
+    READ_ACCOUNT = "read_account"
+    READ = "read"
+    READ_FILE_METADATA = "read_file_metadata"
+    READ_TRASH = "read_trash"
+    CREATE_CHILD = "create_child"
+    EDIT_CONTENT = "edit_content"
+    EDIT_METADATA = "edit_metadata"
+    RENAME = "rename"
+    MOVE = "move"
+    TRASH = "trash"
+    RESTORE = "restore"
+    REQUEST_DELETE = "request_delete"
+    DOWNLOAD = "download"
+    CREATE_SHARE = "create_share"
+    MANAGE_LOCK = "manage_lock"
+    RESET_LOCK = "reset_lock"
+    VERIFY_LOCK_CREDENTIAL = "verify_lock_credential"
+    LIST_SHARES = "list_shares"
+    MANAGE_SHARE = "manage_share"
+    READ_SHARE = "read_share"
+    DOWNLOAD_SHARE = "download_share"
+    SEARCH = "search"
+    LIST_TRASH = "list_trash"
+    MODIFY_SETTINGS = "modify_settings"
+    MODIFY_DISCORD = "modify_discord"
+    CHANGE_PASSWORD = "change_password"
+    MANAGE_NOTIFICATIONS = "manage_notifications"
 
 
 class PrincipalKind(StrEnum):
@@ -27,6 +54,7 @@ class ResourceRole(StrEnum):
 
 
 class TrashAccess(StrEnum):
+    IGNORE = "ignore"
     OUTSIDE_TRASH = "outside_trash"
     EXPLICIT_TRASH_ROOT = "explicit_trash_root"
     OUTSIDE_OR_EXPLICIT_ROOT = "outside_or_explicit_root"
@@ -54,16 +82,17 @@ class ActionPolicy:
     allowed_states: AbstractSet[str] = frozenset({ItemState.ACTIVE})
     trash_access: TrashAccess = TrashAccess.OUTSIDE_TRASH
     lock_rule: LockRule = LockRule.REQUIRE_CREDENTIAL
+    require_share_password: bool = False
     ownership_required: bool = True
     disclosure: Disclosure = Disclosure.NOT_FOUND
     resource_context_optional: bool = False
     allow_global_lock: bool = False
 
-_USER = frozenset({PrincipalKind.USER})
-_SHARE = frozenset({PrincipalKind.SHARE})
-_BOTH_RESOURCES = frozenset({ResourceType.FILE, ResourceType.FOLDER})
-_TARGET = frozenset({ResourceRole.TARGET})
-_SOURCE_DESTINATION = frozenset({ResourceRole.SOURCE, ResourceRole.DESTINATION})
+_USER = {PrincipalKind.USER}
+_SHARE = {PrincipalKind.SHARE}
+_BOTH_RESOURCES = {ResourceType.FILE, ResourceType.FOLDER}
+_TARGET = {ResourceRole.TARGET}
+_SOURCE_DESTINATION = {ResourceRole.SOURCE, ResourceRole.DESTINATION}
 
 
 POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
@@ -77,6 +106,12 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         principal_kinds=_USER,
         account_capabilities={"read"},
         resource_types=_BOTH_RESOURCES,
+    ),
+    ResourceAction.READ_FILE_METADATA: ActionPolicy(
+        principal_kinds=_USER,
+        account_capabilities={"read"},
+        resource_types={ResourceType.FILE},
+        trash_access=TrashAccess.IGNORE,
     ),
     ResourceAction.READ_TRASH: ActionPolicy(
         principal_kinds=_USER,
@@ -121,7 +156,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
     ),
     ResourceAction.RESTORE: ActionPolicy(
         principal_kinds=_USER,
-        account_capabilities={"delete", "modify"},
+        account_capabilities={"modify"},
         resource_types=_BOTH_RESOURCES,
         forbidden_root_roles=_TARGET,
         trash_access=TrashAccess.EXPLICIT_TRASH_ROOT,
@@ -162,6 +197,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         principal_kinds=_USER,
         account_capabilities={"read"},
         resource_types=_BOTH_RESOURCES,
+        trash_access=TrashAccess.IGNORE,
         lock_rule=LockRule.VERIFY_CREDENTIAL,
     ),
     ResourceAction.LIST_SHARES: ActionPolicy(
@@ -169,18 +205,21 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         account_capabilities={"read", "share"},
         resource_roles=set(),
         lock_rule=LockRule.IGNORE,
+        require_share_password=False,
     ),
     ResourceAction.MANAGE_SHARE: ActionPolicy(
         principal_kinds=_USER,
         account_capabilities={"modify", "share"},
         resource_roles=set(),
         lock_rule=LockRule.IGNORE,
+        require_share_password=False,
     ),
     ResourceAction.READ_SHARE: ActionPolicy(
         principal_kinds=_SHARE,
         resource_types=_BOTH_RESOURCES,
         resource_roles={ResourceRole.SHARE_ROOT, ResourceRole.SHARE_ITEM},
         lock_rule=LockRule.IGNORE,
+        require_share_password=True,
         ownership_required=False,
     ),
     ResourceAction.DOWNLOAD_SHARE: ActionPolicy(
@@ -188,6 +227,7 @@ POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
         resource_types=_BOTH_RESOURCES,
         resource_roles={ResourceRole.SHARE_ROOT, ResourceRole.SHARE_ITEM},
         lock_rule=LockRule.IGNORE,
+        require_share_password=True,
         ownership_required=False,
     ),
     ResourceAction.SEARCH: ActionPolicy(

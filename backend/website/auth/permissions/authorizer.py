@@ -4,15 +4,13 @@ from datetime import datetime
 from typing import Iterable
 
 
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, PasswordChallenge, PermissionPasswordError, ResourceNotFoundError, ResourcePermissionError
 from website.models import UserPerms
 
-from .actions import ResourceAction
 from .contexts import ContextSet, ResourceContext, ShareContext
 from .credentials import CredentialSet
-from .errors import PasswordChallenge, PermissionPasswordError
 from .network import ip_is_allowed
-from .policies import ActionPolicy, Disclosure, LockRule, PolicyRegistry, PrincipalKind, ResourceRole, ResourceType, TrashAccess
+from .policies import ActionPolicy, Disclosure, LockRule, PolicyRegistry, PrincipalKind, ResourceAction, ResourceRole, ResourceType, TrashAccess
 from .principals import SharePrincipal, SignedResourcePrincipal, UserPrincipal
 
 
@@ -59,13 +57,15 @@ def _resource_denial(
         return "Resource is not active"
     if is_root_folder and role in policy.forbidden_root_roles:
         return "Root folder cannot be used for this action"
-    if policy.trash_access == TrashAccess.OUTSIDE_TRASH and is_trashed:
-        return "Cannot access a resource in trash"
-    if policy.trash_access == TrashAccess.EXPLICIT_TRASH_ROOT and not explicit_trash_root:
-        return "Resource is not an explicit trash root"
-    if policy.trash_access == TrashAccess.OUTSIDE_OR_EXPLICIT_ROOT and is_trashed and not explicit_trash_root:
-        return "An inherited trashed resource cannot be used directly"
-    return None
+    if policy.trash_access == TrashAccess.IGNORE:
+        return None
+    if policy.trash_access == TrashAccess.OUTSIDE_TRASH:
+        return "Cannot access a resource in trash" if is_trashed else None
+    if policy.trash_access == TrashAccess.EXPLICIT_TRASH_ROOT:
+        return "Resource is not an explicit trash root" if not explicit_trash_root else None
+    if policy.trash_access == TrashAccess.OUTSIDE_OR_EXPLICIT_ROOT:
+        return "An inherited trashed resource cannot be used directly" if is_trashed and not explicit_trash_root else None
+    raise RuntimeError(f"Unsupported trash access policy: {policy.trash_access!r}")
 
 
 def _file_belongs_to_parent(parent: ResourceContext, row: dict) -> bool:
@@ -92,12 +92,7 @@ class Authorizer:
 
         if permissions.globalLock and not policy.allow_global_lock:
             raise ResourcePermissionError("Account is locked")
-        missing = [
-            capability
-            for capability in policy.account_capabilities
-            if not permissions.admin and not getattr(permissions, capability, False)
-        ]
-        if missing:
+        if not permissions.admin and any(not getattr(permissions, capability, False) for capability in policy.account_capabilities):
             raise ResourcePermissionError("Account capability is missing")
 
     def authorize_user_action(
@@ -111,6 +106,7 @@ class Authorizer:
         policy = PolicyRegistry.get(action)
         if _principal_kind(principal) not in policy.principal_kinds:
             raise ResourcePermissionError("Principal cannot perform this action")
+
         self.require_account_capability(principal, action)
         context_set = contexts if isinstance(contexts, ContextSet) else ContextSet(tuple(contexts))
         credentials = credentials or CredentialSet.empty()
@@ -119,7 +115,7 @@ class Authorizer:
 
     def authorize_share_action(
         self,
-        principal: SharePrincipal | UserPrincipal,
+        principal: SharePrincipal,
         action: ResourceAction,
         share_context: ShareContext,
         resource_contexts: ContextSet | tuple[ResourceContext, ...] = (),
@@ -127,40 +123,36 @@ class Authorizer:
     ) -> AuthorizationResult:
         action = ResourceAction(action)
         policy = PolicyRegistry.get(action)
-        if _principal_kind(principal) not in policy.principal_kinds:
+        if not isinstance(principal, SharePrincipal) or PrincipalKind.SHARE not in policy.principal_kinds:
             raise ResourcePermissionError("Principal cannot perform this action")
-        credentials = credentials or CredentialSet.empty()
 
-        if isinstance(principal, UserPrincipal):
-            self.require_account_capability(principal, action)
-            if principal.user_id != share_context.owner_id:
-                raise ResourceNotFoundError("Share not found")
-        else:
-            if not hmac.compare_digest(principal.share_token, share_context.share_token):
-                raise ResourceNotFoundError("Share not found")
-            now = _now_for(share_context.expires_at)
-            if now >= share_context.expires_at:
-                raise ResourcePermissionError("Share has expired")
+        if principal.share_token != share_context.share_token:
+            raise ResourceNotFoundError("Share not found")
+        now = _now_for(share_context.expires_at)
+        if now >= share_context.expires_at:
+            raise ResourcePermissionError("Share has expired")
+
+        credentials = credentials or CredentialSet.empty()
+        if policy.require_share_password:
             supplied = credentials.for_share(share_context.share_id)
-            if share_context.password and (
-                not supplied or not hmac.compare_digest(supplied, share_context.password)
-            ):
+            if share_context.password and (not supplied or supplied != share_context.password):
                 raise PermissionPasswordError((PasswordChallenge(share_context.share_id, "Share"),))
-            if not share_context.requested_item_is_member or not share_context.descendant_folders_allowed:
-                raise ResourceNotFoundError("Share not found")
+
+        if not share_context.requested_item_is_member or not share_context.descendant_folders_allowed:
+            raise ResourceNotFoundError("Share not found")
 
         context_set = resource_contexts if isinstance(resource_contexts, ContextSet) else ContextSet(tuple(resource_contexts))
-        if isinstance(principal, SharePrincipal):
-            root_contexts = [
-                context
-                for context in context_set
-                if context.role == ResourceRole.SHARE_ROOT
-                and context.resource_type == share_context.root_type
-                and context.resource_id == share_context.root_id
-                and context.owner_id == share_context.owner_id
-            ]
-            if not root_contexts or any(context.owner_id != share_context.owner_id for context in context_set):
-                raise ResourceNotFoundError("Share not found")
+        root_contexts = [
+            context
+            for context in context_set
+            if context.role == ResourceRole.SHARE_ROOT
+            and context.resource_type == share_context.root_type
+            and context.resource_id == share_context.root_id
+            and context.owner_id == share_context.owner_id
+        ]
+        if not root_contexts or any(context.owner_id != share_context.owner_id for context in context_set):
+            raise ResourceNotFoundError("Share not found")
+
         self._authorize_resources(principal, policy, context_set, credentials)
         return self._result(action, context_set, share_context.share_id)
 
@@ -174,6 +166,7 @@ class Authorizer:
         action = ResourceAction(action)
         if action not in {ResourceAction.SEARCH, ResourceAction.READ}:
             raise BadRequestError("Context filtering is only available for read queries")
+
         policy = PolicyRegistry.get(action)
         self.require_account_capability(principal, action)
         context_set = contexts if isinstance(contexts, ContextSet) else ContextSet(tuple(contexts))
@@ -272,9 +265,16 @@ class Authorizer:
         action = ResourceAction.DOWNLOAD_SHARE if principal.share_id else ResourceAction.DOWNLOAD
         return self._result(action, ContextSet((context,)), principal.share_id)
 
-    def _authorize_resources(self, principal, policy, contexts: ContextSet, credentials: CredentialSet) -> None:
+    def _authorize_resources(
+        self,
+        principal: UserPrincipal | SharePrincipal,
+        policy: ActionPolicy,
+        contexts: ContextSet,
+        credentials: CredentialSet,
+    ) -> None:
         if policy.resource_types and not contexts.contexts and not policy.resource_context_optional:
             raise BadRequestError("This action requires a resource context")
+
         if not policy.resource_types and contexts.contexts:
             raise BadRequestError("This action does not accept resource contexts")
 
@@ -297,16 +297,23 @@ class Authorizer:
                 raise ResourcePermissionError(denial)
 
             lock_id = context.effective_lock_policy_id
-            if not lock_id or policy.lock_rule == LockRule.IGNORE:
-                if policy.lock_rule == LockRule.VERIFY_CREDENTIAL and credentials.supplied:
-                    raise BadRequestError("This resource is unlocked. Do not provide a password")
-                if policy.lock_rule == LockRule.VERIFY_CREDENTIAL:
-                    raise BadRequestError("This resource has no lock policy")
+            lock_rule = policy.lock_rule
+            if lock_rule == LockRule.IGNORE:
                 continue
+            if not lock_id:
+                if lock_rule == LockRule.VERIFY_CREDENTIAL and credentials.supplied:
+                    raise BadRequestError("This resource is unlocked. Do not provide a password")
+                if lock_rule == LockRule.VERIFY_CREDENTIAL:
+                    raise BadRequestError("This resource has no lock policy")
+                if lock_rule in {LockRule.REQUIRE_CREDENTIAL, LockRule.NETWORK_ONLY}:
+                    continue
+                raise RuntimeError(f"Unsupported lock rule: {lock_rule!r}")
 
             if isinstance(principal, UserPrincipal) and not ip_is_allowed(principal.client_ip):
                 self._deny(policy, "Resource is inaccessible from this network")
-            if policy.lock_rule in {LockRule.REQUIRE_CREDENTIAL, LockRule.VERIFY_CREDENTIAL}:
+            if lock_rule == LockRule.NETWORK_ONLY:
+                continue
+            if lock_rule in {LockRule.REQUIRE_CREDENTIAL, LockRule.VERIFY_CREDENTIAL}:
                 supplied = credentials.for_policy(lock_id)
                 password = context.effective_lock_password
                 if not supplied or not password or not hmac.compare_digest(supplied, password):
@@ -314,6 +321,8 @@ class Authorizer:
                         lock_id,
                         PasswordChallenge(lock_id, context.effective_lock_policy_name or "Locked folder"),
                     )
+                continue
+            raise RuntimeError(f"Unsupported lock rule: {lock_rule!r}")
         if challenges:
             raise PermissionPasswordError(tuple(challenges.values()))
 
@@ -321,7 +330,9 @@ class Authorizer:
     def _deny(policy, message: str) -> None:
         if policy.disclosure == Disclosure.NOT_FOUND:
             raise ResourceNotFoundError()
-        raise ResourcePermissionError(message)
+        if policy.disclosure == Disclosure.FORBIDDEN:
+            raise ResourcePermissionError(message)
+        raise RuntimeError(f"Unsupported disclosure policy: {policy.disclosure!r}")
 
     @staticmethod
     def _result(action: ResourceAction, contexts: ContextSet, share_id: str | None = None) -> AuthorizationResult:

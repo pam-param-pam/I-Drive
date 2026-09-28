@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from website.constants import EventCode, cache
 from website.core.Serializers import FileSerializer
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_encryption_fields, validate_key
 from website.core.validators.GeneralChecks import IsPositive, IsSnowflake

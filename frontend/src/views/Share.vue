@@ -5,7 +5,7 @@
       {{ $t("share.info", { expiry: humanTime(expiry) }) }}
    </h4>
 
-   <breadcrumbs v-if="shareState === 'success'" :base="'/share/' + token" :folderList="folderList"/>
+   <breadcrumbs v-if="shareState === 'success'" :base="'/share/' + token" :folderList="folderList" :showRoot="true"/>
    <errors v-if="itemsError" :error="itemsError" />
 
    <FileListing

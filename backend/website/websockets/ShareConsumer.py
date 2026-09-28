@@ -28,15 +28,16 @@ class ShareConsumer(RateLimitedWebsocketConsumer):
     def get_group_name(self) -> str:
         return "share"
 
-    def authorize(self) -> tuple[bool, bool, str]:
+    def authorize(self) -> tuple[bool, bool, str | None, str | None]:
         token_key, is_standard_protocol = self.get_token_key()
 
         share = self.get_share(token_key)
         if not share:
-            return False, is_standard_protocol, token_key
+            reason = "Missing share token" if not token_key else "Share token not found"
+            return False, is_standard_protocol, token_key, reason
 
         self.share = share
-        return True, is_standard_protocol, token_key
+        return True, is_standard_protocol, token_key, None
 
     def on_message(self, text_data, bytes_data):
         json_data = json.loads(text_data)

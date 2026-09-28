@@ -5,7 +5,7 @@ from django.utils import timezone as django_timezone
 
 from website.celery import app
 from website.constants import MAX_TIME_FILES_IN_TRASH, MAX_RAW_EXTRACTION_ATTEMPTS
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.models import File, ShareableLink, PerDeviceToken, Folder
 from website.models.mixin_models import ItemState
 from website.models.other_models import Notification, UserZIP, RawExtractionClaim, NotificationType, NotificationKind

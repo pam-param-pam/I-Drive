@@ -3,7 +3,7 @@ from django.db import transaction
 
 from website.config import MAX_NUMBER_OF_CHANNELS
 from website.constants import EncryptionMethod, EventCode, ClientsideDecryptionMethod
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_value, validate_ids_as_list
 from website.discord.Discord import discord

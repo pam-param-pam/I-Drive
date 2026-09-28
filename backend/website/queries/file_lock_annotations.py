@@ -18,6 +18,7 @@ def _lock_annotations(base_path: str) -> dict:
         parent_paths = [base_path + "__parent" * depth for depth in range(MAX_FOLDER_DEPTH + 1)]
     else:
         parent_paths = [""] + ["parent" + "__parent" * depth for depth in range(MAX_FOLDER_DEPTH)]
+
     policy_ids = [
         Subquery(
             FolderLockPolicy.objects.filter(

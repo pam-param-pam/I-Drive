@@ -2,7 +2,7 @@ import json
 from typing import Optional
 
 from website.constants import EventCode
-from website.core.dataModels.websocket import WebsocketEvent, WebsocketLogoutEvent
+from website.websockets.models import WebsocketEvent, WebsocketLogoutEvent
 from website.models import PerDeviceToken
 from website.websockets.BaseConsumer import RateLimitedWebsocketConsumer
 
@@ -28,18 +28,21 @@ class UserConsumer(RateLimitedWebsocketConsumer):
     def get_group_name(self) -> str:
         return "user"
 
-    def authorize(self) -> tuple[bool, bool, str]:
+    def authorize(self) -> tuple[bool, bool, str | None, str | None]:
         token_key, is_standard_protocol = self.get_token_key()
 
         token = self.get_token(token_key)
         if not token:
-            return False, is_standard_protocol, token_key
+            reason = "Missing user token" if not token_key else "User token invalid or expired"
+            return False, is_standard_protocol, token_key, reason
 
         self.user = token.user
         self.token_obj = token
         self.token = token_key
         self.device_id = self.token_obj.device_id
-        return token.user.is_authenticated, is_standard_protocol, token_key
+        if not token.user.is_authenticated:
+            return False, is_standard_protocol, token_key, "Token user is not authenticated"
+        return True, is_standard_protocol, token_key, None
 
     def send_error(self, error_code):
         self.send_json({'is_encrypted': False, 'event': {'op_code': EventCode.WEBSOCKET_ERROR.value, 'data': [{'error_code': f"errors.{error_code}"}]}})

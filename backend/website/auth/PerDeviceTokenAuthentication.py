@@ -6,7 +6,7 @@ from rest_framework.authentication import BaseAuthentication
 from django.conf import settings
 
 from website.auth.utils import _trusted_client_ip
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.models import PerDeviceToken
 
 

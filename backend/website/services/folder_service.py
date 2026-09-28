@@ -6,8 +6,8 @@ from django.utils import timezone
 from website.config import MAX_FOLDERS_IN_FOLDER
 from website.constants import EventCode
 from website.core.Serializers import FolderSerializer
-from website.core.dataModels.http import RequestContext
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.http.context import RequestContext
+from website.core.errors import BadRequestError, ResourcePermissionError
 from website.core.helpers import validate_value
 from website.core.validators.GeneralChecks import IsValidItemName, NotEmpty
 from website.models import (DeletionFolderWorkItem, DeletionScope, Folder, FolderLockPolicy, TrashRoot)
@@ -252,6 +252,7 @@ class FolderService:
                 defaults={"owner_id": owner_id, "password": password},
             )
             bump_folder_resources([folder.id])
+            bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
             send_event(RequestContext.from_user(owner_id), hierarchy.folders.get(str(folder.parent_id)),
                        EventCode.FOLDER_LOCK_STATUS_CHANGE,
@@ -302,6 +303,7 @@ class FolderService:
                     password=replacement_password,
                 )
             bump_folder_resources([folder.id])
+            bump_folder_listings([folder.parent_id])
             folder.refresh_from_db(fields=["resource_version"])
             ancestor_ids = hierarchy.chain(str(folder.id))[1:]
             inherited_policies = set(FolderLockPolicy.objects.filter(

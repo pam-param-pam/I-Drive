@@ -13,9 +13,9 @@ from rest_framework.exceptions import Throttled
 from rest_framework.views import exception_handler
 
 from website.core.errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, URLInvalidOrExpired, \
-    ResourceNotFoundError, UsernameTakenError, RangeNotSatisfiable, MissingOrIncorrectResourcePasswordError, CannotProcessDiscordRequestError, MalformedDatabaseRecord, DiscordBlockError, \
+    ResourceNotFoundError, UsernameTakenError, RangeNotSatisfiable, PermissionPasswordError, CannotProcessDiscordRequestError, MalformedDatabaseState, DiscordBlockError, \
     DiscordError, DiscordTextError
-from website.core.helpers import format_wait_time, get_attr
+from website.core.helpers import format_wait_time
 from website.core.http.utils import build_http_error_response
 from website.models import ShareableLink
 
@@ -91,19 +91,18 @@ def custom_exception_handler(exception, context):
         return JsonResponse(build_http_error_response(code=429, error="errors.rateLimit", details=str(exception)), status=429)
 
     # 469 INVALID RESOURCE PASSWORD
-    elif isinstance(exception, MissingOrIncorrectResourcePasswordError):
+    elif isinstance(exception, PermissionPasswordError):
         json_error: Any = build_http_error_response(code=469, error="errors.missingOrIncorrectResourcePassword", details=str(exception))
-        list_of_dicts = []
-        for folder in exception.requiredPasswords:
-            list_of_dicts.append({"id": get_attr(folder, "id"), "name": get_attr(folder, "name")})
-        json_error["requiredFolderPasswords"] = list_of_dicts
+        json_error["requiredFolderPasswords"] = [
+            {"id": challenge.id, "name": challenge.name} for challenge in exception.challenges
+        ]
         return JsonResponse(json_error, status=469)
 
     # 500 INTERNAL SERVER ERROR
     elif isinstance(exception, IntegrityError):
         return JsonResponse(build_http_error_response(code=500, error="errors.integrityError", details=str(exception)), status=500)
 
-    elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseRecord)):
+    elif isinstance(exception, (ConnectError, SSLError, MalformedDatabaseState)):
         return JsonResponse(build_http_error_response(code=500, error="errors.internal", details=str(exception)), status=500)
 
     elif isinstance(exception, ProgrammingError):

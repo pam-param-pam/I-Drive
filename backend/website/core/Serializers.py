@@ -8,7 +8,7 @@ from website.models import File, Folder, ShareableLink, ShareAccessEvent, ShareA
     PerDeviceToken, UserZIP
 from website.models.file_related_models import PhotoMetadata, RawMetadata, SubtitleTrack, Moment
 from website.models.other_models import Notification
-from website.queries.selectors import get_item_inside_share
+from website.services.share_service import get_item_inside_share
 from website.queries.file_lock_annotations import file_lock_annotations
 from website.auth.permissions import ResourceContextResolver
 
@@ -172,8 +172,6 @@ class FileSerializer(AdvancedSerializer):
                 signed = ""
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
-            if sign_urls and not in_trash:
-                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
@@ -231,8 +229,6 @@ class ShareFileSerializer(FileSerializer):
                 signed = sign_resource(download_path)
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
-            if sign_urls and not in_trash:
-                d["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
@@ -283,19 +279,14 @@ class ShareFolderSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(folder_obj: Folder) -> dict:
-        folder_dict = {
+        return {
             'isDir': True,
             'id': folder_obj.id,
-            "parent_id": folder_obj.parent.id,
+            "parent_id": folder_obj.parent_id,
             'name': folder_obj.name,
-            'size': folder_obj.visible_descendant_file_size,
-            'folder_count': folder_obj.visible_descendant_folder_count,
-            'file_count': folder_obj.visible_descendant_file_count,
             'created': folder_obj.created_at.isoformat(),
             'last_modified': folder_obj.last_modified_at.isoformat(),
         }
-
-        return folder_dict
 
 
 class ShareSerializer(SimpleSerializer):

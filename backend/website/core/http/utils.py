@@ -5,16 +5,15 @@ from typing import Optional
 import requests
 import shortuuid
 
-from ..dataModels.general import ResponseDict, ErrorDict
 from ..errors import BadRequestError
 from ..helpers import get_ip
 
 
-def build_response(task_id: str, message: str) -> ResponseDict:
+def build_response(task_id: str, message: str) -> dict[str, str]:
     return {"task_id": task_id, "message": message}
 
 
-def build_http_error_response(code: int, error: str, details: str) -> ErrorDict:
+def build_http_error_response(code: int, error: str, details: str) -> dict[str, int | str]:
     return {"code": code, "error": error, "details": details}
 
 

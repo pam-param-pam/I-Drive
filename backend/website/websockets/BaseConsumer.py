@@ -1,4 +1,5 @@
 import json
+import logging
 import threading
 import time
 import traceback
@@ -10,6 +11,9 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 from django.core.cache import cache
 from django.utils import timezone
+
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
@@ -35,7 +39,7 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         self._last_authorized_at = 0
 
     @abstractmethod
-    def authorize(self) -> tuple[bool, bool, str]:
+    def authorize(self) -> tuple[bool, bool, str | None, str | None]:
         raise NotImplementedError("authorize() must be implemented in subclass.")
 
     @abstractmethod
@@ -80,21 +84,27 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
 
         return entry["count"] <= limit
 
-    def _reauthorize_if_needed(self) -> bool:
+    def _reauthorize_if_needed(self) -> tuple[bool, str | None]:
         if not self.re_authorize_every_n_seconds:
-            return True
+            return True, None
 
         now = time.time()
 
         if now - self._last_authorized_at < self.re_authorize_every_n_seconds:
-            return True
+            return True, None
 
-        authorized, _, _ = self.authorize()
+        authorized, _, _, reason = self.authorize()
         self._last_authorized_at = now
 
-        return authorized
+        return authorized, reason
 
     def reject(self, code, reason):
+        token, _ = self.get_token_key()
+        logger.warning(
+            "WebSocket rejected: consumer=%s path=%s client=%s connection_id=%s code=%s reason=%s",
+            type(self).__name__, self.scope.get("path"), self.scope.get("client"),
+            self._connection_id, code, reason,
+        )
         self.close(code)
         return
 
@@ -107,11 +117,11 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
             self.reject(code=4409, reason="Too many active connections")
             return
 
-        authorized, is_standard_protocol, token = self.authorize()
+        authorized, is_standard_protocol, token, reason = self.authorize()
         self._last_authorized_at = time.time()
 
         if not authorized:
-            self.reject(code=4401, reason="Unauthorized")
+            self.reject(code=4401, reason=reason or "Unauthorized")
             return
 
         if is_standard_protocol:
@@ -142,8 +152,9 @@ class RateLimitedWebsocketConsumer(WebsocketConsumer, ABC):
         USE on_message() INSTEAD!"""
 
         # 0) Re-authorize periodically
-        if not self._reauthorize_if_needed():
-            self.close(code=4401)
+        authorized, reason = self._reauthorize_if_needed()
+        if not authorized:
+            self.reject(code=4401, reason=reason or "Reauthorization failed")
             return
 
         # 1) Rate-limit per-message

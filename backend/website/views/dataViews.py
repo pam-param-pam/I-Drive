@@ -2,36 +2,33 @@ import base64
 import hashlib
 import json
 import time
-from typing import Optional
 
-from django.db.models import Count, Sum, Case, When, Value, CharField
-from django.db.models import F, BooleanField
-from django.db.models.query_utils import Q
+from django.db.models import Count, Sum
+from django.db.models import F
 from django.http import JsonResponse, HttpResponse, HttpResponseNotModified
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 from rest_framework.decorators import permission_classes, throttle_classes, api_view
 from rest_framework.permissions import IsAuthenticated
 
-from website.services import attachment_service
 from website.auth.permissions import PrincipalFactory, ResourceAction, extract_resource_credentials
 from website.auth.throttle import defaultAuthUserThrottle, SearchThrottle, FolderPasswordThrottle, MediaThrottle, SyncerThrottle
-from website.constants import cache, SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EncryptionMethod
+from website.constants import SIGNED_URL_EXPIRY_SECONDS, API_BASE_URL, EncryptionMethod
 from website.core.Serializers import FileSerializer, VideoTrackSerializer, SubtitleTrackSerializer, AudioTrackSerializer, RawMetadataSerializer, PhotoMetadataSerializer, \
     FolderSerializer, \
     MomentSerializer, TagSerializer, MediaPositionSerializer, SubtitleSerializer
-from website.core.converters import param_to_bool
 from website.core.crypto.signer import sign_resource
-from website.core.errors import ResourceNotFoundError, ResourcePermissionError
-from website.core.helpers import validate_ids_as_list, extract_key, validate_key
-from website.models import Folder, File, Subtitle, Moment, Thumbnail, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment, FolderHashWork
+from website.core.errors import PermissionPasswordError, ResourceNotFoundError, ResourcePermissionError
+from website.core.helpers import validate_ids_as_list, extract_key
+from website.models import Folder, File, Subtitle, Moment, VideoTrack, VideoMetadata, SubtitleTrack, AudioTrack, Fragment, FolderHashWork
 from website.models.file_related_models import RawMetadata, PhotoMetadata, Tag, MediaPosition
 from website.models.mixin_models import ItemState
+from website.queries.builders import build_breadcrumbs, build_file_path
 from website.queries.file_lock_annotations import file_lock_annotations
 from website.queries.hierarchy import get_descendant_folder_ids
-from website.queries.builders import build_breadcrumbs, build_file_path
 from website.queries.selectors import check_if_bots_exists
-from website.services import cache_service, search_service
+from website.services import attachment_service
+from website.services import search_service
 from website.services.resource_query_service import FileQueryService, FolderQueryService, ItemQueryService, TrashQueryService
 
 
@@ -43,26 +40,16 @@ def _inputs(request):
 @throttle_classes([defaultAuthUserThrottle])
 def get_folder_info(request, folder_id):
     principal, credentials = _inputs(request)
-    listing = FolderQueryService.list_children(principal, folder_id, credentials)
-    folder_obj = listing.folder
-    folder_content = FolderSerializer.serialize_object(folder_obj)
-    folder_content["children"] = [
-        *(FileSerializer.serialize_dict(row, sign_urls=False) for row in listing.files),
-        *(FolderSerializer.serialize_object(folder) for folder in listing.folders),
-    ]
+    folder_obj = FolderQueryService.get(principal, folder_id, ResourceAction.DOWNLOAD, credentials).folder
     breadcrumbs = build_breadcrumbs(folder_obj)
 
-    downloadable_files = {str(row["id"]): row for row in listing.files}
-
     unsigned_payload = {
-        "folder": folder_content,
+        "resource_version": folder_obj.resource_version,
+        "listing_version": folder_obj.listing_version,
         "breadcrumbs": breadcrumbs,
         "_signature_epoch": int(time.time() // SIGNED_URL_EXPIRY_SECONDS)
     }
-
-    unsigned_json = json.dumps(unsigned_payload, sort_keys=True)
-
-    etag_value = hashlib.md5(unsigned_json.encode()).hexdigest()
+    etag_value = hashlib.md5(json.dumps(unsigned_payload, sort_keys=True).encode()).hexdigest()
 
     request_etag = request.headers.get("If-None-Match")
     if request_etag:
@@ -75,18 +62,23 @@ def get_folder_info(request, folder_id):
 
         return response
 
+    children = FolderQueryService.list_children(principal, folder_id, credentials)
+    folder_content = FolderSerializer.serialize_object(folder_obj)
+    folder_content["children"] = [
+        FolderSerializer.serialize_object(child) if isinstance(child, Folder)
+        else FileSerializer.serialize_dict(child, sign_urls=False)
+        for child in children
+    ]
+
     for file in folder_content["children"]:
         download_path = file.get("_download_path")
         thumbnail_path = file.get("_thumbnail_path")
 
         if thumbnail_path:
-            source = downloadable_files[str(file["id"])]
             file["thumbnail_url"] = f"{API_BASE_URL}{thumbnail_path}{sign_resource(thumbnail_path)}"
 
         if download_path:
-            source = downloadable_files[str(file["id"])]
             file["download_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
-            file["zip_entry_url"] = f"{API_BASE_URL}{download_path}{sign_resource(download_path)}"
 
         file.pop("_download_path", None)
         file.pop("_thumbnail_path", None)
@@ -125,37 +117,22 @@ def get_file_info(request, file_id):
 @cache_page(60 * 1)
 def get_usage(request, folder_id):
     principal, credentials = _inputs(request)
-    subtree = FolderQueryService.list_subtree(principal, folder_id, credentials)
-    folder_obj = subtree.folder
-    key = cache_service.get_total_used_size_key(request.user.id)
-    total_used_size = cache.get(key)
-    if not total_used_size:
-        file_used = File.objects.filter(owner=request.user, trashed_at__isnull=True, state=ItemState.ACTIVE, parent__trash_root__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
-        thumbnail_used = Thumbnail.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trashed_at__isnull=True).aggregate(Sum('size'))[
-                             'size__sum'] or 0
-        moment_used = Moment.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trashed_at__isnull=True).aggregate(Sum('size'))['size__sum'] or 0
-        subtitle_used = Subtitle.objects.filter(file__owner=request.user, file__state=ItemState.ACTIVE, file__parent__trash_root__isnull=True, file__trashed_at__isnull=True).aggregate(Sum('size'))[
-                            'size__sum'] or 0
-
-        total_used_size = file_used + thumbnail_used + moment_used + subtitle_used
-        cache.set(key, total_used_size, 60)
-
-    if folder_obj.parent:
-        folder_used_size = sum(file.size for file in subtree.files)
-    else:
-        folder_used_size = total_used_size
-
-    return JsonResponse({"total": total_used_size, "used": folder_used_size}, status=200)
+    folder_obj = FolderQueryService.get(principal, folder_id, ResourceAction.READ, credentials).folder
+    root = folder_obj if folder_obj.parent_id is None else Folder.objects.only(
+        "visible_descendant_file_size",
+    ).get(owner_id=principal.user_id, parent__isnull=True)
+    return JsonResponse({
+        "total": root.visible_descendant_file_size,
+        "used": folder_obj.visible_descendant_file_size,
+    }, status=200)
 
 
 @api_view(['GET'])
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
-def fetch_additional_info(request, item_id):
-    isTrash = validate_key(request.GET, "isTrash", bool, default=False, converter=param_to_bool)
+def fetch_additional_info(request, file_id):
     principal, credentials = _inputs(request)
-    action = ResourceAction.READ_TRASH if isTrash else ResourceAction.READ
-    item_obj = FileQueryService.get(principal, item_id, action, credentials).file
+    item_obj = FileQueryService.get(principal, file_id, ResourceAction.READ_FILE_METADATA, credentials).file
 
     if item_obj.type == "Video":
         tracks = []
@@ -217,12 +194,10 @@ def get_trash(request):
 
     file_dicts = []
     for file in files:
+        # todo
         item = FileSerializer.serialize_object(file)
-        item.pop("zip_entry_url", None)
         item.pop("_download_path", None)
         item.pop("_thumbnail_path", None)
-        item.pop("iv", None)
-        item.pop("key", None)
         file_dicts.append(item)
     folder_dicts = [FolderSerializer.serialize_object(folder) for folder in folders]
 
@@ -234,7 +209,10 @@ def get_trash(request):
 @permission_classes([IsAuthenticated])
 def check_password(request, item_id):
     principal, credentials = _inputs(request)
-    ItemQueryService.get(principal, item_id, ResourceAction.VERIFY_LOCK_CREDENTIAL, credentials)
+    try:
+        ItemQueryService.get(principal, item_id, ResourceAction.VERIFY_LOCK_CREDENTIAL, credentials)
+    except PermissionPasswordError as exception:
+        raise ResourcePermissionError("Password is incorrect") from exception
     return HttpResponse(status=204)
 
 

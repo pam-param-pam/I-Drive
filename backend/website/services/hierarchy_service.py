@@ -25,7 +25,7 @@ def lock_folder_chains(owner_id: int, folder_ids: Iterable[str]) -> LockedHierar
     if not start_ids:
         return LockedHierarchy({}, {})
 
-    snapshot_folders, snapshot_chains = load_folder_hierarchy(owner_id, start_ids)
+    snapshot_folders, snapshot_chains = load_folder_hierarchy(start_ids)
     locked = list(Folder.objects.select_for_update().filter(owner_id=owner_id, id__in=snapshot_folders).order_by("id"))
     if len(locked) != len(snapshot_folders):
         raise ResourceNotFoundError()

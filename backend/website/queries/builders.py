@@ -6,7 +6,7 @@ from django.db.models import Exists, OuterRef
 from rest_framework.exceptions import ValidationError
 
 from website.core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
-from website.core.dataModels.general import Item
+from website.core.errors import ResourceNotFoundError
 from website.core.helpers import normalize_blocked_until
 from website.discord.Discord import discord
 from website.models import DeletionScope, Folder, File, Channel, Webhook, Bot, ShareAccessEvent
@@ -20,7 +20,7 @@ from website.auth.permissions import ResourceContextResolver, ResourceRef, Resou
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
     breadcrumbs = []
     folder_obj.refresh_from_db()
-    ancestors = get_folder_chain(str(folder_obj.id), folder_obj.owner_id)
+    ancestors = get_folder_chain(str(folder_obj.id))
     contexts = ResourceContextResolver().resolve_many(
         (ResourceRef(ResourceType.FOLDER, ancestor.id, ResourceRole.TARGET) for ancestor in ancestors),
         folder_obj.owner_id,
@@ -36,18 +36,12 @@ def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
     return breadcrumbs
 
 
-def build_share_breadcrumbs(folder_obj: Folder, obj_in_share: Item, is_folder_id: bool = False) -> List[Dict]:
-    subfolders = get_folder_chain(str(folder_obj.id), folder_obj.owner_id)
-
-    breadcrumbs = []
-    for subfolder in subfolders:
-        data = {"name": subfolder.name, "id": subfolder.id}
-        if subfolder != obj_in_share or is_folder_id:
-            breadcrumbs.append(data)
-        if subfolder == obj_in_share:
-            break
-
-    return list(reversed(breadcrumbs))
+def build_share_breadcrumbs(folder_obj: Folder, share_root: Folder) -> List[Dict]:
+    chain = get_folder_chain(str(folder_obj.id))
+    root_index = next((index for index, folder in enumerate(chain) if folder.id == share_root.id), None)
+    if root_index is None:
+        raise ResourceNotFoundError("Folder is outside the share")
+    return [{"name": folder.name, "id": folder.id} for folder in chain[root_index:]]
 
 
 def build_zip_entry_dict(file_row: dict, file_name: str) -> dict:
@@ -135,7 +129,7 @@ def build_flattened_children_values(root_folder: dict, include_root_name: bool =
             yield build_zip_entry_dict(row, f"{parent_path}{row['name']}")
 
 
-def build_share_resource_dict(resource_in_share: Item) -> Dict:
+def build_share_resource_dict(resource_in_share: Folder | File) -> Dict:
     if isinstance(resource_in_share, Folder):
         resource_dict = ShareFolderSerializer.serialize_object(resource_in_share)
     else:
@@ -273,7 +267,7 @@ def build_file_path(file: File, max_folder_id=None) -> str:
 
         return file.name
 
-    folder_parts = [{"id": item.id, "name": item.name} for item in get_folder_chain(str(folder.id), folder.owner_id)]
+    folder_parts = [{"id": item.id, "name": item.name} for item in get_folder_chain(str(folder.id))]
 
     if max_folder_id is not None:
         max_folder_id = str(max_folder_id)

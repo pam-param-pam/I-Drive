@@ -1,4 +1,5 @@
 from json import JSONDecodeError
+from dataclasses import dataclass
 
 from httpx import Response
 
@@ -119,12 +120,13 @@ class DiscordErrorMaxRetries(IDriveException):
 
         return "\n".join(lines)
 
-class MissingOrIncorrectResourcePasswordError(IDriveException):
-    """Raised when password for a resource is missing"""
-    def __init__(self, requiredPasswords, message="Resource password is missing or incorrect"):
-        self.requiredPasswords = requiredPasswords
-        self.message = message
-        super().__init__(self.message)
+@dataclass(frozen=True)
+class PasswordChallenge:
+    id: str
+    name: str
 
-    def __str__(self):
-        return self.message
+
+class PermissionPasswordError(IDriveException):
+    def __init__(self, challenges: tuple[PasswordChallenge, ...], message: str = "Resource password is missing or incorrect"):
+        self.challenges = challenges
+        super().__init__(message)

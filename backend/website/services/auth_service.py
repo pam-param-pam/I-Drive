@@ -11,7 +11,7 @@ from django.db import transaction
 from website.config import TOKEN_EXPIRY_DAYS
 from website.constants import cache, QR_CODE_SESSION_EXPIRY, EventCode
 from website.core.Serializers import DeviceTokenSerializer
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.core.errors import ResourceNotFoundError, BadRequestError, ResourcePermissionError, UsernameTakenError
 from website.core.helpers import get_ip, validate_value
 from website.core.http.utils import get_device_metadata

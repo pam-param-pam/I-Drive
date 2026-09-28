@@ -1,4 +1,3 @@
-import datetime
 import secrets
 
 import shortuuid
@@ -8,9 +7,7 @@ from django.db.models import CheckConstraint, F, Q
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 
-from website.constants import SHARE_ACCESS_DURATION, ShareEventType
-from website.core.dataModels import dataModels
-from website.core.dataModels.http import ShareContext
+from website.constants import ShareEventType
 
 
 class ShareableLink(models.Model):
@@ -89,27 +86,6 @@ class ShareAccess(models.Model):
     accessed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     access_time = models.DateTimeField(auto_now_add=True)
 
-    @classmethod
-    def get_or_create_recent(cls, share: ShareableLink, context: ShareContext) -> 'ShareAccess':
-
-        time_ago = timezone.now() - datetime.timedelta(minutes=SHARE_ACCESS_DURATION)
-        existing = cls.objects.filter(
-            share=share,
-            ip=context.ip,
-            user_agent=context.user_agent,
-            access_time__gte=time_ago
-        ).order_by('-access_time').first()
-
-        if existing:
-            return existing
-
-        return cls.objects.create(
-            share=share,
-            ip=context.ip,
-            user_agent=context.user_agent,
-            accessed_by=context.user
-        )
-
     def __str__(self):
         return f"Access to {self.share} from {self.ip} at {self.access_time} ({self.accessed_by})"
 
@@ -126,45 +102,3 @@ class ShareAccessEvent(models.Model):
             models.Index(fields=["event_type", "timestamp"]),
             models.Index(fields=["access", "timestamp"]),
         ]
-        constraints = [
-            CheckConstraint(
-                condition=Q(event_type__in=[value.value for value in ShareEventType]),
-                name="share_event_type_valid",
-            ),
-        ]
-
-    EVENT_SCHEMAS: dict[ShareEventType, type] = {
-        ShareEventType.SHARE_VIEW: dataModels.ViewShare,
-
-        # File
-        ShareEventType.FILE_OPEN: dataModels.FileOpenEvent,
-        ShareEventType.FILE_DOWNLOAD: dataModels.FileDownloadEvent,
-        ShareEventType.FILE_STREAM: dataModels.FileStreamEvent,
-
-        # Folder
-        ShareEventType.FOLDER_OPEN: dataModels.FolderOpenEvent,
-
-        # Movie
-        ShareEventType.MOVIE_WATCH: dataModels.MovieWatchEvent,
-        ShareEventType.MOVIE_SEEK: dataModels.MovieSeekEvent,
-        ShareEventType.MOVIE_TOGGLE: dataModels.MovieToggleEvent,
-
-        # Zip
-        ShareEventType.ZIP_DOWNLOAD: dataModels.ZipDownloadEvent,
-
-    }
-
-    @staticmethod
-    def log(share: ShareableLink, context: ShareContext, event_type: ShareEventType, **metadata):
-        access = ShareAccess.get_or_create_recent(share, context)
-
-        schema_cls = ShareAccessEvent.EVENT_SCHEMAS[event_type]
-
-        # Validate metadata against schema
-        schema_cls(**metadata)
-
-        return ShareAccessEvent.objects.create(
-            access=access,
-            event_type=event_type.value,
-            metadata=metadata
-        )

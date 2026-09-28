@@ -11,7 +11,7 @@ from django.utils import timezone
 from website.config import MAX_FILES_IN_FOLDER
 from website.constants import EventCode, MAX_DISCORD_MESSAGE_SIZE
 from website.core.Serializers import FileSerializer
-from website.core.dataModels.http import RequestContext
+from website.core.http.context import RequestContext
 from website.core.converters import chop_long_file_name, parse_unix_milliseconds
 from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import (
@@ -97,6 +97,7 @@ def _remove_related_attachment(
         )
         attachment.delete()
         bump_file_resources([file_obj.id])
+        bump_folder_listings([file_obj.parent_id])
         file_obj.refresh_from_db(fields=["resource_version"])
         result = FileCommandResult(str(file_obj.id), file_obj.resource_version)
     _delete_removed_attachments(User.objects.get(id=principal.user_id), (attachment,))
@@ -718,6 +719,7 @@ class FileService:
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
             media_position, _ = MediaPosition.objects.update_or_create(file_id=file_obj.id, defaults={"timestamp": position})
             bump_file_resources([file_obj.id])
+            bump_folder_listings([file_obj.parent_id])
             return media_position
 
     @staticmethod
@@ -734,6 +736,7 @@ class FileService:
             tag, _ = Tag.objects.get_or_create(owner_id=owner_id, name=tag_name)
             file_obj.tags.add(tag)
             bump_file_resources([file_obj.id])
+            bump_folder_listings([file_obj.parent_id])
             return tag
 
     @staticmethod
@@ -752,6 +755,7 @@ class FileService:
                 raise ResourceNotFoundError() from exception
             file_obj.tags.remove(tag)
             bump_file_resources([file_obj.id])
+            bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 
@@ -782,6 +786,7 @@ class FileService:
             })
             moment = Moment.objects.create(**values)
             bump_file_resources([file_obj.id])
+            bump_folder_listings([file_obj.parent_id])
             return moment
 
     @staticmethod
@@ -804,6 +809,7 @@ class FileService:
             _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
             subtitle = _create_subtitle(file_obj, data)
             bump_file_resources([file_obj.id])
+            bump_folder_listings([file_obj.parent_id])
             return subtitle
 
     @staticmethod
@@ -821,6 +827,7 @@ class FileService:
             if not updated:
                 raise ResourceNotFoundError()
             bump_file_resources([file_obj.id])
+            bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])
             return FileCommandResult(str(file_obj.id), file_obj.resource_version)
 

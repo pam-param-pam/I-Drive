@@ -68,7 +68,7 @@ import { isMobile } from "@/utils/common.js"
 export default {
    name: "breadcrumbs",
 
-   props: ["base", "folderList"],
+   props: ["base", "folderList", "showRoot"],
 
    data() {
       return {
@@ -86,7 +86,7 @@ export default {
       },
 
       breadcrumbFolderList() {
-         return this.folderList.slice(1)
+         return this.showRoot ? this.folderList : this.folderList.slice(1)
       },
 
       breadcrumbs() {
