@@ -14,7 +14,7 @@ from rest_framework.views import exception_handler
 
 from website.core.errors import IDriveException, BadRequestError, NoBotsError, LockedFolderWrongIpError, ResourcePermissionError, RootPermissionError, URLInvalidOrExpired, \
     ResourceNotFoundError, UsernameTakenError, RangeNotSatisfiable, PermissionPasswordError, CannotProcessDiscordRequestError, MalformedDatabaseState, DiscordBlockError, \
-    DiscordError, DiscordTextError
+    DiscordError, DiscordTextError, NoAvailableDiscordCredentialError
 from website.core.helpers import format_wait_time
 from website.core.http.utils import build_http_error_response
 from website.models import ShareableLink
@@ -97,6 +97,10 @@ def custom_exception_handler(exception, context):
             {"id": challenge.id, "name": challenge.name} for challenge in exception.challenges
         ]
         return JsonResponse(json_error, status=469)
+
+    # 430 NO DISCORD CREDENTIAL AVAILABLE
+    elif isinstance(exception, NoAvailableDiscordCredentialError):
+        return JsonResponse(build_http_error_response(code=430, error="errors.serviceUnavailable", details=str(exception)), status=430)
 
     # 500 INTERNAL SERVER ERROR
     elif isinstance(exception, IntegrityError):

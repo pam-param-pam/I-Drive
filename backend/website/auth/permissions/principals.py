@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
 
 from website.auth.utils import _trusted_client_ip
-from website.core.crypto.signer import unsign_resource, verify_signed_url
+from website.core.crypto.signer import verify_signed_url
 from website.core.errors import ResourcePermissionError
 
 
@@ -26,6 +25,12 @@ class SignedResourcePrincipal:
     expires_at: datetime
     client_ip: str | None
     share_id: str | None
+
+
+@dataclass(frozen=True)
+class SignedZIPPrincipal:
+    zip_id: str
+    expires_at: datetime
 
 @dataclass(frozen=True)
 class WorkPrincipal:
@@ -65,20 +70,7 @@ class PrincipalFactory:
             share_id=share_id,
         )
 
-
-class WorkPrincipalFactory:
-    # todo
     @staticmethod
-    def from_claimed_work(work_row: Any) -> WorkPrincipal:
-        work_id = getattr(work_row, "pk", None)
-        owner_id = getattr(work_row, "owner_id", None)
-        if owner_id is None:
-            scope = getattr(work_row, "scope", None)
-            owner_id = getattr(scope, "owner_id", None)
-        if work_id is None or owner_id is None:
-            raise TypeError("A claimed work row must expose a primary key and owner")
-        return WorkPrincipal(
-            work_type=work_row._meta.label_lower,
-            work_id=str(work_id),
-            owner_id=int(owner_id),
-        )
+    def from_signed_zip_request(request, zip_id: str) -> SignedZIPPrincipal:
+        expires = verify_signed_url(request)
+        return SignedZIPPrincipal(zip_id, datetime.fromtimestamp(expires, tz=timezone.utc))

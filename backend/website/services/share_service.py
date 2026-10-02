@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 
 from django.db import transaction
@@ -10,34 +9,16 @@ from user_agents import parse as parse_ua
 
 from website.constants import SHARE_ACCESS_DURATION, ShareEventType
 from website.core.http.context import ShareContext
-from website.core.errors import BadRequestError, MalformedDatabaseState, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_value, get_ip
 from website.core.validators.GeneralChecks import IsPositive, MaxLength, NotEmpty
-from website.models import File, Folder, ShareableLink, ShareAccess, ShareAccessEvent, UserSettings
-from website.queries.hierarchy import get_folder_chain
+from website.models import File, Folder, ShareableLink, ShareAccess, ShareAccessEvent
 from website.auth.permissions import (
-    AuthorizationResult, Authorizer, ContextSet, CredentialSet, ResourceAction,
-    ResourceContextResolver, ResourceRef, ResourceRole, ResourceType,
-    ShareContext as PermissionShareContext, SharePrincipal, UserPrincipal)
-from website.services import namespace_lock_service
+    CredentialSet, ResourceAction, ResourceType, SharePrincipal, UserPrincipal)
+from website.services import namespace_lock_service, user_service
 from website.services.hierarchy_service import lock_folder_chains
-from website.services.namespace_command_support import lock_files_and_parents
-
-
-authorizer = Authorizer()
-context_resolver = ResourceContextResolver()
-
-
-@dataclass(frozen=True)
-class ShareResolution:
-    share_id: str
-    owner_id: int
-    root_type: ResourceType
-    root_id: str
-    requested_type: ResourceType
-    requested_id: str
-    expiration_time: datetime
-    authorization: AuthorizationResult
+from website.auth.permissions.authorizer import authorizer
+from website.auth.permissions.authorizer import ShareResolution
 
 
 class ViewShare(BaseModel):
@@ -97,7 +78,7 @@ EVENT_SCHEMAS: dict[ShareEventType, type[BaseModel]] = {
 
 def create_share(
     principal: UserPrincipal,
-    resource_type: ResourceType,
+    resource_type: ResourceType | None,
     resource_id: str,
     unit: str,
     value: int,
@@ -118,20 +99,28 @@ def create_share(
 
     expiration_time = timezone.now() + units[unit]
 
-    resource_type = ResourceType(resource_type)
     owner_id = principal.user_id
+    if resource_type is None:
+        resource_type = ResourceType.FILE if File.objects.filter(owner_id=owner_id, id=resource_id).exists() else ResourceType.FOLDER
+    resource_type = ResourceType(resource_type)
     with transaction.atomic():
         namespace_lock_service.lock_owner_scope_shared(owner_id)
         if resource_type == ResourceType.FILE:
-            locked = lock_files_and_parents(owner_id, [resource_id])
+            from website.services.file_service import lock_files_with_parents
+
+            locked = lock_files_with_parents(owner_id, [resource_id])
             resource = locked.files[str(resource_id)]
-            context = context_resolver.resolve_file(resource_id, owner_id, locked.hierarchy)
+            hierarchy = locked.hierarchy
+            locked_files = locked.files
         else:
             hierarchy = lock_folder_chains(owner_id, [resource_id])
             resource = hierarchy.folders[str(resource_id)]
-            context = context_resolver.resolve_folder(resource_id, owner_id, hierarchy)
+            locked_files = None
 
-        authorizer.authorize_user_action(principal, ResourceAction.CREATE_SHARE, ContextSet((context,)), credentials)
+        authorizer.require_item(
+            principal, ResourceAction.CREATE_SHARE, resource_id, credentials,
+            resource_type=resource_type, locked_hierarchy=hierarchy, locked_files=locked_files,
+        )
 
         root_fields = (
             {"root_file_id": resource.id}
@@ -147,31 +136,26 @@ def create_share(
 
 
 def list_shares(principal: UserPrincipal):
-    authorizer.authorize_user_action(principal, ResourceAction.LIST_SHARES)
-    return ShareableLink.objects.filter(owner_id=principal.user_id)
+    user_service.authorize_user(principal, "read", "share")
+    now = timezone.now()
+    shares = ShareableLink.objects.filter(owner_id=principal.user_id).select_related("root_file", "root_folder")
+    return tuple(share for share in shares if share.expiration_time > now and share.root is not None)
 
 
 def get_item_inside_share(share: ShareableLink) -> File | Folder:
-    if share.is_expired():
-        share.delete()
-        raise ResourcePermissionError("Share has expired")
-
-    try:
-        return share.root
-    except (File.DoesNotExist, Folder.DoesNotExist, ResourceNotFoundError) as exception:
-        share.delete()
-        raise ResourceNotFoundError() from exception
+    """Display data from a share returned by its service; cleanup runs separately."""
+    return share.root
 
 
 def _get_owned_share(principal: UserPrincipal, share_id: str, for_update: bool = False) -> ShareableLink:
-    authorizer.authorize_user_action(principal, ResourceAction.MANAGE_SHARE)
-    shares = ShareableLink.objects.filter(owner_id=principal.user_id)
+    user_service.authorize_user(principal, "modify", "share")
+    rows = ShareableLink.objects.filter(owner_id=principal.user_id)
     if for_update:
-        shares = shares.select_for_update()
-    try:
-        return shares.get(Q(id=share_id) | Q(token=share_id))
-    except ShareableLink.DoesNotExist as exception:
-        raise ResourceNotFoundError("Share not found") from exception
+        rows = rows.select_for_update()
+    share = rows.filter(Q(id=share_id) | Q(token=share_id)).first()
+    if share is None:
+        raise ResourceNotFoundError()
+    return share
 
 
 def delete_share(principal: UserPrincipal, share_id: str) -> None:
@@ -194,86 +178,18 @@ def get_share_events(principal: UserPrincipal, share_id: str, visit_id: str):
     return ShareAccessEvent.objects.filter(access_id=access.id)
 
 
-def _share_membership(
-    owner_id: int,
-    root_type: ResourceType,
-    root_id: str,
-    requested_type: ResourceType,
-    requested_id: str,
-) -> bool:
-    if root_type == requested_type and root_id == requested_id:
-        return True
-    if root_type != ResourceType.FOLDER:
-        return False
-    settings = UserSettings.objects.get(user_id=owner_id)
-    if requested_type == ResourceType.FILE:
-        parent_id = File.objects.filter(owner_id=owner_id, id=requested_id).values_list("parent_id", flat=True).first()
-        if parent_id is None:
-            return False
-        if not settings.subfolders_in_shares:
-            return str(parent_id) == root_id
-        folder_id = str(parent_id)
-    else:
-        if not settings.subfolders_in_shares:
-            return False
-        folder_id = requested_id
-    try:
-        chain = get_folder_chain(folder_id)
-    except ResourceNotFoundError as exception:
-        raise ResourceNotFoundError("Share not found") from exception
-    return any(str(folder.id) == root_id for folder in chain)
-
-
 def resolve_share(
-    principal: SharePrincipal,
-    action: ResourceAction,
-    requested_type: ResourceType | None = None,
-    requested_id: str | None = None,
+    principal: SharePrincipal, action: ResourceAction,
+    requested_type: ResourceType | None = None, requested_id: str | None = None,
     credentials: CredentialSet | None = None,
 ) -> ShareResolution:
-    try:
-        share = ShareableLink.objects.get(token=principal.share_token)
-    except ShareableLink.DoesNotExist as exception:
-        raise ResourceNotFoundError("Share not found") from exception
+    return authorizer.require_share(
+        principal, action, resource_type=requested_type, item_id=requested_id, credentials=credentials,
+    )
 
-    root_type = ResourceType(share.get_type())
-    root_id = share.root_id
-    requested_type = ResourceType(requested_type or root_type)
-    requested_id = requested_id or root_id
-    refs = (
-        ResourceRef(root_type, root_id, ResourceRole.SHARE_ROOT),
-        ResourceRef(requested_type, requested_id, ResourceRole.SHARE_ITEM),
-    )
-    contexts = context_resolver.resolve_many(refs, share.owner_id)
-    membership = _share_membership(share.owner_id, root_type, root_id, requested_type, requested_id)
 
-    share_context = PermissionShareContext(
-        share_id=share.id,
-        share_token=share.token,
-        owner_id=share.owner_id,
-        root_type=root_type,
-        root_id=root_id,
-        expires_at=share.expiration_time,
-        password=share.password,
-        requested_item_is_member=membership,
-        descendant_folders_allowed=(
-            requested_type != ResourceType.FOLDER
-            or requested_id == root_id
-            or root_type != ResourceType.FOLDER
-            or UserSettings.objects.get(user_id=share.owner_id).subfolders_in_shares
-        ),
-    )
-    authorization = authorizer.authorize_share_action(principal, action, share_context, contexts, credentials)
-    return ShareResolution(
-        share_id=share.id,
-        owner_id=share.owner_id,
-        root_type=root_type,
-        root_id=root_id,
-        requested_type=requested_type,
-        requested_id=requested_id,
-        expiration_time=share.expiration_time,
-        authorization=authorization,
-    )
+def list_share_children(principal, folder_id, credentials=None):
+    return authorizer.list_share_children(principal, folder_id, credentials)
 
 
 def _get_or_create_recent_share_access(share: ShareableLink, context: ShareContext) -> ShareAccess:
@@ -305,7 +221,7 @@ def _log_share_event(share: ShareableLink, context: ShareContext, event_type: Sh
 
 
 def log_event_http(request, resolution: ShareResolution, event_type: ShareEventType, **metadata):
-    share = ShareableLink.objects.get(id=resolution.share_id, owner_id=resolution.owner_id)
+    share = resolution.share
     ip, _ = get_ip(request)
     user_agent = request.user_agent
     user = request.user if request.user.is_authenticated else None
@@ -314,7 +230,7 @@ def log_event_http(request, resolution: ShareResolution, event_type: ShareEventT
     _log_share_event(share, context, event_type, **metadata)
 
 def log_event_websocket(scope, resolution: ShareResolution, event_type: ShareEventType, **metadata):
-    share = ShareableLink.objects.get(id=resolution.share_id, owner_id=resolution.owner_id)
+    share = resolution.share
     # IP address
     ip, _ = scope.get("client", ("", None))
 

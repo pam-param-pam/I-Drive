@@ -11,7 +11,6 @@ def get_thumbnail_key(file_id: str, resource_version: int | None = None) -> str:
 def get_folder_content_key(folder_id: str) -> str:
     return f"folder-content:{folder_id}"
 
-
 def get_folder_hash_key(folder_id: str) -> str:
     return f"folder-hash:{folder_id}"
 
@@ -20,7 +19,6 @@ def get_router_ip_key():
 
 def get_folder_content_version(folder) -> str:
     return str(folder.listing_version)
-
 
 def get_folder_content(folder):
     cached = cache.get(get_folder_content_key(folder.id))
@@ -32,7 +30,6 @@ def get_folder_content(folder):
         return None
 
     return cached.get("content")
-
 
 def set_folder_content(folder, folder_content: dict) -> None:
     cache.set(

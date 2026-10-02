@@ -26,7 +26,8 @@
 9) cancel/confirm etc prompts should be called independently
 11) fix docker compose project name and prefix volumes properly
 12) fix db indexes!!!
-
+13) Zip download with lots of small files fucks up due to no credentials (1 only
+14) )
 Verify the speed of celery delete tasks
 Re think how many of them should there be
 

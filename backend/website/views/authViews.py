@@ -4,7 +4,7 @@ from rest_framework.decorators import throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.permissions import AllowedNetwork, PrincipalFactory, ResourceAction
+from website.auth.permissions import AllowedNetwork, PrincipalFactory
 from website.auth.throttle import defaultAnonUserThrottle, LoginThrottle, RegisterThrottle, PasswordChangeThrottle, defaultAuthUserThrottle
 from website.core.Serializers import DeviceTokenSerializer
 from website.core.helpers import extract_key
@@ -105,7 +105,7 @@ def cancel_pending_qr_session_view(request, session_id):
 @permission_classes([IsAuthenticated])
 def list_active_devices_view(request):
     user_service.authorize_user(
-        PrincipalFactory.from_authenticated_request(request), ResourceAction.READ_ACCOUNT,
+        PrincipalFactory.from_authenticated_request(request), "read",
     )
     tokens = PerDeviceToken.objects.get_active_for_user(user=request.user)
     data = DeviceTokenSerializer.serialize_objects(tokens)

@@ -1,43 +1,60 @@
 import base64
 import hashlib
-from itertools import chain
+from collections import deque
+from itertools import batched
 
-from django.db.models import Exists, OuterRef, Q
+from django.contrib.auth import get_user_model
 
 from website.auth.permissions import (
-    Authorizer, CredentialSet, ResourceAction,
-    ResourceContextResolver, ResourceRef, ResourceRole, ResourceType, SharePrincipal,
-    SignedResourcePrincipal, UserPrincipal)
+    ResourceAction, SignedResourcePrincipal, SignedZIPPrincipal)
 from website.config import MAX_THUMBNAIL_SIZE
 from website.constants import cache, MAX_MEDIA_CACHE_AGE
 from website.core.converters import param_to_bool
 from website.core.crypto.Decryptor import Decryptor
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import validate_key
 from website.core.media.stream.sources.DeflateZipEntryByteSource import DeflateZipEntryByteSource
 from website.core.media.stream.sources.EmptyByteSource import EmptyByteSource
 from website.core.media.stream.sources.FragmentByteSource import FragmentedDiscordByteSource
 from website.core.media.stream.sources.ZipByteSource import ZipByteSource
 from website.core.media.utils import decrypt_bytes, fetch_discord_file, build_binary_response, build_streaming_response
-from website.models import DeletionScope, File, Moment, Subtitle, UserZIP, Thumbnail
-from website.models.mixin_models import ItemState
-from website.queries.builders import build_zip_entry_dict, build_flattened_children_values
-from website.queries._zip_fields import ZIP_FILE_VALUE_FIELDS, ZIP_FOLDER_VALUE_FIELDS
+from website.models import File, Folder, Moment, Subtitle, Thumbnail
 from website.queries.selectors import check_if_bots_exists
-from website.services import attachment_service, cache_service
+from website.services import attachment_service, cache_service, zip_service
 
-authorizer = Authorizer()
-context_resolver = ResourceContextResolver()
+from website.auth.permissions.authorizer import authorizer
+
+
+def iter_download_files(principal, item_id, credentials=None):
+    root = authorizer.require_download_root(principal, item_id, credentials)
+    if root["kind"] == "file":
+        yield root
+        return
+    pending, seen = deque([root["id"]]), {root["id"]}
+    while pending:
+        parent_ids = [pending.popleft() for _ in range(min(len(pending), 500))]
+        parents = authorizer.filter_download_items(
+            principal, root["id"], folder_ids=parent_ids, credentials=credentials,
+        )
+        parent_ids = {row["id"] for row in parents}
+        for model, kind in ((File, "file"), (Folder, "folder")):
+            ids = model.objects.filter(owner_id=principal.user_id, parent_id__in=parent_ids).order_by("id").values_list("id", flat=True)
+            for batch in batched(ids.iterator(chunk_size=500), 500):
+                selected = {"folder_ids" if kind == "folder" else "file_ids": list(batch)}
+                rows = authorizer.filter_download_items(
+                    principal, root["id"], parent_ids=parent_ids, credentials=credentials, **selected,
+                )
+                for row in rows:
+                    if kind == "file":
+                        yield row
+                    elif row["id"] not in seen:
+                        seen.add(row["id"])
+                        pending.append(row["id"])
 
 
 def _authorized_signed_file(principal: SignedResourcePrincipal, *, for_zip: bool = False) -> File:
-    file_obj = File.objects.select_related("owner", "parent").get(id=principal.file_id)
-    context = context_resolver.resolve_file(principal.file_id, file_obj.owner_id)
-    authorizer.authorize_signed_resource(principal, context)
-    if for_zip and context.is_trashed:
-        raise ResourcePermissionError("ZIP downloads of items in trash are not allowed")
-
-    return file_obj
+    action = ResourceAction.STREAM_ZIP_ENTRY if for_zip else ResourceAction.STREAM_FILE
+    return authorizer.require_signed_file(principal, action)
 
 
 def _stable_file_etag(file_obj: File) -> str:
@@ -47,7 +64,7 @@ def _stable_file_etag(file_obj: File) -> str:
 
 def get_thumbnail_response(request, principal: SignedResourcePrincipal, thumbnail_id: str):
     isInline = validate_key(request.GET, "inline", bool, default=False, converter=param_to_bool)
-    file_obj = _authorized_signed_file(principal)
+    file_obj = authorizer.require_signed_file(principal, ResourceAction.STREAM_THUMBNAIL)
     try:
         thumbnail = Thumbnail.objects.get(id=thumbnail_id, file_id=file_obj.id)
     except Thumbnail.DoesNotExist as exception:
@@ -152,92 +169,15 @@ def get_file_response(request, principal: SignedResourcePrincipal):
     return response
 
 
-def iter_zip_file_dicts(file_rows):
-    for file_row in file_rows:
-        yield build_zip_entry_dict(file_row, file_row["name"])
-
-
-def get_zip_response(
-        request,
-        principal: UserPrincipal | SharePrincipal,
-        zip_id: str,
-        credentials: CredentialSet | None = None,
-):
-    try:
-        user_zip = UserZIP.objects.select_related("owner").get(Q(id=zip_id) | Q(token=zip_id))
-    except UserZIP.DoesNotExist as exception:
-        raise ResourceNotFoundError() from exception
-    if isinstance(principal, UserPrincipal) and user_zip.owner_id != principal.user_id:
+def get_zip_response(request, principal: SignedZIPPrincipal):
+    user_zip, roots, scope = authorizer.require_signed_zip(principal)
+    user = get_user_model().objects.filter(id=user_zip.owner_id).first()
+    if user is None:
         raise ResourceNotFoundError()
-    user = user_zip.owner
 
-    files_qs = user_zip.files.all()
-    folders_qs = user_zip.folders.all()
-    file_ids = list(files_qs.values_list("id", flat=True))
-    folder_ids = list(folders_qs.values_list("id", flat=True))
-    if isinstance(principal, UserPrincipal):
-        file_rows = list(
-            File.objects.filter(owner_id=principal.user_id, id__in=file_ids)
-            .annotate(has_active_deletion=Exists(DeletionScope.objects.filter(
-                owner_id=principal.user_id,
-                root_file_id=OuterRef("pk"),
-                state=DeletionScope.State.ACTIVE,
-            )))
-            .values("id", "owner_id", "parent_id", "state", "trashed_at", "has_active_deletion")
-        )
-        if len(file_rows) != len(file_ids):
-            raise ResourceNotFoundError()
-        parent_ids = {str(row["parent_id"]) for row in file_rows}
-        context_folder_ids = parent_ids | set(folder_ids)
-        folder_contexts = context_resolver.resolve_many(
-            (ResourceRef(ResourceType.FOLDER, folder_id, ResourceRole.TARGET) for folder_id in context_folder_ids),
-            principal.user_id,
-        ) if context_folder_ids else ()
-        contexts_by_id = {context.resource_id: context for context in folder_contexts}
-        authorizer.authorize_user_file_batch(
-            principal,
-            ResourceAction.DOWNLOAD,
-            (contexts_by_id[parent_id] for parent_id in parent_ids),
-            file_rows,
-            (contexts_by_id[folder_id] for folder_id in folder_ids),
-            credentials,
-        )
-    else:
-        from website.services.share_service import resolve_share
-
-        refs = [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids]
-        refs.extend(ResourceRef(ResourceType.FOLDER, folder_id, ResourceRole.TARGET) for folder_id in folder_ids)
-        for ref in refs:
-            resolve_share(principal, ResourceAction.DOWNLOAD_SHARE, ref.resource_type, ref.resource_id, credentials)
-
-    files_qs = files_qs.filter(state=ItemState.ACTIVE)
-    folders_qs = folders_qs.filter(state=ItemState.ACTIVE)
-    files_exists = files_qs.exists()
-    if not files_exists and not folders_qs.exists():
-        raise ResourcePermissionError("ZIP contains no available files or folders")
-
-    folders = list(folders_qs.values(*ZIP_FOLDER_VALUE_FIELDS).order_by("id"))
-
-    single_root = not files_exists and len(folders) == 1
-
-    if single_root:
-        root_folder = folders[0]
-        dict_files = build_flattened_children_values(root_folder, include_root_name=False)
-        zip_name = f"{root_folder['name']}.zip"
-    else:
-        file_rows = files_qs.values(*ZIP_FILE_VALUE_FIELDS).order_by("id").iterator(chunk_size=1000)
-
-        folder_iterators = (
-            build_flattened_children_values(folder_row)
-            for folder_row in folders
-        )
-
-        dict_files = chain(
-            iter_zip_file_dicts(file_rows),
-            chain.from_iterable(folder_iterators),
-        )
-
-        zip_name = f"{user_zip.name}.zip"
+    single_root = len(roots) == 1 and roots[0]["kind"] == "folder"
+    zip_name = f"{roots[0]['name'] if single_root else user_zip.name}.zip"
+    dict_files = zip_service.iter_zip_entries(principal, roots, scope)
 
     raw = validate_key(request.GET, "raw", bool, default=False, converter=param_to_bool)
     num_bots = check_if_bots_exists(user)
@@ -249,7 +189,7 @@ def get_zip_response(
         filename=zip_name,
         content_type="application/zip",
         etag=user_zip.id,
-        vary=["x-resource-password"],
+        cache_control="private, no-store",
     )
 
 

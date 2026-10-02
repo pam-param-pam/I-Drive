@@ -82,11 +82,13 @@ export class Downloader {
       this.ensureDownloadingState()
    }
 
-   async downloadZip(ids, shareToken) {
+   async downloadZip(ids, shareToken, resourcePasswords) {
       this.checkIfSupported()
       this.initRuntimeDownload()
 
-      const zipDescriptor = shareToken ? await createShareZIP(shareToken, { ids }) : await createZIP({ ids })
+      const zipDescriptor = shareToken
+         ? await createShareZIP(shareToken, { ids, resourcePasswords })
+         : await createZIP({ ids, resourcePasswords })
       let zipFile = await this.prepareZipFile(zipDescriptor)
 
       let fileHandle = await this.getZipFileHandle(zipFile)
@@ -109,9 +111,10 @@ export class Downloader {
    async prepareZipFile(zipDescriptor) {
       const id = zipDescriptor.id
       const name = zipDescriptor.name + ".zip"
-      const downloadUrl = zipDescriptor.download_url + "?&raw=True"
+      const downloadUrl = new URL(zipDescriptor.download_url)
+      downloadUrl.searchParams.set("raw", "True")
 
-      const response = await backendInstance.get(downloadUrl, {
+      const response = await backendInstance.get(downloadUrl.toString(), {
          headers: {
             Range: "bytes=0-0"
          },
@@ -125,7 +128,7 @@ export class Downloader {
          zipId: id,
          name,
          size,
-         downloadUrl,
+         downloadUrl: downloadUrl.toString(),
          fileHandle: null,
          isZip: true
       }

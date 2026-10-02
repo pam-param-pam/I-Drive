@@ -114,6 +114,13 @@ export function shouldRetry469(error) {
 }
 
 
+export function isCredentialUnavailable(error) {
+   return error.response?.status === 430 &&
+      error.response?.data?.error === "errors.serviceUnavailable" &&
+      error.response?.data?.details === "No credentials available right now"
+}
+
+
 export async function displayErrorToastIfNeeded(error) {
    let errorMessage = error.response?.data?.error
    let errorDetails = error.response?.data?.details
@@ -138,7 +145,10 @@ export async function displayErrorToastIfNeeded(error) {
       errorDetails = i18n.global.t("errors.timeoutDetails")
    }
 
-   if (error.config?.__displayErrorToast !== false) {
+   const suppressedStatuses = error.config?.__supressStatusCodes
+   const suppressToast = Array.isArray(suppressedStatuses) && suppressedStatuses.includes(error.response?.status)
+
+   if (error.config?.__displayErrorToast !== false && !suppressToast) {
       toast.error(`${i18n.global.t(errorMessage)}\n${i18n.global.t(errorDetails)}`, {
          timeout: 5000,
          position: "bottom-right"

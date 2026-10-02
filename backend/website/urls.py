@@ -112,7 +112,7 @@ urlpatterns = [
     path("ultraDownload/fragments/<fragment_id>", ['GET'], get_fragment_url_view, name="returns fragment metadata and discord fetch url"),
 
     path("zip", ["POST"], create_zip_model_view, name="create zip model"),
-    path('zip/<token>/stream', ['GET'], stream_zip_files),
+    path('zip/<zip_id>/stream', ['GET'], stream_zip_files),
 
     django_path("auth/token/login", login_per_device_view, name="login"),
     django_path("auth/token/logout", logout_per_device_view, name="logout"),
@@ -158,7 +158,6 @@ urlpatterns = [
     path("shares/<token>/password", ['GET'], check_share_password, name="check share password"),
 
     path("shares/<token>/zip", ['POST'], create_share_zip_model, name="create zip for share"),
-    path("shares/<share_token>/zip/<token>/stream", ['GET'], stream_zip_files, name="stream share zip"),
 
     django_path('admin', admin.site.urls),
     django_path("", include("django_prometheus.urls")),

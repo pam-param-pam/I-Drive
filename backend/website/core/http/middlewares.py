@@ -34,7 +34,7 @@ class FailedRequestLoggerMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if response.status_code >= 400:
+        if response.status_code >= 400 and response.status_code != 430:
             key = self._get_key(request)
             data = cache.get(key, [])
             data.append(time.time())

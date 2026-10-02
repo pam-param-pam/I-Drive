@@ -30,7 +30,7 @@ def _visible_folders(folder_id):
         root_folder_id=OuterRef("pk"), state=DeletionScope.State.ACTIVE,
     )
     return list(
-        Folder.objects.filter(parent_id=folder_id, state=ItemState.ACTIVE, trash_root__isnull=True)
+        Folder.objects.filter(parent_id=folder_id, state=ItemState.ACTIVE, trashed_at__isnull=True)
         .annotate(has_deletion=Exists(deletion)).filter(has_deletion=False)
         .values("id", "name", "subtree_hash", "hash_input_generation", "hash_computed_generation")
     )

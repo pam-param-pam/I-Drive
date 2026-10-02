@@ -1,3 +1,5 @@
+from website.queries.resource_loader import ResourceLoader
+from website.auth.permissions import ResourceRef, ResourceType
 import base64
 from abc import abstractmethod, ABC
 from typing import Iterable
@@ -9,8 +11,6 @@ from website.models import File, Folder, ShareableLink, ShareAccessEvent, ShareA
 from website.models.file_related_models import PhotoMetadata, RawMetadata, SubtitleTrack, Moment
 from website.models.other_models import Notification
 from website.services.share_service import get_item_inside_share
-from website.queries.file_lock_annotations import file_lock_annotations
-from website.auth.permissions import ResourceContextResolver
 
 
 class SimpleSerializer(ABC):
@@ -65,54 +65,74 @@ class AdvancedSerializer(ABC):
 class FileSerializer(AdvancedSerializer):
 
     @classmethod
+    def _load_tuples(
+        cls,
+        file_objects: tuple[File, ...],
+        effective_lock_scope_id: str | None = None,
+        lock_context_resolved: bool = False,
+    ) -> dict[str, tuple]:
+        lock_fields = {"is_locked", "lock_from_id", "lock_from_name"}
+        value_fields = tuple(field for field in File.DISPLAY_VALUES if field not in lock_fields)
+        values_by_id = {
+            str(values["id"]): values
+            for row in (
+                File.objects.filter(id__in=[obj.id for obj in file_objects])
+                .annotate(**File.get_display_annotate())
+                .values_list(*value_fields)
+            )
+            for values in (dict(zip(value_fields, row)),)
+        }
+
+        if lock_context_resolved:
+            for values in values_by_id.values():
+                values["is_locked"] = effective_lock_scope_id is not None
+                values["lock_from_id"] = effective_lock_scope_id
+                values["lock_from_name"] = None
+        else:
+            by_owner: dict[int, list[str]] = {}
+            for file_id, values in values_by_id.items():
+                by_owner.setdefault(values["owner_id"], []).append(file_id)
+            for owner_id, file_ids in by_owner.items():
+                contexts = ResourceLoader().resolve_many(
+                    tuple(ResourceRef(ResourceType.FILE, file_id) for file_id in file_ids), owner_id,
+                )
+                for context in contexts:
+                    values = values_by_id[context.resource_id]
+                    values["is_locked"] = context.is_locked
+                    values["lock_from_id"] = context.effective_lock_scope_id
+                    values["lock_from_name"] = context.effective_lock_scope_name
+
+        return {
+            file_id: tuple(values[field] for field in File.DISPLAY_VALUES)
+            for file_id, values in values_by_id.items()
+        }
+
+    @classmethod
     def serialize_many(
         cls,
         file_objects: Iterable[File],
         hide=False,
         sign_urls: bool = True,
-        effective_lock_policy_id: str | None = None,
+        effective_lock_scope_id: str | None = None,
         lock_context_resolved: bool = False,
     ) -> list[dict]:
         file_objects = tuple(file_objects)
         if not file_objects:
             return []
 
-        if not lock_context_resolved:
-            tuples_by_id = {
-                str(row[0]): row
-                for row in File.objects.filter(id__in=[obj.id for obj in file_objects])
-                .annotate(**File.get_display_annotate(), **file_lock_annotations())
-                .values_list(*File.DISPLAY_VALUES)
-            }
-        else:
-            lock_fields = {"is_locked", "lock_from_id", "lock_from_name"}
-            value_fields = tuple(field for field in File.DISPLAY_VALUES if field not in lock_fields)
-            tuples_by_id = {}
-            for row in (
-                File.objects.filter(id__in=[obj.id for obj in file_objects])
-                .annotate(**File.get_display_annotate())
-                .values_list(*value_fields)
-            ):
-                values = dict(zip(value_fields, row))
-                values["is_locked"] = effective_lock_policy_id is not None
-                values["lock_from_id"] = effective_lock_policy_id
-                values["lock_from_name"] = None
-                tuples_by_id[str(values["id"])] = tuple(values[field] for field in File.DISPLAY_VALUES)
+        tuples_by_id = cls._load_tuples(
+            file_objects, effective_lock_scope_id=effective_lock_scope_id,
+            lock_context_resolved=lock_context_resolved,
+        )
         return [
             cls.serialize_tuple(tuples_by_id[str(obj.id)], hide=hide, sign_urls=sign_urls)
             for obj in file_objects
             if str(obj.id) in tuples_by_id
         ]
 
-    @staticmethod
-    def _object_to_tuple(obj) -> tuple:
-        file_tuple = (
-            File.objects
-            .filter(id=obj.id)
-            .annotate(**File.get_display_annotate(), **file_lock_annotations())
-            .values_list(*File.DISPLAY_VALUES)
-            .first()
-        )
+    @classmethod
+    def _object_to_tuple(cls, obj) -> tuple:
+        file_tuple = cls._load_tuples((obj,)).get(str(obj.id))
 
         if not file_tuple:
             raise ValueError("File not found during fallback.")
@@ -129,7 +149,7 @@ class FileSerializer(AdvancedSerializer):
         (
             _id, name, in_trash, state, parent_id, owner_id, is_locked, lock_from_id, lock_from_name, is_dir,
             type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
+            parent__id, crc, subs_count, has_photo_metadata, has_raw_metadata, thumbnail_id, has_video_metadata, iv, key
         ) = tuple_data
 
         key = base64.b64encode(key).decode() if key else None
@@ -147,10 +167,10 @@ class FileSerializer(AdvancedSerializer):
             "last_modified": last_modified_at.isoformat() if last_modified_at else None,
             "isLocked": is_locked,
             "encryption_method": encryption_method,
-            "isVideoMetadata": has_videometadata,
-            "isRawMetadata": has_rawmetadata,
-            "isPhotoMetadata": has_photometadata,
-            "hasSubtitles": has_subtitle,
+            "isVideoMetadata": has_video_metadata,
+            "isRawMetadata": has_raw_metadata,
+            "isPhotoMetadata": has_photo_metadata,
+            "hasSubtitles": bool(subs_count),
             "iv": iv,
             "key": key,
             "crc": crc
@@ -162,7 +182,7 @@ class FileSerializer(AdvancedSerializer):
         if in_trash:
             d["in_trash_since"] = in_trash_since.isoformat()
 
-        if not hide and not (is_locked and in_trash):
+        if not hide and not in_trash:
             download_path = f"/files/{_id}/stream"
 
             if sign_urls:
@@ -173,6 +193,7 @@ class FileSerializer(AdvancedSerializer):
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
+        if not hide and not (is_locked and in_trash):
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
 
@@ -194,7 +215,7 @@ class ShareFileSerializer(FileSerializer):
         (
             _id, name, in_trash, state, parent_id, owner_id, is_locked, lock_from_id, lock_from_name, is_dir,
             type_, size, created_at, last_modified_at, encryption_method, in_trash_since, extension,
-            parent__id, crc, has_subtitle, has_photometadata, has_rawmetadata, thumbnail_id, has_videometadata, iv, key
+            parent__id, crc, subs_count, has_photo_metadata, has_raw_metadata, thumbnail_id, has_video_metadata, iv, key
         ) = tuple_data
 
         key = base64.b64encode(key).decode() if key else None
@@ -211,16 +232,16 @@ class ShareFileSerializer(FileSerializer):
             "created": created_at.isoformat() if created_at else None,
             "last_modified": last_modified_at.isoformat() if last_modified_at else None,
             "encryption_method": encryption_method,
-            "isVideoMetadata": has_videometadata,
-            "isRawMetadata": has_rawmetadata,
-            "isPhotoMetadata": has_photometadata,
-            "hasSubtitles": has_subtitle,
+            "isVideoMetadata": has_video_metadata,
+            "isRawMetadata": has_raw_metadata,
+            "isPhotoMetadata": has_photo_metadata,
+            "hasSubtitles": bool(subs_count),
             "crc": crc,
             "iv": iv,
             "key": key,
         }
 
-        if not hide and not (is_locked and in_trash):
+        if not hide and not in_trash:
             signed = ""
 
             download_path = f"/files/{_id}/stream"
@@ -230,6 +251,7 @@ class ShareFileSerializer(FileSerializer):
 
             d["download_url"] = f"{API_BASE_URL}{download_path}{signed}"
 
+        if not hide and not (is_locked and in_trash):
             if thumbnail_id:
                 thumbnail_path = f"/files/{_id}/thumbnail/{thumbnail_id}/stream"
 
@@ -246,14 +268,30 @@ class ShareFileSerializer(FileSerializer):
 class FolderSerializer(SimpleSerializer):
 
     @staticmethod
+    def serialize_dict(row: dict) -> dict:
+        result = {
+            "isDir": True, "id": row["id"], "name": row["name"], "parent_id": row["parent_id"],
+            "size": row["visible_descendant_file_size"],
+            "folder_count": row["visible_descendant_folder_count"],
+            "file_count": row["visible_descendant_file_count"],
+            "created": row["created_at"].isoformat(), "last_modified": row["last_modified_at"].isoformat(),
+            "isLocked": row["is_locked"],
+        }
+        if row["is_locked"]:
+            result["lockFrom"] = row["lock_from_id"]
+        if row["trashed_at"] is not None:
+            result["in_trash_since"] = row["trashed_at"].isoformat()
+        return result
+
+    @staticmethod
     def serialize_object(folder_obj: Folder) -> dict:
-        context = ResourceContextResolver().resolve_folder(str(folder_obj.id), folder_obj.owner_id)
+        context = ResourceLoader().resolve_folder(str(folder_obj.id), folder_obj.owner_id)
         is_locked = context.is_locked
         folder_dict = {
             'isDir': True,
             'id': folder_obj.id,
             'name': folder_obj.name,
-            'parent_id': folder_obj.parent.id if folder_obj.parent else None,
+            'parent_id': folder_obj.parent_id,
             'size': folder_obj.visible_descendant_file_size,
             'folder_count': folder_obj.visible_descendant_folder_count,
             'file_count': folder_obj.visible_descendant_file_count,
@@ -263,14 +301,10 @@ class FolderSerializer(SimpleSerializer):
         }
 
         if is_locked:
-            folder_dict['lockFrom'] = context.effective_lock_policy_id
+            folder_dict['lockFrom'] = context.effective_lock_scope_id
 
-        try:
-            trash_marker = folder_obj.trash_root
-        except Folder.trash_root.RelatedObjectDoesNotExist:
-            trash_marker = None
-        if trash_marker:
-            folder_dict["in_trash_since"] = trash_marker.created_at.isoformat()
+        if folder_obj.trashed_at is not None:
+            folder_dict["in_trash_since"] = folder_obj.trashed_at.isoformat()
 
         return folder_dict
 
@@ -541,5 +575,6 @@ class ZipSerializer(SimpleSerializer):
 
     @staticmethod
     def serialize_object(user_zip: UserZIP) -> dict:
-        url = f"{API_BASE_URL}/zip/{user_zip.token}/stream"
+        path = f"/zip/{user_zip.id}/stream"
+        url = f"{API_BASE_URL}{path}{sign_resource(path)}"
         return {"download_url": url, "name": user_zip.name, "id": user_zip.id}

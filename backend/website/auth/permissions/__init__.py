@@ -1,43 +1,18 @@
-from .authorizer import AuthorizationResult, AuthorizedResource, Authorizer
-from .contexts import ContextSet, ResourceContext, ResourceContextResolver, ResourceRef, ShareContext
 from .credentials import CredentialSet, extract_resource_credentials
 from .drf import AllowedNetwork
-from website.core.errors import PasswordChallenge, PermissionPasswordError
-from .policies import ActionPolicy, LockRule, PolicyRegistry, ResourceAction, ResourceRole, ResourceType, TrashAccess
+from .policies import ResourceAction, ResourceType
+from .contexts import ResourceContext, ResourceRef
 from .principals import (
-    PrincipalFactory,
-    SharePrincipal,
-    SignedResourcePrincipal,
-    UserPrincipal,
-    WorkPrincipal,
-    WorkPrincipalFactory,
+    PrincipalFactory, SharePrincipal, SignedResourcePrincipal, SignedZIPPrincipal,
+    UserPrincipal, WorkPrincipal,
 )
+from website.core.errors import PasswordChallenge, PermissionPasswordError
 
+# Import the authorizer from .authorizer at service boundaries. Keeping package
+# initialization independent of ORM loaders avoids a circular import for queries.
 __all__ = [
-    "ActionPolicy",
-    "AllowedNetwork",
-    "AuthorizationResult",
-    "AuthorizedResource",
-    "Authorizer",
-    "ContextSet",
-    "CredentialSet",
-    "LockRule",
-    "PasswordChallenge",
-    "PermissionPasswordError",
-    "PolicyRegistry",
-    "PrincipalFactory",
-    "ResourceAction",
-    "ResourceContext",
-    "ResourceContextResolver",
-    "ResourceRef",
-    "ResourceRole",
-    "ResourceType",
-    "ShareContext",
-    "SharePrincipal",
-    "SignedResourcePrincipal",
-    "TrashAccess",
-    "UserPrincipal",
-    "WorkPrincipal",
-    "WorkPrincipalFactory",
-    "extract_resource_credentials",
+    "AllowedNetwork", "CredentialSet", "PasswordChallenge", "PermissionPasswordError",
+    "PrincipalFactory", "ResourceAction", "ResourceContext", "ResourceRef", "ResourceType",
+    "SharePrincipal", "SignedResourcePrincipal", "SignedZIPPrincipal", "UserPrincipal",
+    "WorkPrincipal", "extract_resource_credentials",
 ]

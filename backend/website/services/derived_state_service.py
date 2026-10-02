@@ -4,6 +4,7 @@ from typing import Iterable
 from django.db.models import F
 
 from website.models import File, Folder, FolderHashWork, FolderHeightRepair
+from website.constants import FILE_TYPE_CHOICES
 
 
 _COUNTER_FIELDS = (
@@ -31,6 +32,50 @@ def merge_delta(target: dict[str, dict[str, int]], folder_ids: Iterable[str], **
         bucket = target.setdefault(str(folder_id), defaultdict(int))
         for field, amount in values.items():
             bucket[field] += amount
+
+
+def merge_file_stats(target, folder_ids, stats, direction=1):
+    for folder_id in folder_ids:
+        buckets = target.setdefault(str(folder_id), {})
+        for file_type, values in stats.items():
+            bucket = buckets.setdefault(file_type, {"count": 0, "size": 0})
+            for field in ("count", "size"):
+                bucket[field] += direction * values[field]
+
+
+def apply_file_stats_deltas(deltas):
+    """Apply merged type deltas under the caller's locked ancestor chains.
+
+    Call after scalar deltas, in the same transaction. A single bulk update
+    avoids one JSON write query per ancestor; no model save hooks are required.
+    """
+    folders = list(Folder.objects.filter(id__in=deltas).order_by("id"))
+    valid_types = {choice[0] for choice in FILE_TYPE_CHOICES}
+    for folder in folders:
+        stats = folder.physical_file_stats
+        for file_type, values in deltas[str(folder.id)].items():
+            if file_type not in valid_types:
+                raise ValueError(f"Invalid file type: {file_type}")
+            bucket = stats.setdefault(file_type, {"count": 0, "size": 0})
+            for field in ("count", "size"):
+                bucket[field] += values[field]
+                if bucket[field] < 0:
+                    raise ValueError("Negative file statistics")
+            if bucket["count"] == 0:
+                if bucket["size"] != 0:
+                    raise ValueError("Nonzero size for an empty file bucket")
+                del stats[file_type]
+        if (sum(value["count"] for value in stats.values()) != folder.physical_descendant_file_count
+                or sum(value["size"] for value in stats.values()) != folder.physical_descendant_file_size):
+            raise ValueError("File statistics do not match physical counters")
+    if folders:
+        Folder.objects.bulk_update(folders, ["physical_file_stats"])
+
+
+def change_file_stats(chain, file_type, count=0, size=0):
+    deltas = {}
+    merge_file_stats(deltas, chain, {file_type: {"count": count, "size": size}})
+    apply_file_stats_deltas(deltas)
 
 
 def dirty_hashes(folder_ids: Iterable[str]) -> None:

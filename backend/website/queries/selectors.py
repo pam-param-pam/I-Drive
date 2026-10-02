@@ -5,7 +5,7 @@ from website.models import Bot, Webhook, Channel, DiscordAttachmentMixin
 from website.safety.helper import get_classes_extending_discordAttachmentMixin
 
 
-def get_discord_author(user, message_author_id: str) -> Bot | Webhook:
+def get_discord_author(user, message_author_id: str) -> Webhook:
     try:
         return Webhook.objects.get(discord_id=message_author_id, owner=user)
     except Webhook.DoesNotExist:
@@ -41,7 +41,7 @@ def query_attachments(channel_id=None, message_id=None, attachment_id=None, auth
     if attachment_id:
         query &= Q(attachment_id=attachment_id)
     if author_id:
-        query &= Q(object_id=author_id)
+        query &= Q(author_id=author_id)
     if owner:
         query &= Q(file__owner=owner)
 

@@ -2,7 +2,7 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { getDownloader } from "@/transfers/downloads/Downloader.js"
 import { createZIP } from "@/api/item.js"
 import { createShareZIP } from "@/api/share.js"
-import { showToast } from "@/utils/common.js"
+import { buildResourcePasswords, showToast } from "@/utils/common.js"
 import { useWebSocketStore } from "@/stores/websocketStore.js"
 import { ClientsideDecryptionMethod } from "@/utils/constants.js"
 import { FilePickerNotSupported } from "@/transfers/downloads/utils/helper.js"
@@ -39,6 +39,7 @@ export async function smartDownload({ shareToken = null, zipEntryDownload = fals
 
       await downloadZip({
          ids: selected.map(item => item.id),
+         resourcePasswords: buildResourcePasswords(selected),
          useClientSideDecryption,
          shareToken
       })
@@ -72,12 +73,12 @@ async function downloadSingleFile({ file, wsStore, useClientSideDecryption, shar
 }
 
 
-async function downloadZip({ ids, useClientSideDecryption, shareToken }) {
+async function downloadZip({ ids, resourcePasswords, useClientSideDecryption, shareToken }) {
 
    if (useClientSideDecryption) {
       console.log("requiresClientSideDownload")
       try {
-         await getDownloader().downloadZip(ids, shareToken)
+         await getDownloader().downloadZip(ids, shareToken, resourcePasswords)
          return
       } catch (error) {
          if (isDownloadAborted(error)) return
@@ -89,7 +90,9 @@ async function downloadZip({ ids, useClientSideDecryption, shareToken }) {
       }
    }
 
-   const response = !shareToken ? await createZIP({ ids }) : await createShareZIP(shareToken, { ids })
+   const response = !shareToken
+      ? await createZIP({ ids, resourcePasswords })
+      : await createShareZIP(shareToken, { ids, resourcePasswords })
    console.log(response)
    window.open(response.download_url, "_blank")
    showToast("success", "toasts.downloadingZIP")

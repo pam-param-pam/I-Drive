@@ -4,7 +4,7 @@ import os
 import shortuuid
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint, OuterRef, Exists
+from django.db.models import Case, Value, BooleanField, When, F, CheckConstraint, Q, UniqueConstraint
 from django.utils import timezone
 from shortuuidfield import ShortUUIDField
 from simple_history.models import HistoricalRecords
@@ -38,6 +38,13 @@ class File(models.Model):
     state_changed_at = models.DateTimeField(null=True)
     resource_version = models.PositiveBigIntegerField(default=1)
     trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    fragment_count = models.PositiveIntegerField(default=0)
+    subs_count = models.PositiveIntegerField(default=0)
+    thumbnail_cache_id = models.CharField(max_length=22, null=True, blank=True)
+    has_photo_metadata = models.BooleanField(default=False)
+    has_raw_metadata = models.BooleanField(default=False)
+    has_video_metadata = models.BooleanField(default=False)
 
     history = HistoricalRecords()
 
@@ -107,40 +114,14 @@ class File(models.Model):
     STANDARD_VALUES = MINIMAL_VALUES + ("type", )
     DISPLAY_VALUES = STANDARD_VALUES + (
         "size", "created_at", "last_modified_at", "encryption_method", "in_trash_since", "extension",
-        "parent_id", "crc", "has_subtitle", "has_photometadata", "has_rawmetadata", "thumbnail__id", "has_videometadata", "iv", "key"
+        "parent_id", "crc", "subs_count", "has_photo_metadata", "has_raw_metadata", "thumbnail_cache_id", "has_video_metadata", "iv", "key"
     )
-
-    @classmethod
-    def get_file_metadata_annotate(cls):
-        from . import Subtitle
-
-        return {
-            "has_videometadata": Case(
-                When(videometadata__isnull=False, then=Value(True)),
-                default=Value(False),
-                output_field=BooleanField(),
-            ),
-            "has_rawmetadata": Case(
-                When(rawmetadata__isnull=False, then=Value(True)),
-                default=Value(False),
-                output_field=BooleanField(),
-            ),
-            "has_photometadata": Case(
-                When(photometadata__isnull=False, then=Value(True)),
-                default=Value(False),
-                output_field=BooleanField(),
-            ),
-            "has_subtitle": Exists(
-                Subtitle.objects.filter(file_id=OuterRef("pk"))
-            ),
-        }
 
     @classmethod
     def get_display_annotate(cls):
         return {
             "in_trash": Case(When(trashed_at__isnull=False, then=Value(True)), default=Value(False), output_field=BooleanField()),
             "in_trash_since": F("trashed_at"),
-            **cls.get_file_metadata_annotate(),
             "is_dir": Value(False, output_field=BooleanField()),
         }
 

@@ -2,7 +2,7 @@ from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.permissions import PrincipalFactory, ResourceAction, extract_resource_credentials
+from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceType, extract_resource_credentials
 from website.auth.throttle import FolderPasswordThrottle, defaultAuthUserThrottle
 from website.core.Serializers import MomentSerializer, SubtitleSerializer, TagSerializer, ZipSerializer
 from website.core.helpers import extract_key
@@ -10,7 +10,7 @@ from website.core.http.utils import build_response
 from website.services import namespace_service, zip_service
 from website.services.file_service import FileService
 from website.services.folder_service import FolderService
-from website.services.resource_query_service import FileQueryService
+from website.auth.permissions.authorizer import authorizer
 from website.services.thumbnail_service import ThumbnailService
 
 
@@ -23,7 +23,9 @@ def _inputs(request):
 @permission_classes([IsAuthenticated])
 def create_folder_view(request):
     principal, credentials = _inputs(request)
-    result = FolderService.create(principal, str(extract_key(request.data, "parent_id")), extract_key(request.data, "name"), credentials)
+    parent_id = str(extract_key(request.data, "parent_id"))
+    name = extract_key(request.data, "name")
+    result = FolderService.create(principal, parent_id, name, credentials)
     return JsonResponse({"id": result.folder_id, "resource_version": result.resource_version}, status=200)
 
 
@@ -32,8 +34,11 @@ def create_folder_view(request):
 @permission_classes([IsAuthenticated])
 def move_items_view(request):
     principal, credentials = _inputs(request)
-    namespace_service.move(principal, extract_key(request.data, "ids"), str(extract_key(request.data, "new_parent_id")), credentials)
-    return JsonResponse(build_response(principal.request_id, "Moving items..."))
+    ids = extract_key(request.data, "ids")
+    new_parent_id = extract_key(request.data, "new_parent_id")
+    operation = namespace_service.move(principal, ids, new_parent_id, credentials)
+    return JsonResponse({**build_response(principal.request_id, "Moving items..."),
+                         "operation_id": str(operation.pk)}, status=202)
 
 
 @api_view(["PATCH"])
@@ -41,8 +46,10 @@ def move_items_view(request):
 @permission_classes([IsAuthenticated])
 def move_items_to_trash_view(request):
     principal, credentials = _inputs(request)
-    namespace_service.trash(principal, extract_key(request.data, "ids"), credentials)
-    return JsonResponse(build_response(principal.request_id, "Moving to Trash..."))
+    ids = extract_key(request.data, "ids")
+    operation = namespace_service.trash(principal, ids, credentials)
+    return JsonResponse({**build_response(principal.request_id, "Moving to Trash..."),
+                         "operation_id": str(operation.pk)}, status=202)
 
 
 @api_view(["PATCH"])
@@ -50,8 +57,10 @@ def move_items_to_trash_view(request):
 @permission_classes([IsAuthenticated])
 def restore_from_trash_view(request):
     principal, credentials = _inputs(request)
-    namespace_service.restore(principal, extract_key(request.data, "ids"), credentials)
-    return JsonResponse(build_response(principal.request_id, "Restoring from Trash..."))
+    ids = extract_key(request.data, "ids")
+    operation = namespace_service.restore(principal, ids, credentials)
+    return JsonResponse({**build_response(principal.request_id, "Restoring from Trash..."),
+                         "operation_id": str(operation.pk)}, status=202)
 
 
 @api_view(["POST"])
@@ -69,8 +78,8 @@ def delete_view(request):
 @permission_classes([IsAuthenticated])
 def create_zip_model_view(request):
     principal, credentials = _inputs(request)
-    refs = namespace_service.classify_item_ids(extract_key(request.data, "ids"))
-    user_zip = zip_service.create_zip_model(principal, [ref.as_dict() for ref in refs], credentials)
+    ids = extract_key(request.data, "ids")
+    user_zip = zip_service.create_zip_model(principal, ids, credentials)
     return JsonResponse(ZipSerializer.serialize_object(user_zip), status=200)
 
 
@@ -79,7 +88,8 @@ def create_zip_model_view(request):
 @permission_classes([IsAuthenticated])
 def rename_view(request, item_id):
     principal, credentials = _inputs(request)
-    namespace_service.rename(principal, item_id, extract_key(request.data, "new_name"), credentials)
+    new_name = extract_key(request.data, "new_name")
+    namespace_service.rename(principal, item_id, new_name, credentials)
     return HttpResponse(status=204)
 
 
@@ -104,7 +114,8 @@ def change_folder_password_view(request, folder_id):
 def reset_folder_password_view(request, folder_id):
     principal, credentials = _inputs(request)
     new_password = extract_key(request.data, "folderPassword")
-    FolderService.reset_lock(principal, folder_id, extract_key(request.data, "accountPassword"), new_password, credentials)
+    account_password = extract_key(request.data, "accountPassword")
+    FolderService.reset_lock(principal, folder_id, account_password, new_password, credentials)
     message = "Folder password is being changed..." if new_password else "Folder is being unlocked..."
     return JsonResponse(build_response(principal.request_id, message))
 
@@ -114,7 +125,8 @@ def reset_folder_password_view(request, folder_id):
 @permission_classes([IsAuthenticated])
 def update_media_position_view(request, file_id):
     principal, credentials = _inputs(request)
-    FileService.update_media_position(principal, file_id, extract_key(request.data, "position"), credentials)
+    position = extract_key(request.data, "position")
+    FileService.update_media_position(principal, file_id, position, credentials)
     return HttpResponse(status=204)
 
 
@@ -123,7 +135,8 @@ def update_media_position_view(request, file_id):
 @permission_classes([IsAuthenticated])
 def add_tag_view(request, file_id):
     principal, credentials = _inputs(request)
-    tag = FileService.add_tag(principal, file_id, extract_key(request.data, "tag_name"), credentials)
+    tag_name = extract_key(request.data, "tag_name")
+    tag = FileService.add_tag(principal, file_id, tag_name, credentials)
     return JsonResponse(TagSerializer.serialize_object(tag), status=200)
 
 
@@ -141,7 +154,7 @@ def remove_tag_view(request, file_id, tag_id):
 @permission_classes([IsAuthenticated])
 def add_moment_view(request, file_id):
     principal, credentials = _inputs(request)
-    FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials)
+    authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
     moment = FileService.add_moment(principal, file_id, request.data, credentials)
     return JsonResponse(MomentSerializer.serialize_object(moment), status=200)
 
@@ -160,7 +173,7 @@ def remove_moment_view(request, file_id, moment_id):
 @permission_classes([IsAuthenticated])
 def add_subtitle_view(request, file_id):
     principal, credentials = _inputs(request)
-    FileQueryService.get(principal, file_id, ResourceAction.DOWNLOAD, credentials)
+    authorizer.require_item(principal, ResourceAction.DOWNLOAD, file_id, credentials, resource_type=ResourceType.FILE)
     subtitle = FileService.create_subtitle(principal, file_id, request.data, credentials)
     return JsonResponse(SubtitleSerializer.serialize_object(subtitle), status=200)
 
@@ -170,7 +183,8 @@ def add_subtitle_view(request, file_id):
 @permission_classes([IsAuthenticated])
 def rename_subtitle_view(request, file_id, subtitle_id):
     principal, credentials = _inputs(request)
-    FileService.rename_subtitle(principal, file_id, subtitle_id, extract_key(request.data, "new_language"), credentials)
+    new_language = extract_key(request.data, "new_language")
+    FileService.rename_subtitle(principal, file_id, subtitle_id, new_language, credentials)
     return HttpResponse(status=204)
 
 

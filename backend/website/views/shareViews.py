@@ -5,14 +5,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceType, extract_resource_credentials
 from website.auth.throttle import AnonUserMediaThrottle, defaultAnonUserThrottle, defaultAuthUserThrottle
-from website.constants import ShareEventType
+from website.constants import MAX_FILES_IN_ZIP, ShareEventType
 from website.constants import API_BASE_URL
 from website.core.crypto.signer import sign_resource
 from website.core.Serializers import ShareAccessSerializer, ShareSerializer, SubtitleSerializer, ZipSerializer
 from website.core.errors import ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import extract_key, validate_ids_as_list
-from website.models import File, Folder, Subtitle, UserSettings
-from website.queries.builders import build_share_breadcrumbs, build_share_folder_content, build_share_resource_dict, create_share_events
+from website.models import Subtitle
+from website.queries.builders import build_share_folder_content, build_share_resource_dict, create_share_events
 from website.services import share_service, zip_service
 
 
@@ -22,11 +22,6 @@ def _user_inputs(request):
 
 def _share_inputs(request, token):
     return PrincipalFactory.from_share_request(request, token), extract_resource_credentials(request)
-
-
-def _resource(owner_id, resource_type, resource_id):
-    model = File if ResourceType(resource_type) == ResourceType.FILE else Folder
-    return model.objects.get(owner_id=owner_id, id=resource_id)
 
 
 def _bind_share_urls(items, share_id):
@@ -60,13 +55,9 @@ def get_shares(request):
 def create_share(request):
     principal, credentials = _user_inputs(request)
     item_id = str(extract_key(request.data, "item_id"))
-    if File.objects.filter(owner_id=principal.user_id, id=item_id).exists():
-        resource_type = ResourceType.FILE
-    else:
-        resource_type = ResourceType.FOLDER
     share = share_service.create_share(
         principal,
-        resource_type,
+        None,
         item_id,
         extract_key(request.data, "unit"),
         extract_key(request.data, "value"),
@@ -117,10 +108,10 @@ def check_share_password(request, token):
 @permission_classes([AllowAny])
 def view_share(request, token, folder_id=None):
     principal, credentials = _share_inputs(request, token)
-    requested_type = ResourceType.FOLDER if folder_id else None
-    resolution = share_service.resolve_share(principal, ResourceAction.READ_SHARE, requested_type, folder_id, credentials)
-    root = _resource(resolution.owner_id, resolution.root_type, resolution.root_id)
-    requested = _resource(resolution.owner_id, resolution.requested_type, resolution.requested_id)
+    if folder_id:
+        resolution, children = share_service.list_share_children(principal, folder_id, credentials)
+    else:
+        resolution = share_service.resolve_share(principal, ResourceAction.READ_SHARE, credentials=credentials)
     if resolution.requested_type == ResourceType.FILE:
         resolution = share_service.resolve_share(
             principal,
@@ -131,31 +122,12 @@ def view_share(request, token, folder_id=None):
         )
     share_service.log_event_http(request, resolution, ShareEventType.SHARE_VIEW, share_id=resolution.share_id)
 
-    if folder_id and resolution.root_type == ResourceType.FOLDER:
-        breadcrumbs = build_share_breadcrumbs(requested, root)
-    else:
-        breadcrumbs = []
-    root_dict = build_share_resource_dict(root)
+    breadcrumbs = list(resolution.breadcrumbs) if folder_id else []
+    root_dict = build_share_resource_dict(resolution.root)
     root_dict.pop("parent_id", None)
     if folder_id:
         share_service.log_event_http(request, resolution, ShareEventType.FOLDER_OPEN, folder_id=folder_id)
-        include_folders = UserSettings.objects.get(user_id=resolution.owner_id).subfolders_in_shares
-        candidates = build_share_folder_content(requested, include_folders=include_folders)["children"]
-        folder_content = []
-        for item in candidates:
-            if not item.get("isDir"):
-                # The requested folder has already been authorized for this live
-                # share. Direct child files inherit that membership, and their
-                # active/trash/deletion state was checked in the bounded query.
-                folder_content.append(item)
-                continue
-            resource_type = ResourceType.FOLDER
-            action = ResourceAction.READ_SHARE
-            try:
-                share_service.resolve_share(principal, action, resource_type, str(item["id"]), credentials)
-            except ResourceNotFoundError:
-                continue
-            folder_content.append(item)
+        folder_content = build_share_folder_content(resolution.requested, children)["children"]
     else:
         folder_content = [root_dict]
     _bind_share_urls(folder_content, resolution.share_id)
@@ -173,20 +145,10 @@ def view_share(request, token, folder_id=None):
 def create_share_zip_model(request, token):
     principal, credentials = _share_inputs(request, token)
     ids = extract_key(request.data, "ids")
-    validate_ids_as_list(ids, max_length=1_000)
-    root = share_service.resolve_share(principal, ResourceAction.READ_SHARE, credentials=credentials)
-    items = []
-    for item_id in ids:
-        if File.objects.filter(owner_id=root.owner_id, id=item_id).exists():
-            item_type = ResourceType.FILE
-        elif Folder.objects.filter(owner_id=root.owner_id, id=item_id).exists():
-            item_type = ResourceType.FOLDER
-        else:
-            item_type = ResourceType.FILE
-        items.append({"type": item_type.value, "id": str(item_id)})
-    user_zip = zip_service.create_share_zip_model(principal, items, credentials)
+    validate_ids_as_list(ids, max_length=MAX_FILES_IN_ZIP, child_type=str)
+    user_zip = zip_service.create_share_zip_model(principal, ids, credentials)
     response = ZipSerializer.serialize_object(user_zip)
-    response["download_url"] = f"{API_BASE_URL}/shares/{token}/zip/{user_zip.token}/stream"
+    root = share_service.resolve_share(principal, ResourceAction.READ_SHARE, credentials=credentials)
     share_service.log_event_http(request, root, ShareEventType.ZIP_DOWNLOAD, files=[], folders=[])
     return JsonResponse(response, status=200)
 

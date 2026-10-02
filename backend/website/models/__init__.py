@@ -8,5 +8,5 @@ from .share_models import ShareAccess, ShareAccessEvent, ShareableLink
 from .user_models import UserPerms, UserSettings, DiscordSettings
 from .mixin_models import DiscordAttachmentMixin
 from .namespace_models import (DeletionScope, FolderHashWork, FolderHeightRepair,
-                               FolderLockPolicy, TrashRoot)
+                               FolderLockScope, NamespaceOperation)
 from .delete_models import DeletionFileWorkItem, DeletionFolderWorkItem, DeletionJob

@@ -18,12 +18,10 @@ from website.core.http.utils import get_device_metadata
 from website.core.validators.GeneralChecks import NotEmpty
 from website.models import PerDeviceToken, UserPerms, UserSettings, DiscordSettings
 from website.models.other_models import NotificationType, NotificationKind
-from website.auth.permissions import Authorizer, ResourceAction, UserPrincipal
+from website.auth.permissions import UserPrincipal
 from website.services import cache_service, folder_service, user_service
 from website.websockets.utils import send_event, send_channels_message
 
-
-authorizer = Authorizer()
 
 
 def _create_token_internal(user: User, device_info: dict) -> tuple[str, PerDeviceToken]:
@@ -212,8 +210,7 @@ def change_password(request, principal: UserPrincipal, current_password: str, ne
     current_password = validate_value(current_password, str, checks=[NotEmpty])
     new_password = validate_value(new_password, str, checks=[NotEmpty])
 
-    authorizer.authorize_user_action(principal, ResourceAction.CHANGE_PASSWORD)
-    user = User.objects.get(id=principal.user_id)
+    user = user_service.authorize_user(principal, "change_password", allow_global_lock=True)
     if not user.check_password(current_password):
         raise ResourcePermissionError("Password is incorrect!")
 

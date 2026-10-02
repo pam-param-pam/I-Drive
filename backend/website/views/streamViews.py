@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 
-from website.auth.permissions import PrincipalFactory, extract_resource_credentials
+from website.auth.permissions import PrincipalFactory
 from website.auth.throttle import MediaThrottle, NonCacheMediaThrottle
 from website.core.decorators import no_gzip
 from website.services import media_service
@@ -55,11 +55,8 @@ def stream_file(request, file_id, share_id=None):
 @no_gzip
 @throttle_classes([NonCacheMediaThrottle])
 @permission_classes([AllowAny])
-def stream_zip_files(request, token, share_token=None):
-    if share_token:
-        principal = PrincipalFactory.from_share_request(request, share_token)
-    else:
-        principal = PrincipalFactory.from_authenticated_request(request)
-    response = media_service.get_zip_response(request, principal, token, extract_resource_credentials(request))
+def stream_zip_files(request, zip_id):
+    principal = PrincipalFactory.from_signed_zip_request(request, zip_id)
+    response = media_service.get_zip_response(request, principal)
     record_stream_response(response)
     return response

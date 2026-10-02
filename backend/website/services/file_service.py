@@ -1,9 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Type
+from typing import Iterable, Type
 
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -13,7 +12,7 @@ from website.constants import EventCode, MAX_DISCORD_MESSAGE_SIZE
 from website.core.Serializers import FileSerializer
 from website.core.http.context import RequestContext
 from website.core.converters import chop_long_file_name, parse_unix_milliseconds
-from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
+from website.core.errors import BadRequestError, ResourceNotFoundError
 from website.core.helpers import (
     get_file_extension, get_file_type, validate_crc,
     validate_encryption_fields, validate_ids_as_list, validate_key,
@@ -29,21 +28,18 @@ from website.models.file_related_models import PhotoMetadata, RawMetadata
 from website.models.other_models import RawExtractionClaim
 from website.models.mixin_models import DiscordAttachmentMixin, ItemState
 from website.auth.permissions import (
-    Authorizer, ContextSet, CredentialSet, ResourceAction,
-    ResourceContextResolver, ResourceRef, ResourceRole, ResourceType,
+    CredentialSet, ResourceAction, ResourceType,
     UserPrincipal)
 from website.queries.selectors import (check_if_bots_exists, get_discord_author, get_discord_channel)
 from website.services import namespace_lock_service
 from website.services.derived_state_service import (
     apply_counter_deltas, bump_file_resources, bump_folder_listings,
     dirty_hashes, merge_delta)
-from website.services.namespace_command_support import FileCommandContext, lock_files_and_parents
-from website.services.thumbnail_service import thumbnail_service
+from website.services.hierarchy_service import LockedHierarchy, lock_folder_chains
+from website.services.derived_state_service import change_file_stats, merge_file_stats, apply_file_stats_deltas
 from website.websockets.utils import group_and_send_event, send_event
-
-
-authorizer = Authorizer()
-context_resolver = ResourceContextResolver()
+from website.auth.permissions.authorizer import authorizer
+from website.queries.resource_loader import ResourceLoader
 
 
 @dataclass(frozen=True)
@@ -60,19 +56,76 @@ class FileCreateResult:
     created: bool
 
 
+@dataclass(frozen=True)
+class LockedFiles:
+    files: dict[str, File]
+    hierarchy: LockedHierarchy
+
+
+def lock_files_with_parents(
+    owner_id: int,
+    file_ids: Iterable[str],
+    extra_folder_ids: Iterable[str] = (),
+) -> LockedFiles:
+    owner_id = int(owner_id)
+    ids = {str(file_id) for file_id in file_ids}
+    snapshot = {
+        str(file_id): str(parent_id)
+        for file_id, parent_id in File.objects.filter(owner_id=owner_id, id__in=ids).values_list("id", "parent_id")
+    }
+    if len(snapshot) != len(ids):
+        raise ResourceNotFoundError()
+
+    hierarchy = lock_folder_chains(owner_id, {*snapshot.values(), *{str(value) for value in extra_folder_ids}})
+    file_objects = list(File.objects.select_for_update().filter(owner_id=owner_id, id__in=ids).order_by("id"))
+    if len(file_objects) != len(ids):
+        raise ResourceNotFoundError()
+
+    files = {str(file_obj.id): file_obj for file_obj in file_objects}
+    if any(str(file_obj.parent_id) != snapshot[str(file_obj.id)] for file_obj in file_objects):
+        raise BadRequestError("File hierarchy changed concurrently; retry the request")
+    return LockedFiles(files, hierarchy)
+
+
+def adjust_relation_count(file_obj: File, field: str, delta: int) -> None:
+    if field not in {"fragment_count", "subs_count"}:
+        raise ValueError("Unsupported file relation count")
+    File.objects.filter(pk=file_obj.pk).update(**{field: F(field) + delta})
+    setattr(file_obj, field, getattr(file_obj, field) + delta)
+
+
+def set_relation_state(file_obj: File, **values) -> None:
+    allowed = {"fragment_count", "subs_count", "thumbnail_cache_id",
+               "has_photo_metadata", "has_raw_metadata", "has_video_metadata"}
+    if set(values) - allowed:
+        raise ValueError("Unsupported file relation state")
+    File.objects.filter(pk=file_obj.pk).update(**values)
+    for field, value in values.items():
+        setattr(file_obj, field, value)
+
+
+def set_thumbnail(file_obj: File, thumbnail=None) -> None:
+    set_relation_state(
+        file_obj,
+        thumbnail_cache_id=str(thumbnail.pk) if thumbnail is not None else None,
+    )
+
+
 def _authorize_file(
     principal: UserPrincipal,
     file_id: str,
     action: ResourceAction,
     credentials: CredentialSet | None,
-) -> tuple[FileCommandContext, File]:
+) -> tuple[LockedFiles, File]:
     """Lock and authorize one file inside the caller's transaction."""
     owner_id = principal.user_id
     namespace_lock_service.lock_owner_scope_shared(owner_id)
-    locked = lock_files_and_parents(owner_id, [file_id])
+    locked = lock_files_with_parents(owner_id, [file_id])
     file_obj = locked.files[str(file_id)]
-    context = context_resolver.resolve_file(file_id, owner_id, locked.hierarchy)
-    authorizer.authorize_user_action(principal, action, ContextSet((context,)), credentials)
+    authorizer.require_item(
+        principal, action, file_id, credentials, resource_type=ResourceType.FILE,
+        locked_hierarchy=locked.hierarchy, locked_files=locked.files,
+    )
     return locked, file_obj
 
 
@@ -87,15 +140,19 @@ def _remove_related_attachment(
     principal: UserPrincipal,
     file_id: str,
     attachment_id: str,
-    model: Type[Moment] | Type[Subtitle],
+    model: Type[Moment] | Type[Subtitle] | Type[Fragment],
     credentials: CredentialSet | None,
 ) -> FileCommandResult:
     with transaction.atomic():
         _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
-        attachment = model.objects.select_for_update().select_related("channel", "content_type").get(
+        attachment = model.objects.select_for_update().select_related("channel", "author").get(
             id=attachment_id, file_id=file_obj.id,
         )
         attachment.delete()
+        if model is Subtitle:
+            adjust_relation_count(file_obj, "subs_count", -1)
+        elif model is Fragment:
+            adjust_relation_count(file_obj, "fragment_count", -1)
         bump_file_resources([file_obj.id])
         bump_folder_listings([file_obj.parent_id])
         file_obj.refresh_from_db(fields=["resource_version"])
@@ -112,43 +169,48 @@ def _change_trash_state(
 ) -> list[FileCommandResult]:
     owner_id = principal.user_id
     action = ResourceAction.RESTORE if restore else ResourceAction.TRASH
-    direction = 1 if restore else -1
     with transaction.atomic():
         namespace_lock_service.lock_owner_scope_shared(owner_id)
-        locked = lock_files_and_parents(owner_id, file_ids)
-        contexts = context_resolver.resolve_many(
-            [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids],
-            owner_id,
-            locked.hierarchy,
+        locked = lock_files_with_parents(owner_id, file_ids)
+        authorizer.require_items(
+            principal, action, file_ids=file_ids, credentials=credentials,
+            locked_hierarchy=locked.hierarchy, locked_files=locked.files,
         )
-        authorizer.authorize_user_action(principal, action, contexts, credentials)
 
-        deltas: dict[str, dict[str, int]] = {}
-        dirty_ids: set[str] = set()
-        parent_ids: set[str] = set()
-        for file_obj in locked.files.values():
-            chain = locked.hierarchy.chain(str(file_obj.parent_id))
-            dirty_ids.update(chain)
-            parent_ids.add(str(file_obj.parent_id))
-            merge_delta(deltas, chain, visible_descendant_file_count=direction,
-                        visible_descendant_file_size=direction * file_obj.size)
+        return _change_trash_state_locked(owner_id, locked, restore)
 
-        files = File.objects.filter(id__in=locked.files, owner_id=owner_id)
-        if restore:
-            files = files.filter(trashed_at__isnull=False)
-        now = timezone.now()
-        updated = files.update(trashed_at=None if restore else now, last_modified_at=now,
-                               resource_version=F("resource_version") + 1)
-        if restore and updated < len(locked.files):
-            raise ResourcePermissionError("File is not in trash")
 
-        apply_counter_deltas(deltas)
-        dirty_hashes(dirty_ids)
-        bump_folder_listings(parent_ids)
-        event = EventCode.ITEM_RESTORE_FROM_TRASH if restore else EventCode.ITEM_MOVE_TO_TRASH
-        group_and_send_event(RequestContext.from_user(owner_id), event, list(locked.files.values()))
-        refreshed = File.objects.filter(id__in=locked.files).values_list("id", "resource_version")
-        return [FileCommandResult(str(file_id), version) for file_id, version in refreshed]
+def _change_trash_state_locked(owner_id, locked, restore):
+    namespace_lock_service._require_transaction()
+    direction = 1 if restore else -1
+    deltas: dict[str, dict[str, int]] = {}
+    dirty_ids: set[str] = set()
+    parent_ids: set[str] = set()
+    for file_obj in locked.files.values():
+        chain = locked.hierarchy.chain(str(file_obj.parent_id))
+        dirty_ids.update(chain)
+        parent_ids.add(str(file_obj.parent_id))
+        merge_delta(deltas, chain, visible_descendant_file_count=direction,
+                    visible_descendant_file_size=direction * file_obj.size)
+
+    files = File.objects.filter(id__in=locked.files, owner_id=owner_id)
+    now = timezone.now()
+    updated = files.update(trashed_at=None if restore else now, last_modified_at=now,
+                           resource_version=F("resource_version") + 1)
+    if updated != len(locked.files):
+        raise BadRequestError("File selection changed during the command")
+
+    apply_counter_deltas(deltas)
+    dirty_hashes(dirty_ids)
+    bump_folder_listings(parent_ids)
+    event = EventCode.ITEM_RESTORE_FROM_TRASH if restore else EventCode.ITEM_MOVE_TO_TRASH
+    for file_obj in locked.files.values():
+        file_obj.trashed_at = None if restore else now
+        file_obj.last_modified_at = now
+        file_obj.resource_version += 1
+    group_and_send_event(RequestContext.from_user(owner_id), event, list(locked.files.values()))
+    refreshed = File.objects.filter(id__in=locked.files).values_list("id", "resource_version")
+    return [FileCommandResult(str(file_id), version) for file_id, version in refreshed]
 
 
 def _attachment_identity(owner_id: int, data: dict) -> dict:
@@ -162,8 +224,7 @@ def _attachment_identity(owner_id: int, data: dict) -> dict:
         "channel": get_discord_channel(owner_id, channel_id),
         "message_id": message_id,
         "attachment_id": attachment_id,
-        "content_type": ContentType.objects.get_for_model(author),
-        "object_id": author.discord_id,
+        "author": author,
     }
 
 
@@ -180,7 +241,9 @@ def _create_fragment(file_obj: File, data: dict) -> Fragment:
         "crc": validate_key(data, "crc", int, checks=[MaxLength(10), NotNegative]),
     })
 
-    return Fragment.objects.create(**values)
+    result = Fragment.objects.create(**values)
+    adjust_relation_count(file_obj, "fragment_count", 1)
+    return result
 
 
 def _create_subtitle(file_obj: File, data: dict) -> Subtitle:
@@ -201,7 +264,9 @@ def _create_subtitle(file_obj: File, data: dict) -> Subtitle:
         "key": key,
         "iv": iv,
     })
-    return Subtitle.objects.create(**values)
+    result = Subtitle.objects.create(**values)
+    adjust_relation_count(file_obj, "subs_count", 1)
+    return result
 
 
 def _create_tracks(metadata: dict, track_type: str, model_class: Type[VideoMetadataTrackMixin], video_metadata: VideoMetadata) -> None:
@@ -246,6 +311,7 @@ def _create_video_metadata(file_obj: File, metadata: dict) -> VideoMetadata:
         brands=validate_key(metadata, "brands", str, checks=[NotEmpty, MaxLength(100)]),
         mime=validate_key(metadata, "mime", str, checks=[NotEmpty, MaxLength(100)]),
     )
+    set_relation_state(file_obj, has_video_metadata=True)
     _create_tracks(metadata, "video_tracks", VideoTrack, result)
     _create_tracks(metadata, "audio_tracks", AudioTrack, result)
     _create_tracks(metadata, "subtitle_tracks", SubtitleTrack, result)
@@ -255,7 +321,7 @@ def _create_video_metadata(file_obj: File, metadata: dict) -> VideoMetadata:
 def _create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
     if file_obj.type != "Raw image":
         raise BadRequestError(f"Raw metadata is not allowed for file type: {file_obj.type}")
-    return RawMetadata.objects.create(
+    result = RawMetadata.objects.create(
         file=file_obj,
         camera=validate_key(metadata, "camera", str, checks=[NotEmpty, MaxLength(50)]),
         camera_owner=validate_key(metadata, "camera_owner", str, default="", checks=[MaxLength(50)]),
@@ -264,19 +330,40 @@ def _create_raw_metadata(file_obj: File, metadata: dict) -> RawMetadata:
         aperture=validate_key(metadata, "aperture", str, checks=[NotEmpty, MaxLength(50)]),
         focal_length=validate_key(metadata, "focal_length", str, checks=[NotEmpty, MaxLength(50)]),
     )
+    set_relation_state(file_obj, has_raw_metadata=True)
+    return result
 
 
 def _create_photo_metadata(file_obj: File, metadata: dict) -> PhotoMetadata:
     if file_obj.type != "Image":
         raise BadRequestError(f"Photo metadata is not allowed for file type: {file_obj.type}")
-    return PhotoMetadata.objects.create(
+    result = PhotoMetadata.objects.create(
         file=file_obj,
         height=validate_key(metadata, "height", int, checks=[IsPositive]),
         width=validate_key(metadata, "width", int, checks=[IsPositive]),
     )
+    set_relation_state(file_obj, has_photo_metadata=True)
+    return result
 
 
 class FileService:
+    @staticmethod
+    def remove_fragment(principal, file_id, fragment_id, credentials=None):
+        return _remove_related_attachment(principal, file_id, fragment_id, Fragment, credentials)
+
+    @staticmethod
+    def remove_metadata(principal, file_id, model, credentials=None):
+        fields = {PhotoMetadata: "has_photo_metadata", RawMetadata: "has_raw_metadata",
+                  VideoMetadata: "has_video_metadata"}
+        if model not in fields:
+            raise ValueError("Unsupported metadata model")
+        with transaction.atomic():
+            _, file_obj = _authorize_file(principal, file_id, ResourceAction.EDIT_METADATA, credentials)
+            model.objects.filter(file_id=file_obj.pk).delete()
+            set_relation_state(file_obj, **{fields[model]: False})
+            bump_file_resources([file_obj.pk])
+            bump_folder_listings([file_obj.parent_id])
+
     @staticmethod
     def complete_raw_image_extraction(
         owner_id: int,
@@ -287,28 +374,32 @@ class FileService:
         failed: bool = False,
     ) -> bool:
         """Commit a claimed raw-image result and its cache versions together."""
+        from website.services.thumbnail_service import thumbnail_service
+
         if failed == (thumbnail is not None):
             raise BadRequestError("Raw extraction requires a thumbnail on success and none on failure")
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
-            locked = lock_files_and_parents(owner_id, [file_id])
-            file_obj = locked.require_locked_file(file_id)
+            locked = lock_files_with_parents(owner_id, [file_id])
+            file_obj = locked.files[str(file_id)]
             claim = RawExtractionClaim.objects.select_for_update().filter(file_id=file_id).first()
             if claim is None or claim.attempts != claim_attempts:
                 return False
             if claim.state != RawExtractionClaim.State.RUNNING and not failed:
                 return False
-            context = context_resolver.resolve_file(file_id, owner_id, locked.hierarchy)
+            context = ResourceLoader().resolve_file(
+                file_id, owner_id, locked.hierarchy, locked.files,
+            )
             if context.is_deleting or context.is_trashed or file_obj.state != ItemState.ACTIVE:
                 return False
             if file_obj.type != "Raw image":
                 return False
-            if RawMetadata.objects.filter(file_id=file_id).exists() or hasattr(file_obj, "thumbnail"):
+            if file_obj.has_raw_metadata or file_obj.thumbnail_cache_id:
                 RawExtractionClaim.objects.filter(file_id=file_id).delete()
                 return False
 
             if thumbnail is not None:
-                thumbnail_service.add_to_new_file(locked, file_id, thumbnail)
+                thumbnail_service.add_to_new_file(file_obj, thumbnail)
             raw_metadata = _create_raw_metadata(file_obj, metadata)
             if failed:
                 raw_metadata.failed_to_process = True
@@ -334,6 +425,7 @@ class FileService:
                fragments: list[dict], key_b64: str | None = None, iv_b64: str | None = None, created_at=None, thumbnail: dict | None = None,
                video_metadata: dict | None = None, raw_metadata: dict | None = None, photo_metadata: dict | None = None,
                subtitles: list[dict] | None = None, credentials: CredentialSet | None = None) -> FileCreateResult:
+        from website.services.thumbnail_service import thumbnail_service
 
         name = validate_value(name, str, checks=[IsValidItemName])
         size = validate_value(size, int, checks=[NotNegative])
@@ -352,11 +444,11 @@ class FileService:
         file_type = get_file_type(extension)
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
-            locked = lock_files_and_parents(owner_id, [], [parent_id])
+            locked = lock_files_with_parents(owner_id, [], [parent_id])
             parent = locked.hierarchy.folders[str(parent_id)]
-            context = context_resolver.resolve_folder(parent.id, owner_id, locked.hierarchy)
-            authorizer.authorize_user_action(
-                principal, ResourceAction.CREATE_CHILD, ContextSet((context,)), credentials,
+            authorizer.require_item(
+                principal, ResourceAction.CREATE_CHILD, str(parent.id), credentials,
+                resource_type=ResourceType.FOLDER, locked_hierarchy=locked.hierarchy,
             )
 
             existing = File.objects.select_for_update().filter(frontend_id=frontend_id).first()
@@ -380,7 +472,6 @@ class FileService:
                 key=key,
                 iv=iv,
             )
-            locked.register_created_file(file_obj)
             if created_at is not None:
                 File.objects.filter(id=file_obj.id).update(created_at=created_at)
                 file_obj.created_at = created_at
@@ -388,7 +479,7 @@ class FileService:
             for fragment in fragments:
                 _create_fragment(file_obj, fragment)
             if thumbnail is not None:
-                thumbnail_service.add_to_new_file(locked, str(file_obj.id), thumbnail)
+                thumbnail_service.add_to_new_file(file_obj, thumbnail)
             if video_metadata is not None:
                 _create_video_metadata(file_obj, video_metadata)
             if raw_metadata is not None:
@@ -409,6 +500,7 @@ class FileService:
                 visible_descendant_file_size=size,
             )
             apply_counter_deltas(deltas)
+            change_file_stats(chain, file_obj.type, count=1, size=size)
             dirty_hashes(chain)
             bump_folder_listings([parent.id])
             send_event(RequestContext.from_user(owner_id), parent, EventCode.ITEM_CREATE,
@@ -467,6 +559,8 @@ class FileService:
 
     @staticmethod
     def replace_content(principal: UserPrincipal, file_id: str, file_data: dict | None, credentials: CredentialSet | None = None) -> FileCommandResult:
+        from website.services.thumbnail_service import thumbnail_service
+
         attachment = None
         crc = 0
         key_b64 = None
@@ -496,12 +590,10 @@ class FileService:
                 key, iv = validate_encryption_fields(file_obj.encryption_method, key_b64, iv_b64)
 
             removed: tuple[DiscordAttachmentMixin, ...] = tuple([
-                *Fragment.objects.select_for_update().select_related("channel", "content_type").filter(file_id=file_obj.id),
-                *thumbnail_service.remove_during_content_replacement(
-                    locked, str(file_obj.id),
-                ),
-                *Moment.objects.select_for_update().select_related("channel", "content_type").filter(file_id=file_obj.id),
-                *Subtitle.objects.select_for_update().select_related("channel", "content_type").filter(file_id=file_obj.id),
+                *Fragment.objects.select_for_update().select_related("channel", "author").filter(file_id=file_obj.id),
+                *thumbnail_service.remove_during_content_replacement(file_obj),
+                *Moment.objects.select_for_update().select_related("channel", "author").filter(file_id=file_obj.id),
+                *Subtitle.objects.select_for_update().select_related("channel", "author").filter(file_id=file_obj.id),
             ])
             if sum(isinstance(value, Fragment) for value in removed) > 1:
                 raise BadRequestError("You cannot edit a file that has more than one fragment!")
@@ -513,6 +605,8 @@ class FileService:
             RawMetadata.objects.filter(file_id=file_obj.id).delete()
             PhotoMetadata.objects.filter(file_id=file_obj.id).delete()
             MediaPosition.objects.filter(file_id=file_obj.id).delete()
+            set_relation_state(file_obj, fragment_count=0, subs_count=0,
+                               has_photo_metadata=False, has_raw_metadata=False, has_video_metadata=False)
 
             if attachment is not None:
                 _create_fragment(file_obj, attachment)
@@ -528,6 +622,7 @@ class FileService:
                 visible_descendant_file_size=difference,
             )
             apply_counter_deltas(deltas)
+            change_file_stats(chain, file_obj.type, size=difference)
             dirty_hashes(chain)
             bump_file_resources([file_obj.id])
             bump_folder_listings([file_obj.parent_id])
@@ -556,6 +651,10 @@ class FileService:
                 last_modified_at=timezone.now(),
             )
             chain = locked.hierarchy.chain(str(file_obj.parent_id))
+            stats = {}
+            merge_file_stats(stats, chain, {file_obj.type: {"count": 1, "size": file_obj.size}}, -1)
+            merge_file_stats(stats, chain, {get_file_type(extension): {"count": 1, "size": file_obj.size}})
+            apply_file_stats_deltas(stats)
             dirty_hashes(chain)
             bump_file_resources([file_obj.id])
             bump_folder_listings([file_obj.parent_id])
@@ -582,6 +681,7 @@ class FileService:
                 visible_descendant_file_size=difference,
             )
             apply_counter_deltas(deltas)
+            change_file_stats(chain, file_obj.type, size=difference)
             dirty_hashes(chain)
             bump_file_resources([file_obj.id])
             bump_folder_listings([file_obj.parent_id])
@@ -596,62 +696,76 @@ class FileService:
         owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
-            locked = lock_files_and_parents(owner_id, file_ids, [destination_id])
+            locked = lock_files_with_parents(owner_id, file_ids, [destination_id])
             destination = locked.hierarchy.folders[str(destination_id)]
-            refs = [ResourceRef(ResourceType.FILE, file_id, ResourceRole.SOURCE) for file_id in file_ids]
-            refs.append(ResourceRef(ResourceType.FOLDER, destination_id, ResourceRole.DESTINATION))
-            contexts = context_resolver.resolve_many(refs, owner_id, locked.hierarchy)
-            authorizer.authorize_user_action(principal, ResourceAction.MOVE, contexts, credentials)
+            authorizer.require_move_items(
+                principal, destination_id, file_ids=file_ids, credentials=credentials,
+                locked_hierarchy=locked.hierarchy, locked_files=locked.files,
+            )
 
-            moving = [file_obj for file_obj in locked.files.values() if str(file_obj.parent_id) != str(destination.id)]
-            if not moving:
-                return [FileCommandResult(str(file_obj.id), file_obj.resource_version) for file_obj in locked.files.values()]
-            if destination.files.count() + len(moving) > MAX_FILES_IN_FOLDER:
-                raise BadRequestError(f"Too many files in folder. Max = {MAX_FILES_IN_FOLDER}")
+            return FileService._move_locked(owner_id, locked, destination)
 
-            deltas: dict[str, dict[str, int]] = {}
-            old_parent_ids: set[str] = set()
-            new_chain = locked.hierarchy.chain(str(destination.id))
-            dirty_ids: set[str] = set(new_chain)
-            for file_obj in moving:
-                old_chain = locked.hierarchy.chain(str(file_obj.parent_id))
-                old_parent_ids.add(str(file_obj.parent_id))
-                dirty_ids.update(old_chain)
-                merge_delta(
-                    deltas,
-                    old_chain,
-                    physical_descendant_file_count=-1,
-                    physical_descendant_file_size=-file_obj.size,
-                    visible_descendant_file_count=-1,
-                    visible_descendant_file_size=-file_obj.size,
-                )
-                merge_delta(
-                    deltas,
-                    new_chain,
-                    physical_descendant_file_count=1,
-                    physical_descendant_file_size=file_obj.size,
-                    visible_descendant_file_count=1,
-                    visible_descendant_file_size=file_obj.size,
-                )
+    @staticmethod
+    def _move_locked(owner_id, locked, destination):
+        namespace_lock_service._require_transaction()
+        moving = [file_obj for file_obj in locked.files.values() if str(file_obj.parent_id) != str(destination.id)]
+        if not moving:
+            return [FileCommandResult(str(file_obj.id), file_obj.resource_version) for file_obj in locked.files.values()]
+        if destination.files.count() + len(moving) > MAX_FILES_IN_FOLDER:
+            raise BadRequestError(f"Too many files in folder. Max = {MAX_FILES_IN_FOLDER}")
 
-            moving_ids = [file_obj.id for file_obj in moving]
-            moving_by_parent: dict[str, list[File]] = defaultdict(list)
-            for file_obj in moving:
-                moving_by_parent[str(file_obj.parent_id)].append(file_obj)
-            File.objects.filter(id__in=moving_ids).update(parent_id=destination.id, last_modified_at=timezone.now())
-            apply_counter_deltas(deltas)
-            dirty_hashes(dirty_ids)
-            bump_file_resources(moving_ids)
-            bump_folder_listings({*old_parent_ids, str(destination.id)})
-            for old_parent_id, files in moving_by_parent.items():
-                for start in range(0, len(files), 250):
-                    batch = files[start:start + 250]
-                    send_event(RequestContext.from_user(owner_id), locked.hierarchy.folders[old_parent_id],
-                               EventCode.ITEM_MOVE_OUT, [str(file_obj.id) for file_obj in batch])
-                    send_event(RequestContext.from_user(owner_id), destination, EventCode.ITEM_MOVE_IN,
-                               FileSerializer.serialize_many(batch))
-            refreshed = File.objects.filter(id__in=locked.files).values_list("id", "resource_version")
-            return [FileCommandResult(str(file_id), version) for file_id, version in refreshed]
+        deltas: dict[str, dict[str, int]] = {}
+        old_parent_ids: set[str] = set()
+        new_chain = locked.hierarchy.chain(str(destination.id))
+        dirty_ids: set[str] = set(new_chain)
+        for file_obj in moving:
+            old_chain = locked.hierarchy.chain(str(file_obj.parent_id))
+            old_parent_ids.add(str(file_obj.parent_id))
+            dirty_ids.update(old_chain)
+            merge_delta(
+                deltas,
+                old_chain,
+                physical_descendant_file_count=-1,
+                physical_descendant_file_size=-file_obj.size,
+                visible_descendant_file_count=-1,
+                visible_descendant_file_size=-file_obj.size,
+            )
+            merge_delta(
+                deltas,
+                new_chain,
+                physical_descendant_file_count=1,
+                physical_descendant_file_size=file_obj.size,
+                visible_descendant_file_count=1,
+                visible_descendant_file_size=file_obj.size,
+            )
+
+        stats = {}
+        for file_obj in moving:
+            contribution = {file_obj.type: {"count": 1, "size": file_obj.size}}
+            merge_file_stats(stats, locked.hierarchy.chain(str(file_obj.parent_id)), contribution, -1)
+            merge_file_stats(stats, new_chain, contribution)
+        moving_ids = [file_obj.id for file_obj in moving]
+        moving_by_parent: dict[str, list[File]] = defaultdict(list)
+        for file_obj in moving:
+            moving_by_parent[str(file_obj.parent_id)].append(file_obj)
+        File.objects.filter(id__in=moving_ids).update(parent_id=destination.id, last_modified_at=timezone.now())
+        apply_counter_deltas(deltas)
+        apply_file_stats_deltas(stats)
+        dirty_hashes(dirty_ids)
+        bump_file_resources(moving_ids)
+        bump_folder_listings({*old_parent_ids, str(destination.id)})
+        for old_parent_id, files in moving_by_parent.items():
+            for start in range(0, len(files), 250):
+                batch = files[start:start + 250]
+                send_event(RequestContext.from_user(owner_id), locked.hierarchy.folders[old_parent_id],
+                           EventCode.ITEM_MOVE_OUT, [str(file_obj.id) for file_obj in batch])
+                for file_obj in batch:
+                    file_obj.parent = destination
+                    file_obj.resource_version += 1
+                send_event(RequestContext.from_user(owner_id), destination, EventCode.ITEM_MOVE_IN,
+                           FileSerializer.serialize_many(batch))
+        refreshed = File.objects.filter(id__in=locked.files).values_list("id", "resource_version")
+        return [FileCommandResult(str(file_id), version) for file_id, version in refreshed]
 
     @staticmethod
     def trash(principal: UserPrincipal, file_ids: list[str], credentials: CredentialSet | None = None) -> list[FileCommandResult]:
@@ -666,24 +780,19 @@ class FileService:
         owner_id = principal.user_id
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_exclusive(owner_id)
-            locked = lock_files_and_parents(owner_id, file_ids)
-            contexts = context_resolver.resolve_many(
-                [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_ids],
-                owner_id,
-                locked.hierarchy,
+            locked = lock_files_with_parents(owner_id, file_ids)
+            authorizer.require_items(
+                principal, ResourceAction.REQUEST_DELETE, file_ids=file_ids,
+                credentials=credentials, locked_hierarchy=locked.hierarchy, locked_files=locked.files,
             )
-            authorizer.authorize_user_action(
-                principal, ResourceAction.REQUEST_DELETE, contexts, credentials,
-            )
-            contexts_by_id = {context.resource_id: context for context in contexts}
             deltas: dict[str, dict[str, int]] = {}
             dirty_ids: set[str] = set()
             parent_ids: set[str] = set()
             results: list[FileCommandResult] = []
             now = timezone.now()
             for file_obj in locked.files.values():
-                context = contexts_by_id[str(file_obj.id)]
-                visible = not context.is_trashed
+                # REQUEST_DELETE already rejects inherited trash.
+                visible = file_obj.trashed_at is None
                 scope = DeletionScope.objects.create(
                     owner_id=owner_id,
                     root_file_id=file_obj.id,
@@ -844,7 +953,7 @@ class FileService:
     def _mark_remote_missing_attachment(owner_id: int, file_id: str, fragment_id: str) -> FileCommandResult:
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
-            locked = lock_files_and_parents(owner_id, [file_id])
+            locked = lock_files_with_parents(owner_id, [file_id])
             file_obj = locked.files[str(file_id)]
             if not Fragment.objects.select_for_update().filter(id=fragment_id, file_id=file_obj.id).exists():
                 raise ResourceNotFoundError()
@@ -864,11 +973,13 @@ class FileService:
     ) -> FileCommandResult:
         with transaction.atomic():
             namespace_lock_service.lock_owner_scope_shared(owner_id)
-            locked = lock_files_and_parents(owner_id, [file_id])
+            locked = lock_files_with_parents(owner_id, [file_id])
             file_obj = locked.files[str(file_id)]
             deleted, _ = type(resource).objects.filter(id=resource.id, file_id=file_obj.id).delete()
             if not deleted:
                 raise ResourceNotFoundError()
+            if isinstance(resource, Subtitle):
+                adjust_relation_count(file_obj, "subs_count", -1)
             bump_file_resources([file_obj.id])
             bump_folder_listings([file_obj.parent_id])
             file_obj.refresh_from_db(fields=["resource_version"])

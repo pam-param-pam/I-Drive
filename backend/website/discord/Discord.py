@@ -11,7 +11,7 @@ from httpx import Response
 
 from website.discord.constants import ERROR_UNKNOWN_WEBHOOK, ERROR_UNKNOWN_CHANNEL
 from website.constants import DISCORD_BASE_URL, cache
-from website.core.errors import DiscordError, CannotProcessDiscordRequestError, DiscordErrorMaxRetries, DiscordTextError, BadRequestError
+from website.core.errors import DiscordError, CannotProcessDiscordRequestError, NoAvailableDiscordCredentialError, DiscordErrorMaxRetries, DiscordTextError, BadRequestError
 from website.discord.CredentialState import CredentialState
 from website.discord.UserState import UserState
 from website.models import Bot, Webhook, DiscordAttachmentMixin
@@ -148,7 +148,7 @@ class DiscordManager:
                     continue
                 else:
                     raise exc
-            except CannotProcessDiscordRequestError as e:
+            except NoAvailableDiscordCredentialError as e:
                 print(f"CannotProcessDiscordRequestError: {str(e)}")
                 time.sleep(min(2 ** attempt, 5))
                 continue
@@ -199,6 +199,8 @@ class DiscordManager:
                 else:
                     raise exc
             except CannotProcessDiscordRequestError as e:
+                if isinstance(e, NoAvailableDiscordCredentialError):
+                    raise
                 time.sleep(min(2 ** attempt, 10))
                 continue
 

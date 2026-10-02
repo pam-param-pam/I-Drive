@@ -1,12 +1,15 @@
+"""Fixed compositions of small checks. Callers select actions, never exceptions."""
+
 from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
-from typing import AbstractSet, Mapping
+from typing import Protocol
 
-from website.models.mixin_models import ItemState
+from . import checks
+from .principals import SharePrincipal, SignedResourcePrincipal, SignedZIPPrincipal, UserPrincipal
+
 
 class ResourceAction(StrEnum):
-    READ_ACCOUNT = "read_account"
     READ = "read"
     READ_FILE_METADATA = "read_file_metadata"
     READ_TRASH = "read_trash"
@@ -23,21 +26,14 @@ class ResourceAction(StrEnum):
     MANAGE_LOCK = "manage_lock"
     RESET_LOCK = "reset_lock"
     VERIFY_LOCK_CREDENTIAL = "verify_lock_credential"
-    LIST_SHARES = "list_shares"
-    MANAGE_SHARE = "manage_share"
     READ_SHARE = "read_share"
     DOWNLOAD_SHARE = "download_share"
+    STREAM_FILE = "stream_file"
+    STREAM_THUMBNAIL = "stream_thumbnail"
+    STREAM_ZIP_ENTRY = "stream_zip_entry"
+    STREAM_ZIP = "stream_zip"
     SEARCH = "search"
     LIST_TRASH = "list_trash"
-    MODIFY_SETTINGS = "modify_settings"
-    MODIFY_DISCORD = "modify_discord"
-    CHANGE_PASSWORD = "change_password"
-    MANAGE_NOTIFICATIONS = "manage_notifications"
-
-
-class PrincipalKind(StrEnum):
-    USER = "user"
-    SHARE = "share"
 
 
 class ResourceType(StrEnum):
@@ -45,244 +41,77 @@ class ResourceType(StrEnum):
     FOLDER = "folder"
 
 
-class ResourceRole(StrEnum):
-    TARGET = "target"
-    SOURCE = "source"
-    DESTINATION = "destination"
-    SHARE_ROOT = "share_root"
-    SHARE_ITEM = "share_item"
+class ResourceCheck(Protocol):
+    def __call__(self, row: dict, state: object, network_allowed: bool) -> None: ...
 
 
-class TrashAccess(StrEnum):
-    IGNORE = "ignore"
-    OUTSIDE_TRASH = "outside_trash"
-    EXPLICIT_TRASH_ROOT = "explicit_trash_root"
-    OUTSIDE_OR_EXPLICIT_ROOT = "outside_or_explicit_root"
+class CredentialCheck(Protocol):
+    def __call__(self, state: object, credentials: object) -> object | None: ...
 
 
-class LockRule(StrEnum):
-    REQUIRE_CREDENTIAL = "require_credential"
-    NETWORK_ONLY = "network_only"
-    VERIFY_CREDENTIAL = "verify_credential"
-    IGNORE = "ignore"
+@dataclass(frozen=True)
+class Policy:
+    principals: tuple[type, ...] = (UserPrincipal,)
+    capabilities: tuple[str, ...] = ()
+    resource_types: frozenset[str] = frozenset({"file", "folder"})
+    checks: tuple[ResourceCheck, ...] = ()
+    credential_check: CredentialCheck | None = None
 
 
-class Disclosure(StrEnum):
-    NOT_FOUND = "not_found"
-    FORBIDDEN = "forbidden"
+LIFECYCLE = (checks.check_active, checks.check_no_deletion)
+AVAILABLE = LIFECYCLE + (checks.check_outside_trash,)
+OWNER_CHECKS = AVAILABLE + (checks.check_lock_network,)
+OWNER_TRASH = LIFECYCLE + (checks.check_explicit_trash, checks.check_lock_network)
+PASSWORD = checks.lock_challenge
+FILE = frozenset({"file"})
+FOLDER = frozenset({"folder"})
 
 
-@dataclass(frozen=True, kw_only=True)
-class ActionPolicy:
-    principal_kinds: AbstractSet[PrincipalKind]
-    account_capabilities: AbstractSet[str] = frozenset()
-    resource_types: AbstractSet[ResourceType] = frozenset()
-    resource_roles: AbstractSet[ResourceRole] = frozenset({ResourceRole.TARGET})
-    forbidden_root_roles: AbstractSet[ResourceRole] = frozenset()
-    allowed_states: AbstractSet[str] = frozenset({ItemState.ACTIVE})
-    trash_access: TrashAccess = TrashAccess.OUTSIDE_TRASH
-    lock_rule: LockRule = LockRule.REQUIRE_CREDENTIAL
-    require_share_password: bool = False
-    ownership_required: bool = True
-    disclosure: Disclosure = Disclosure.NOT_FOUND
-    resource_context_optional: bool = False
-    allow_global_lock: bool = False
-
-_USER = {PrincipalKind.USER}
-_SHARE = {PrincipalKind.SHARE}
-_BOTH_RESOURCES = {ResourceType.FILE, ResourceType.FOLDER}
-_TARGET = {ResourceRole.TARGET}
-_SOURCE_DESTINATION = {ResourceRole.SOURCE, ResourceRole.DESTINATION}
-
-
-POLICIES: Mapping[ResourceAction, ActionPolicy] = MappingProxyType({
-    ResourceAction.READ_ACCOUNT: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-    ),
-    ResourceAction.READ: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_types=_BOTH_RESOURCES,
-    ),
-    ResourceAction.READ_FILE_METADATA: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_types={ResourceType.FILE},
-        trash_access=TrashAccess.IGNORE,
-    ),
-    ResourceAction.READ_TRASH: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_types=_BOTH_RESOURCES,
-        trash_access=TrashAccess.EXPLICIT_TRASH_ROOT,
-    ),
-    ResourceAction.CREATE_CHILD: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"create"},
-        resource_types={ResourceType.FOLDER},
-    ),
-    ResourceAction.EDIT_CONTENT: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify"},
-        resource_types={ResourceType.FILE},
-    ),
-    ResourceAction.EDIT_METADATA: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify"},
-        resource_types={ResourceType.FILE},
-    ),
-    ResourceAction.RENAME: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify"},
-        resource_types=_BOTH_RESOURCES,
-        forbidden_root_roles=_TARGET,
-        lock_rule=LockRule.REQUIRE_CREDENTIAL,
-    ),
-    ResourceAction.MOVE: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify"},
-        resource_types=_BOTH_RESOURCES,
-        resource_roles=_SOURCE_DESTINATION,
-        forbidden_root_roles={ResourceRole.SOURCE},
-    ),
-    ResourceAction.TRASH: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"delete", "modify"},
-        resource_types=_BOTH_RESOURCES,
-        forbidden_root_roles=_TARGET,
-    ),
-    ResourceAction.RESTORE: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify"},
-        resource_types=_BOTH_RESOURCES,
-        forbidden_root_roles=_TARGET,
-        trash_access=TrashAccess.EXPLICIT_TRASH_ROOT,
-        lock_rule=LockRule.REQUIRE_CREDENTIAL,
-    ),
-    ResourceAction.REQUEST_DELETE: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"delete", "modify"},
-        resource_types=_BOTH_RESOURCES,
-        forbidden_root_roles=_TARGET,
-        trash_access=TrashAccess.OUTSIDE_OR_EXPLICIT_ROOT,
-        lock_rule=LockRule.REQUIRE_CREDENTIAL,
-    ),
-    ResourceAction.DOWNLOAD: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read", "download"},
-        resource_types=_BOTH_RESOURCES,
-    ),
-    ResourceAction.CREATE_SHARE: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify", "share"},
-        resource_types=_BOTH_RESOURCES,
-    ),
-    ResourceAction.MANAGE_LOCK: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify", "lock"},
-        resource_types={ResourceType.FOLDER},
-        forbidden_root_roles=_TARGET,
-    ),
-    ResourceAction.RESET_LOCK: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify", "reset_lock"},
-        resource_types={ResourceType.FOLDER},
-        forbidden_root_roles=_TARGET,
-        lock_rule=LockRule.NETWORK_ONLY,
-    ),
-    ResourceAction.VERIFY_LOCK_CREDENTIAL: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_types=_BOTH_RESOURCES,
-        trash_access=TrashAccess.IGNORE,
-        lock_rule=LockRule.VERIFY_CREDENTIAL,
-    ),
-    ResourceAction.LIST_SHARES: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read", "share"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-        require_share_password=False,
-    ),
-    ResourceAction.MANAGE_SHARE: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"modify", "share"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-        require_share_password=False,
-    ),
-    ResourceAction.READ_SHARE: ActionPolicy(
-        principal_kinds=_SHARE,
-        resource_types=_BOTH_RESOURCES,
-        resource_roles={ResourceRole.SHARE_ROOT, ResourceRole.SHARE_ITEM},
-        lock_rule=LockRule.IGNORE,
-        require_share_password=True,
-        ownership_required=False,
-    ),
-    ResourceAction.DOWNLOAD_SHARE: ActionPolicy(
-        principal_kinds=_SHARE,
-        resource_types=_BOTH_RESOURCES,
-        resource_roles={ResourceRole.SHARE_ROOT, ResourceRole.SHARE_ITEM},
-        lock_rule=LockRule.IGNORE,
-        require_share_password=True,
-        ownership_required=False,
-    ),
-    ResourceAction.SEARCH: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_types=_BOTH_RESOURCES,
-        resource_context_optional=True,
-    ),
-    ResourceAction.LIST_TRASH: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_types=_BOTH_RESOURCES,
-        trash_access=TrashAccess.EXPLICIT_TRASH_ROOT,
-        lock_rule=LockRule.IGNORE,
-        resource_context_optional=True,
-    ),
-    ResourceAction.MODIFY_SETTINGS: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"settings_modify"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-    ),
-    ResourceAction.MODIFY_DISCORD: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"discord_modify"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-    ),
-    ResourceAction.CHANGE_PASSWORD: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"change_password"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-        allow_global_lock=True,
-    ),
-    ResourceAction.MANAGE_NOTIFICATIONS: ActionPolicy(
-        principal_kinds=_USER,
-        account_capabilities={"read"},
-        resource_roles=set(),
-        lock_rule=LockRule.IGNORE,
-    ),
+POLICIES = MappingProxyType({
+    ResourceAction.READ: Policy(capabilities=("read",), checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.READ_FILE_METADATA: Policy(capabilities=("read",), resource_types=FILE,
+        checks=LIFECYCLE + (checks.check_lock_network,), credential_check=PASSWORD),
+    ResourceAction.READ_TRASH: Policy(capabilities=("read",), checks=OWNER_TRASH, credential_check=PASSWORD),
+    ResourceAction.CREATE_CHILD: Policy(capabilities=("create",), resource_types=FOLDER,
+        checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.EDIT_CONTENT: Policy(capabilities=("modify",), resource_types=FILE,
+        checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.EDIT_METADATA: Policy(capabilities=("modify",), resource_types=FILE,
+        checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.RENAME: Policy(capabilities=("modify",),
+        checks=OWNER_CHECKS + (checks.check_not_root,), credential_check=PASSWORD),
+    # require_move checks source/root and destination shape explicitly, as one operation.
+    ResourceAction.MOVE: Policy(capabilities=("modify",), checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.TRASH: Policy(capabilities=("delete", "modify"),
+        checks=OWNER_CHECKS + (checks.check_not_root,), credential_check=PASSWORD),
+    ResourceAction.RESTORE: Policy(capabilities=("modify",),
+        checks=OWNER_TRASH + (checks.check_not_root, checks.check_restore_parent_visible), credential_check=PASSWORD),
+    ResourceAction.REQUEST_DELETE: Policy(capabilities=("delete", "modify"),
+        checks=LIFECYCLE + (checks.check_outside_or_explicit_trash, checks.check_not_root, checks.check_lock_network),
+        credential_check=PASSWORD),
+    ResourceAction.DOWNLOAD: Policy(capabilities=("read", "download"), checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.CREATE_SHARE: Policy(capabilities=("modify", "share"), checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.MANAGE_LOCK: Policy(capabilities=("modify", "lock"), resource_types=FOLDER,
+        checks=OWNER_CHECKS + (checks.check_not_root,), credential_check=PASSWORD),
+    ResourceAction.RESET_LOCK: Policy(capabilities=("modify", "reset_lock"), resource_types=FOLDER,
+        checks=OWNER_CHECKS + (checks.check_not_root,)),
+    ResourceAction.VERIFY_LOCK_CREDENTIAL: Policy(capabilities=("read",),
+        checks=LIFECYCLE + (checks.check_has_lock, checks.check_lock_network), credential_check=PASSWORD),
+    ResourceAction.READ_SHARE: Policy(principals=(SharePrincipal,), checks=AVAILABLE),
+    ResourceAction.DOWNLOAD_SHARE: Policy(principals=(SharePrincipal,), checks=AVAILABLE),
+    ResourceAction.STREAM_FILE: Policy(principals=(SignedResourcePrincipal,), capabilities=("read", "download"),
+        resource_types=FILE, checks=OWNER_CHECKS),
+    ResourceAction.STREAM_THUMBNAIL: Policy(principals=(SignedResourcePrincipal,), capabilities=("read", "download"),
+        resource_types=FILE, checks=LIFECYCLE + (checks.check_no_locked_trash, checks.check_lock_network)),
+    ResourceAction.STREAM_ZIP_ENTRY: Policy(principals=(SignedResourcePrincipal,), capabilities=("read", "download"),
+        resource_types=FILE, checks=OWNER_CHECKS),
+    ResourceAction.STREAM_ZIP: Policy(principals=(SignedZIPPrincipal,), checks=AVAILABLE),
+    ResourceAction.SEARCH: Policy(capabilities=("read",), checks=OWNER_CHECKS, credential_check=PASSWORD),
+    ResourceAction.LIST_TRASH: Policy(capabilities=("read",), checks=LIFECYCLE + (checks.check_explicit_trash,)),
 })
 
+# A parent listing exposes child names, including locked folder names, not content.
+CHILD_METADATA = Policy(checks=AVAILABLE)
 
-class PolicyRegistry:
-    @staticmethod
-    def get(action: ResourceAction) -> ActionPolicy:
-        return POLICIES[ResourceAction(action)]
-
-    @staticmethod
-    def validate_complete() -> None:
-        missing = set(ResourceAction) - set(POLICIES)
-        extra = set(POLICIES) - set(ResourceAction)
-        if missing or extra:
-            raise RuntimeError(f"Invalid permission policy registry: missing={missing}, extra={extra}")
-
-
-PolicyRegistry.validate_complete()
+if set(POLICIES) != set(ResourceAction):
+    raise RuntimeError("Every resource action must have exactly one policy")

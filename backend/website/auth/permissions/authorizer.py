@@ -1,352 +1,405 @@
-import hmac
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Iterable
 
+from django.utils import timezone
 
-from website.core.errors import BadRequestError, PasswordChallenge, PermissionPasswordError, ResourceNotFoundError, ResourcePermissionError
-from website.models import UserPerms
-
-from .contexts import ContextSet, ResourceContext, ShareContext
+from website.core.errors import BadRequestError, PermissionPasswordError, ResourceNotFoundError, ResourcePermissionError
+from website.core.helpers import validate_ids_as_list
+from website.config import MAX_FILES_IN_FOLDER
+from website.models import File, ShareableLink, UserPerms, UserSettings, UserZIP
+from website.queries.resource_loader import ResourceLoader
+from . import checks
+from .contexts import ResourceRef
 from .credentials import CredentialSet
+from .facts import AccountFacts, ZIPScope
 from .network import ip_is_allowed
-from .policies import ActionPolicy, Disclosure, LockRule, PolicyRegistry, PrincipalKind, ResourceAction, ResourceRole, ResourceType, TrashAccess
+from .policies import POLICIES, ResourceAction, ResourceType
 from .principals import SharePrincipal, SignedResourcePrincipal, UserPrincipal
 
 
+def load_account_facts(owner_id):
+    row = UserPerms.objects.filter(user_id=owner_id).values().first()
+    if row is None:
+        raise ResourceNotFoundError()
+    return AccountFacts(owner_id, row["globalLock"], row["admin"], frozenset(
+        name for name, value in row.items() if value is True and name not in {"globalLock", "admin"}
+    ))
+
+
 @dataclass(frozen=True)
-class AuthorizedResource:
-    resource_type: str
-    resource_id: str
-    role: str
-    effective_lock_policy_id: str | None
+class SelectionItem:
+    type: str
+    id: str
+    owner_id: int
+    parent_id: str | None
+    name: str
     resource_version: int
 
 
+def selection_items(rows):
+    return tuple(SelectionItem(row["kind"], row["id"], row["owner_id"], row["parent_id"],
+                               row["name"], row["resource_version"]) for row in rows)
+
+
 @dataclass(frozen=True)
-class AuthorizationResult:
-    action: ResourceAction
-    resources: tuple[AuthorizedResource, ...]
-    share_id: str | None = None
+class ShareResolution:
+    share: ShareableLink
+    root: object
+    requested: object
+    breadcrumbs: tuple[dict, ...]
+    allow_descendants: bool
+
+    @classmethod
+    def from_loaded(cls, share, allow_descendants, loaded):
+        row = loaded.rows[-1]
+        chain = list(reversed(loaded.state(row).ancestor_ids))
+        start = chain.index(share.root_id) if share.root_folder_id is not None else len(chain)
+        breadcrumbs = tuple({"id": key, "name": loaded.ancestors[key]["name"]} for key in chain[start:])
+        return cls(share, loaded.resources[0], loaded.resources[-1], breadcrumbs, allow_descendants)
+
+    @property
+    def share_id(self):
+        return str(self.share.id)
+
+    @property
+    def owner_id(self):
+        return self.share.owner_id
+
+    @property
+    def root_type(self):
+        return self.share.get_type()
+
+    @property
+    def root_id(self):
+        return self.share.root_id
+
+    @property
+    def requested_type(self):
+        return "file" if self.requested._meta.model_name == "file" else "folder"
+
+    @property
+    def requested_id(self):
+        return str(self.requested.id)
+
+    @property
+    def expiration_time(self):
+        return self.share.expiration_time
 
 
-def _principal_kind(principal) -> PrincipalKind:
-    if isinstance(principal, UserPrincipal):
-        return PrincipalKind.USER
-    if isinstance(principal, SharePrincipal):
-        return PrincipalKind.SHARE
-    raise TypeError("Unsupported permission principal")
+def load_share(token):
+    share = ShareableLink.objects.filter(token=token).first()
+    if share is None:
+        raise ResourceNotFoundError()
+    allow_descendants = UserSettings.objects.filter(user_id=share.owner_id).values_list("subfolders_in_shares", flat=True).first()
+    return share, bool(allow_descendants)
 
 
-def _now_for(value: datetime) -> datetime:
-    return datetime.now(tz=value.tzinfo) if value.tzinfo else datetime.now()
+def _refs(file_ids=None, folder_ids=None):
+    files, folders = file_ids if file_ids is not None else [], folder_ids if folder_ids is not None else []
+    for ids in (files, folders):
+        validate_ids_as_list(ids, max_length=MAX_FILES_IN_FOLDER, child_type=str, empty_allowed=True)
+    if len(files) + len(folders) > MAX_FILES_IN_FOLDER:
+        raise BadRequestError("Too many resources")
+    return (*(ResourceRef(ResourceType.FILE, key) for key in files),
+            *(ResourceRef(ResourceType.FOLDER, key) for key in folders))
 
 
-def _resource_denial(
-    policy: ActionPolicy,
-    direct_state: str,
-    is_deleting: bool,
-    is_trashed: bool,
-    explicit_trash_root: bool,
-    is_root_folder: bool = False,
-    role: ResourceRole = ResourceRole.TARGET,
-) -> str | None:
-    if is_deleting:
-        return "Resource is being deleted"
-    if direct_state not in policy.allowed_states:
-        return "Resource is not active"
-    if is_root_folder and role in policy.forbidden_root_roles:
-        return "Root folder cannot be used for this action"
-    if policy.trash_access == TrashAccess.IGNORE:
-        return None
-    if policy.trash_access == TrashAccess.OUTSIDE_TRASH:
-        return "Cannot access a resource in trash" if is_trashed else None
-    if policy.trash_access == TrashAccess.EXPLICIT_TRASH_ROOT:
-        return "Resource is not an explicit trash root" if not explicit_trash_root else None
-    if policy.trash_access == TrashAccess.OUTSIDE_OR_EXPLICIT_ROOT:
-        return "An inherited trashed resource cannot be used directly" if is_trashed and not explicit_trash_root else None
-    raise RuntimeError(f"Unsupported trash access policy: {policy.trash_access!r}")
+def _policy(principal, action):
+    policy = POLICIES[ResourceAction(action)]
+    if not isinstance(principal, policy.principals):
+        raise ResourcePermissionError("Principal cannot perform this action")
+    return policy
 
 
-def _file_belongs_to_parent(parent: ResourceContext, row: dict) -> bool:
-    return row["owner_id"] == parent.owner_id and str(row["parent_id"]) == parent.resource_id
+def _network(principal, policy, loaded):
+    if checks.check_lock_network not in policy.checks or not any(state.lock_id for state in loaded.states.values()):
+        return True
+    if isinstance(principal, SignedResourcePrincipal) and principal.share_id is not None:
+        return True
+    return ip_is_allowed(principal.client_ip)
 
 
-def _file_row_denial(policy: ActionPolicy, parent: ResourceContext, row: dict) -> str | None:
-    explicit_trash = row["trashed_at"] is not None
-    return _resource_denial(
-        policy,
-        direct_state=row["state"],
-        is_deleting=row["has_active_deletion"],
-        is_trashed=explicit_trash or parent.is_trashed,
-        explicit_trash_root=explicit_trash,
-    )
+def _check_rows(policy, loaded, network_allowed):
+    for row in loaded.rows:
+        if row["kind"] not in policy.resource_types:
+            raise BadRequestError("Resource type is invalid for this action")
+        state = loaded.state(row)
+        for check in policy.checks:
+            check(row, state, network_allowed)
+
+
+def _check_credentials(policy, loaded, credentials):
+    if policy.credential_check is None:
+        return
+    credentials = credentials or CredentialSet.empty()
+    challenges, checked = [], set()
+    for state in loaded.states.values():
+        if state.lock_id in checked:
+            continue
+        checked.add(state.lock_id)
+        challenge = policy.credential_check(state, credentials)
+        if challenge:
+            challenges.append(challenge)
+    if challenges:
+        raise PermissionPasswordError(tuple(challenges))
+
+
+def _filter_rows(policy, loaded, credentials, network_allowed, scope_check=None):
+    credentials = credentials or CredentialSet.empty()
+    credential_matches = {}
+    accepted = []
+    for index, row in enumerate(loaded.rows):
+        state = loaded.state(row)
+        try:
+            if scope_check is not None:
+                scope_check(row, state)
+            for check in policy.checks:
+                check(row, state, network_allowed)
+            if policy.credential_check is not None:
+                if state.lock_id not in credential_matches:
+                    credential_matches[state.lock_id] = policy.credential_check(state, credentials) is None
+                if not credential_matches[state.lock_id]:
+                    continue
+        except ResourceNotFoundError:
+            continue
+        accepted.append(index)
+    return accepted
 
 
 class Authorizer:
-    def require_account_capability(self, principal: UserPrincipal, action: ResourceAction) -> None:
+    def __init__(self):
+        self._loader = ResourceLoader()
+
+    def _user_policy(self, principal, action):
         if not isinstance(principal, UserPrincipal):
-            raise TypeError("Account capabilities require a user principal")
-        policy = PolicyRegistry.get(action)
-        permissions = UserPerms.objects.get(user_id=principal.user_id)
+            raise TypeError("User access requires a user principal")
+        policy = _policy(principal, action)
+        checks.check_account(principal.user_id, load_account_facts(principal.user_id), policy.capabilities)
+        return policy
 
-        if permissions.globalLock and not policy.allow_global_lock:
-            raise ResourcePermissionError("Account is locked")
-        if not permissions.admin and any(not getattr(permissions, capability, False) for capability in policy.account_capabilities):
-            raise ResourcePermissionError("Account capability is missing")
+    def _resource_policy(self, principal, action):
+        if ResourceAction(action) == ResourceAction.MOVE:
+            raise BadRequestError("A move requires sources and a destination")
+        return self._user_policy(principal, action)
 
-    def authorize_user_action(
-        self,
-        principal: UserPrincipal,
-        action: ResourceAction,
-        contexts: ContextSet | tuple[ResourceContext, ...] = (),
-        credentials: CredentialSet | None = None,
-    ) -> AuthorizationResult:
-        action = ResourceAction(action)
-        policy = PolicyRegistry.get(action)
-        if _principal_kind(principal) not in policy.principal_kinds:
-            raise ResourcePermissionError("Principal cannot perform this action")
+    def _check_owned(self, principal, policy, loaded, credentials, *, empty_allowed=False):
+        if not loaded.rows and not empty_allowed:
+            raise BadRequestError("This action requires resources")
+        for row in loaded.rows:
+            checks.check_owner(row, principal.user_id)
+        _check_rows(policy, loaded, _network(principal, policy, loaded))
+        _check_credentials(policy, loaded, credentials)
 
-        self.require_account_capability(principal, action)
-        context_set = contexts if isinstance(contexts, ContextSet) else ContextSet(tuple(contexts))
-        credentials = credentials or CredentialSet.empty()
-        self._authorize_resources(principal, policy, context_set, credentials)
-        return self._result(action, context_set)
-
-    def authorize_share_action(
-        self,
-        principal: SharePrincipal,
-        action: ResourceAction,
-        share_context: ShareContext,
-        resource_contexts: ContextSet | tuple[ResourceContext, ...] = (),
-        credentials: CredentialSet | None = None,
-    ) -> AuthorizationResult:
-        action = ResourceAction(action)
-        policy = PolicyRegistry.get(action)
-        if not isinstance(principal, SharePrincipal) or PrincipalKind.SHARE not in policy.principal_kinds:
-            raise ResourcePermissionError("Principal cannot perform this action")
-
-        if principal.share_token != share_context.share_token:
-            raise ResourceNotFoundError("Share not found")
-        now = _now_for(share_context.expires_at)
-        if now >= share_context.expires_at:
-            raise ResourcePermissionError("Share has expired")
-
-        credentials = credentials or CredentialSet.empty()
-        if policy.require_share_password:
-            supplied = credentials.for_share(share_context.share_id)
-            if share_context.password and (not supplied or supplied != share_context.password):
-                raise PermissionPasswordError((PasswordChallenge(share_context.share_id, "Share"),))
-
-        if not share_context.requested_item_is_member or not share_context.descendant_folders_allowed:
-            raise ResourceNotFoundError("Share not found")
-
-        context_set = resource_contexts if isinstance(resource_contexts, ContextSet) else ContextSet(tuple(resource_contexts))
-        root_contexts = [
-            context
-            for context in context_set
-            if context.role == ResourceRole.SHARE_ROOT
-            and context.resource_type == share_context.root_type
-            and context.resource_id == share_context.root_id
-            and context.owner_id == share_context.owner_id
-        ]
-        if not root_contexts or any(context.owner_id != share_context.owner_id for context in context_set):
-            raise ResourceNotFoundError("Share not found")
-
-        self._authorize_resources(principal, policy, context_set, credentials)
-        return self._result(action, context_set, share_context.share_id)
-
-    def filter_user_contexts(
-        self,
-        principal: UserPrincipal,
-        action: ResourceAction,
-        contexts: ContextSet | tuple[ResourceContext, ...],
-        credentials: CredentialSet | None = None,
-    ) -> AuthorizationResult:
-        action = ResourceAction(action)
-        if action not in {ResourceAction.SEARCH, ResourceAction.READ}:
-            raise BadRequestError("Context filtering is only available for read queries")
-
-        policy = PolicyRegistry.get(action)
-        self.require_account_capability(principal, action)
-        context_set = contexts if isinstance(contexts, ContextSet) else ContextSet(tuple(contexts))
-        credentials = credentials or CredentialSet.empty()
-        authorized: list[ResourceContext] = []
-        for context in context_set:
-            try:
-                self._authorize_resources(principal, policy, ContextSet((context,)), credentials)
-            except (PermissionPasswordError, ResourceNotFoundError, ResourcePermissionError):
-                continue
-            authorized.append(context)
-        return self._result(action, ContextSet(tuple(authorized)))
-
-    def filter_user_file_batch(
-        self,
-        principal: UserPrincipal,
-        action: ResourceAction,
-        parent_context: ResourceContext,
-        rows: Iterable[dict],
-        credentials: CredentialSet | None = None,
-    ) -> tuple[AuthorizationResult, tuple[dict, ...]]:
-        """Authorize one same-parent file batch without building file contexts.
-
-        Parent authorization supplies inherited trash, deletion, and lock state;
-        the policy registry supplies the per-file state and trash rules.
-        """
-        action = ResourceAction(action)
-        policy = PolicyRegistry.get(action)
-        if ResourceType.FILE not in policy.resource_types or ResourceRole.TARGET not in policy.resource_roles:
-            raise BadRequestError("This action cannot authorize a file batch")
-        if parent_context.resource_type != ResourceType.FOLDER:
-            raise BadRequestError("A file batch requires an authorized parent folder")
-        parent_authorization = self.authorize_user_action(principal, action, ContextSet((parent_context,)), credentials)
-        rows = tuple(rows)
-        if len(rows) > 10000:
-            raise BadRequestError("A same-parent file batch may contain at most 10000 files")
-        authorized = []
-        for row in rows:
-            if not _file_belongs_to_parent(parent_context, row):
-                continue
-            if _file_row_denial(policy, parent_context, row) is None:
-                authorized.append(row)
-        return parent_authorization, tuple(authorized)
-
-    def authorize_user_file_batch(
-        self,
-        principal: UserPrincipal,
-        action: ResourceAction,
-        parent_contexts: Iterable[ResourceContext],
-        file_rows: Iterable[dict],
-        additional_contexts: Iterable[ResourceContext] = (),
-        credentials: CredentialSet | None = None,
-    ) -> AuthorizationResult:
-        """Strictly authorize explicitly selected files grouped by parent."""
-        action = ResourceAction(action)
-        policy = PolicyRegistry.get(action)
-        if ResourceType.FILE not in policy.resource_types or ResourceRole.TARGET not in policy.resource_roles:
-            raise BadRequestError("This action cannot authorize a file batch")
-
-        parents = tuple(parent_contexts)
-        contexts_by_parent = {context.resource_id: context for context in parents}
-        if len(contexts_by_parent) != len(parents) or any(context.resource_type != ResourceType.FOLDER for context in parents):
-            raise BadRequestError("File batch parents must be distinct folders")
-
-        context_set = ContextSet((*parents, *tuple(additional_contexts)))
-        authorization = self.authorize_user_action(principal, action, context_set, credentials)
-        for row in file_rows:
-            parent = contexts_by_parent.get(str(row["parent_id"]))
-            if parent is None or not _file_belongs_to_parent(parent, row):
-                raise ResourceNotFoundError()
-            denial = _file_row_denial(policy, parent, row)
-            if denial is not None:
-                raise ResourcePermissionError(denial)
-        return authorization
-
-    def authorize_signed_resource(
-        self,
-        principal: SignedResourcePrincipal,
-        context: ResourceContext,
-    ) -> AuthorizationResult:
-        now = _now_for(principal.expires_at)
-        if principal.expires_at <= now:
-            raise ResourcePermissionError("Signed resource capability has expired")
-        if principal.file_id != context.resource_id:
-            raise ResourceNotFoundError()
-        if context.resource_type != ResourceType.FILE:
-            raise ResourcePermissionError("Signed resource capability requires a file")
-        if context.is_deleting:
-            raise ResourcePermissionError("Resource is being deleted")
-        if context.direct_state != "active":
-            raise ResourcePermissionError("Resource is not active")
-        if context.is_trashed and context.effective_lock_policy_id:
-            raise ResourcePermissionError("Cannot stream a locked file in trash")
-        if context.effective_lock_policy_id and principal.share_id is None and not ip_is_allowed(principal.client_ip):
-            raise ResourceNotFoundError()
-        action = ResourceAction.DOWNLOAD_SHARE if principal.share_id else ResourceAction.DOWNLOAD
-        return self._result(action, ContextSet((context,)), principal.share_id)
-
-    def _authorize_resources(
-        self,
-        principal: UserPrincipal | SharePrincipal,
-        policy: ActionPolicy,
-        contexts: ContextSet,
-        credentials: CredentialSet,
-    ) -> None:
-        if policy.resource_types and not contexts.contexts and not policy.resource_context_optional:
-            raise BadRequestError("This action requires a resource context")
-
-        if not policy.resource_types and contexts.contexts:
-            raise BadRequestError("This action does not accept resource contexts")
-
-        challenges: dict[str, PasswordChallenge] = {}
-        for context in contexts:
-            if context.resource_type not in policy.resource_types or context.role not in policy.resource_roles:
-                raise BadRequestError("Resource type or role is invalid for this action")
-            if policy.ownership_required and isinstance(principal, UserPrincipal) and context.owner_id != principal.user_id:
-                raise ResourceNotFoundError()
-            denial = _resource_denial(
-                policy,
-                direct_state=context.direct_state,
-                is_deleting=context.is_deleting,
-                is_trashed=context.is_trashed,
-                explicit_trash_root=context.explicit_trash_root,
-                is_root_folder=context.is_root_folder,
-                role=context.role,
-            )
-            if denial is not None:
-                raise ResourcePermissionError(denial)
-
-            lock_id = context.effective_lock_policy_id
-            lock_rule = policy.lock_rule
-            if lock_rule == LockRule.IGNORE:
-                continue
-            if not lock_id:
-                if lock_rule == LockRule.VERIFY_CREDENTIAL and credentials.supplied:
-                    raise BadRequestError("This resource is unlocked. Do not provide a password")
-                if lock_rule == LockRule.VERIFY_CREDENTIAL:
-                    raise BadRequestError("This resource has no lock policy")
-                if lock_rule in {LockRule.REQUIRE_CREDENTIAL, LockRule.NETWORK_ONLY}:
-                    continue
-                raise RuntimeError(f"Unsupported lock rule: {lock_rule!r}")
-
-            if isinstance(principal, UserPrincipal) and not ip_is_allowed(principal.client_ip):
-                self._deny(policy, "Resource is inaccessible from this network")
-            if lock_rule == LockRule.NETWORK_ONLY:
-                continue
-            if lock_rule in {LockRule.REQUIRE_CREDENTIAL, LockRule.VERIFY_CREDENTIAL}:
-                supplied = credentials.for_policy(lock_id)
-                password = context.effective_lock_password
-                if not supplied or not password or not hmac.compare_digest(supplied, password):
-                    challenges.setdefault(
-                        lock_id,
-                        PasswordChallenge(lock_id, context.effective_lock_policy_name or "Locked folder"),
-                    )
-                continue
-            raise RuntimeError(f"Unsupported lock rule: {lock_rule!r}")
-        if challenges:
-            raise PermissionPasswordError(tuple(challenges.values()))
-
-    @staticmethod
-    def _deny(policy, message: str) -> None:
-        if policy.disclosure == Disclosure.NOT_FOUND:
-            raise ResourceNotFoundError()
-        if policy.disclosure == Disclosure.FORBIDDEN:
-            raise ResourcePermissionError(message)
-        raise RuntimeError(f"Unsupported disclosure policy: {policy.disclosure!r}")
-
-    @staticmethod
-    def _result(action: ResourceAction, contexts: ContextSet, share_id: str | None = None) -> AuthorizationResult:
-        return AuthorizationResult(
-            action=action,
-            resources=tuple(
-                AuthorizedResource(
-                    resource_type=context.resource_type.value,
-                    resource_id=context.resource_id,
-                    role=context.role.value,
-                    effective_lock_policy_id=context.effective_lock_policy_id,
-                    resource_version=context.resource_version,
-                )
-                for context in contexts
-            ),
-            share_id=share_id,
+    def require_item(self, principal, action, item_id, credentials=None, *, resource_type=None,
+                     locked_hierarchy=None, locked_files=None):
+        policy = self._resource_policy(principal, action)
+        validate_ids_as_list([item_id], max_length=1, child_type=str)
+        if resource_type is None:
+            resource_type = ResourceType.FILE if File.objects.filter(owner_id=principal.user_id, id=item_id).exists() else ResourceType.FOLDER
+        loaded = self._loader.load_many(
+            (ResourceRef(ResourceType(resource_type), item_id),), principal.user_id,
+            locked_hierarchy, locked_files=locked_files,
         )
+        self._check_owned(principal, policy, loaded, credentials)
+        return loaded.resources[0]
+
+    def require_items(self, principal, action, *, file_ids=None, folder_ids=None, credentials=None,
+                      locked_hierarchy=None, locked_files=None):
+        policy = self._resource_policy(principal, action)
+        loaded = self._loader.load_many(
+            _refs(file_ids, folder_ids), principal.user_id, locked_hierarchy, locked_files=locked_files,
+        )
+        self._check_owned(principal, policy, loaded, credentials,
+                          empty_allowed=action in {ResourceAction.LIST_TRASH, ResourceAction.SEARCH})
+        return loaded.resources
+
+    def require_selection(self, principal, action, item_ids, credentials=None):
+        policy = self._resource_policy(principal, action)
+        validate_ids_as_list(item_ids, max_length=MAX_FILES_IN_FOLDER, child_type=str)
+        loaded = self._loader.load_selection(principal.user_id, item_ids)
+        self._check_owned(principal, policy, loaded, credentials)
+        checks.check_same_parent(loaded.rows)
+        return selection_items(loaded.rows)
+
+    def _check_move(self, principal, policy, loaded, credentials):
+        for row in loaded.rows:
+            checks.check_owner(row, principal.user_id)
+        allowed_network = _network(principal, policy, loaded)
+        _check_rows(policy, loaded, allowed_network)
+        for source in loaded.rows[:-1]:
+            checks.check_not_root(source, loaded.state(source), allowed_network)
+        if not loaded.rows[:-1] or loaded.rows[-1]["kind"] != "folder":
+            raise BadRequestError("A move requires sources and a destination folder")
+        _check_credentials(policy, loaded, credentials)
+
+    def require_move(self, principal, item_ids, destination_id, credentials=None):
+        policy = self._user_policy(principal, ResourceAction.MOVE)
+        validate_ids_as_list(item_ids, max_length=MAX_FILES_IN_FOLDER, child_type=str)
+        validate_ids_as_list([destination_id], max_length=1, child_type=str)
+        if not destination_id:
+            raise BadRequestError("A move requires a destination folder")
+        loaded = self._loader.load_selection(principal.user_id, item_ids, ResourceRef(ResourceType.FOLDER, destination_id))
+        self._check_move(principal, policy, loaded, credentials)
+        checks.check_same_parent(loaded.rows[:-1])
+        items = selection_items(loaded.rows)
+        return items[:-1], items[-1]
+
+    def require_move_items(self, principal, destination_id, *, file_ids=None, folder_ids=None, credentials=None,
+                           locked_hierarchy=None, locked_files=None):
+        policy = self._user_policy(principal, ResourceAction.MOVE)
+        refs = _refs(file_ids, folder_ids)
+        if not refs or not isinstance(destination_id, str) or not destination_id:
+            raise BadRequestError("A move requires sources and a destination")
+        loaded = self._loader.load_many(
+            (*refs, ResourceRef(ResourceType.FOLDER, destination_id)), principal.user_id,
+            locked_hierarchy, locked_files=locked_files,
+        )
+        self._check_move(principal, policy, loaded, credentials)
+        return loaded.resources[:-1], loaded.resources[-1]
+
+    def filter_items(self, principal, action, *, file_ids=None, folder_ids=None, credentials=None):
+        if action not in {ResourceAction.READ, ResourceAction.SEARCH}:
+            raise BadRequestError("Filtering is only available for read queries")
+        policy = self._resource_policy(principal, action)
+        loaded = self._loader.load_many(_refs(file_ids, folder_ids), principal.user_id)
+        indices = _filter_rows(policy, loaded, credentials, _network(principal, policy, loaded))
+        return tuple(loaded.resources[index] for index in indices)
+
+    def _share_batch(self, principal, action, requested=None, credentials=None, *, projected=False, item_ids=None):
+        policy = _policy(principal, action)
+        if not isinstance(principal, SharePrincipal):
+            raise TypeError("Share access requires a share principal")
+        share, allow_descendants = load_share(principal.share_token)
+        checks.check_share(principal, share, timezone.now())
+        root = ResourceRef(ResourceType(share.get_type()), share.root_id)
+        if item_ids is not None:
+            validate_ids_as_list(item_ids, max_length=MAX_FILES_IN_FOLDER, child_type=str)
+            loaded = self._loader.load_selection(share.owner_id, item_ids, root)
+            loaded.rows = (loaded.rows[-1], *loaded.rows[:-1])
+        else:
+            loaded = self._loader.load_many((root, *(requested if requested is not None else (root,))), share.owner_id, projected=projected)
+        for row in loaded.rows:
+            checks.check_share_member(row, loaded.state(row), share, allow_descendants)
+        _check_rows(policy, loaded, True)
+        checks.check_share_password(share, credentials or CredentialSet.empty())
+        return share, allow_descendants, loaded
+
+    def require_share(self, principal, action, *, resource_type=None, item_id=None, credentials=None):
+        if (resource_type is None) != (item_id is None):
+            raise BadRequestError("A share item requires both its type and ID")
+        requested = None if item_id is None else (ResourceRef(ResourceType(resource_type), item_id),)
+        share, allow_descendants, loaded = self._share_batch(principal, action, requested, credentials)
+        return ShareResolution.from_loaded(share, allow_descendants, loaded)
+
+    def require_share_selection(self, principal, *, file_ids=None, folder_ids=None, item_ids=None, credentials=None):
+        refs = None if item_ids is not None else _refs(file_ids, folder_ids)
+        if item_ids is None and not refs:
+            raise BadRequestError("A selection cannot be empty")
+        _, _, loaded = self._share_batch(principal, ResourceAction.DOWNLOAD_SHARE, refs, credentials,
+                                         projected=True, item_ids=item_ids)
+        checks.check_same_parent(loaded.rows[1:])
+        return selection_items(loaded.rows[1:])
+
+    def list_trash(self, principal):
+        from .listing import load_trash_rows
+
+        policy = self._resource_policy(principal, ResourceAction.LIST_TRASH)
+        files, folders = load_trash_rows(principal.user_id)
+        refs = _refs(list(files), list(folders))
+        loaded = self._loader.for_rows(refs, principal.user_id, files, folders)
+        indices = _filter_rows(policy, loaded, None, True)
+        rows = []
+        for index in indices:
+            row = loaded.rows[index]
+            state = loaded.state(row)
+            # An explicit marker beneath a trashed folder is covered by that
+            # enclosing root and must not appear as another top-level entry.
+            ancestors = state.ancestor_ids[1:] if row["kind"] == "folder" else state.ancestor_ids
+            if any(loaded.ancestors[key]["trashed_at"] is not None for key in ancestors):
+                continue
+            row.update(is_locked=state.lock_id is not None, lock_from_id=state.lock_id,
+                       lock_from_name=state.lock_name)
+            rows.append(row)
+        return rows
+
+    def list_children(self, principal, folder_id, credentials=None):
+        from .listing import load_entries
+        policy = self._resource_policy(principal, ResourceAction.READ)
+        loaded = self._loader.load_many((ResourceRef(ResourceType.FOLDER, folder_id),), principal.user_id, projected=True)
+        self._check_owned(principal, policy, loaded, credentials)
+        return load_entries(loaded.rows[0], loaded.state(loaded.rows[0]))
+
+    def list_share_children(self, principal, folder_id, credentials=None):
+        from .listing import load_entries
+        share, descendants, loaded = self._share_batch(
+            principal, ResourceAction.READ_SHARE, (ResourceRef(ResourceType.FOLDER, folder_id),), credentials,
+        )
+        resolution = ShareResolution.from_loaded(share, descendants, loaded)
+        return resolution, load_entries(loaded.rows[-1], loaded.state(loaded.rows[-1]), include_folders=descendants)
+
+    def require_signed_file(self, principal, action=ResourceAction.STREAM_FILE):
+        policy = _policy(principal, action)
+        if not isinstance(principal, SignedResourcePrincipal):
+            raise TypeError("Signed file access requires a verified signed principal")
+
+        checks.check_signed_expiry(principal, timezone.now())
+        owner_id = File.objects.filter(id=principal.file_id).values_list("owner_id", flat=True).first()
+        if owner_id is None:
+            raise ResourceNotFoundError()
+        if principal.share_id is None:
+            checks.check_account(owner_id, load_account_facts(owner_id), policy.capabilities)
+        loaded = self._loader.load_many((ResourceRef(ResourceType.FILE, principal.file_id),), owner_id)
+        _check_rows(policy, loaded, _network(principal, policy, loaded))
+        return loaded.resources[0]
+
+    def require_signed_zip(self, principal):
+        policy = _policy(principal, ResourceAction.STREAM_ZIP)
+        now = timezone.now()
+        checks.check_signed_expiry(principal, now)
+        record = UserZIP.objects.filter(id=principal.zip_id).first()
+        if record is None:
+            raise ResourceNotFoundError()
+        loaded = self._loader.load_many(_refs(record.file_ids, record.folder_ids), record.owner_id, projected=True)
+        if not loaded.rows:
+            raise ResourceNotFoundError()
+        scope = ZIPScope(str(record.id), record.owner_id, record.parent_id,
+            frozenset((row["kind"], row["id"]) for row in loaded.rows),
+            {row["id"]: loaded.state(row).lock_id for row in loaded.rows if row["kind"] == "folder"}, now)
+        for row in loaded.rows:
+            checks.check_zip_member(row, loaded.state(row), scope)
+        _check_rows(policy, loaded, True)
+        return record, loaded.rows, scope
+
+    def filter_zip_items(self, principal, scope, *, file_ids=None, folder_ids=None, parent_ids=None):
+        policy = _policy(principal, ResourceAction.STREAM_ZIP)
+        if principal.zip_id != scope.zip_id:
+            raise ResourceNotFoundError()
+        checks.check_signed_expiry(principal, scope.admitted_at)
+        loaded = self._loader.load_many(_refs(file_ids, folder_ids), scope.owner_id, projected=True)
+        def scope_check(row, state):
+            checks.check_zip_member(row, state, scope)
+            if parent_ids is not None and row["parent_id"] not in parent_ids:
+                raise ResourceNotFoundError()
+        return tuple(loaded.rows[index] for index in _filter_rows(policy, loaded, None, True, scope_check))
+
+    def require_download_root(self, principal, item_id, credentials=None):
+        policy = self._resource_policy(principal, ResourceAction.DOWNLOAD)
+        validate_ids_as_list([item_id], max_length=1, child_type=str)
+        loaded = self._loader.load_selection(principal.user_id, [item_id])
+        self._check_owned(principal, policy, loaded, credentials)
+        return self._download_row(loaded, loaded.rows[0])
+
+    def filter_download_items(self, principal, root_id, *, file_ids=None, folder_ids=None, parent_ids=None, credentials=None):
+        policy = self._resource_policy(principal, ResourceAction.DOWNLOAD)
+        # Account and root denial fail the operation, even for an empty candidate batch.
+        root = self._loader.load_many((ResourceRef(ResourceType.FOLDER, root_id),), principal.user_id, projected=True)
+        self._check_owned(principal, policy, root, credentials)
+        loaded = self._loader.load_many(_refs(file_ids, folder_ids), principal.user_id, projected=True)
+        indices = _filter_rows(policy, loaded, credentials, _network(principal, policy, loaded),
+                               lambda row, state: checks.check_traversal_member(row, state, root_id, parent_ids))
+        return tuple(self._download_row(loaded, loaded.rows[index]) for index in indices)
+
+    @staticmethod
+    def _download_row(loaded, row):
+        return {**row, "lock_from_id": loaded.state(row).lock_id}
+
+authorizer = Authorizer()

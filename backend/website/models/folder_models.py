@@ -20,7 +20,10 @@ class Folder(models.Model):
     state = models.CharField(max_length=32, choices=ItemState.choices, default=ItemState.ACTIVE, db_index=True)
     state_changed_at = models.DateTimeField(null=True, blank=True)
 
-    # Authoritative, transactionally maintained subtree aggregates.
+    trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    physical_file_stats = models.JSONField(default=dict)
+
+    # Transactionally maintained subtree aggregates.
     physical_descendant_folder_count = models.PositiveBigIntegerField(default=0)
     physical_descendant_file_count = models.PositiveBigIntegerField(default=0)
     physical_descendant_file_size = models.PositiveBigIntegerField(default=0)

@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 
 from django_redis import get_redis_connection
 
-from website.core.errors import BadRequestError, DiscordBlockError, CannotProcessDiscordRequestError
+from website.core.errors import BadRequestError, DiscordBlockError, CannotProcessDiscordRequestError, NoAvailableDiscordCredentialError
 from website.core.helpers import normalize_blocked_until
 from website.discord.CredentialState import CredentialState, CredentialType
 from website.discord.utils import decode_redis_hash
@@ -423,17 +423,17 @@ class UserState:
         if code == "GLOBAL_BLOCK":
             raise DiscordBlockError("Discord temporarily blocked us :(", retry_after=result["retry_after"])
         if code == "NOT_FOUND":
-            raise CannotProcessDiscordRequestError("Requested credential not found")
+            raise BadRequestError("Requested credential not found")
         if code == "TYPE_MISMATCH":
-            raise CannotProcessDiscordRequestError("Credential type mismatch")
+            raise BadRequestError("Credential type mismatch")
         if code == "CREDENTIAL_BLOCKED":
-            raise CannotProcessDiscordRequestError("Credential is temporarily blocked")
+            raise BadRequestError("Credential is temporarily blocked")
         if code == "UNAVAILABLE":
-            raise CannotProcessDiscordRequestError("Credential currently unavailable")
+            raise NoAvailableDiscordCredentialError("Credential currently unavailable")
         if code == "NO_CREDENTIALS":
-            raise CannotProcessDiscordRequestError("No credentials available right now")
+            raise NoAvailableDiscordCredentialError("No credentials available right now")
 
-        raise CannotProcessDiscordRequestError(f"Unexpected acquire error: {code}")
+        raise RuntimeError(f"Unexpected acquire error: {code}")
 
     def acquire_token(self, bot: Optional["Bot"] = None) -> CredentialState:
         secret = bot.token if bot else None

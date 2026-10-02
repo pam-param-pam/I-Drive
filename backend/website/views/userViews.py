@@ -1,10 +1,11 @@
+from website.queries.resource_loader import ResourceLoader
 from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
-from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceContextResolver, extract_resource_credentials
+from website.auth.permissions import PrincipalFactory, ResourceAction, ResourceType, extract_resource_credentials
 from website.auth.throttle import defaultAuthUserThrottle, DiscordSettingsThrottle
 from website.config import MAX_FOLDER_DEPTH
 from website.constants import FILE_TYPES, EncryptionMethod, MAX_DISCORD_MESSAGE_SIZE, MAX_ATTACHMENTS_PER_MESSAGE, EXTENSION_TO_FILE_TYPE
@@ -16,7 +17,7 @@ from website.models import Channel, Folder, UserSettings, UserPerms, DiscordSett
 from website.models.other_models import Notification, NotificationType
 from website.queries.builders import build_discord_settings
 from website.services import user_service
-from website.services.resource_query_service import FolderQueryService
+from website.auth.permissions.authorizer import authorizer
 
 
 def _principal(request):
@@ -28,9 +29,10 @@ def _principal(request):
 @permission_classes([IsAuthenticated])
 def can_upload(request, folder_id):
     principal = _principal(request)
-    folder_obj = FolderQueryService.get(
-        principal, folder_id, ResourceAction.CREATE_CHILD, extract_resource_credentials(request),
-    ).folder
+    folder_obj = authorizer.require_item(
+        principal, ResourceAction.CREATE_CHILD, folder_id, extract_resource_credentials(request),
+        resource_type=ResourceType.FOLDER,
+    )
     discordSettings = request.user.discordsettings
     channels = Channel.objects.filter(owner=request.user)
 
@@ -40,8 +42,8 @@ def can_upload(request, folder_id):
     webhooks = discord_settings["webhooks"]
 
     allowed_to_upload = bool(discordSettings.guild_id and discordSettings.attachment_name and len(webhooks) > 0 and len(bots) > 0 and channels.exists())
-    lock_context = ResourceContextResolver().resolve_folder(str(folder_obj.id), principal.user_id)
-    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhooks, "attachment_name": discordSettings.attachment_name, "lockFrom": lock_context.effective_lock_policy_id,
+    lock_context = ResourceLoader().resolve_folder(str(folder_obj.id), principal.user_id)
+    return JsonResponse({"can_upload": allowed_to_upload, "webhooks": webhooks, "attachment_name": discordSettings.attachment_name, "lockFrom": lock_context.effective_lock_scope_id,
                          "extensions": FILE_TYPES})
 
 
@@ -49,7 +51,7 @@ def can_upload(request, folder_id):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def users_me(request):
-    user_service.authorize_user(_principal(request), ResourceAction.READ_ACCOUNT)
+    user_service.authorize_user(_principal(request), "read")
     user = request.user
     settings: UserSettings = user.usersettings
     perms: UserPerms = user.userperms
@@ -92,7 +94,7 @@ def update_settings(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def get_discord_settings_view(request):
-    user_service.authorize_user(_principal(request), ResourceAction.READ_ACCOUNT)
+    user_service.authorize_user(_principal(request), "read")
     settings = build_discord_settings(request.user)
     return JsonResponse(settings)
 
@@ -175,7 +177,7 @@ def reset_discord_settings_view(request):
 @throttle_classes([defaultAuthUserThrottle])
 @permission_classes([IsAuthenticated])
 def get_notifications_view(request):
-    user_service.authorize_user(_principal(request), ResourceAction.MANAGE_NOTIFICATIONS)
+    user_service.authorize_user(_principal(request), "read")
     unread_only = validate_key(request.GET, "unreadOnly", bool, default=True, converter=param_to_bool)
     page_number = request.GET.get("page", 1)
 

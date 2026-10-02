@@ -37,13 +37,17 @@
             <img
                v-if="imageSrcSmall"
                ref="thumbnail"
-               v-lazy="{ src: imageSrcSmall }"
+               v-show="!waitingForCredential"
+               v-lazy="{ src: imageSrcSmall, error: blankImage }"
                :draggable="false"
                @error="handleImageError"
                @mouseenter="handleHoverStart"
                @mouseleave="handleHoverEnd"
             />
-            <i v-else :style="iconStyle" class="material-icons"></i>
+            <span v-if="waitingForCredential" class="thumbnail-loading" role="status" :aria-label="$t('files.loading')">
+               <span class="thumbnail-loading-spinner"></span>
+            </span>
+            <i v-if="!imageSrcSmall" :style="iconStyle" class="material-icons"></i>
          </div>
 
          <div :title="item.name" class="name">
@@ -70,6 +74,8 @@ import { useMainStore } from "@/stores/mainStore.js"
 import { mapActions, mapState } from "pinia"
 import { filesize, humanTime, isMobile } from "@/utils/common.js"
 import { getFileRawData } from "@/api/files.js"
+import { isCredentialUnavailable } from "@/axios/helper.js"
+import axios from "axios"
 
 export default {
    name: "item",
@@ -82,12 +88,18 @@ export default {
       return {
          clickTimer: null,
          clickDelay: 210,
-         fallback: false
+         blankImage: "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
+         fallback: false,
+         waitingForCredential: false,
+         thumbnailController: null
       }
    },
 
    computed: {
       ...mapState(useMainStore, ["perms", "selected", "settings", "items", "selectedCount", "sortedItems", "multiSelection", "contextMenuState", "areImagesBlocked"]),
+      isInSortedItems() {
+         return this.sortedItems?.some(item => item.id === this.item.id) ?? false
+      },
       imageSrc() {
          if (this.item.size === 0) return null
          if (this.item.thumbnail_url) {
@@ -148,8 +160,22 @@ export default {
    },
 
    watch: {
+      isInSortedItems(isPresent) {
+         if (!isPresent) {
+            this.thumbnailController?.abort()
+            this.waitingForCredential = false
+         }
+      },
+      imageSrc() {
+         this.thumbnailController?.abort()
+         if (this._thumbnailBlobUrl) URL.revokeObjectURL(this._thumbnailBlobUrl)
+         this._thumbnailBlobUrl = null
+         this.waitingForCredential = false
+         this.fallback = false
+         this.$refs.thumbnail?.removeAttribute("data-failed")
+      },
       areImagesBlocked(blocked, wasBlocked) {
-         if (wasBlocked && !blocked) {
+         if (wasBlocked && !blocked && !this.fallback) {
             this.$refs.thumbnail?.removeAttribute("data-failed")
          }
       }
@@ -160,6 +186,8 @@ export default {
    },
 
    unmounted() {
+      this.thumbnailController?.abort()
+      if (this._thumbnailBlobUrl) URL.revokeObjectURL(this._thumbnailBlobUrl)
       window.removeEventListener("keydown", this.onEsc)
    },
    methods: {
@@ -398,6 +426,7 @@ export default {
       async handleImageError(event) {
          const img = event.target
 
+         if (!this.isInSortedItems) return
          if (img.dataset.failed) return
          img.dataset.failed = "true"
 
@@ -405,25 +434,85 @@ export default {
             return
          }
 
-         try {
-            const data = await getFileRawData(this.imageSrc)
-            img.src = URL.createObjectURL(data)
+         this.waitingForCredential = true
+         this.thumbnailController?.abort()
+         this.thumbnailController = new AbortController()
+         const controller = this.thumbnailController
+         const source = this.imageSrc
+         const itemId = this.item.id
 
-         } catch (err) {
-            const response = err?.response
-
-            if (response?.status === 429) {
-               const retryAfter = Number(response.headers?.["retry-after"]) || 5
-               this.blockImagesFor(retryAfter)
+         while (!controller.signal.aborted && source === this.imageSrc &&
+                itemId === this.item.id && this.isInSortedItems) {
+            try {
+               const data = await getFileRawData(source, {
+                  responseType: "blob",
+                  signal: controller.signal,
+                  __supressStatusCodes: [404, 430]
+               })
+               if (controller.signal.aborted || source !== this.imageSrc ||
+                   itemId !== this.item.id || !this.isInSortedItems) return
+               this._thumbnailBlobUrl = URL.createObjectURL(data)
+               img.src = this._thumbnailBlobUrl
+               this.waitingForCredential = false
+               return
+            } catch (err) {
+               if (axios.isCancel(err) || controller.signal.aborted ||
+                   itemId !== this.item.id || !this.isInSortedItems) return
+               if (isCredentialUnavailable(err)) {
+                  this.waitingForCredential = true
+                  await this.waitForThumbnailRetry(controller.signal)
+                  continue
+               }
+               if (err?.response?.status === 429) {
+                  const retryAfter = Number(err.response.headers?.["retry-after"]) || 5
+                  this.blockImagesFor(retryAfter * 1000)
+               }
+               this.waitingForCredential = false
+               this.fallback = true
+               return
             }
-
-            this.fallback = true
          }
+         if (this.thumbnailController === controller) this.waitingForCredential = false
+      },
+      waitForThumbnailRetry(signal) {
+         return new Promise(resolve => {
+            const onAbort = () => {
+               clearTimeout(timer)
+               resolve()
+            }
+            const timer = setTimeout(() => {
+               signal.removeEventListener("abort", onAbort)
+               resolve()
+            }, 3000)
+            signal.addEventListener("abort", onAbort, { once: true })
+         })
       }
    }
 }
 </script>
 <style scoped>
+.thumbnail-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  transform: translateY(10px);
+}
+
+.thumbnail-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: thumbnail-loading-spin 0.8s linear infinite;
+}
+
+@keyframes thumbnail-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 .multi-select-toggle {
   position: absolute;
   top: -8px;

@@ -1,32 +1,28 @@
+from website.queries.resource_loader import ResourceLoader
 import time
 from typing import Dict
-from typing import List, Iterable, Iterator
+from typing import List, Iterable
 
-from django.db.models import Exists, OuterRef
 from rest_framework.exceptions import ValidationError
 
 from website.core.Serializers import ShareFolderSerializer, ShareFileSerializer, WebhookSerializer, BotSerializer, ShareAccessEventSerializer
-from website.core.errors import ResourceNotFoundError
 from website.core.helpers import normalize_blocked_until
 from website.discord.Discord import discord
-from website.models import DeletionScope, Folder, File, Channel, Webhook, Bot, ShareAccessEvent
-from website.models.mixin_models import ItemState
-from website.queries.file_lock_annotations import file_lock_annotations, folder_lock_annotations
-from website.queries.hierarchy import get_descendant_folder_ids, get_folder_chain
-from website.queries._zip_fields import ZIP_FILE_VALUE_FIELDS
-from website.auth.permissions import ResourceContextResolver, ResourceRef, ResourceRole, ResourceType
+from website.models import Folder, File, Channel, Webhook, Bot, ShareAccessEvent
+from website.queries.hierarchy import get_folder_chain
+from website.auth.permissions import ResourceRef, ResourceType
 
 
 def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
     breadcrumbs = []
     folder_obj.refresh_from_db()
     ancestors = get_folder_chain(str(folder_obj.id))
-    contexts = ResourceContextResolver().resolve_many(
-        (ResourceRef(ResourceType.FOLDER, ancestor.id, ResourceRole.TARGET) for ancestor in ancestors),
+    contexts = ResourceLoader().resolve_many(
+        (ResourceRef(ResourceType.FOLDER, ancestor.id) for ancestor in ancestors),
         folder_obj.owner_id,
     )
     lock_from_by_id = {
-        context.resource_id: context.effective_lock_policy_id for context in contexts
+        context.resource_id: context.effective_lock_scope_id for context in contexts
     }
     for ancestor in ancestors:
         lock_from = lock_from_by_id[str(ancestor.id)]
@@ -34,99 +30,6 @@ def build_breadcrumbs(folder_obj: Folder) -> List[dict]:
         breadcrumbs.append(data)
 
     return breadcrumbs
-
-
-def build_share_breadcrumbs(folder_obj: Folder, share_root: Folder) -> List[Dict]:
-    chain = get_folder_chain(str(folder_obj.id))
-    root_index = next((index for index, folder in enumerate(chain) if folder.id == share_root.id), None)
-    if root_index is None:
-        raise ResourceNotFoundError("Folder is outside the share")
-    return [{"name": folder.name, "id": folder.id} for folder in chain[root_index:]]
-
-
-def build_zip_entry_dict(file_row: dict, file_name: str) -> dict:
-    file_dict = {
-        "isDir": False,
-        "name": file_name,
-        "id": str(file_row["id"]),
-        "crc": file_row["crc"],
-        "size": file_row["size"],
-        "encryption_method": file_row["encryption_method"],
-    }
-
-    if file_row.get("encryption_method"):
-        file_dict["iv"] = file_row["iv"]
-        file_dict["key"] = file_row["key"]
-
-    return file_dict
-
-
-def build_flattened_children_values(root_folder: dict, include_root_name: bool = True, chunk_size: int = 1000) -> Iterator:
-    root_id = str(root_folder["id"])
-    from website.auth.permissions import ResourceContextResolver
-
-    root_context = ResourceContextResolver().resolve_folder(root_id, root_folder["owner_id"])
-    root_lock_id = root_context.effective_lock_policy_id
-    folder_ids = get_descendant_folder_ids([root_id])
-    rows = list(
-        Folder.objects.filter(
-            id__in=folder_ids, state=ItemState.ACTIVE,
-            trash_root__isnull=True, parent__trash_root__isnull=True,
-        ).annotate(
-            **folder_lock_annotations(),
-            has_active_deletion=Exists(DeletionScope.objects.filter(
-                owner_id=root_folder["owner_id"],
-                root_folder_id=OuterRef("pk"),
-                state=DeletionScope.State.ACTIVE,
-            )),
-        ).values("id", "name", "parent_id", "lock_from_id", "has_active_deletion")
-    )
-    rows = [row for row in rows if row["lock_from_id"] == root_lock_id]
-    rows_by_parent: dict[str, list[dict]] = {}
-    for row in rows:
-        if row["parent_id"] is not None:
-            rows_by_parent.setdefault(str(row["parent_id"]), []).append(row)
-    for children in rows_by_parent.values():
-        children.sort(key=lambda row: row["name"].casefold())
-
-    path_by_folder_id = {root_id: f"{root_folder['name']}/" if include_root_name else ""}
-    pending = [root_id]
-    traversal_ids: list[str] = []
-    deleting_folder_ids: set[str] = set()
-    while pending:
-        parent_id = pending.pop(0)
-        child_rows = rows_by_parent.get(parent_id, [])
-        for row in child_rows:
-            folder_id = str(row["id"])
-            if row["has_active_deletion"] or parent_id in deleting_folder_ids:
-                deleting_folder_ids.add(folder_id)
-                continue
-            path_by_folder_id[folder_id] = f"{path_by_folder_id[parent_id]}{row['name']}/"
-            traversal_ids.append(folder_id)
-            pending.append(folder_id)
-
-    files_qs = File.objects.filter(
-        parent_id__in=path_by_folder_id,
-        state=ItemState.ACTIVE,
-        trashed_at__isnull=True,
-        parent__trash_root__isnull=True,
-    ).annotate(
-        has_active_deletion=Exists(DeletionScope.objects.filter(
-            owner_id=root_folder["owner_id"],
-            root_file_id=OuterRef("pk"),
-            state=DeletionScope.State.ACTIVE,
-        )),
-        **file_lock_annotations(),
-    ).filter(lock_from_id=root_lock_id, has_active_deletion=False).values(*ZIP_FILE_VALUE_FIELDS).order_by("parent_id", "name")
-    parent_ids_with_files = {str(value) for value in files_qs.values_list("parent_id", flat=True).distinct()}
-
-    for folder_id in traversal_ids:
-        if folder_id not in parent_ids_with_files:
-            yield {"name": path_by_folder_id[folder_id], "isDir": True}
-    for row in files_qs.iterator(chunk_size=chunk_size):
-        parent_path = path_by_folder_id.get(str(row["parent_id"]))
-        if parent_path is not None:
-            yield build_zip_entry_dict(row, f"{parent_path}{row['name']}")
 
 
 def build_share_resource_dict(resource_in_share: Folder | File) -> Dict:
@@ -138,33 +41,12 @@ def build_share_resource_dict(resource_in_share: Folder | File) -> Dict:
     return resource_dict
 
 
-def build_share_folder_content(folder_obj: Folder, include_folders: bool) -> Dict:
-    file_queryset = (
-        folder_obj.files
-        .filter(state=ItemState.ACTIVE, trashed_at__isnull=True, parent__trash_root__isnull=True)
-        .annotate(has_active_deletion=Exists(DeletionScope.objects.filter(
-            owner_id=folder_obj.owner_id,
-            root_file_id=OuterRef("pk"),
-            state=DeletionScope.State.ACTIVE,
-        )))
-        .filter(has_active_deletion=False)
-        .annotate(**File.get_display_annotate(), **file_lock_annotations())
-        .values(*File.DISPLAY_VALUES)
-    )
-    files = list(file_queryset[:10001])
-    if len(files) > 10000:
-        from website.core.errors import BadRequestError
-        raise BadRequestError("A shared folder listing may contain at most 10000 files")
-
-    folders = []
-    if include_folders:
-        folders = folder_obj.subfolders.filter(state=ItemState.ACTIVE, trash_root__isnull=True).select_related("parent")
-
-    file_dicts = [ShareFileSerializer.serialize_dict(file) for file in files]
-    folder_dicts = [ShareFolderSerializer.serialize_object(folder) for folder in folders]
+def build_share_folder_content(folder_obj: Folder, children) -> Dict:
+    """Format the authorizer's checked listing without another visibility query."""
+    rows = [ShareFileSerializer.serialize_dict(item) if isinstance(item, dict)
+            else ShareFolderSerializer.serialize_object(item) for item in children]
     folder_dict = build_share_resource_dict(folder_obj)
-
-    folder_dict["children"] = file_dicts + folder_dicts
+    folder_dict["children"] = rows
     return folder_dict
 
 

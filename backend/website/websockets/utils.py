@@ -4,6 +4,7 @@ from typing import List, Union, Optional
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.db import transaction
 
 from ..constants import EventCode
 from ..core.Serializers import FolderSerializer, FileSerializer
@@ -27,20 +28,30 @@ def group_and_send_event(context: RequestContext, op_code: EventCode, resources:
     """Group files by parent object and send event for each parent"""
     grouped_files = defaultdict(list)
     parent_mapping = {}
+    serialized_files = {
+        item["id"]: item for item in FileSerializer.serialize_many(
+            resource for resource in resources if isinstance(resource, File)
+        )
+    }
 
     for resource in resources:
-        parent_mapping[resource.parent_id] = resource.parent
+        if resource.parent_id not in parent_mapping:
+            parent_mapping[resource.parent_id] = resource.parent
         grouped_files[resource.parent_id].append(resource)
 
     for parent_id, items in grouped_files.items():
         parent = parent_mapping[parent_id]
         send_event(context, parent, op_code, [
             FolderSerializer.serialize_object(item) if isinstance(item, Folder)
-            else FileSerializer.serialize_object(item) for item in items
+            else serialized_files[str(item.id)] for item in items
         ])
 
 
 def send_event(context: RequestContext, folder_context: Optional[Folder], op_code: EventCode, payload: Union[List, dict, str, None] = None) -> None:
+    transaction.on_commit(lambda: _send_event(context, folder_context, op_code, payload))
+
+
+def _send_event(context: RequestContext, folder_context: Optional[Folder], op_code: EventCode, payload: Union[List, dict, str, None] = None) -> None:
     """
     Sends an event to the websocket layer.
     Handles optional encryption when a folder is locked.

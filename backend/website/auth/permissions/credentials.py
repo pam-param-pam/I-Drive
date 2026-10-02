@@ -28,6 +28,9 @@ class CredentialSet:
     def supplied(self) -> bool:
         return bool(self._credentials or self._header_password)
 
+    def serialize(self) -> dict:
+        return {"credentials": dict(self._credentials), "header_password": self._header_password}
+
 
 def extract_resource_credentials(request) -> CredentialSet:
     data = getattr(request, "data", {}) or {}

@@ -1,9 +1,10 @@
+from website.queries.resource_loader import ResourceLoader
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 
 from website.auth.permissions import (
-    PrincipalFactory, ResourceContextResolver, ResourceRef, ResourceRole, ResourceType,
+    PrincipalFactory, ResourceRef, ResourceType,
     extract_resource_credentials,
 )
 from website.auth.throttle import defaultAuthUserThrottle
@@ -22,11 +23,11 @@ def _inputs(request):
 def create_file_view(request):
     principal, credentials = _inputs(request)
     files = FileService.create_files(principal, extract_key(request.data, "files"), credentials)
-    contexts = ResourceContextResolver().resolve_many(
-        (ResourceRef(ResourceType.FILE, file.id, ResourceRole.TARGET) for file in files), principal.user_id,
+    contexts = ResourceLoader().resolve_many(
+        (ResourceRef(ResourceType.FILE, file.id) for file in files), principal.user_id,
     )
     lock_from_by_file = {
-        context.resource_id: context.effective_lock_policy_id
+        context.resource_id: context.effective_lock_scope_id
         for context in contexts
     }
     return JsonResponse([

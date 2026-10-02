@@ -37,7 +37,7 @@ def cleanup_expired_shares(user) -> int:
 
 def cleanup_expired_zips(user) -> int:
     removed = 0
-    for zip_obj in UserZIP.objects.filter(owner=user):
+    for zip_obj in UserZIP.objects.filter(owner_id=user.id):
         if zip_obj.is_expired():
             zip_obj.delete()
             removed += 1
@@ -54,7 +54,7 @@ def cleanup_trash(user) -> int:
     cutoff = now - timedelta(days=MAX_TIME_FILES_IN_TRASH)
 
     files = File.objects.filter(owner=user, state=ItemState.ACTIVE, trashed_at__lte=cutoff)
-    folders = Folder.objects.filter(owner=user, state=ItemState.ACTIVE, trash_root__created_at__lte=cutoff)
+    folders = Folder.objects.filter(owner=user, state=ItemState.ACTIVE, trashed_at__lte=cutoff)
 
     items = list(files) + list(folders)
 

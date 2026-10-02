@@ -30,6 +30,10 @@ class HttpxError(IDriveException):
 class CannotProcessDiscordRequestError(IDriveException):
     """Raised when we are unable to make requests to discord due to being overloaded"""
 
+
+class NoAvailableDiscordCredentialError(CannotProcessDiscordRequestError):
+    """Raised when no Discord credential can serve the request right now."""
+
 class RangeNotSatisfiable(IDriveException):
     """Raised when the supplied header range is not satisfiable"""
 
@@ -41,9 +45,6 @@ class URLInvalidOrExpired(IDriveException):
 
 class RootFolderError(IDriveException):
     """Raised when user has no root folder or has multiple root"""
-
-class DiscordBotAttachmentAuthor(IDriveException):
-    """Raised when a bot is a message author. This should not happen"""
 
 class FailedToParseRawImage(IDriveException):
     """Raised when metadata extraction fails for a raw image"""

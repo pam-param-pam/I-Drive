@@ -18,8 +18,7 @@ class IDriveAdminSite(AdminSite):
     model_sections = {
         "Folder": "File System",
         "File": "File System",
-        "TrashRoot": "Internal Namespace",
-        "FolderLockPolicy": "Internal Namespace",
+        "FolderLockScope": "Internal Namespace",
         "FolderHashWork": "Internal Namespace",
         "FolderHeightRepair": "Internal Namespace",
         "Fragment": "Discord Media",
@@ -46,6 +45,7 @@ class IDriveAdminSite(AdminSite):
         "Webhook": "Discord",
         "Bot": "Discord",
         "DeletionScope": "Operations",
+        "NamespaceOperation": "Operations",
         "DeletionFileWorkItem": "Operations",
         "DeletionFolderWorkItem": "Operations",
         "DeletionJob": "Operations",

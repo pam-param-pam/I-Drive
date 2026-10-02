@@ -4,32 +4,40 @@ from django.db import transaction
 from website.config import MAX_NUMBER_OF_CHANNELS
 from website.constants import EncryptionMethod, EventCode, ClientsideDecryptionMethod
 from website.core.http.context import RequestContext
-from website.core.errors import BadRequestError
+from website.core.errors import BadRequestError, ResourceNotFoundError, ResourcePermissionError
 from website.core.helpers import validate_key, validate_value, validate_ids_as_list
 from website.discord.Discord import discord
 from website.discord.DiscordHelper import DiscordHelperService
-from website.models import UserSettings, DiscordSettings, Webhook, Channel, Bot, File
+from website.models import UserSettings, UserPerms, DiscordSettings, Webhook, Channel, Bot, File
 from website.models.mixin_models import ItemState
 from website.models.other_models import Notification, NotificationType, NotificationKind
-from website.auth.permissions import Authorizer, ResourceAction, UserPrincipal
+from website.auth.permissions import UserPrincipal
 from website.queries.selectors import query_attachments
 from website.websockets.utils import send_event
 
 
-authorizer = Authorizer()
+def _authorized_user(principal: UserPrincipal, *capabilities: str, allow_global_lock=False) -> User:
+    if not isinstance(principal, UserPrincipal):
+        raise TypeError("User access requires a user principal")
+    user = User.objects.filter(id=principal.user_id).first()
+    if user is None:
+        raise ResourceNotFoundError()
+    perms = UserPerms.objects.filter(user_id=user.id).first()
+    if perms is None:
+        raise ResourceNotFoundError()
+    if perms.globalLock and not allow_global_lock:
+        raise ResourcePermissionError("Account is locked")
+    if not perms.admin and not all(getattr(perms, capability) for capability in capabilities):
+        raise ResourcePermissionError("Account capability is missing")
+    return user
 
 
-def _authorized_user(principal: UserPrincipal, action: ResourceAction) -> User:
-    authorizer.authorize_user_action(principal, action)
-    return User.objects.get(id=principal.user_id)
-
-
-def authorize_user(principal: UserPrincipal, action: ResourceAction) -> User:
-    return _authorized_user(principal, action)
+def authorize_user(principal: UserPrincipal, *capabilities: str, allow_global_lock=False) -> User:
+    return _authorized_user(principal, *capabilities, allow_global_lock=allow_global_lock)
 
 
 def update_user_settings(principal: UserPrincipal, data: dict) -> UserSettings:
-    user = _authorized_user(principal, ResourceAction.MODIFY_SETTINGS)
+    user = _authorized_user(principal, "settings_modify")
     settings = UserSettings.objects.get(user=user)
 
     locale = validate_key(data, "locale", str, default=None)
@@ -105,7 +113,7 @@ def update_user_settings(principal: UserPrincipal, data: dict) -> UserSettings:
     return settings
 
 def create_new_channel_and_webhooks(principal: UserPrincipal) -> tuple[Channel, list[Webhook]]:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     with transaction.atomic():
         settings = DiscordSettings.objects.select_for_update(nowait=True).get(user=user)
 
@@ -142,7 +150,7 @@ def create_new_channel_and_webhooks(principal: UserPrincipal) -> tuple[Channel, 
     return channel_obj, webhook_objs
 
 def delete_webhook(principal: UserPrincipal, webhook_id: str) -> None:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     with transaction.atomic():
         webhook = Webhook.objects.select_for_update().get(discord_id=webhook_id, owner=user)
         if query_attachments(author_id=webhook.discord_id):
@@ -168,7 +176,7 @@ def delete_webhook(principal: UserPrincipal, webhook_id: str) -> None:
 
 
 def add_bot(principal: UserPrincipal, token: str) -> Bot:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     if Bot.objects.filter(token=token, owner=user).exists():
         raise BadRequestError("Bot with this token already exists!")
 
@@ -191,7 +199,7 @@ def add_bot(principal: UserPrincipal, token: str) -> Bot:
     return bot
 
 def delete_bot(principal: UserPrincipal, bot_id: str) -> None:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     primary_bot = Bot.objects.filter(owner=user, primary=True).first()
     if not primary_bot:
         raise BadRequestError("No primary bot found.")
@@ -209,16 +217,13 @@ def delete_bot(principal: UserPrincipal, bot_id: str) -> None:
     if bot.primary:
         raise BadRequestError("Cannot remove primary bot.")
 
-    if query_attachments(author_id=bot.discord_id):
-        raise BadRequestError("Cannot remove bot. There are files associated with this bot")
-
     DiscordHelperService(bot_token).delete_bot(bot_id=bot_id, guild_id=guild_id, role_id=role_id)
 
     bot.delete()
     discord.remove_user_state(user)
 
 def reenable_credential(principal: UserPrincipal, credential_id: str) -> None:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     state = discord.get_user_state(user)
     credential = state.get_credential_from_id(credential_id)
     if not credential:
@@ -230,7 +235,7 @@ def reenable_credential(principal: UserPrincipal, credential_id: str) -> None:
     state.unblock_credential(credential)
 
 def auto_setup_discord_settings(principal: UserPrincipal, guild_id: str, bot_token: str, attachment_name: str) -> None:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     with transaction.atomic():
         settings = DiscordSettings.objects.select_for_update(nowait=True).get(user=user)
 
@@ -262,7 +267,7 @@ def auto_setup_discord_settings(principal: UserPrincipal, guild_id: str, bot_tok
 
 
 def change_attachment_name(principal: UserPrincipal, new_attachment_name: str):
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     settings = DiscordSettings.objects.get(user=user)
     if not settings.auto_setup_complete:
         raise BadRequestError("Do auto setup first!")
@@ -272,7 +277,7 @@ def change_attachment_name(principal: UserPrincipal, new_attachment_name: str):
     discord_settings.save()
 
 def reset_discord_settings(principal: UserPrincipal) -> str:
-    user = _authorized_user(principal, ResourceAction.MODIFY_DISCORD)
+    user = _authorized_user(principal, "discord_modify")
     if File.objects.filter(owner=user, state__in=[ItemState.ACTIVE]).exists():
         raise BadRequestError("Cannot reset discord settings. Remove all files first")
 
@@ -315,7 +320,7 @@ def create_notification(user: User, notification_type: NotificationType, notific
 
 
 def set_notifications_read_status(principal: UserPrincipal, notification_ids: list[str], read=True):
-    user = _authorized_user(principal, ResourceAction.MANAGE_NOTIFICATIONS)
+    user = _authorized_user(principal, "read")
     validate_value(read, bool)
     validate_ids_as_list(notification_ids, max_length=100)
 

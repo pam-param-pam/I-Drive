@@ -80,7 +80,7 @@ def _claim_raw_image_files():
             thumbnail__isnull=True,
             rawmetadata__isnull=True,
             trashed_at__isnull=True,
-            parent__trash_root__isnull=True,
+            parent__trashed_at__isnull=True,
         )
         .filter(
             Q(rawextractionclaim__isnull=True) |
@@ -121,7 +121,7 @@ def _claim_raw_image_files():
                         thumbnail__isnull=True,
                         rawmetadata__isnull=True,
                         trashed_at__isnull=True,
-                        parent__trash_root__isnull=True,
+                        parent__trashed_at__isnull=True,
                     )
                     .exists()
                 )

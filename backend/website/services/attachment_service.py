@@ -2,9 +2,9 @@ from website.discord.constants import ERROR_UNKNOWN_MESSAGE, ERROR_UNKNOWN_MESSA
 from website.models import Fragment, File, Thumbnail, Subtitle, Moment
 from website.models.other_models import NotificationType, NotificationKind
 from website.services import user_service, file_service, thumbnail_service
-from website.core.errors import DiscordBotAttachmentAuthor, DiscordError
+from website.core.errors import DiscordError
 from website.discord.Discord import discord
-from website.models import DiscordAttachmentMixin, Webhook
+from website.models import DiscordAttachmentMixin
 from website.queries.selectors import query_attachments
 
 
@@ -68,12 +68,7 @@ def delete_remote_single_discord_attachment(user, resource: DiscordAttachmentMix
         # Get the difference
         attachment_ids_to_keep = list(all_attachments_ids - attachment_ids_to_remove)
         if len(attachment_ids_to_keep) > 0:
-            # we find message author
-            author = resource.get_author()
-            if isinstance(author, Webhook):
-                discord.edit_attachments_webhook(user, author, resource.message_id, attachment_ids_to_keep)
-            else:
-                raise DiscordBotAttachmentAuthor()
+            discord.edit_attachments_webhook(user, resource.author, resource.message_id, attachment_ids_to_keep)
         else:
             discord.delete_message(user, resource.channel.discord_id, resource.message_id)
     except DiscordError as e:

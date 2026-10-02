@@ -10,15 +10,10 @@ from website.core.errors import BadRequestError
 from website.core.helpers import validate_key, validate_ids_as_list
 from website.core.validators.GeneralChecks import MaxLength, Max, Min
 from website.models import Folder, File
-from website.queries.file_lock_annotations import file_lock_annotations
 from website.queries.hierarchy import get_descendant_folder_ids
 from website.auth.permissions import (
-    Authorizer, ContextSet, CredentialSet, ResourceAction,
-    ResourceContextResolver, ResourceRef, ResourceRole, ResourceType, UserPrincipal)
-
-
-authorizer = Authorizer()
-context_resolver = ResourceContextResolver()
+    CredentialSet, ResourceAction, ResourceType, UserPrincipal)
+from website.auth.permissions.authorizer import authorizer
 
 
 def validate_filter(f: Optional[dict]) -> Optional[dict]:
@@ -341,30 +336,21 @@ def perform_search(principal: UserPrincipal, data: dict, credentials: Credential
         .values_list("id", flat=True)[:candidate_limit]
     ) if include_folders else []
 
-    refs = [ResourceRef(ResourceType.FILE, file_id, ResourceRole.TARGET) for file_id in file_candidate_ids]
-    refs.extend(ResourceRef(ResourceType.FOLDER, folder_id, ResourceRole.TARGET) for folder_id in folder_candidate_ids)
-    contexts = context_resolver.resolve_many(refs, principal.user_id) if refs else ContextSet(())
-    authorization = authorizer.filter_user_contexts(
-        principal, ResourceAction.SEARCH, contexts, credentials,
+    visible = authorizer.filter_items(
+        principal, ResourceAction.SEARCH, file_ids=file_candidate_ids,
+        folder_ids=folder_candidate_ids, credentials=credentials,
     )
-    authorized_files = {
-        resource.resource_id for resource in authorization.resources
-        if resource.resource_type == ResourceType.FILE.value
-    }
-    authorized_folders = {
-        resource.resource_id for resource in authorization.resources
-        if resource.resource_type == ResourceType.FOLDER.value
-    }
+    authorized_files = {str(item.id) for item in visible if isinstance(item, File)}
+    authorized_folders = {str(item.id) for item in visible if isinstance(item, Folder)}
 
     result = []
     if include_files and authorized_files:
-        files = (
+        files = list(
             File.objects.filter(id__in=authorized_files)
             .order_by(f"{order_prefix}{order_by}")
-            .annotate(**File.get_display_annotate(), **file_lock_annotations())
-            .values_list(*File.DISPLAY_VALUES)[:result_limit]
+            [:result_limit]
         )
-        result.extend(FileSerializer.serialize_tuple(f) for f in files)
+        result.extend(FileSerializer.serialize_many(files))
 
     if include_folders and authorized_folders:
         folders = (

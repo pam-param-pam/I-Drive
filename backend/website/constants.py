@@ -26,7 +26,6 @@ SIGNED_URL_EXPIRY_SECONDS = 7200
 MAX_TIME_FILES_IN_TRASH = 7
 
 # How many retries allowed for files before they are marked as fatally failed
-MAX_FILE_DELETION_ATTEMPTS = 5
 
 # How many retries allowed for raw extraction before they are marked as fatally failed
 MAX_RAW_EXTRACTION_ATTEMPTS = 3
@@ -39,9 +38,6 @@ SHARE_ACCESS_DURATION = 180
 
 # Max files count allowed to stream in a single zip archive
 MAX_FILES_IN_ZIP = 10_000
-
-# How long the zip download url is valid for, 6 hours
-ZIP_EXPIRY_SECONDS = 21600
 
 # How long files which are marked as remote missing will wait for admin fix, before being automatically deleted
 REMOTE_MISSING_FILES_WAIT_DAYS = 7

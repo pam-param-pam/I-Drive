@@ -6,7 +6,7 @@ from celery.schedules import crontab
 
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "website.settings")
-app = Celery("website")
+app = Celery("website", include=["website.tasks.namespaceTasks"])
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
@@ -26,18 +26,16 @@ def setup_periodic_tasks(sender, **kwargs):
             timedelta(minutes=5), generate_raw_image_thumbnails.s(), name="generate-raw-image-thumbnails",
         )
 
-        from website.tasks.cleanupDeletionTasks import supervise_deletion_system
         from website.tasks.cleanupDiscordTasks import cleanup_user_discord
         from website.tasks.cleanupDatabaseTasks import cleanup_user_db
         from website.tasks.derivedStateTasks import process_folder_hash_work, process_folder_height_repairs
-
-        print("### IMPORTS SUCCESS")
+        from website.tasks.namespaceTasks import recover_namespace_operations
 
         sender.add_periodic_task(
-            timedelta(minutes=1),
-            supervise_deletion_system.s(),
-            name="supervise-deletion-system",
+            timedelta(seconds=15), recover_namespace_operations.s(), name="recover-namespace-operations",
         )
+
+        print("### IMPORTS SUCCESS")
 
         sender.add_periodic_task(
             timedelta(seconds=15),

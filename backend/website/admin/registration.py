@@ -1,3 +1,4 @@
+from website.queries.resource_loader import ResourceLoader
 import datetime
 from typing import Union, List
 
@@ -9,7 +10,7 @@ from django.urls import reverse
 from simple_history.admin import SimpleHistoryAdmin
 
 from website.services import attachment_service
-from website.auth.permissions import CredentialSet, PrincipalFactory, ResourceContextResolver
+from website.auth.permissions import CredentialSet, PrincipalFactory
 from website.constants import API_BASE_URL, EncryptionMethod
 from website.core.crypto.signer import sign_resource
 from website.core.errors import DiscordError
@@ -20,8 +21,8 @@ from website.models.namespace_models import (
     DeletionScope,
     FolderHashWork,
     FolderHeightRepair,
-    FolderLockPolicy,
-    TrashRoot,
+    FolderLockScope,
+    NamespaceOperation,
 )
 from website.models.file_related_models import RawMetadata, PhotoMetadata
 from website.models.other_models import Notification, RawExtractionClaim
@@ -63,14 +64,8 @@ class InternalNamespaceAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(TrashRoot)
-class TrashRootAdmin(InternalNamespaceAdmin):
-    list_display = ("folder", "owner", "created_at")
-    list_select_related = ("folder", "owner")
-
-
-@admin.register(FolderLockPolicy)
-class FolderLockPolicyAdmin(InternalNamespaceAdmin):
+@admin.register(FolderLockScope)
+class FolderLockScopeAdmin(InternalNamespaceAdmin):
     list_display = ("folder", "owner", "created_at", "updated_at")
     list_select_related = ("folder", "owner")
     exclude = ("password",)
@@ -88,10 +83,41 @@ class FolderHeightRepairAdmin(InternalNamespaceAdmin):
     list_select_related = ("folder",)
 
 
+@admin.register(NamespaceOperation)
+class NamespaceOperationAdmin(InternalNamespaceAdmin):
+    list_display = ("id", "action", "state", "user_id", "request_id", "progress",
+                    "destination_id", "next_attempt_at", "last_error")
+    list_filter = ("action", "state")
+    search_fields = ("id", "request_context__user_id", "request_context__request_id", "destination_id")
+    ordering = ("state", "id")
+
+    @admin.display(description="User ID")
+    def user_id(self, obj):
+        return obj.request_context["user_id"]
+
+    @admin.display(description="Request ID")
+    def request_id(self, obj):
+        return obj.request_context["request_id"]
+
+    @admin.display(description="Progress")
+    def progress(self, obj):
+        return f"{obj.cursor} / {len(obj.refs)}"
+
+
 @admin.register(Fragment)
 class FragmentAdmin(SimpleHistoryAdmin):
+    def delete_model(self, request, obj):
+        from website.services.file_service import FileService
+
+        FileService.remove_fragment(PrincipalFactory.from_authenticated_request(request),
+                                    str(obj.file_id), str(obj.pk), CredentialSet.empty())
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            self.delete_model(request, obj)
+
     readonly_fields = ('id', 'channel', 'message_id', 'attachment_id', 'sequence', 'offset', 'readable_size',
-                       'file', 'created_at', 'size', 'fragment_url', 'object_id', 'content_type', 'crc', 'crc_hex', 'jump')
+                       'file', 'created_at', 'size', 'fragment_url', 'author', 'crc', 'crc_hex', 'jump')
     ordering = ["-created_at"]
     list_display = ["sequence", "file_name", "readable_size", "owner", "folder", "created_at"]
     list_select_related = ["file"]
@@ -156,7 +182,7 @@ class FragmentAdmin(SimpleHistoryAdmin):
 
 @admin.register(Folder)
 class FolderAdmin(SimpleHistoryAdmin):
-    readonly_fields = ('id', 'last_modified_at', 'parent')
+    readonly_fields = ('id', 'last_modified_at', 'parent', 'trashed_at', 'physical_file_stats')
     ordering = ["-created_at"]
     list_display = ["name", "owner", "state", "created_at", "is_trashed", "is_locked"]
     search_fields = ["id", "name"]
@@ -166,12 +192,12 @@ class FolderAdmin(SimpleHistoryAdmin):
 
     @easy.smart(short_description="Is locked", boolean=True)
     def is_locked(self, obj: Folder):
-        context = ResourceContextResolver().resolve_folder(str(obj.id), obj.owner_id)
+        context = ResourceLoader().resolve_folder(str(obj.id), obj.owner_id)
         return context.is_locked
 
     @easy.smart(short_description="In trash", boolean=True)
     def is_trashed(self, obj: Folder):
-        return hasattr(obj, "trash_root")
+        return obj.trashed_at is not None
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(SimpleHistoryAdmin, self).get_form(request, obj, **kwargs)
@@ -191,7 +217,9 @@ class FolderAdmin(SimpleHistoryAdmin):
 class FileAdmin(SimpleHistoryAdmin):
     exclude = ('encryption_method', )
     readonly_fields = ('id', 'parent', 'size', 'type', 'extension', 'owner', 'readable_size', 'state', 'is_locked', 'created_at',
-                       'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag", "iv_hex", "key_hex")
+                       'last_modified_at', 'formatted_encryption_method', 'formatted_key', 'formatted_iv', 'frontend_id', 'crc', "media_tag", "iv_hex", "key_hex",
+                       'fragment_count', 'subs_count', 'thumbnail_cache_id',
+                       'has_photo_metadata', 'has_raw_metadata', 'has_video_metadata')
     ordering = ["-created_at"]
     list_display = ['name', 'parent', 'readable_size', 'owner', 'state', 'type', 'created_at',
                     'is_trashed', 'is_locked']
@@ -204,7 +232,7 @@ class FileAdmin(SimpleHistoryAdmin):
 
     @easy.smart(short_description="Locked", boolean=True)
     def is_locked(self, obj: File):
-        context = ResourceContextResolver().resolve_file(str(obj.id), obj.owner_id)
+        context = ResourceLoader().resolve_file(str(obj.id), obj.owner_id)
         return context.is_locked
 
     @easy.smart(short_description="In trash", boolean=True)
@@ -304,7 +332,7 @@ class ThumbnailAdmin(SimpleHistoryAdmin):
     search_fields = ['file__name', 'file__id', 'file__owner__username']
     ordering = ['-created_at']
     list_display = ['file_name', 'owner', 'readable_size', 'created_at']
-    readonly_fields = ['created_at', 'channel', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'object_id', 'content_type']
+    readonly_fields = ['created_at', 'channel', 'message_id', 'attachment_id', 'size', 'file', 'thumbnail_media', 'encryption_method', 'author']
 
     def delete_queryset(self, request, queryset: QuerySet[Thumbnail]):
         for thumb in queryset:
@@ -369,17 +397,11 @@ class ShareableLinkAdmin(admin.ModelAdmin):
 
 @admin.register(UserZIP)
 class UserZIPAdmin(admin.ModelAdmin):
-    list_display = ("owner_name", "created_at")
-    filter_horizontal = ("files", "folders")
+    list_display = ("owner_id", "created_at")
     ordering = ["-created_at"]
 
     def has_add_permission(self, request):
         return False
-
-    @easy.smart(short_description="Owner", admin_order_field="owner__username")
-    def owner_name(self, obj: UserZIP):
-        return obj.owner.username
-
 
 @admin.register(Tag)
 class TagAdmin(SimpleHistoryAdmin):
@@ -452,7 +474,7 @@ class BotAdmin(admin.ModelAdmin):
 class MomentAdmin(admin.ModelAdmin):
     search_fields = ('file__name', 'file__owner__username')
     list_display = ['file', 'owner', 'formatted_timestamp', 'readable_size']
-    readonly_fields = ('channel', 'message_id', 'attachment_id', 'content_type', 'object_id', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
+    readonly_fields = ('channel', 'message_id', 'attachment_id', 'author', 'file', 'formatted_timestamp', 'readable_size', 'moment_preview', 'encryption_method')
     exclude = ['size', 'timestamp']
 
     def has_add_permission(self, request):
@@ -484,8 +506,20 @@ class MomentAdmin(admin.ModelAdmin):
         return EncryptionMethod(obj.file.encryption_method).name
 
 
+class FileMetadataAdmin(admin.ModelAdmin):
+    def delete_model(self, request, obj):
+        from website.services.file_service import FileService
+
+        FileService.remove_metadata(PrincipalFactory.from_authenticated_request(request),
+                                    str(obj.file_id), type(obj), CredentialSet.empty())
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            self.delete_model(request, obj)
+
+
 @admin.register(VideoMetadata)
-class VideoMetadataAdmin(admin.ModelAdmin):
+class VideoMetadataAdmin(FileMetadataAdmin):
     search_fields = ('file__name', 'file__id')
     readonly_fields = ('file', 'is_progressive', 'is_fragmented', 'has_moov', 'has_IOD', 'brands', 'mime')
     list_display = ['file', 'owner', 'created_at']
@@ -498,7 +532,7 @@ class VideoMetadataAdmin(admin.ModelAdmin):
         return obj.file.owner
 
 @admin.register(RawMetadata)
-class RawMetadataAdmin(admin.ModelAdmin):
+class RawMetadataAdmin(FileMetadataAdmin):
     search_fields = ('file__name', 'file__id')
     list_display = ['file', 'owner', 'created_at', 'failed_to_process']
     readonly_fields = ('file', 'camera', 'camera_owner', 'iso', 'shutter', 'aperture', 'focal_length')
@@ -511,9 +545,11 @@ class RawMetadataAdmin(admin.ModelAdmin):
         return obj.file.owner
 
 @admin.register(PhotoMetadata)
-class PhotoMetadataAdmin(admin.ModelAdmin):
+class PhotoMetadataAdmin(FileMetadataAdmin):
     search_fields = ('file__name', 'file__id')
     list_display = ['file', 'owner', 'created_at']
+
+    readonly_fields = ('file',)
 
     def has_add_permission(self, request):
         return False
@@ -528,8 +564,18 @@ class SubtitleAdmin(admin.ModelAdmin):
 
     search_fields = ('file__name', 'file__id', 'file__owner__username')
     list_display = ['file_name', 'language', 'owner', 'readable_size']
-    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel', 'attachment_id', 'message_id', 'content_type', 'object_id', 'readable_size', 'encryption_method', 'sub_preview')
+    readonly_fields = ('file', 'formatted_iv', 'formatted_key', 'channel', 'attachment_id', 'message_id', 'author', 'readable_size', 'encryption_method', 'sub_preview')
     exclude = ['size']
+
+    def delete_model(self, request, obj):
+        from website.services.file_service import FileService
+
+        FileService.remove_subtitle(PrincipalFactory.from_authenticated_request(request),
+                                    str(obj.file_id), str(obj.pk), CredentialSet.empty())
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            self.delete_model(request, obj)
 
     def has_add_permission(self, request):
         return False
